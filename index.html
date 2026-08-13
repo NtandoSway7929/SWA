@@ -563,6 +563,32 @@
     color: rgba(255, 255, 255, 0.8);
 }
 
+        /* SCROLL REVEAL ANIMATIONS */
+
+.reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition:
+        opacity 0.7s ease,
+        transform 0.7s ease;
+}
+
+.reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.reveal-delay-1 {
+    transition-delay: 0.1s;
+}
+
+.reveal-delay-2 {
+    transition-delay: 0.2s;
+}
+
+.reveal-delay-3 {
+    transition-delay: 0.3s;
+}
         /* MOBILE */
         @media (max-width: 700px) {
 
@@ -1098,6 +1124,34 @@
             © 2026 Swayphics
         </div>
     </footer>
+
+<script>
+    const revealElements = document.querySelectorAll(
+        ".section-label, .section-title, .service, .identity-item, .work-card, .about-content, .about-belief, .featured-service-footer, .cta p, .contact-buttons, .contact-email"
+    );
+
+    revealElements.forEach((element) => {
+        element.classList.add("reveal");
+    });
+
+    const revealObserver = new IntersectionObserver(
+        (entries, observer) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add("visible");
+                    observer.unobserve(entry.target);
+                }
+            });
+        },
+        {
+            threshold: 0.12
+        }
+    );
+
+    revealElements.forEach((element) => {
+        revealObserver.observe(element);
+    });
+</script>
 
 </body>
 </html>
