@@ -74,19 +74,15 @@
         }
 
         .logo {
-    font-size: 1.5rem;
-    font-weight: 900;
-    letter-spacing: -1.5px;
+    display: flex;
+    align-items: center;
 }
 
-.logo span {
-    color: #2C91FC;
+.logo img {
+    display: block;
+    width: 155px;
+    height: auto;
 }
-
-        .logo span {
-            color: #2C91FC;
-        }
-
         .nav-links {
             display: flex;
             gap: 30px;
@@ -846,6 +842,10 @@
     width: 100%;
     text-align: center;
 }
+            
+            .logo img {
+    width: 125px;
+}
 }
 
         @media (prefers-reduced-motion: reduce) {
@@ -1408,7 +1408,12 @@ footer strong {
 <body>
 
     <nav>
-        <a href="#" class="logo">Sway<span>phics</span></a>
+        <a href="#" class="logo">
+    <img
+        src="swayphics-logo.png"
+        alt="Swayphics — Empowering through design"
+    >
+</a>
 
         <ul class="nav-links">
             <li><a href="#services">Services</a></li>
