@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="description"
+        content="Swayphics — empowering businesses through design."
+    >
+
+    <meta name="robots" content="noindex">
+
+    <title>404 — Swayphics</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 6%;
+            background: #002096;
+            color: #FFFFFF;
+            font-family: Arial, Helvetica, sans-serif;
+            overflow: hidden;
+        }
+
+        .page {
+            position: relative;
+            width: 100%;
+            max-width: 1100px;
+            text-align: center;
+        }
+
+        .glow {
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            border-radius: 50%;
+            background: #0152F4;
+            opacity: 0.3;
+            filter: blur(120px);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo {
+            display: inline-block;
+            margin-bottom: 80px;
+            color: #FFFFFF;
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: #2C91FC;
+        }
+
+        .error-code {
+            margin-bottom: 15px;
+            color: #77C1FC;
+            font-size: clamp(6rem, 18vw, 12rem);
+            font-weight: 900;
+            line-height: 0.85;
+            letter-spacing: -8px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            line-height: 0.95;
+            letter-spacing: -3px;
+        }
+
+        p {
+            max-width: 520px;
+            margin: 0 auto 40px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 16px 28px;
+            background: #FFFFFF;
+            color: #002096;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-decoration: none;
+            text-transform: uppercase;
+            transition:
+                transform 0.25s ease,
+                box-shadow 0.25s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 35px rgba(119, 193, 252, 0.25);
+        }
+
+        .footer {
+            margin-top: 100px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 700px) {
+
+            body {
+                padding: 30px 6%;
+            }
+
+            .logo {
+                margin-bottom: 60px;
+            }
+
+            .error-code {
+                letter-spacing: -5px;
+            }
+
+            h1 {
+                letter-spacing: -2px;
+            }
+
+            .footer {
+                margin-top: 70px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            html {
+                scroll-behavior: auto;
+            }
+
+            .btn {
+                transition: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="page">
+
+        <div class="glow"></div>
+
+        <div class="content">
+
+            <a href="./" class="logo">
+                sway<span>phics</span>
+            </a>
+
+            <div class="error-code">404</div>
+
+            <h1>
+                Looks like this page<br>
+                got lost.
+            </h1>
+
+            <p>
+                The page you're looking for doesn't exist or may have
+                moved. Don't worry — Swayphics is still here.
+            </p>
+
+            <a href="./" class="btn">
+                Back to Swayphics →
+            </a>
+
+            <div class="footer">
+                Empowering through design
+            </div>
+
+        </div>
+
+    </main>
+
+</body>
+</html>
