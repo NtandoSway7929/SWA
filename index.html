@@ -225,23 +225,78 @@
             margin-bottom: 50px;
         }
 
-        .work-card {
-            min-height: 400px;
-            border: 1px solid #333333;
-            display: flex;
-            align-items: flex-end;
-            padding: 40px;
-            background: linear-gradient(135deg, #151515, #090909);
-        }
+        .work-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
 
-        .work-card h3 {
-            font-size: 2.5rem;
-        }
+.work-card {
+    min-height: 430px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: flex-end;
+    padding: 35px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(
+        145deg,
+        #0031C5,
+        #002096
+    );
+    transition: transform 0.35s ease,
+                border-color 0.35s ease;
+}
 
-        .work-card p {
-            color: #888888;
-        }
+.work-card:nth-child(2) {
+    background: linear-gradient(
+        145deg,
+        #0152F4,
+        #0031C5
+    );
+}
 
+.work-card:nth-child(3) {
+    background: linear-gradient(
+        145deg,
+        #2C91FC,
+        #0152F4
+    );
+}
+
+.work-card:hover {
+    transform: translateY(-8px);
+    border-color: #77C1FC;
+}
+
+.work-card::before {
+    content: "";
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    top: -80px;
+    right: -60px;
+}
+
+.work-card h3 {
+    font-size: 3rem;
+    letter-spacing: -2px;
+    margin: 12px 0;
+}
+
+.work-card p {
+    color: rgba(255, 255, 255, 0.8);
+    max-width: 300px;
+}
+
+.work-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #FFFFFF;
+}
         /* ABOUT */
         .about {
             background: #0031C5;
@@ -322,9 +377,13 @@
                 padding: 30px;
             }
 
-            .work-card {
-                min-height: 300px;
-            }
+            .work-grid {
+    grid-template-columns: 1fr;
+}
+
+.work-card {
+    min-height: 320px;
+}
 
             footer {
                 flex-direction: column;
@@ -453,26 +512,55 @@
         <!-- WORK -->
         <section id="work">
 
-            <div class="section-label">Selected work</div>
+            <div class="section-label">The Swayphics approach</div>
 
             <h2 class="section-title">
-                Ideas we've<br>
-                brought to life.
+                From idea<br>
+                to identity.
             </h2>
 
             <p class="work-intro">
-                A growing collection of branding, design and digital
-                projects created through Swayphics.
+                We don't just make things look good. We combine creativity,
+                strategy and execution to help businesses show up with
+                clarity, confidence and character.
             </p>
 
-            <div class="work-card">
-                <div>
-                    <h3>More coming soon.</h3>
-                    <p>
-                        We're building something worth showing.
-                    </p>
-                </div>
-            </div>
+            <div class="work-grid">
+
+    <div class="work-card">
+        <div>
+            <span class="work-tag">01 — BRAND</span>
+            <h3>Identity</h3>
+            <p>
+                Building visual identities that give businesses
+                something recognizable to own.
+            </p>
+        </div>
+    </div>
+
+    <div class="work-card">
+        <div>
+            <span class="work-tag">02 — DIGITAL</span>
+            <h3>Presence</h3>
+            <p>
+                Creating digital experiences that turn attention
+                into meaningful interaction.
+            </p>
+        </div>
+    </div>
+
+    <div class="work-card">
+        <div>
+            <span class="work-tag">03 — CONTENT</span>
+            <h3>Expression</h3>
+            <p>
+                Developing visual content that gives brands
+                personality across every platform.
+            </p>
+        </div>
+    </div>
+
+</div>
 
         </section>
 
