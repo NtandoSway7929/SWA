@@ -358,6 +358,38 @@
             margin-bottom: 35px;
         }
 
+        .contact-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.contact-email {
+    margin-top: 55px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.contact-email span {
+    color: #77C1FC;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.contact-email a {
+    font-size: 1.2rem;
+    color: #FFFFFF;
+    transition: color 0.3s ease;
+}
+
+.contact-email a:hover {
+    color: #77C1FC;
+}
+
         /* FOOTER */
         footer {
             padding: 40px 7%;
@@ -641,26 +673,46 @@
         <!-- CTA -->
         <section class="cta" id="contact">
 
-            <div class="section-label">Let's build</div>
+    <div class="section-label">Start a project</div>
 
-            <h2>
-                Your idea.<br>
-                Our design.
-            </h2>
+    <h2>
+        Let's make<br>
+        something matter.
+    </h2>
 
-            <p>
-                Ready to turn your idea into something real?
-            </p>
+    <p>
+        Have an idea, a business or a brand that needs
+        to move forward? Let's talk.
+    </p>
 
-            <a
-                href="https://instagram.com/swayphics"
-                target="_blank"
-                class="btn btn-primary"
-            >
-                @swayphics
-            </a>
+    <div class="contact-buttons">
 
-        </section>
+        <a
+            href="https://wa.me/YOURNUMBER"
+            target="_blank"
+            class="btn btn-primary"
+        >
+            WhatsApp Swayphics →
+        </a>
+
+        <a
+            href="https://instagram.com/swayphics"
+            target="_blank"
+            class="btn btn-secondary"
+        >
+            Instagram @swayphics
+        </a>
+
+    </div>
+
+    <div class="contact-email">
+        <span>Email</span>
+        <a href="mailto:YOUR_EMAIL">
+            YOUR_EMAIL
+        </a>
+    </div>
+
+</section>
 
     </main>
 
