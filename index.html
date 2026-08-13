@@ -1401,6 +1401,128 @@ footer strong {
                 #0152F4 100%
             );
     }
+
+    /* =========================================================
+   SWAYPHICS 2.0 — PHASE 3
+   HERO VISUAL
+   ========================================================= */
+
+.hero {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: 40px;
+    padding-left: 7%;
+    padding-right: 4%;
+}
+
+.hero-content {
+    max-width: 650px;
+    padding: 100px 0 150px;
+}
+
+.hero-visual {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.hero-visual::before {
+    content: "";
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    right: 5%;
+    top: 10%;
+    background: #2C91FC;
+    opacity: 0.16;
+    filter: blur(80px);
+    border-radius: 50%;
+    z-index: -1;
+}
+
+.hero-visual img {
+    display: block;
+    width: min(760px, 100%);
+    height: auto;
+    border-radius: 28px 0 0 28px;
+    object-fit: cover;
+    box-shadow:
+        0 30px 70px rgba(0, 32, 150, 0.20);
+    transform: translateX(3%);
+}
+
+
+/* -------------------------
+   HERO RESPONSIVE
+   ------------------------- */
+
+@media (max-width: 900px) {
+
+    .hero {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding-left: 6%;
+        padding-right: 6%;
+        padding-top: 40px;
+    }
+
+    .hero-content {
+        max-width: 700px;
+        padding: 70px 0 20px;
+    }
+
+    .hero-visual {
+        justify-content: center;
+        padding-bottom: 140px;
+    }
+
+    .hero-visual img {
+        width: 100%;
+        max-width: 720px;
+        border-radius: 24px;
+        transform: none;
+    }
+}
+
+
+@media (max-width: 700px) {
+
+    .hero {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding-left: 5%;
+        padding-right: 5%;
+    }
+
+    .hero-content {
+        padding: 55px 0 15px;
+    }
+
+    .hero-visual {
+        padding-bottom: 120px;
+    }
+
+    .hero-visual img {
+        width: 100%;
+        border-radius: 20px;
+        box-shadow:
+            0 20px 45px rgba(0, 32, 150, 0.16);
+    }
+
+    .hero-visual::before {
+        width: 90%;
+        height: 70%;
+        right: 5%;
+        top: 15%;
+        filter: blur(55px);
+    }
+}
 }
         
     </style>
@@ -1428,7 +1550,8 @@ footer strong {
     <main>
 
         <!-- HERO -->
-        <section class="hero">
+       <section class="hero">
+
     <div class="hero-content">
 
         <div class="eyebrow">Creative & Design Lab</div>
@@ -1439,22 +1562,30 @@ footer strong {
         </h1>
 
         <p>
-            Swayphics helps ambitious businesses turn ideas into
-            distinctive brands, compelling content and digital
-            experiences that move people.
+            Swayphics helps businesses turn ideas into distinctive
+            brands, compelling content and visual experiences built
+            to stand out and move business forward.
         </p>
 
         <div class="buttons">
-            <a href="#services" class="btn btn-primary">
-                Explore Swayphics
+            <a href="#brand-identity" class="btn btn-primary">
+                Build My Brand →
             </a>
 
-            <a href="#contact" class="btn btn-secondary">
-                Start a Project →
+            <a href="#services" class="btn btn-secondary">
+                Explore Services
             </a>
         </div>
 
     </div>
+
+    <div class="hero-visual">
+        <img
+            src="swayphics-hero-workspace.png"
+            alt="Swayphics creative branding workspace"
+        >
+    </div>
+
 </section>
         </section>
 
