@@ -451,6 +451,117 @@
         transform: translateX(-50%);
     }
 }
+        /* FEATURED SERVICE */
+
+.featured-service {
+    background: #002096;
+    position: relative;
+    overflow: hidden;
+}
+
+.featured-service::before {
+    content: "";
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: #0152F4;
+    opacity: 0.25;
+    filter: blur(120px);
+    top: -200px;
+    right: -150px;
+}
+
+.featured-service-header {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr;
+    gap: 80px;
+    align-items: end;
+    margin-bottom: 70px;
+}
+
+.featured-service .section-title {
+    margin-bottom: 0;
+}
+
+.featured-service .section-title span {
+    color: #77C1FC;
+}
+
+.featured-service-intro {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 1.05rem;
+    max-width: 430px;
+}
+
+.identity-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.identity-item {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 25px;
+    padding: 40px;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    transition: background 0.3s ease;
+}
+
+.identity-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.identity-number {
+    color: #77C1FC;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.identity-item h3 {
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+}
+
+.identity-item p {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.95rem;
+    max-width: 450px;
+}
+
+.featured-service-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: 60px;
+    padding-top: 35px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 40px;
+}
+
+.featured-label {
+    display: block;
+    color: #77C1FC;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.featured-service-footer p {
+    color: rgba(255, 255, 255, 0.8);
+}
 
         /* MOBILE */
         @media (max-width: 700px) {
@@ -578,6 +689,32 @@
         flex-direction: column;
         gap: 10px;
     }
+
+            .featured-service-header {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    margin-bottom: 50px;
+}
+
+.identity-grid {
+    grid-template-columns: 1fr;
+}
+
+.identity-item {
+    grid-template-columns: 45px 1fr;
+    padding: 30px 25px;
+}
+
+.featured-service-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 30px;
+}
+
+.featured-service-footer .btn {
+    width: 100%;
+    text-align: center;
+}
 }
     </style>
 </head>
@@ -589,6 +726,7 @@
 
         <ul class="nav-links">
             <li><a href="#services">Services</a></li>
+            <li><a href="#brand-identity">Brand Identity</a></li>
             <li><a href="#work">Our Work</a></li>
             <li><a href="#about">About</a></li>
             <li><a href="#contact">Let's Talk</a></li>
@@ -713,6 +851,105 @@
 
             </div>
         </section>
+
+        <!-- FEATURED SERVICE -->
+<section class="featured-service" id="brand-identity">
+
+    <div class="featured-service-header">
+        <div>
+            <div class="section-label">Featured service</div>
+
+            <h2 class="section-title">
+                Brand identity<br>
+                <span>worth remembering.</span>
+            </h2>
+        </div>
+
+        <p class="featured-service-intro">
+            Your business deserves more than a logo. Build a
+            distinctive visual identity that makes your business
+            look professional, consistent and ready for the market.
+        </p>
+    </div>
+
+    <div class="identity-grid">
+
+        <div class="identity-item">
+            <div class="identity-number">01</div>
+            <div>
+                <h3>Logo System</h3>
+                <p>
+                    Primary logo, logo variations and brand mark
+                    designed to give your business a recognisable
+                    visual signature.
+                </p>
+            </div>
+        </div>
+
+        <div class="identity-item">
+            <div class="identity-number">02</div>
+            <div>
+                <h3>Colour System</h3>
+                <p>
+                    A considered colour palette with colour codes
+                    and usage guidance to keep your brand consistent.
+                </p>
+            </div>
+        </div>
+
+        <div class="identity-item">
+            <div class="identity-number">03</div>
+            <div>
+                <h3>Typography</h3>
+                <p>
+                    Primary and supporting typefaces with a clear
+                    hierarchy for consistent brand communication.
+                </p>
+            </div>
+        </div>
+
+        <div class="identity-item">
+            <div class="identity-number">04</div>
+            <div>
+                <h3>Brand Guidelines</h3>
+                <p>
+                    Practical guidelines covering logo, colour and
+                    typography usage to protect your brand identity.
+                </p>
+            </div>
+        </div>
+
+        <div class="identity-item">
+            <div class="identity-number">05</div>
+            <div>
+                <h3>Brand Applications</h3>
+                <p>
+                    Essential branded assets including social media
+                    graphics, templates and business card designs.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="featured-service-footer">
+
+        <div>
+            <span class="featured-label">The outcome</span>
+
+            <p>
+                A complete visual foundation your business can
+                confidently build on.
+            </p>
+        </div>
+
+        <a href="#contact" class="btn btn-primary">
+            Build My Brand →
+        </a>
+
+    </div>
+
+</section>
 
         <!-- WORK -->
         <section id="work">
