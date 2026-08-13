@@ -1523,7 +1523,124 @@ footer strong {
         filter: blur(55px);
     }
 }
+
+    /* =========================================================
+   SWAYPHICS HERO — BLENDED IMAGE + FRONT WAVE
+   ========================================================= */
+
+.hero {
+    overflow: hidden;
 }
+
+/* Put the image behind the wave */
+.hero-visual {
+    position: relative;
+    z-index: 1;
+}
+
+/* Make the image dissolve into the white hero */
+.hero-visual img {
+    border-radius: 0;
+    box-shadow: none;
+    
+    /* Fade the image into the white background */
+    -webkit-mask-image:
+        linear-gradient(
+            to left,
+            black 0%,
+            black 68%,
+            rgba(0, 0, 0, 0.85) 78%,
+            rgba(0, 0, 0, 0.45) 88%,
+            transparent 100%
+        );
+
+    mask-image:
+        linear-gradient(
+            to left,
+            black 0%,
+            black 68%,
+            rgba(0, 0, 0, 0.85) 78%,
+            rgba(0, 0, 0, 0.45) 88%,
+            transparent 100%
+        );
+
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+
+    transform: translateX(3%);
+}
+
+/* Add a soft white blend over the left side */
+.hero-visual::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 1) 0%,
+            rgba(255, 255, 255, 0.92) 8%,
+            rgba(255, 255, 255, 0.45) 22%,
+            rgba(255, 255, 255, 0) 48%
+        );
+    pointer-events: none;
+}
+
+/* Bring the Swayphics wave to the FRONT */
+.hero::after {
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Keep the text above everything */
+.hero-content {
+    position: relative;
+    z-index: 4;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .hero-visual img {
+        -webkit-mask-image:
+            linear-gradient(
+                to bottom,
+                black 0%,
+                black 78%,
+                rgba(0, 0, 0, 0.8) 88%,
+                transparent 100%
+            );
+
+        mask-image:
+            linear-gradient(
+                to bottom,
+                black 0%,
+                black 78%,
+                rgba(0, 0, 0, 0.8) 88%,
+                transparent 100%
+            );
+
+        transform: none;
+    }
+
+    .hero-visual::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0) 60%,
+                rgba(255, 255, 255, 0.5) 82%,
+                rgba(255, 255, 255, 1) 100%
+            );
+    }
+}
+
         
     </style>
 </head>
