@@ -45,10 +45,14 @@
         }
 
         .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            letter-spacing: -1px;
-        }
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+}
+
+.logo span {
+    color: #2C91FC;
+}
 
         .logo span {
             color: #2C91FC;
@@ -140,13 +144,15 @@
         }
 
         .btn-primary {
-            background: #ffffff;
-            color: #000000;
-        }
+    background: #FFFFFF;
+    color: #002096;
+    box-shadow: 0 0 0 rgba(119, 193, 252, 0);
+}
 
-        .btn-primary:hover {
-            transform: translateY(-3px);
-        }
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 35px rgba(119, 193, 252, 0.25);
+}
 
         .btn-secondary {
             border: 1px solid #444444;
@@ -406,6 +412,46 @@
             color: #ffffff;
         }
 
+        .brand-strip {
+    overflow: hidden;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    background: #002096;
+    padding: 18px 0;
+}
+
+.brand-strip-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 25s linear infinite;
+}
+
+.brand-strip span {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 0 30px;
+    color: #FFFFFF;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+}
+
+.brand-strip span::after {
+    content: "✦";
+    color: #77C1FC;
+}
+
+@keyframes marquee {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-50%);
+    }
+}
+
         /* MOBILE */
         @media (max-width: 700px) {
 
@@ -579,6 +625,21 @@
 
             </div>
         </section>
+
+                <div class="brand-strip">
+            <div class="brand-strip-track">
+                <span>BRANDING</span>
+                <span>DESIGN</span>
+                <span>DIGITAL</span>
+                <span>STRATEGY</span>
+                <span>CREATIVITY</span>
+                <span>BRANDING</span>
+                <span>DESIGN</span>
+                <span>DIGITAL</span>
+                <span>STRATEGY</span>
+                <span>CREATIVITY</span>
+            </div>
+        </div>++
 
         <!-- SERVICES -->
         <section class="services" id="services">
