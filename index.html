@@ -1523,118 +1523,180 @@ footer strong {
         filter: blur(55px);
     }
 }
-
-/* =========================================================
-   SWAYPHICS 2.0 — HERO FINAL
+   /* =========================================================
+   SWAYPHICS — HERO BACKGROUND COMPOSITION
    ========================================================= */
 
 .hero {
     position: relative;
-    z-index: 2;
-    overflow: hidden;
-}
-
-/* Keep content above the visual layers */
-.hero-content {
-    position: relative;
-    z-index: 6;
-}
-
-/* Image container */
-.hero-visual {
-    position: relative;
-    z-index: 3;
-    min-width: 0;
-    width: 100%;
+    min-height: 760px;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    overflow: hidden;
+    isolation: isolate;
+
+    padding: 0 7%;
+
+    background: #ffffff;
 }
 
-/* Image itself */
-.hero-visual img {
-    display: block;
+/* -----------------------------------------
+   FULL HERO IMAGE
+   ----------------------------------------- */
+
+.hero-visual {
+    position: absolute;
+    inset: 0;
 
     width: 100%;
-    max-width: 760px;
-    height: auto;
+    height: 100%;
 
-    object-fit: contain;
+    z-index: -2;
 
-    border-radius: 28px;
-
-    box-shadow:
-        0 25px 60px rgba(0, 32, 150, 0.16);
-
-    transform: none;
-
-    /* Very subtle edge fade */
-    -webkit-mask-image:
-        linear-gradient(
-            to right,
-            transparent 0%,
-            rgba(0, 0, 0, 0.65) 6%,
-            black 14%,
-            black 92%,
-            rgba(0, 0, 0, 0.80) 97%,
-            transparent 100%
-        );
-
-    mask-image:
-        linear-gradient(
-            to right,
-            transparent 0%,
-            rgba(0, 0, 0, 0.65) 6%,
-            black 14%,
-            black 92%,
-            rgba(0, 0, 0, 0.80) 97%,
-            transparent 100%
-        );
+    display: block;
 }
 
-/* Soft blue atmosphere behind the image */
-.hero-visual::before {
+.hero-visual img {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+    object-position: center;
+
+    display: block;
+
+    border-radius: 0;
+    box-shadow: none;
+}
+
+
+/* -----------------------------------------
+   WHITE GRADIENT OVER IMAGE
+   ----------------------------------------- */
+
+.hero::before {
     content: "";
+
     position: absolute;
-
-    width: 70%;
-    height: 70%;
-
-    right: 8%;
-    top: 15%;
-
-    background: #2C91FC;
-    opacity: 0.14;
-
-    filter: blur(100px);
-    border-radius: 50%;
+    inset: 0;
 
     z-index: -1;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            90deg,
+            #ffffff 0%,
+            rgba(255,255,255,0.98) 22%,
+            rgba(255,255,255,0.88) 38%,
+            rgba(255,255,255,0.42) 58%,
+            rgba(255,255,255,0.05) 78%,
+            rgba(255,255,255,0) 100%
+        );
 }
 
 
-/* =========================================================
+/* -----------------------------------------
+   TEXT
+   ----------------------------------------- */
+
+.hero-content {
+    position: relative;
+
+    z-index: 5;
+
+    max-width: 650px;
+
+    padding: 100px 0 170px;
+}
+
+
+/* -----------------------------------------
+   TEXT BACKGROUND
+   ----------------------------------------- */
+
+.hero-content::before {
+    content: "";
+
+    position: absolute;
+
+    z-index: -1;
+
+    left: -70px;
+    top: 50%;
+
+    width: 650px;
+    height: 500px;
+
+    transform: translateY(-50%);
+
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(255,255,255,0.98) 0%,
+            rgba(255,255,255,0.90) 42%,
+            rgba(255,255,255,0.55) 68%,
+            rgba(255,255,255,0) 100%
+        );
+
+    filter: blur(5px);
+
+    pointer-events: none;
+}
+
+
+/* -----------------------------------------
+   BLUE BRAND GLOW
+   ----------------------------------------- */
+
+.hero-visual::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(44,145,252,0.10),
+            rgba(0,50,200,0.05),
+            transparent 60%
+        );
+
+    pointer-events: none;
+}
+
+
+/* -----------------------------------------
    SWAYPHICS WAVE
-   The wave now lives INSIDE the hero.
-   ========================================================= */
+   ----------------------------------------- */
+
+.hero .brand-wave {
+    display: none;
+}
 
 .hero::after {
     content: "";
 
     position: absolute;
 
-    left: -8%;
-    bottom: -1px;
+    z-index: 10;
 
-    width: 116%;
-    height: 145px;
+    left: -5%;
+    bottom: -70px;
+
+    width: 110%;
+    height: 170px;
 
     background:
         linear-gradient(
-            110deg,
+            115deg,
             #2C91FC 0%,
-            #0152F4 30%,
-            #0031C5 65%,
+            #0875F5 25%,
+            #0152F4 50%,
+            #0031C5 75%,
             #002096 100%
         );
 
@@ -1645,43 +1707,10 @@ footer strong {
     transform: rotate(-2deg);
 
     box-shadow:
-        0 -5px 0 rgba(255, 255, 255, 0.95),
-        0 -12px 0 rgba(44, 145, 252, 0.22);
-
-    z-index: 5;
+        0 -5px 0 rgba(255,255,255,0.95),
+        0 -13px 0 rgba(44,145,252,0.25);
 
     pointer-events: none;
-}
-
-
-/* =========================================================
-   DESKTOP
-   ========================================================= */
-
-@media (min-width: 901px) {
-
-    .hero {
-        grid-template-columns:
-            minmax(0, 0.9fr)
-            minmax(0, 1.1fr);
-
-        min-height: 92vh;
-
-        align-items: center;
-    }
-
-    .hero-content {
-        padding-top: 80px;
-        padding-bottom: 180px;
-    }
-
-    .hero-visual {
-        padding-bottom: 90px;
-    }
-
-    .hero-visual img {
-        width: 100%;
-    }
 }
 
 
@@ -1692,45 +1721,36 @@ footer strong {
 @media (max-width: 900px) {
 
     .hero {
-        grid-template-columns: 1fr;
-    }
+        min-height: 820px;
 
-    .hero-content {
-        padding-top: 60px;
-        padding-bottom: 30px;
-    }
-
-    .hero-visual {
-        justify-content: center;
-        padding-bottom: 150px;
+        padding:
+            0 6%;
     }
 
     .hero-visual img {
-        width: 100%;
-        max-width: 720px;
-        border-radius: 24px;
+        object-position: 58% center;
+    }
 
-        -webkit-mask-image:
+    .hero::before {
+        background:
             linear-gradient(
-                to right,
-                transparent 0%,
-                black 10%,
-                black 90%,
-                transparent 100%
-            );
-
-        mask-image:
-            linear-gradient(
-                to right,
-                transparent 0%,
-                black 10%,
-                black 90%,
+                90deg,
+                #ffffff 0%,
+                rgba(255,255,255,0.96) 30%,
+                rgba(255,255,255,0.72) 50%,
+                rgba(255,255,255,0.20) 78%,
                 transparent 100%
             );
     }
 
-    .hero::after {
-        height: 120px;
+    .hero-content {
+        padding:
+            80px 0 180px;
+    }
+
+    .hero-content::before {
+        left: -80px;
+        width: 600px;
     }
 }
 
@@ -1742,55 +1762,55 @@ footer strong {
 @media (max-width: 700px) {
 
     .hero {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-    }
+        min-height: 760px;
 
-    .hero-content {
-        padding-top: 50px;
-        padding-bottom: 20px;
-    }
-
-    .hero-visual {
-        width: 100%;
-        padding-bottom: 110px;
+        padding:
+            0 5%;
     }
 
     .hero-visual img {
-        width: 100%;
-        max-width: none;
+        object-position: 65% center;
+    }
 
-        border-radius: 18px;
-
-        /* Small edge fade only */
-        -webkit-mask-image:
+    .hero::before {
+        background:
             linear-gradient(
-                to right,
-                transparent 0%,
-                black 8%,
-                black 92%,
-                transparent 100%
+                180deg,
+                rgba(255,255,255,1) 0%,
+                rgba(255,255,255,0.97) 38%,
+                rgba(255,255,255,0.68) 58%,
+                rgba(255,255,255,0.15) 78%,
+                rgba(255,255,255,0) 100%
             );
+    }
 
-        mask-image:
-            linear-gradient(
-                to right,
-                transparent 0%,
-                black 8%,
-                black 92%,
-                transparent 100%
-            );
+    .hero-content {
+        padding:
+            60px 0 160px;
+    }
+
+    .hero-content::before {
+        left: 50%;
+        top: 40%;
+
+        width: 125%;
+        height: 470px;
+
+        transform:
+            translate(-50%, -50%);
     }
 
     .hero::after {
         left: -10%;
+        bottom: -45px;
+
         width: 120%;
-        height: 90px;
+        height: 110px;
+
         transform: rotate(-3deg);
     }
 }
-        
+    
  </style>
 </head>
 
