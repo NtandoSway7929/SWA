@@ -477,15 +477,15 @@
         transform: translateX(-50%);
     }
 }
-        /* FEATURED SERVICE */
+        /*  SERVICE */
 
-.featured-service {
+.-service {
     background: #002096;
     position: relative;
     overflow: hidden;
 }
 
-.featured-service::before {
+.-service::before {
     content: "";
     position: absolute;
     width: 500px;
@@ -498,7 +498,7 @@
     right: -150px;
 }
 
-.featured-service-header {
+.-service-header {
     position: relative;
     z-index: 1;
     display: grid;
@@ -508,37 +508,233 @@
     margin-bottom: 70px;
 }
 
-.featured-service .section-title {
+.-service .section-title {
     margin-bottom: 0;
 }
 
-.featured-service .section-title span {
+.-service .section-title span {
     color: #77C1FC;
 }
 
-.featured-service-intro {
+.-service-intro {
     color: rgba(255, 255, 255, 0.75);
     font-size: 1.05rem;
     max-width: 430px;
 }
 
+/* =========================================================
+   FEATURED SERVICE — BRAND IDENTITY
+   ========================================================= */
+
 .identity-grid {
     position: relative;
     z-index: 1;
+
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    border-left: 1px solid rgba(255, 255, 255, 0.2);
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 18px;
+
+    border: 0;
 }
 
+
+/* Individual identity item */
+
 .identity-item {
+    position: relative;
+
     display: grid;
-    grid-template-columns: 60px 1fr;
-    gap: 25px;
-    padding: 40px;
-    border-right: 1px solid rgba(255, 255, 255, 0.2);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    transition: background 0.3s ease;
+
+    grid-template-columns:
+        58px 1fr;
+
+    gap: 24px;
+
+    padding: 34px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,1) 0%,
+            rgba(247,250,255,1) 100%
+        );
+
+    border:
+        1px solid rgba(0,32,150,0.08);
+
+    border-radius: 22px;
+
+    box-shadow:
+        0 12px 35px rgba(0,32,150,0.055);
+
+    overflow: hidden;
+
+    transition:
+        transform 0.35s ease,
+        box-shadow 0.35s ease,
+        border-color 0.35s ease;
+}
+
+
+/* Blue gradient accent */
+
+.identity-item::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    top: 0;
+
+    width: 4px;
+    height: 100%;
+
+    background:
+        linear-gradient(
+            180deg,
+            #2C91FC 0%,
+            #0152F4 55%,
+            #002096 100%
+        );
+
+    transform:
+        scaleY(0.25);
+
+    transform-origin: top;
+
+    transition:
+        transform 0.35s ease;
+}
+
+
+/* Soft blue glow */
+
+.identity-item::after {
+    content: "";
+
+    position: absolute;
+
+    width: 180px;
+    height: 180px;
+
+    right: -100px;
+    bottom: -100px;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.13) 0%,
+            rgba(44,145,252,0) 70%
+        );
+
+    opacity: 0;
+
+    transition:
+        opacity 0.35s ease;
+
+    pointer-events: none;
+}
+
+
+/* Hover */
+
+.identity-item:hover {
+    transform:
+        translateY(-6px);
+
+    border-color:
+        rgba(1,82,244,0.18);
+
+    box-shadow:
+        0 22px 50px rgba(0,32,150,0.10);
+}
+
+.identity-item:hover::before {
+    transform:
+        scaleY(1);
+}
+
+.identity-item:hover::after {
+    opacity: 1;
+}
+
+
+/* Number */
+
+.identity-number {
+    display: flex;
+
+    align-items: flex-start;
+    justify-content: center;
+
+    padding-top: 2px;
+
+    font-size: 0.78rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.08em;
+
+    color:
+        var(--sway-accent);
+}
+
+
+/* Heading */
+
+.identity-item h3 {
+    margin-bottom: 10px;
+
+    color:
+        var(--text-dark);
+
+    transition:
+        color 0.3s ease;
+}
+
+.identity-item:hover h3 {
+    color:
+        #0152F4;
+}
+
+
+/* Description */
+
+.identity-item p {
+    color:
+        var(--text-muted);
+
+    line-height: 1.7;
+}
+
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .identity-grid {
+        grid-template-columns: 1fr;
+
+        gap: 14px;
+    }
+
+    .identity-item {
+        grid-template-columns:
+            48px 1fr;
+
+        gap: 18px;
+
+        padding: 26px 22px;
+
+        border-radius: 19px;
+    }
+
+    .identity-number {
+        font-size: 0.72rem;
+    }
 }
 
 .identity-item:hover {
@@ -563,7 +759,7 @@
     max-width: 450px;
 }
 
-.featured-service-footer {
+.-service-footer {
     position: relative;
     z-index: 1;
     margin-top: 60px;
@@ -575,7 +771,7 @@
     gap: 40px;
 }
 
-.featured-label {
+.-label {
     display: block;
     color: #77C1FC;
     font-size: 0.7rem;
@@ -585,7 +781,7 @@
     margin-bottom: 8px;
 }
 
-.featured-service-footer p {
+.-service-footer p {
     color: rgba(255, 255, 255, 0.8);
 }
 
@@ -818,7 +1014,7 @@
         gap: 10px;
     }
 
-            .featured-service-header {
+            .-service-header {
     grid-template-columns: 1fr;
     gap: 30px;
     margin-bottom: 50px;
@@ -833,13 +1029,13 @@
     padding: 30px 25px;
 }
 
-.featured-service-footer {
+.-service-footer {
     flex-direction: column;
     align-items: flex-start;
     gap: 30px;
 }
 
-.featured-service-footer .btn {
+.-service-footer .btn {
     width: 100%;
     text-align: center;
 }
@@ -1492,29 +1688,29 @@ nav {
 }
 
 /* -------------------------
-   FEATURED BRAND IDENTITY
+    BRAND IDENTITY
    ------------------------- */
 
-.featured-service {
+.-service {
     background: var(--gradient-main);
     color: var(--white);
     overflow: hidden;
 }
 
-.featured-service::before {
+.-service::before {
     background: #77C1FC;
     opacity: 0.16;
 }
 
-.featured-service .section-title {
+.-service .section-title {
     color: var(--white);
 }
 
-.featured-service .section-title span {
+.-service .section-title span {
     color: var(--sway-highlight);
 }
 
-.featured-service-intro {
+.-service-intro {
     color: rgba(255, 255, 255, 0.78);
 }
 
@@ -1542,15 +1738,15 @@ nav {
     color: rgba(255, 255, 255, 0.70);
 }
 
-.featured-service-footer {
+.-service-footer {
     border-color: rgba(255, 255, 255, 0.16);
 }
 
-.featured-label {
+.-label {
     color: var(--sway-highlight);
 }
 
-.featured-service-footer p {
+.-service-footer p {
     color: rgba(255, 255, 255, 0.82);
 }
 
@@ -1734,7 +1930,7 @@ footer strong {
         border-radius: 20px;
     }
 
-    .featured-service {
+    .-service {
         background:
             linear-gradient(
                 155deg,
@@ -2024,7 +2220,7 @@ footer strong {
 
     </div>
 </section>
-        <!-- FEATURED SERVICE -->
+        <!--  SERVICE -->
 <section class="featured-service" id="brand-identity">
 
     <div class="featured-service-header">
