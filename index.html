@@ -521,47 +521,223 @@
     letter-spacing: 2px;
     color: #FFFFFF;
 }
-        /* ABOUT */
-        .about {
-            background: #0031C5;
-        }
 
-        .about-content {
-            max-width: 850px;
-        }
+        /* -------------------------
+           ABOUT SWAYPHICS
+           ------------------------- */
 
-        .about-content p {
-            font-size: 1.4rem;
-            color: #bbbbbb;
-            margin-bottom: 25px;
-        }
+.about {
+    position: relative;
 
-        .about-belief {
-    margin-top: 80px;
-    padding-top: 35px;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 40px;
+    background:
+        linear-gradient(
+            180deg,
+            #FFFFFF 0%,
+            #F7FAFF 100%
+        );
+
+    color:
+        var(--text-dark);
+
+    overflow: hidden;
 }
+
+
+/* Soft blue atmosphere */
+
+.about::before {
+    content: "";
+
+    position: absolute;
+
+    width: 520px;
+    height: 520px;
+
+    right: -260px;
+    top: 50px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.14) 0%,
+            rgba(44,145,252,0.05) 45%,
+            rgba(44,145,252,0) 72%
+        );
+
+    filter:
+        blur(20px);
+
+    pointer-events:
+        none;
+}
+
+
+/* Content */
+
+.about-content {
+    position: relative;
+
+    z-index: 1;
+
+    max-width:
+        850px;
+}
+
+
+/* Main heading */
+
+.about-content .section-title {
+    color:
+        var(--text-dark);
+}
+
+
+/* Paragraphs */
+
+.about-content p {
+    max-width:
+        780px;
+
+    margin:
+        0 0 25px 0;
+
+    color:
+        var(--text-muted);
+
+    font-size:
+        1.25rem;
+
+    line-height:
+        1.8;
+}
+
+
+/* Belief */
+
+.about-belief {
+    position: relative;
+
+    z-index: 1;
+
+    display: flex;
+
+    align-items:
+        flex-start;
+
+    justify-content:
+        space-between;
+
+    gap:
+        40px;
+
+    margin-top:
+        80px;
+
+    padding-top:
+        35px;
+
+    border-top:
+        1px solid rgba(0,32,150,0.10);
+}
+
+
+/* Belief label */
 
 .about-belief span {
-    color: #77C1FC;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 2px;
+    flex-shrink:
+        0;
+
+    color:
+        var(--sway-accent);
+
+    font-size:
+        0.7rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        2px;
+
+    text-transform:
+        uppercase;
 }
+
+
+/* Belief statement */
 
 .about-belief p {
-    max-width: 500px;
-    font-size: 2rem;
-    color: #FFFFFF;
-    margin: 0;
+    max-width:
+        500px;
+
+    margin:
+        0;
+
+    color:
+        var(--text-dark);
+
+    font-size:
+        2rem;
+
+    line-height:
+        1.25;
 }
 
+
+/* Highlight */
+
 .about-belief strong {
-    color: #77C1FC;
+    color:
+        #0152F4;
+}
+
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .about::before {
+        width:
+            380px;
+
+        height:
+            380px;
+
+        right:
+            -220px;
+
+        top:
+            120px;
+    }
+
+    .about-content p {
+        font-size:
+            1.05rem;
+
+        line-height:
+            1.7;
+    }
+
+    .about-belief {
+        flex-direction:
+            column;
+
+        gap:
+            20px;
+
+        margin-top:
+            55px;
+
+        padding-top:
+            28px;
+    }
+
+    .about-belief p {
+        font-size:
+            1.65rem;
+    }
 }
 
         /* CTA */
