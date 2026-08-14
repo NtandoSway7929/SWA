@@ -2069,6 +2069,121 @@ footer strong {
         height: 3px;
     }
 }
+
+    /* =========================================================
+   FEATURED SERVICE — FIX TEXT + OUTCOME
+   ========================================================= */
+
+/* Make identity descriptions visible */
+.identity-item p {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    margin: 0;
+
+    color: var(--text-muted) !important;
+
+    line-height: 1.7;
+}
+
+
+/* Keep the identity heading properly spaced */
+.identity-item h3 {
+    margin: 0 0 10px 0;
+}
+
+
+/* Fix the outcome area */
+.featured-service-footer {
+    position: relative;
+
+    z-index: 2;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 40px;
+
+    margin-top: 40px;
+
+    width: 100%;
+}
+
+
+/* Outcome text container */
+.featured-service-footer > div {
+    flex: 1;
+
+    min-width: 0;
+}
+
+
+/* Outcome label */
+.featured-service-footer .featured-label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: var(--sway-accent);
+
+    font-size: 0.75rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.1em;
+
+    text-transform: uppercase;
+}
+
+
+/* Outcome paragraph */
+.featured-service-footer p {
+    margin: 0;
+
+    max-width: 600px;
+
+    color: var(--text-dark);
+
+    font-size: 1rem;
+
+    line-height: 1.6;
+
+    transform: none !important;
+}
+
+
+/* Keep button normal */
+.featured-service-footer .btn {
+    flex-shrink: 0;
+
+    transform: none;
+}
+
+
+/* Mobile */
+@media (max-width: 700px) {
+
+    .featured-service-footer {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 24px;
+
+        margin-top: 30px;
+    }
+
+    .featured-service-footer p {
+        max-width: 100%;
+    }
+
+    .featured-service-footer .btn {
+        width: 100%;
+    }
+}
     
  </style>
 </head>
