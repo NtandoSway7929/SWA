@@ -741,23 +741,169 @@
 }
 
         /* CTA */
-        .cta {
-            text-align: center;
-            padding: 150px 7%;
-        }
+        /* -------------------------
+   CTA / START A PROJECT
+   ------------------------- */
 
-        .cta h2 {
-            font-size: clamp(3rem, 7vw, 6rem);
-            letter-spacing: -4px;
-            line-height: 0.95;
-            margin-bottom: 30px;
-        }
+.cta {
+    position: relative;
 
-        .cta p {
-            color: #999999;
-            margin-bottom: 35px;
-        }
+    text-align: center;
 
+    padding:
+        150px 7%;
+
+    background:
+        linear-gradient(
+            135deg,
+            #002096 0%,
+            #0031C5 45%,
+            #0152F4 100%
+        );
+
+    color:
+        #FFFFFF;
+
+    overflow: hidden;
+}
+
+
+/* Large atmospheric glow */
+
+.cta::before {
+    content: "";
+
+    position: absolute;
+
+    width: 650px;
+    height: 650px;
+
+    top: -330px;
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    border-radius:
+        50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(119,193,252,0.30) 0%,
+            rgba(119,193,252,0.10) 40%,
+            rgba(119,193,252,0) 72%
+        );
+
+    filter:
+        blur(20px);
+
+    pointer-events:
+        none;
+}
+
+
+/* Secondary glow */
+
+.cta::after {
+    content: "";
+
+    position: absolute;
+
+    width: 450px;
+    height: 450px;
+
+    right: -220px;
+    bottom: -250px;
+
+    border-radius:
+        50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.22) 0%,
+            rgba(44,145,252,0) 70%
+        );
+
+    pointer-events:
+        none;
+}
+
+
+/* Keep CTA content above effects */
+
+.cta > * {
+    position: relative;
+
+    z-index: 2;
+}
+
+
+/* Section label */
+
+.cta .section-label {
+    color:
+        #77C1FC;
+}
+
+
+/* Heading */
+
+.cta h2 {
+    margin-bottom:
+        30px;
+
+    color:
+        #FFFFFF;
+
+    font-size:
+        clamp(3rem, 7vw, 6rem);
+
+    line-height:
+        0.95;
+
+    letter-spacing:
+        -4px;
+}
+
+
+/* Supporting text */
+
+.cta > p {
+    max-width:
+        560px;
+
+    margin:
+        0 auto 45px;
+
+    color:
+        rgba(255,255,255,0.72);
+
+    line-height:
+        1.7;
+}
+
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .cta {
+        padding:
+            100px 7%;
+    }
+
+    .cta h2 {
+        letter-spacing:
+            -2px;
+    }
+
+    .cta > p {
+        margin-bottom:
+            35px;
+    }
+}
         .contact-buttons {
     display: flex;
     justify-content: center;
