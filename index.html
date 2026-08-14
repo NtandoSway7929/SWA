@@ -1326,72 +1326,201 @@
     transition-delay: 0.3s;
 }
 
-        /* PROJECT ENQUIRY FORM */
+/* -------------------------
+   PROJECT FORM
+   ------------------------- */
 
 .project-form {
+    position: relative;
+
+    z-index: 3;
+
     max-width: 700px;
-    margin: 55px auto 0;
-    text-align: left;
+
+    margin:
+        55px auto 0;
+
+    text-align:
+        left;
 }
+
+
+/* Form groups */
 
 .form-group {
-    margin-bottom: 28px;
+    margin-bottom:
+        28px;
 }
 
+
+/* Labels */
+
 .form-group label {
-    display: block;
-    margin-bottom: 9px;
-    color: #77C1FC;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
+    display:
+        block;
+
+    margin-bottom:
+        10px;
+
+    color:
+        #77C1FC;
+
+    font-size:
+        0.7rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        1.5px;
+
+    text-transform:
+        uppercase;
 }
+
+
+/* Inputs */
 
 .form-group input,
 .form-group select,
 .form-group textarea {
-    width: 100%;
-    padding: 17px 18px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.05);
-    color: #FFFFFF;
-    font: inherit;
-    outline: none;
-    border-radius: 0;
+    width:
+        100%;
+
+    padding:
+        17px 18px;
+
+    border:
+        1px solid rgba(255,255,255,0.20);
+
+    border-radius:
+        12px;
+
+    background:
+        rgba(255,255,255,0.07);
+
+    color:
+        #FFFFFF;
+
+    font:
+        inherit;
+
+    outline:
+        none;
+
+    box-sizing:
+        border-box;
+
+    backdrop-filter:
+        blur(8px);
+
+    -webkit-backdrop-filter:
+        blur(8px);
+
     transition:
         border-color 0.25s ease,
-        background 0.25s ease;
+        background 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.25s ease;
 }
+
+
+/* Placeholder */
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-    color: rgba(255, 255, 255, 0.45);
+    color:
+        rgba(255,255,255,0.45);
 }
+
+
+/* Focus */
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-    border-color: #2C91FC;
-    background: rgba(255, 255, 255, 0.08);
+    border-color:
+        #77C1FC;
+
+    background:
+        rgba(255,255,255,0.11);
+
+    box-shadow:
+        0 0 0 3px rgba(119,193,252,0.10);
+
+    transform:
+        translateY(-1px);
 }
+
+
+/* Textarea */
 
 .form-group textarea {
-    resize: vertical;
-    min-height: 150px;
+    resize:
+        vertical;
+
+    min-height:
+        150px;
 }
+
+
+/* Select */
 
 .form-group select {
-    appearance: none;
+    appearance:
+        none;
+
+    -webkit-appearance:
+        none;
+
+    cursor:
+        pointer;
 }
+
+
+/* Select options */
 
 .form-group select option {
-    color: #000000;
+    color:
+        #000000;
+
+    background:
+        #FFFFFF;
 }
 
+
+/* Submit button */
+
 .project-form .btn {
-    border: none;
-    cursor: pointer;
+    border:
+        none;
+
+    cursor:
+        pointer;
+
+    margin-top:
+        5px;
+}
+
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .project-form {
+        margin-top:
+            40px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding:
+            15px 16px;
+
+        border-radius:
+            10px;
+    }
 }
         /* MOBILE */
         @media (max-width: 700px) {
