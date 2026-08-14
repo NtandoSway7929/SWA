@@ -1810,6 +1810,162 @@ footer strong {
         transform: rotate(-3deg);
     }
 }
+
+    /* =========================================================
+   SWAYPHICS HERO — FORCE DESKTOP COMPOSITION
+   ========================================================= */
+
+@media (min-width: 901px) {
+
+    .hero {
+        position: relative !important;
+        display: block !important;
+        min-height: 760px !important;
+        height: 92vh !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        isolation: isolate !important;
+    }
+
+    /* Full-screen hero image */
+    .hero .hero-visual {
+        position: absolute !important;
+        inset: 0 !important;
+
+        width: 100% !important;
+        height: 100% !important;
+
+        display: block !important;
+
+        z-index: 0 !important;
+    }
+
+    .hero .hero-visual img {
+        display: block !important;
+
+        position: absolute !important;
+        inset: 0 !important;
+
+        width: 100% !important;
+        height: 100% !important;
+
+        max-width: none !important;
+
+        object-fit: cover !important;
+        object-position: center !important;
+
+        border-radius: 0 !important;
+        box-shadow: none !important;
+
+        transform: none !important;
+
+        -webkit-mask-image: none !important;
+        mask-image: none !important;
+    }
+
+    /* White fade over LEFT side of image */
+    .hero::before {
+        content: "" !important;
+
+        position: absolute !important;
+        inset: 0 !important;
+
+        z-index: 1 !important;
+
+        background:
+            linear-gradient(
+                90deg,
+                rgba(255,255,255,1) 0%,
+                rgba(255,255,255,0.98) 18%,
+                rgba(255,255,255,0.90) 32%,
+                rgba(255,255,255,0.60) 46%,
+                rgba(255,255,255,0.20) 62%,
+                rgba(255,255,255,0) 82%
+            ) !important;
+
+        pointer-events: none !important;
+    }
+
+    /* Text */
+    .hero .hero-content {
+        position: relative !important;
+
+        z-index: 5 !important;
+
+        width: 100% !important;
+        max-width: 650px !important;
+
+        margin: 0 !important;
+
+        padding:
+            150px 0 200px 7% !important;
+    }
+
+    /* Extra white glow directly behind text */
+    .hero .hero-content::before {
+        content: "" !important;
+
+        position: absolute !important;
+
+        z-index: -1 !important;
+
+        left: -80px !important;
+        top: 50% !important;
+
+        width: 700px !important;
+        height: 520px !important;
+
+        transform: translateY(-50%) !important;
+
+        background:
+            radial-gradient(
+                ellipse,
+                rgba(255,255,255,0.98) 0%,
+                rgba(255,255,255,0.90) 45%,
+                rgba(255,255,255,0.50) 68%,
+                rgba(255,255,255,0) 100%
+            ) !important;
+
+        pointer-events: none !important;
+    }
+
+    /* BLUE WAVE — FRONT */
+    .hero::after {
+        content: "" !important;
+
+        position: absolute !important;
+
+        z-index: 10 !important;
+
+        left: -5% !important;
+        bottom: -75px !important;
+
+        width: 110% !important;
+        height: 180px !important;
+
+        background:
+            linear-gradient(
+                115deg,
+                #2C91FC 0%,
+                #0875F5 25%,
+                #0152F4 50%,
+                #0031C5 75%,
+                #002096 100%
+            ) !important;
+
+        border-radius:
+            50% 50% 0 0 /
+            100% 100% 0 0 !important;
+
+        transform: rotate(-2deg) !important;
+
+        box-shadow:
+            0 -5px 0 rgba(255,255,255,0.95),
+            0 -14px 0 rgba(44,145,252,0.25) !important;
+
+        pointer-events: none !important;
+    }
+}
     
  </style>
 </head>
