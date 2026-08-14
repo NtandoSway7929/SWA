@@ -305,9 +305,53 @@
         transform 0.35s ease,
         box-shadow 0.35s ease,
         border-color 0.35s ease;
+
+    isolation: isolate;
 }
 
+        /* Identity visual */
 
+.work-card:nth-child(1) {
+    background:
+        linear-gradient(
+            145deg,
+            #FFFFFF 0%,
+            #F2F7FF 100%
+        );
+}
+
+.work-card:nth-child(1)::before {
+    content: "";
+
+    position: absolute;
+
+    width: 300px;
+    height: 300px;
+
+    top: -90px;
+    right: -70px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.22) 0%,
+            rgba(1,82,244,0.08) 45%,
+            transparent 72%
+        );
+
+    z-index: -1;
+
+    transition:
+        transform 0.5s ease;
+}
+
+.work-card:nth-child(1):hover::before {
+    transform:
+        scale(1.2);
+}
+        
 /* Large atmospheric gradient */
 
 .work-card::before {
