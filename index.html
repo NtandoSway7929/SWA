@@ -911,31 +911,103 @@
     flex-wrap: wrap;
 }
 
+/* -------------------------
+   CONTACT / SOCIAL
+   ------------------------- */
+
 .contact-email {
-    margin-top: 55px;
+    position: relative;
+
+    z-index: 3;
+
     display: flex;
+
     flex-direction: column;
-    gap: 8px;
+
+    align-items: center;
+
+    gap: 10px;
+
+    margin-top:
+        60px;
+
+    padding-top:
+        30px;
+
+    border-top:
+        1px solid rgba(255,255,255,0.14);
 }
+
+
+/* Label */
 
 .contact-email span {
-    color: #77C1FC;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
+    color:
+        #77C1FC;
+
+    font-size:
+        0.7rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        2px;
+
+    line-height:
+        1.2;
+
+    text-transform:
+        uppercase;
 }
 
+
+/* Instagram link */
+
 .contact-email a {
-    font-size: 1.2rem;
-    color: #FFFFFF;
-    transition: color 0.3s ease;
+    color:
+        #FFFFFF;
+
+    font-size:
+        1.15rem;
+
+    font-weight:
+        600;
+
+    text-decoration:
+        none;
+
+    transition:
+        color 0.3s ease,
+        transform 0.3s ease;
 }
 
 .contact-email a:hover {
-    color: #77C1FC;
+    color:
+        #77C1FC;
+
+    transform:
+        translateY(-2px);
 }
 
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .contact-email {
+        margin-top:
+            45px;
+
+        padding-top:
+            25px;
+    }
+
+    .contact-email a {
+        font-size:
+            1.05rem;
+    }
+}
         /* FOOTER */
         footer {
             padding: 40px 7%;
