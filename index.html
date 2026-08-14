@@ -257,70 +257,262 @@
             margin-bottom: 50px;
         }
 
-        .work-grid {
+        /* -------------------------
+   SWAYPHICS APPROACH
+   ------------------------- */
+
+.work-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
     gap: 20px;
 }
 
+
+/* Approach cards */
+
 .work-card {
-    min-height: 430px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    display: flex;
-    align-items: flex-end;
-    padding: 35px;
     position: relative;
+
+    min-height: 430px;
+
+    display: flex;
+
+    align-items: flex-end;
+
+    padding: 35px;
+
     overflow: hidden;
-    background: linear-gradient(
-        145deg,
-        #0031C5,
-        #002096
-    );
-    transition: transform 0.35s ease,
-                border-color 0.35s ease;
+
+    background:
+        linear-gradient(
+            145deg,
+            #FFFFFF 0%,
+            #F4F8FF 100%
+        );
+
+    border:
+        1px solid rgba(0,32,150,0.09);
+
+    border-radius: 24px;
+
+    box-shadow:
+        0 14px 40px rgba(0,32,150,0.06);
+
+    transition:
+        transform 0.35s ease,
+        box-shadow 0.35s ease,
+        border-color 0.35s ease;
 }
 
-.work-card:nth-child(2) {
-    background: linear-gradient(
-        145deg,
-        #0152F4,
-        #0031C5
-    );
-}
 
-.work-card:nth-child(3) {
-    background: linear-gradient(
-        145deg,
-        #2C91FC,
-        #0152F4
-    );
-}
-
-.work-card:hover {
-    transform: translateY(-8px);
-    border-color: #77C1FC;
-}
+/* Large atmospheric gradient */
 
 .work-card::before {
     content: "";
+
     position: absolute;
-    width: 220px;
-    height: 220px;
+
+    width: 330px;
+    height: 330px;
+
+    top: -170px;
+    right: -130px;
+
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.12);
-    top: -80px;
-    right: -60px;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.20) 0%,
+            rgba(1,82,244,0.08) 45%,
+            rgba(1,82,244,0) 72%
+        );
+
+    transition:
+        transform 0.45s ease,
+        opacity 0.35s ease;
+
+    pointer-events: none;
 }
+
+
+/* Bottom gradient atmosphere */
+
+.work-card::after {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    bottom: 0;
+
+    width: 100%;
+    height: 55%;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,0) 0%,
+            rgba(239,246,255,0.80) 100%
+        );
+
+    pointer-events: none;
+}
+
+
+/* Card content */
+
+.work-card > div {
+    position: relative;
+
+    z-index: 2;
+
+    width: 100%;
+}
+
+
+/* Card number/tag */
+
+.work-tag {
+    display: inline-block;
+
+    margin-bottom: 8px;
+
+    color:
+        var(--sway-accent);
+
+    font-size:
+        0.72rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.12em;
+}
+
+
+/* Heading */
 
 .work-card h3 {
-    font-size: 3rem;
-    letter-spacing: -2px;
-    margin: 12px 0;
+    margin:
+        8px 0 12px;
+
+    color:
+        var(--text-dark);
+
+    font-size:
+        3rem;
+
+    line-height:
+        0.95;
+
+    letter-spacing:
+        -2px;
+
+    transition:
+        color 0.3s ease;
 }
 
+
+/* Description */
+
 .work-card p {
-    color: rgba(255, 255, 255, 0.8);
-    max-width: 300px;
+    max-width:
+        300px;
+
+    margin:
+        0;
+
+    color:
+        var(--text-muted);
+
+    line-height:
+        1.7;
+}
+
+
+/* Hover */
+
+.work-card:hover {
+    transform:
+        translateY(-8px);
+
+    border-color:
+        rgba(1,82,244,0.18);
+
+    box-shadow:
+        0 25px 55px rgba(0,32,150,0.11);
+}
+
+.work-card:hover::before {
+    transform:
+        scale(1.15);
+}
+
+.work-card:hover h3 {
+    color:
+        #0152F4;
+}
+
+
+/* Make each card subtly different */
+
+.work-card:nth-child(2) {
+    background:
+        linear-gradient(
+            145deg,
+            #FFFFFF 0%,
+            #F2F7FF 100%
+        );
+}
+
+.work-card:nth-child(3) {
+    background:
+        linear-gradient(
+            145deg,
+            #FFFFFF 0%,
+            #F6FAFF 100%
+        );
+}
+
+
+/* Mobile */
+
+@media (max-width: 900px) {
+
+    .work-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+    .work-card {
+        min-height:
+            360px;
+    }
+}
+
+
+@media (max-width: 700px) {
+
+    .work-card {
+        min-height:
+            320px;
+
+        padding:
+            28px 24px;
+
+        border-radius:
+            20px;
+    }
+
+    .work-card h3 {
+        font-size:
+            2.6rem;
+    }
 }
 
 .work-tag {
