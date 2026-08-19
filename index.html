@@ -36,7 +36,7 @@
 <title>Swayphics — Build a Brand Worth Remembering</title>
     <link rel="icon" type="image/png" href="swayphics-logo.png">
 
-    <style>
+    <>
         * {
             margin: 0;
             padding: 0;
@@ -87,7 +87,7 @@
         .nav-links {
             display: flex;
             gap: 30px;
-            list-style: none;
+            list-: none;
         }
 
         .nav-links a {
@@ -3338,6 +3338,215 @@ footer strong {
     }
 }
 
+        /* =========================================================
+   SWAYPHICS — FINAL HERO VIDEO SYSTEM
+   ========================================================= */
+
+.hero {
+    position: relative !important;
+
+    display: flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    min-height: 92vh !important;
+
+    padding: 140px 6% 120px !important;
+
+    overflow: hidden !important;
+
+    isolation: isolate !important;
+
+    background: #ffffff !important;
+}
+
+
+/* ---------------------------------------------------------
+   VIDEO
+   --------------------------------------------------------- */
+
+.hero-video {
+    position: absolute !important;
+
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    display: block !important;
+
+    object-fit: cover !important;
+    object-position: center center !important;
+
+    z-index: 0 !important;
+
+    pointer-events: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   SOFT EDGE FADE
+   --------------------------------------------------------- */
+
+.hero-video-fade {
+    position: absolute !important;
+
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+
+    z-index: 1 !important;
+
+    pointer-events: none !important;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(255,255,255,0.00) 0%,
+            rgba(255,255,255,0.04) 28%,
+            rgba(255,255,255,0.18) 48%,
+            rgba(255,255,255,0.48) 66%,
+            rgba(255,255,255,0.78) 82%,
+            rgba(255,255,255,0.96) 94%,
+            #ffffff 100%
+        );
+}
+
+
+/* ---------------------------------------------------------
+   CENTER TEXT
+   --------------------------------------------------------- */
+
+.hero-content {
+    position: relative !important;
+
+    z-index: 2 !important;
+
+    width: min(900px, 100%) !important;
+
+    max-width: 900px !important;
+
+    margin: 0 auto !important;
+
+    padding: 70px 40px !important;
+
+    text-align: center !important;
+}
+
+
+/* Soft white glow directly beneath the text */
+
+.hero-content::before {
+    content: "";
+
+    position: absolute !important;
+
+    left: 50% !important;
+    top: 50% !important;
+
+    width: 850px !important;
+    height: 600px !important;
+
+    transform:
+        translate(-50%, -50%) !important;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(255,255,255,0.94) 0%,
+            rgba(255,255,255,0.82) 35%,
+            rgba(255,255,255,0.46) 60%,
+            rgba(255,255,255,0) 100%
+        ) !important;
+
+    filter: blur(12px);
+
+    z-index: -1 !important;
+
+    pointer-events: none !important;
+}
+
+
+/* Center paragraph */
+
+.hero-content p {
+    max-width: 650px !important;
+
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+
+/* Center buttons */
+
+.hero-content .buttons {
+    justify-content: center !important;
+}
+
+
+/* Center headline */
+
+.hero-content h1 {
+    max-width: 900px !important;
+
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+
+/* ---------------------------------------------------------
+   MOBILE
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+    .hero {
+        min-height: 100svh !important;
+
+        padding:
+            120px 5% 100px !important;
+    }
+
+    .hero-video {
+        object-position: center center !important;
+    }
+
+    .hero-video-fade {
+        background:
+            radial-gradient(
+                ellipse at center,
+                rgba(255,255,255,0.00) 0%,
+                rgba(255,255,255,0.08) 25%,
+                rgba(255,255,255,0.28) 45%,
+                rgba(255,255,255,0.62) 65%,
+                rgba(255,255,255,0.88) 82%,
+                #ffffff 100%
+            );
+    }
+
+    .hero-content {
+        width: 100% !important;
+
+        padding:
+            50px 18px !important;
+    }
+
+    .hero-content::before {
+        width:
+            125% !important;
+
+        height:
+            520px !important;
+    }
+}
     
  </style>
 </head>
