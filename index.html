@@ -3089,14 +3089,13 @@ footer strong {
 }
 
     /* =========================================================
-   SWAYPHICS HERO — CENTERED VIDEO
+   SWAYPHICS — HERO VIDEO FINAL
    ========================================================= */
 
 .hero {
     position: relative !important;
 
     display: flex !important;
-
     align-items: center !important;
     justify-content: center !important;
 
@@ -3108,8 +3107,14 @@ footer strong {
 
     isolation: isolate !important;
 
-    /* Remove the previous hero image */
-    background: #FFFFFF !important;
+    /* Remove old hero image/background */
+    background: transparent !important;
+}
+
+
+/* Remove the old blue hero glow */
+.hero::before {
+    display: none !important;
 }
 
 
@@ -3120,84 +3125,66 @@ footer strong {
 .hero-video {
     position: absolute !important;
 
-    inset: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
 
     width: 100% !important;
     height: 100% !important;
 
-    object-fit: cover !important;
-
-    object-position: center center !important;
-
     display: block !important;
 
-    z-index: -3 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    object-fit: cover !important;
+    object-position: center center !important;
+
+    z-index: 0 !important;
 
     pointer-events: none !important;
-
-    /* Soften the video itself at the edges */
-    -webkit-mask-image:
-        radial-gradient(
-            ellipse at center,
-            black 0%,
-            black 45%,
-            rgba(0,0,0,0.92) 58%,
-            rgba(0,0,0,0.55) 72%,
-            transparent 100%
-        );
-
-    mask-image:
-        radial-gradient(
-            ellipse at center,
-            black 0%,
-            black 45%,
-            rgba(0,0,0,0.92) 58%,
-            rgba(0,0,0,0.55) 72%,
-            transparent 100%
-        );
-
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
 }
 
 
 /* =========================================================
-   WHITE EDGE FADE
+   SOFT EDGE FADE
    ========================================================= */
 
 .hero-video-fade {
     position: absolute !important;
 
-    inset: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
 
-    z-index: -2 !important;
+    z-index: 1 !important;
 
     pointer-events: none !important;
 
     background:
         radial-gradient(
             ellipse at center,
-            rgba(255,255,255,0.04) 0%,
-            rgba(255,255,255,0.08) 28%,
-            rgba(255,255,255,0.34) 52%,
-            rgba(255,255,255,0.72) 72%,
-            rgba(255,255,255,0.96) 90%,
+            rgba(255,255,255,0) 0%,
+            rgba(255,255,255,0.04) 25%,
+            rgba(255,255,255,0.16) 45%,
+            rgba(255,255,255,0.42) 63%,
+            rgba(255,255,255,0.72) 78%,
+            rgba(255,255,255,0.94) 91%,
             #FFFFFF 100%
         );
 }
 
 
 /* =========================================================
-   CENTER TEXT AREA
+   CENTERED HERO CONTENT
    ========================================================= */
 
 .hero-content {
     position: relative !important;
 
-    z-index: 5 !important;
+    z-index: 2 !important;
 
     width: min(900px, 100%) !important;
 
@@ -3211,64 +3198,69 @@ footer strong {
 }
 
 
-/* Soft white glow directly behind the text */
+/* Soft white reading area behind text */
 
 .hero-content::before {
     content: "";
 
-    position: absolute;
+    position: absolute !important;
 
-    z-index: -1;
+    left: 50% !important;
+    top: 50% !important;
 
-    left: 50%;
-    top: 50%;
-
-    width: 900px;
-    height: 620px;
+    width: 850px !important;
+    height: 600px !important;
 
     transform:
-        translate(-50%, -50%);
+        translate(-50%, -50%) !important;
 
     background:
         radial-gradient(
             ellipse at center,
-            rgba(255,255,255,0.97) 0%,
-            rgba(255,255,255,0.88) 38%,
-            rgba(255,255,255,0.52) 62%,
+            rgba(255,255,255,0.94) 0%,
+            rgba(255,255,255,0.82) 35%,
+            rgba(255,255,255,0.42) 62%,
             rgba(255,255,255,0) 100%
         );
 
-    filter:
-        blur(10px);
+    filter: blur(12px);
+
+    z-index: -1 !important;
 
     pointer-events: none;
 }
 
 
-/* Center the paragraph */
+/* Center text elements */
 
-.hero-content p {
+.hero-content h1 {
+    max-width: 900px !important;
+
     margin-left: auto !important;
     margin-right: auto !important;
 
-    max-width: 650px !important;
+    color: var(--text-dark) !important;
 }
 
+.hero-content p {
+    max-width: 650px !important;
 
-/* Center the buttons */
+    margin-left: auto !important;
+    margin-right: auto !important;
+
+    color: var(--text-muted) !important;
+}
 
 .hero-content .buttons {
     justify-content: center !important;
 }
 
 
-/* Slightly stronger headline */
+/* Keep the text above the reading glow */
 
-.hero-content h1 {
-    max-width: 900px;
-
-    margin-left: auto;
-    margin-right: auto;
+.hero-content > * {
+    position: relative;
+    z-index: 2;
 }
 
 
@@ -3281,42 +3273,22 @@ footer strong {
     .hero {
         min-height: 100svh !important;
 
-        padding:
-            120px 5% 100px !important;
+        padding: 120px 5% 100px !important;
     }
 
     .hero-video {
         object-position: center center !important;
-
-        -webkit-mask-image:
-            radial-gradient(
-                ellipse at center,
-                black 0%,
-                black 38%,
-                rgba(0,0,0,0.86) 55%,
-                rgba(0,0,0,0.48) 72%,
-                transparent 100%
-            );
-
-        mask-image:
-            radial-gradient(
-                ellipse at center,
-                black 0%,
-                black 38%,
-                rgba(0,0,0,0.86) 55%,
-                rgba(0,0,0,0.48) 72%,
-                transparent 100%
-            );
     }
 
     .hero-video-fade {
         background:
             radial-gradient(
                 ellipse at center,
-                rgba(255,255,255,0.08) 0%,
-                rgba(255,255,255,0.20) 28%,
-                rgba(255,255,255,0.55) 55%,
-                rgba(255,255,255,0.88) 78%,
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.08) 22%,
+                rgba(255,255,255,0.24) 42%,
+                rgba(255,255,255,0.55) 62%,
+                rgba(255,255,255,0.84) 80%,
                 #FFFFFF 100%
             );
     }
@@ -3324,17 +3296,12 @@ footer strong {
     .hero-content {
         width: 100% !important;
 
-        padding:
-            50px 18px !important;
+        padding: 50px 18px !important;
     }
 
     .hero-content::before {
-        width: 125%;
-        height: 520px;
-    }
-
-    .hero-content p {
-        max-width: 520px !important;
+        width: 125% !important;
+        height: 520px !important;
     }
 }
 
