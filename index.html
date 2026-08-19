@@ -3089,106 +3089,255 @@ footer strong {
 }
 
     /* =========================================================
-   PHASE 1 — HERO VIDEO
+   SWAYPHICS HERO — CENTERED VIDEO
    ========================================================= */
 
 .hero {
-    position: relative;
-    overflow: hidden;
-    isolation: isolate;
+    position: relative !important;
+
+    display: flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    min-height: 92vh !important;
+
+    padding: 140px 6% 120px !important;
+
+    overflow: hidden !important;
+
+    isolation: isolate !important;
+
+    /* Remove the previous hero image */
+    background: #FFFFFF !important;
 }
 
-/* Full-screen video */
+
+/* =========================================================
+   VIDEO BACKGROUND
+   ========================================================= */
 
 .hero-video {
-    position: absolute;
-    inset: 0;
+    position: absolute !important;
 
-    width: 100%;
-    height: 100%;
+    inset: 0 !important;
 
-    object-fit: cover;
-    object-position: center;
+    width: 100% !important;
+    height: 100% !important;
 
-    z-index: -3;
+    object-fit: cover !important;
 
-    pointer-events: none;
+    object-position: center center !important;
+
+    display: block !important;
+
+    z-index: -3 !important;
+
+    pointer-events: none !important;
+
+    /* Soften the video itself at the edges */
+    -webkit-mask-image:
+        radial-gradient(
+            ellipse at center,
+            black 0%,
+            black 45%,
+            rgba(0,0,0,0.92) 58%,
+            rgba(0,0,0,0.55) 72%,
+            transparent 100%
+        );
+
+    mask-image:
+        radial-gradient(
+            ellipse at center,
+            black 0%,
+            black 45%,
+            rgba(0,0,0,0.92) 58%,
+            rgba(0,0,0,0.55) 72%,
+            transparent 100%
+        );
+
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
 }
 
-/* White/Swayphics gradient over the video */
 
-.hero-video-overlay {
-    position: absolute;
-    inset: 0;
+/* =========================================================
+   WHITE EDGE FADE
+   ========================================================= */
 
-    z-index: -2;
+.hero-video-fade {
+    position: absolute !important;
 
-    pointer-events: none;
+    inset: 0 !important;
+
+    z-index: -2 !important;
+
+    pointer-events: none !important;
 
     background:
-        linear-gradient(
-            90deg,
-            rgba(255,255,255,0.99) 0%,
-            rgba(255,255,255,0.97) 20%,
-            rgba(255,255,255,0.88) 34%,
-            rgba(255,255,255,0.58) 50%,
-            rgba(255,255,255,0.18) 70%,
-            rgba(255,255,255,0) 100%
+        radial-gradient(
+            ellipse at center,
+            rgba(255,255,255,0.04) 0%,
+            rgba(255,255,255,0.08) 28%,
+            rgba(255,255,255,0.34) 52%,
+            rgba(255,255,255,0.72) 72%,
+            rgba(255,255,255,0.96) 90%,
+            #FFFFFF 100%
         );
 }
 
-/* Keep your content above the video */
+
+/* =========================================================
+   CENTER TEXT AREA
+   ========================================================= */
 
 .hero-content {
-    position: relative;
-    z-index: 5;
+    position: relative !important;
+
+    z-index: 5 !important;
+
+    width: min(900px, 100%) !important;
+
+    max-width: 900px !important;
+
+    margin: 0 auto !important;
+
+    padding: 70px 40px !important;
+
+    text-align: center !important;
 }
 
-/* Desktop */
 
-@media (min-width: 901px) {
+/* Soft white glow directly behind the text */
 
-    .hero-video {
-        object-position: center center;
-    }
+.hero-content::before {
+    content: "";
+
+    position: absolute;
+
+    z-index: -1;
+
+    left: 50%;
+    top: 50%;
+
+    width: 900px;
+    height: 620px;
+
+    transform:
+        translate(-50%, -50%);
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(255,255,255,0.97) 0%,
+            rgba(255,255,255,0.88) 38%,
+            rgba(255,255,255,0.52) 62%,
+            rgba(255,255,255,0) 100%
+        );
+
+    filter:
+        blur(10px);
+
+    pointer-events: none;
 }
 
-/* Mobile */
+
+/* Center the paragraph */
+
+.hero-content p {
+    margin-left: auto !important;
+    margin-right: auto !important;
+
+    max-width: 650px !important;
+}
+
+
+/* Center the buttons */
+
+.hero-content .buttons {
+    justify-content: center !important;
+}
+
+
+/* Slightly stronger headline */
+
+.hero-content h1 {
+    max-width: 900px;
+
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
 
 @media (max-width: 700px) {
 
-    .hero-video {
-        object-position: 65% center;
+    .hero {
+        min-height: 100svh !important;
+
+        padding:
+            120px 5% 100px !important;
     }
 
-    .hero-video-overlay {
-        background:
-            linear-gradient(
-                180deg,
-                rgba(255,255,255,1) 0%,
-                rgba(255,255,255,0.97) 30%,
-                rgba(255,255,255,0.82) 48%,
-                rgba(255,255,255,0.42) 68%,
-                rgba(255,255,255,0.08) 88%,
-                rgba(255,255,255,0) 100%
+    .hero-video {
+        object-position: center center !important;
+
+        -webkit-mask-image:
+            radial-gradient(
+                ellipse at center,
+                black 0%,
+                black 38%,
+                rgba(0,0,0,0.86) 55%,
+                rgba(0,0,0,0.48) 72%,
+                transparent 100%
+            );
+
+        mask-image:
+            radial-gradient(
+                ellipse at center,
+                black 0%,
+                black 38%,
+                rgba(0,0,0,0.86) 55%,
+                rgba(0,0,0,0.48) 72%,
+                transparent 100%
             );
     }
-}
 
-/* Respect reduced-motion preferences */
-
-@media (prefers-reduced-motion: reduce) {
-
-    .hero-video {
-        display: none;
-    }
-
-    .hero {
+    .hero-video-fade {
         background:
-            url("swayphics-hero-workspace.png")
-            center / cover no-repeat;
+            radial-gradient(
+                ellipse at center,
+                rgba(255,255,255,0.08) 0%,
+                rgba(255,255,255,0.20) 28%,
+                rgba(255,255,255,0.55) 55%,
+                rgba(255,255,255,0.88) 78%,
+                #FFFFFF 100%
+            );
+    }
+
+    .hero-content {
+        width: 100% !important;
+
+        padding:
+            50px 18px !important;
+    }
+
+    .hero-content::before {
+        width: 125%;
+        height: 520px;
+    }
+
+    .hero-content p {
+        max-width: 520px !important;
     }
 }
+
     
  </style>
 </head>
@@ -3217,19 +3366,19 @@ footer strong {
         <!-- HERO -->
        <section class="hero">
 
-           <video
-    class="hero-video"
-    autoplay
-    muted
-    loop
-    playsinline
-    preload="metadata"
-    poster="swayphics-hero-workspace.png"
->
-    <source src="swayphics-hero.mp4" type="video/mp4">
-</video>
+    <video
+        class="hero-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        aria-hidden="true"
+    >
+        <source src="swayphics-hero.mp4" type="video/mp4">
+    </video>
 
-<div class="hero-video-overlay"></div>
+    <div class="hero-video-fade"></div>
 
     <div class="hero-content">
 
@@ -3258,10 +3407,6 @@ footer strong {
             </a>
         </div>
 
-    </div>
-
-    <div class="hero-wave">
-        <div class="hero-wave-highlight"></div>
     </div>
 
 </section>
