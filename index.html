@@ -3281,17 +3281,16 @@ footer strong {
     }
 
     .hero-video-fade {
-        background:
-            radial-gradient(
-                ellipse at center,
-                rgba(255,255,255,0) 0%,
-                rgba(255,255,255,0.08) 22%,
-                rgba(255,255,255,0.24) 42%,
-                rgba(255,255,255,0.55) 62%,
-                rgba(255,255,255,0.84) 80%,
-                #FFFFFF 100%
-            );
-    }
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    z-index: 1 !important;
+
+    pointer-events: none !important;
+
+    background: transparent !important;
+}
 
     .hero-content {
         width: 100% !important;
