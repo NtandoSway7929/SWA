@@ -471,11 +471,17 @@ nav.scrolled .logo img {
 }
 
 
-/* Eyebrow */
+/* Creative & Design Lab stays left */
 
 .hero .eyebrow {
+    display: block !important;
+
+    width: 100% !important;
+
     margin:
         0 0 22px !important;
+
+    text-align: left !important;
 
     color:
         #0152F4 !important;
@@ -497,105 +503,85 @@ nav.scrolled .logo img {
 }
 
 
-/* Main heading */
+/* Main heading stays centered */
 
 .hero h1 {
-    width:
-        100% !important;
+    width: 100% !important;
 
-    max-width:
-        950px !important;
+    max-width: 950px !important;
 
-    margin:
-        0 auto 28px !important;
+    margin: 0 auto 28px !important;
 
-    color:
-        var(--text-dark) !important;
+    text-align: center !important;
+
+    color: var(--text-dark) !important;
 
     font-size:
         clamp(3.7rem, 8vw, 7.2rem) !important;
 
-    font-weight:
-        700 !important;
+    font-weight: 700 !important;
 
-    line-height:
-        0.94 !important;
+    line-height: 0.94 !important;
 
-    letter-spacing:
-        -4px !important;
+    letter-spacing: -4px !important;
 }
 
 .hero h1 span {
-    color:
-        #0152F4 !important;
+    color: #0152F4 !important;
 }
 
 
-/* Supporting paragraph */
+/* Paragraph centered */
 
 .hero p {
-    width:
-        100% !important;
+    width: 100% !important;
 
-    max-width:
-        650px !important;
+    max-width: 650px !important;
 
-    margin:
-        0 auto 34px !important;
+    margin: 0 auto 34px !important;
 
-    color:
-        var(--text-muted) !important;
+    text-align: center !important;
 
-    font-size:
-        1.08rem !important;
+    color: var(--text-muted) !important;
 
-    line-height:
-        1.7 !important;
+    font-size: 1.08rem !important;
+
+    line-height: 1.7 !important;
 }
 
 
-/* Buttons */
+/* Buttons centered */
 
 .hero .buttons {
-    display:
-        flex !important;
+    display: flex !important;
 
-    justify-content:
-        center !important;
+    justify-content: center !important;
 
-    align-items:
-        center !important;
+    align-items: center !important;
 
-    gap:
-        14px !important;
+    gap: 14px !important;
 
-    flex-wrap:
-        wrap !important;
+    flex-wrap: wrap !important;
 
-    width:
-        100% !important;
+    width: 100% !important;
 }
-
-
 /* Desktop */
 
-@media (min-width: 901px) {
+@media (max-width: 700px) {
 
-    .hero {
-        min-height:
-            92vh !important;
-
-        padding:
-            130px 7% 105px !important;
+    .hero .eyebrow {
+        text-align: left !important;
     }
 
-    .hero-content {
-        transform:
-            translateY(-4px) !important;
+    .hero h1,
+    .hero p {
+        text-align: center !important;
+    }
+
+    .hero .buttons {
+        justify-content: center !important;
     }
 }
-
-
 /* Tablet */
 
 @media (max-width: 900px) {
