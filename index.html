@@ -2161,15 +2161,27 @@ footer > div:last-child {
 }
 
         @media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .why-card,
+    .work-card,
+    .work-image,
+    .package-card,
+    .service-category,
+    .btn,
+    .mobile-menu,
+    .mobile-menu-toggle,
+    nav {
+        transition: none !important;
+    }
+
 
     html {
         scroll-behavior: auto;
     }
 
-    .reveal {
-        opacity: 1;
-        transform: none;
-        transition: none;
+        .reveal {
+        opacity: 1 !important;
+        transform: none !important;
     }
 
     .brand-strip-track {
@@ -4846,6 +4858,54 @@ footer strong {
 
     pointer-events: none;
 }
+
+/* =========================================================
+   ACCESSIBILITY + UX
+   Keyboard focus states
+   ========================================================= */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid rgba(1, 82, 244, 0.45);
+    outline-offset: 3px;
+}
+
+
+/* Navigation links */
+
+.nav-links a:focus-visible,
+.mobile-menu a:focus-visible {
+    background: rgba(1, 82, 244, 0.08);
+    color: #0152F4;
+}
+
+
+/* Buttons */
+
+.btn:focus-visible,
+.package-button:focus-visible {
+    outline: 3px solid rgba(119, 193, 252, 0.65);
+    outline-offset: 4px;
+}
+
+
+/* Form controls */
+
+.form-group input:focus-visible,
+.form-group select:focus-visible,
+.form-group textarea:focus-visible {
+    border-color: #77C1FC;
+}
+
+
+/* Don't show the focus ring for mouse clicks */
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
     
  </style>
 
@@ -5495,6 +5555,7 @@ body {
         type="button"
         aria-label="Open navigation"
         aria-expanded="false"
+        aria-controls="mobile-navigation"
     >
         <span></span>
         <span></span>
@@ -5504,7 +5565,7 @@ body {
 </nav>
 
 
-<div class="mobile-menu">
+<div class="mobile-menu" id="mobile-navigation">
 
     <ul>
 
