@@ -6696,128 +6696,142 @@ body {
 </script>
 
 <script>
-    /* =========================================================
-       LIQUID NAVIGATION
-       Scroll state + active section
-       ========================================================= */
+(function () {
 
-    const nav = document.querySelector("nav");
+    const swayNav =
+        document.querySelector("nav");
 
-    const navLinks = Array.from(
-        document.querySelectorAll(
-            '.nav-links a[href^="#"]'
-        )
-    );
+    const swayNavLinks =
+        Array.from(
+            document.querySelectorAll(
+                ".nav-links a"
+            )
+        );
 
-    const sections = navLinks
-        .map((link) => {
-            const targetId =
-                link.getAttribute("href");
+    const swaySections =
+        swayNavLinks
+            .map(function (link) {
 
-            return document.querySelector(targetId);
-        })
-        .filter(Boolean);
+                const href =
+                    link.getAttribute("href");
+
+                if (
+                    !href ||
+                    href === "#" ||
+                    !href.startsWith("#")
+                ) {
+                    return null;
+                }
+
+                return document.querySelector(href);
+
+            })
+            .filter(Boolean);
 
 
     /* ---------------------------------------------------------
-       LIQUID NAV SCROLL STATE
+       NAVIGATION SHRINK
        --------------------------------------------------------- */
 
-    function updateNavScrollState() {
+    function updateSwayNav() {
 
         if (window.scrollY > 40) {
-            nav.classList.add("scrolled");
+
+            swayNav.classList.add(
+                "scrolled"
+            );
+
         } else {
-            nav.classList.remove("scrolled");
+
+            swayNav.classList.remove(
+                "scrolled"
+            );
+
+        }
+
+
+        /* -----------------------------------------------------
+           ACTIVE SECTION
+           ----------------------------------------------------- */
+
+        const marker =
+            window.innerHeight * 0.35;
+
+        let activeSection = null;
+
+
+        swaySections.forEach(
+            function (section) {
+
+                const rect =
+                    section.getBoundingClientRect();
+
+                if (
+                    rect.top <= marker &&
+                    rect.bottom > marker
+                ) {
+                    activeSection = section;
+                }
+
+            }
+        );
+
+
+        swayNavLinks.forEach(
+            function (link) {
+
+                link.classList.remove(
+                    "active"
+                );
+
+            }
+        );
+
+
+        if (activeSection) {
+
+            const activeLink =
+                swayNavLinks.find(
+                    function (link) {
+
+                        return (
+                            link.getAttribute("href") ===
+                            "#" + activeSection.id
+                        );
+
+                    }
+                );
+
+            if (activeLink) {
+
+                activeLink.classList.add(
+                    "active"
+                );
+
+            }
+
         }
 
     }
 
 
-    /* ---------------------------------------------------------
-       ACTIVE SECTION
-       --------------------------------------------------------- */
-
-    const sectionObserver =
-        new IntersectionObserver(
-            (entries) => {
-
-                const visibleSections =
-                    entries
-                        .filter(
-                            (entry) =>
-                                entry.isIntersecting
-                        )
-                        .sort(
-                            (a, b) =>
-                                b.intersectionRatio -
-                                a.intersectionRatio
-                        );
-
-                if (!visibleSections.length) {
-                    return;
-                }
-
-                const currentSection =
-                    visibleSections[0].target;
-
-                navLinks.forEach((link) => {
-                    link.classList.remove("active");
-                });
-
-                const activeLink =
-                    document.querySelector(
-                        `.nav-links a[href="#${currentSection.id}"]`
-                    );
-
-                if (activeLink) {
-                    activeLink.classList.add("active");
-                }
-
-            },
-
-            {
-                root: null,
-
-                rootMargin:
-                    "-20% 0px -60% 0px",
-
-                threshold: [
-                    0,
-                    0.1,
-                    0.25,
-                    0.5,
-                    0.75
-                ]
-            }
-        );
-
-
-    sections.forEach((section) => {
-        sectionObserver.observe(section);
-    });
-
-
-    /* ---------------------------------------------------------
-       LISTEN FOR SCROLL
-       --------------------------------------------------------- */
-
     window.addEventListener(
         "scroll",
-        updateNavScrollState,
-        {
-            passive: true
-        }
+        updateSwayNav,
+        { passive: true }
     );
 
     window.addEventListener(
         "resize",
-        updateNavScrollState
+        updateSwayNav
     );
 
 
-    updateNavScrollState();
+    updateSwayNav();
+
+})();
 </script>
+    
     <script>
     /* =========================================================
        MOBILE NAVIGATION
