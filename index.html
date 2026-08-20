@@ -399,25 +399,28 @@ nav.scrolled .logo img {
     }
 }
         /* =========================================================
-   SWAYPHICS HERO — BALANCED COMPOSITION
+   SWAYPHICS HERO — FINAL BALANCED LAYOUT
    ========================================================= */
 
 .hero {
-    position: relative;
+    position: relative !important;
 
-    min-height: 92vh;
+    min-height: 92vh !important;
 
-    display: flex;
-    align-items: center;
+    display: flex !important;
 
-    padding:
-        125px 7% 105px;
+    align-items: center !important;
+    justify-content: center !important;
 
-    overflow: hidden;
+    padding: 120px 7% 100px !important;
+
+    overflow: hidden !important;
+
+    text-align: center !important;
 }
 
 
-/* Atmospheric glow */
+/* Atmospheric blue glow */
 
 .hero::before {
     content: "";
@@ -427,267 +430,275 @@ nav.scrolled .logo img {
     width: 520px;
     height: 520px;
 
-    top: 8%;
-    right: -170px;
+    left: 50%;
+    top: 50%;
+
+    transform:
+        translate(-50%, -50%);
 
     background:
-        #0152F4;
+        radial-gradient(
+            circle,
+            rgba(1,82,244,0.12) 0%,
+            rgba(44,145,252,0.06) 40%,
+            rgba(44,145,252,0) 72%
+        );
 
     filter:
-        blur(180px);
-
-    opacity:
-        0.16;
+        blur(30px);
 
     pointer-events:
         none;
 }
 
 
-/* ---------------------------------------------------------
-   HERO CONTENT
-   --------------------------------------------------------- */
+/* Hero content */
 
 .hero-content {
-    position: relative;
+    position: relative !important;
 
-    z-index: 1;
+    z-index: 1 !important;
 
-    width: 100%;
-    max-width: 850px;
+    width: 100% !important;
 
-    padding:
-        20px 0;
+    max-width: 1050px !important;
+
+    margin: 0 auto !important;
+
+    padding: 20px 30px !important;
+
+    text-align: center !important;
 }
 
 
-/* ---------------------------------------------------------
-   EYEBROW
-   --------------------------------------------------------- */
+/* Eyebrow */
 
 .hero .eyebrow {
     margin:
-        0 0 22px;
+        0 0 22px !important;
 
     color:
-        #0152F4;
-
-    text-transform:
-        uppercase;
-
-    letter-spacing:
-        3px;
+        #0152F4 !important;
 
     font-size:
-        0.72rem;
+        0.72rem !important;
 
     font-weight:
-        800;
+        800 !important;
+
+    letter-spacing:
+        3px !important;
 
     line-height:
-        1.2;
+        1.2 !important;
+
+    text-transform:
+        uppercase !important;
 }
 
 
-/* ---------------------------------------------------------
-   HEADLINE
-   --------------------------------------------------------- */
+/* Main heading */
 
 .hero h1 {
+    width:
+        100% !important;
+
     max-width:
-        820px;
+        950px !important;
 
     margin:
-        0 0 28px;
+        0 auto 28px !important;
 
     color:
-        var(--text-dark);
+        var(--text-dark) !important;
 
     font-size:
-        clamp(3.5rem, 8vw, 7.2rem);
+        clamp(3.7rem, 8vw, 7.2rem) !important;
 
     font-weight:
-        700;
+        700 !important;
 
     line-height:
-        0.93;
+        0.94 !important;
 
     letter-spacing:
-        -4px;
+        -4px !important;
 }
 
 .hero h1 span {
     color:
-        #0152F4;
+        #0152F4 !important;
 }
 
 
-/* ---------------------------------------------------------
-   SUPPORTING COPY
-   --------------------------------------------------------- */
+/* Supporting paragraph */
 
 .hero p {
+    width:
+        100% !important;
+
     max-width:
-        620px;
+        650px !important;
 
     margin:
-        0 0 34px;
+        0 auto 34px !important;
 
     color:
-        var(--text-muted);
+        var(--text-muted) !important;
 
     font-size:
-        1.08rem;
+        1.08rem !important;
 
     line-height:
-        1.7;
+        1.7 !important;
 }
 
 
-/* ---------------------------------------------------------
-   BUTTONS
-   --------------------------------------------------------- */
+/* Buttons */
 
 .hero .buttons {
     display:
-        flex;
+        flex !important;
+
+    justify-content:
+        center !important;
 
     align-items:
-        center;
+        center !important;
 
     gap:
-        14px;
+        14px !important;
 
     flex-wrap:
-        wrap;
+        wrap !important;
+
+    width:
+        100% !important;
 }
 
 
-/* ---------------------------------------------------------
-   DESKTOP BALANCE
-   --------------------------------------------------------- */
+/* Desktop */
 
 @media (min-width: 901px) {
 
-    .hero-content {
-        transform:
-            translateY(-8px);
+    .hero {
+        min-height:
+            92vh !important;
+
+        padding:
+            130px 7% 105px !important;
     }
 
+    .hero-content {
+        transform:
+            translateY(-4px) !important;
+    }
 }
 
 
-/* ---------------------------------------------------------
-   TABLET
-   --------------------------------------------------------- */
+/* Tablet */
 
 @media (max-width: 900px) {
 
     .hero {
         min-height:
-            88vh;
+            88vh !important;
 
         padding:
-            120px 6% 100px;
+            120px 6% 100px !important;
     }
 
     .hero-content {
         max-width:
-            760px;
+            800px !important;
+
+        padding:
+            20px !important;
     }
 
     .hero h1 {
-        max-width:
-            700px;
-
         font-size:
-            clamp(3.3rem, 8vw, 5.8rem);
+            clamp(3.3rem, 8vw, 5.8rem) !important;
 
         letter-spacing:
-            -3px;
+            -3px !important;
     }
-
 }
 
 
-/* ---------------------------------------------------------
-   MOBILE
-   --------------------------------------------------------- */
+/* Mobile */
 
 @media (max-width: 700px) {
 
     .hero {
         min-height:
-            94svh;
+            94svh !important;
 
         padding:
-            120px 6% 85px;
+            120px 6% 85px !important;
     }
 
     .hero-content {
-        width:
-            100%;
-
         padding:
-            10px 0;
+            10px 0 !important;
     }
 
     .hero .eyebrow {
         margin-bottom:
-            18px;
+            18px !important;
 
         font-size:
-            0.65rem;
+            0.65rem !important;
 
         letter-spacing:
-            2px;
+            2px !important;
     }
 
     .hero h1 {
         max-width:
-            100%;
+            100% !important;
 
         margin-bottom:
-            24px;
+            24px !important;
 
         font-size:
-            clamp(3.2rem, 16vw, 5rem);
+            clamp(3.2rem, 16vw, 5rem) !important;
 
         line-height:
-            0.92;
+            0.92 !important;
 
         letter-spacing:
-            -3px;
+            -3px !important;
     }
 
     .hero p {
+        max-width:
+            520px !important;
+
         margin-bottom:
-            30px;
+            30px !important;
 
         font-size:
-            1rem;
+            1rem !important;
 
         line-height:
-            1.7;
+            1.7 !important;
     }
 
     .hero .buttons {
-        width:
-            100%;
-
         flex-direction:
-            column;
+            column !important;
 
         align-items:
-            stretch;
+            stretch !important;
     }
 
     .hero .buttons .btn {
         width:
-            100%;
+            100% !important;
 
         text-align:
-            center;
+            center !important;
     }
 }
         /* GENERAL */
