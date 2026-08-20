@@ -858,132 +858,192 @@ h1 span {
     color: #FFFFFF;
 }
 
-        /* -------------------------
-           ABOUT SWAYPHICS
-           ------------------------- */
+        /* =========================================================
+   SWAYPHICS — ABOUT
+   ========================================================= */
 
 .about {
     position: relative;
+
+    padding:
+        125px 7% 115px;
 
     background:
         linear-gradient(
             180deg,
             #FFFFFF 0%,
-            #F7FAFF 100%
+            #F8FBFF 58%,
+            #EEF6FF 100%
         );
 
     color:
         var(--text-dark);
 
-    overflow: hidden;
+    overflow:
+        hidden;
 }
 
 
-/* Soft blue atmosphere */
+/* Large atmospheric glow */
 
 .about::before {
     content: "";
 
     position: absolute;
 
-    width: 520px;
-    height: 520px;
+    width: 680px;
+    height: 680px;
 
-    right: -260px;
-    top: 50px;
+    right: -330px;
+    top: -120px;
 
-    border-radius: 50%;
+    border-radius:
+        50%;
 
     background:
         radial-gradient(
             circle,
             rgba(44,145,252,0.14) 0%,
-            rgba(44,145,252,0.05) 45%,
+            rgba(44,145,252,0.06) 42%,
             rgba(44,145,252,0) 72%
         );
 
     filter:
-        blur(20px);
+        blur(25px);
 
     pointer-events:
         none;
 }
 
 
-/* Content */
+/* Small secondary atmosphere */
+
+.about::after {
+    content: "";
+
+    position: absolute;
+
+    width: 340px;
+    height: 340px;
+
+    left: -180px;
+    bottom: -180px;
+
+    border-radius:
+        50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(1,82,244,0.06) 0%,
+            rgba(1,82,244,0) 72%
+        );
+
+    pointer-events:
+        none;
+}
+
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
 
 .about-content {
     position: relative;
 
-    z-index: 1;
+    z-index:
+        1;
 
     max-width:
-        850px;
+        900px;
 }
 
 
-/* Main heading */
+/* Heading */
 
 .about-content .section-title {
+    margin-bottom:
+        38px;
+
     color:
         var(--text-dark);
 }
 
+.about-content .section-title span {
+    color:
+        var(--sway-accent);
+}
 
-/* Paragraphs */
+
+/* Body copy */
 
 .about-content p {
     max-width:
         780px;
 
     margin:
-        0 0 25px 0;
+        0 0 24px;
 
     color:
         var(--text-muted);
 
     font-size:
-        1.25rem;
+        1.18rem;
 
     line-height:
         1.8;
 }
 
 
-/* Belief */
+/* Make final paragraph slightly more substantial */
+
+.about-content p:last-child {
+    margin-bottom:
+        0;
+}
+
+
+/* =========================================================
+   BELIEF STATEMENT
+   ========================================================= */
 
 .about-belief {
     position: relative;
 
-    z-index: 1;
+    z-index:
+        1;
 
-    display: flex;
+    display:
+        grid;
 
-    align-items:
-        flex-start;
-
-    justify-content:
-        space-between;
+    grid-template-columns:
+        180px 1fr;
 
     gap:
-        40px;
+        50px;
+
+    align-items:
+        start;
 
     margin-top:
-        80px;
+        90px;
 
     padding-top:
-        35px;
+        34px;
 
     border-top:
-        1px solid rgba(0,32,150,0.10);
+        1px solid rgba(0,32,150,0.12);
 }
 
 
-/* Belief label */
+/* Label */
 
 .about-belief span {
-    flex-shrink:
-        0;
+    display:
+        block;
+
+    padding-top:
+        8px;
 
     color:
         var(--sway-accent);
@@ -995,18 +1055,21 @@ h1 span {
         800;
 
     letter-spacing:
-        2px;
+        2.5px;
+
+    line-height:
+        1.2;
 
     text-transform:
         uppercase;
 }
 
 
-/* Belief statement */
+/* Main belief */
 
 .about-belief p {
     max-width:
-        500px;
+        760px;
 
     margin:
         0;
@@ -1015,10 +1078,16 @@ h1 span {
         var(--text-dark);
 
     font-size:
-        2rem;
+        clamp(2.2rem, 4.5vw, 4.5rem);
+
+    font-weight:
+        700;
 
     line-height:
-        1.25;
+        1;
+
+    letter-spacing:
+        -2.5px;
 }
 
 
@@ -1026,26 +1095,36 @@ h1 span {
 
 .about-belief strong {
     color:
-        #0152F4;
+        var(--sway-accent);
+
+    font-weight:
+        700;
 }
 
 
-/* Mobile */
+/* =========================================================
+   MOBILE
+   ========================================================= */
 
 @media (max-width: 700px) {
 
+    .about {
+        padding:
+            90px 6% 85px;
+    }
+
     .about::before {
         width:
-            380px;
+            420px;
 
         height:
-            380px;
+            420px;
 
         right:
-            -220px;
+            -230px;
 
         top:
-            120px;
+            60px;
     }
 
     .about-content p {
@@ -1057,22 +1136,33 @@ h1 span {
     }
 
     .about-belief {
-        flex-direction:
-            column;
+        grid-template-columns:
+            1fr;
 
         gap:
-            20px;
+            18px;
 
         margin-top:
-            55px;
+            60px;
 
         padding-top:
             28px;
     }
 
+    .about-belief span {
+        padding-top:
+            0;
+    }
+
     .about-belief p {
         font-size:
-            1.65rem;
+            clamp(2rem, 9vw, 3.2rem);
+
+        letter-spacing:
+            -1.5px;
+
+        line-height:
+            1.02;
     }
 }
 
