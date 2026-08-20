@@ -3902,7 +3902,429 @@ footer strong {
     }
 }
 
+/* =========================================================
+   WHY SWAYPHICS
+   ========================================================= */
 
+.why-swayphics {
+    position: relative;
+
+    background:
+        linear-gradient(
+            145deg,
+            #FFFFFF 0%,
+            #F7FAFF 55%,
+            #EEF6FF 100%
+        );
+
+    color:
+        var(--text-dark);
+
+    overflow: hidden;
+}
+
+
+/* Soft background atmosphere */
+
+.why-swayphics::before {
+    content: "";
+
+    position: absolute;
+
+    width: 620px;
+    height: 620px;
+
+    right: -280px;
+    top: -220px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.14) 0%,
+            rgba(1,82,244,0.05) 45%,
+            rgba(1,82,244,0) 72%
+        );
+
+    filter:
+        blur(25px);
+
+    pointer-events:
+        none;
+}
+
+
+/* Header */
+
+.why-header {
+    position: relative;
+
+    z-index: 1;
+
+    max-width:
+        900px;
+
+    margin-bottom:
+        60px;
+}
+
+.why-header .section-title {
+    margin-bottom:
+        0;
+
+    color:
+        var(--text-dark);
+}
+
+.why-header .section-title span {
+    color:
+        var(--sway-accent);
+}
+
+
+/* Cards */
+
+.why-grid {
+    position: relative;
+
+    z-index: 1;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap:
+        18px;
+}
+
+
+.why-card {
+    position: relative;
+
+    min-height:
+        300px;
+
+    padding:
+        34px;
+
+    background:
+        rgba(255,255,255,0.82);
+
+    border:
+        1px solid rgba(0,32,150,0.08);
+
+    border-radius:
+        24px;
+
+    box-shadow:
+        0 14px 40px rgba(0,32,150,0.05);
+
+    overflow:
+        hidden;
+
+    transition:
+        transform 0.35s ease,
+        border-color 0.35s ease,
+        box-shadow 0.35s ease;
+}
+
+
+/* Accent line */
+
+.why-card::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    top: 0;
+
+    width: 100%;
+    height: 4px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #2C91FC,
+            #0152F4,
+            #002096
+        );
+
+    transform:
+        scaleX(0.12);
+
+    transform-origin:
+        left;
+
+    transition:
+        transform 0.35s ease;
+}
+
+
+/* Soft blue glow */
+
+.why-card::after {
+    content: "";
+
+    position: absolute;
+
+    width: 220px;
+    height: 220px;
+
+    right: -120px;
+    bottom: -120px;
+
+    border-radius:
+        50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.13) 0%,
+            rgba(44,145,252,0) 72%
+        );
+
+    opacity:
+        0;
+
+    transition:
+        opacity 0.35s ease;
+
+    pointer-events:
+        none;
+}
+
+
+/* Hover */
+
+.why-card:hover {
+    transform:
+        translateY(-7px);
+
+    border-color:
+        rgba(1,82,244,0.18);
+
+    box-shadow:
+        0 24px 55px rgba(0,32,150,0.10);
+}
+
+.why-card:hover::before {
+    transform:
+        scaleX(1);
+}
+
+.why-card:hover::after {
+    opacity:
+        1;
+}
+
+
+/* Number */
+
+.why-number {
+    display:
+        block;
+
+    margin-bottom:
+        45px;
+
+    color:
+        var(--sway-accent);
+
+    font-size:
+        0.72rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.12em;
+}
+
+
+/* Heading */
+
+.why-card h3 {
+    margin:
+        0 0 12px;
+
+    color:
+        var(--text-dark);
+
+    font-size:
+        1.5rem;
+
+    letter-spacing:
+        -0.5px;
+}
+
+
+/* Paragraph */
+
+.why-card p {
+    max-width:
+        470px;
+
+    margin:
+        0;
+
+    color:
+        var(--text-muted);
+
+    line-height:
+        1.7;
+}
+
+
+/* Footer CTA */
+
+.why-footer {
+    position: relative;
+
+    z-index: 1;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    gap:
+        40px;
+
+    margin-top:
+        55px;
+
+    padding-top:
+        32px;
+
+    border-top:
+        1px solid rgba(0,32,150,0.10);
+}
+
+
+.why-footer > div {
+    min-width:
+        0;
+
+    flex:
+        1 1 auto;
+}
+
+
+.why-footer-label {
+    display:
+        block;
+
+    margin-bottom:
+        8px;
+
+    color:
+        var(--sway-accent);
+
+    font-size:
+        0.72rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.1em;
+
+    text-transform:
+        uppercase;
+}
+
+
+.why-footer p {
+    max-width:
+        620px;
+
+    margin:
+        0;
+
+    color:
+        var(--text-dark);
+
+    line-height:
+        1.65;
+}
+
+
+.why-footer .btn {
+    flex:
+        0 0 auto;
+}
+
+
+/* Mobile */
+
+@media (max-width: 800px) {
+
+    .why-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+    .why-card {
+        min-height:
+            auto;
+    }
+
+    .why-footer {
+        flex-direction:
+            column;
+
+        align-items:
+            flex-start;
+
+        gap:
+            24px;
+    }
+
+    .why-footer .btn {
+        width:
+            100%;
+
+        text-align:
+            center;
+    }
+}
+
+
+@media (max-width: 700px) {
+
+    .why-header {
+        margin-bottom:
+            40px;
+    }
+
+    .why-card {
+        padding:
+            28px 24px;
+
+        border-radius:
+            20px;
+    }
+
+    .why-number {
+        margin-bottom:
+            30px;
+    }
+
+    .why-footer {
+        margin-top:
+            40px;
+
+        padding-top:
+            26px;
+    }
+}
 
  </style>
 </head>
@@ -3919,7 +4341,7 @@ footer strong {
 
         <ul class="nav-links">
             <li><a href="#services">Services</a></li>
-            <li><a href="#brand-identity">Brand Identity</a></li>
+            <li><a href="#why-swayphics">Why Swayphics</a></li>
             <li><a href="#work">Our Work</a></li>
             <li><a href="#about">About</a></li>
             <li><a href="#contact">Let's Talk</a></li>
@@ -3947,9 +4369,9 @@ footer strong {
         </p>
 
         <div class="buttons">
-            <a href="#brand-identity" class="btn btn-primary">
-                Build My Brand →
-            </a>
+            <a href="#services" class="btn btn-primary">
+    Build My Brand →
+</a>
 
             <a href="#services" class="btn btn-secondary">
                 Explore Services
@@ -4442,151 +4864,118 @@ footer strong {
     </div>
 
 </section>
-        <!-- BRAND IDENTITY -->
-<section class="featured-service" id="brand-identity">
+        
+       <!-- WHY SWAYPHICS -->
+<section class="why-swayphics" id="why-swayphics">
 
-    <div class="featured-service-header">
+    <div class="why-header">
 
         <div>
             <div class="section-label">
-                Featured service
+                Why Swayphics
             </div>
 
             <h2 class="section-title">
-                Build an identity<br>
-                <span>people remember.</span>
+                Your business deserves to look
+                <span>as serious as your ambition.</span>
             </h2>
         </div>
 
-        <p class="featured-service-intro">
-            A strong brand is more than a logo. We create the visual
-            foundation your business needs to look credible, consistent
-            and ready to compete.
-        </p>
-
     </div>
 
 
-    <div class="identity-grid">
+    <div class="why-grid">
 
+        <article class="why-card">
 
-        <div class="identity-item">
-
-            <div class="identity-number">
+            <span class="why-number">
                 01
-            </div>
+            </span>
 
-            <div>
-                <h3>Logo System</h3>
+            <h3>
+                Built for real businesses
+            </h3>
 
-                <p>
-                    A distinctive logo system designed to give your
-                    business a recognisable visual mark across digital,
-                    print and everyday brand touchpoints.
-                </p>
-            </div>
+            <p>
+                Practical branding and digital solutions designed
+                around what a growing business actually needs.
+            </p>
 
-        </div>
+        </article>
 
 
-        <div class="identity-item">
+        <article class="why-card">
 
-            <div class="identity-number">
+            <span class="why-number">
                 02
-            </div>
+            </span>
 
-            <div>
-                <h3>Colour System</h3>
+            <h3>
+                More than pretty designs
+            </h3>
 
-                <p>
-                    A considered colour palette with the right colour
-                    codes and usage direction to keep your brand
-                    consistent wherever it appears.
-                </p>
-            </div>
+            <p>
+                We focus on making your business look credible,
+                communicate clearly and create better customer
+                touchpoints.
+            </p>
 
-        </div>
+        </article>
 
 
-        <div class="identity-item">
+        <article class="why-card">
 
-            <div class="identity-number">
+            <span class="why-number">
                 03
-            </div>
+            </span>
 
-            <div>
-                <h3>Typography</h3>
+            <h3>
+                Start small, build properly
+            </h3>
 
-                <p>
-                    A clear type system that establishes hierarchy,
-                    improves readability and gives your business
-                    a consistent visual voice.
-                </p>
-            </div>
+            <p>
+                Choose an individual service or start with a package
+                and add what you need as your business grows.
+            </p>
 
-        </div>
+        </article>
 
 
-        <div class="identity-item">
+        <article class="why-card">
 
-            <div class="identity-number">
+            <span class="why-number">
                 04
-            </div>
+            </span>
 
-            <div>
-                <h3>Brand Guidelines</h3>
+            <h3>
+                One creative partner
+            </h3>
 
-                <p>
-                    Practical guidelines showing how to use your logo,
-                    colours and typography correctly as your business
-                    grows and more people create content for it.
-                </p>
-            </div>
+            <p>
+                Branding, websites, digital setup and business
+                systems, brought together under one roof.
+            </p>
 
-        </div>
-
-
-        <div class="identity-item">
-
-            <div class="identity-number">
-                05
-            </div>
-
-            <div>
-                <h3>Brand Applications</h3>
-
-                <p>
-                    Essential branded assets such as social media
-                    graphics, templates and business stationery that
-                    help your identity work in the real world.
-                </p>
-            </div>
-
-        </div>
-
+        </article>
 
     </div>
 
 
-    <div class="featured-service-footer">
+    <div class="why-footer">
 
         <div>
-
-            <span class="featured-label">
-                THE OUTCOME
+            <span class="why-footer-label">
+                Ready to build something better?
             </span>
 
             <p>
-                One cohesive identity that helps your business look
-                established, communicate with confidence and stay
-                recognisable wherever customers encounter it.
+                Let's turn your next idea into something your
+                customers can recognise, trust and remember.
             </p>
-
         </div>
 
-
         <a href="#contact" class="btn btn-primary">
-            Request a Brand Quote →
+            Let's Work Together →
         </a>
 
     </div>
