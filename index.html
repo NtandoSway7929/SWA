@@ -4944,6 +4944,30 @@ textarea:focus-visible {
 .form-group select:valid {
     border-color: rgba(119,193,252,0.35);
 }    
+
+/* =========================================================
+   LIQUID NAVIGATION — ACTIVE SECTION
+   ========================================================= */
+
+.nav-links a.active {
+    color: #0152F4;
+
+    background:
+        rgba(1,82,244,0.07);
+
+    box-shadow:
+        inset 0 0 0 1px rgba(1,82,244,0.06);
+}
+
+.nav-links li:last-child a.active {
+    color: #FFFFFF;
+
+    background:
+        #0152F4;
+
+    box-shadow:
+        0 6px 18px rgba(1,82,244,0.18);
+}
     
  </style>
 
@@ -6645,19 +6669,90 @@ body {
 </script>
 
 <script>
+    /* =========================================================
+       LIQUID NAVIGATION
+       Scroll state + active section
+       ========================================================= */
+
     const nav = document.querySelector("nav");
 
+    const navLinks = document.querySelectorAll(
+        '.nav-links a[href^="#"]'
+    );
+
+    const sections = Array.from(navLinks)
+        .map((link) => {
+            const id = link.getAttribute("href");
+            return document.querySelector(id);
+        })
+        .filter(Boolean);
+
+
     function updateNavigation() {
+
+        /* Shrink navigation after scrolling */
+
         if (window.scrollY > 40) {
             nav.classList.add("scrolled");
         } else {
             nav.classList.remove("scrolled");
         }
+
+
+        /* Find the section currently in view */
+
+        const scrollPosition =
+            window.scrollY + 160;
+
+        let currentSection = null;
+
+        sections.forEach((section) => {
+
+            if (
+                section.offsetTop <=
+                scrollPosition
+            ) {
+                currentSection = section;
+            }
+
+        });
+
+
+        /* Clear previous active state */
+
+        navLinks.forEach((link) => {
+            link.classList.remove("active");
+        });
+
+
+        /* Apply active state */
+
+        if (currentSection) {
+
+            const activeLink =
+                document.querySelector(
+                    `.nav-links a[href="#${currentSection.id}"]`
+                );
+
+            if (activeLink) {
+                activeLink.classList.add("active");
+            }
+
+        }
+
     }
 
-    window.addEventListener("scroll", updateNavigation, {
-        passive: true
-    });
+
+    window.addEventListener(
+        "scroll",
+        updateNavigation,
+        { passive: true }
+    );
+
+    window.addEventListener(
+        "resize",
+        updateNavigation
+    );
 
     updateNavigation();
 </script>
