@@ -4968,6 +4968,33 @@ textarea:focus-visible {
     box-shadow:
         0 6px 18px rgba(1,82,244,0.18);
 }
+
+    /* =========================================================
+   NAVIGATION ACTIVE STATE
+   ========================================================= */
+
+.nav-links a.active {
+    color: #0152F4 !important;
+
+    background:
+        rgba(1,82,244,0.08) !important;
+
+    box-shadow:
+        inset 0 0 0 1px rgba(1,82,244,0.08) !important;
+
+    font-weight:
+        700 !important;
+}
+
+.nav-links li:last-child a.active {
+    color: #FFFFFF !important;
+
+    background:
+        #0152F4 !important;
+
+    box-shadow:
+        0 6px 18px rgba(1,82,244,0.18) !important;
+}
     
  </style>
 
@@ -6676,21 +6703,27 @@ body {
 
     const nav = document.querySelector("nav");
 
-    const navLinks = document.querySelectorAll(
-        '.nav-links a[href^="#"]'
+    const navLinks = Array.from(
+        document.querySelectorAll(
+            '.nav-links a[href^="#"]'
+        )
     );
 
-    const sections = Array.from(navLinks)
+    const sections = navLinks
         .map((link) => {
-            const id = link.getAttribute("href");
-            return document.querySelector(id);
+            const targetId =
+                link.getAttribute("href");
+
+            return document.querySelector(targetId);
         })
         .filter(Boolean);
 
 
-    function updateNavigation() {
+    /* ---------------------------------------------------------
+       LIQUID NAV SCROLL STATE
+       --------------------------------------------------------- */
 
-        /* Shrink navigation after scrolling */
+    function updateNavScrollState() {
 
         if (window.scrollY > 40) {
             nav.classList.add("scrolled");
@@ -6698,65 +6731,93 @@ body {
             nav.classList.remove("scrolled");
         }
 
-
-        /* Find the section currently in view */
-
-        const scrollPosition =
-            window.scrollY + 160;
-
-        let currentSection = null;
-
-        sections.forEach((section) => {
-
-            if (
-                section.offsetTop <=
-                scrollPosition
-            ) {
-                currentSection = section;
-            }
-
-        });
-
-
-        /* Clear previous active state */
-
-        navLinks.forEach((link) => {
-            link.classList.remove("active");
-        });
-
-
-        /* Apply active state */
-
-        if (currentSection) {
-
-            const activeLink =
-                document.querySelector(
-                    `.nav-links a[href="#${currentSection.id}"]`
-                );
-
-            if (activeLink) {
-                activeLink.classList.add("active");
-            }
-
-        }
-
     }
 
 
+    /* ---------------------------------------------------------
+       ACTIVE SECTION
+       --------------------------------------------------------- */
+
+    const sectionObserver =
+        new IntersectionObserver(
+            (entries) => {
+
+                const visibleSections =
+                    entries
+                        .filter(
+                            (entry) =>
+                                entry.isIntersecting
+                        )
+                        .sort(
+                            (a, b) =>
+                                b.intersectionRatio -
+                                a.intersectionRatio
+                        );
+
+                if (!visibleSections.length) {
+                    return;
+                }
+
+                const currentSection =
+                    visibleSections[0].target;
+
+                navLinks.forEach((link) => {
+                    link.classList.remove("active");
+                });
+
+                const activeLink =
+                    document.querySelector(
+                        `.nav-links a[href="#${currentSection.id}"]`
+                    );
+
+                if (activeLink) {
+                    activeLink.classList.add("active");
+                }
+
+            },
+
+            {
+                root: null,
+
+                rootMargin:
+                    "-20% 0px -60% 0px",
+
+                threshold: [
+                    0,
+                    0.1,
+                    0.25,
+                    0.5,
+                    0.75
+                ]
+            }
+        );
+
+
+    sections.forEach((section) => {
+        sectionObserver.observe(section);
+    });
+
+
+    /* ---------------------------------------------------------
+       LISTEN FOR SCROLL
+       --------------------------------------------------------- */
+
     window.addEventListener(
         "scroll",
-        updateNavigation,
-        { passive: true }
+        updateNavScrollState,
+        {
+            passive: true
+        }
     );
 
     window.addEventListener(
         "resize",
-        updateNavigation
+        updateNavScrollState
     );
 
-    updateNavigation();
-</script>
 
+    updateNavScrollState();
+</script>
     <script>
     /* =========================================================
        MOBILE NAVIGATION
