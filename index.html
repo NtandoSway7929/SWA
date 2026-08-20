@@ -4906,6 +4906,22 @@ textarea:focus-visible {
 :focus:not(:focus-visible) {
     outline: none;
 }
+
+/* =========================================================
+   FORM VALIDATION STATES
+   ========================================================= */
+
+.form-group input:invalid:not(:placeholder-shown),
+.form-group textarea:invalid:not(:placeholder-shown),
+.form-group select[aria-invalid="true"] {
+    border-color: rgba(255, 120, 120, 0.85);
+}
+
+.form-group input:valid,
+.form-group textarea:valid,
+.form-group select:valid {
+    border-color: rgba(119,193,252,0.35);
+}    
     
  </style>
 
@@ -6371,53 +6387,76 @@ body {
     >
 
         <div class="form-group">
-            <label for="name">Your name</label>
-            <input
-                type="text"
-                id="name"
-                name="Name"
-                placeholder="Your name"
-                required
-            >
-        </div>
+    <label for="name">Your name</label>
+    <input
+        type="text"
+        id="name"
+        name="Name"
+        placeholder="Your name"
+        autocomplete="name"
+        minlength="2"
+        maxlength="80"
+        required
+    >
+</div>
 
-        <div class="form-group">
-            <label for="email">Email address</label>
-            <input
-                type="email"
-                id="email"
-                name="Email"
-                placeholder="you@example.com"
-                required
-            >
-        </div>
+<div class="form-group">
+    <label for="email">Email address</label>
+    <input
+        type="email"
+        id="email"
+        name="Email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        inputmode="email"
+        maxlength="120"
+        required
+    >
+</div>
 
-        <div class="form-group">
-            <label for="service">What do you need?</label>
-            <select id="service" name="Service" required>
-                <option value="" disabled selected>
-                    Select a service
-                </option>
-                <option>Brand Identity Kit</option>
-                <option>Social Media Acceleration</option>
-                <option>Motion Branding</option>
-                <option>Apparel Prints</option>
-                <option>Company Registration</option>
-                <option>Something else</option>
-            </select>
-        </div>
+<div class="form-group">
+    <label for="service">What do you need?</label>
+    <select
+        id="service"
+        name="Service"
+        required
+    >
+        <option value="" disabled selected>
+            Select a service
+        </option>
+        <option value="Starter Package">Starter Package</option>
+        <option value="Launch Package">Launch Package</option>
+        <option value="Growth Package">Growth Package</option>
+        <option value="Logo Design">Logo Design</option>
+        <option value="Business Identity Kit">Business Identity Kit</option>
+        <option value="Business Card Design">Business Card Design</option>
+        <option value="Business Letterhead Design">Business Letterhead Design</option>
+        <option value="Packaging Design">Packaging Design</option>
+        <option value="Apparel Design">Apparel Design</option>
+        <option value="Website Design">Website Design</option>
+        <option value="Google Business Profile">Google Business Profile</option>
+        <option value="Professional Email Setup">Professional Email Setup</option>
+        <option value="Company Registration">Company Registration</option>
+        <option value="Booking System">Booking / Appointment System</option>
+        <option value="AI Customer Reply Setup">AI Customer Reply Setup</option>
+        <option value="Review Collection System">Review Collection System</option>
+        <option value="Website Maintenance">Website Maintenance</option>
+        <option value="Something else">Something else</option>
+    </select>
+</div>
 
-        <div class="form-group">
-            <label for="message">Tell us about your project</label>
-            <textarea
-                id="message"
-                name="Message"
-                rows="5"
-                placeholder="What are you looking to create?"
-                required
-            ></textarea>
-        </div>
-
+<div class="form-group">
+    <label for="message">Tell us about your project</label>
+    <textarea
+        id="message"
+        name="Message"
+        rows="5"
+        minlength="10"
+        maxlength="1500"
+        placeholder="What are you looking to create?"
+        required
+    ></textarea>
+</div>
         <button type="submit" class="btn btn-primary">
             Send Enquiry →
         </button>
@@ -6666,6 +6705,66 @@ body {
         }
 
     });
+</script>
+
+    <script>
+    /* =========================================================
+       CONTACT FORM VALIDATION
+       ========================================================= */
+
+    const projectForm = document.querySelector(".project-form");
+
+    if (projectForm) {
+
+        projectForm.addEventListener("submit", (event) => {
+
+            const name = projectForm.querySelector("#name");
+            const email = projectForm.querySelector("#email");
+            const service = projectForm.querySelector("#service");
+            const message = projectForm.querySelector("#message");
+
+            const fields = [
+                name,
+                email,
+                service,
+                message
+            ];
+
+            fields.forEach((field) => {
+                field.removeAttribute("aria-invalid");
+            });
+
+
+            if (!name.checkValidity()) {
+                name.setAttribute("aria-invalid", "true");
+                name.focus();
+                event.preventDefault();
+                return;
+            }
+
+            if (!email.checkValidity()) {
+                email.setAttribute("aria-invalid", "true");
+                email.focus();
+                return;
+            }
+
+            if (!service.checkValidity()) {
+                service.setAttribute("aria-invalid", "true");
+                service.focus();
+                event.preventDefault();
+                return;
+            }
+
+            if (!message.checkValidity()) {
+                message.setAttribute("aria-invalid", "true");
+                message.focus();
+                event.preventDefault();
+                return;
+            }
+
+        });
+
+    }
 </script>
     
 </body>
