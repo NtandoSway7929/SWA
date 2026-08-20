@@ -4635,6 +4635,123 @@ footer strong {
     }
 
 }
+
+    /* =========================================================
+   SWAYPHICS — SECTION TRANSITION POLISH
+   ========================================================= */
+
+/* Services fades gently into the next section */
+
+.services {
+    position: relative;
+}
+
+.services::after {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    bottom: -1px;
+
+    width: 100%;
+    height: 140px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(238,246,255,0) 0%,
+            rgba(247,250,255,0.72) 65%,
+            rgba(255,255,255,1) 100%
+        );
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+
+/* Keep Services content above the transition */
+
+.services > * {
+    position: relative;
+
+    z-index: 1;
+}
+
+
+/* Why Swayphics transition */
+
+.why-swayphics {
+    position: relative;
+}
+
+.why-swayphics::after {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    bottom: 0;
+
+    width: 100%;
+    height: 120px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(238,246,255,0) 0%,
+            rgba(255,255,255,0.85) 100%
+        );
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+.why-swayphics > * {
+    position: relative;
+
+    z-index: 1;
+}
+
+
+/* Work starts clean */
+
+#work {
+    position: relative;
+
+    background:
+        #FFFFFF;
+}
+
+
+/* Subtle top atmosphere for Work */
+
+#work::before {
+    content: "";
+
+    position: absolute;
+
+    left: 50%;
+    top: -180px;
+
+    width: 700px;
+    height: 300px;
+
+    transform:
+        translateX(-50%);
+
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(44,145,252,0.07) 0%,
+            rgba(44,145,252,0.02) 50%,
+            transparent 75%
+        );
+
+    pointer-events: none;
+}
     
  </style>
 
