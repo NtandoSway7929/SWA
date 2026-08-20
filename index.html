@@ -6695,143 +6695,7 @@ body {
         });
 </script>
 
-<script>
-(function () {
 
-    const swayNav =
-        document.querySelector("nav");
-
-    const swayNavLinks =
-        Array.from(
-            document.querySelectorAll(
-                ".nav-links a"
-            )
-        );
-
-    const swaySections =
-        swayNavLinks
-            .map(function (link) {
-
-                const href =
-                    link.getAttribute("href");
-
-                if (
-                    !href ||
-                    href === "#" ||
-                    !href.startsWith("#")
-                ) {
-                    return null;
-                }
-
-                return document.querySelector(href);
-
-            })
-            .filter(Boolean);
-
-
-    /* ---------------------------------------------------------
-       NAVIGATION SHRINK
-       --------------------------------------------------------- */
-
-    function updateSwayNav() {
-
-        if (window.scrollY > 40) {
-
-            swayNav.classList.add(
-                "scrolled"
-            );
-
-        } else {
-
-            swayNav.classList.remove(
-                "scrolled"
-            );
-
-        }
-
-
-        /* -----------------------------------------------------
-           ACTIVE SECTION
-           ----------------------------------------------------- */
-
-        const marker =
-            window.innerHeight * 0.35;
-
-        let activeSection = null;
-
-
-        swaySections.forEach(
-            function (section) {
-
-                const rect =
-                    section.getBoundingClientRect();
-
-                if (
-                    rect.top <= marker &&
-                    rect.bottom > marker
-                ) {
-                    activeSection = section;
-                }
-
-            }
-        );
-
-
-        swayNavLinks.forEach(
-            function (link) {
-
-                link.classList.remove(
-                    "active"
-                );
-
-            }
-        );
-
-
-        if (activeSection) {
-
-            const activeLink =
-                swayNavLinks.find(
-                    function (link) {
-
-                        return (
-                            link.getAttribute("href") ===
-                            "#" + activeSection.id
-                        );
-
-                    }
-                );
-
-            if (activeLink) {
-
-                activeLink.classList.add(
-                    "active"
-                );
-
-            }
-
-        }
-
-    }
-
-
-    window.addEventListener(
-        "scroll",
-        updateSwayNav,
-        { passive: true }
-    );
-
-    window.addEventListener(
-        "resize",
-        updateSwayNav
-    );
-
-
-    updateSwayNav();
-
-})();
-</script>
-    
     <script>
     /* =========================================================
        MOBILE NAVIGATION
@@ -6982,6 +6846,135 @@ body {
         });
 
     }
+</script>
+
+<script>
+(function () {
+
+    const navigation =
+        document.querySelector("nav");
+
+    const desktopLinks =
+        Array.from(
+            document.querySelectorAll(".nav-links a")
+        );
+
+    const targets =
+        desktopLinks
+            .map(function (link) {
+                const href =
+                    link.getAttribute("href");
+
+                if (!href || href === "#") {
+                    return null;
+                }
+
+                return document.getElementById(
+                    href.substring(1)
+                );
+            })
+            .filter(Boolean);
+
+
+    function updateNavigation() {
+
+        /* Shrink floating navigation */
+
+        navigation.classList.toggle(
+            "scrolled",
+            window.scrollY > 40
+        );
+
+
+        /* Find the section nearest the navigation */
+
+        const navHeight =
+            navigation.getBoundingClientRect().height;
+
+        const activationLine =
+            navHeight + 80;
+
+        let activeTarget = null;
+
+        targets.forEach(function (section) {
+
+            const top =
+                section.getBoundingClientRect().top;
+
+            if (top <= activationLine) {
+                activeTarget = section;
+            }
+
+        });
+
+
+        /* Clear active states */
+
+        desktopLinks.forEach(function (link) {
+
+            link.classList.remove("active");
+
+        });
+
+
+        /* Set active state */
+
+        if (activeTarget) {
+
+            const matchingLink =
+                desktopLinks.find(function (link) {
+
+                    return (
+                        link.getAttribute("href") ===
+                        "#" + activeTarget.id
+                    );
+
+                });
+
+            if (matchingLink) {
+                matchingLink.classList.add("active");
+            }
+
+        }
+
+    }
+
+
+    let ticking = false;
+
+    window.addEventListener(
+        "scroll",
+        function () {
+
+            if (!ticking) {
+
+                window.requestAnimationFrame(
+                    function () {
+
+                        updateNavigation();
+
+                        ticking = false;
+
+                    }
+                );
+
+                ticking = true;
+            }
+
+        },
+        { passive: true }
+    );
+
+
+    window.addEventListener(
+        "resize",
+        updateNavigation
+    );
+
+
+    updateNavigation();
+
+})();
 </script>
     
 </body>
