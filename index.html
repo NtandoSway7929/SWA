@@ -5225,6 +5225,236 @@ footer strong {
     }
 }
 
+/* =========================================================
+   SWAYPHICS — MOBILE NAVIGATION
+   ========================================================= */
+
+.mobile-menu-toggle {
+    display: none;
+
+    width: 44px;
+    height: 44px;
+
+    padding: 0;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-direction: column;
+
+    gap: 5px;
+
+    border: none;
+    border-radius: 50%;
+
+    background:
+        rgba(1,82,244,0.08);
+
+    cursor: pointer;
+
+    transition:
+        background 0.25s ease,
+        transform 0.25s ease;
+}
+
+.mobile-menu-toggle:hover {
+    background:
+        rgba(1,82,244,0.13);
+}
+
+.mobile-menu-toggle span {
+    display: block;
+
+    width: 17px;
+    height: 2px;
+
+    border-radius: 999px;
+
+    background:
+        #081533;
+
+    transition:
+        transform 0.3s ease,
+        opacity 0.3s ease;
+}
+
+
+/* Mobile menu panel */
+
+.mobile-menu {
+    display: none;
+
+    position: fixed;
+
+    top: 78px;
+    left: 50%;
+
+    width: 92%;
+
+    transform:
+        translateX(-50%)
+        translateY(-12px);
+
+    padding: 22px;
+
+    border-radius: 24px;
+
+    background:
+        rgba(255,255,255,0.94);
+
+    border:
+        1px solid rgba(0,32,150,0.08);
+
+    box-shadow:
+        0 20px 50px rgba(0,32,150,0.14);
+
+    backdrop-filter:
+        blur(22px);
+
+    -webkit-backdrop-filter:
+        blur(22px);
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    z-index: 999;
+
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+
+
+.mobile-menu ul {
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        6px;
+
+    margin:
+        0;
+
+    padding:
+        0;
+
+    list-style:
+        none;
+}
+
+
+.mobile-menu a {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    padding:
+        14px 15px;
+
+    border-radius:
+        14px;
+
+    color:
+        #081533;
+
+    font-size:
+        0.95rem;
+
+    font-weight:
+        700;
+
+    transition:
+        background 0.25s ease,
+        color 0.25s ease;
+}
+
+.mobile-menu a:hover {
+    background:
+        rgba(1,82,244,0.07);
+
+    color:
+        #0152F4;
+}
+
+
+/* Open state */
+
+.mobile-menu.open {
+    opacity:
+        1;
+
+    transform:
+        translateX(-50%)
+        translateY(0);
+
+    pointer-events:
+        auto;
+}
+
+
+.mobile-menu-toggle.open span:nth-child(1) {
+    transform:
+        translateY(7px)
+        rotate(45deg);
+}
+
+.mobile-menu-toggle.open span:nth-child(2) {
+    opacity:
+        0;
+}
+
+.mobile-menu-toggle.open span:nth-child(3) {
+    transform:
+        translateY(-7px)
+        rotate(-45deg);
+}
+
+
+/* =========================================================
+   MOBILE BREAKPOINT
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .nav-links {
+        display:
+            none !important;
+    }
+
+    .mobile-menu-toggle {
+        display:
+            flex;
+    }
+
+    nav {
+        width:
+            94%;
+
+        top:
+            12px;
+
+        padding:
+            10px 13px;
+    }
+
+    nav.scrolled {
+        top:
+            8px;
+
+        width:
+            94%;
+    }
+}
+    
 </style>
     
 </head>
@@ -5232,21 +5462,63 @@ footer strong {
 <body>
 
     <nav>
-        <a href="#" class="logo">
-    <img
-        src="swayphics-logo.png"
-        alt="Swayphics — Empowering through design"
-    >
-</a>
 
-        <ul class="nav-links">
-            <li><a href="#services">Services</a></li>
-            <li><a href="#why-swayphics">Why Swayphics</a></li>
-            <li><a href="#work">Our Work</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#contact">Let's Talk</a></li>
-        </ul>
-    </nav>
+    <a href="#" class="logo">
+        <img
+            src="swayphics-logo.png"
+            alt="Swayphics — Empowering through design"
+        >
+    </a>
+
+    <ul class="nav-links">
+        <li><a href="#services">Services</a></li>
+        <li><a href="#why-swayphics">Why Swayphics</a></li>
+        <li><a href="#work">Our Work</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Let's Talk</a></li>
+    </ul>
+
+    <button
+        class="mobile-menu-toggle"
+        type="button"
+        aria-label="Open navigation"
+        aria-expanded="false"
+    >
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+</nav>
+
+
+<div class="mobile-menu">
+
+    <ul>
+
+        <li>
+            <a href="#services">Services</a>
+        </li>
+
+        <li>
+            <a href="#why-swayphics">Why Swayphics</a>
+        </li>
+
+        <li>
+            <a href="#work">Our Work</a>
+        </li>
+
+        <li>
+            <a href="#about">About</a>
+        </li>
+
+        <li>
+            <a href="#contact">Let's Talk</a>
+        </li>
+
+    </ul>
+
+</div>
 
     <main>
 
@@ -6229,6 +6501,98 @@ footer strong {
     });
 
     updateNavigation();
+</script>
+
+    <script>
+    /* =========================================================
+       MOBILE NAVIGATION
+       ========================================================= */
+
+    const mobileToggle =
+        document.querySelector(".mobile-menu-toggle");
+
+    const mobileMenu =
+        document.querySelector(".mobile-menu");
+
+    const mobileLinks =
+        document.querySelectorAll(".mobile-menu a");
+
+    function closeMobileMenu() {
+
+        mobileMenu.classList.remove("open");
+
+        mobileToggle.classList.remove("open");
+
+        mobileToggle.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+
+        mobileToggle.setAttribute(
+            "aria-label",
+            "Open navigation"
+        );
+    }
+
+
+    mobileToggle.addEventListener("click", () => {
+
+        const isOpen =
+            mobileMenu.classList.toggle("open");
+
+        mobileToggle.classList.toggle("open", isOpen);
+
+        mobileToggle.setAttribute(
+            "aria-expanded",
+            String(isOpen)
+        );
+
+        mobileToggle.setAttribute(
+            "aria-label",
+            isOpen
+                ? "Close navigation"
+                : "Open navigation"
+        );
+
+    });
+
+
+    mobileLinks.forEach((link) => {
+
+        link.addEventListener(
+            "click",
+            closeMobileMenu
+        );
+
+    });
+
+
+    document.addEventListener("click", (event) => {
+
+        const clickedInsideMenu =
+            mobileMenu.contains(event.target);
+
+        const clickedToggle =
+            mobileToggle.contains(event.target);
+
+        if (
+            mobileMenu.classList.contains("open") &&
+            !clickedInsideMenu &&
+            !clickedToggle
+        ) {
+            closeMobileMenu();
+        }
+
+    });
+
+
+    window.addEventListener("resize", () => {
+
+        if (window.innerWidth > 700) {
+            closeMobileMenu();
+        }
+
+    });
 </script>
     
 </body>
