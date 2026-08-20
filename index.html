@@ -1344,9 +1344,9 @@ h1 span {
             1.05rem;
     }
 }
-        /* -------------------------
-   FOOTER
-   ------------------------- */
+        /* =========================================================
+   SWAYPHICS FOOTER
+   ========================================================= */
 
 footer {
     display: flex;
@@ -1355,46 +1355,57 @@ footer {
 
     justify-content: space-between;
 
-    gap: 20px;
+    gap: 24px;
 
     flex-wrap: wrap;
 
-    padding:
-        32px 7%;
-
-    border-top:
-        1px solid rgba(0,32,150,0.10);
+    padding: 28px 7%;
 
     background:
-        #FFFFFF;
+        #00145F;
 
     color:
-        var(--text-muted);
+        rgba(255,255,255,0.62);
 
     font-size:
-        0.85rem;
+        0.82rem;
 
     line-height:
         1.5;
 }
 
 
-/* Swayphics name */
+/* Brand */
 
-footer strong {
+.footer-brand {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    flex-wrap: wrap;
+}
+
+.footer-brand strong {
     color:
-        var(--text-dark);
+        #FFFFFF;
 
     font-weight:
         800;
 }
 
-
-/* Copyright */
-
-footer > div:last-child {
+.footer-brand span {
     color:
-        var(--text-muted);
+        rgba(255,255,255,0.58);
+}
+
+
+/* Right side */
+
+.footer-right {
+    color:
+        rgba(255,255,255,0.58);
 
     white-space:
         nowrap;
@@ -1413,13 +1424,24 @@ footer > div:last-child {
             column;
 
         gap:
-            8px;
+            10px;
 
         padding:
-            28px 7%;
+            26px 6%;
     }
 
-    footer > div:last-child {
+    .footer-brand {
+        flex-direction:
+            column;
+
+        align-items:
+            flex-start;
+
+        gap:
+            3px;
+    }
+
+    .footer-right {
         white-space:
             normal;
     }
@@ -6501,14 +6523,17 @@ body {
     </main>
 
     <footer>
-        <div>
-            <strong>Swayphics</strong> — Empowering through design.
-        </div>
 
-        <div>
-            © 2026 Swayphics
-        </div>
-    </footer>
+    <div class="footer-brand">
+        <strong>Swayphics</strong>
+        <span>Empowering through design.</span>
+    </div>
+
+    <div class="footer-right">
+        <span>© 2026 Swayphics</span>
+    </div>
+
+</footer>
 
 <script>
     /* =========================================================
