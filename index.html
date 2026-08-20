@@ -5282,14 +5282,15 @@ footer strong {
 /* Mobile menu panel */
 
 .mobile-menu {
-    display: none;
+    display: block;
 
     position: fixed;
 
-    top: 78px;
+    top: 70px;
     left: 50%;
 
     width: 92%;
+    max-width: 500px;
 
     transform:
         translateX(-50%)
@@ -5316,13 +5317,16 @@ footer strong {
 
     opacity: 0;
 
+    visibility: hidden;
+
     pointer-events: none;
 
-    z-index: 999;
+    z-index: 9999;
 
     transition:
         opacity 0.3s ease,
-        transform 0.3s ease;
+        transform 0.3s ease,
+        visibility 0.3s ease;
 }
 
 
@@ -5389,15 +5393,15 @@ footer strong {
 /* Open state */
 
 .mobile-menu.open {
-    opacity:
-        1;
+    opacity: 1;
+
+    visibility: visible;
 
     transform:
         translateX(-50%)
         translateY(0);
 
-    pointer-events:
-        auto;
+    pointer-events: auto;
 }
 
 
@@ -5453,6 +5457,14 @@ footer strong {
         width:
             94%;
     }
+}
+
+    /* Prevent horizontal page shifting on mobile */
+
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
 }
     
 </style>
