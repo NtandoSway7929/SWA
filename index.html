@@ -5964,31 +5964,112 @@ footer strong {
     </footer>
 
 <script>
+    /* =========================================================
+       SWAYPHICS — SCROLL REVEAL SYSTEM
+       ========================================================= */
+
+    const revealSelectors = [
+        ".services-intro",
+        ".package-card",
+        ".custom-services-header",
+        ".service-category",
+        ".why-header",
+        ".why-card",
+        ".why-footer",
+        "#work .section-label",
+        "#work .section-title",
+        "#work .work-intro",
+        "#work .work-card",
+        ".about .section-label",
+        ".about-content",
+        ".about-belief",
+        ".cta .section-label",
+        ".cta h2",
+        ".cta > p",
+        ".project-form",
+        ".contact-email"
+    ];
+
     const revealElements = document.querySelectorAll(
-        ".section-label, .section-title, .service, .identity-item, .work-card, .about-content, .about-belief, .featured-service-footer, .cta p, .contact-buttons, .contact-email"
+        revealSelectors.join(", ")
     );
 
+    /* Add reveal class */
     revealElements.forEach((element) => {
         element.classList.add("reveal");
     });
 
+
+    /* ---------------------------------------------------------
+       STAGGER CHILDREN INSIDE GROUPS
+       --------------------------------------------------------- */
+
+    const staggerGroups = [
+        ".package-grid",
+        ".service-catalog",
+        ".why-grid",
+        ".work-grid"
+    ];
+
+    staggerGroups.forEach((selector) => {
+
+        const group = document.querySelector(selector);
+
+        if (!group) return;
+
+        const children = group.children;
+
+        Array.from(children).forEach((child, index) => {
+
+            child.classList.add("reveal");
+
+            child.style.transitionDelay =
+                `${index * 0.08}s`;
+
+        });
+
+    });
+
+
+    /* ---------------------------------------------------------
+       INTERSECTION OBSERVER
+       --------------------------------------------------------- */
+
     const revealObserver = new IntersectionObserver(
         (entries, observer) => {
+
             entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add("visible");
-                    observer.unobserve(entry.target);
-                }
+
+                if (!entry.isIntersecting) return;
+
+                entry.target.classList.add("visible");
+
+                observer.unobserve(entry.target);
+
             });
+
         },
         {
-            threshold: 0.12
+            threshold: 0.12,
+            rootMargin: "0px 0px -40px 0px"
         }
     );
+
 
     revealElements.forEach((element) => {
         revealObserver.observe(element);
     });
+
+
+    document
+        .querySelectorAll(
+            ".package-grid > *, .service-catalog > *, .why-grid > *, .work-grid > *"
+        )
+        .forEach((element) => {
+
+            revealObserver.observe(element);
+
+        });
 </script>
 
 <script>
