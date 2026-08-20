@@ -59,47 +59,345 @@
             text-decoration: none;
         }
 
-        /* NAVIGATION */
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 22px 7%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(8, 8, 8, 0.85);
-            backdrop-filter: blur(12px);
-            z-index: 1000;
-        }
+        /* =========================================================
+   SWAYPHICS — LIQUID NAVIGATION
+   ========================================================= */
 
-        .logo {
+nav {
+    position: fixed;
+
+    top: 18px;
+    left: 50%;
+
+    width: min(1180px, 92%);
+
+    transform: translateX(-50%);
+
+    padding: 12px 18px;
+
     display: flex;
+    justify-content: space-between;
     align-items: center;
+
+    background: rgba(255, 255, 255, 0.72);
+
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+
+    border: 1px solid rgba(255, 255, 255, 0.65);
+
+    border-radius: 999px;
+
+    box-shadow:
+        0 10px 35px rgba(0, 32, 150, 0.08);
+
+    z-index: 1000;
+
+    transition:
+        top 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+        width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+        padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.45s ease,
+        box-shadow 0.45s ease,
+        border-color 0.45s ease;
 }
+
+
+/* =========================================================
+   SCROLLED STATE
+   ========================================================= */
+
+nav.scrolled {
+    top: 10px;
+
+    width: min(1050px, 88%);
+
+    padding:
+        9px 15px;
+
+    background:
+        rgba(255, 255, 255, 0.88);
+
+    border-color:
+        rgba(0, 32, 150, 0.08);
+
+    box-shadow:
+        0 12px 40px rgba(0, 32, 150, 0.12);
+}
+
+
+/* =========================================================
+   LOGO
+   ========================================================= */
+
+.logo {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    flex-shrink:
+        0;
+}
+
 
 .logo img {
-    display: block;
-    width: 155px;
-    height: auto;
+    display:
+        block;
+
+    width:
+        145px;
+
+    height:
+        auto;
+
+    transition:
+        width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
-        .nav-links {
-            display: flex;
-            gap: 30px;
-            list-style: none;
-        }
 
-        .nav-links a {
-            font-size: 0.9rem;
-            color: #cccccc;
-            transition: 0.3s;
-        }
 
-        .nav-links a:hover {
-            color: #ffffff;
-        }
+nav.scrolled .logo img {
+    width:
+        128px;
+}
 
+
+/* =========================================================
+   NAV LINKS
+   ========================================================= */
+
+.nav-links {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        6px;
+
+    margin:
+        0;
+
+    padding:
+        0;
+
+    list-style:
+        none;
+}
+
+
+.nav-links li {
+    display:
+        flex;
+
+    align-items:
+        center;
+}
+
+
+.nav-links a {
+    position:
+        relative;
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    padding:
+        9px 13px;
+
+    border-radius:
+        999px;
+
+    color:
+        #26334D;
+
+    font-size:
+        0.82rem;
+
+    font-weight:
+        600;
+
+    text-decoration:
+        none;
+
+    transition:
+        color 0.3s ease,
+        background 0.3s ease,
+        transform 0.3s ease;
+}
+
+
+.nav-links a:hover {
+    color:
+        #0152F4;
+
+    background:
+        rgba(1, 82, 244, 0.07);
+
+    transform:
+        translateY(-1px);
+}
+
+
+/* =========================================================
+   LET'S TALK CTA
+   ========================================================= */
+
+.nav-links li:last-child a {
+    margin-left:
+        5px;
+
+    padding:
+        10px 17px;
+
+    background:
+        #0152F4;
+
+    color:
+        #FFFFFF;
+
+    box-shadow:
+        0 6px 18px rgba(1, 82, 244, 0.18);
+}
+
+
+.nav-links li:last-child a:hover {
+    background:
+        #002096;
+
+    color:
+        #FFFFFF;
+
+    transform:
+        translateY(-1px);
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 850px) {
+
+    nav {
+        top:
+            12px;
+
+        width:
+            92%;
+
+        padding:
+            10px 14px;
+    }
+
+    nav.scrolled {
+        top:
+            8px;
+
+        width:
+            94%;
+    }
+
+    .logo img {
+        width:
+            125px;
+    }
+
+    nav.scrolled .logo img {
+        width:
+            115px;
+    }
+
+    .nav-links {
+        gap:
+            2px;
+    }
+
+    .nav-links a {
+        padding:
+            8px 8px;
+
+        font-size:
+            0.72rem;
+    }
+
+    .nav-links li:last-child a {
+        padding:
+            8px 11px;
+    }
+}
+
+
+@media (max-width: 650px) {
+
+    nav {
+        width:
+            94%;
+
+        padding:
+            10px 13px;
+    }
+
+    .logo img {
+        width:
+            115px;
+    }
+
+    nav.scrolled .logo img {
+        width:
+            105px;
+    }
+
+    .nav-links {
+        gap:
+            0;
+    }
+
+    .nav-links a {
+        padding:
+            7px 6px;
+
+        font-size:
+            0.66rem;
+    }
+
+    .nav-links li:last-child a {
+        padding:
+            8px 9px;
+    }
+}
+
+
+@media (max-width: 500px) {
+
+    nav {
+        width:
+            94%;
+    }
+
+    .logo img {
+        width:
+            105px;
+    }
+
+    .nav-links a {
+        padding:
+            6px 4px;
+
+        font-size:
+            0.58rem;
+    }
+
+    .nav-links li:last-child a {
+        padding:
+            7px 8px;
+    }
+}
         /* HERO */
         .hero {
             min-height: 100vh;
@@ -4430,5 +4728,23 @@ footer strong {
     });
 </script>
 
+<script>
+    const nav = document.querySelector("nav");
+
+    function updateNavigation() {
+        if (window.scrollY > 40) {
+            nav.classList.add("scrolled");
+        } else {
+            nav.classList.remove("scrolled");
+        }
+    }
+
+    window.addEventListener("scroll", updateNavigation, {
+        passive: true
+    });
+
+    updateNavigation();
+</script>
+    
 </body>
 </html>
