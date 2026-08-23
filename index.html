@@ -6759,6 +6759,178 @@ body {
     }
 
 }
+
+/* =========================================================
+   HERO — STRONGER PREMIUM ATMOSPHERE
+   ========================================================= */
+
+.hero {
+    background:
+        radial-gradient(
+            circle at 82% 28%,
+            rgba(1,82,244,0.16) 0%,
+            rgba(44,145,252,0.10) 24%,
+            rgba(44,145,252,0.03) 44%,
+            transparent 66%
+        ),
+        radial-gradient(
+            circle at 12% 82%,
+            rgba(119,193,252,0.12) 0%,
+            rgba(119,193,252,0.05) 28%,
+            transparent 58%
+        ),
+        linear-gradient(
+            135deg,
+            #FFFFFF 0%,
+            #F9FCFF 34%,
+            #EEF7FF 65%,
+            #DCEEFF 100%
+        ) !important;
+}
+
+
+/* Main premium glow */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    width: 760px;
+    height: 760px;
+
+    right: -280px;
+    top: -250px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.20) 0%,
+            rgba(1,82,244,0.10) 28%,
+            rgba(1,82,244,0.04) 48%,
+            transparent 72%
+        );
+
+    filter:
+        blur(18px);
+
+    opacity:
+        1;
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+}
+
+
+/* Lower atmospheric glow */
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    width: 520px;
+    height: 420px;
+
+    left: -220px;
+    bottom: -180px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.12) 0%,
+            rgba(119,193,252,0.07) 32%,
+            transparent 72%
+        );
+
+    filter:
+        blur(10px);
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+}
+
+
+/* Keep the FIST above the atmosphere but below content */
+
+.hero-fist {
+    z-index:
+        1 !important;
+}
+
+.hero-content {
+    z-index:
+        5 !important;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        background:
+            radial-gradient(
+                circle at 85% 22%,
+                rgba(1,82,244,0.15) 0%,
+                rgba(44,145,252,0.08) 26%,
+                transparent 58%
+            ),
+            radial-gradient(
+                circle at 5% 85%,
+                rgba(119,193,252,0.10) 0%,
+                transparent 55%
+            ),
+            linear-gradient(
+                145deg,
+                #FFFFFF 0%,
+                #F9FCFF 38%,
+                #EEF7FF 72%,
+                #E3F1FF 100%
+            ) !important;
+    }
+
+    .hero::before {
+        width:
+            520px;
+
+        height:
+            520px;
+
+        right:
+            -220px;
+
+        top:
+            -170px;
+    }
+
+    .hero::after {
+        width:
+            360px;
+
+        height:
+            300px;
+
+        left:
+            -180px;
+
+        bottom:
+            -140px;
+    }
+
+}
     
 </style>
     
