@@ -6933,82 +6933,199 @@ body {
 }
 
 /* =========================================================
-   SWAYPHICS — FLOWING BRAND STRIP
+   SWAYPHICS — PREMIUM CAPABILITIES STRIP
    ========================================================= */
 
 .brand-strip {
     position: relative;
 
+    display: flex;
+
+    align-items: stretch;
+
     width: 100%;
-    height: 210px;
+
+    height: 78px;
 
     overflow: hidden;
 
-    background-image:
-        url("brand-strip.webp");
-
-    background-repeat: no-repeat;
-
-    /* Crop the large white area from the source image */
-    background-size: 100% auto;
-    background-position: center bottom;
+    background:
+        linear-gradient(
+            100deg,
+            #00145F 0%,
+            #002096 42%,
+            #0152F4 100%
+        );
 
     border-top:
-        1px solid rgba(1,82,244,0.08);
+        1px solid rgba(119,193,252,0.16);
 
     border-bottom:
-        1px solid rgba(1,82,244,0.08);
+        1px solid rgba(119,193,252,0.16);
+
+    box-shadow:
+        0 12px 35px rgba(0,32,150,0.10);
 
     isolation: isolate;
 }
 
 
-/* Light overlay */
+/* Subtle atmosphere */
 
 .brand-strip::before {
     content: "";
 
     position: absolute;
 
-    inset: 0;
+    width: 420px;
+    height: 420px;
+
+    right: -180px;
+    top: -170px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(119,193,252,0.16) 0%,
+            rgba(119,193,252,0) 70%
+        );
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+
+/* Left label */
+
+.brand-strip-label {
+    position: relative;
+
+    z-index: 3;
+
+    display: flex;
+
+    align-items: center;
+
+    flex: 0 0 auto;
+
+    width: 150px;
+
+    padding-left: 7%;
 
     background:
         linear-gradient(
-            180deg,
-            rgba(255,255,255,0.08) 0%,
-            rgba(255,255,255,0) 60%,
-            rgba(0,32,150,0.04) 100%
+            90deg,
+            #00145F 0%,
+            rgba(0,20,95,0.96) 78%,
+            rgba(0,20,95,0) 100%
         );
+}
 
-    z-index: 0;
+
+.brand-strip-label span {
+    color:
+        #77C1FC;
+
+    font-size:
+        0.62rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.16em;
+
+    white-space:
+        nowrap;
+
+    text-transform:
+        uppercase;
+}
+
+
+/* Scrolling area */
+
+.brand-strip-window {
+    position: relative;
+
+    flex: 1 1 auto;
+
+    overflow: hidden;
+
+    display: flex;
+
+    align-items: center;
+}
+
+
+/* Fade edges */
+
+.brand-strip-window::before,
+.brand-strip-window::after {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    bottom: 0;
+
+    width: 70px;
+
+    z-index: 3;
 
     pointer-events: none;
+}
+
+
+.brand-strip-window::before {
+    left: 0;
+
+    background:
+        linear-gradient(
+            90deg,
+            #00145F 0%,
+            rgba(0,20,95,0) 100%
+        );
+}
+
+
+.brand-strip-window::after {
+    right: 0;
+
+    background:
+        linear-gradient(
+            270deg,
+            #0152F4 0%,
+            rgba(1,82,244,0) 100%
+        );
 }
 
 
 /* Moving track */
 
 .brand-strip-track {
-    position: absolute;
-
-    top: 25%;
-    left: 0;
+    position: relative;
 
     display: flex;
 
     width: max-content;
 
-    z-index: 2;
+    flex-shrink: 0;
 
     animation:
-        brandMarquee 25s linear infinite;
+        swayBrandMarquee 28s linear infinite;
 
     will-change:
         transform;
+
+    z-index: 1;
 }
 
 
-/* Each repeated sequence */
+/* Repeated groups */
 
 .brand-strip-group {
     display: flex;
@@ -7023,58 +7140,58 @@ body {
 }
 
 
-/* Individual words */
+/* Capability text */
 
-.brand-strip span {
-    display: inline-flex;
-
-    align-items: center;
-
-    gap: 22px;
+.brand-strip-group span {
+    display: inline-block;
 
     color:
-        #002096;
+        rgba(255,255,255,0.94);
 
     font-size:
-        0.74rem;
+        0.72rem;
 
     font-weight:
-        800;
+        700;
 
     letter-spacing:
-        0.14em;
+        0.13em;
 
     line-height:
         1;
 
     white-space:
         nowrap;
-
-    text-shadow:
-        0 1px 8px rgba(255,255,255,0.65);
 }
 
 
 /* Separator */
 
-.brand-strip span::after {
-    content:
-        "✦";
+.brand-strip-group i {
+    display: inline-flex;
 
-    margin-left:
-        0;
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+    height: 18px;
 
     color:
-        #0152F4;
+        #77C1FC;
 
     font-size:
-        0.6rem;
+        0.58rem;
+
+    font-style:
+        normal;
+
+    flex-shrink: 0;
 }
 
 
-/* Seamless movement */
+/* Continuous marquee */
 
-@keyframes brandMarquee {
+@keyframes swayBrandMarquee {
 
     from {
         transform:
@@ -7089,7 +7206,7 @@ body {
 }
 
 
-/* Hover pause */
+/* Pause on hover */
 
 .brand-strip:hover .brand-strip-track {
     animation-play-state:
@@ -7105,18 +7222,20 @@ body {
 
     .brand-strip {
         height:
-            185px;
-
-        background-size:
-            130% auto;
-
-        background-position:
-            center bottom;
+            72px;
     }
 
-    .brand-strip-track {
-        top:
-            23%;
+    .brand-strip-label {
+        width:
+            125px;
+
+        padding-left:
+            6%;
+    }
+
+    .brand-strip-label span {
+        font-size:
+            0.58rem;
     }
 
     .brand-strip-group {
@@ -7127,12 +7246,9 @@ body {
             18px;
     }
 
-    .brand-strip span {
+    .brand-strip-group span {
         font-size:
-            0.68rem;
-
-        gap:
-            18px;
+            0.66rem;
     }
 
 }
@@ -7146,46 +7262,60 @@ body {
 
     .brand-strip {
         height:
-            145px;
+            64px;
+    }
 
-        /* Zoom the artwork so the white source area is cropped */
-        background-size:
-            170% auto;
+    .brand-strip-label {
+        width:
+            98px;
 
-        background-position:
-            center bottom;
+        padding-left:
+            6%;
+    }
+
+    .brand-strip-label span {
+        font-size:
+            0.52rem;
+
+        letter-spacing:
+            0.11em;
+    }
+
+    .brand-strip-window::before,
+    .brand-strip-window::after {
+        width:
+            30px;
     }
 
     .brand-strip-track {
-        top:
-            20%;
-
         animation-duration:
             22s;
     }
 
     .brand-strip-group {
         gap:
-            15px;
+            14px;
 
         padding-right:
-            15px;
+            14px;
     }
 
-    .brand-strip span {
+    .brand-strip-group span {
         font-size:
-            0.58rem;
+            0.56rem;
 
         letter-spacing:
-            0.11em;
-
-        gap:
-            15px;
+            0.10em;
     }
 
-    .brand-strip span::after {
+    .brand-strip-group i {
+        width:
+            12px;
+        height:
+            12px;
+
         font-size:
-            0.52rem;
+            0.48rem;
     }
 
 }
@@ -7295,27 +7425,71 @@ body {
     </div>
 
 </section>
-                <!-- BRAND STRIP -->
+                <!-- SWAYPHICS CAPABILITIES STRIP -->
 <div class="brand-strip">
 
-    <div class="brand-strip-track">
+    <div class="brand-strip-label">
+        <span>WHAT WE BUILD</span>
+    </div>
 
-        <div class="brand-strip-group">
-            <span>BRANDING</span>
-            <span>DESIGN</span>
-            <span>DIGITAL</span>
-            <span>STRATEGY</span>
-            <span>CREATIVITY</span>
-            <span>IDENTITY</span>
-        </div>
+    <div class="brand-strip-window">
 
-        <div class="brand-strip-group" aria-hidden="true">
-            <span>BRANDING</span>
-            <span>DESIGN</span>
-            <span>DIGITAL</span>
-            <span>STRATEGY</span>
-            <span>CREATIVITY</span>
-            <span>IDENTITY</span>
+        <div class="brand-strip-track">
+
+            <div class="brand-strip-group">
+
+                <span>BRAND IDENTITY</span>
+                <i>✦</i>
+
+                <span>DIGITAL PRESENCE</span>
+                <i>✦</i>
+
+                <span>WEBSITES</span>
+                <i>✦</i>
+
+                <span>BUSINESS SYSTEMS</span>
+                <i>✦</i>
+
+                <span>CONTENT</span>
+                <i>✦</i>
+
+                <span>BRAND LAUNCH</span>
+                <i>✦</i>
+
+                <span>GROWTH</span>
+                <i>✦</i>
+
+            </div>
+
+
+            <div
+                class="brand-strip-group"
+                aria-hidden="true"
+            >
+
+                <span>BRAND IDENTITY</span>
+                <i>✦</i>
+
+                <span>DIGITAL PRESENCE</span>
+                <i>✦</i>
+
+                <span>WEBSITES</span>
+                <i>✦</i>
+
+                <span>BUSINESS SYSTEMS</span>
+                <i>✦</i>
+
+                <span>CONTENT</span>
+                <i>✦</i>
+
+                <span>BRAND LAUNCH</span>
+                <i>✦</i>
+
+                <span>GROWTH</span>
+                <i>✦</i>
+
+            </div>
+
         </div>
 
     </div>
