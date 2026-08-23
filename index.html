@@ -6961,7 +6961,7 @@ body {
 
 
 /* =========================================================
-   FIXED LABEL
+   WHAT WE DO — SOFT FLOATING LABEL
    ========================================================= */
 
 .brand-strip-label {
@@ -6971,36 +6971,54 @@ body {
 
     display: flex;
     align-items: center;
+    justify-content: center;
 
-    flex: 0 0 175px;
+    flex: 0 0 165px;
 
-    padding-left: 7%;
+    margin: 9px 0 9px 6%;
+
+    padding: 0 20px;
 
     background:
-        #00145F;
+        rgba(255,255,255,0.10);
 
-    border-right:
-        1px solid rgba(119,193,252,0.22);
+    border:
+        1px solid rgba(119,193,252,0.28);
+
+    border-radius:
+        999px;
 
     box-shadow:
-        12px 0 22px rgba(0,20,95,0.18);
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        0 6px 18px rgba(0,20,95,0.10);
+
+    backdrop-filter:
+        blur(12px);
+
+    -webkit-backdrop-filter:
+        blur(12px);
+
+    overflow:
+        hidden;
 }
 
+
+/* Text */
 
 .brand-strip-label span {
     display: block;
 
     color:
-        #FFFFFF;
+        rgba(255,255,255,0.96);
 
     font-size:
-        0.68rem;
+        0.64rem;
 
     font-weight:
         800;
 
     letter-spacing:
-        0.18em;
+        0.16em;
 
     line-height:
         1;
@@ -7010,24 +7028,31 @@ body {
 }
 
 
-/* Small accent line */
+/* Soft accent */
 
 .brand-strip-label::after {
     content: "";
 
     position: absolute;
 
-    left: 0;
+    left: 50%;
     bottom: 0;
 
-    width: 42px;
-    height: 3px;
+    width: 34px;
+    height: 2px;
+
+    transform:
+        translateX(-50%);
 
     background:
         #77C1FC;
+
+    border-radius:
+        999px;
+
+    opacity:
+        0.75;
 }
-
-
 /* =========================================================
    MOVING AREA
    ========================================================= */
@@ -7168,18 +7193,21 @@ body {
 
     .brand-strip-label {
         flex-basis:
-            145px;
+            135px;
 
-        padding-left:
-            6%;
+        margin:
+            8px 0 8px 5%;
+
+        padding:
+            0 16px;
     }
 
     .brand-strip-label span {
         font-size:
-            0.61rem;
+            0.57rem;
 
         letter-spacing:
-            0.14em;
+            0.13em;
     }
 
     .brand-strip-group {
@@ -7216,26 +7244,29 @@ body {
 
     .brand-strip-label {
         flex-basis:
-            103px;
+            100px;
 
-        padding-left:
-            6%;
+        margin:
+            7px 0 7px 5%;
+
+        padding:
+            0 12px;
+
+        border-radius:
+            999px;
     }
 
     .brand-strip-label span {
         font-size:
-            0.52rem;
+            0.49rem;
 
         letter-spacing:
-            0.10em;
+            0.09em;
     }
 
     .brand-strip-label::after {
         width:
-            28px;
-
-        height:
-            2px;
+            24px;
     }
 
     .brand-strip-track {
