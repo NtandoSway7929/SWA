@@ -6931,6 +6931,249 @@ body {
     }
 
 }
+
+/* =========================================================
+   SWAYPHICS — FLOWING BRAND STRIP
+   ========================================================= */
+
+.brand-strip {
+    position: relative;
+
+    width: 100%;
+
+    height: 235px;
+
+    overflow: hidden;
+
+    background-image:
+        url("brand-strip.webp");
+
+    background-size: cover;
+
+    background-position: center 58%;
+
+    background-repeat: no-repeat;
+
+    border-top: 1px solid rgba(1,82,244,0.08);
+
+    border-bottom: 1px solid rgba(1,82,244,0.08);
+
+    isolation: isolate;
+}
+
+
+/* Soft overlay so the words remain readable */
+
+.brand-strip::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,0.14) 0%,
+            rgba(255,255,255,0.02) 45%,
+            rgba(0,32,150,0.04) 100%
+        );
+
+    z-index: 0;
+
+    pointer-events: none;
+}
+
+
+/* Moving track */
+
+.brand-strip-track {
+    position: absolute;
+
+    top: 34%;
+
+    left: 0;
+
+    display: flex;
+
+    width: max-content;
+
+    z-index: 2;
+
+    animation:
+        brandMarquee 28s linear infinite;
+
+    will-change:
+        transform;
+}
+
+
+/* Each repeated group */
+
+.brand-strip-group {
+    display: flex;
+
+    align-items: center;
+
+    flex-shrink: 0;
+
+    gap: 42px;
+
+    padding-right: 42px;
+}
+
+
+/* Individual words */
+
+.brand-strip span {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 42px;
+
+    color:
+        #002096;
+
+    font-size:
+        0.78rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.18em;
+
+    line-height:
+        1;
+
+    white-space:
+        nowrap;
+
+    text-shadow:
+        0 1px 8px rgba(255,255,255,0.55);
+}
+
+
+/* Blue separator */
+
+.brand-strip span::after {
+    content:
+        "✦";
+
+    color:
+        #0152F4;
+
+    font-size:
+        0.65rem;
+}
+
+
+/* Seamless movement */
+
+@keyframes brandMarquee {
+
+    from {
+        transform:
+            translateX(0);
+    }
+
+    to {
+        transform:
+            translateX(-50%);
+    }
+
+}
+
+
+/* Pause very subtly on hover */
+
+.brand-strip:hover .brand-strip-track {
+    animation-play-state:
+        paused;
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .brand-strip {
+        height:
+            200px;
+
+        background-position:
+            center 56%;
+    }
+
+    .brand-strip-track {
+        top:
+            32%;
+    }
+
+    .brand-strip-group {
+        gap:
+            32px;
+
+        padding-right:
+            32px;
+    }
+
+    .brand-strip span {
+        font-size:
+            0.7rem;
+
+        gap:
+            32px;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .brand-strip {
+        height:
+            165px;
+
+        background-position:
+            center 55%;
+    }
+
+    .brand-strip-track {
+        top:
+            28%;
+
+        animation-duration:
+            24s;
+    }
+
+    .brand-strip-group {
+        gap:
+            25px;
+
+        padding-right:
+            25px;
+    }
+
+    .brand-strip span {
+        font-size:
+            0.62rem;
+
+        letter-spacing:
+            0.14em;
+
+        gap:
+            25px;
+    }
+
+}
     
 </style>
     
@@ -7037,21 +7280,32 @@ body {
     </div>
 
 </section>
-                <div class="brand-strip">
-            <div class="brand-strip-track">
-                <span>BRANDING</span>
-                <span>DESIGN</span>
-                <span>DIGITAL</span>
-                <span>STRATEGY</span>
-                <span>CREATIVITY</span>
-                <span>BRANDING</span>
-                <span>DESIGN</span>
-                <span>DIGITAL</span>
-                <span>STRATEGY</span>
-                <span>CREATIVITY</span>
-            </div>
+                <!-- BRAND STRIP -->
+<div class="brand-strip">
+
+    <div class="brand-strip-track">
+
+        <div class="brand-strip-group">
+            <span>BRANDING</span>
+            <span>DESIGN</span>
+            <span>DIGITAL</span>
+            <span>STRATEGY</span>
+            <span>CREATIVITY</span>
+            <span>IDENTITY</span>
         </div>
 
+        <div class="brand-strip-group" aria-hidden="true">
+            <span>BRANDING</span>
+            <span>DESIGN</span>
+            <span>DIGITAL</span>
+            <span>STRATEGY</span>
+            <span>CREATIVITY</span>
+            <span>IDENTITY</span>
+        </div>
+
+    </div>
+
+</div>
         <!-- SERVICES -->
 <section class="services" id="services">
 
