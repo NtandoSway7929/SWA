@@ -6573,14 +6573,14 @@ body {
     position: absolute;
 
     width: min(520px, 46vw);
+
     aspect-ratio: 531 / 417;
 
-    right: -80px;
+    right: -55px;
     top: 50%;
 
     transform:
-        translateY(-50%)
-        
+        translateY(-50%);
 
     background-image:
         url("FIST.webp");
@@ -6595,10 +6595,10 @@ body {
         contain;
 
     opacity:
-        0.10;
+        0.16;
 
-    filter:
-        blur(0.2px);
+    mix-blend-mode:
+        multiply;
 
     pointer-events:
         none;
@@ -6608,6 +6608,67 @@ body {
 }
 
 
+/* Desktop */
+
+@media (min-width: 901px) {
+
+    .hero-fist {
+        width:
+            540px;
+
+        right:
+            -70px;
+
+        opacity:
+            0.16;
+    }
+
+}
+
+
+/* Tablet */
+
+@media (max-width: 900px) {
+
+    .hero-fist {
+        width:
+            430px;
+
+        right:
+            -105px;
+
+        top:
+            52%;
+
+        opacity:
+            0.11;
+    }
+
+}
+
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .hero-fist {
+        width:
+            360px;
+
+        right:
+            -115px;
+
+        top:
+            58%;
+
+        opacity:
+            0.09;
+
+        transform:
+            translateY(-50%);
+    }
+
+}
 /* Keep text above the watermark */
 
 .hero-content {
