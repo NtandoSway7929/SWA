@@ -7868,6 +7868,31 @@ textarea:focus-visible {
     box-shadow:
         0 0 0 4px rgba(119,193,252,0.25);
 }
+
+    /* =========================================================
+   PHASE 1 — ACCESSIBILITY
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration:
+            0.01ms !important;
+
+        animation-iteration-count:
+            1 !important;
+
+        scroll-behavior:
+            auto !important;
+
+        transition-duration:
+            0.01ms !important;
+    }
+
+}
     
 </style>
     
@@ -8649,6 +8674,8 @@ textarea:focus-visible {
             <img
     src="identity.webp"
     alt="Swayphics brand identity design"
+    width="1536"
+    height="1024"
     class="work-image"
     loading="lazy"
     decoding="async"
@@ -8673,6 +8700,8 @@ textarea:focus-visible {
             <img
     src="presence.webp"
     alt="Swayphics digital presence design"
+    width="1536"
+    height="1024"
     class="work-image"
     loading="lazy"
     decoding="async"
@@ -8697,6 +8726,8 @@ textarea:focus-visible {
             <img
     src="expression.webp"
     alt="Swayphics creative content design"
+    width="1536"
+    height="1024"
     class="work-image"
     loading="lazy"
     decoding="async"
@@ -8901,76 +8932,80 @@ textarea:focus-visible {
 </footer>
 
 <script>
-    /* =========================================================
-       SWAYPHICS — SCROLL REVEAL SYSTEM
-       ========================================================= */
+/* =========================================================
+   SWAYPHICS — SCROLL REVEAL SYSTEM
+   ========================================================= */
 
-    const revealSelectors = [
-        ".services-intro",
-        ".package-card",
-        ".custom-services-header",
-        ".service-category",
-        ".why-header",
-        ".why-card",
-        ".why-footer",
-        "#work .section-label",
-        "#work .section-title",
-        "#work .work-intro",
-        "#work .work-card",
-        ".about .section-label",
-        ".about-content",
-        ".about-belief",
-        ".cta .section-label",
-        ".cta h2",
-        ".cta > p",
-        ".project-form",
-        ".contact-email"
-    ];
+const revealSelectors = [
+    ".services-intro",
+    ".package-card",
+    ".custom-services-header",
+    ".service-category",
+    ".why-header",
+    ".why-card",
+    ".why-footer",
+    "#work .section-label",
+    "#work .section-title",
+    "#work .work-intro",
+    "#work .work-card",
+    ".about .section-label",
+    ".about-content",
+    ".about-belief",
+    ".cta .section-label",
+    ".cta h2",
+    ".cta > p",
+    ".project-form",
+    ".contact-email"
+];
 
-    const revealElements = document.querySelectorAll(
-        revealSelectors.join(", ")
-    );
+const revealElements = document.querySelectorAll(
+    revealSelectors.join(", ")
+);
 
-    /* Add reveal class */
-    revealElements.forEach((element) => {
-        element.classList.add("reveal");
+
+/* ---------------------------------------------------------
+   PREPARE REVEAL ELEMENTS
+   --------------------------------------------------------- */
+
+revealElements.forEach((element) => {
+    element.classList.add("reveal");
+});
+
+
+/* ---------------------------------------------------------
+   STAGGER GROUP CHILDREN
+   --------------------------------------------------------- */
+
+const staggerGroups = [
+    ".package-grid",
+    ".service-catalog",
+    ".why-grid",
+    ".work-grid"
+];
+
+staggerGroups.forEach((selector) => {
+
+    const group = document.querySelector(selector);
+
+    if (!group) return;
+
+    Array.from(group.children).forEach((child, index) => {
+
+        child.classList.add("reveal");
+
+        child.style.transitionDelay =
+            `${index * 0.08}s`;
+
     });
 
-
-    /* ---------------------------------------------------------
-       STAGGER CHILDREN INSIDE GROUPS
-       --------------------------------------------------------- */
-
-    const staggerGroups = [
-        ".package-grid",
-        ".service-catalog",
-        ".why-grid",
-        ".work-grid"
-    ];
-
-    staggerGroups.forEach((selector) => {
-
-        const group = document.querySelector(selector);
-
-        if (!group) return;
-
-        const children = group.children;
-
-        Array.from(children).forEach((child, index) => {
-
-            child.classList.add("reveal");
-
-            child.style.transitionDelay =
-                `${index * 0.08}s`;
-
-        });
-
-    });
+});
 
 
-    /* ---------------------------------------------------------
-       INTERSECTION OBSERVER
-       --------------------------------------------------------- */
+/* ---------------------------------------------------------
+   INTERSECTION OBSERVER
+   --------------------------------------------------------- */
+
+if ("IntersectionObserver" in window) {
 
     const revealObserver = new IntersectionObserver(
         (entries, observer) => {
@@ -9004,9 +9039,23 @@ textarea:focus-visible {
         )
         .forEach((element) => {
 
+            if (!element.classList.contains("reveal")) {
+                element.classList.add("reveal");
+            }
+
             revealObserver.observe(element);
 
         });
+
+} else {
+
+    /* Fallback for browsers without IntersectionObserver */
+
+    revealElements.forEach((element) => {
+        element.classList.add("visible");
+    });
+
+}
 </script>
 
 
