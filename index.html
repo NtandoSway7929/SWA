@@ -6108,6 +6108,245 @@ body {
     }
 
 }
+
+ /* =========================================================
+   HERO — READABILITY + CTA POLISH
+   ========================================================= */
+
+/* Soft white readability layer over the hero image */
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 0;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,0.96) 0%,
+            rgba(255,255,255,0.88) 42%,
+            rgba(255,255,255,0.68) 72%,
+            rgba(255,255,255,0.52) 100%
+        );
+
+    pointer-events: none;
+}
+
+
+/* Keep hero content above the readability layer */
+
+.hero-content {
+    position: relative !important;
+
+    z-index: 5 !important;
+}
+
+
+/* Keep the eyebrow on the left */
+
+.hero .eyebrow {
+    text-align: left !important;
+
+    color:
+        #0152F4 !important;
+
+    text-shadow:
+        0 1px 8px rgba(255,255,255,0.85);
+}
+
+
+/* Make the headline readable */
+
+.hero h1 {
+    color:
+        #081533 !important;
+
+    text-shadow:
+        0 2px 18px rgba(255,255,255,0.75);
+}
+
+.hero h1 span {
+    color:
+        #0152F4 !important;
+}
+
+
+/* Make paragraph readable */
+
+.hero p {
+    color:
+        #33415F !important;
+
+    text-shadow:
+        0 1px 10px rgba(255,255,255,0.85);
+}
+
+
+/* =========================================================
+   HERO BUTTONS
+   ========================================================= */
+
+.hero .buttons {
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    gap:
+        16px !important;
+}
+
+
+/* Both buttons */
+
+.hero .buttons .btn {
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    min-width:
+        185px !important;
+
+    height:
+        54px !important;
+
+    padding:
+        0 28px !important;
+
+    border-radius:
+        999px !important;
+
+    font-size:
+        0.9rem !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        1 !important;
+
+    text-decoration:
+        none !important;
+
+    white-space:
+        nowrap !important;
+
+    box-sizing:
+        border-box !important;
+
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        background 0.3s ease !important;
+}
+
+
+/* Primary button */
+
+.hero .buttons .btn-primary {
+    background:
+        #0152F4 !important;
+
+    color:
+        #FFFFFF !important;
+
+    border:
+        1px solid #0152F4 !important;
+
+    box-shadow:
+        0 10px 28px rgba(1,82,244,0.22) !important;
+}
+
+
+/* Secondary button */
+
+.hero .buttons .btn-secondary {
+    background:
+        rgba(255,255,255,0.82) !important;
+
+    color:
+        #002096 !important;
+
+    border:
+        1.5px solid #0152F4 !important;
+
+    box-shadow:
+        0 6px 20px rgba(0,32,150,0.08) !important;
+}
+
+
+/* Hover */
+
+.hero .buttons .btn:hover {
+    transform:
+        translateY(-3px) !important;
+}
+
+.hero .buttons .btn-primary:hover {
+    box-shadow:
+        0 14px 32px rgba(1,82,244,0.28) !important;
+}
+
+.hero .buttons .btn-secondary:hover {
+    background:
+        #FFFFFF !important;
+
+    box-shadow:
+        0 10px 26px rgba(0,32,150,0.12) !important;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(255,255,255,0.94) 0%,
+                rgba(255,255,255,0.91) 55%,
+                rgba(255,255,255,0.78) 100%
+            );
+    }
+
+
+    .hero .buttons {
+        width:
+            100% !important;
+
+        gap:
+            12px !important;
+    }
+
+
+    .hero .buttons .btn {
+        width:
+            100% !important;
+
+        min-width:
+            0 !important;
+
+        height:
+            52px !important;
+    }
+
+}   
     
 </style>
     
