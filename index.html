@@ -6485,6 +6485,219 @@ body {
     z-index:
         5 !important;
 }
+
+    /* =========================================================
+   HERO — STRONGER SWAYPHICS VISUAL
+   ========================================================= */
+
+.hero {
+    background:
+        linear-gradient(
+            115deg,
+            #FFFFFF 0%,
+            #F8FBFF 34%,
+            #EAF4FF 62%,
+            #D9ECFF 100%
+        ) !important;
+
+    isolation: isolate !important;
+}
+
+
+/* Main atmospheric blue glow */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    width: 720px;
+    height: 720px;
+
+    right: -220px;
+    top: -210px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(1,82,244,0.24) 0%,
+            rgba(44,145,252,0.16) 32%,
+            rgba(119,193,252,0.08) 52%,
+            rgba(119,193,252,0) 74%
+        );
+
+    filter: blur(18px);
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+
+/* Lower-left light */
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    width: 500px;
+    height: 400px;
+
+    left: -230px;
+    bottom: -180px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.10) 0%,
+            rgba(44,145,252,0.04) 45%,
+            rgba(44,145,252,0) 72%
+        );
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+
+/* =========================================================
+   SWAYPHICS FIST WATERMARK
+   ========================================================= */
+
+.hero-fist {
+    position: absolute;
+
+    width: min(520px, 46vw);
+    aspect-ratio: 531 / 417;
+
+    right: -80px;
+    top: 50%;
+
+    transform:
+        translateY(-50%)
+        rotate(180deg);
+
+    background-image:
+        url("FIST.webp");
+
+    background-repeat:
+        no-repeat;
+
+    background-position:
+        center;
+
+    background-size:
+        contain;
+
+    opacity:
+        0.10;
+
+    filter:
+        blur(0.2px);
+
+    pointer-events:
+        none;
+
+    z-index:
+        1;
+}
+
+
+/* Keep text above the watermark */
+
+.hero-content {
+    position:
+        relative !important;
+
+    z-index:
+        5 !important;
+}
+
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (min-width: 901px) {
+
+    .hero-fist {
+        width:
+            520px;
+
+        right:
+            -85px;
+
+        opacity:
+            0.11;
+    }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .hero-fist {
+        width:
+            420px;
+
+        right:
+            -120px;
+
+        top:
+            52%;
+
+        opacity:
+            0.075;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        background:
+            linear-gradient(
+                150deg,
+                #FFFFFF 0%,
+                #F8FBFF 42%,
+                #EDF6FF 72%,
+                #E5F1FF 100%
+            ) !important;
+    }
+
+    .hero-fist {
+        width:
+            360px;
+
+        right:
+            -145px;
+
+        top:
+            58%;
+
+        opacity:
+            0.055;
+
+        transform:
+            translateY(-50%)
+            rotate(180deg);
+    }
+
+}
     
 </style>
     
@@ -6554,8 +6767,10 @@ body {
 
     <main>
 
-       <!-- HERO -->
+      <!-- HERO -->
 <section class="hero">
+
+    <div class="hero-fist" aria-hidden="true"></div>
 
     <div class="hero-content">
 
@@ -6589,7 +6804,6 @@ body {
     </div>
 
 </section>
-
                 <div class="brand-strip">
             <div class="brand-strip-track">
                 <span>BRANDING</span>
