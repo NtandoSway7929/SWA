@@ -8777,11 +8777,12 @@ textarea:focus-visible {
     </p>
 
     <form
-        class="project-form"
-        action="mailto:swayphics@gmail.com"
-        method="post"
-        enctype="text/plain"
-    >
+    class="project-form"
+    action="mailto:swayphics@gmail.com"
+    method="post"
+    enctype="text/plain"
+    aria-label="Start a project enquiry"
+>
 
         <div class="form-group">
             <label for="name">Your name</label>
@@ -8815,10 +8816,11 @@ textarea:focus-visible {
             <label for="service">What do you need?</label>
 
             <select
-                id="service"
-                name="Service"
-                required
-            >
+    id="service"
+    name="Service"
+    autocomplete="off"
+    required
+>
                 <option value="" disabled selected>
                     Select a service
                 </option>
@@ -8852,14 +8854,15 @@ textarea:focus-visible {
             <label for="message">Tell us about your project</label>
 
             <textarea
-                id="message"
-                name="Message"
-                rows="5"
-                minlength="10"
-                maxlength="1500"
-                placeholder="What are you looking to create?"
-                required
-            ></textarea>
+    id="message"
+    name="Message"
+    rows="5"
+    minlength="10"
+    maxlength="1500"
+    placeholder="What are you looking to create?"
+    autocomplete="off"
+    required
+></textarea>
         </div>
 
         <button type="submit" class="btn btn-primary">
