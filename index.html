@@ -7843,6 +7843,31 @@ body {
     }
 
 }
+
+    /* =========================================================
+   PHASE 1 — ACCESSIBILITY
+   KEYBOARD FOCUS STATES
+   ========================================================= */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline:
+        3px solid #77C1FC;
+
+    outline-offset:
+        4px;
+}
+
+
+/* Keep keyboard focus visible on dark buttons */
+
+.btn:focus-visible {
+    box-shadow:
+        0 0 0 4px rgba(119,193,252,0.25);
+}
     
 </style>
     
@@ -8033,7 +8058,7 @@ body {
 
         <p class="services-description">
             From your first logo to a complete digital business system,
-            choose a package that fits where your business is going —
+            choose a package that fits where your business is going 
             or build your own solution from our individual services.
         </p>
 
