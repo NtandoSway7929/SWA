@@ -6398,6 +6398,93 @@ body {
     }
 
 }
+
+    /* =========================================================
+   HERO — CLEAN BLUE ATMOSPHERE
+   ========================================================= */
+
+.hero {
+    background:
+        linear-gradient(
+            135deg,
+            #FFFFFF 0%,
+            #F8FBFF 48%,
+            #EEF6FF 100%
+        ) !important;
+}
+
+
+/* subtle blue atmosphere */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    width: 620px;
+    height: 620px;
+
+    right: -260px;
+    top: -180px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.18) 0%,
+            rgba(1,82,244,0.08) 42%,
+            rgba(1,82,244,0) 72%
+        );
+
+    filter:
+        blur(25px);
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+}
+
+
+/* subtle lower atmosphere */
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    width: 420px;
+    height: 320px;
+
+    left: -180px;
+    bottom: -180px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(119,193,252,0.10) 0%,
+            rgba(119,193,252,0) 72%
+        );
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+}
+
+
+.hero-content {
+    position:
+        relative !important;
+
+    z-index:
+        5 !important;
+}
     
 </style>
     
