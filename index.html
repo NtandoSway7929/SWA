@@ -6384,6 +6384,36 @@ body {
     }
 
 }
+
+    /* =========================================================
+   HERO — MOBILE BACKGROUND REDUCTION
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        background-position:
+            center center !important;
+
+        background-size:
+            cover !important;
+    }
+
+
+    /* Stronger mobile readability layer */
+
+    .hero::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(255,255,255,0.985) 0%,
+                rgba(255,255,255,0.97) 35%,
+                rgba(255,255,255,0.94) 70%,
+                rgba(255,255,255,0.90) 100%
+            ) !important;
+    }
+
+}
     
 </style>
     
