@@ -7265,6 +7265,164 @@ body {
     }
 
 }
+
+    /* =========================================================
+   PHASE 1 — RESPONSIVE PASS
+   MOBILE HERO
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        min-height: auto;
+
+        display: flex;
+        align-items: center;
+
+        padding:
+            150px 6% 90px;
+
+        text-align: left;
+
+        overflow: hidden;
+    }
+
+
+    .hero-content {
+        width: 100%;
+        max-width: 100%;
+    }
+
+
+    .eyebrow {
+        margin-bottom: 22px;
+
+        font-size:
+            0.68rem;
+
+        letter-spacing:
+            2.2px;
+    }
+
+
+    .hero h1 {
+        width: 100%;
+
+        margin:
+            0 0 25px;
+
+        font-size:
+            clamp(3.15rem, 14vw, 4.8rem);
+
+        line-height:
+            0.91;
+
+        letter-spacing:
+            -3px;
+
+        text-wrap:
+            balance;
+    }
+
+
+    .hero h1 span {
+        display:
+            inline;
+    }
+
+
+    .hero p {
+        width: 100%;
+        max-width: 520px;
+
+        margin:
+            0 0 32px;
+
+        font-size:
+            1rem;
+
+        line-height:
+            1.65;
+    }
+
+
+    .buttons {
+        display:
+            flex;
+
+        flex-direction:
+            column;
+
+        align-items:
+            stretch;
+
+        gap:
+            12px;
+
+        width:
+            100%;
+    }
+
+
+    .buttons .btn {
+        width:
+            100%;
+
+        min-height:
+            52px;
+
+        display:
+            flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            center;
+
+        padding:
+            15px 20px;
+
+        border-radius:
+            999px;
+
+        text-align:
+            center;
+    }
+
+}
+
+    /* =========================================================
+   DESKTOP HERO ALIGNMENT
+   ========================================================= */
+
+@media (min-width: 701px) {
+
+    .hero {
+        text-align:
+            left;
+    }
+
+    .hero-content {
+        width:
+            100%;
+
+        max-width:
+            850px;
+    }
+
+    .buttons {
+        display:
+            flex;
+
+        align-items:
+            center;
+
+        gap:
+            14px;
+    }
+
+}
     
 </style>
     
