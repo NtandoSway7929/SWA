@@ -5827,6 +5827,287 @@ body {
     max-width: 100%;
     overflow-x: hidden;
 }
+
+/* =========================================================
+   HERO — FINAL STRUCTURE FIX
+   ========================================================= */
+
+.hero {
+    position: relative !important;
+
+    min-height: 92vh !important;
+
+    display: flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding: 120px 7% 100px !important;
+
+    overflow: hidden !important;
+
+    isolation: isolate !important;
+}
+
+
+/* Hero content */
+
+.hero-content {
+    position: relative !important;
+
+    z-index: 5 !important;
+
+    width: 100% !important;
+
+    max-width: 1050px !important;
+
+    margin: 0 auto !important;
+
+    padding: 20px 30px !important;
+
+    text-align: center !important;
+}
+
+
+/* Eyebrow stays LEFT aligned */
+
+.hero .eyebrow {
+    display: block !important;
+
+    width: 100% !important;
+
+    margin: 0 0 22px !important;
+
+    text-align: left !important;
+
+    color: #0152F4 !important;
+
+    font-size: 0.72rem !important;
+
+    font-weight: 800 !important;
+
+    letter-spacing: 3px !important;
+
+    line-height: 1.2 !important;
+
+    text-transform: uppercase !important;
+}
+
+
+/* Headline centered */
+
+.hero h1 {
+    display: block !important;
+
+    width: 100% !important;
+
+    max-width: 950px !important;
+
+    margin: 0 auto 28px !important;
+
+    text-align: center !important;
+
+    color: var(--text-dark) !important;
+
+    font-size: clamp(3.7rem, 8vw, 7.2rem) !important;
+
+    font-weight: 700 !important;
+
+    line-height: 0.94 !important;
+
+    letter-spacing: -4px !important;
+}
+
+.hero h1 span {
+    color: #0152F4 !important;
+}
+
+
+/* Paragraph centered */
+
+.hero p {
+    display: block !important;
+
+    width: 100% !important;
+
+    max-width: 650px !important;
+
+    margin: 0 auto 34px !important;
+
+    text-align: center !important;
+
+    color: var(--text-muted) !important;
+
+    font-size: 1.08rem !important;
+
+    line-height: 1.7 !important;
+}
+
+
+/* Buttons centered */
+
+.hero .buttons {
+    display: flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    gap: 14px !important;
+
+    width: 100% !important;
+
+    flex-wrap: wrap !important;
+}
+
+
+/* Hero buttons */
+
+.hero .buttons .btn {
+    display: inline-flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    min-height: 50px !important;
+
+    padding: 15px 28px !important;
+
+    border-radius: 999px !important;
+
+    font-size: 0.9rem !important;
+
+    font-weight: 700 !important;
+
+    line-height: 1 !important;
+
+    white-space: nowrap !important;
+}
+
+
+/* Primary */
+
+.hero .buttons .btn-primary {
+    background: #0152F4 !important;
+
+    color: #FFFFFF !important;
+
+    border: 1px solid #0152F4 !important;
+
+    box-shadow:
+        0 10px 25px rgba(1,82,244,0.18) !important;
+}
+
+
+/* Secondary */
+
+.hero .buttons .btn-secondary {
+    background:
+        rgba(255,255,255,0.78) !important;
+
+    color:
+        #081533 !important;
+
+    border:
+        1px solid rgba(0,32,150,0.20) !important;
+}
+
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (min-width: 901px) {
+
+    .hero-content {
+        transform:
+            translateY(-5px) !important;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        min-height: 94svh !important;
+
+        padding: 120px 6% 85px !important;
+    }
+
+    .hero-content {
+        width: 100% !important;
+
+        max-width: 100% !important;
+
+        padding: 10px 0 !important;
+    }
+
+    .hero .eyebrow {
+        margin-bottom: 18px !important;
+
+        text-align: left !important;
+
+        font-size: 0.65rem !important;
+
+        letter-spacing: 2px !important;
+    }
+
+    .hero h1 {
+        width: 100% !important;
+
+        max-width: 100% !important;
+
+        margin-bottom: 24px !important;
+
+        text-align: center !important;
+
+        font-size:
+            clamp(3.2rem, 16vw, 5rem) !important;
+
+        line-height: 0.92 !important;
+
+        letter-spacing: -3px !important;
+    }
+
+    .hero p {
+        width: 100% !important;
+
+        max-width: 520px !important;
+
+        margin: 0 auto 30px !important;
+
+        text-align: center !important;
+
+        font-size: 1rem !important;
+
+        line-height: 1.7 !important;
+    }
+
+    .hero .buttons {
+        flex-direction: column !important;
+
+        align-items: stretch !important;
+
+        justify-content: center !important;
+
+        gap: 12px !important;
+    }
+
+    .hero .buttons .btn {
+        width: 100% !important;
+
+        min-height: 50px !important;
+
+        text-align: center !important;
+    }
+
+}
     
 </style>
     
@@ -5896,8 +6177,10 @@ body {
 
     <main>
 
-        <!-- HERO -->
-       <section class="hero">
+       <!-- HERO -->
+<section class="hero">
+
+    <div class="hero-content">
 
         <div class="eyebrow">
             Creative & Design Lab
@@ -5915,19 +6198,20 @@ body {
         </p>
 
         <div class="buttons">
+
             <a href="#services" class="btn btn-primary">
-    Build My Brand →
-</a>
+                Build My Brand →
+            </a>
 
             <a href="#services" class="btn btn-secondary">
                 Explore Services
             </a>
+
         </div>
 
     </div>
 
 </section>
-
 
                 <div class="brand-strip">
             <div class="brand-strip-track">
