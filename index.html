@@ -6940,29 +6940,30 @@ body {
     position: relative;
 
     width: 100%;
-
-    height: 235px;
+    height: 210px;
 
     overflow: hidden;
 
     background-image:
         url("brand-strip.webp");
 
-    background-size: cover;
-
-    background-position: center 58%;
-
     background-repeat: no-repeat;
 
-    border-top: 1px solid rgba(1,82,244,0.08);
+    /* Crop the large white area from the source image */
+    background-size: 100% auto;
+    background-position: center bottom;
 
-    border-bottom: 1px solid rgba(1,82,244,0.08);
+    border-top:
+        1px solid rgba(1,82,244,0.08);
+
+    border-bottom:
+        1px solid rgba(1,82,244,0.08);
 
     isolation: isolate;
 }
 
 
-/* Soft overlay so the words remain readable */
+/* Light overlay */
 
 .brand-strip::before {
     content: "";
@@ -6974,8 +6975,8 @@ body {
     background:
         linear-gradient(
             180deg,
-            rgba(255,255,255,0.14) 0%,
-            rgba(255,255,255,0.02) 45%,
+            rgba(255,255,255,0.08) 0%,
+            rgba(255,255,255,0) 60%,
             rgba(0,32,150,0.04) 100%
         );
 
@@ -6990,8 +6991,7 @@ body {
 .brand-strip-track {
     position: absolute;
 
-    top: 34%;
-
+    top: 25%;
     left: 0;
 
     display: flex;
@@ -7001,14 +7001,14 @@ body {
     z-index: 2;
 
     animation:
-        brandMarquee 28s linear infinite;
+        brandMarquee 25s linear infinite;
 
     will-change:
         transform;
 }
 
 
-/* Each repeated group */
+/* Each repeated sequence */
 
 .brand-strip-group {
     display: flex;
@@ -7017,9 +7017,9 @@ body {
 
     flex-shrink: 0;
 
-    gap: 42px;
+    gap: 22px;
 
-    padding-right: 42px;
+    padding-right: 22px;
 }
 
 
@@ -7030,19 +7030,19 @@ body {
 
     align-items: center;
 
-    gap: 42px;
+    gap: 22px;
 
     color:
         #002096;
 
     font-size:
-        0.78rem;
+        0.74rem;
 
     font-weight:
         800;
 
     letter-spacing:
-        0.18em;
+        0.14em;
 
     line-height:
         1;
@@ -7051,21 +7051,24 @@ body {
         nowrap;
 
     text-shadow:
-        0 1px 8px rgba(255,255,255,0.55);
+        0 1px 8px rgba(255,255,255,0.65);
 }
 
 
-/* Blue separator */
+/* Separator */
 
 .brand-strip span::after {
     content:
         "✦";
 
+    margin-left:
+        0;
+
     color:
         #0152F4;
 
     font-size:
-        0.65rem;
+        0.6rem;
 }
 
 
@@ -7086,7 +7089,7 @@ body {
 }
 
 
-/* Pause very subtly on hover */
+/* Hover pause */
 
 .brand-strip:hover .brand-strip-track {
     animation-play-state:
@@ -7102,31 +7105,34 @@ body {
 
     .brand-strip {
         height:
-            200px;
+            185px;
+
+        background-size:
+            130% auto;
 
         background-position:
-            center 56%;
+            center bottom;
     }
 
     .brand-strip-track {
         top:
-            32%;
+            23%;
     }
 
     .brand-strip-group {
         gap:
-            32px;
+            18px;
 
         padding-right:
-            32px;
+            18px;
     }
 
     .brand-strip span {
         font-size:
-            0.7rem;
+            0.68rem;
 
         gap:
-            32px;
+            18px;
     }
 
 }
@@ -7140,37 +7146,46 @@ body {
 
     .brand-strip {
         height:
-            165px;
+            145px;
+
+        /* Zoom the artwork so the white source area is cropped */
+        background-size:
+            170% auto;
 
         background-position:
-            center 55%;
+            center bottom;
     }
 
     .brand-strip-track {
         top:
-            28%;
+            20%;
 
         animation-duration:
-            24s;
+            22s;
     }
 
     .brand-strip-group {
         gap:
-            25px;
+            15px;
 
         padding-right:
-            25px;
+            15px;
     }
 
     .brand-strip span {
         font-size:
-            0.62rem;
+            0.58rem;
 
         letter-spacing:
-            0.14em;
+            0.11em;
 
         gap:
-            25px;
+            15px;
+    }
+
+    .brand-strip span::after {
+        font-size:
+            0.52rem;
     }
 
 }
