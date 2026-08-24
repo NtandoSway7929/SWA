@@ -8893,6 +8893,20 @@ textarea:focus-visible {
 ></textarea>
         </div>
 
+        <div
+    aria-hidden="true"
+    style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"
+>
+    <label for="website">Website</label>
+    <input
+        type="text"
+        id="website"
+        name="website"
+        tabindex="-1"
+        autocomplete="off"
+    >
+</div>
+
         <button type="submit" class="btn btn-primary">
             Send Enquiry →
         </button>
@@ -9181,6 +9195,9 @@ if (projectForm) {
             const message =
                 document.querySelector("#message");
 
+            const website =
+    document.querySelector("#website");
+
 
             /* -------------------------------------------------
                Clear previous validation states
@@ -9294,17 +9311,12 @@ if (projectForm) {
                             },
 
                             body: JSON.stringify({
-                                name: name.value.trim(),
-
-                                email:
-                                    email.value.trim(),
-
-                                service:
-                                    service.value,
-
-                                message:
-                                    message.value.trim()
-                            })
+    name: name.value.trim(),
+    email: email.value.trim(),
+    service: service.value,
+    message: message.value.trim(),
+    website: website.value.trim()
+})
                         }
                     );
 
