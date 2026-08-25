@@ -8328,20 +8328,55 @@ nav.scrolled {
 }
 
     /* =========================================================
-   TESTIMONIALS
+   TESTIMONIALS — ALIGN WITH SITE CONTENT
    ========================================================= */
 
 .testimonials {
     position: relative;
-    padding: 120px 0;
+
+    padding-top: 120px;
+    padding-bottom: 120px;
+
+    /* Match the site's existing section gutters */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.testimonials > .section-label,
+.testimonials > .testimonials-header,
+.testimonials > .testimonial-grid {
+    width: min(1180px, 92%);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .testimonials-header {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
+
     gap: 60px;
+
     margin-bottom: 55px;
+}
+
+.testimonials-intro {
+    max-width: 390px;
+
+    margin: 0 0 6px;
+
+    color: var(--text-muted);
+
+    line-height: 1.7;
+}
+
+.testimonial-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 22px;
 }
 
 .testimonials-intro {
@@ -8491,14 +8526,22 @@ nav.scrolled {
 
 
 /* =========================================================
-   TESTIMONIALS — MOBILE
+   TESTIMONIALS — MOBILE ALIGNMENT
    ========================================================= */
 
 @media (max-width: 900px) {
 
+    .testimonials > .section-label,
+    .testimonials > .testimonials-header,
+    .testimonials > .testimonial-grid {
+        width: 92%;
+    }
+
     .testimonials-header {
         align-items: flex-start;
+
         flex-direction: column;
+
         gap: 20px;
     }
 
@@ -8512,7 +8555,14 @@ nav.scrolled {
 @media (max-width: 700px) {
 
     .testimonials {
-        padding: 85px 0;
+        padding-top: 85px;
+        padding-bottom: 85px;
+    }
+
+    .testimonials > .section-label,
+    .testimonials > .testimonials-header,
+    .testimonials > .testimonial-grid {
+        width: 92%;
     }
 
     .testimonials-header {
