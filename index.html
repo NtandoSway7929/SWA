@@ -2713,15 +2713,33 @@ nav {
 .btn-primary {
     background: var(--sway-accent);
     color: var(--white);
+
+    min-height: 56px;
+
+    padding: 0 32px;
+
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+
     box-shadow:
         0 10px 25px rgba(1, 82, 244, 0.18);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
 }
 
 .btn-primary:hover {
+    background: #2C91FC;
+
     transform: translateY(-3px);
+
     box-shadow:
         0 14px 35px rgba(1, 82, 244, 0.28);
 }
+
 
 .btn-secondary {
     border: 1px solid rgba(0, 32, 150, 0.22);
@@ -7763,28 +7781,27 @@ body {
             vertical;
     }
 
-    .project-form .btn {
-        width:
-            100%;
+   .project-form .btn {
+    width: 100%;
 
-        min-height:
-            52px;
+    min-height: 56px;
 
-        display:
-            flex;
+    display: flex;
 
-        align-items:
-            center;
+    align-items: center;
+    justify-content: center;
 
-        justify-content:
-            center;
+    box-sizing: border-box;
 
-        box-sizing:
-            border-box;
+    padding: 0 32px;
 
-        border-radius:
-            999px;
-    }
+    border: none;
+    border-radius: 999px;
+
+    cursor: pointer;
+
+    margin-top: 5px;
+}
 
     .contact-email {
         width:
