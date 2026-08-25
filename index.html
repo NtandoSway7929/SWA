@@ -7896,30 +7896,85 @@ textarea:focus-visible {
 
     .form-status {
     margin-top: 18px;
-    padding: 16px 20px;
+    padding: 15px 18px;
     border-radius: 14px;
+
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+
     font-size: 14px;
     line-height: 1.5;
     font-weight: 500;
     text-align: left;
 
     background: #FFFFFF;
-    border: 1px solid rgba(0, 32, 150, 0.18);
-    color: #002096;
-
     box-shadow:
         0 8px 24px rgba(0, 32, 150, 0.08);
 }
 
-.form-status.error {
-    background: #FFFFFF;
-    border-color: rgba(0, 32, 150, 0.22);
+.form-status-icon {
+    flex: 0 0 auto;
+
+    width: 22px;
+    height: 22px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.form-status-content {
+    flex: 1;
+}
+
+
+/* ---------------------------------------------
+   Rate-limit warning
+   --------------------------------------------- */
+
+.form-status.warning {
+    border: 1px solid rgba(0, 32, 150, 0.22);
     color: #002096;
 }
 
+.form-status.warning .form-status-icon {
+    background: rgba(0, 32, 150, 0.09);
+    color: #002096;
+}
+
+
+/* ---------------------------------------------
+   Server error
+   --------------------------------------------- */
+
+.form-status.error {
+    border: 1px solid rgba(180, 35, 35, 0.20);
+    color: #8F2020;
+}
+
+.form-status.error .form-status-icon {
+    background: rgba(180, 35, 35, 0.09);
+    color: #8F2020;
+}
+
+
+/* ---------------------------------------------
+   Success
+   --------------------------------------------- */
+
 .form-status.success {
-    background: #FFFFFF;
-    border-color: rgba(0, 32, 150, 0.22);
+    border: 1px solid rgba(0, 32, 150, 0.20);
+    color: #002096;
+}
+
+.form-status.success .form-status-icon {
+    background: rgba(0, 32, 150, 0.09);
     color: #002096;
 }
     
@@ -9412,9 +9467,28 @@ if (projectForm) {
 
             projectForm.reset();
 
-            submitButton.textContent =
-                "Enquiry Sent ✓";
+submitButton.textContent =
+    "Enquiry Sent ✓";
 
+
+if (formStatus) {
+
+    formStatus.className =
+        "form-status success";
+
+    formStatus.innerHTML = `
+        <span class="form-status-icon">
+            ✓
+        </span>
+
+        <span class="form-status-content">
+            Your enquiry has been received. We'll be in touch soon.
+        </span>
+    `;
+
+    formStatus.hidden = false;
+
+}
 
             if (formStatus) {
 
@@ -9462,20 +9536,36 @@ if (projectForm) {
                Show branded error message
                --------------------------------------------- */
 
-            if (formStatus) {
+           if (formStatus) {
 
-                formStatus.textContent =
-                    error instanceof Error
-                        ? error.message
-                        : "We couldn't send your enquiry right now. Please try again.";
+    const errorMessage =
+        error instanceof Error
+            ? error.message
+            : "We couldn't send your enquiry right now. Please try again.";
 
-                formStatus.className =
-                    "form-status error";
+    const isRateLimit =
+        errorMessage.toLowerCase().includes(
+            "too many enquiries"
+        );
 
-                formStatus.hidden = false;
+    formStatus.className =
+        isRateLimit
+            ? "form-status warning"
+            : "form-status error";
 
-            }
+    formStatus.innerHTML = `
+        <span class="form-status-icon">
+            ${isRateLimit ? "!" : "×"}
+        </span>
 
+        <span class="form-status-content">
+            ${errorMessage}
+        </span>
+    `;
+
+    formStatus.hidden = false;
+
+}
         }
 
     }
