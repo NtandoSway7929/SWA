@@ -9463,16 +9463,8 @@ nav.scrolled {
     </div>
 
 
-    <div class="testimonial-grid">
-
-        <!-- DEVELOPMENT PLACEHOLDER -->
-
-        <article class="testimonial-card">
-
-            <div class="testimonial-rating"
-                 aria-label="Five star rating">
-                ★★★★★
-            </div>
+    <div class="testimonial-grid">   
+         </div>
 
             <blockquote>
                 “Development testimonial — replace this with
@@ -9989,7 +9981,183 @@ const projectForm =
     document.querySelector(".project-form");
 
  const formStatus =
-    document.getElementById("form-status");       
+    document.getElementById("form-status");
+
+  /* =========================================================
+   SUPABASE — PUBLIC CLIENT
+   ========================================================= */
+
+const SUPABASE_URL =
+    "https://sqifhribgsqfaxgtobsa.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+    "https://sqifhribgsqfaxgtobsa.supabase.co/rest/v1/";
+
+        /* =========================================================
+   TESTIMONIALS
+   ========================================================= */
+
+async function loadTestimonials() {
+
+    const testimonialGrid =
+        document.querySelector(
+            ".testimonial-grid"
+        );
+
+    if (!testimonialGrid) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                `${SUPABASE_URL}/rest/v1/testimonials?select=id,name,business,role,quote,rating,image_url&approved=eq.true&order=created_at.desc`,
+                {
+                    method: "GET",
+
+                    headers: {
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+
+                        "Authorization":
+                            `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+                    }
+                }
+            );
+
+
+        if (!response.ok) {
+
+            const errorText =
+                await response.text();
+
+            console.error(
+                "Testimonials request failed:",
+                errorText
+            );
+
+            return;
+        }
+
+
+        const testimonials =
+            await response.json();
+
+
+        if (!Array.isArray(testimonials)) {
+            return;
+        }
+
+
+        /* ---------------------------------------------
+           No approved testimonials
+           --------------------------------------------- */
+
+        if (testimonials.length === 0) {
+
+            testimonialGrid.innerHTML = "";
+
+            return;
+        }
+
+
+        /* ---------------------------------------------
+           Render testimonials
+           --------------------------------------------- */
+
+        testimonialGrid.innerHTML =
+            testimonials.map(
+                (testimonial) => {
+
+                    const rating =
+                        Math.min(
+                            5,
+                            Math.max(
+                                1,
+                                Number(
+                                    testimonial.rating
+                                ) || 5
+                            )
+                        );
+
+                    const stars =
+                        "★".repeat(rating);
+
+
+                    const business =
+                        testimonial.business ||
+                        "";
+
+                    const role =
+                        testimonial.role ||
+                        "";
+
+
+                    return `
+                        <article class="testimonial-card">
+
+                            <div
+                                class="testimonial-rating"
+                                aria-label="${rating} star rating"
+                            >
+                                ${stars}
+                            </div>
+
+                            <blockquote>
+                                “${testimonial.quote}”
+                            </blockquote>
+
+                            <div class="testimonial-author">
+
+                                <div
+                                    class="testimonial-avatar"
+                                    aria-hidden="true"
+                                >
+                                    ${
+                                        testimonial.name
+                                            ?.charAt(0)
+                                            .toUpperCase() || "?"
+                                    }
+                                </div>
+
+                                <div>
+
+                                    <strong>
+                                        ${testimonial.name}
+                                    </strong>
+
+                                    <span>
+                                        ${
+                                            [role, business]
+                                                .filter(Boolean)
+                                                .join(" · ")
+                                        }
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </article>
+                    `;
+                }
+            ).join("");
+
+    } catch (error) {
+
+        console.error(
+            "Unable to load testimonials:",
+            error
+        );
+
+    }
+}
+
+
+/* Load testimonials */
+
+loadTestimonials();
 
 if (projectForm) {
 
