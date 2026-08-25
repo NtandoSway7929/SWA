@@ -8183,6 +8183,29 @@ a.btn.btn-primary[href="#contact"]:hover {
     }
 
 }
+
+    /* =========================================================
+   SWAYPHICS — APPROACH CARDS MOBILE
+   Preserve full image composition
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .work-card {
+        min-height: 0 !important;
+        aspect-ratio: 3 / 2;
+        padding: 28px 24px;
+    }
+
+    .work-card .work-image {
+        width: 100% !important;
+        height: 100% !important;
+
+        object-fit: cover !important;
+        object-position: center center !important;
+    }
+
+}
     
 </style>
     
