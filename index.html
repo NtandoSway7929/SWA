@@ -7994,6 +7994,83 @@ textarea:focus-visible {
     background: rgba(0, 32, 150, 0.09);
     color: #002096;
 }
+
+/* =========================================================
+   SWAYPHICS — ENQUIRY BUTTON & STATUS FINAL OVERRIDES
+   ========================================================= */
+
+/* Hide the status container when it is not being used */
+.form-status[hidden] {
+    display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   Enquiry button
+   --------------------------------------------------------- */
+
+.project-form .btn.btn-primary {
+    width: 100% !important;
+    min-height: 56px !important;
+
+    padding: 0 32px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    box-sizing: border-box !important;
+
+    background: #0152F4 !important;
+    color: #FFFFFF !important;
+
+    border: none !important;
+    border-radius: 999px !important;
+
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+
+    cursor: pointer;
+
+    margin-top: 5px !important;
+
+    box-shadow:
+        0 10px 25px rgba(1, 82, 244, 0.18) !important;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease !important;
+}
+
+
+/* Desktop hover */
+.project-form .btn.btn-primary:hover {
+    background: #2C91FC !important;
+
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 14px 35px rgba(1, 82, 244, 0.28) !important;
+}
+
+
+/* Keep the button comfortable on mobile */
+@media (max-width: 768px) {
+
+    .project-form .btn.btn-primary {
+        width: 100% !important;
+        min-height: 54px !important;
+
+        padding: 0 24px !important;
+
+        font-size: 15px !important;
+
+        border-radius: 999px !important;
+    }
+
+}    
     
 </style>
     
