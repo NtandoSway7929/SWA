@@ -8327,69 +8327,97 @@ nav.scrolled {
         inset 0 -1px 0 rgba(255, 255, 255, 0.28) !important;
 }
 
-    /* =========================================================
-   TESTIMONIALS — ALIGN WITH SITE CONTENT
+/* =========================================================
+   TESTIMONIALS — MATCH SWAYPHICS SECTION ALIGNMENT
    ========================================================= */
 
 .testimonials {
     position: relative;
 
-    padding-top: 120px;
-    padding-bottom: 120px;
+    padding:
+        125px 7% 115px;
 
-    /* Match the site's existing section gutters */
-    width: 100%;
-    box-sizing: border-box;
+    box-sizing:
+        border-box;
 }
 
-.testimonials > .section-label,
-.testimonials > .testimonials-header,
-.testimonials > .testimonial-grid {
-    width: min(1180px, 92%);
-    margin-left: auto;
-    margin-right: auto;
-}
+
+/* Header */
 
 .testimonials-header {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
+    display:
+        flex;
 
-    gap: 60px;
+    align-items:
+        flex-end;
 
-    margin-bottom: 55px;
+    justify-content:
+        space-between;
+
+    gap:
+        50px;
+
+    margin-bottom:
+        55px;
 }
+
+
+/* Intro */
 
 .testimonials-intro {
-    max-width: 390px;
+    max-width:
+        390px;
 
-    margin: 0 0 6px;
+    margin:
+        0 0 6px;
 
-    color: var(--text-muted);
+    color:
+        var(--text-muted);
 
-    line-height: 1.7;
+    line-height:
+        1.7;
 }
 
+
+/* Cards */
+
 .testimonial-grid {
-    display: grid;
+    display:
+        grid;
 
     grid-template-columns:
         repeat(3, minmax(0, 1fr));
 
-    gap: 22px;
+    gap:
+        22px;
+
+    width:
+        100%;
 }
 
-.testimonials-intro {
-    max-width: 390px;
-    margin: 0 0 6px;
-    color: var(--text-muted);
-    line-height: 1.7;
-}
 
-.testimonial-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 22px;
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .testimonials-header {
+        align-items:
+            flex-start;
+
+        flex-direction:
+            column;
+
+        gap:
+            20px;
+    }
+
+    .testimonial-grid {
+        grid-template-columns:
+            1fr;
+    }
+
 }
 
 .testimonial-card {
@@ -8526,59 +8554,36 @@ nav.scrolled {
 
 
 /* =========================================================
-   TESTIMONIALS — MOBILE ALIGNMENT
+   MOBILE
    ========================================================= */
-
-@media (max-width: 900px) {
-
-    .testimonials > .section-label,
-    .testimonials > .testimonials-header,
-    .testimonials > .testimonial-grid {
-        width: 92%;
-    }
-
-    .testimonials-header {
-        align-items: flex-start;
-
-        flex-direction: column;
-
-        gap: 20px;
-    }
-
-    .testimonial-grid {
-        grid-template-columns: 1fr;
-    }
-
-}
-
 
 @media (max-width: 700px) {
 
     .testimonials {
-        padding-top: 85px;
-        padding-bottom: 85px;
-    }
-
-    .testimonials > .section-label,
-    .testimonials > .testimonials-header,
-    .testimonials > .testimonial-grid {
-        width: 92%;
+        padding:
+            90px 6% 85px;
     }
 
     .testimonials-header {
-        margin-bottom: 35px;
+        margin-bottom:
+            35px;
     }
 
     .testimonial-card {
-        min-height: 0;
-        padding: 26px 24px;
-        border-radius: 22px;
+        min-height:
+            0;
+
+        padding:
+            26px 24px;
+
+        border-radius:
+            22px;
     }
 
     .testimonial-rating {
-        margin-bottom: 22px;
+        margin-bottom:
+            22px;
     }
-
 }
     
 </style>
