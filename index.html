@@ -8585,6 +8585,222 @@ nav.scrolled {
             22px;
     }
 }
+
+    /* =========================================================
+   TESTIMONIALS — EMPTY STATE
+   ========================================================= */
+
+.testimonials-empty {
+    width: 100%;
+    min-height: 230px;
+
+    display: flex;
+    align-items: center;
+    gap: 30px;
+
+    box-sizing: border-box;
+
+    padding: 42px 46px;
+
+    border:
+        1px solid rgba(0, 32, 150, 0.10);
+
+    border-radius: 28px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.92),
+            rgba(238,246,255,0.72)
+        );
+
+    box-shadow:
+        0 20px 55px rgba(0,32,150,0.08);
+
+    backdrop-filter:
+        blur(18px);
+
+    -webkit-backdrop-filter:
+        blur(18px);
+}
+
+
+/* Brand mark */
+
+.testimonials-empty-mark {
+    flex:
+        0 0 72px;
+
+    width:
+        72px;
+
+    height:
+        72px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    border-radius:
+        22px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #002096,
+            #0152F4
+        );
+
+    box-shadow:
+        0 14px 30px rgba(1,82,244,0.20);
+}
+
+
+.testimonials-empty-mark span {
+    color:
+        #FFFFFF;
+
+    font-size:
+        1rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.08em;
+}
+
+
+/* Content */
+
+.testimonials-empty-content {
+    max-width:
+        620px;
+}
+
+
+.testimonials-empty-label {
+    display:
+        block;
+
+    margin-bottom:
+        10px;
+
+    color:
+        #0152F4;
+
+    font-size:
+        0.68rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.18em;
+}
+
+
+.testimonials-empty h3 {
+    margin:
+        0 0 10px;
+
+    color:
+        var(--text-dark);
+
+    font-size:
+        clamp(1.8rem, 3vw, 2.6rem);
+
+    line-height:
+        1;
+
+    letter-spacing:
+        -1.5px;
+}
+
+
+.testimonials-empty p {
+    max-width:
+        580px;
+
+    margin:
+        0;
+
+    color:
+        var(--text-muted);
+
+    font-size:
+        1rem;
+
+    line-height:
+        1.7;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .testimonials-empty {
+        min-height:
+            auto;
+
+        flex-direction:
+            column;
+
+        align-items:
+            flex-start;
+
+        gap:
+            24px;
+
+        padding:
+            30px 26px;
+
+        border-radius:
+            22px;
+    }
+
+
+    .testimonials-empty-mark {
+        width:
+            58px;
+
+        height:
+            58px;
+
+        flex-basis:
+            58px;
+
+        border-radius:
+            18px;
+    }
+
+
+    .testimonials-empty h3 {
+        font-size:
+            2rem;
+
+        letter-spacing:
+            -1px;
+    }
+
+
+    .testimonials-empty p {
+        font-size:
+            0.98rem;
+
+        line-height:
+            1.7;
+    }
+
+}
     
 </style>
     
@@ -9975,18 +10191,32 @@ async function loadTestimonials() {
     testimonialSection.hidden = false;
 
     testimonialGrid.innerHTML = `
-        <div class="testimonials-empty">
+    <div class="testimonials-empty">
 
-            <p>
-                We're building something worth talking about.
-            </p>
+        <div class="testimonials-empty-mark">
+            <span>SW</span>
+        </div>
 
-            <span>
-                Client stories will appear here as Swayphics grows.
+        <div class="testimonials-empty-content">
+
+            <span class="testimonials-empty-label">
+                THE NEXT CHAPTER
             </span>
 
+            <h3>
+                Your story could be next.
+            </h3>
+
+            <p>
+                Swayphics is building brands, digital experiences
+                and businesses worth talking about. As our clients
+                grow, their stories will live here.
+            </p>
+
         </div>
-    `;
+
+    </div>
+`;
 
     return;
 }
