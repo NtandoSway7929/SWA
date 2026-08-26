@@ -9968,21 +9968,28 @@ async function loadTestimonials() {
 
 
         if (
-            !Array.isArray(testimonials) ||
-            testimonials.length === 0
-        ) {
+    !Array.isArray(testimonials) ||
+    testimonials.length === 0
+) {
 
-            /*
-             * No approved testimonials yet.
-             * Hide the entire section so the website
-             * does not show an empty gap.
-             */
+    testimonialSection.hidden = false;
 
-            testimonialSection.hidden = true;
+    testimonialGrid.innerHTML = `
+        <div class="testimonials-empty">
 
-            return;
-        }
+            <p>
+                We're building something worth talking about.
+            </p>
 
+            <span>
+                Client stories will appear here as Swayphics grows.
+            </span>
+
+        </div>
+    `;
+
+    return;
+}
 
         /*
          * Approved testimonials exist.
