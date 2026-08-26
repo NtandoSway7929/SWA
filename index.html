@@ -9997,6 +9997,194 @@ nav.scrolled {
         border: 5px solid red !important;
     }
 }
+
+    @media (max-width: 700px) {
+
+    .portfolio-grid {
+        display: flex !important;
+
+        flex-wrap: nowrap !important;
+
+        flex-direction: row !important;
+
+        align-items: stretch !important;
+
+        justify-content: flex-start !important;
+
+        gap: 18px !important;
+
+        width: 100% !important;
+
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding:
+            4px 16% 14px 0 !important;
+
+        overflow-x: scroll !important;
+
+        overflow-y: hidden !important;
+
+        scroll-snap-type:
+            x mandatory !important;
+
+        -webkit-overflow-scrolling:
+            touch;
+
+        scrollbar-width:
+            none;
+    }
+
+
+    .portfolio-grid::-webkit-scrollbar {
+        display:
+            none;
+    }
+
+
+    .portfolio-grid .portfolio-card {
+        display:
+            flex !important;
+
+        flex-direction:
+            column !important;
+
+        flex:
+            0 0 84% !important;
+
+        width:
+            84% !important;
+
+        max-width:
+            84% !important;
+
+        min-width:
+            84% !important;
+
+        margin:
+            0 !important;
+
+        scroll-snap-align:
+            start;
+
+        box-sizing:
+            border-box;
+    }
+
+
+    .portfolio-grid .portfolio-image-wrap {
+        width:
+            100% !important;
+
+        height:
+            330px !important;
+
+        flex-shrink:
+            0;
+    }
+
+
+    .portfolio-grid .portfolio-image {
+        width:
+            100% !important;
+
+        height:
+            100% !important;
+
+        object-fit:
+            cover !important;
+    }
+
+
+    .portfolio-scroll-hint {
+        display:
+            flex !important;
+
+        align-items:
+            center;
+
+        justify-content:
+            flex-end;
+
+        gap:
+            10px;
+
+        margin-top:
+            14px;
+
+        padding-right:
+            4px;
+
+        color:
+            var(--sway-accent);
+
+        font-size:
+            0.68rem;
+
+        font-weight:
+            800;
+
+        letter-spacing:
+            0.12em;
+
+        text-transform:
+            uppercase;
+    }
+
+
+    .portfolio-scroll-arrow {
+        display:
+            inline-flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            center;
+
+        width:
+            30px;
+
+        height:
+            30px;
+
+        flex-shrink:
+            0;
+
+        border:
+            1px solid rgba(1,82,244,0.18);
+
+        border-radius:
+            50%;
+
+        background:
+            rgba(255,255,255,0.85);
+
+        font-size:
+            1rem;
+
+        animation:
+            portfolioHint 1.8s ease-in-out infinite;
+    }
+
+}
+
+
+@keyframes portfolioHint {
+
+    0%,
+    100% {
+        transform:
+            translateX(0);
+    }
+
+    50% {
+        transform:
+            translateX(5px);
+    }
+
+}
     
 </style>
     
