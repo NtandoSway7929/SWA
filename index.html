@@ -10209,7 +10209,49 @@ nav.scrolled {
 
 .portfolio-project-link span:last-child {
     font-size: 1rem;
-}    
+} 
+    
+/* =========================================================
+   PORTFOLIO CARD INTERACTION
+   ========================================================= */
+
+.portfolio-card {
+    cursor: pointer;
+}
+
+.portfolio-card .portfolio-image-wrap {
+    overflow: hidden;
+}
+
+.portfolio-card .portfolio-image {
+    transition:
+        transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.portfolio-card:hover .portfolio-image {
+    transform: scale(1.035);
+}
+
+.portfolio-card:hover {
+    transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .portfolio-card,
+    .portfolio-card .portfolio-image {
+        transition: none;
+    }
+
+    .portfolio-card:hover {
+        transform: none;
+    }
+
+    .portfolio-card:hover .portfolio-image {
+        transform: none;
+    }
+
+}
     
 </style>
     
