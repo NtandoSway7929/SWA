@@ -10252,6 +10252,41 @@ nav.scrolled {
     }
 
 }
+
+    /* =========================================================
+   PORTFOLIO IMAGE FALLBACK
+   ========================================================= */
+
+.portfolio-image-wrap.image-error {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f5f8ff,
+            #ffffff
+        );
+}
+
+.portfolio-image-wrap.image-error::before {
+    content: "SWAYPHICS";
+
+    display: block;
+
+    font-size: 0.7rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.2em;
+
+    color: #0152F4;
+
+    opacity: 0.45;
+}
     
 </style>
     
@@ -11953,12 +11988,13 @@ async function loadPortfolio() {
                     <div class="portfolio-image-wrap">
 
                         <img
-                            src="${project.image_url || ""}"
-                            alt="${project.title}"
-                            class="portfolio-image"
-                            loading="lazy"
-                            decoding="async"
-                        >
+    src="${project.image_url || ""}"
+    alt="${project.title || "Swayphics project"}"
+    class="portfolio-image"
+    loading="lazy"
+    decoding="async"
+    onerror="this.style.display='none'; this.parentElement.classList.add('image-error');"
+>
 
                     </div>
 
