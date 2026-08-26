@@ -10019,34 +10019,8 @@ nav.scrolled {
 
 
     <div class="portfolio-grid">
-
-        <div class="portfolio-empty">
-
-            <div class="portfolio-empty-accent"></div>
-
-            <div class="portfolio-empty-content">
-
-                <span class="portfolio-empty-label">
-                    THE WORK IS GROWING
-                </span>
-
-                <h3>
-                    Something worth seeing is coming.
-                </h3>
-
-                <p>
-                    We're building a collection of work that reflects
-                    what Swayphics does best — turning ideas into
-                    distinctive brands, digital experiences and
-                    meaningful visual identities.
-                </p>
-
-            </div>
-
-        </div>
-
-    </div>
-
+</div>
+        
 </section>
 
         <!-- ABOUT -->
@@ -10693,10 +10667,146 @@ async function loadTestimonials() {
     }
 }
 
+ async function loadPortfolio() {
+
+    const portfolioGrid =
+        document.querySelector(".portfolio-grid");
+
+    if (!portfolioGrid) return;
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabase
+            .from("portfolio_projects")
+            .select(`
+                id,
+                title,
+                category,
+                description,
+                image_url,
+                project_url,
+                year
+            `)
+            .eq("published", true)
+            .order("created_at", {
+                ascending: false
+            });
+
+        if (error) {
+
+            console.error(
+                "Portfolio request failed:",
+                error
+            );
+
+            return;
+        }
+
+
+        /* No published projects */
+
+        if (!data || data.length === 0) {
+
+            portfolioGrid.innerHTML = `
+                <div class="portfolio-empty">
+
+                    <div class="portfolio-empty-accent"></div>
+
+                    <div class="portfolio-empty-content">
+
+                        <span class="portfolio-empty-label">
+                            THE WORK IS GROWING
+                        </span>
+
+                        <h3>
+                            Something worth seeing is coming.
+                        </h3>
+
+                        <p>
+                            We're building a collection of work that
+                            reflects what Swayphics does best — turning
+                            ideas into distinctive brands, digital
+                            experiences and meaningful visual identities.
+                        </p>
+
+                    </div>
+
+                </div>
+            `;
+
+            return;
+        }
+
+
+        /* Published projects */
+
+        portfolioGrid.innerHTML = data.map(project => `
+
+            <article
+                class="portfolio-card"
+                data-project-id="${project.id}"
+            >
+
+                <div class="portfolio-image-wrap">
+
+                    <img
+                        src="${project.image_url || ""}"
+                        alt="${project.title}"
+                        class="portfolio-image"
+                        loading="lazy"
+                        decoding="async"
+                    >
+
+                </div>
+
+                <div class="portfolio-content">
+
+                    <div class="portfolio-meta">
+
+                        <span>
+                            ${project.category}
+                        </span>
+
+                        ${
+                            project.year
+                                ? `<span>${project.year}</span>`
+                                : ""
+                        }
+
+                    </div>
+
+                    <h3>
+                        ${project.title}
+                    </h3>
+
+                    <p>
+                        ${project.description}
+                    </p>
+
+                </div>
+
+            </article>
+
+        `).join("");
+
+    } catch (error) {
+
+        console.error(
+            "Portfolio loading error:",
+            error
+        );
+
+    }
+}       
+
 
 /* Load testimonials */
 
 loadTestimonials();
+loadPortfolio();        
 
 if (projectForm) {
 
