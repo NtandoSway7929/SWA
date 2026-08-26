@@ -10667,48 +10667,54 @@ async function loadTestimonials() {
     }
 }
 
- async function loadPortfolio() {
+async function loadPortfolio() {
 
     const portfolioGrid =
         document.querySelector(".portfolio-grid");
 
     if (!portfolioGrid) return;
 
+    const SUPABASE_URL =
+        "https://sqifhribgsqfaxgtobsa.supabase.co";
+
+    const SUPABASE_ANON_KEY =
+        "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
+
     try {
 
-        const {
-            data,
-            error
-        } = await supabase
-            .from("portfolio_projects")
-            .select(`
-                id,
-                title,
-                category,
-                description,
-                image_url,
-                project_url,
-                year
-            `)
-            .eq("published", true)
-            .order("created_at", {
-                ascending: false
-            });
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/portfolio_projects?select=id,title,category,description,image_url,project_url,year&published=eq.true&order=created_at.desc`,
+            {
+                method: "GET",
 
-        if (error) {
+                headers: {
+                    "apikey": SUPABASE_ANON_KEY,
+                    "Authorization":
+                        `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+
+            const errorText =
+                await response.text();
 
             console.error(
                 "Portfolio request failed:",
-                error
+                errorText
             );
 
             return;
         }
 
+        const projects =
+            await response.json();
+
 
         /* No published projects */
 
-        if (!data || data.length === 0) {
+        if (!projects.length) {
 
             portfolioGrid.innerHTML = `
                 <div class="portfolio-empty">
@@ -10741,56 +10747,57 @@ async function loadTestimonials() {
         }
 
 
-        /* Published projects */
+        /* Display projects */
 
-        portfolioGrid.innerHTML = data.map(project => `
+        portfolioGrid.innerHTML =
+            projects.map(project => `
 
-            <article
-                class="portfolio-card"
-                data-project-id="${project.id}"
-            >
+                <article
+                    class="portfolio-card"
+                    data-project-id="${project.id}"
+                >
 
-                <div class="portfolio-image-wrap">
+                    <div class="portfolio-image-wrap">
 
-                    <img
-                        src="${project.image_url || ""}"
-                        alt="${project.title}"
-                        class="portfolio-image"
-                        loading="lazy"
-                        decoding="async"
-                    >
-
-                </div>
-
-                <div class="portfolio-content">
-
-                    <div class="portfolio-meta">
-
-                        <span>
-                            ${project.category}
-                        </span>
-
-                        ${
-                            project.year
-                                ? `<span>${project.year}</span>`
-                                : ""
-                        }
+                        <img
+                            src="${project.image_url || ""}"
+                            alt="${project.title}"
+                            class="portfolio-image"
+                            loading="lazy"
+                            decoding="async"
+                        >
 
                     </div>
 
-                    <h3>
-                        ${project.title}
-                    </h3>
+                    <div class="portfolio-content">
 
-                    <p>
-                        ${project.description}
-                    </p>
+                        <div class="portfolio-meta">
 
-                </div>
+                            <span>
+                                ${project.category}
+                            </span>
 
-            </article>
+                            ${
+                                project.year
+                                    ? `<span>${project.year}</span>`
+                                    : ""
+                            }
 
-        `).join("");
+                        </div>
+
+                        <h3>
+                            ${project.title}
+                        </h3>
+
+                        <p>
+                            ${project.description}
+                        </p>
+
+                    </div>
+
+                </article>
+
+            `).join("");
 
     } catch (error) {
 
@@ -10800,8 +10807,7 @@ async function loadTestimonials() {
         );
 
     }
-}       
-
+}
 
 /* Load testimonials */
 
