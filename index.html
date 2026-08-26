@@ -12048,18 +12048,22 @@ if (portfolioGrid) {
             if (!card) return;
 
 
-            openPortfolioLightbox({
+            console.log("PORTFOLIO CARD CLICKED", {
+    image: card.dataset.imageUrl,
+    title: card.dataset.title,
+    category: card.dataset.category
+});
 
-                image_url:
-                    card.dataset.imageUrl,
+openPortfolioLightbox({
+    image_url:
+        card.dataset.imageUrl,
 
-                title:
-                    card.dataset.title,
+    title:
+        card.dataset.title,
 
-                category:
-                    card.dataset.category
-
-            });
+    category:
+        card.dataset.category
+});
 
         }
     );
