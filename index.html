@@ -9913,12 +9913,13 @@ const SUPABASE_PUBLISHABLE_KEY =
 
 async function loadTestimonials() {
 
-    const testimonialGrid =
-        document.querySelector(
-            ".testimonial-grid"
-        );
+    const testimonialSection =
+        document.querySelector("#testimonials");
 
-    if (!testimonialGrid) {
+    const testimonialGrid =
+        document.querySelector(".testimonial-grid");
+
+    if (!testimonialSection || !testimonialGrid) {
         return;
     }
 
@@ -9951,6 +9952,13 @@ async function loadTestimonials() {
                 errorText
             );
 
+            /*
+             * Keep the section hidden if testimonials
+             * cannot be loaded.
+             */
+
+            testimonialSection.hidden = true;
+
             return;
         }
 
@@ -9959,26 +9967,30 @@ async function loadTestimonials() {
             await response.json();
 
 
-        if (!Array.isArray(testimonials)) {
+        if (
+            !Array.isArray(testimonials) ||
+            testimonials.length === 0
+        ) {
+
+            /*
+             * No approved testimonials yet.
+             * Hide the entire section so the website
+             * does not show an empty gap.
+             */
+
+            testimonialSection.hidden = true;
+
             return;
         }
 
 
-        /* ---------------------------------------------
-           No approved testimonials
-           --------------------------------------------- */
+        /*
+         * Approved testimonials exist.
+         * Show the section.
+         */
 
-        if (testimonials.length === 0) {
+        testimonialSection.hidden = false;
 
-            testimonialGrid.innerHTML = "";
-
-            return;
-        }
-
-
-        /* ---------------------------------------------
-           Render testimonials
-           --------------------------------------------- */
 
         testimonialGrid.innerHTML =
             testimonials.map(
@@ -9995,6 +10007,7 @@ async function loadTestimonials() {
                             )
                         );
 
+
                     const stars =
                         "★".repeat(rating);
 
@@ -10002,6 +10015,7 @@ async function loadTestimonials() {
                     const business =
                         testimonial.business ||
                         "";
+
 
                     const role =
                         testimonial.role ||
@@ -10058,6 +10072,7 @@ async function loadTestimonials() {
                 }
             ).join("");
 
+
     } catch (error) {
 
         console.error(
@@ -10065,6 +10080,12 @@ async function loadTestimonials() {
             error
         );
 
+        /*
+         * If the request fails unexpectedly,
+         * don't leave an empty section on the page.
+         */
+
+        testimonialSection.hidden = true;
     }
 }
 
