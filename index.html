@@ -11507,6 +11507,53 @@ if ("IntersectionObserver" in window) {
     });
 </script>
 
+    <!-- SWAYPHICS PORTFOLIO LIGHTBOX -->
+
+<div
+    class="portfolio-lightbox"
+    id="portfolio-lightbox"
+    aria-hidden="true"
+>
+
+    <div class="portfolio-lightbox-inner">
+
+        <button
+            type="button"
+            class="portfolio-lightbox-close"
+            id="portfolio-lightbox-close"
+            aria-label="Close project preview"
+        >
+            ×
+        </button>
+
+        <div class="portfolio-lightbox-image-wrap">
+
+            <img
+                src=""
+                alt=""
+                id="portfolio-lightbox-image"
+                class="portfolio-lightbox-image"
+            >
+
+        </div>
+
+        <div class="portfolio-lightbox-caption">
+
+            <span
+                id="portfolio-lightbox-category"
+                class="portfolio-lightbox-category"
+            ></span>
+
+            <h3
+                id="portfolio-lightbox-title"
+            ></h3>
+
+        </div>
+
+    </div>
+
+</div>
+
     <script>
 /* =========================================================
    SWAYPHICS — CONTACT FORM / SUPABASE
@@ -12052,12 +12099,6 @@ if (portfolioGrid) {
             if (!card) return;
 
 
-            console.log("PORTFOLIO CARD CLICKED", {
-    image: card.dataset.imageUrl,
-    title: card.dataset.title,
-    category: card.dataset.category
-});
-
 openPortfolioLightbox({
     image_url:
         card.dataset.imageUrl,
@@ -12571,53 +12612,6 @@ if (formStatus) {
 })();
 </script>
 
-<!-- SWAYPHICS PORTFOLIO LIGHTBOX -->
 
-<div
-    class="portfolio-lightbox"
-    id="portfolio-lightbox"
-    aria-hidden="true"
->
-
-    <div class="portfolio-lightbox-inner">
-
-        <button
-            type="button"
-            class="portfolio-lightbox-close"
-            id="portfolio-lightbox-close"
-            aria-label="Close project preview"
-        >
-            ×
-        </button>
-
-        <div class="portfolio-lightbox-image-wrap">
-
-            <img
-                src=""
-                alt=""
-                id="portfolio-lightbox-image"
-                class="portfolio-lightbox-image"
-            >
-
-        </div>
-
-        <div class="portfolio-lightbox-caption">
-
-            <span
-                id="portfolio-lightbox-category"
-                class="portfolio-lightbox-category"
-            ></span>
-
-            <h3
-                id="portfolio-lightbox-title"
-            ></h3>
-
-        </div>
-
-    </div>
-
-</div>
-
-    
 </body>
 </html>
