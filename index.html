@@ -9399,76 +9399,16 @@ nav.scrolled {
 }
 
     /* =========================================================
-   MOBILE PORTFOLIO CAROUSEL
+   PORTFOLIO SWIPE HINT
    ========================================================= */
 
 .portfolio-scroll-hint {
-    display: none;
+    display:
+        none;
 }
 
 
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
 @media (max-width: 700px) {
-
-    .portfolio-grid {
-        display: flex;
-
-        flex-direction: row;
-
-        gap: 18px;
-
-        width: calc(100% + 6vw);
-
-        margin-right: -6vw;
-
-        overflow-x: auto;
-        overflow-y: hidden;
-
-        padding:
-            4px 6vw 12px 0;
-
-        scroll-snap-type:
-            x mandatory;
-
-        scroll-padding-left:
-            0;
-
-        -webkit-overflow-scrolling:
-            touch;
-
-        scrollbar-width:
-            none;
-    }
-
-
-    .portfolio-grid::-webkit-scrollbar {
-        display:
-            none;
-    }
-
-
-    .portfolio-card {
-        flex:
-            0 0 86%;
-
-        width:
-            86%;
-
-        scroll-snap-align:
-            start;
-    }
-
-
-    .portfolio-image-wrap {
-        height:
-            330px;
-    }
-
-
-    /* Swipe indication */
 
     .portfolio-scroll-hint {
         display:
@@ -9484,10 +9424,10 @@ nav.scrolled {
             10px;
 
         margin-top:
-            12px;
+            14px;
 
         padding-right:
-            2px;
+            4px;
 
         color:
             var(--sway-accent);
@@ -9505,10 +9445,23 @@ nav.scrolled {
             uppercase;
 
         opacity:
-            0.75;
+            0;
+
+        visibility:
+            hidden;
 
         transition:
-            opacity 0.3s ease;
+            opacity 0.3s ease,
+            visibility 0.3s ease;
+    }
+
+
+    .portfolio-scroll-hint.is-visible {
+        opacity:
+            0.75;
+
+        visibility:
+            visible;
     }
 
 
@@ -9528,6 +9481,9 @@ nav.scrolled {
         height:
             30px;
 
+        flex-shrink:
+            0;
+
         border:
             1px solid rgba(1,82,244,0.18);
 
@@ -9535,7 +9491,7 @@ nav.scrolled {
             50%;
 
         background:
-            rgba(255,255,255,0.7);
+            rgba(255,255,255,0.8);
 
         font-size:
             1rem;
@@ -9883,7 +9839,158 @@ nav.scrolled {
             1.7rem;
     }
 
-}    
+} 
+
+    /* =========================================================
+   SWAYPHICS — MOBILE PORTFOLIO SLIDER
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .portfolio-grid {
+        display: flex !important;
+
+        flex-direction: row !important;
+
+        gap: 18px;
+
+        width: calc(100% + 6vw);
+
+        margin-right: -6vw;
+
+        overflow-x: auto;
+
+        overflow-y: hidden;
+
+        padding:
+            4px 6vw 14px 0;
+
+        scroll-snap-type:
+            x mandatory;
+
+        -webkit-overflow-scrolling:
+            touch;
+
+        scrollbar-width:
+            none;
+    }
+
+
+    .portfolio-grid::-webkit-scrollbar {
+        display:
+            none;
+    }
+
+
+    .portfolio-grid .portfolio-card {
+        flex:
+            0 0 84% !important;
+
+        width:
+            84% !important;
+
+        min-width:
+            84% !important;
+
+        scroll-snap-align:
+            start;
+
+        scroll-snap-stop:
+            always;
+    }
+
+
+    .portfolio-scroll-hint {
+        display:
+            flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            flex-end;
+
+        gap:
+            10px;
+
+        margin-top:
+            14px;
+
+        padding-right:
+            4px;
+
+        color:
+            var(--sway-accent);
+
+        font-size:
+            0.68rem;
+
+        font-weight:
+            800;
+
+        letter-spacing:
+            0.12em;
+
+        text-transform:
+            uppercase;
+
+        opacity:
+            0.75;
+    }
+
+
+    .portfolio-scroll-arrow {
+        display:
+            inline-flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            center;
+
+        width:
+            30px;
+
+        height:
+            30px;
+
+        flex-shrink:
+            0;
+
+        border:
+            1px solid rgba(1,82,244,0.18);
+
+        border-radius:
+            50%;
+
+        background:
+            rgba(255,255,255,0.85);
+
+        font-size:
+            1rem;
+
+        animation:
+            portfolioHint 1.8s ease-in-out infinite;
+    }
+
+}
+
+
+@keyframes portfolioHint {
+
+    0%,
+    100% {
+        transform:
+            translateX(0);
+    }
+
+    50% {
+        transform:
+            translateX(5px);
+    }
+
+}
     
 </style>
     
@@ -11579,30 +11686,7 @@ async function loadPortfolio() {
 
         updatePortfolioScrollHint();
 
-document
-    .querySelectorAll(".portfolio-card")
-    .forEach(card => {
-
-        card.addEventListener(
-            "click",
-            () => {
-
-                openPortfolioLightbox({
-                    image_url:
-                        card.dataset.imageUrl,
-
-                    title:
-                        card.dataset.title,
-
-                    category:
-                        card.dataset.category
-                });
-
-            }
-        );
-
-    });
-    } catch (error) {
+ } catch (error) {
 
         console.error(
             "Portfolio loading error:",
@@ -11615,21 +11699,37 @@ document
  function updatePortfolioScrollHint() {
 
     const grid =
-        document.querySelector(".portfolio-grid");
+        document.querySelector(
+            ".portfolio-grid"
+        );
 
     const hint =
-        document.querySelector(".portfolio-scroll-hint");
+        document.querySelector(
+            ".portfolio-scroll-hint"
+        );
 
     if (!grid || !hint) return;
+
 
     const hasMoreContent =
         grid.scrollWidth >
         grid.clientWidth + 5;
 
-    hint.style.display =
-        hasMoreContent ? "flex" : "none";
-}       
 
+    if (hasMoreContent) {
+
+        hint.classList.add(
+            "is-visible"
+        );
+
+    } else {
+
+        hint.classList.remove(
+            "is-visible"
+        );
+
+    }
+}
 /* Load testimonials */
 
 loadTestimonials();
@@ -11775,6 +11875,41 @@ document.addEventListener(
 
     }
 );
+
+/* =========================================================
+   PORTFOLIO CARD CLICK HANDLER
+   ========================================================= */
+
+const portfolioGrid =
+    document.querySelector(".portfolio-grid");
+
+if (portfolioGrid) {
+
+    portfolioGrid.addEventListener(
+        "click",
+        (event) => {
+
+            const card =
+                event.target.closest(
+                    ".portfolio-card"
+                );
+
+            if (!card) return;
+
+            openPortfolioLightbox({
+                image_url:
+                    card.dataset.imageUrl,
+
+                title:
+                    card.dataset.title,
+
+                category:
+                    card.dataset.category
+            });
+
+        }
+    );
+}        
 
 if (projectForm) {
 
