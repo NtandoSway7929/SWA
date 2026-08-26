@@ -8586,158 +8586,115 @@ nav.scrolled {
     }
 }
 
-    /* =========================================================
+  /* =========================================================
    TESTIMONIALS — EMPTY STATE
    ========================================================= */
 
 .testimonials-empty {
     width: 100%;
-    min-height: 230px;
+    min-height: 320px;
 
     display: flex;
     align-items: center;
-    gap: 30px;
 
     box-sizing: border-box;
 
-    padding: 42px 46px;
+    padding: 64px 72px;
 
     border:
         1px solid rgba(0, 32, 150, 0.10);
 
-    border-radius: 28px;
+    border-radius: 32px;
 
     background:
         linear-gradient(
             135deg,
-            rgba(255,255,255,0.92),
-            rgba(238,246,255,0.72)
+            rgba(255,255,255,0.96) 0%,
+            rgba(244,249,255,0.90) 100%
         );
 
     box-shadow:
-        0 20px 55px rgba(0,32,150,0.08);
+        0 24px 65px rgba(0,32,150,0.08);
 
     backdrop-filter:
-        blur(18px);
+        blur(20px);
 
     -webkit-backdrop-filter:
-        blur(18px);
+        blur(20px);
+
+    overflow: hidden;
 }
 
 
-/* Brand mark */
+/* Brand accent */
 
-.testimonials-empty-mark {
-    flex:
-        0 0 72px;
+.testimonials-empty-accent {
+    width: 5px;
+    min-height: 190px;
 
-    width:
-        72px;
+    flex-shrink: 0;
 
-    height:
-        72px;
+    margin-right: 55px;
 
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
-
-    border-radius:
-        22px;
+    border-radius: 999px;
 
     background:
         linear-gradient(
-            135deg,
+            180deg,
             #002096,
-            #0152F4
+            #0152F4,
+            #77C1FC
         );
-
-    box-shadow:
-        0 14px 30px rgba(1,82,244,0.20);
-}
-
-
-.testimonials-empty-mark span {
-    color:
-        #FFFFFF;
-
-    font-size:
-        1rem;
-
-    font-weight:
-        800;
-
-    letter-spacing:
-        0.08em;
 }
 
 
 /* Content */
 
 .testimonials-empty-content {
-    max-width:
-        620px;
+    max-width: 760px;
 }
 
 
 .testimonials-empty-label {
-    display:
-        block;
+    display: block;
 
-    margin-bottom:
-        10px;
+    margin-bottom: 16px;
 
-    color:
-        #0152F4;
+    color: #0152F4;
 
-    font-size:
-        0.68rem;
+    font-size: 0.68rem;
 
-    font-weight:
-        800;
+    font-weight: 800;
 
-    letter-spacing:
-        0.18em;
+    letter-spacing: 0.2em;
+
+    text-transform: uppercase;
 }
 
 
 .testimonials-empty h3 {
-    margin:
-        0 0 10px;
+    margin: 0 0 18px;
 
-    color:
-        var(--text-dark);
+    color: var(--text-dark);
 
-    font-size:
-        clamp(1.8rem, 3vw, 2.6rem);
+    font-size: clamp(2.4rem, 4vw, 4rem);
 
-    line-height:
-        1;
+    line-height: 0.98;
 
-    letter-spacing:
-        -1.5px;
+    letter-spacing: -2.5px;
 }
 
 
 .testimonials-empty p {
-    max-width:
-        580px;
+    max-width: 680px;
 
-    margin:
-        0;
+    margin: 0;
 
-    color:
-        var(--text-muted);
+    color: var(--text-muted);
 
-    font-size:
-        1rem;
+    font-size: 1.08rem;
 
-    line-height:
-        1.7;
+    line-height: 1.8;
 }
 
 
@@ -8748,56 +8705,59 @@ nav.scrolled {
 @media (max-width: 700px) {
 
     .testimonials-empty {
-        min-height:
-            auto;
+        min-height: auto;
 
-        flex-direction:
-            column;
+        display: block;
 
-        align-items:
-            flex-start;
+        padding: 38px 28px;
 
-        gap:
-            24px;
-
-        padding:
-            30px 26px;
-
-        border-radius:
-            22px;
+        border-radius: 24px;
     }
 
 
-    .testimonials-empty-mark {
-        width:
-            58px;
+    .testimonials-empty-accent {
+        width: 55px;
+        min-height: 4px;
 
-        height:
-            58px;
+        margin: 0 0 30px;
 
-        flex-basis:
-            58px;
+        border-radius: 999px;
 
-        border-radius:
-            18px;
+        background:
+            linear-gradient(
+                90deg,
+                #002096,
+                #0152F4,
+                #77C1FC
+            );
+    }
+
+
+    .testimonials-empty-content {
+        max-width: none;
+    }
+
+
+    .testimonials-empty-label {
+        margin-bottom: 13px;
     }
 
 
     .testimonials-empty h3 {
-        font-size:
-            2rem;
+        margin-bottom: 16px;
 
-        letter-spacing:
-            -1px;
+        font-size: clamp(2rem, 9vw, 3rem);
+
+        letter-spacing: -1.5px;
+
+        line-height: 1;
     }
 
 
     .testimonials-empty p {
-        font-size:
-            0.98rem;
+        font-size: 1rem;
 
-        line-height:
-            1.7;
+        line-height: 1.75;
     }
 
 }
@@ -10193,14 +10153,12 @@ async function loadTestimonials() {
     testimonialGrid.innerHTML = `
     <div class="testimonials-empty">
 
-        <div class="testimonials-empty-mark">
-            <span>SW</span>
-        </div>
+        <div class="testimonials-empty-accent"></div>
 
         <div class="testimonials-empty-content">
 
             <span class="testimonials-empty-label">
-                THE NEXT CHAPTER
+                CLIENT STORIES
             </span>
 
             <h3>
@@ -10208,9 +10166,10 @@ async function loadTestimonials() {
             </h3>
 
             <p>
-                Swayphics is building brands, digital experiences
-                and businesses worth talking about. As our clients
-                grow, their stories will live here.
+                Swayphics exists to turn ideas into brands,
+                experiences and businesses worth remembering.
+                As we work with more businesses, their stories
+                will become part of ours.
             </p>
 
         </div>
