@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Share your experience with Swayphics."
+    >
+
+    <title>
+        Share Your Story — Swayphics
+    </title>
+
+
+    <style>
+
+        :root {
+
+            --sway-dark:
+                #081533;
+
+            --sway-blue:
+                #0152F4;
+
+            --sway-deep:
+                #002096;
+
+            --sway-light:
+                #77C1FC;
+
+            --text-muted:
+                #56627A;
+
+            --border:
+                rgba(0,32,150,0.10);
+
+        }
+
+
+        * {
+            box-sizing:
+                border-box;
+
+            margin:
+                0;
+
+            padding:
+                0;
+        }
+
+
+        body {
+
+            min-height:
+                100vh;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #FFFFFF 0%,
+                    #F8FBFF 48%,
+                    #EDF6FF 100%
+                );
+
+            color:
+                var(--sway-dark);
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            -webkit-font-smoothing:
+                antialiased;
+        }
+
+
+        /* =====================================================
+           PAGE
+           ===================================================== */
+
+        .testimonial-page {
+
+            width:
+                100%;
+
+            min-height:
+                100vh;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+            padding:
+                70px 24px;
+        }
+
+
+        .testimonial-container {
+
+            width:
+                min(760px, 100%);
+
+            margin:
+                0 auto;
+        }
+
+
+        /* =====================================================
+           BRAND
+           ===================================================== */
+
+        .brand {
+
+            display:
+                flex;
+
+            justify-content:
+                center;
+
+            margin-bottom:
+                52px;
+        }
+
+
+        .brand img {
+
+            width:
+                150px;
+
+            height:
+                auto;
+
+            display:
+                block;
+        }
+
+
+        /* =====================================================
+           INTRO
+           ===================================================== */
+
+        .testimonial-intro {
+
+            text-align:
+                center;
+
+            margin-bottom:
+                38px;
+        }
+
+
+        .section-label {
+
+            display:
+                block;
+
+            margin-bottom:
+                14px;
+
+            color:
+                var(--sway-blue);
+
+            font-size:
+                0.68rem;
+
+            font-weight:
+                800;
+
+            letter-spacing:
+                0.2em;
+
+            text-transform:
+                uppercase;
+        }
+
+
+        .testimonial-intro h1 {
+
+            margin:
+                0 auto 18px;
+
+            max-width:
+                700px;
+
+            color:
+                var(--sway-dark);
+
+            font-size:
+                clamp(2.6rem, 7vw, 5rem);
+
+            line-height:
+                0.98;
+
+            letter-spacing:
+                -0.06em;
+        }
+
+
+        .testimonial-intro h1 span {
+
+            color:
+                var(--sway-blue);
+        }
+
+
+        .testimonial-intro p {
+
+            max-width:
+                610px;
+
+            margin:
+                0 auto;
+
+            color:
+                var(--text-muted);
+
+            font-size:
+                1rem;
+
+            line-height:
+                1.7;
+        }
+
+
+        /* =====================================================
+           FORM CARD
+           ===================================================== */
+
+        .testimonial-card {
+
+            width:
+                100%;
+
+            padding:
+                44px;
+
+            border:
+                1px solid var(--border);
+
+            border-radius:
+                30px;
+
+            background:
+                rgba(255,255,255,0.88);
+
+            box-shadow:
+                0 25px 70px
+                rgba(0,32,150,0.09);
+
+            backdrop-filter:
+                blur(20px);
+
+            -webkit-backdrop-filter:
+                blur(20px);
+        }
+
+
+        /* =====================================================
+           FORM
+           ===================================================== */
+
+        .testimonial-form {
+
+            display:
+                grid;
+
+            gap:
+                24px;
+        }
+
+
+        .form-row {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap:
+                18px;
+        }
+
+
+        .form-group {
+
+            display:
+                flex;
+
+            flex-direction:
+                column;
+
+            gap:
+                8px;
+        }
+
+
+        .form-group label {
+
+            color:
+                var(--sway-dark);
+
+            font-size:
+                0.78rem;
+
+            font-weight:
+                800;
+
+            letter-spacing:
+                0.04em;
+        }
+
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+
+            width:
+                100%;
+
+            border:
+                1px solid
+                rgba(0,32,150,0.13);
+
+            border-radius:
+                14px;
+
+            padding:
+                15px 16px;
+
+            background:
+                #FFFFFF;
+
+            color:
+                var(--sway-dark);
+
+            font-family:
+                inherit;
+
+            font-size:
+                0.95rem;
+
+            outline:
+                none;
+
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+
+        .form-group textarea {
+
+            min-height:
+                170px;
+
+            resize:
+                vertical;
+
+            line-height:
+                1.6;
+        }
+
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+
+            border-color:
+                var(--sway-blue);
+
+            box-shadow:
+                0 0 0 4px
+                rgba(1,82,244,0.08);
+        }
+
+
+        /* =====================================================
+           RATING
+           ===================================================== */
+
+        .rating-group {
+
+            display:
+                flex;
+
+            flex-direction:
+                column;
+
+            gap:
+                10px;
+        }
+
+
+        .rating-options {
+
+            display:
+                flex;
+
+            gap:
+                8px;
+        }
+
+
+        .rating-options input {
+
+            position:
+                absolute;
+
+            opacity:
+                0;
+
+            pointer-events:
+                none;
+        }
+
+
+        .rating-options label {
+
+            width:
+                48px;
+
+            height:
+                44px;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+            border:
+                1px solid
+                rgba(0,32,150,0.12);
+
+            border-radius:
+                12px;
+
+            background:
+                #FFFFFF;
+
+            color:
+                #AAB3C3;
+
+            font-size:
+                1.2rem;
+
+            cursor:
+                pointer;
+
+            transition:
+                all 0.2s ease;
+        }
+
+
+        .rating-options label:hover {
+
+            border-color:
+                rgba(1,82,244,0.35);
+
+            color:
+                var(--sway-blue);
+        }
+
+
+        .rating-options input:checked + label {
+
+            border-color:
+                var(--sway-blue);
+
+            background:
+                rgba(1,82,244,0.08);
+
+            color:
+                var(--sway-blue);
+        }
+
+
+        /* =====================================================
+           SUBMIT
+           ===================================================== */
+
+        .submit-button {
+
+            width:
+                100%;
+
+            border:
+                none;
+
+            border-radius:
+                14px;
+
+            padding:
+                16px 22px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    var(--sway-deep),
+                    var(--sway-blue)
+                );
+
+            color:
+                #FFFFFF;
+
+            font-family:
+                inherit;
+
+            font-size:
+                0.88rem;
+
+            font-weight:
+                800;
+
+            letter-spacing:
+                0.04em;
+
+            cursor:
+                pointer;
+
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+
+        .submit-button:hover {
+
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 12px 30px
+                rgba(1,82,244,0.22);
+        }
+
+
+        .submit-button:disabled {
+
+            opacity:
+                0.65;
+
+            cursor:
+                wait;
+
+            transform:
+                none;
+        }
+
+
+        /* =====================================================
+           STATUS
+           ===================================================== */
+
+        .form-status {
+
+            padding:
+                14px 16px;
+
+            border-radius:
+                12px;
+
+            font-size:
+                0.88rem;
+
+            line-height:
+                1.5;
+
+            text-align:
+                center;
+        }
+
+
+        .form-status.success {
+
+            background:
+                rgba(1,82,244,0.07);
+
+            color:
+                var(--sway-deep);
+        }
+
+
+        .form-status.error {
+
+            background:
+                rgba(180,30,30,0.07);
+
+            color:
+                #9B1C1C;
+        }
+
+
+        /* =====================================================
+           FOOTER
+           ===================================================== */
+
+        .page-footer {
+
+            margin-top:
+                30px;
+
+            text-align:
+                center;
+
+            color:
+                var(--text-muted);
+
+            font-size:
+                0.72rem;
+
+            letter-spacing:
+                0.03em;
+        }
+
+
+        /* =====================================================
+           MOBILE
+           ===================================================== */
+
+        @media (max-width: 700px) {
+
+            .testimonial-page {
+
+                padding:
+                    45px 18px;
+            }
+
+
+            .brand {
+
+                margin-bottom:
+                    38px;
+            }
+
+
+            .brand img {
+
+                width:
+                    125px;
+            }
+
+
+            .testimonial-intro {
+
+                margin-bottom:
+                    28px;
+            }
+
+
+            .testimonial-intro h1 {
+
+                font-size:
+                    clamp(2.4rem, 13vw, 3.7rem);
+
+                letter-spacing:
+                    -0.05em;
+            }
+
+
+            .testimonial-intro p {
+
+                font-size:
+                    0.95rem;
+            }
+
+
+            .testimonial-card {
+
+                padding:
+                    28px 22px;
+
+                border-radius:
+                    24px;
+            }
+
+
+            .form-row {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+
+            .rating-options label {
+
+                width:
+                    44px;
+
+                height:
+                    42px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<main class="testimonial-page">
+
+    <div class="testimonial-container">
+
+
+        <!-- BRAND -->
+
+        <div class="brand">
+
+            <a href="index.html">
+
+                <img
+                    src="swayphics-logo.png"
+                    alt="Swayphics — Empowering through design"
+                >
+
+            </a>
+
+        </div>
+
+
+        <!-- INTRO -->
+
+        <header class="testimonial-intro">
+
+            <span class="section-label">
+                Your experience matters
+            </span>
+
+            <h1>
+                Tell us what<br>
+                <span>you think.</span>
+            </h1>
+
+            <p>
+                We'd love to hear about your experience working
+                with Swayphics. Your feedback helps us improve,
+                grow and help more businesses build something
+                worth remembering.
+            </p>
+
+        </header>
+
+
+        <!-- FORM -->
+
+        <section class="testimonial-card">
+
+            <form
+                class="testimonial-form"
+                id="testimonial-form"
+            >
+
+
+                <div class="form-row">
+
+
+                    <div class="form-group">
+
+                        <label for="name">
+                            Your name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            placeholder="Your name"
+                            autocomplete="name"
+                            minlength="2"
+                            maxlength="80"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="business">
+                            Business name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="business"
+                            name="business"
+                            placeholder="Your business"
+                            autocomplete="organization"
+                            maxlength="100"
+                        >
+
+                    </div>
+
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="role">
+                        Your role
+                    </label>
+
+                    <input
+                        type="text"
+                        id="role"
+                        name="role"
+                        placeholder="e.g. Founder, Owner, Manager"
+                        maxlength="100"
+                    >
+
+                </div>
+
+
+                <div class="rating-group">
+
+                    <label>
+                        Your rating
+                    </label>
+
+                    <div class="rating-options">
+
+
+                        <input
+                            type="radio"
+                            id="rating-1"
+                            name="rating"
+                            value="1"
+                            required
+                        >
+
+                        <label for="rating-1">
+                            ★
+                        </label>
+
+
+                        <input
+                            type="radio"
+                            id="rating-2"
+                            name="rating"
+                            value="2"
+                        >
+
+                        <label for="rating-2">
+                            ★
+                        </label>
+
+
+                        <input
+                            type="radio"
+                            id="rating-3"
+                            name="rating"
+                            value="3"
+                        >
+
+                        <label for="rating-3">
+                            ★
+                        </label>
+
+
+                        <input
+                            type="radio"
+                            id="rating-4"
+                            name="rating"
+                            value="4"
+                        >
+
+                        <label for="rating-4">
+                            ★
+                        </label>
+
+
+                        <input
+                            type="radio"
+                            id="rating-5"
+                            name="rating"
+                            value="5"
+                        >
+
+                        <label for="rating-5">
+                            ★
+                        </label>
+
+
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="quote">
+                        Your experience
+                    </label>
+
+                    <textarea
+                        id="quote"
+                        name="quote"
+                        placeholder="Tell us about your experience working with Swayphics..."
+                        minlength="10"
+                        maxlength="1200"
+                        required
+                    ></textarea>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="submit-button"
+                    id="submit-button"
+                >
+                    Submit your story →
+                </button>
+
+
+                <div
+                    class="form-status"
+                    id="form-status"
+                    hidden
+                    aria-live="polite"
+                ></div>
+
+
+            </form>
+
+        </section>
+
+
+        <div class="page-footer">
+
+            Swayphics · Empowering through design.
+
+        </div>
+
+
+    </div>
+
+</main>
+
+
+<script>
+
+    /* =====================================================
+       SUPABASE
+       ===================================================== */
+
+    const SUPABASE_URL =
+        "https://sqifhribgsqfaxgtobsa.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+        "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
+
+
+    /* =====================================================
+       FORM
+       ===================================================== */
+
+    const testimonialForm =
+        document.getElementById(
+            "testimonial-form"
+        );
+
+    const submitButton =
+        document.getElementById(
+            "submit-button"
+        );
+
+    const formStatus =
+        document.getElementById(
+            "form-status"
+        );
+
+
+    testimonialForm.addEventListener(
+        "submit",
+        async (event) => {
+
+            event.preventDefault();
+
+
+            const formData =
+                new FormData(
+                    testimonialForm
+                );
+
+
+            const payload = {
+
+                name:
+                    formData.get("name")
+                    .trim(),
+
+                business:
+                    formData.get("business")
+                    .trim() || null,
+
+                role:
+                    formData.get("role")
+                    .trim() || null,
+
+                quote:
+                    formData.get("quote")
+                    .trim(),
+
+                rating:
+                    Number(
+                        formData.get("rating")
+                    ),
+
+                approved:
+                    false
+
+            };
+
+
+            submitButton.disabled =
+                true;
+
+            submitButton.textContent =
+                "Submitting...";
+
+
+            formStatus.hidden =
+                true;
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `${SUPABASE_URL}/rest/v1/testimonials`,
+                        {
+
+                            method:
+                                "POST",
+
+                            headers: {
+
+                                "apikey":
+                                    SUPABASE_PUBLISHABLE_KEY,
+
+                                "Authorization":
+                                    `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+
+                                "Content-Type":
+                                    "application/json",
+
+                                "Prefer":
+                                    "return=minimal"
+
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    payload
+                                )
+
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    const error =
+                        await response.text();
+
+                    throw new Error(
+                        error
+                    );
+
+                }
+
+
+                testimonialForm.reset();
+
+
+                formStatus.textContent =
+                    "Thank you for sharing your experience. Your testimonial has been received and will be reviewed by Swayphics.";
+
+                formStatus.className =
+                    "form-status success";
+
+                formStatus.hidden =
+                    false;
+
+
+            } catch (error) {
+
+                console.error(
+                    "Testimonial submission failed:",
+                    error
+                );
+
+
+                formStatus.textContent =
+                    "Something went wrong while submitting your testimonial. Please try again.";
+
+                formStatus.className =
+                    "form-status error";
+
+                formStatus.hidden =
+                    false;
+
+            } finally {
+
+                submitButton.disabled =
+                    false;
+
+                submitButton.textContent =
+                    "Submit your story →";
+
+            }
+
+        }
+    );
+
+</script>
+
+</body>
+
+</html>
