@@ -10287,6 +10287,133 @@ nav.scrolled {
 
     opacity: 0.45;
 }
+
+    /* =========================================================
+   TESTIMONIAL CTA
+   ========================================================= */
+
+.testimonials-cta {
+    width: 100%;
+
+    margin-top: 42px;
+
+    padding: 28px 32px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 30px;
+
+    border: 1px solid rgba(1, 82, 244, 0.12);
+
+    border-radius: 22px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(1, 82, 244, 0.055),
+            rgba(119, 193, 252, 0.10)
+        );
+}
+
+.testimonials-cta-content {
+    min-width: 0;
+}
+
+.testimonials-cta-label {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: #0152F4;
+
+    font-size: 0.66rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.18em;
+}
+
+.testimonials-cta h3 {
+    margin: 0 0 6px;
+
+    color: #081533;
+
+    font-size: 1.15rem;
+
+    line-height: 1.2;
+}
+
+.testimonials-cta p {
+    margin: 0;
+
+    color: #56627A;
+
+    font-size: 0.85rem;
+
+    line-height: 1.5;
+}
+
+.testimonials-cta-button {
+    flex-shrink: 0;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    padding: 12px 18px;
+
+    border-radius: 12px;
+
+    background: #0152F4;
+
+    color: #FFFFFF;
+
+    font-size: 0.78rem;
+
+    font-weight: 800;
+
+    text-decoration: none;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.testimonials-cta-button:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 10px 24px
+        rgba(1, 82, 244, 0.20);
+}
+
+.testimonials-cta-button span {
+    font-size: 1rem;
+}
+
+@media (max-width: 700px) {
+
+    .testimonials-cta {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        padding: 24px;
+    }
+
+    .testimonials-cta-button {
+        width: 100%;
+
+        justify-content: center;
+    }
+
+}
     
 </style>
     
@@ -11166,6 +11293,35 @@ nav.scrolled {
 
 <div class="testimonial-grid">   
          </div>
+
+    <div class="testimonials-cta">
+
+    <div class="testimonials-cta-content">
+
+        <span class="testimonials-cta-label">
+            WORKED WITH SWAYPHICS?
+        </span>
+
+        <h3>
+            Tell us about your experience.
+        </h3>
+
+        <p>
+            Your story could help another business
+            take the next step.
+        </p>
+
+    </div>
+
+    <a
+        href="testimonial.html"
+        class="testimonials-cta-button"
+    >
+        Share your story
+        <span aria-hidden="true">→</span>
+    </a>
+
+</div>
 
 </section>
 
