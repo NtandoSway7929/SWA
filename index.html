@@ -11922,7 +11922,7 @@ window.addEventListener(
 ); 
 
         /* =========================================================
-   PORTFOLIO LIGHTBOX
+   SWAYPHICS PORTFOLIO LIGHTBOX
    ========================================================= */
 
 const portfolioLightbox =
@@ -11950,11 +11950,14 @@ function openPortfolioLightbox(project) {
         return;
     }
 
+
     portfolioLightboxImage.src =
         project.image_url || "";
 
     portfolioLightboxImage.alt =
-        project.title || "Swayphics project";
+        project.title ||
+        "Swayphics project";
+
 
     if (portfolioLightboxTitle) {
 
@@ -11962,20 +11965,24 @@ function openPortfolioLightbox(project) {
             project.title || "";
     }
 
+
     if (portfolioLightboxCategory) {
 
         portfolioLightboxCategory.textContent =
             project.category || "";
     }
 
+
     portfolioLightbox.classList.add(
         "is-open"
     );
+
 
     portfolioLightbox.setAttribute(
         "aria-hidden",
         "false"
     );
+
 
     document.body.style.overflow =
         "hidden";
@@ -11988,17 +11995,21 @@ function closePortfolioLightbox() {
         return;
     }
 
+
     portfolioLightbox.classList.remove(
         "is-open"
     );
+
 
     portfolioLightbox.setAttribute(
         "aria-hidden",
         "true"
     );
 
+
     document.body.style.overflow =
         "";
+
 
     setTimeout(() => {
 
@@ -12012,6 +12023,53 @@ function closePortfolioLightbox() {
 }
 
 
+/* =========================================================
+   CARD CLICK
+   ========================================================= */
+
+const portfolioGrid =
+    document.querySelector(
+        ".portfolio-grid"
+    );
+
+
+if (portfolioGrid) {
+
+    portfolioGrid.addEventListener(
+        "click",
+        (event) => {
+
+            const card =
+                event.target.closest(
+                    ".portfolio-card"
+                );
+
+
+            if (!card) return;
+
+
+            openPortfolioLightbox({
+
+                image_url:
+                    card.dataset.imageUrl,
+
+                title:
+                    card.dataset.title,
+
+                category:
+                    card.dataset.category
+
+            });
+
+        }
+    );
+}
+
+
+/* =========================================================
+   CLOSE BUTTON
+   ========================================================= */
+
 if (portfolioLightboxClose) {
 
     portfolioLightboxClose.addEventListener(
@@ -12020,6 +12078,10 @@ if (portfolioLightboxClose) {
     );
 }
 
+
+/* =========================================================
+   CLICK OUTSIDE
+   ========================================================= */
 
 if (portfolioLightbox) {
 
@@ -12039,6 +12101,10 @@ if (portfolioLightbox) {
     );
 }
 
+
+/* =========================================================
+   ESCAPE KEY
+   ========================================================= */
 
 document.addEventListener(
     "keydown",
