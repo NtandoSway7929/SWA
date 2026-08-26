@@ -12123,41 +12123,7 @@ document.addEventListener(
     }
 );
 
-/* =========================================================
-   PORTFOLIO CARD CLICK HANDLER
-   ========================================================= */
-
-const portfolioGrid =
-    document.querySelector(".portfolio-grid");
-
-if (portfolioGrid) {
-
-    portfolioGrid.addEventListener(
-        "click",
-        (event) => {
-
-            const card =
-                event.target.closest(
-                    ".portfolio-card"
-                );
-
-            if (!card) return;
-
-            openPortfolioLightbox({
-                image_url:
-                    card.dataset.imageUrl,
-
-                title:
-                    card.dataset.title,
-
-                category:
-                    card.dataset.category
-            });
-
-        }
-    );
-}        
-
+        
 if (projectForm) {
 
     projectForm.addEventListener(
