@@ -9397,6 +9397,493 @@ nav.scrolled {
     }
 
 }
+
+    /* =========================================================
+   MOBILE PORTFOLIO CAROUSEL
+   ========================================================= */
+
+.portfolio-scroll-hint {
+    display: none;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .portfolio-grid {
+        display: flex;
+
+        flex-direction: row;
+
+        gap: 18px;
+
+        width: calc(100% + 6vw);
+
+        margin-right: -6vw;
+
+        overflow-x: auto;
+        overflow-y: hidden;
+
+        padding:
+            4px 6vw 12px 0;
+
+        scroll-snap-type:
+            x mandatory;
+
+        scroll-padding-left:
+            0;
+
+        -webkit-overflow-scrolling:
+            touch;
+
+        scrollbar-width:
+            none;
+    }
+
+
+    .portfolio-grid::-webkit-scrollbar {
+        display:
+            none;
+    }
+
+
+    .portfolio-card {
+        flex:
+            0 0 86%;
+
+        width:
+            86%;
+
+        scroll-snap-align:
+            start;
+    }
+
+
+    .portfolio-image-wrap {
+        height:
+            330px;
+    }
+
+
+    /* Swipe indication */
+
+    .portfolio-scroll-hint {
+        display:
+            flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            flex-end;
+
+        gap:
+            10px;
+
+        margin-top:
+            12px;
+
+        padding-right:
+            2px;
+
+        color:
+            var(--sway-accent);
+
+        font-size:
+            0.68rem;
+
+        font-weight:
+            800;
+
+        letter-spacing:
+            0.12em;
+
+        text-transform:
+            uppercase;
+
+        opacity:
+            0.75;
+
+        transition:
+            opacity 0.3s ease;
+    }
+
+
+    .portfolio-scroll-arrow {
+        display:
+            inline-flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            center;
+
+        width:
+            30px;
+
+        height:
+            30px;
+
+        border:
+            1px solid rgba(1,82,244,0.18);
+
+        border-radius:
+            50%;
+
+        background:
+            rgba(255,255,255,0.7);
+
+        font-size:
+            1rem;
+
+        animation:
+            portfolioHint 1.8s ease-in-out infinite;
+    }
+
+}
+
+
+@keyframes portfolioHint {
+
+    0%,
+    100% {
+        transform:
+            translateX(0);
+    }
+
+    50% {
+        transform:
+            translateX(5px);
+    }
+
+}
+
+/* =========================================================
+   SWAYPHICS PORTFOLIO LIGHTBOX
+   ========================================================= */
+
+.portfolio-lightbox {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 30px;
+
+    background:
+        rgba(3, 10, 25, 0.92);
+
+    backdrop-filter:
+        blur(18px);
+
+    -webkit-backdrop-filter:
+        blur(18px);
+
+    opacity: 0;
+
+    visibility: hidden;
+
+    pointer-events: none;
+
+    transition:
+        opacity 0.35s ease,
+        visibility 0.35s ease;
+}
+
+
+.portfolio-lightbox.is-open {
+    opacity: 1;
+
+    visibility: visible;
+
+    pointer-events: auto;
+}
+
+
+/* =========================================================
+   LIGHTBOX INNER
+   ========================================================= */
+
+.portfolio-lightbox-inner {
+    position: relative;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    width: min(1100px, 100%);
+
+    max-height: 94vh;
+
+    transform:
+        translateY(20px) scale(0.97);
+
+    transition:
+        transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+.portfolio-lightbox.is-open
+.portfolio-lightbox-inner {
+    transform:
+        translateY(0) scale(1);
+}
+
+
+/* =========================================================
+   CLOSE BUTTON
+   ========================================================= */
+
+.portfolio-lightbox-close {
+    position: absolute;
+
+    top: -18px;
+
+    right: -18px;
+
+    z-index: 2;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 48px;
+
+    height: 48px;
+
+    border:
+        1px solid rgba(255,255,255,0.22);
+
+    border-radius:
+        50%;
+
+    background:
+        rgba(255,255,255,0.10);
+
+    color:
+        #FFFFFF;
+
+    font-size:
+        1.8rem;
+
+    font-weight:
+        300;
+
+    line-height:
+        1;
+
+    cursor:
+        pointer;
+
+    transition:
+        background 0.25s ease,
+        transform 0.25s ease;
+}
+
+
+.portfolio-lightbox-close:hover {
+    background:
+        rgba(255,255,255,0.20);
+
+    transform:
+        rotate(90deg);
+}
+
+
+/* =========================================================
+   IMAGE
+   ========================================================= */
+
+.portfolio-lightbox-image-wrap {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    width:
+        100%;
+
+    max-height:
+        78vh;
+
+    overflow:
+        hidden;
+
+    border-radius:
+        18px;
+
+    background:
+        rgba(255,255,255,0.04);
+
+    box-shadow:
+        0 35px 100px rgba(0,0,0,0.40);
+}
+
+
+.portfolio-lightbox-image {
+    display:
+        block;
+
+    width:
+        auto;
+
+    max-width:
+        100%;
+
+    height:
+        auto;
+
+    max-height:
+        78vh;
+
+    object-fit:
+        contain;
+
+    border-radius:
+        18px;
+}
+
+
+/* =========================================================
+   CAPTION
+   ========================================================= */
+
+.portfolio-lightbox-caption {
+    align-self:
+        flex-start;
+
+    padding:
+        18px 4px 0;
+}
+
+
+.portfolio-lightbox-category {
+    display:
+        block;
+
+    margin-bottom:
+        6px;
+
+    color:
+        #77C1FC;
+
+    font-size:
+        0.68rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.18em;
+
+    text-transform:
+        uppercase;
+}
+
+
+.portfolio-lightbox-caption h3 {
+    margin:
+        0;
+
+    color:
+        #FFFFFF;
+
+    font-size:
+        clamp(1.5rem, 3vw, 2.4rem);
+
+    font-weight:
+        700;
+
+    line-height:
+        1;
+
+    letter-spacing:
+        -1.2px;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .portfolio-lightbox {
+        padding:
+            20px;
+    }
+
+    .portfolio-lightbox-inner {
+        width:
+            100%;
+
+        max-height:
+            92vh;
+    }
+
+    .portfolio-lightbox-image-wrap {
+        max-height:
+            72vh;
+
+        border-radius:
+            14px;
+    }
+
+    .portfolio-lightbox-image {
+        max-height:
+            72vh;
+
+        border-radius:
+            14px;
+    }
+
+    .portfolio-lightbox-close {
+        top:
+            -14px;
+
+        right:
+            -8px;
+
+        width:
+            42px;
+
+        height:
+            42px;
+
+        font-size:
+            1.5rem;
+    }
+
+    .portfolio-lightbox-caption {
+        padding-top:
+            16px;
+    }
+
+    .portfolio-lightbox-caption h3 {
+        font-size:
+            1.7rem;
+    }
+
+}    
     
 </style>
     
@@ -10301,7 +10788,12 @@ nav.scrolled {
     </div>
 
 
-    <div class="portfolio-grid">
+   <div class="portfolio-grid">
+</div>
+
+<div class="portfolio-scroll-hint" aria-hidden="true">
+    <span>Swipe for more</span>
+    <span class="portfolio-scroll-arrow">→</span>
 </div>
         
 </section>
@@ -11035,10 +11527,13 @@ async function loadPortfolio() {
         portfolioGrid.innerHTML =
             projects.map(project => `
 
-                <article
-                    class="portfolio-card"
-                    data-project-id="${project.id}"
-                >
+               <article
+    class="portfolio-card"
+    data-project-id="${project.id}"
+    data-image-url="${project.image_url || ""}"
+    data-title="${project.title || ""}"
+    data-category="${project.category || ""}"
+>
 
                     <div class="portfolio-image-wrap">
 
@@ -11080,8 +11575,33 @@ async function loadPortfolio() {
 
                 </article>
 
-            `).join("");
+                    `).join("");
 
+        updatePortfolioScrollHint();
+
+document
+    .querySelectorAll(".portfolio-card")
+    .forEach(card => {
+
+        card.addEventListener(
+            "click",
+            () => {
+
+                openPortfolioLightbox({
+                    image_url:
+                        card.dataset.imageUrl,
+
+                    title:
+                        card.dataset.title,
+
+                    category:
+                        card.dataset.category
+                });
+
+            }
+        );
+
+    });
     } catch (error) {
 
         console.error(
@@ -11092,10 +11612,169 @@ async function loadPortfolio() {
     }
 }
 
+ function updatePortfolioScrollHint() {
+
+    const grid =
+        document.querySelector(".portfolio-grid");
+
+    const hint =
+        document.querySelector(".portfolio-scroll-hint");
+
+    if (!grid || !hint) return;
+
+    const hasMoreContent =
+        grid.scrollWidth >
+        grid.clientWidth + 5;
+
+    hint.style.display =
+        hasMoreContent ? "flex" : "none";
+}       
+
 /* Load testimonials */
 
 loadTestimonials();
-loadPortfolio();        
+loadPortfolio();  
+
+window.addEventListener(
+    "resize",
+    updatePortfolioScrollHint
+); 
+
+        /* =========================================================
+   PORTFOLIO LIGHTBOX
+   ========================================================= */
+
+const portfolioLightbox =
+    document.querySelector("#portfolio-lightbox");
+
+const portfolioLightboxImage =
+    document.querySelector("#portfolio-lightbox-image");
+
+const portfolioLightboxTitle =
+    document.querySelector("#portfolio-lightbox-title");
+
+const portfolioLightboxCategory =
+    document.querySelector("#portfolio-lightbox-category");
+
+const portfolioLightboxClose =
+    document.querySelector("#portfolio-lightbox-close");
+
+
+function openPortfolioLightbox(project) {
+
+    if (
+        !portfolioLightbox ||
+        !portfolioLightboxImage
+    ) {
+        return;
+    }
+
+    portfolioLightboxImage.src =
+        project.image_url || "";
+
+    portfolioLightboxImage.alt =
+        project.title || "Swayphics project";
+
+    if (portfolioLightboxTitle) {
+
+        portfolioLightboxTitle.textContent =
+            project.title || "";
+    }
+
+    if (portfolioLightboxCategory) {
+
+        portfolioLightboxCategory.textContent =
+            project.category || "";
+    }
+
+    portfolioLightbox.classList.add(
+        "is-open"
+    );
+
+    portfolioLightbox.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    document.body.style.overflow =
+        "hidden";
+}
+
+
+function closePortfolioLightbox() {
+
+    if (!portfolioLightbox) {
+        return;
+    }
+
+    portfolioLightbox.classList.remove(
+        "is-open"
+    );
+
+    portfolioLightbox.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    document.body.style.overflow =
+        "";
+
+    setTimeout(() => {
+
+        if (portfolioLightboxImage) {
+
+            portfolioLightboxImage.src =
+                "";
+        }
+
+    }, 350);
+}
+
+
+if (portfolioLightboxClose) {
+
+    portfolioLightboxClose.addEventListener(
+        "click",
+        closePortfolioLightbox
+    );
+}
+
+
+if (portfolioLightbox) {
+
+    portfolioLightbox.addEventListener(
+        "click",
+        (event) => {
+
+            if (
+                event.target ===
+                portfolioLightbox
+            ) {
+
+                closePortfolioLightbox();
+            }
+
+        }
+    );
+}
+
+
+document.addEventListener(
+    "keydown",
+    (event) => {
+
+        if (
+            event.key === "Escape" &&
+            portfolioLightbox?.classList.contains(
+                "is-open"
+            )
+        ) {
+
+            closePortfolioLightbox();
+        }
+
+    }
+);
 
 if (projectForm) {
 
@@ -11535,6 +12214,54 @@ if (formStatus) {
 
 })();
 </script>
+
+<!-- SWAYPHICS PORTFOLIO LIGHTBOX -->
+
+<div
+    class="portfolio-lightbox"
+    id="portfolio-lightbox"
+    aria-hidden="true"
+>
+
+    <div class="portfolio-lightbox-inner">
+
+        <button
+            type="button"
+            class="portfolio-lightbox-close"
+            id="portfolio-lightbox-close"
+            aria-label="Close project preview"
+        >
+            ×
+        </button>
+
+        <div class="portfolio-lightbox-image-wrap">
+
+            <img
+                src=""
+                alt=""
+                id="portfolio-lightbox-image"
+                class="portfolio-lightbox-image"
+            >
+
+        </div>
+
+        <div class="portfolio-lightbox-caption">
+
+            <span
+                id="portfolio-lightbox-category"
+                class="portfolio-lightbox-category"
+            ></span>
+
+            <h3
+                id="portfolio-lightbox-title"
+            ></h3>
+
+        </div>
+
+    </div>
+
+</div>
+
     
 </body>
 </html>
