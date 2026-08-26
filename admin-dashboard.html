@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Swayphics private administration dashboard."
+    >
+
+    <title>
+        Swayphics Admin Dashboard
+    </title>
+
+
+    <style>
+
+        :root {
+
+            --sway-blue: #0152F4;
+            --sway-deep: #002096;
+            --sway-dark: #081533;
+            --text-muted: #56627A;
+
+            --border:
+                rgba(0,32,150,0.10);
+
+            --surface:
+                rgba(255,255,255,0.90);
+        }
+
+
+        * {
+
+            box-sizing: border-box;
+
+            margin: 0;
+
+            padding: 0;
+        }
+
+
+        body {
+
+            min-height: 100vh;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #FFFFFF 0%,
+                    #F8FBFF 50%,
+                    #EDF6FF 100%
+                );
+
+            color:
+                var(--sway-dark);
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            -webkit-font-smoothing:
+                antialiased;
+        }
+
+
+        /* =====================================================
+           HEADER
+           ===================================================== */
+
+        .admin-header {
+
+            position:
+                sticky;
+
+            top: 0;
+
+            z-index: 100;
+
+            width: 100%;
+
+            border-bottom:
+                1px solid var(--border);
+
+            background:
+                rgba(255,255,255,0.88);
+
+            backdrop-filter:
+                blur(20px);
+
+            -webkit-backdrop-filter:
+                blur(20px);
+        }
+
+
+        .admin-header-inner {
+
+            width:
+                min(1180px, calc(100% - 40px));
+
+            min-height:
+                76px;
+
+            margin:
+                0 auto;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                space-between;
+
+            gap:
+                20px;
+        }
+
+
+        .admin-brand {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+        }
+
+
+        .admin-brand-logo {
+
+            width:
+                145px;
+
+            height:
+                auto;
+
+            display:
+                block;
+        }
+
+
+        .admin-header-right {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            gap:
+                14px;
+        }
+
+
+        .admin-status {
+
+            display:
+                inline-flex;
+
+            align-items:
+                center;
+
+            gap:
+                7px;
+
+            color:
+                var(--text-muted);
+
+            font-size:
+                0.72rem;
+
+            font-weight:
+                700;
+        }
+
+
+        .admin-status-dot {
+
+            width:
+                7px;
+
+            height:
+                7px;
+
+            border-radius:
+                50%;
+
+            background:
+                #16A34A;
+        }
+
+
+        .logout-button {
+
+            border:
+                1px solid
+                rgba(0,32,150,0.12);
+
+            border-radius:
+                10px;
+
+            padding:
+                9px 13px;
+
+            background:
+                #FFFFFF;
+
+            color:
+                var(--sway-dark);
+
+            font-family:
+                inherit;
+
+            font-size:
+                0.72rem;
+
+            font-weight:
+                800;
+
+            cursor:
+                pointer;
+
+            transition:
+                all 0.2s ease;
+        }
+
+
+        .logout-button:hover {
+
+            border-color:
+                rgba(1,82,244,0.30);
+
+            color:
+                var(--sway-blue);
+        }
+
+
+        /* =====================================================
+           MAIN
+           ===================================================== */
+
+        .admin-main {
+
+            width:
+                min(1180px, calc(100% - 40px));
+
+            margin:
+                0 auto;
+
+            padding:
+                70px 0 90px;
+        }
+
+
+        .admin-intro {
+
+            margin-bottom:
+                45px;
+        }
+
+
+        .admin-label {
+
+            display:
+                block;
+
+            margin-bottom:
+                12px;
+
+            color:
+                var(--sway-blue);
+
+            font-size:
+                0.66rem;
+
+            font-weight:
+                800;
+
+            letter-spacing:
+                0.2em;
+
+            text-transform:
+                uppercase;
+        }
+
+
+        .admin-intro h1 {
+
+            font-size:
+                clamp(2.4rem, 6vw, 4.5rem);
+
+            line-height:
+                0.98;
+
+            letter-spacing:
+                -0.06em;
+        }
+
+
+        .admin-intro h1 span {
+
+            color:
+                var(--sway-blue);
+        }
+
+
+        .admin-intro p {
+
+            max-width:
+                600px;
+
+            margin-top:
+                18px;
+
+            color:
+                var(--text-muted);
+
+            font-size:
+                0.95rem;
+
+            line-height:
+                1.7;
+        }
+
+
+        /* =====================================================
+           DASHBOARD GRID
+           ===================================================== */
+
+        .dashboard-grid {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+
+            gap:
+                24px;
+        }
+
+
+        .dashboard-card {
+
+            min-height:
+                280px;
+
+            padding:
+                32px;
+
+            display:
+                flex;
+
+            flex-direction:
+                column;
+
+            justify-content:
+                space-between;
+
+            border:
+                1px solid var(--border);
+
+            border-radius:
+                26px;
+
+            background:
+                var(--surface);
+
+            box-shadow:
+                0 20px 55px
+                rgba(0,32,150,0.07);
+
+            backdrop-filter:
+                blur(20px);
+
+            -webkit-backdrop-filter:
+                blur(20px);
+        }
+
+
+        .dashboard-card-top {
+
+            display:
+                flex;
+
+            align-items:
+                flex-start;
+
+            justify-content:
+                space-between;
+
+            gap:
+                20px;
+        }
+
+
+        .dashboard-card-label {
+
+            color:
+                var(--sway-blue);
+
+            font-size:
+                0.65rem;
+
+            font-weight:
+                800;
+
+            letter-spacing:
+                0.17em;
+
+            text-transform:
+                uppercase;
+        }
+
+
+        .dashboard-card-icon {
+
+            width:
+                42px;
+
+            height:
+                42px;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+            border-radius:
+                13px;
+
+            background:
+                rgba(1,82,244,0.07);
+
+            color:
+                var(--sway-blue);
+
+            font-size:
+                1.05rem;
+
+            font-weight:
+                900;
+        }
+
+
+        .dashboard-card h2 {
+
+            margin-top:
+                20px;
+
+            font-size:
+                1.65rem;
+
+            letter-spacing:
+                -0.04em;
+        }
+
+
+        .dashboard-card p {
+
+            margin-top:
+                10px;
+
+            max-width:
+                470px;
+
+            color:
+                var(--text-muted);
+
+            font-size:
+                0.84rem;
+
+            line-height:
+                1.6;
+        }
+
+
+        .dashboard-card-footer {
+
+            margin-top:
+                28px;
+
+            padding-top:
+                20px;
+
+            border-top:
+                1px solid var(--border);
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                space-between;
+
+            gap:
+                15px;
+        }
+
+
+        .dashboard-card-status {
+
+            color:
+                var(--text-muted);
+
+            font-size:
+                0.72rem;
+
+            font-weight:
+                700;
+        }
+
+
+        .coming-soon {
+
+            display:
+                inline-flex;
+
+            align-items:
+                center;
+
+            padding:
+                7px 10px;
+
+            border-radius:
+                8px;
+
+            background:
+                rgba(1,82,244,0.06);
+
+            color:
+                var(--sway-blue);
+
+            font-size:
+                0.63rem;
+
+            font-weight:
+                800;
+
+            letter-spacing:
+                0.06em;
+
+            text-transform:
+                uppercase;
+        }
+
+
+        /* =====================================================
+           SECURITY NOTICE
+           ===================================================== */
+
+        .security-notice {
+
+            margin-top:
+                24px;
+
+            padding:
+                20px 22px;
+
+            border:
+                1px solid
+                rgba(1,82,244,0.10);
+
+            border-radius:
+                18px;
+
+            background:
+                rgba(1,82,244,0.035);
+
+            color:
+                var(--text-muted);
+
+            font-size:
+                0.75rem;
+
+            line-height:
+                1.6;
+        }
+
+
+        .security-notice strong {
+
+            color:
+                var(--sway-dark);
+        }
+
+
+        /* =====================================================
+           MOBILE
+           ===================================================== */
+
+        @media (max-width: 760px) {
+
+            .admin-header-inner {
+
+                width:
+                    min(100% - 28px, 1180px);
+
+                min-height:
+                    68px;
+            }
+
+
+            .admin-brand-logo {
+
+                width:
+                    120px;
+            }
+
+
+            .admin-status {
+
+                display:
+                    none;
+            }
+
+
+            .admin-main {
+
+                width:
+                    min(100% - 28px, 1180px);
+
+                padding:
+                    48px 0 70px;
+            }
+
+
+            .dashboard-grid {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+
+            .dashboard-card {
+
+                min-height:
+                    250px;
+
+                padding:
+                    26px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<header class="admin-header">
+
+    <div class="admin-header-inner">
+
+
+        <a
+            href="index.html"
+            class="admin-brand"
+            aria-label="Swayphics home"
+        >
+
+            <img
+                src="swayphics-logo.png"
+                alt="Swayphics"
+                class="admin-brand-logo"
+            >
+
+        </a>
+
+
+        <div class="admin-header-right">
+
+            <div class="admin-status">
+
+                <span
+                    class="admin-status-dot"
+                    aria-hidden="true"
+                ></span>
+
+                <span>
+                    Authenticated
+                </span>
+
+            </div>
+
+
+            <button
+                type="button"
+                class="logout-button"
+                id="logout-button"
+            >
+                Log out
+            </button>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+<main class="admin-main">
+
+
+    <section class="admin-intro">
+
+        <span class="admin-label">
+            Swayphics control centre
+        </span>
+
+        <h1>
+            Welcome to your<br>
+            <span>workspace.</span>
+        </h1>
+
+        <p>
+            Manage the work and stories that appear across
+            the Swayphics website from one private dashboard.
+        </p>
+
+    </section>
+
+
+    <section class="dashboard-grid">
+
+
+        <!-- PORTFOLIO -->
+
+        <article class="dashboard-card">
+
+            <div>
+
+                <div class="dashboard-card-top">
+
+                    <span class="dashboard-card-label">
+                        Portfolio
+                    </span>
+
+                    <div
+                        class="dashboard-card-icon"
+                        aria-hidden="true"
+                    >
+                        ↗
+                    </div>
+
+                </div>
+
+
+                <h2>
+                    Your work.
+                </h2>
+
+
+                <p>
+                    Add, edit, publish and manage the projects
+                    displayed in the Swayphics portfolio.
+                </p>
+
+            </div>
+
+
+            <div class="dashboard-card-footer">
+
+                <span class="dashboard-card-status">
+                    Management coming next
+                </span>
+
+                <span class="coming-soon">
+                    Coming next
+                </span>
+
+            </div>
+
+        </article>
+
+
+        <!-- TESTIMONIALS -->
+
+        <article class="dashboard-card">
+
+            <div>
+
+                <div class="dashboard-card-top">
+
+                    <span class="dashboard-card-label">
+                        Testimonials
+                    </span>
+
+                    <div
+                        class="dashboard-card-icon"
+                        aria-hidden="true"
+                    >
+                        ★
+                    </div>
+
+                </div>
+
+
+                <h2>
+                    Their stories.
+                </h2>
+
+
+                <p>
+                    Review client submissions and decide which
+                    testimonials become part of the public
+                    Swayphics experience.
+                </p>
+
+            </div>
+
+
+            <div class="dashboard-card-footer">
+
+                <span class="dashboard-card-status">
+                    Moderation coming next
+                </span>
+
+                <span class="coming-soon">
+                    Coming next
+                </span>
+
+            </div>
+
+        </article>
+
+
+    </section>
+
+
+    <div class="security-notice">
+
+        <strong>
+            Private workspace.
+        </strong>
+
+        Your dashboard requires an authenticated Supabase
+        session. Administrative database actions will be
+        protected separately by Row Level Security.
+
+    </div>
+
+
+</main>
+
+
+<script>
+
+    /* =========================================================
+       SUPABASE
+       ========================================================= */
+
+    const SUPABASE_URL =
+        "https://sqifhribgsqfaxgtobsa.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+        "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
+
+
+    /* =========================================================
+       STORED SESSION
+       ========================================================= */
+
+    const accessToken =
+        localStorage.getItem(
+            "swayphics_admin_access_token"
+        );
+
+    const refreshToken =
+        localStorage.getItem(
+            "swayphics_admin_refresh_token"
+        );
+
+
+    /* =========================================================
+       AUTHENTICATION CHECK
+       ========================================================= */
+
+    async function verifyAdminSession() {
+
+        if (!accessToken) {
+
+            window.location.href =
+                "admin.html";
+
+            return;
+
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    `${SUPABASE_URL}/auth/v1/user`,
+                    {
+
+                        method:
+                            "GET",
+
+                        headers: {
+
+                            "apikey":
+                                SUPABASE_PUBLISHABLE_KEY,
+
+                            "Authorization":
+                                `Bearer ${accessToken}`
+
+                        }
+
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Session is no longer valid."
+                );
+
+            }
+
+
+            /*
+             * The token is valid.
+             * Dashboard may remain visible.
+             */
+
+        } catch (error) {
+
+            console.error(
+                "Admin session verification failed:",
+                error
+            );
+
+
+            localStorage.removeItem(
+                "swayphics_admin_access_token"
+            );
+
+            localStorage.removeItem(
+                "swayphics_admin_refresh_token"
+            );
+
+
+            window.location.href =
+                "admin.html";
+
+        }
+
+    }
+
+
+    /* =========================================================
+       LOGOUT
+       ========================================================= */
+
+    document
+        .getElementById("logout-button")
+        .addEventListener(
+            "click",
+            async () => {
+
+                try {
+
+                    await fetch(
+                        `${SUPABASE_URL}/auth/v1/logout`,
+                        {
+
+                            method:
+                                "POST",
+
+                            headers: {
+
+                                "apikey":
+                                    SUPABASE_PUBLISHABLE_KEY,
+
+                                "Authorization":
+                                    `Bearer ${accessToken}`
+
+                            }
+
+                        }
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Logout request failed:",
+                        error
+                    );
+
+                } finally {
+
+                    localStorage.removeItem(
+                        "swayphics_admin_access_token"
+                    );
+
+                    localStorage.removeItem(
+                        "swayphics_admin_refresh_token"
+                    );
+
+
+                    window.location.href =
+                        "admin.html";
+
+                }
+
+            }
+        );
+
+
+    /* =========================================================
+       START
+       ========================================================= */
+
+    verifyAdminSession();
+
+</script>
+
+
+</body>
+
+</html>
