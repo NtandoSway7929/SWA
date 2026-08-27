@@ -1596,24 +1596,29 @@
                     </div>
 
 
-                    <div class="portfolio-field portfolio-field-full">
+                <div class="portfolio-field portfolio-field-full">
 
-                        <label for="portfolio-image-url">
-                            Image URL
-                        </label>
+    <label for="portfolio-image-file">
+        Project image
+    </label>
 
-                        <input
-                            type="url"
-                            id="portfolio-image-url"
-                            placeholder="https://..."
-                        >
+    <input
+        type="file"
+        id="portfolio-image-file"
+        accept="image/*"
+    >
 
-                        <small>
-                            Image upload will be connected in the
-                            next step.
-                        </small>
+    <small id="portfolio-image-status">
+        Choose an image. It will be uploaded to
+        Supabase Storage when you save the project.
+    </small>
 
-                    </div>
+    <input
+        type="hidden"
+        id="portfolio-image-url"
+    >
+
+</div>
 
 
                     <label
