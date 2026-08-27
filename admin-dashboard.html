@@ -2085,6 +2085,216 @@ document
         }
     );
 
+    
+async function editPortfolioProject(projectId) {
+
+    const accessToken =
+        localStorage.getItem(
+            "swayphics_admin_access_token"
+        );
+
+
+    if (!accessToken) {
+
+        window.location.href =
+            "admin.html";
+
+        return;
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${projectId}&select=id,title,category,description,image_url,project_url,year,published`,
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+
+                        "Authorization":
+                            `Bearer ${accessToken}`
+
+                    }
+
+                }
+            );
+
+
+        const projects =
+            await response.json();
+
+
+        if (
+            !response.ok ||
+            !Array.isArray(projects) ||
+            projects.length === 0
+        ) {
+
+            throw new Error(
+                "Unable to load this project."
+            );
+
+        }
+
+
+        const project =
+            projects[0];
+
+
+        document.getElementById(
+            "portfolio-project-id"
+        ).value =
+            project.id;
+
+
+        document.getElementById(
+            "portfolio-title"
+        ).value =
+            project.title || "";
+
+
+        document.getElementById(
+            "portfolio-category"
+        ).value =
+            project.category || "";
+
+
+        document.getElementById(
+            "portfolio-description"
+        ).value =
+            project.description || "";
+
+
+        document.getElementById(
+            "portfolio-year"
+        ).value =
+            project.year || "";
+
+
+        document.getElementById(
+            "portfolio-project-url"
+        ).value =
+            project.project_url || "";
+
+
+        document.getElementById(
+            "portfolio-image-url"
+        ).value =
+            project.image_url || "";
+
+
+        document.getElementById(
+            "portfolio-published"
+        ).checked =
+            Boolean(project.published);
+
+
+        document.getElementById(
+            "portfolio-image-file"
+        ).value =
+            "";
+
+
+        document.getElementById(
+            "portfolio-modal-title"
+        ).textContent =
+            "Edit project";
+
+
+        document.getElementById(
+            "portfolio-save-button"
+        ).textContent =
+            "Save changes";
+
+
+        document.getElementById(
+            "portfolio-image-status"
+        ).textContent =
+            project.image_url
+                ? "Current project image is being used. Choose a new image only if you want to replace it."
+                : "This project does not currently have an image.";
+
+
+        document.getElementById(
+            "portfolio-form-status"
+        ).hidden =
+            true;
+
+
+        portfolioModal.hidden =
+            false;
+
+
+    } catch (error) {
+
+        console.error(
+            "Unable to edit portfolio project:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Unable to load this project."
+        );
+
+    }
+
+}
+
+
+const adminPortfolioList =
+    document.getElementById(
+        "portfolio-admin-list"
+    );
+
+
+if (adminPortfolioList) {
+
+    adminPortfolioList.addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    "[data-portfolio-action]"
+                );
+
+
+            if (!button) return;
+
+
+            const action =
+                button.dataset.portfolioAction;
+
+
+            const projectId =
+                button.dataset.projectId;
+
+
+            if (
+                action === "edit" &&
+                projectId
+            ) {
+
+                editPortfolioProject(
+                    projectId
+                );
+
+            }
+
+        }
+    );
+
+}
 
 portfolioForm.addEventListener(
     "submit",
