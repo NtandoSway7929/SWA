@@ -2334,16 +2334,13 @@ async function togglePortfolioPublished(projectId) {
             "swayphics_admin_access_token"
         );
 
-
     if (!accessToken) {
 
         window.location.href =
             "admin.html";
 
         return;
-
     }
-
 
     try {
 
@@ -2351,27 +2348,20 @@ async function togglePortfolioPublished(projectId) {
             await fetch(
                 `${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${projectId}&select=id,published`,
                 {
-
-                    method:
-                        "GET",
+                    method: "GET",
 
                     headers: {
-
                         "apikey":
                             SUPABASE_PUBLISHABLE_KEY,
 
                         "Authorization":
                             `Bearer ${accessToken}`
-
                     }
-
                 }
             );
 
-
         const projects =
             await getResponse.json();
-
 
         if (
             !getResponse.ok ||
@@ -2382,30 +2372,20 @@ async function togglePortfolioPublished(projectId) {
             throw new Error(
                 "Unable to find this project."
             );
-
         }
-
 
         const currentPublished =
             Boolean(
                 projects[0].published
             );
 
-
-        const newPublished =
-            !currentPublished;
-
-
         const updateResponse =
             await fetch(
                 `${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${projectId}`,
                 {
-
-                    method:
-                        "PATCH",
+                    method: "PATCH",
 
                     headers: {
-
                         "apikey":
                             SUPABASE_PUBLISHABLE_KEY,
 
@@ -2417,40 +2397,27 @@ async function togglePortfolioPublished(projectId) {
 
                         "Prefer":
                             "return=representation"
-
                     },
 
                     body:
                         JSON.stringify({
                             published:
-                                newPublished
+                                !currentPublished
                         })
-
                 }
             );
-
 
         const responseText =
             await updateResponse.text();
 
-
         if (!updateResponse.ok) {
-
-            console.error(
-                "Portfolio publish update failed:",
-                responseText
-            );
-
 
             throw new Error(
                 `Supabase returned ${updateResponse.status}: ${responseText}`
             );
-
         }
 
-
         await loadAdminPortfolio();
-
 
     } catch (error) {
 
@@ -2459,14 +2426,11 @@ async function togglePortfolioPublished(projectId) {
             error
         );
 
-
         alert(
             error.message ||
             "Unable to update publication status."
         );
-
     }
-
 }
 
 
@@ -2477,25 +2441,20 @@ async function deletePortfolioProject(projectId) {
             "swayphics_admin_access_token"
         );
 
-
     if (!accessToken) {
 
         window.location.href =
             "admin.html";
 
         return;
-
     }
-
 
     const confirmed =
         window.confirm(
             "Are you sure you want to delete this portfolio project?"
         );
 
-
     if (!confirmed) return;
-
 
     try {
 
@@ -2503,45 +2462,29 @@ async function deletePortfolioProject(projectId) {
             await fetch(
                 `${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${projectId}`,
                 {
-
-                    method:
-                        "DELETE",
+                    method: "DELETE",
 
                     headers: {
-
                         "apikey":
                             SUPABASE_PUBLISHABLE_KEY,
 
                         "Authorization":
                             `Bearer ${accessToken}`
-
                     }
-
                 }
             );
-
 
         const responseText =
             await response.text();
 
-
         if (!response.ok) {
-
-            console.error(
-                "Portfolio deletion failed:",
-                responseText
-            );
-
 
             throw new Error(
                 `Supabase returned ${response.status}: ${responseText}`
             );
-
         }
 
-
         await loadAdminPortfolio();
-
 
     } catch (error) {
 
@@ -2550,16 +2493,12 @@ async function deletePortfolioProject(projectId) {
             error
         );
 
-
         alert(
             error.message ||
             "Unable to delete portfolio project."
         );
-
     }
-
 }
-
 
 
         const responseText =
