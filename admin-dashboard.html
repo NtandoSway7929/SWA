@@ -2303,10 +2303,21 @@ if (adminPortfolioList) {
                 togglePortfolioPublished(
                     projectId
                 );
-
-                return;
+                        return;
 
             }
+
+            if (
+    action === "delete"
+) {
+
+    deletePortfolioProject(
+        projectId
+    );
+
+    return;
+
+}
 
         }
     );
@@ -2353,6 +2364,96 @@ if (adminPortfolioList) {
 
                 }
             );
+
+        async function deletePortfolioProject(projectId) {
+
+    const accessToken =
+        localStorage.getItem(
+            "swayphics_admin_access_token"
+        );
+
+
+    if (!accessToken) {
+
+        window.location.href =
+            "admin.html";
+
+        return;
+
+    }
+
+
+    const confirmed =
+        window.confirm(
+            "Are you sure you want to delete this portfolio project?"
+        );
+
+
+    if (!confirmed) return;
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${projectId}`,
+                {
+
+                    method:
+                        "DELETE",
+
+                    headers: {
+
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+
+                        "Authorization":
+                            `Bearer ${accessToken}`
+
+                    }
+
+                }
+            );
+
+
+        const responseText =
+            await response.text();
+
+
+        if (!response.ok) {
+
+            console.error(
+                "Portfolio deletion failed:",
+                responseText
+            );
+
+
+            throw new Error(
+                `Supabase returned ${response.status}: ${responseText}`
+            );
+
+        }
+
+
+        await loadAdminPortfolio();
+
+
+    } catch (error) {
+
+        console.error(
+            "Unable to delete portfolio project:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Unable to delete portfolio project."
+        );
+
+    }
+
+}
 
 
         const projects =
