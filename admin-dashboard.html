@@ -1725,6 +1725,246 @@
             "swayphics_admin_refresh_token"
         );
 
+    async function loadAdminPortfolio() {
+
+    const portfolioList =
+        document.getElementById(
+            "portfolio-admin-list"
+        );
+
+    if (!portfolioList) return;
+
+
+    const accessToken =
+        localStorage.getItem(
+            "swayphics_admin_access_token"
+        );
+
+
+    if (!accessToken) {
+
+        window.location.href =
+            "admin.html";
+
+        return;
+
+    }
+
+
+    portfolioList.innerHTML = `
+        <div class="portfolio-admin-loading">
+            Loading portfolio...
+        </div>
+    `;
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${SUPABASE_URL}/rest/v1/portfolio_projects?select=id,title,category,description,image_url,project_url,year,published,created_at&order=created_at.desc`,
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+
+                        "Authorization":
+                            `Bearer ${accessToken}`
+
+                    }
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            const errorText =
+                await response.text();
+
+            console.error(
+                "Admin portfolio request failed:",
+                errorText
+            );
+
+            throw new Error(
+                "Unable to load portfolio projects."
+            );
+
+        }
+
+
+        const projects =
+            await response.json();
+
+
+        if (
+            !Array.isArray(projects) ||
+            projects.length === 0
+        ) {
+
+            portfolioList.innerHTML = `
+                <div class="portfolio-admin-loading">
+                    No portfolio projects found.
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        portfolioList.innerHTML =
+            projects.map(
+                project => `
+
+                    <article
+                        class="portfolio-admin-item"
+                        data-project-id="${project.id}"
+                    >
+
+                        <div
+                            class="portfolio-admin-image"
+                        >
+
+                            ${
+                                project.image_url
+                                    ? `
+                                        <img
+                                            src="${project.image_url}"
+                                            alt="${project.title || "Portfolio project"}"
+                                            loading="lazy"
+                                        >
+                                    `
+                                    : ""
+                            }
+
+                        </div>
+
+
+                        <div
+                            class="portfolio-admin-info"
+                        >
+
+                            <div
+                                class="portfolio-admin-meta"
+                            >
+
+                                <span>
+                                    ${project.category || "Uncategorized"}
+                                </span>
+
+                                ${
+                                    project.year
+                                        ? `
+                                            <span>
+                                                · ${project.year}
+                                            </span>
+                                        `
+                                        : ""
+                                }
+
+                            </div>
+
+
+                            <h3>
+                                ${project.title || "Untitled project"}
+                            </h3>
+
+
+                            <span
+                                class="
+                                    portfolio-admin-status
+                                    ${
+                                        project.published
+                                            ? ""
+                                            : "unpublished"
+                                    }
+                                "
+                            >
+
+                                ${
+                                    project.published
+                                        ? "Published"
+                                        : "Unpublished"
+                                }
+
+                            </span>
+
+                        </div>
+
+
+                        <div
+                            class="portfolio-admin-actions"
+                        >
+
+                            <button
+                                type="button"
+                                class="portfolio-admin-action"
+                                disabled
+                            >
+                                Edit
+                            </button>
+
+
+                            <button
+                                type="button"
+                                class="portfolio-admin-action"
+                                disabled
+                            >
+                                ${
+                                    project.published
+                                        ? "Unpublish"
+                                        : "Publish"
+                                }
+                            </button>
+
+
+                            <button
+                                type="button"
+                                class="
+                                    portfolio-admin-action
+                                    delete
+                                "
+                                disabled
+                            >
+                                Delete
+                            </button>
+
+                        </div>
+
+                    </article>
+
+                `
+            ).join("");
+
+
+    } catch (error) {
+
+        console.error(
+            "Unable to load admin portfolio:",
+            error
+        );
+
+
+        portfolioList.innerHTML = `
+            <div class="portfolio-admin-loading">
+                Unable to load portfolio projects.
+            </div>
+        `;
+
+    }
+
+}
+
+
+loadAdminPortfolio();
+
 
     /* =========================================================
        AUTHENTICATION CHECK
