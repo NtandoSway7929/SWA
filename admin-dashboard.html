@@ -2302,89 +2302,66 @@ portfolioForm.addEventListener(
 
         event.preventDefault();
 
-
         const accessToken =
             localStorage.getItem(
                 "swayphics_admin_access_token"
             );
 
-
         if (!accessToken) {
-
             window.location.href =
                 "admin.html";
-
             return;
-
         }
 
+        const projectId =
+            document.getElementById(
+                "portfolio-project-id"
+            ).value.trim();
 
         const title =
-            document
-                .getElementById(
-                    "portfolio-title"
-                )
-                .value
-                .trim();
-
+            document.getElementById(
+                "portfolio-title"
+            ).value.trim();
 
         const category =
-            document
-                .getElementById(
-                    "portfolio-category"
-                )
-                .value
-                .trim();
-
+            document.getElementById(
+                "portfolio-category"
+            ).value.trim();
 
         const description =
-            document
-                .getElementById(
-                    "portfolio-description"
-                )
-                .value
-                .trim();
-
+            document.getElementById(
+                "portfolio-description"
+            ).value.trim();
 
         const yearValue =
-            document
-                .getElementById(
-                    "portfolio-year"
-                )
-                .value
-                .trim();
-
+            document.getElementById(
+                "portfolio-year"
+            ).value.trim();
 
         const projectUrl =
-            document
-                .getElementById(
-                    "portfolio-project-url"
-                )
-                .value
-                .trim();
-
+            document.getElementById(
+                "portfolio-project-url"
+            ).value.trim();
 
         const imageFile =
-            document
-                .getElementById(
-                    "portfolio-image-file"
-                )
-                .files[0];
+            document.getElementById(
+                "portfolio-image-file"
+            ).files[0];
 
+        const existingImageUrl =
+            document.getElementById(
+                "portfolio-image-url"
+            ).value.trim();
 
-        const publishProject =
-            document
-                .getElementById(
-                    "portfolio-published"
-                )
-                .checked;
-
+        const published =
+            document.getElementById(
+                "portfolio-published"
+            ).checked;
 
         const imageStatus =
             document.getElementById(
                 "portfolio-image-status"
             );
-
 
         portfolioSaveButton.disabled =
             true;
@@ -2392,21 +2369,18 @@ portfolioForm.addEventListener(
         portfolioSaveButton.textContent =
             imageFile
                 ? "Uploading..."
-                : "Saving...";
-
+                : projectId
+                    ? "Saving changes..."
+                    : "Saving...";
 
         portfolioFormStatus.hidden =
             true;
 
-
         try {
 
-            let imageUrl = null;
+            let imageUrl =
+                existingImageUrl || null;
 
-
-            /* =====================================================
-               IMAGE UPLOAD
-               ===================================================== */
 
             if (imageFile) {
 
@@ -2416,7 +2390,6 @@ portfolioForm.addEventListener(
                     "image/webp",
                     "image/gif"
                 ];
-
 
                 const maxFileSize =
                     10 * 1024 * 1024;
@@ -2525,14 +2498,10 @@ portfolioForm.addEventListener(
 
 
                 imageStatus.textContent =
-                    "Image uploaded successfully.";
+                    "New image uploaded successfully.";
 
             }
 
-
-            /* =====================================================
-               DATABASE RECORD
-               ===================================================== */
 
             const project = {
 
@@ -2553,23 +2522,22 @@ portfolioForm.addEventListener(
                 image_url:
                     imageUrl,
 
-                published:
-                    publishProject
+                published
 
             };
 
 
-            portfolioSaveButton.textContent =
-                "Saving...";
-
-
             const response =
                 await fetch(
-                    `${SUPABASE_URL}/rest/v1/portfolio_projects`,
+                    projectId
+                        ? `${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${projectId}`
+                        : `${SUPABASE_URL}/rest/v1/portfolio_projects`,
                     {
 
                         method:
-                            "POST",
+                            projectId
+                                ? "PATCH"
+                                : "POST",
 
                         headers: {
 
@@ -2603,7 +2571,7 @@ portfolioForm.addEventListener(
             if (!response.ok) {
 
                 console.error(
-                    "Portfolio insert failed:",
+                    "Portfolio save failed:",
                     responseText
                 );
 
@@ -2615,7 +2583,9 @@ portfolioForm.addEventListener(
 
 
             portfolioFormStatus.textContent =
-                "Project added successfully.";
+                projectId
+                    ? "Project updated successfully."
+                    : "Project added successfully.";
 
             portfolioFormStatus.className =
                 "portfolio-form-status success";
@@ -2624,18 +2594,21 @@ portfolioForm.addEventListener(
                 false;
 
 
-            portfolioForm.reset();
-
-
-            imageStatus.textContent =
-                "Choose an image. It will be uploaded to Supabase Storage when you save the project.";
-
-
             await loadAdminPortfolio();
 
 
             setTimeout(
                 () => {
+
+                    portfolioForm.reset();
+
+                    document.getElementById(
+                        "portfolio-project-id"
+                    ).value = "";
+
+                    document.getElementById(
+                        "portfolio-image-url"
+                    ).value = "";
 
                     closePortfolioModal();
 
@@ -2647,10 +2620,9 @@ portfolioForm.addEventListener(
         } catch (error) {
 
             console.error(
-                "Unable to add portfolio project:",
+                "Unable to save portfolio project:",
                 error
             );
-
 
             portfolioFormStatus.textContent =
                 error.message ||
@@ -2673,8 +2645,7 @@ portfolioForm.addEventListener(
         }
 
     }
-);  
-
+);
 
     /* =========================================================
        AUTHENTICATION CHECK
