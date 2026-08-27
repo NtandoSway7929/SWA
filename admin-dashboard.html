@@ -2326,7 +2326,8 @@ if (adminPortfolioList) {
 
 }
 
-    async function togglePortfolioPublished(projectId) {
+
+async function togglePortfolioPublished(projectId) {
 
     const accessToken =
         localStorage.getItem(
@@ -2367,7 +2368,109 @@ if (adminPortfolioList) {
                 }
             );
 
-        async function deletePortfolioProject(projectId) {
+
+        const projects =
+            await getResponse.json();
+
+
+        if (
+            !getResponse.ok ||
+            !Array.isArray(projects) ||
+            projects.length === 0
+        ) {
+
+            throw new Error(
+                "Unable to find this project."
+            );
+
+        }
+
+
+        const currentPublished =
+            Boolean(
+                projects[0].published
+            );
+
+
+        const newPublished =
+            !currentPublished;
+
+
+        const updateResponse =
+            await fetch(
+                `${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${projectId}`,
+                {
+
+                    method:
+                        "PATCH",
+
+                    headers: {
+
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+
+                        "Authorization":
+                            `Bearer ${accessToken}`,
+
+                        "Content-Type":
+                            "application/json",
+
+                        "Prefer":
+                            "return=representation"
+
+                    },
+
+                    body:
+                        JSON.stringify({
+                            published:
+                                newPublished
+                        })
+
+                }
+            );
+
+
+        const responseText =
+            await updateResponse.text();
+
+
+        if (!updateResponse.ok) {
+
+            console.error(
+                "Portfolio publish update failed:",
+                responseText
+            );
+
+
+            throw new Error(
+                `Supabase returned ${updateResponse.status}: ${responseText}`
+            );
+
+        }
+
+
+        await loadAdminPortfolio();
+
+
+    } catch (error) {
+
+        console.error(
+            "Unable to change portfolio publication status:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Unable to update publication status."
+        );
+
+    }
+
+}
+
+
+async function deletePortfolioProject(projectId) {
 
     const accessToken =
         localStorage.getItem(
@@ -2416,6 +2519,47 @@ if (adminPortfolioList) {
 
                 }
             );
+
+
+        const responseText =
+            await response.text();
+
+
+        if (!response.ok) {
+
+            console.error(
+                "Portfolio deletion failed:",
+                responseText
+            );
+
+
+            throw new Error(
+                `Supabase returned ${response.status}: ${responseText}`
+            );
+
+        }
+
+
+        await loadAdminPortfolio();
+
+
+    } catch (error) {
+
+        console.error(
+            "Unable to delete portfolio project:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Unable to delete portfolio project."
+        );
+
+    }
+
+}
+
 
 
         const responseText =
