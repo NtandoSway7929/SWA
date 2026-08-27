@@ -1965,6 +1965,318 @@
 
 loadAdminPortfolio();
 
+  const portfolioForm =
+    document.getElementById(
+        "portfolio-form"
+    );
+
+const portfolioModal =
+    document.getElementById(
+        "portfolio-modal"
+    );
+
+const addProjectButton =
+    document.getElementById(
+        "add-project-button"
+    );
+
+const portfolioSaveButton =
+    document.getElementById(
+        "portfolio-save-button"
+    );
+
+const portfolioFormStatus =
+    document.getElementById(
+        "portfolio-form-status"
+    );
+
+
+function openPortfolioModal() {
+
+    portfolioForm.reset();
+
+    document.getElementById(
+        "portfolio-project-id"
+    ).value = "";
+
+    document.getElementById(
+        "portfolio-modal-title"
+    ).textContent =
+        "Add project";
+
+    portfolioSaveButton.textContent =
+        "Save project";
+
+    portfolioFormStatus.hidden =
+        true;
+
+    portfolioModal.hidden =
+        false;
+
+}
+
+
+function closePortfolioModal() {
+
+    portfolioModal.hidden =
+        true;
+
+}
+
+
+addProjectButton.addEventListener(
+    "click",
+    openPortfolioModal
+);
+
+
+document
+    .querySelectorAll(
+        "[data-close-portfolio-modal]"
+    )
+    .forEach(
+        element => {
+
+            element.addEventListener(
+                "click",
+                closePortfolioModal
+            );
+
+        }
+    );
+
+
+portfolioForm.addEventListener(
+    "submit",
+    async event => {
+
+        event.preventDefault();
+
+
+        const accessToken =
+            localStorage.getItem(
+                "swayphics_admin_access_token"
+            );
+
+
+        if (!accessToken) {
+
+            window.location.href =
+                "admin.html";
+
+            return;
+
+        }
+
+
+        const title =
+            document
+                .getElementById(
+                    "portfolio-title"
+                )
+                .value
+                .trim();
+
+
+        const category =
+            document
+                .getElementById(
+                    "portfolio-category"
+                )
+                .value
+                .trim();
+
+
+        const description =
+            document
+                .getElementById(
+                    "portfolio-description"
+                )
+                .value
+                .trim();
+
+
+        const yearValue =
+            document
+                .getElementById(
+                    "portfolio-year"
+                )
+                .value
+                .trim();
+
+
+        const projectUrl =
+            document
+                .getElementById(
+                    "portfolio-project-url"
+                )
+                .value
+                .trim();
+
+
+        const imageUrl =
+            document
+                .getElementById(
+                    "portfolio-image-url"
+                )
+                .value
+                .trim();
+
+
+        const published =
+            document
+                .getElementById(
+                    "portfolio-published"
+                )
+                .checked;
+
+
+        const project = {
+
+            title,
+
+            category,
+
+            description,
+
+            year:
+                yearValue
+                    ? Number(yearValue)
+                    : null,
+
+            project_url:
+                projectUrl || null,
+
+            image_url:
+                imageUrl || null,
+
+            published
+
+        };
+
+
+        portfolioSaveButton.disabled =
+            true;
+
+        portfolioSaveButton.textContent =
+            "Saving...";
+
+
+        portfolioFormStatus.hidden =
+            true;
+
+
+        try {
+
+            const response =
+                await fetch(
+                    `${SUPABASE_URL}/rest/v1/portfolio_projects`,
+                    {
+
+                        method:
+                            "POST",
+
+                        headers: {
+
+                            "apikey":
+                                SUPABASE_PUBLISHABLE_KEY,
+
+                            "Authorization":
+                                `Bearer ${accessToken}`,
+
+                            "Content-Type":
+                                "application/json",
+
+                            "Prefer":
+                                "return=representation"
+
+                        },
+
+                        body:
+                            JSON.stringify(
+                                project
+                            )
+
+                    }
+                );
+
+
+            const responseText =
+                await response.text();
+
+
+            if (!response.ok) {
+
+                console.error(
+                    "Portfolio insert failed:",
+                    responseText
+                );
+
+                throw new Error(
+                    `Supabase returned ${response.status}: ${responseText}`
+                );
+
+            }
+
+
+            portfolioFormStatus.textContent =
+                "Project added successfully.";
+
+            portfolioFormStatus.className =
+                "portfolio-form-status success";
+
+            portfolioFormStatus.hidden =
+                false;
+
+
+            portfolioForm.reset();
+
+
+            await loadAdminPortfolio();
+
+
+            setTimeout(
+                () => {
+
+                    closePortfolioModal();
+
+                },
+                700
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Unable to add portfolio project:",
+                error
+            );
+
+
+            portfolioFormStatus.textContent =
+                error.message ||
+                "Unable to save project.";
+
+            portfolioFormStatus.className =
+                "portfolio-form-status error";
+
+            portfolioFormStatus.hidden =
+                false;
+
+
+        } finally {
+
+            portfolioSaveButton.disabled =
+                false;
+
+            portfolioSaveButton.textContent =
+                "Save project";
+
+        }
+
+    }
+);  
+
 
     /* =========================================================
        AUTHENTICATION CHECK
