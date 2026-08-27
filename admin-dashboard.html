@@ -1793,8 +1793,8 @@
             );
 
             throw new Error(
-                "Unable to load portfolio projects."
-            );
+    `Supabase returned ${response.status}: ${errorText}`
+);
 
         }
 
@@ -1953,10 +1953,10 @@
 
 
         portfolioList.innerHTML = `
-            <div class="portfolio-admin-loading">
-                Unable to load portfolio projects.
-            </div>
-        `;
+    <div class="portfolio-admin-loading">
+        ${error.message}
+    </div>
+`;
 
     }
 
