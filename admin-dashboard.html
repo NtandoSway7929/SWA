@@ -659,6 +659,683 @@
 
         }
 
+/* =========================================================
+   PORTFOLIO MANAGER
+   ========================================================= */
+
+.portfolio-manager {
+    width: 100%;
+}
+
+
+.manager-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+
+.manager-heading .admin-label {
+    margin-bottom: 8px;
+}
+
+
+.manager-heading h2 {
+    font-size: 2rem;
+    letter-spacing: -0.05em;
+}
+
+
+.manager-heading p {
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+}
+
+
+.add-project-button {
+    flex-shrink: 0;
+
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 12px 17px;
+
+    border: none;
+    border-radius: 11px;
+
+    background: var(--sway-blue);
+    color: #FFFFFF;
+
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.add-project-button:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 10px 25px
+        rgba(1,82,244,0.20);
+}
+
+
+.add-project-button span {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+
+.portfolio-admin-list {
+    display: grid;
+    gap: 14px;
+}
+
+
+.portfolio-admin-loading {
+    padding: 35px;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 18px;
+
+    background:
+        rgba(255,255,255,0.75);
+
+    color: var(--text-muted);
+
+    font-size: 0.8rem;
+
+    text-align: center;
+}
+
+
+.portfolio-admin-item {
+    display: flex;
+
+    align-items: center;
+
+    gap: 18px;
+
+    padding: 16px;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 18px;
+
+    background:
+        rgba(255,255,255,0.88);
+
+    box-shadow:
+        0 10px 30px
+        rgba(0,32,150,0.04);
+}
+
+
+.portfolio-admin-image {
+    width: 86px;
+    height: 70px;
+
+    flex-shrink: 0;
+
+    overflow: hidden;
+
+    border-radius: 12px;
+
+    background: #EEF4FF;
+}
+
+
+.portfolio-admin-image img {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: cover;
+}
+
+
+.portfolio-admin-info {
+    min-width: 0;
+    flex: 1;
+}
+
+
+.portfolio-admin-meta {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-bottom: 5px;
+
+    color: var(--sway-blue);
+
+    font-size: 0.62rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.08em;
+
+    text-transform: uppercase;
+}
+
+
+.portfolio-admin-info h3 {
+    overflow: hidden;
+
+    color: var(--sway-dark);
+
+    font-size: 0.95rem;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+}
+
+
+.portfolio-admin-status {
+    display: inline-flex;
+
+    align-items: center;
+
+    margin-top: 6px;
+
+    padding: 5px 8px;
+
+    border-radius: 7px;
+
+    background:
+        rgba(22,163,74,0.08);
+
+    color: #15803D;
+
+    font-size: 0.6rem;
+
+    font-weight: 800;
+
+    text-transform: uppercase;
+}
+
+
+.portfolio-admin-status.unpublished {
+    background:
+        rgba(86,98,122,0.08);
+
+    color: var(--text-muted);
+}
+
+
+.portfolio-admin-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    flex-shrink: 0;
+}
+
+
+.portfolio-admin-action {
+    padding: 8px 10px;
+
+    border:
+        1px solid
+        rgba(0,32,150,0.10);
+
+    border-radius: 9px;
+
+    background: #FFFFFF;
+
+    color: var(--sway-dark);
+
+    font-family: inherit;
+
+    font-size: 0.65rem;
+
+    font-weight: 800;
+
+    cursor: pointer;
+
+    transition:
+        border-color 0.2s ease,
+        color 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.portfolio-admin-action:hover {
+    border-color:
+        rgba(1,82,244,0.25);
+
+    color: var(--sway-blue);
+
+    background:
+        rgba(1,82,244,0.03);
+}
+
+
+.portfolio-admin-action.delete:hover {
+    border-color:
+        rgba(180,30,30,0.20);
+
+    color: #9B1C1C;
+
+    background:
+        rgba(180,30,30,0.04);
+}
+
+
+/* =========================================================
+   PORTFOLIO MODAL
+   ========================================================= */
+
+.portfolio-modal {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 1000;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 20px;
+}
+
+
+.portfolio-modal[hidden] {
+    display: none;
+}
+
+
+.portfolio-modal-backdrop {
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        rgba(8,21,51,0.45);
+
+    backdrop-filter:
+        blur(8px);
+
+    -webkit-backdrop-filter:
+        blur(8px);
+}
+
+
+.portfolio-modal-card {
+    position: relative;
+
+    z-index: 1;
+
+    width: min(700px, 100%);
+
+    max-height: calc(100vh - 40px);
+
+    overflow-y: auto;
+
+    padding: 30px;
+
+    border:
+        1px solid
+        rgba(255,255,255,0.50);
+
+    border-radius: 24px;
+
+    background:
+        rgba(255,255,255,0.97);
+
+    box-shadow:
+        0 30px 90px
+        rgba(0,32,150,0.20);
+}
+
+
+.portfolio-modal-header {
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-bottom: 28px;
+}
+
+
+.portfolio-modal-header .admin-label {
+    margin-bottom: 7px;
+}
+
+
+.portfolio-modal-header h3 {
+    font-size: 1.5rem;
+
+    letter-spacing: -0.04em;
+}
+
+
+.modal-close-button {
+    width: 34px;
+    height: 34px;
+
+    flex-shrink: 0;
+
+    border: none;
+
+    border-radius: 9px;
+
+    background:
+        rgba(0,32,150,0.06);
+
+    color: var(--sway-dark);
+
+    font-size: 1.25rem;
+
+    line-height: 1;
+
+    cursor: pointer;
+}
+
+
+.portfolio-form-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 18px;
+}
+
+
+.portfolio-field {
+    display: grid;
+
+    gap: 7px;
+}
+
+
+.portfolio-field-full {
+    grid-column: 1 / -1;
+}
+
+
+.portfolio-field label {
+    font-size: 0.72rem;
+
+    font-weight: 800;
+}
+
+
+.portfolio-field input,
+.portfolio-field textarea {
+    width: 100%;
+
+    padding: 12px 13px;
+
+    border:
+        1px solid
+        rgba(0,32,150,0.12);
+
+    border-radius: 10px;
+
+    background: #FFFFFF;
+
+    color: var(--sway-dark);
+
+    font-family: inherit;
+
+    font-size: 0.82rem;
+
+    outline: none;
+
+    resize: vertical;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.portfolio-field input:focus,
+.portfolio-field textarea:focus {
+    border-color:
+        var(--sway-blue);
+
+    box-shadow:
+        0 0 0 4px
+        rgba(1,82,244,0.07);
+}
+
+
+.portfolio-field small {
+    color: var(--text-muted);
+
+    font-size: 0.65rem;
+
+    line-height: 1.5;
+}
+
+
+.portfolio-publish-toggle {
+    grid-column: 1 / -1;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 15px;
+
+    border:
+        1px solid
+        rgba(1,82,244,0.10);
+
+    border-radius: 12px;
+
+    background:
+        rgba(1,82,244,0.035);
+
+    cursor: pointer;
+}
+
+
+.portfolio-publish-toggle input {
+    width: 17px;
+    height: 17px;
+
+    accent-color:
+        var(--sway-blue);
+}
+
+
+.portfolio-publish-toggle span {
+    display: grid;
+
+    gap: 3px;
+}
+
+
+.portfolio-publish-toggle strong {
+    font-size: 0.76rem;
+}
+
+
+.portfolio-publish-toggle small {
+    color: var(--text-muted);
+
+    font-size: 0.65rem;
+}
+
+
+.portfolio-form-actions {
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 25px;
+
+    padding-top: 20px;
+
+    border-top:
+        1px solid var(--border);
+}
+
+
+.modal-secondary-button,
+.modal-primary-button {
+    padding: 11px 16px;
+
+    border-radius: 10px;
+
+    font-family: inherit;
+
+    font-size: 0.72rem;
+
+    font-weight: 800;
+
+    cursor: pointer;
+}
+
+
+.modal-secondary-button {
+    border:
+        1px solid
+        rgba(0,32,150,0.10);
+
+    background: #FFFFFF;
+
+    color: var(--sway-dark);
+}
+
+
+.modal-primary-button {
+    border: none;
+
+    background:
+        var(--sway-blue);
+
+    color: #FFFFFF;
+}
+
+
+.portfolio-form-status {
+    margin-top: 15px;
+
+    padding: 11px 13px;
+
+    border-radius: 9px;
+
+    font-size: 0.7rem;
+
+    line-height: 1.5;
+
+    text-align: center;
+}
+
+
+.portfolio-form-status.error {
+    background:
+        rgba(180,30,30,0.07);
+
+    color: #9B1C1C;
+}
+
+
+.portfolio-form-status.success {
+    background:
+        rgba(22,163,74,0.07);
+
+    color: #15803D;
+}
+
+
+@media (max-width: 700px) {
+
+    .manager-heading {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+
+    .add-project-button {
+        width: 100%;
+
+        justify-content: center;
+    }
+
+
+    .portfolio-admin-item {
+        align-items: flex-start;
+
+        flex-wrap: wrap;
+    }
+
+
+    .portfolio-admin-info {
+        width: calc(100% - 104px);
+        flex: none;
+    }
+
+
+    .portfolio-admin-actions {
+        width: 100%;
+
+        padding-top: 4px;
+    }
+
+
+    .portfolio-admin-action {
+        flex: 1;
+    }
+
+
+    .portfolio-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+
+    .portfolio-field-full,
+    .portfolio-publish-toggle {
+        grid-column: auto;
+    }
+
+
+    .portfolio-modal-card {
+        padding: 23px;
+
+        border-radius: 20px;
+    }
+
+}
+  
+
     </style>
 
 </head>
@@ -739,115 +1416,273 @@
 
     </section>
 
+<section class="portfolio-manager">
 
-    <section class="dashboard-grid">
+    <div class="manager-heading">
+
+        <div>
+
+            <span class="admin-label">
+                Portfolio management
+            </span>
+
+            <h2>
+                Your work.
+            </h2>
+
+            <p>
+                Manage the projects displayed on the
+                Swayphics website.
+            </p>
+
+        </div>
 
 
-        <!-- PORTFOLIO -->
+        <button
+            type="button"
+            class="add-project-button"
+            id="add-project-button"
+        >
+            <span aria-hidden="true">+</span>
+            Add project
+        </button>
 
-        <article class="dashboard-card">
+    </div>
 
-            <div>
 
-                <div class="dashboard-card-top">
+    <div
+        class="portfolio-admin-list"
+        id="portfolio-admin-list"
+    >
 
-                    <span class="dashboard-card-label">
+        <div class="portfolio-admin-loading">
+            Loading portfolio...
+        </div>
+
+    </div>
+
+
+    <div
+        class="portfolio-modal"
+        id="portfolio-modal"
+        hidden
+    >
+
+        <div
+            class="portfolio-modal-backdrop"
+            data-close-portfolio-modal
+        ></div>
+
+
+        <div
+            class="portfolio-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="portfolio-modal-title"
+        >
+
+            <div class="portfolio-modal-header">
+
+                <div>
+
+                    <span class="admin-label">
                         Portfolio
                     </span>
 
-                    <div
-                        class="dashboard-card-icon"
-                        aria-hidden="true"
-                    >
-                        ↗
-                    </div>
+                    <h3 id="portfolio-modal-title">
+                        Add project
+                    </h3>
 
                 </div>
 
 
-                <h2>
-                    Your work.
-                </h2>
-
-
-                <p>
-                    Add, edit, publish and manage the projects
-                    displayed in the Swayphics portfolio.
-                </p>
-
-            </div>
-
-
-            <div class="dashboard-card-footer">
-
-                <span class="dashboard-card-status">
-                    Management coming next
-                </span>
-
-                <span class="coming-soon">
-                    Coming next
-                </span>
+                <button
+                    type="button"
+                    class="modal-close-button"
+                    data-close-portfolio-modal
+                    aria-label="Close"
+                >
+                    ×
+                </button>
 
             </div>
 
-        </article>
+
+            <form id="portfolio-form">
 
 
-        <!-- TESTIMONIALS -->
+                <input
+                    type="hidden"
+                    id="portfolio-project-id"
+                >
 
-        <article class="dashboard-card">
 
-            <div>
+                <div class="portfolio-form-grid">
 
-                <div class="dashboard-card-top">
 
-                    <span class="dashboard-card-label">
-                        Testimonials
-                    </span>
+                    <div class="portfolio-field">
 
-                    <div
-                        class="dashboard-card-icon"
-                        aria-hidden="true"
-                    >
-                        ★
+                        <label for="portfolio-title">
+                            Project title
+                        </label>
+
+                        <input
+                            type="text"
+                            id="portfolio-title"
+                            required
+                        >
+
                     </div>
+
+
+                    <div class="portfolio-field">
+
+                        <label for="portfolio-category">
+                            Category
+                        </label>
+
+                        <input
+                            type="text"
+                            id="portfolio-category"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="portfolio-field">
+
+                        <label for="portfolio-year">
+                            Year
+                        </label>
+
+                        <input
+                            type="number"
+                            id="portfolio-year"
+                            min="1900"
+                            max="2100"
+                        >
+
+                    </div>
+
+
+                    <div class="portfolio-field">
+
+                        <label for="portfolio-project-url">
+                            Project URL
+                        </label>
+
+                        <input
+                            type="url"
+                            id="portfolio-project-url"
+                            placeholder="https://..."
+                        >
+
+                    </div>
+
+
+                    <div class="portfolio-field portfolio-field-full">
+
+                        <label for="portfolio-description">
+                            Description
+                        </label>
+
+                        <textarea
+                            id="portfolio-description"
+                            rows="4"
+                            required
+                        ></textarea>
+
+                    </div>
+
+
+                    <div class="portfolio-field portfolio-field-full">
+
+                        <label for="portfolio-image-url">
+                            Image URL
+                        </label>
+
+                        <input
+                            type="url"
+                            id="portfolio-image-url"
+                            placeholder="https://..."
+                        >
+
+                        <small>
+                            Image upload will be connected in the
+                            next step.
+                        </small>
+
+                    </div>
+
+
+                    <label
+                        class="portfolio-publish-toggle"
+                    >
+
+                        <input
+                            type="checkbox"
+                            id="portfolio-published"
+                        >
+
+                        <span>
+
+                            <strong>
+                                Publish project
+                            </strong>
+
+                            <small>
+                                Make this project visible on the
+                                public portfolio.
+                            </small>
+
+                        </span>
+
+                    </label>
+
 
                 </div>
 
 
-                <h2>
-                    Their stories.
-                </h2>
+                <div class="portfolio-form-actions">
+
+                    <button
+                        type="button"
+                        class="modal-secondary-button"
+                        data-close-portfolio-modal
+                    >
+                        Cancel
+                    </button>
 
 
-                <p>
-                    Review client submissions and decide which
-                    testimonials become part of the public
-                    Swayphics experience.
-                </p>
+                    <button
+                        type="submit"
+                        class="modal-primary-button"
+                        id="portfolio-save-button"
+                    >
+                        Save project
+                    </button>
 
-            </div>
-
-
-            <div class="dashboard-card-footer">
-
-                <span class="dashboard-card-status">
-                    Moderation coming next
-                </span>
-
-                <span class="coming-soon">
-                    Coming next
-                </span>
-
-            </div>
-
-        </article>
+                </div>
 
 
-    </section>
+                <div
+                    class="portfolio-form-status"
+                    id="portfolio-form-status"
+                    hidden
+                ></div>
 
 
-    <div class="security-notice">
+            </form>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+ <div class="security-notice">
 
         <strong>
             Private workspace.
