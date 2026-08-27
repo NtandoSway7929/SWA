@@ -2119,16 +2119,15 @@ portfolioForm.addEventListener(
                 .trim();
 
 
-        const imageUrl =
+        const imageFile =
             document
                 .getElementById(
-                    "portfolio-image-url"
+                    "portfolio-image-file"
                 )
-                .value
-                .trim();
+                .files[0];
 
 
-        const published =
+        const publishProject =
             document
                 .getElementById(
                     "portfolio-published"
@@ -2136,35 +2135,19 @@ portfolioForm.addEventListener(
                 .checked;
 
 
-        const project = {
-
-            title,
-
-            category,
-
-            description,
-
-            year:
-                yearValue
-                    ? Number(yearValue)
-                    : null,
-
-            project_url:
-                projectUrl || null,
-
-            image_url:
-                imageUrl || null,
-
-            published
-
-        };
+        const imageStatus =
+            document.getElementById(
+                "portfolio-image-status"
+            );
 
 
         portfolioSaveButton.disabled =
             true;
 
         portfolioSaveButton.textContent =
-            "Saving...";
+            imageFile
+                ? "Uploading..."
+                : "Saving...";
 
 
         portfolioFormStatus.hidden =
@@ -2172,6 +2155,168 @@ portfolioForm.addEventListener(
 
 
         try {
+
+            let imageUrl = null;
+
+
+            /* =====================================================
+               IMAGE UPLOAD
+               ===================================================== */
+
+            if (imageFile) {
+
+                const allowedTypes = [
+                    "image/jpeg",
+                    "image/png",
+                    "image/webp",
+                    "image/gif"
+                ];
+
+
+                const maxFileSize =
+                    10 * 1024 * 1024;
+
+
+                if (
+                    !allowedTypes.includes(
+                        imageFile.type
+                    )
+                ) {
+
+                    throw new Error(
+                        "Please select a JPG, PNG, WEBP, or GIF image."
+                    );
+
+                }
+
+
+                if (
+                    imageFile.size >
+                    maxFileSize
+                ) {
+
+                    throw new Error(
+                        "The image must be 10 MB or smaller."
+                    );
+
+                }
+
+
+                imageStatus.textContent =
+                    "Uploading image...";
+
+
+                const originalName =
+                    imageFile.name
+                        .toLowerCase()
+                        .replace(
+                            /[^a-z0-9.]+/g,
+                            "-"
+                        )
+                        .replace(
+                            /^-+|-+$/g,
+                            ""
+                        );
+
+
+                const filePath =
+                    `projects/${crypto.randomUUID()}-${originalName}`;
+
+
+                const uploadResponse =
+                    await fetch(
+                        `${SUPABASE_URL}/storage/v1/object/portfolio/${filePath}`,
+                        {
+
+                            method:
+                                "POST",
+
+                            headers: {
+
+                                "apikey":
+                                    SUPABASE_PUBLISHABLE_KEY,
+
+                                "Authorization":
+                                    `Bearer ${accessToken}`,
+
+                                "Content-Type":
+                                    imageFile.type,
+
+                                "Cache-Control":
+                                    "3600",
+
+                                "x-upsert":
+                                    "false"
+
+                            },
+
+                            body:
+                                imageFile
+
+                        }
+                    );
+
+
+                const uploadText =
+                    await uploadResponse.text();
+
+
+                if (!uploadResponse.ok) {
+
+                    console.error(
+                        "Portfolio image upload failed:",
+                        uploadText
+                    );
+
+                    throw new Error(
+                        `Image upload failed (${uploadResponse.status}).`
+                    );
+
+                }
+
+
+                imageUrl =
+                    `${SUPABASE_URL}/storage/v1/object/public/portfolio/${filePath}`;
+
+
+                imageStatus.textContent =
+                    "Image uploaded successfully.";
+
+            }
+
+
+            /* =====================================================
+               DATABASE RECORD
+               ===================================================== */
+
+            const project = {
+
+                title,
+
+                category,
+
+                description,
+
+                year:
+                    yearValue
+                        ? Number(yearValue)
+                        : null,
+
+                project_url:
+                    projectUrl || null,
+
+                image_url:
+                    imageUrl,
+
+                published:
+                    publishProject
+
+            };
+
+
+            portfolioSaveButton.textContent =
+                "Saving...";
+
 
             const response =
                 await fetch(
@@ -2237,6 +2382,10 @@ portfolioForm.addEventListener(
             portfolioForm.reset();
 
 
+            imageStatus.textContent =
+                "Choose an image. It will be uploaded to Supabase Storage when you save the project.";
+
+
             await loadAdminPortfolio();
 
 
@@ -2267,7 +2416,6 @@ portfolioForm.addEventListener(
 
             portfolioFormStatus.hidden =
                 false;
-
 
         } finally {
 
