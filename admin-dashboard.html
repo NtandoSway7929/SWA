@@ -1905,8 +1905,43 @@
 
 
                         <div
-                            class="portfolio-admin-actions"
-                        >
+    class="portfolio-admin-actions"
+>
+
+    <button
+        type="button"
+        class="portfolio-admin-action"
+        data-portfolio-action="edit"
+        data-project-id="${project.id}"
+    >
+        Edit
+    </button>
+
+
+    <button
+        type="button"
+        class="portfolio-admin-action"
+        data-portfolio-action="toggle-published"
+        data-project-id="${project.id}"
+    >
+        ${
+            project.published
+                ? "Unpublish"
+                : "Publish"
+        }
+    </button>
+
+
+    <button
+        type="button"
+        class="portfolio-admin-action delete"
+        data-portfolio-action="delete"
+        data-project-id="${project.id}"
+    >
+        Delete
+    </button>
+
+</div>
 
                             <button
                                 type="button"
