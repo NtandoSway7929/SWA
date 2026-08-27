@@ -2500,26 +2500,6 @@ async function deletePortfolioProject(projectId) {
     }
 }
 
-
-        const responseText =
-            await response.text();
-
-
-        if (!response.ok) {
-
-            console.error(
-                "Portfolio deletion failed:",
-                responseText
-            );
-
-
-            throw new Error(
-                `Supabase returned ${response.status}: ${responseText}`
-            );
-
-        }
-
-
         await loadAdminPortfolio();
 
 
