@@ -2453,6 +2453,173 @@
 
         }
 
+        async function toggleTestimonialApproval(testimonialId) {
+
+    const accessToken =
+        localStorage.getItem(
+            "swayphics_admin_access_token"
+        );
+
+    if (!accessToken) {
+
+        window.location.href =
+            "admin.html";
+
+        return;
+
+    }
+
+    try {
+
+        const getResponse =
+            await fetch(
+                `${SUPABASE_URL}/rest/v1/testimonials?id=eq.${testimonialId}&select=id,approved`,
+                {
+                    method: "GET",
+
+                    headers: {
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+
+                        "Authorization":
+                            `Bearer ${accessToken}`
+                    }
+                }
+            );
+
+
+        const testimonials =
+            await getResponse.json();
+
+
+        if (
+            !getResponse.ok ||
+            !Array.isArray(testimonials) ||
+            testimonials.length === 0
+        ) {
+
+            throw new Error(
+                "Unable to find this testimonial."
+            );
+
+        }
+
+
+        const currentApproved =
+            Boolean(
+                testimonials[0].approved
+            );
+
+
+        const updateResponse =
+            await fetch(
+                `${SUPABASE_URL}/rest/v1/testimonials?id=eq.${testimonialId}`,
+                {
+                    method: "PATCH",
+
+                    headers: {
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+
+                        "Authorization":
+                            `Bearer ${accessToken}`,
+
+                        "Content-Type":
+                            "application/json",
+
+                        "Prefer":
+                            "return=representation"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            approved:
+                                !currentApproved
+                        })
+                }
+            );
+
+
+        const responseText =
+            await updateResponse.text();
+
+
+        if (!updateResponse.ok) {
+
+            throw new Error(
+                `Supabase returned ${updateResponse.status}: ${responseText}`
+            );
+
+        }
+
+
+        await loadAdminTestimonials();
+
+
+    } catch (error) {
+
+        console.error(
+            "Unable to change testimonial approval:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Unable to update testimonial."
+        );
+
+    }
+
+}
+
+        const testimonialsAdminList =
+    document.getElementById(
+        "testimonials-admin-list"
+    );
+
+
+if (testimonialsAdminList) {
+
+    testimonialsAdminList.addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    "[data-testimonial-action]"
+                );
+
+
+            if (!button) return;
+
+
+            const action =
+                button.dataset.testimonialAction;
+
+
+            const testimonialId =
+                button.dataset.testimonialId;
+
+
+            if (!testimonialId) return;
+
+
+            if (
+                action === "toggle-approval"
+            ) {
+
+                toggleTestimonialApproval(
+                    testimonialId
+                );
+
+            }
+
+        }
+    );
+
+}
+
 
         testimonialsList.innerHTML =
             testimonials.map(
@@ -2594,7 +2761,8 @@
                                 <button
                                     type="button"
                                     class="testimonial-admin-action"
-                                    disabled
+                                    data-testimonial-action="toggle-approval"
+                                    data-testimonial-id="${testimonial.id}"
                                 >
                                     Edit
                                 </button>
@@ -2609,7 +2777,8 @@
                                                 : "approve"
                                         }
                                     "
-                                    disabled
+                                   data-testimonial-action="toggle-approval"
+                                   data-testimonial-id="${testimonial.id}"
                                 >
                                     ${
                                         testimonial.approved
@@ -2624,7 +2793,8 @@
                                         testimonial-admin-action
                                         delete
                                     "
-                                    disabled
+                                   data-testimonial-action="toggle-approval"
+                                   data-testimonial-id="${testimonial.id}"
                                 >
                                     Delete
                                 </button>
