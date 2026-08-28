@@ -422,6 +422,37 @@ nav.scrolled .logo img {
 }
 
 
+/* Atmospheric blue glow */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    width: 520px;
+    height: 520px;
+
+    left: 50%;
+    top: 50%;
+
+    transform:
+        translate(-50%, -50%);
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(1,82,244,0.12) 0%,
+            rgba(44,145,252,0.06) 40%,
+            rgba(44,145,252,0) 72%
+        );
+
+    filter:
+        blur(30px);
+
+    pointer-events:
+        none;
+}
+
 
 /* Hero content */
 
@@ -2518,6 +2549,38 @@ nav {
 }
 
 
+/* Soft white glow behind the headline */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    left: -180px;
+    top: 50%;
+
+    width: 760px;
+    height: 620px;
+
+    transform: translateY(-50%);
+
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(255,255,255,0.98) 0%,
+            rgba(255,255,255,0.92) 42%,
+            rgba(255,255,255,0.55) 68%,
+            rgba(255,255,255,0) 100%
+        );
+
+    filter: blur(8px);
+
+    z-index: -1;
+
+    pointer-events: none;
+}
+
+
 /* Hero content */
 
 .hero-content {
@@ -2575,6 +2638,19 @@ nav {
         max-width: 700px;
     }
 
+    .hero::before {
+        left: -180px;
+        top: 35%;
+
+        width: 700px;
+        height: 520px;
+    }
+
+    .hero::after {
+        bottom: -100px;
+
+        height: 190px;
+    }
 }
 
 
@@ -2605,7 +2681,29 @@ nav {
         width: 100%;
     }
 
-    
+    .hero::before {
+        left: 50%;
+        top: 35%;
+
+        width: 130%;
+        height: 500px;
+
+        transform:
+            translate(-50%, -50%);
+    }
+
+    .hero::after {
+        left: -10%;
+
+        bottom: -80px;
+
+        width: 120%;
+
+        height: 150px;
+
+        transform:
+            rotate(-3deg);
+    }
 }
 
 /* -------------------------
@@ -6298,6 +6396,553 @@ body {
     }
 
 
+    /* Stronger mobile readability layer */
+
+    .hero::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(255,255,255,0.985) 0%,
+                rgba(255,255,255,0.97) 35%,
+                rgba(255,255,255,0.94) 70%,
+                rgba(255,255,255,0.90) 100%
+            ) !important;
+    }
+
+}
+
+    /* =========================================================
+   HERO — CLEAN BLUE ATMOSPHERE
+   ========================================================= */
+
+.hero {
+    background:
+        linear-gradient(
+            135deg,
+            #FFFFFF 0%,
+            #F8FBFF 48%,
+            #EEF6FF 100%
+        ) !important;
+}
+
+
+/* subtle blue atmosphere */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    width: 620px;
+    height: 620px;
+
+    right: -260px;
+    top: -180px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.18) 0%,
+            rgba(1,82,244,0.08) 42%,
+            rgba(1,82,244,0) 72%
+        );
+
+    filter:
+        blur(25px);
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+}
+
+
+/* subtle lower atmosphere */
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    width: 420px;
+    height: 320px;
+
+    left: -180px;
+    bottom: -180px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(119,193,252,0.10) 0%,
+            rgba(119,193,252,0) 72%
+        );
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+}
+
+
+.hero-content {
+    position:
+        relative !important;
+
+    z-index:
+        5 !important;
+}
+
+    /* =========================================================
+   HERO — STRONGER SWAYPHICS VISUAL
+   ========================================================= */
+
+.hero {
+    background:
+        linear-gradient(
+            115deg,
+            #FFFFFF 0%,
+            #F8FBFF 34%,
+            #EAF4FF 62%,
+            #D9ECFF 100%
+        ) !important;
+
+    isolation: isolate !important;
+}
+
+
+/* Main atmospheric blue glow */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    width: 720px;
+    height: 720px;
+
+    right: -220px;
+    top: -210px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(1,82,244,0.24) 0%,
+            rgba(44,145,252,0.16) 32%,
+            rgba(119,193,252,0.08) 52%,
+            rgba(119,193,252,0) 74%
+        );
+
+    filter: blur(18px);
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+
+/* Lower-left light */
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    width: 500px;
+    height: 400px;
+
+    left: -230px;
+    bottom: -180px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.10) 0%,
+            rgba(44,145,252,0.04) 45%,
+            rgba(44,145,252,0) 72%
+        );
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+
+/* =========================================================
+   SWAYPHICS FIST WATERMARK
+   ========================================================= */
+
+.hero-fist {
+    position: absolute;
+
+    width: min(520px, 46vw);
+
+    aspect-ratio: 531 / 417;
+
+    right: -55px;
+    top: 50%;
+
+    transform:
+        translateY(-50%);
+
+    background-image:
+        url("FIST.webp");
+
+    background-repeat:
+        no-repeat;
+
+    background-position:
+        center;
+
+    background-size:
+        contain;
+
+    opacity:
+        0.16;
+
+    mix-blend-mode:
+        multiply;
+
+    pointer-events:
+        none;
+
+    z-index:
+        1;
+}
+
+
+/* Desktop */
+
+@media (min-width: 901px) {
+
+    .hero-fist {
+        width:
+            540px;
+
+        right:
+            -70px;
+
+        opacity:
+            0.16;
+    }
+
+}
+
+
+/* Tablet */
+
+@media (max-width: 900px) {
+
+    .hero-fist {
+        width:
+            430px;
+
+        right:
+            -105px;
+
+        top:
+            52%;
+
+        opacity:
+            0.11;
+    }
+
+}
+
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .hero-fist {
+        width:
+            360px;
+
+        right:
+            -115px;
+
+        top:
+            58%;
+
+        opacity:
+            0.09;
+
+        transform:
+            translateY(-50%);
+    }
+
+}
+/* Keep text above the watermark */
+
+.hero-content {
+    position:
+        relative !important;
+
+    z-index:
+        5 !important;
+}
+
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (min-width: 901px) {
+
+    .hero-fist {
+        width:
+            520px;
+
+        right:
+            -85px;
+
+        opacity:
+            0.11;
+    }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .hero-fist {
+        width:
+            420px;
+
+        right:
+            -120px;
+
+        top:
+            52%;
+
+        opacity:
+            0.075;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        background:
+            linear-gradient(
+                150deg,
+                #FFFFFF 0%,
+                #F8FBFF 42%,
+                #EDF6FF 72%,
+                #E5F1FF 100%
+            ) !important;
+    }
+
+    .hero-fist {
+        width:
+            360px;
+
+        right:
+            -145px;
+
+        top:
+            58%;
+
+        opacity:
+            0.055;
+
+        transform:
+            translateY(-50%)
+            
+    }
+
+}
+
+/* =========================================================
+   HERO — STRONGER PREMIUM ATMOSPHERE
+   ========================================================= */
+
+.hero {
+    background:
+        radial-gradient(
+            circle at 82% 28%,
+            rgba(1,82,244,0.16) 0%,
+            rgba(44,145,252,0.10) 24%,
+            rgba(44,145,252,0.03) 44%,
+            transparent 66%
+        ),
+        radial-gradient(
+            circle at 12% 82%,
+            rgba(119,193,252,0.12) 0%,
+            rgba(119,193,252,0.05) 28%,
+            transparent 58%
+        ),
+        linear-gradient(
+            135deg,
+            #FFFFFF 0%,
+            #F9FCFF 34%,
+            #EEF7FF 65%,
+            #DCEEFF 100%
+        ) !important;
+}
+
+
+/* Main premium glow */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    width: 760px;
+    height: 760px;
+
+    right: -280px;
+    top: -250px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.20) 0%,
+            rgba(1,82,244,0.10) 28%,
+            rgba(1,82,244,0.04) 48%,
+            transparent 72%
+        );
+
+    filter:
+        blur(18px);
+
+    opacity:
+        1;
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+}
+
+
+/* Lower atmospheric glow */
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    width: 520px;
+    height: 420px;
+
+    left: -220px;
+    bottom: -180px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(44,145,252,0.12) 0%,
+            rgba(119,193,252,0.07) 32%,
+            transparent 72%
+        );
+
+    filter:
+        blur(10px);
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+}
+
+
+/* Keep the FIST above the atmosphere but below content */
+
+.hero-fist {
+    z-index:
+        1 !important;
+}
+
+.hero-content {
+    z-index:
+        5 !important;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        background:
+            radial-gradient(
+                circle at 85% 22%,
+                rgba(1,82,244,0.15) 0%,
+                rgba(44,145,252,0.08) 26%,
+                transparent 58%
+            ),
+            radial-gradient(
+                circle at 5% 85%,
+                rgba(119,193,252,0.10) 0%,
+                transparent 55%
+            ),
+            linear-gradient(
+                145deg,
+                #FFFFFF 0%,
+                #F9FCFF 38%,
+                #EEF7FF 72%,
+                #E3F1FF 100%
+            ) !important;
+    }
+
+    .hero::before {
+        width:
+            520px;
+
+        height:
+            520px;
+
+        right:
+            -220px;
+
+        top:
+            -170px;
+    }
+
+    .hero::after {
+        width:
+            360px;
+
+        height:
+            300px;
+
+        left:
+            -180px;
+
+        bottom:
+            -140px;
+    }
+
+}
 
 /* =========================================================
    SWAYPHICS — FINAL CAPABILITIES STRIP
@@ -9887,6 +10532,58 @@ nav.scrolled {
 }
 
 
+/* =========================================================
+   ATMOSPHERIC OVERLAY
+   ========================================================= */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 3 !important;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,0.99) 0%,
+            rgba(255,255,255,0.96) 18%,
+            rgba(255,255,255,0.82) 32%,
+            rgba(255,255,255,0.48) 45%,
+            rgba(255,255,255,0.12) 64%,
+            rgba(255,255,255,0.00) 82%
+        );
+}
+
+
+/* =========================================================
+   BLUE CINEMATIC TINT
+   ========================================================= */
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 4 !important;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0,32,150,0.10) 0%,
+            rgba(1,82,244,0.04) 38%,
+            rgba(0,0,0,0.16) 100%
+        );
+}
+
 
 /* =========================================================
    HERO CONTENT
@@ -10068,6 +10765,31 @@ nav.scrolled {
     }
 
 
+    .hero::before {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(255,255,255,0.99) 0%,
+                rgba(255,255,255,0.97) 26%,
+                rgba(255,255,255,0.84) 43%,
+                rgba(255,255,255,0.46) 61%,
+                rgba(255,255,255,0.12) 80%,
+                rgba(255,255,255,0.00) 100%
+            ) !important;
+    }
+
+
+    .hero::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(0,32,150,0.04) 0%,
+                rgba(1,82,244,0.02) 48%,
+                rgba(0,0,0,0.20) 100%
+            ) !important;
+    }
+
+
     .hero-content {
         padding:
             125px 6% 160px !important;
@@ -10078,373 +10800,6 @@ nav.scrolled {
         text-shadow:
             0 3px 18px rgba(255,255,255,0.82),
             0 8px 30px rgba(0,32,150,0.08);
-    }
-
-}
-
-    /* =========================================================
-   SWAYPHICS HERO — FINAL DEPTH COMPOSITION
-   ========================================================= */
-
-.hero {
-    position: relative !important;
-
-    min-height: 92vh !important;
-    height: 92vh !important;
-
-    display: flex !important;
-    align-items: center !important;
-
-    padding: 0 7% !important;
-
-    overflow: hidden !important;
-
-    isolation: isolate !important;
-
-    background: #0A0E17 !important;
-}
-
-
-/* =========================================================
-   HERO IMAGE
-   ========================================================= */
-
-.hero-image {
-    position: absolute;
-
-    inset: 0;
-
-    z-index: 0;
-
-    overflow: hidden;
-}
-
-
-.hero-image img {
-    position: absolute;
-
-    inset: 0;
-
-    width: 100%;
-    height: 100%;
-
-    display: block;
-
-    object-fit: cover;
-
-    object-position: 68% center;
-
-    transform: scale(1.03);
-
-    user-select: none;
-
-    pointer-events: none;
-}
-
-
-/* =========================================================
-   DEPTH TYPOGRAPHY
-   ========================================================= */
-
-.hero-depth-copy {
-    position: absolute;
-
-    z-index: 1;
-
-    right: -2vw;
-    top: 50%;
-
-    width: 67vw;
-
-    transform:
-        translateY(-50%);
-
-    display: flex;
-
-    flex-direction: column;
-
-    gap: 0;
-
-    color:
-        rgba(255,255,255,0.10);
-
-    font-size:
-        clamp(4.5rem, 8.4vw, 9rem);
-
-    font-weight: 900;
-
-    line-height: 0.79;
-
-    letter-spacing: -0.075em;
-
-    text-transform: uppercase;
-
-    white-space: nowrap;
-
-    pointer-events: none;
-
-    user-select: none;
-}
-
-
-.hero-depth-copy span,
-.hero-depth-copy strong {
-    display: block;
-}
-
-
-.hero-depth-copy strong {
-    color:
-        rgba(1,82,244,0.18);
-
-    font-weight: 900;
-}
-
-
-.hero-depth-copy span:nth-child(2) {
-    margin-left: 4vw;
-}
-
-
-/* =========================================================
-   LEFT-TO-RIGHT READABILITY SHADE
-   ========================================================= */
-
-.hero-shade {
-    position: absolute;
-
-    inset: 0;
-
-    z-index: 2;
-
-    pointer-events: none;
-
-    background:
-        linear-gradient(
-            90deg,
-            rgba(255,255,255,0.99) 0%,
-            rgba(255,255,255,0.97) 21%,
-            rgba(255,255,255,0.90) 33%,
-            rgba(255,255,255,0.68) 43%,
-            rgba(255,255,255,0.28) 55%,
-            rgba(255,255,255,0.03) 71%,
-            rgba(255,255,255,0) 100%
-        );
-}
-
-
-/* =========================================================
-   HERO CONTENT
-   ========================================================= */
-
-.hero-content {
-    position: relative !important;
-
-    z-index: 5 !important;
-
-    width: min(650px, 48vw) !important;
-
-    max-width: 650px !important;
-
-    padding: 0 !important;
-
-    margin: 0 !important;
-}
-
-
-.hero h1 {
-    color:
-        var(--text-dark) !important;
-}
-
-
-.hero h1 span {
-    color:
-        var(--sway-accent) !important;
-}
-
-
-.hero p {
-    color:
-        var(--text-muted) !important;
-
-    max-width: 560px !important;
-}
-
-
-/* =========================================================
-   DESKTOP
-   ========================================================= */
-
-@media (min-width: 901px) {
-
-    .hero-image img {
-        object-position:
-            68% center;
-    }
-
-
-    .hero-content {
-        transform:
-            translateY(-3vh);
-    }
-
-
-    .hero-depth-copy {
-        right:
-            -4vw;
-    }
-
-}
-
-
-/* =========================================================
-   TABLET
-   ========================================================= */
-
-@media (max-width: 900px) {
-
-    .hero {
-        min-height:
-            850px !important;
-
-        height:
-            850px !important;
-
-        align-items:
-            flex-start !important;
-
-        padding:
-            0 6% !important;
-    }
-
-
-    .hero-image img {
-        object-position:
-            72% center;
-
-        transform:
-            scale(1.08);
-    }
-
-
-    .hero-shade {
-        background:
-            linear-gradient(
-                180deg,
-                rgba(255,255,255,1) 0%,
-                rgba(255,255,255,0.98) 22%,
-                rgba(255,255,255,0.90) 39%,
-                rgba(255,255,255,0.56) 54%,
-                rgba(255,255,255,0.14) 72%,
-                rgba(255,255,255,0) 100%
-            );
-    }
-
-
-    .hero-content {
-        width:
-            100% !important;
-
-        max-width:
-            680px !important;
-
-        padding:
-            130px 0 0 !important;
-    }
-
-
-    .hero-depth-copy {
-        right:
-            -23vw;
-
-        top:
-            61%;
-
-        width:
-            110vw;
-
-        font-size:
-            clamp(3.5rem, 10.5vw, 6.5rem);
-    }
-
-}
-
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .hero {
-        min-height:
-            100svh !important;
-
-        height:
-            100svh !important;
-
-        padding:
-            0 5% !important;
-    }
-
-
-    .hero-image img {
-        object-position:
-            73% center;
-
-        transform:
-            scale(1.18);
-    }
-
-
-    .hero-shade {
-        background:
-            linear-gradient(
-                180deg,
-                rgba(255,255,255,1) 0%,
-                rgba(255,255,255,0.995) 23%,
-                rgba(255,255,255,0.96) 38%,
-                rgba(255,255,255,0.76) 52%,
-                rgba(255,255,255,0.28) 68%,
-                rgba(255,255,255,0) 86%
-            );
-    }
-
-
-    .hero-content {
-        padding:
-            112px 0 0 !important;
-
-        width:
-            100% !important;
-
-        max-width:
-            100% !important;
-    }
-
-
-    .hero-depth-copy {
-        right:
-            -51vw;
-
-        top:
-            65%;
-
-        width:
-            145vw;
-
-        font-size:
-            clamp(3rem, 14vw, 5.5rem);
-
-        line-height:
-            0.82;
-    }
-
-
-    .hero-depth-copy strong {
-        color:
-            rgba(1,82,244,0.14);
     }
 
 }
@@ -10520,25 +10875,17 @@ nav.scrolled {
       <!-- HERO -->
 <section class="hero">
 
-    <div class="hero-depth-copy" aria-hidden="true">
-        <span>BUILD A</span>
-        <strong>BRAND</strong>
+    <div class="hero-depth-text" aria-hidden="true">
+        BUILD A BRAND
         <span>WORTH REMEMBERING</span>
     </div>
 
-
-    <div class="hero-image" aria-hidden="true">
-
+    <div class="hero-visual" aria-hidden="true">
         <img
             src="hero-image.webp"
             alt=""
         >
-
     </div>
-
-
-    <div class="hero-shade" aria-hidden="true"></div>
-
 
     <div class="hero-content">
 
