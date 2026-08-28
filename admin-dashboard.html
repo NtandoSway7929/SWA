@@ -1943,8 +1943,6 @@
 
 </div>
 
-                             </div>
-
                     </article>
 
                 `
@@ -2466,88 +2464,6 @@ async function deletePortfolioProject(projectId) {
         );
     }
 }
-
-        const currentPublished =
-            Boolean(
-                projects[0].published
-            );
-
-
-        const newPublished =
-            !currentPublished;
-
-
-        const updateResponse =
-            await fetch(
-                `${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${projectId}`,
-                {
-
-                    method:
-                        "PATCH",
-
-                    headers: {
-
-                        "apikey":
-                            SUPABASE_PUBLISHABLE_KEY,
-
-                        "Authorization":
-                            `Bearer ${accessToken}`,
-
-                        "Content-Type":
-                            "application/json",
-
-                        "Prefer":
-                            "return=representation"
-
-                    },
-
-                    body:
-                        JSON.stringify({
-                            published:
-                                newPublished
-                        })
-
-                }
-            );
-
-
-        const responseText =
-            await updateResponse.text();
-
-
-        if (!updateResponse.ok) {
-
-            console.error(
-                "Portfolio publish update failed:",
-                responseText
-            );
-
-            throw new Error(
-                `Supabase returned ${updateResponse.status}: ${responseText}`
-            );
-
-        }
-
-
-        await loadAdminPortfolio();
-
-
-    } catch (error) {
-
-        console.error(
-            "Unable to change portfolio publication status:",
-            error
-        );
-
-
-        alert(
-            error.message ||
-            "Unable to update publication status."
-        );
-
-    }
-
-}    
 
 portfolioForm.addEventListener(
     "submit",
