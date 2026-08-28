@@ -10414,6 +10414,395 @@ nav.scrolled {
     }
 
 }
+
+    /* =========================================================
+   SWAYPHICS — HERO IMAGE + DEPTH TYPOGRAPHY
+   ========================================================= */
+
+.hero {
+    position: relative !important;
+    overflow: hidden !important;
+    isolation: isolate !important;
+    background: #080D18 !important;
+}
+
+
+/* =========================================================
+   HERO IMAGE
+   ========================================================= */
+
+.hero-visual {
+    position: absolute !important;
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    z-index: 2 !important;
+
+    overflow: hidden !important;
+
+    pointer-events: none !important;
+}
+
+
+.hero-visual img {
+    position: absolute !important;
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    display: block !important;
+
+    object-fit: cover !important;
+
+    object-position: center center !important;
+
+    max-width: none !important;
+
+    border-radius: 0 !important;
+
+    box-shadow: none !important;
+
+    transform: none !important;
+}
+
+
+/* =========================================================
+   DEPTH TYPOGRAPHY
+   Sits BEHIND the image, so the chess piece and rocks
+   naturally obscure parts of the letters.
+   ========================================================= */
+
+.hero-depth-text {
+    position: absolute !important;
+
+    z-index: 1 !important;
+
+    right: -3vw;
+    top: 50%;
+
+    width: 72vw;
+
+    transform:
+        translateY(-50%);
+
+    color:
+        rgba(255,255,255,0.075);
+
+    font-size:
+        clamp(4rem, 8.5vw, 9rem);
+
+    font-weight:
+        900;
+
+    line-height:
+        0.82;
+
+    letter-spacing:
+        -0.075em;
+
+    text-transform:
+        uppercase;
+
+    white-space:
+        nowrap;
+
+    user-select:
+        none;
+
+    pointer-events:
+        none;
+
+    mix-blend-mode:
+        screen;
+}
+
+
+.hero-depth-text span {
+    display:
+        block;
+
+    margin-left:
+        5vw;
+
+    color:
+        rgba(1,82,244,0.16);
+}
+
+
+/* =========================================================
+   ATMOSPHERIC OVERLAY
+   ========================================================= */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 3 !important;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,0.99) 0%,
+            rgba(255,255,255,0.96) 18%,
+            rgba(255,255,255,0.82) 32%,
+            rgba(255,255,255,0.48) 45%,
+            rgba(255,255,255,0.12) 64%,
+            rgba(255,255,255,0.00) 82%
+        );
+}
+
+
+/* =========================================================
+   BLUE CINEMATIC TINT
+   ========================================================= */
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 4 !important;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0,32,150,0.10) 0%,
+            rgba(1,82,244,0.04) 38%,
+            rgba(0,0,0,0.16) 100%
+        );
+}
+
+
+/* =========================================================
+   HERO CONTENT
+   ========================================================= */
+
+.hero-content {
+    position: relative !important;
+
+    z-index: 5 !important;
+
+    max-width: 700px !important;
+}
+
+
+/* Keep existing text treatment but increase depth */
+
+.hero h1 {
+    position: relative;
+
+    text-shadow:
+        0 4px 20px rgba(255,255,255,0.72),
+        0 10px 40px rgba(0,32,150,0.10);
+}
+
+
+.hero h1 span {
+    position: relative;
+
+    text-shadow:
+        0 4px 24px rgba(1,82,244,0.16);
+}
+
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (min-width: 901px) {
+
+    .hero {
+        min-height:
+            92vh !important;
+
+        height:
+            92vh !important;
+
+        padding:
+            0 !important;
+    }
+
+
+    .hero-visual img {
+        object-position:
+            center center !important;
+
+        transform:
+            scale(1.015) !important;
+    }
+
+
+    .hero-depth-text {
+        right:
+            -6vw;
+
+        width:
+            72vw;
+    }
+
+
+    .hero-content {
+        padding:
+            145px 0 190px 7% !important;
+    }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .hero {
+        min-height:
+            850px !important;
+
+        height:
+            auto !important;
+    }
+
+
+    .hero-visual img {
+        object-position:
+            64% center !important;
+
+        transform:
+            scale(1.04) !important;
+    }
+
+
+    .hero-depth-text {
+        right:
+            -22vw;
+
+        top:
+            54%;
+
+        width:
+            105vw;
+
+        font-size:
+            clamp(3.4rem, 10vw, 6rem);
+    }
+
+
+    .hero-content {
+        padding:
+            120px 6% 190px !important;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        min-height:
+            100svh !important;
+
+        padding:
+            0 !important;
+
+        background:
+            #080D18 !important;
+    }
+
+
+    .hero-visual img {
+        object-position:
+            67% center !important;
+
+        transform:
+            scale(1.08) !important;
+    }
+
+
+    .hero-depth-text {
+        right:
+            -52vw;
+
+        top:
+            57%;
+
+        width:
+            150vw;
+
+        font-size:
+            clamp(3rem, 14vw, 5.5rem);
+
+        line-height:
+            0.84;
+
+        color:
+            rgba(255,255,255,0.055);
+    }
+
+
+    .hero-depth-text span {
+        margin-left:
+            7vw;
+
+        color:
+            rgba(1,82,244,0.12);
+    }
+
+
+    .hero::before {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(255,255,255,0.99) 0%,
+                rgba(255,255,255,0.97) 26%,
+                rgba(255,255,255,0.84) 43%,
+                rgba(255,255,255,0.46) 61%,
+                rgba(255,255,255,0.12) 80%,
+                rgba(255,255,255,0.00) 100%
+            ) !important;
+    }
+
+
+    .hero::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(0,32,150,0.04) 0%,
+                rgba(1,82,244,0.02) 48%,
+                rgba(0,0,0,0.20) 100%
+            ) !important;
+    }
+
+
+    .hero-content {
+        padding:
+            125px 6% 160px !important;
+    }
+
+
+    .hero h1 {
+        text-shadow:
+            0 3px 18px rgba(255,255,255,0.82),
+            0 8px 30px rgba(0,32,150,0.08);
+    }
+
+}
     
 </style>
     
@@ -10486,7 +10875,17 @@ nav.scrolled {
       <!-- HERO -->
 <section class="hero">
 
-    <div class="hero-fist" aria-hidden="true"></div>
+    <div class="hero-depth-text" aria-hidden="true">
+        BUILD A BRAND
+        <span>WORTH REMEMBERING</span>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+        <img
+            src="hero-image.webp"
+            alt=""
+        >
+    </div>
 
     <div class="hero-content">
 
