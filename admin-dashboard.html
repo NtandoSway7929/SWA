@@ -2500,27 +2500,6 @@ async function deletePortfolioProject(projectId) {
     }
 }
 
-        await loadAdminPortfolio();
-
-
-    } catch (error) {
-
-        console.error(
-            "Unable to delete portfolio project:",
-            error
-        );
-
-
-        alert(
-            error.message ||
-            "Unable to delete portfolio project."
-        );
-
-    }
-
-}
-
-
         const projects =
             await getResponse.json();
 
