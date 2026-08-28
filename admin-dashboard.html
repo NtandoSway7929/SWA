@@ -1943,40 +1943,7 @@
 
 </div>
 
-                            <button
-                                type="button"
-                                class="portfolio-admin-action"
-                                disabled
-                            >
-                                Edit
-                            </button>
-
-
-                            <button
-                                type="button"
-                                class="portfolio-admin-action"
-                                disabled
-                            >
-                                ${
-                                    project.published
-                                        ? "Unpublish"
-                                        : "Publish"
-                                }
-                            </button>
-
-
-                            <button
-                                type="button"
-                                class="
-                                    portfolio-admin-action
-                                    delete
-                                "
-                                disabled
-                            >
-                                Delete
-                            </button>
-
-                        </div>
+                             </div>
 
                     </article>
 
@@ -2499,23 +2466,6 @@ async function deletePortfolioProject(projectId) {
         );
     }
 }
-
-        const projects =
-            await getResponse.json();
-
-
-        if (
-            !getResponse.ok ||
-            !Array.isArray(projects) ||
-            projects.length === 0
-        ) {
-
-            throw new Error(
-                "Unable to find this project."
-            );
-
-        }
-
 
         const currentPublished =
             Boolean(
