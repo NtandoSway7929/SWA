@@ -2358,8 +2358,308 @@
 
 }
 
+    async function loadAdminTestimonials() {
+
+    const testimonialsList =
+        document.getElementById(
+            "testimonials-admin-list"
+        );
+
+    if (!testimonialsList) return;
+
+
+    const accessToken =
+        localStorage.getItem(
+            "swayphics_admin_access_token"
+        );
+
+
+    if (!accessToken) {
+
+        window.location.href =
+            "admin.html";
+
+        return;
+
+    }
+
+
+    testimonialsList.innerHTML = `
+        <div class="testimonials-admin-loading">
+            Loading testimonials...
+        </div>
+    `;
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${SUPABASE_URL}/rest/v1/testimonials?select=id,name,business,role,quote,rating,image_url,approved,created_at&order=created_at.desc`,
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+
+                        "Authorization":
+                            `Bearer ${accessToken}`
+
+                    }
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            const errorText =
+                await response.text();
+
+
+            console.error(
+                "Admin testimonials request failed:",
+                errorText
+            );
+
+
+            throw new Error(
+                `Supabase returned ${response.status}: ${errorText}`
+            );
+
+        }
+
+
+        const testimonials =
+            await response.json();
+
+
+        if (
+            !Array.isArray(testimonials) ||
+            testimonials.length === 0
+        ) {
+
+            testimonialsList.innerHTML = `
+                <div class="testimonials-admin-loading">
+                    No testimonials found.
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        testimonialsList.innerHTML =
+            testimonials.map(
+                testimonial => {
+
+                    const initials =
+                        (testimonial.name || "S")
+                            .trim()
+                            .split(/\s+/)
+                            .map(
+                                part =>
+                                    part.charAt(0)
+                            )
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase();
+
+
+                    const rating =
+                        Math.min(
+                            5,
+                            Math.max(
+                                1,
+                                Number(
+                                    testimonial.rating
+                                ) || 5
+                            )
+                        );
+
+
+                    const stars =
+                        "★".repeat(rating) +
+                        "☆".repeat(5 - rating);
+
+
+                    return `
+
+                        <article
+                            class="testimonial-admin-card"
+                            data-testimonial-id="${testimonial.id}"
+                        >
+
+                            <div
+                                class="testimonial-admin-avatar"
+                            >
+
+                                ${
+                                    testimonial.image_url
+                                        ? `
+                                            <img
+                                                src="${testimonial.image_url}"
+                                                alt="${testimonial.name || "Client"}"
+                                                loading="lazy"
+                                            >
+                                        `
+                                        : initials
+                                }
+
+                            </div>
+
+
+                            <div
+                                class="testimonial-admin-info"
+                            >
+
+                                <div
+                                    class="testimonial-admin-meta"
+                                >
+
+                                    <span>
+                                        ${
+                                            testimonial.business ||
+                                            "Client testimonial"
+                                        }
+                                    </span>
+
+                                    ${
+                                        testimonial.role
+                                            ? `
+                                                <span>
+                                                    · ${testimonial.role}
+                                                </span>
+                                            `
+                                            : ""
+                                    }
+
+                                </div>
+
+
+                                <h3
+                                    class="testimonial-admin-name"
+                                >
+                                    ${
+                                        testimonial.name ||
+                                        "Unnamed client"
+                                    }
+                                </h3>
+
+
+                                <p
+                                    class="testimonial-admin-quote"
+                                >
+                                    “${testimonial.quote || ""}”
+                                </p>
+
+
+                                <div
+                                    class="testimonial-admin-rating"
+                                    aria-label="${rating} out of 5 stars"
+                                >
+                                    ${stars}
+                                </div>
+
+
+                                <span
+                                    class="
+                                        testimonial-admin-status
+                                        ${
+                                            testimonial.approved
+                                                ? ""
+                                                : "pending"
+                                        }
+                                    "
+                                >
+                                    ${
+                                        testimonial.approved
+                                            ? "Approved"
+                                            : "Pending review"
+                                    }
+                                </span>
+
+                            </div>
+
+
+                            <div
+                                class="testimonial-admin-actions"
+                            >
+
+                                <button
+                                    type="button"
+                                    class="testimonial-admin-action"
+                                    disabled
+                                >
+                                    Edit
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="
+                                        testimonial-admin-action
+                                        ${
+                                            testimonial.approved
+                                                ? ""
+                                                : "approve"
+                                        }
+                                    "
+                                    disabled
+                                >
+                                    ${
+                                        testimonial.approved
+                                            ? "Unapprove"
+                                            : "Approve"
+                                    }
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="
+                                        testimonial-admin-action
+                                        delete
+                                    "
+                                    disabled
+                                >
+                                    Delete
+                                </button>
+
+                            </div>
+
+                        </article>
+
+                    `;
+
+                }
+            ).join("");
+
+
+    } catch (error) {
+
+        console.error(
+            "Unable to load admin testimonials:",
+            error
+        );
+
+
+        testimonialsList.innerHTML = `
+            <div class="testimonials-admin-loading">
+                ${error.message}
+            </div>
+        `;
+
+    }
+
+}
+
 
 loadAdminPortfolio();
+     loadAdminTestimonials();
 
   const portfolioForm =
     document.getElementById(
