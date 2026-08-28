@@ -2453,7 +2453,7 @@
 
         }
 
-        async function toggleTestimonialApproval(testimonialId) {
+       async function toggleTestimonialApproval(testimonialId) {
 
     const accessToken =
         localStorage.getItem(
@@ -2469,55 +2469,108 @@
 
     }
 
+
+    const card =
+        document.querySelector(
+            `.testimonial-admin-card[data-testimonial-id="${testimonialId}"]`
+        );
+
+
+    if (!card) return;
+
+
+    const button =
+        card.querySelector(
+            '[data-testimonial-action="toggle-approval"]'
+        );
+
+
+    const status =
+        card.querySelector(
+            ".testimonial-admin-status"
+        );
+
+
+    if (!button || !status) return;
+
+
+    const currentlyApproved =
+        status.textContent
+            .trim()
+            .toLowerCase()
+            .includes("approved");
+
+
+    const newApproved =
+        !currentlyApproved;
+
+
+    if (button.dataset.processing === "true") {
+        return;
+    }
+
+
+    button.dataset.processing = "true";
+
+    button.disabled = true;
+
+
+    const originalButtonText =
+        button.textContent.trim();
+
+    const originalStatusText =
+        status.textContent.trim();
+
+
+    /* Instant UI update */
+
+    if (newApproved) {
+
+        button.textContent =
+            "Unapprove";
+
+        button.classList.remove(
+            "approve"
+        );
+
+        status.textContent =
+            "Approved";
+
+        status.classList.remove(
+            "pending"
+        );
+
+    } else {
+
+        button.textContent =
+            "Approve";
+
+        button.classList.add(
+            "approve"
+        );
+
+        status.textContent =
+            "Pending review";
+
+        status.classList.add(
+            "pending"
+        );
+
+    }
+
+
     try {
 
-        const getResponse =
-            await fetch(
-                `${SUPABASE_URL}/rest/v1/testimonials?id=eq.${testimonialId}&select=id,approved`,
-                {
-                    method: "GET",
-
-                    headers: {
-                        "apikey":
-                            SUPABASE_PUBLISHABLE_KEY,
-
-                        "Authorization":
-                            `Bearer ${accessToken}`
-                    }
-                }
-            );
-
-
-        const testimonials =
-            await getResponse.json();
-
-
-        if (
-            !getResponse.ok ||
-            !Array.isArray(testimonials) ||
-            testimonials.length === 0
-        ) {
-
-            throw new Error(
-                "Unable to find this testimonial."
-            );
-
-        }
-
-
-        const currentApproved =
-            Boolean(
-                testimonials[0].approved
-            );
-
-
-        const updateResponse =
+        const response =
             await fetch(
                 `${SUPABASE_URL}/rest/v1/testimonials?id=eq.${testimonialId}`,
                 {
-                    method: "PATCH",
+
+                    method:
+                        "PATCH",
 
                     headers: {
+
                         "apikey":
                             SUPABASE_PUBLISHABLE_KEY,
 
@@ -2528,32 +2581,31 @@
                             "application/json",
 
                         "Prefer":
-                            "return=representation"
+                            "return=minimal"
+
                     },
 
                     body:
                         JSON.stringify({
                             approved:
-                                !currentApproved
+                                newApproved
                         })
+
                 }
             );
 
 
         const responseText =
-            await updateResponse.text();
+            await response.text();
 
 
-        if (!updateResponse.ok) {
+        if (!response.ok) {
 
             throw new Error(
-                `Supabase returned ${updateResponse.status}: ${responseText}`
+                `Supabase returned ${response.status}: ${responseText}`
             );
 
         }
-
-
-        await loadAdminTestimonials();
 
 
     } catch (error) {
@@ -2564,12 +2616,53 @@
         );
 
 
+        /* Revert UI if Supabase fails */
+
+        button.textContent =
+            originalButtonText;
+
+        status.textContent =
+            originalStatusText;
+
+
+        if (currentlyApproved) {
+
+            button.classList.remove(
+                "approve"
+            );
+
+            status.classList.remove(
+                "pending"
+            );
+
+        } else {
+
+            button.classList.add(
+                "approve"
+            );
+
+            status.classList.add(
+                "pending"
+            );
+
+        }
+
+
         alert(
             error.message ||
             "Unable to update testimonial."
         );
 
+
+    } finally {
+
+        button.disabled = false;
+
+        delete button.dataset.processing;
+
     }
+
+}
 
 }
 
