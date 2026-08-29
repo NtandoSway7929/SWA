@@ -11111,6 +11111,91 @@ nav.scrolled {
 
 }
 
+    /* =========================================================
+   SWAYPHICS HERO — READABILITY OVERRIDE
+   ========================================================= */
+
+.hero-showcase-image::after {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,0.99) 0%,
+            rgba(255,255,255,0.97) 18%,
+            rgba(255,255,255,0.90) 30%,
+            rgba(255,255,255,0.68) 42%,
+            rgba(255,255,255,0.30) 54%,
+            rgba(255,255,255,0.08) 67%,
+            rgba(255,255,255,0) 80%
+        ) !important;
+}
+
+
+.hero-intro {
+    position:
+        relative !important;
+
+    z-index:
+        20 !important;
+}
+
+
+.hero-intro h1 {
+    color:
+        #07142F !important;
+
+    text-shadow:
+        0 2px 12px
+        rgba(255,255,255,0.75) !important;
+}
+
+
+.hero-intro h1 span {
+    color:
+        #0152F4 !important;
+
+    text-shadow:
+        0 2px 12px
+        rgba(255,255,255,0.65) !important;
+}
+
+
+.hero-intro p {
+    color:
+        #1F304B !important;
+
+    text-shadow:
+        0 2px 10px
+        rgba(255,255,255,0.85) !important;
+}
+
+
+@media (max-width: 700px) {
+
+    .hero-showcase-image::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(255,255,255,1) 0%,
+                rgba(255,255,255,0.99) 20%,
+                rgba(255,255,255,0.94) 35%,
+                rgba(255,255,255,0.76) 50%,
+                rgba(255,255,255,0.38) 66%,
+                rgba(255,255,255,0.10) 82%,
+                rgba(255,255,255,0) 100%
+            ) !important;
+    }
+
+
+    .hero-intro p {
+        color:
+            #1D2D47 !important;
+
+        text-shadow:
+            0 2px 10px
+            rgba(255,255,255,0.95) !important;
+    }
+
+}
     
 </style>
     
