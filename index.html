@@ -10928,6 +10928,910 @@ nav.scrolled {
     }
 }
 
+    /* =========================================================
+   SWAYPHICS — HERO MASTER SYSTEM
+   Final visual direction
+   ========================================================= */
+
+.hero {
+    position: relative !important;
+
+    min-height: 94vh !important;
+    height: 94vh !important;
+
+    display: grid !important;
+
+    grid-template-columns:
+        minmax(0, 0.92fr)
+        minmax(0, 1.08fr) !important;
+
+    grid-template-rows:
+        auto auto !important;
+
+    align-content: center !important;
+    align-items: center !important;
+
+    column-gap: 2vw !important;
+    row-gap: 24px !important;
+
+    padding:
+        128px
+        6vw
+        80px !important;
+
+    overflow: hidden !important;
+
+    isolation: isolate !important;
+
+    background:
+        #F7F9FD !important;
+
+    text-align: left !important;
+}
+
+
+/* =========================================================
+   BACKGROUND ARTWORK
+   ========================================================= */
+
+.hero-showcase {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    z-index: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    pointer-events: none !important;
+
+    transform: none !important;
+}
+
+
+.hero-showcase-image {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    overflow: hidden !important;
+
+    border: none !important;
+    border-radius: 0 !important;
+
+    background:
+        #06122B !important;
+
+    box-shadow: none !important;
+
+    isolation: isolate !important;
+}
+
+
+.hero-showcase-image img {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    max-width: none !important;
+
+    display: block !important;
+
+    object-fit: cover !important;
+
+    object-position:
+        72% center !important;
+
+    transform:
+        scale(1.055) !important;
+
+    opacity:
+        0.74 !important;
+
+    filter:
+        grayscale(100%)
+        contrast(1.12)
+        brightness(0.82) !important;
+
+    user-select:
+        none !important;
+}
+
+
+/* =========================================================
+   SWAYPHICS BLUE DUOTONE
+   ========================================================= */
+
+.hero-showcase-image::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 2;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0,32,150,0.78) 0%,
+            rgba(1,82,244,0.38) 38%,
+            rgba(44,145,252,0.10) 62%,
+            rgba(3,10,25,0.82) 100%
+        );
+
+    mix-blend-mode:
+        color;
+
+    opacity:
+        0.92;
+}
+
+
+/* =========================================================
+   READABILITY FIELD
+   ========================================================= */
+
+.hero-showcase-image::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 3;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(247,249,253,1) 0%,
+            rgba(247,249,253,0.985) 16%,
+            rgba(247,249,253,0.94) 29%,
+            rgba(247,249,253,0.72) 40%,
+            rgba(247,249,253,0.38) 51%,
+            rgba(247,249,253,0.10) 64%,
+            rgba(247,249,253,0) 77%
+        );
+}
+
+
+/* =========================================================
+   REMOVE OLD HERO ATMOSPHERE
+   ========================================================= */
+
+.hero::before {
+    content: none !important;
+}
+
+.hero::after {
+    content: none !important;
+}
+
+.hero-fist {
+    display: none !important;
+}
+
+.hero-showcase-footer {
+    display: none !important;
+}
+
+
+/* =========================================================
+   BACKGROUND SWAYPHICS
+   ========================================================= */
+
+.hero-background-word {
+    position: absolute !important;
+
+    z-index: 1 !important;
+
+    top: 13% !important;
+    left: 65% !important;
+
+    transform:
+        translateX(-50%) !important;
+
+    margin: 0 !important;
+
+    color:
+        rgba(255,255,255,0.075) !important;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif !important;
+
+    font-size:
+        clamp(8rem, 13.5vw, 16rem) !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        0.78 !important;
+
+    letter-spacing:
+        -0.105em !important;
+
+    white-space:
+        nowrap !important;
+
+    pointer-events:
+        none !important;
+
+    user-select:
+        none !important;
+}
+
+
+/* =========================================================
+   BRAND — LARGE ART-DIRECTION TEXT
+   ========================================================= */
+
+.hero-showcase-word {
+    position: absolute !important;
+
+    z-index: 4 !important;
+
+    top: 66% !important;
+    left: 76% !important;
+
+    transform:
+        translate(-50%, -50%) !important;
+
+    margin: 0 !important;
+
+    color:
+        rgba(255,255,255,0.115) !important;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif !important;
+
+    font-size:
+        clamp(7rem, 11.5vw, 14rem) !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        0.78 !important;
+
+    letter-spacing:
+        -0.10em !important;
+
+    white-space:
+        nowrap !important;
+
+    pointer-events:
+        none !important;
+
+    user-select:
+        none !important;
+}
+
+
+/* =========================================================
+   HERO CONTENT
+   ========================================================= */
+
+.hero-intro {
+    position: relative !important;
+
+    z-index: 10 !important;
+
+    grid-column: 1 !important;
+    grid-row: 1 / span 2 !important;
+
+    align-self: center !important;
+
+    width:
+        min(640px, 100%) !important;
+
+    max-width:
+        640px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform:
+        translateY(-2vh) !important;
+
+    text-align:
+        left !important;
+}
+
+
+/* =========================================================
+   EYEBROW
+   ========================================================= */
+
+.hero-intro .eyebrow {
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        9px !important;
+
+    width:
+        auto !important;
+
+    margin:
+        0 0 22px !important;
+
+    padding:
+        8px 12px !important;
+
+    border:
+        1px solid
+        rgba(0,32,150,0.10) !important;
+
+    border-radius:
+        999px !important;
+
+    background:
+        rgba(255,255,255,0.72) !important;
+
+    color:
+        #002096 !important;
+
+    font-size:
+        0.63rem !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        0.15em !important;
+
+    line-height:
+        1 !important;
+
+    text-transform:
+        uppercase !important;
+
+    backdrop-filter:
+        blur(14px) !important;
+
+    -webkit-backdrop-filter:
+        blur(14px) !important;
+}
+
+
+.hero-intro .eyebrow::before {
+    content:
+        "" !important;
+
+    width:
+        6px !important;
+
+    height:
+        6px !important;
+
+    flex:
+        0 0 6px !important;
+
+    border-radius:
+        50% !important;
+
+    background:
+        #0152F4 !important;
+
+    box-shadow:
+        0 0 0 4px
+        rgba(1,82,244,0.10) !important;
+}
+
+
+/* =========================================================
+   HEADLINE
+   ========================================================= */
+
+.hero-intro h1 {
+    width:
+        auto !important;
+
+    max-width:
+        620px !important;
+
+    margin:
+        0 !important;
+
+    color:
+        #07142F !important;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif !important;
+
+    font-size:
+        clamp(4rem, 6.1vw, 6.8rem) !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        0.88 !important;
+
+    letter-spacing:
+        -0.078em !important;
+
+    text-align:
+        left !important;
+
+    text-shadow:
+        0 2px 0
+        rgba(255,255,255,0.75) !important;
+}
+
+
+.hero-intro h1 span {
+    color:
+        #0152F4 !important;
+}
+
+
+/* =========================================================
+   SUPPORTING COPY
+   ========================================================= */
+
+.hero-intro p {
+    width:
+        auto !important;
+
+    max-width:
+        515px !important;
+
+    margin:
+        28px 0 0 !important;
+
+    color:
+        #2B3B55 !important;
+
+    font-size:
+        0.97rem !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        1.76 !important;
+
+    text-align:
+        left !important;
+
+    text-shadow:
+        0 1px 8px
+        rgba(255,255,255,0.55) !important;
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.hero-actions {
+    position:
+        relative !important;
+
+    z-index:
+        10 !important;
+
+    grid-column:
+        1 !important;
+
+    grid-row:
+        2 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        11px !important;
+
+    width:
+        fit-content !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+.hero-actions .btn {
+    min-height:
+        50px !important;
+
+    padding:
+        0 21px !important;
+
+    border-radius:
+        12px !important;
+
+    font-size:
+        0.74rem !important;
+
+    font-weight:
+        800 !important;
+}
+
+
+.hero-actions .btn-primary {
+    background:
+        #0152F4 !important;
+
+    color:
+        #FFFFFF !important;
+
+    box-shadow:
+        0 14px 32px
+        rgba(1,82,244,0.18) !important;
+}
+
+
+.hero-actions .btn-secondary {
+    background:
+        rgba(255,255,255,0.72) !important;
+
+    color:
+        #07142F !important;
+
+    border:
+        1px solid
+        rgba(0,32,150,0.12) !important;
+
+    backdrop-filter:
+        blur(10px) !important;
+
+    -webkit-backdrop-filter:
+        blur(10px) !important;
+}
+
+
+/* =========================================================
+   LARGE DESKTOP
+   ========================================================= */
+
+@media (min-width: 1200px) {
+
+    .hero-showcase-image img {
+        object-position:
+            73% center !important;
+
+        transform:
+            scale(1.07) !important;
+    }
+
+
+    .hero-background-word {
+        top:
+            11% !important;
+
+        left:
+            65% !important;
+    }
+
+
+    .hero-showcase-word {
+        top:
+            68% !important;
+
+        left:
+            77% !important;
+    }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1050px) {
+
+    .hero {
+        grid-template-columns:
+            1fr !important;
+
+        grid-template-rows:
+            auto auto !important;
+
+        align-content:
+            start !important;
+
+        min-height:
+            850px !important;
+
+        height:
+            auto !important;
+
+        padding:
+            140px 7% 75px !important;
+    }
+
+
+    .hero-intro {
+        grid-column:
+            1 !important;
+
+        grid-row:
+            1 !important;
+
+        width:
+            min(650px,100%) !important;
+
+        max-width:
+            650px !important;
+
+        transform:
+            none !important;
+    }
+
+
+    .hero-actions {
+        grid-column:
+            1 !important;
+
+        grid-row:
+            2 !important;
+
+        margin-top:
+            30px !important;
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            72% center !important;
+
+        transform:
+            scale(1.10) !important;
+    }
+
+
+    .hero-showcase-image::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(247,249,253,1) 0%,
+                rgba(247,249,253,0.985) 20%,
+                rgba(247,249,253,0.90) 35%,
+                rgba(247,249,253,0.60) 52%,
+                rgba(247,249,253,0.22) 69%,
+                rgba(247,249,253,0.03) 88%,
+                rgba(247,249,253,0) 100%
+            ) !important;
+    }
+
+
+    .hero-background-word {
+        top:
+            27% !important;
+
+        left:
+            55% !important;
+
+        font-size:
+            14vw !important;
+    }
+
+
+    .hero-showcase-word {
+        top:
+            66% !important;
+
+        left:
+            69% !important;
+
+        font-size:
+            15vw !important;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        min-height:
+            100svh !important;
+
+        height:
+            100svh !important;
+
+        display:
+            block !important;
+
+        padding:
+            112px 5% 42px !important;
+    }
+
+
+    .hero-intro {
+        width:
+            100% !important;
+
+        max-width:
+            100% !important;
+
+        padding:
+            0 !important;
+
+        transform:
+            none !important;
+    }
+
+
+    .hero-intro .eyebrow {
+        margin-bottom:
+            17px !important;
+
+        font-size:
+            0.58rem !important;
+    }
+
+
+    .hero-intro h1 {
+        max-width:
+            100% !important;
+
+        font-size:
+            clamp(3rem, 13.5vw, 4.7rem) !important;
+
+        line-height:
+            0.90 !important;
+
+        letter-spacing:
+            -0.073em !important;
+    }
+
+
+    .hero-intro p {
+        max-width:
+            100% !important;
+
+        margin-top:
+            20px !important;
+
+        font-size:
+            0.89rem !important;
+
+        line-height:
+            1.66 !important;
+    }
+
+
+    .hero-actions {
+        width:
+            100% !important;
+
+        display:
+            grid !important;
+
+        grid-template-columns:
+            1fr !important;
+
+        gap:
+            9px !important;
+
+        margin-top:
+            23px !important;
+    }
+
+
+    .hero-actions .btn {
+        width:
+            100% !important;
+
+        min-width:
+            0 !important;
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            73% center !important;
+
+        transform:
+            scale(1.18) !important;
+
+        opacity:
+            0.70 !important;
+    }
+
+
+    .hero-showcase-image::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(247,249,253,1) 0%,
+                rgba(247,249,253,1) 20%,
+                rgba(247,249,253,0.98) 33%,
+                rgba(247,249,253,0.88) 46%,
+                rgba(247,249,253,0.58) 60%,
+                rgba(247,249,253,0.20) 76%,
+                rgba(247,249,253,0.02) 91%,
+                rgba(247,249,253,0) 100%
+            ) !important;
+    }
+
+
+    .hero-background-word {
+        top:
+            31% !important;
+
+        left:
+            55% !important;
+
+        font-size:
+            20vw !important;
+
+        color:
+            rgba(255,255,255,0.055) !important;
+    }
+
+
+    .hero-showcase-word {
+        top:
+            69% !important;
+
+        left:
+            71% !important;
+
+        font-size:
+            21vw !important;
+
+        color:
+            rgba(255,255,255,0.085) !important;
+    }
+
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .hero-actions .btn {
+        transition:
+            none !important;
+    }
+
+}
+
 
     </style>
     
