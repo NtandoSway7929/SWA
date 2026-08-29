@@ -10416,204 +10416,360 @@ nav.scrolled {
 }
 
     /* =========================================================
-   SWAYPHICS — HERO IMAGE + DEPTH TYPOGRAPHY
+   SWAYPHICS — EDITORIAL HERO
    ========================================================= */
 
 .hero {
-    position: relative !important;
-    overflow: hidden !important;
-    isolation: isolate !important;
-    background: #080D18 !important;
+    position: relative;
+
+    min-height: 92vh;
+
+    padding:
+        145px 6vw 95px;
+
+    overflow: hidden;
+
+    isolation: isolate;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(320px, 0.78fr)
+        minmax(520px, 1.22fr);
+
+    align-items: center;
+
+    gap: 3vw;
+
+    background:
+        linear-gradient(
+            135deg,
+            #FFFFFF 0%,
+            #F8FBFF 58%,
+            #EEF6FF 100%
+        );
 }
 
 
 /* =========================================================
-   HERO IMAGE
+   LARGE BACKGROUND WORD
    ========================================================= */
 
-.hero-visual {
-    position: absolute !important;
-    inset: 0 !important;
+.hero-background-word {
+    position: absolute;
 
-    width: 100% !important;
-    height: 100% !important;
+    z-index: 0;
 
-    z-index: 2 !important;
+    left: 50%;
 
-    overflow: hidden !important;
-
-    pointer-events: none !important;
-}
-
-
-.hero-visual img {
-    position: absolute !important;
-    inset: 0 !important;
-
-    width: 100% !important;
-    height: 100% !important;
-
-    display: block !important;
-
-    object-fit: cover !important;
-
-    object-position: center center !important;
-
-    max-width: none !important;
-
-    border-radius: 0 !important;
-
-    box-shadow: none !important;
-
-    transform: none !important;
-}
-
-
-/* =========================================================
-   DEPTH TYPOGRAPHY
-   Sits BEHIND the image, so the chess piece and rocks
-   naturally obscure parts of the letters.
-   ========================================================= */
-
-.hero-depth-text {
-    position: absolute !important;
-
-    z-index: 1 !important;
-
-    right: -3vw;
     top: 50%;
 
-    width: 72vw;
-
     transform:
-        translateY(-50%);
+        translate(-24%, -50%);
 
     color:
-        rgba(255,255,255,0.075);
+        rgba(0,32,150,0.045);
 
     font-size:
-        clamp(4rem, 8.5vw, 9rem);
+        clamp(8rem, 18vw, 19rem);
 
     font-weight:
         900;
 
     line-height:
-        0.82;
+        0.8;
 
     letter-spacing:
-        -0.075em;
-
-    text-transform:
-        uppercase;
+        -0.09em;
 
     white-space:
         nowrap;
 
-    user-select:
-        none;
-
     pointer-events:
         none;
 
-    mix-blend-mode:
-        screen;
+    user-select:
+        none;
 }
 
 
-.hero-depth-text span {
-    display:
-        block;
+/* =========================================================
+   LEFT CONTENT
+   ========================================================= */
 
-    margin-left:
-        5vw;
+.hero-intro {
+    position: relative;
+
+    z-index: 5;
+
+    max-width:
+        560px;
+
+    align-self:
+        center;
+}
+
+
+.hero-intro .eyebrow {
+    margin-bottom:
+        22px;
+}
+
+
+.hero-intro h1 {
+    margin:
+        0;
 
     color:
-        rgba(1,82,244,0.16);
+        var(--text-dark);
+
+    font-size:
+        clamp(3.6rem, 6vw, 6.8rem);
+
+    line-height:
+        0.91;
+
+    letter-spacing:
+        -0.07em;
+}
+
+
+.hero-intro h1 span {
+    color:
+        var(--sway-accent);
+}
+
+
+.hero-intro p {
+    max-width:
+        510px;
+
+    margin-top:
+        28px;
+
+    color:
+        var(--text-muted);
+
+    font-size:
+        1rem;
+
+    line-height:
+        1.75;
 }
 
 
 /* =========================================================
-   ATMOSPHERIC OVERLAY
+   SHOWCASE
    ========================================================= */
 
-.hero::before {
-    content: "";
+.hero-showcase {
+    position: relative;
 
-    position: absolute;
+    z-index: 3;
 
-    inset: 0;
+    width: 100%;
 
-    z-index: 3 !important;
+    align-self:
+        center;
 
-    pointer-events: none;
+    transform:
+        translateY(2vh);
+}
+
+
+.hero-showcase-image {
+    position: relative;
+
+    width: 100%;
+
+    aspect-ratio:
+        1.5 / 1;
+
+    overflow:
+        hidden;
+
+    border:
+        1px solid rgba(255,255,255,0.72);
+
+    border-radius:
+        30px;
 
     background:
-        linear-gradient(
-            90deg,
-            rgba(255,255,255,0.99) 0%,
-            rgba(255,255,255,0.96) 18%,
-            rgba(255,255,255,0.82) 32%,
-            rgba(255,255,255,0.48) 45%,
-            rgba(255,255,255,0.12) 64%,
-            rgba(255,255,255,0.00) 82%
-        );
+        #0A0E17;
+
+    box-shadow:
+        0 35px 85px
+        rgba(0,32,150,0.16);
 }
 
 
-/* =========================================================
-   BLUE CINEMATIC TINT
-   ========================================================= */
-
-.hero::after {
+.hero-showcase-image::after {
     content: "";
 
     position: absolute;
 
     inset: 0;
-
-    z-index: 4 !important;
-
-    pointer-events: none;
 
     background:
         linear-gradient(
             135deg,
-            rgba(0,32,150,0.10) 0%,
-            rgba(1,82,244,0.04) 38%,
-            rgba(0,0,0,0.16) 100%
+            rgba(0,32,150,0.08),
+            rgba(1,82,244,0.02) 45%,
+            rgba(0,0,0,0.18)
         );
+
+    pointer-events:
+        none;
+
+    z-index:
+        2;
+}
+
+
+.hero-showcase-image img {
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: cover;
+
+    object-position:
+        center center;
+
+    transform:
+        scale(1.015);
 }
 
 
 /* =========================================================
-   HERO CONTENT
+   IMAGE TYPOGRAPHY
    ========================================================= */
 
-.hero-content {
-    position: relative !important;
+.hero-showcase-word {
+    position: absolute;
 
-    z-index: 5 !important;
+    left: 4%;
 
-    max-width: 700px !important;
+    top: 3%;
+
+    z-index: 3;
+
+    color:
+        rgba(255,255,255,0.25);
+
+    font-size:
+        clamp(5rem, 11vw, 11rem);
+
+    font-weight:
+        900;
+
+    line-height:
+        0.8;
+
+    letter-spacing:
+        -0.08em;
+
+    text-transform:
+        uppercase;
+
+    pointer-events:
+        none;
+
+    user-select:
+        none;
 }
 
 
-/* Keep existing text treatment but increase depth */
+/* =========================================================
+   CARD FOOTER
+   ========================================================= */
 
-.hero h1 {
-    position: relative;
+.hero-showcase-footer {
+    display: flex;
 
-    text-shadow:
-        0 4px 20px rgba(255,255,255,0.72),
-        0 10px 40px rgba(0,32,150,0.10);
+    align-items: center;
+
+    gap: 16px;
+
+    width:
+        100%;
+
+    margin-top:
+        16px;
+
+    color:
+        #6B7485;
+
+    font-size:
+        0.68rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.12em;
+
+    text-transform:
+        uppercase;
 }
 
 
-.hero h1 span {
+.hero-showcase-line {
+    flex:
+        1;
+
+    height:
+        1px;
+
+    background:
+        rgba(0,32,150,0.12);
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.hero-actions {
     position: relative;
 
-    text-shadow:
-        0 4px 24px rgba(1,82,244,0.16);
+    z-index: 5;
+
+    grid-column:
+        1;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin-top:
+        -1vh;
+}
+
+
+.hero-actions .btn {
+    min-width:
+        175px;
+
+    text-align:
+        center;
+}
+
+
+/* =========================================================
+   REMOVE OLD HERO ART
+   ========================================================= */
+
+.hero-fist {
+    display:
+        none !important;
 }
 
 
@@ -10621,41 +10777,17 @@ nav.scrolled {
    DESKTOP
    ========================================================= */
 
-@media (min-width: 901px) {
+@media (min-width: 1101px) {
 
-    .hero {
-        min-height:
-            92vh !important;
-
-        height:
-            92vh !important;
-
-        padding:
-            0 !important;
+    .hero-showcase {
+        padding-right:
+            1.5vw;
     }
 
 
-    .hero-visual img {
-        object-position:
-            center center !important;
-
+    .hero-showcase-image {
         transform:
-            scale(1.015) !important;
-    }
-
-
-    .hero-depth-text {
-        right:
-            -6vw;
-
-        width:
-            72vw;
-    }
-
-
-    .hero-content {
-        padding:
-            145px 0 190px 7% !important;
+            rotate(0deg);
     }
 
 }
@@ -10665,44 +10797,59 @@ nav.scrolled {
    TABLET
    ========================================================= */
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
 
     .hero {
+        grid-template-columns:
+            1fr;
+
         min-height:
-            850px !important;
+            auto;
 
-        height:
-            auto !important;
+        padding:
+            130px 6vw 90px;
     }
 
 
-    .hero-visual img {
-        object-position:
-            64% center !important;
-
-        transform:
-            scale(1.04) !important;
-    }
-
-
-    .hero-depth-text {
-        right:
-            -22vw;
+    .hero-background-word {
+        left:
+            50%;
 
         top:
-            54%;
+            53%;
 
-        width:
-            105vw;
+        transform:
+            translate(-50%, -50%);
 
         font-size:
-            clamp(3.4rem, 10vw, 6rem);
+            15vw;
     }
 
 
-    .hero-content {
-        padding:
-            120px 6% 190px !important;
+    .hero-intro {
+        max-width:
+            760px;
+    }
+
+
+    .hero-showcase {
+        width:
+            min(900px, 100%);
+
+        margin:
+            12px auto 0;
+
+        transform:
+            none;
+    }
+
+
+    .hero-actions {
+        grid-column:
+            auto;
+
+        margin-top:
+            10px;
     }
 
 }
@@ -10716,90 +10863,163 @@ nav.scrolled {
 
     .hero {
         min-height:
-            100svh !important;
+            auto;
 
         padding:
-            0 !important;
+            112px 18px 64px;
+
+        display:
+            flex;
+
+        flex-direction:
+            column;
+
+        align-items:
+            stretch;
+
+        gap:
+            0;
 
         background:
-            #080D18 !important;
+            linear-gradient(
+                145deg,
+                #FFFFFF 0%,
+                #F8FBFF 62%,
+                #EEF6FF 100%
+            );
     }
 
 
-    .hero-visual img {
-        object-position:
-            67% center !important;
-
-        transform:
-            scale(1.08) !important;
-    }
-
-
-    .hero-depth-text {
-        right:
-            -52vw;
+    .hero-background-word {
+        left:
+            50%;
 
         top:
-            57%;
+            52%;
 
-        width:
-            150vw;
+        transform:
+            translate(-50%, -50%);
 
         font-size:
-            clamp(3rem, 14vw, 5.5rem);
+            23vw;
+
+        color:
+            rgba(0,32,150,0.035);
+    }
+
+
+    .hero-intro {
+        width:
+            100%;
+
+        max-width:
+            none;
+    }
+
+
+    .hero-intro h1 {
+        font-size:
+            clamp(3rem, 14vw, 4.9rem);
 
         line-height:
-            0.84;
+            0.92;
+    }
+
+
+    .hero-intro p {
+        margin-top:
+            22px;
+
+        max-width:
+            100%;
+
+        font-size:
+            0.93rem;
+
+        line-height:
+            1.68;
+    }
+
+
+    .hero-showcase {
+        width:
+            100%;
+
+        margin-top:
+            34px;
+    }
+
+
+    .hero-showcase-image {
+        aspect-ratio:
+            0.96 / 1;
+
+        border-radius:
+            24px;
+
+        box-shadow:
+            0 25px 55px
+            rgba(0,32,150,0.14);
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            67% center;
+
+        transform:
+            scale(1.08);
+    }
+
+
+    .hero-showcase-word {
+        left:
+            5%;
+
+        top:
+            5%;
+
+        font-size:
+            22vw;
 
         color:
-            rgba(255,255,255,0.055);
+            rgba(255,255,255,0.19);
     }
 
 
-    .hero-depth-text span {
-        margin-left:
-            7vw;
+    .hero-showcase-footer {
+        margin-top:
+            12px;
 
-        color:
-            rgba(1,82,244,0.12);
+        font-size:
+            0.61rem;
     }
 
 
-    .hero::before {
-        background:
-            linear-gradient(
-                180deg,
-                rgba(255,255,255,0.99) 0%,
-                rgba(255,255,255,0.97) 26%,
-                rgba(255,255,255,0.84) 43%,
-                rgba(255,255,255,0.46) 61%,
-                rgba(255,255,255,0.12) 80%,
-                rgba(255,255,255,0.00) 100%
-            ) !important;
+    .hero-actions {
+        width:
+            100%;
+
+        display:
+            grid;
+
+        grid-template-columns:
+            1fr;
+
+        gap:
+            10px;
+
+        margin-top:
+            24px;
     }
 
 
-    .hero::after {
-        background:
-            linear-gradient(
-                180deg,
-                rgba(0,32,150,0.04) 0%,
-                rgba(1,82,244,0.02) 48%,
-                rgba(0,0,0,0.20) 100%
-            ) !important;
-    }
+    .hero-actions .btn {
+        width:
+            100%;
 
-
-    .hero-content {
-        padding:
-            125px 6% 160px !important;
-    }
-
-
-    .hero h1 {
-        text-shadow:
-            0 3px 18px rgba(255,255,255,0.82),
-            0 8px 30px rgba(0,32,150,0.08);
+        min-width:
+            0;
     }
 
 }
@@ -10875,19 +11095,12 @@ nav.scrolled {
       <!-- HERO -->
 <section class="hero">
 
-    <div class="hero-depth-text" aria-hidden="true">
-        BUILD A BRAND
-        <span>WORTH REMEMBERING</span>
+    <div class="hero-background-word" aria-hidden="true">
+        SWAYPHICS
     </div>
 
-    <div class="hero-visual" aria-hidden="true">
-        <img
-            src="hero-image.webp"
-            alt=""
-        >
-    </div>
 
-    <div class="hero-content">
+    <div class="hero-intro">
 
         <div class="eyebrow">
             Creative & Design Lab
@@ -10904,17 +11117,57 @@ nav.scrolled {
             to stand out and move business forward.
         </p>
 
-        <div class="buttons">
+    </div>
 
-            <a href="#contact" class="btn btn-primary">
-                Build My Brand →
-            </a>
 
-            <a href="#services" class="btn btn-secondary">
-                Explore Services
-            </a>
+    <div class="hero-showcase">
+
+        <div class="hero-showcase-image">
+
+            <img
+                src="hero-image.webp"
+                alt="Swayphics creative visual"
+            >
+
+            <div class="hero-showcase-word" aria-hidden="true">
+                BRAND
+            </div>
 
         </div>
+
+
+        <div class="hero-showcase-footer">
+
+            <span>
+                01
+            </span>
+
+            <div class="hero-showcase-line"></div>
+
+            <span>
+                01 / 01
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="hero-actions">
+
+        <a
+            href="#contact"
+            class="btn btn-primary"
+        >
+            Build My Brand →
+        </a>
+
+        <a
+            href="#services"
+            class="btn btn-secondary"
+        >
+            Explore Services
+        </a>
 
     </div>
 
