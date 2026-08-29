@@ -11196,6 +11196,822 @@ nav.scrolled {
     }
 
 }
+
+   /* =========================================================
+   SWAYPHICS — PREMIUM HERO OVERRIDE
+   ========================================================= */
+
+.hero {
+    position: relative !important;
+
+    min-height: 94vh !important;
+    height: 94vh !important;
+
+    overflow: hidden !important;
+
+    background:
+        #F8FAFE !important;
+
+    isolation: isolate !important;
+}
+
+
+/* =========================================================
+   PREMIUM ATMOSPHERE
+   ========================================================= */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 2;
+
+    pointer-events: none;
+
+    background:
+        radial-gradient(
+            circle at 76% 46%,
+            rgba(1,82,244,0.13) 0%,
+            rgba(1,82,244,0.055) 24%,
+            rgba(1,82,244,0) 52%
+        );
+
+    opacity: 0.95;
+}
+
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 8;
+
+    pointer-events: none;
+
+    opacity: 0.055;
+
+    background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
+
+    mix-blend-mode:
+        multiply;
+}
+
+
+/* =========================================================
+   HERO IMAGE — PREMIUM DUOTONE
+   ========================================================= */
+
+.hero-showcase {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    z-index: 0 !important;
+
+    margin: 0 !important;
+
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+.hero-showcase-image {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    overflow: hidden !important;
+
+    border: 0 !important;
+
+    border-radius: 0 !important;
+
+    background:
+        #08142E !important;
+
+    box-shadow: none !important;
+}
+
+
+.hero-showcase-image img {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    max-width: none !important;
+
+    object-fit: cover !important;
+
+    object-position:
+        69% center !important;
+
+    transform:
+        scale(1.06) !important;
+
+    opacity:
+        0.73 !important;
+
+    filter:
+        grayscale(100%)
+        contrast(1.14)
+        brightness(0.84)
+        saturate(0) !important;
+}
+
+
+/* =========================================================
+   DUOTONE BLUE INK
+   ========================================================= */
+
+.hero-showcase-image::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 2;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0,32,150,0.76) 0%,
+            rgba(1,82,244,0.36) 38%,
+            rgba(44,145,252,0.12) 61%,
+            rgba(4,12,29,0.72) 100%
+        );
+
+    mix-blend-mode:
+        color;
+
+    opacity:
+        0.94;
+}
+
+
+/* =========================================================
+   READABILITY + CINEMATIC FALL-OFF
+   ========================================================= */
+
+.hero-showcase-image::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 3;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(248,250,254,1) 0%,
+            rgba(248,250,254,0.985) 15%,
+            rgba(248,250,254,0.92) 27%,
+            rgba(248,250,254,0.68) 39%,
+            rgba(248,250,254,0.30) 51%,
+            rgba(248,250,254,0.07) 64%,
+            rgba(248,250,254,0) 78%
+        ),
+        linear-gradient(
+            180deg,
+            rgba(0,0,0,0) 0%,
+            rgba(0,0,0,0.02) 52%,
+            rgba(0,0,0,0.28) 100%
+        );
+}
+
+
+/* =========================================================
+   OVERSIZED EDITORIAL SWAYPHICS
+   ========================================================= */
+
+.hero-background-word {
+    position: absolute !important;
+
+    z-index: 1 !important;
+
+    top: 17% !important;
+
+    left: 64% !important;
+
+    transform:
+        translateX(-50%) !important;
+
+    margin: 0 !important;
+
+    color:
+        rgba(255,255,255,0.085) !important;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif !important;
+
+    font-size:
+        clamp(8rem, 13vw, 16rem) !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        0.78 !important;
+
+    letter-spacing:
+        -0.10em !important;
+
+    white-space:
+        nowrap !important;
+
+    pointer-events:
+        none !important;
+
+    user-select:
+        none !important;
+}
+
+
+/* =========================================================
+   SECONDARY BRAND WORD
+   ========================================================= */
+
+.hero-showcase-word {
+    position: absolute !important;
+
+    z-index: 4 !important;
+
+    top: 63% !important;
+
+    left: 74% !important;
+
+    transform:
+        translate(-50%, -50%) !important;
+
+    margin: 0 !important;
+
+    color:
+        rgba(255,255,255,0.095) !important;
+
+    font-size:
+        clamp(7rem, 11vw, 14rem) !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        0.78 !important;
+
+    letter-spacing:
+        -0.095em !important;
+
+    white-space:
+        nowrap !important;
+
+    pointer-events:
+        none !important;
+
+    user-select:
+        none !important;
+}
+
+
+/* =========================================================
+   MAIN HERO CONTENT
+   ========================================================= */
+
+.hero-intro {
+    position: relative !important;
+
+    z-index: 20 !important;
+
+    width:
+        min(670px, 50vw) !important;
+
+    max-width:
+        670px !important;
+
+    margin: 0 !important;
+
+    padding: 0 !important;
+
+    transform:
+        translateY(-4vh) !important;
+}
+
+
+/* =========================================================
+   EYEBROW
+   ========================================================= */
+
+.hero-intro .eyebrow {
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        9px !important;
+
+    margin-bottom:
+        22px !important;
+
+    padding:
+        8px 12px !important;
+
+    border:
+        1px solid
+        rgba(0,32,150,0.09) !important;
+
+    border-radius:
+        999px !important;
+
+    background:
+        rgba(255,255,255,0.72) !important;
+
+    color:
+        #002096 !important;
+
+    font-size:
+        0.63rem !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        0.15em !important;
+
+    text-transform:
+        uppercase !important;
+
+    backdrop-filter:
+        blur(12px) !important;
+
+    -webkit-backdrop-filter:
+        blur(12px) !important;
+}
+
+
+.hero-intro .eyebrow::before {
+    content: "";
+
+    width:
+        6px;
+
+    height:
+        6px;
+
+    border-radius:
+        50%;
+
+    background:
+        #0152F4;
+
+    box-shadow:
+        0 0 0 4px
+        rgba(1,82,244,0.10);
+}
+
+
+/* =========================================================
+   HEADLINE
+   ========================================================= */
+
+.hero-intro h1 {
+    margin:
+        0 !important;
+
+    color:
+        #07142F !important;
+
+    font-size:
+        clamp(4rem, 6.3vw, 7rem) !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        0.88 !important;
+
+    letter-spacing:
+        -0.078em !important;
+
+    text-wrap:
+        balance;
+
+    text-shadow:
+        0 1px 0 rgba(255,255,255,0.9);
+}
+
+
+.hero-intro h1 span {
+    color:
+        #0152F4 !important;
+}
+
+
+/* =========================================================
+   SUPPORTING COPY
+   ========================================================= */
+
+.hero-intro p {
+    max-width:
+        535px !important;
+
+    margin-top:
+        28px !important;
+
+    color:
+        #273853 !important;
+
+    font-size:
+        0.98rem !important;
+
+    line-height:
+        1.78 !important;
+
+    letter-spacing:
+        -0.01em !important;
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.hero-actions {
+    position:
+        relative !important;
+
+    z-index:
+        20 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        10px !important;
+
+    margin-top:
+        30px !important;
+}
+
+
+.hero-actions .btn {
+    min-height:
+        48px !important;
+
+    padding:
+        0 20px !important;
+
+    border-radius:
+        12px !important;
+
+    font-size:
+        0.74rem !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        0.01em !important;
+}
+
+
+.hero-actions .btn-primary {
+    box-shadow:
+        0 14px 35px
+        rgba(1,82,244,0.20) !important;
+}
+
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (min-width: 1200px) {
+
+    .hero-intro {
+        transform:
+            translateY(-4vh) !important;
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            70% center !important;
+
+        transform:
+            scale(1.07) !important;
+    }
+
+
+    .hero-background-word {
+        top:
+            15% !important;
+
+        left:
+            63% !important;
+    }
+
+
+    .hero-showcase-word {
+        top:
+            64% !important;
+
+        left:
+            75% !important;
+    }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .hero {
+        min-height:
+            850px !important;
+
+        height:
+            850px !important;
+
+        padding:
+            0 6% !important;
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            71% center !important;
+
+        transform:
+            scale(1.10) !important;
+    }
+
+
+    .hero-showcase-image::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(248,250,254,1) 0%,
+                rgba(248,250,254,0.99) 20%,
+                rgba(248,250,254,0.94) 35%,
+                rgba(248,250,254,0.66) 51%,
+                rgba(248,250,254,0.24) 69%,
+                rgba(248,250,254,0.04) 84%,
+                rgba(248,250,254,0) 100%
+            );
+    }
+
+
+    .hero-intro {
+        width:
+            100% !important;
+
+        max-width:
+            720px !important;
+
+        padding-top:
+            128px !important;
+
+        transform:
+            none !important;
+    }
+
+
+    .hero-intro h1 {
+        font-size:
+            clamp(3.5rem, 9vw, 5.6rem) !important;
+    }
+
+
+    .hero-intro p {
+        max-width:
+            670px !important;
+    }
+
+
+    .hero-background-word {
+        top:
+            29% !important;
+
+        left:
+            55% !important;
+
+        font-size:
+            14vw !important;
+    }
+
+
+    .hero-showcase-word {
+        left:
+            69% !important;
+
+        top:
+            65% !important;
+
+        font-size:
+            15vw !important;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        min-height:
+            100svh !important;
+
+        height:
+            100svh !important;
+
+        padding:
+            0 5% !important;
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            72% center !important;
+
+        transform:
+            scale(1.18) !important;
+
+        opacity:
+            0.72 !important;
+    }
+
+
+    .hero-showcase-image::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(248,250,254,1) 0%,
+                rgba(248,250,254,1) 22%,
+                rgba(248,250,254,0.97) 34%,
+                rgba(248,250,254,0.88) 45%,
+                rgba(248,250,254,0.61) 58%,
+                rgba(248,250,254,0.23) 74%,
+                rgba(248,250,254,0.03) 91%,
+                rgba(248,250,254,0) 100%
+            );
+    }
+
+
+    .hero-intro {
+        width:
+            100% !important;
+
+        max-width:
+            100% !important;
+
+        padding-top:
+            112px !important;
+
+        transform:
+            none !important;
+    }
+
+
+    .hero-intro .eyebrow {
+        margin-bottom:
+            17px !important;
+
+        font-size:
+            0.58rem !important;
+    }
+
+
+    .hero-intro h1 {
+        font-size:
+            clamp(3.05rem, 14vw, 4.8rem) !important;
+
+        line-height:
+            0.91 !important;
+
+        letter-spacing:
+            -0.073em !important;
+    }
+
+
+    .hero-intro p {
+        max-width:
+            100% !important;
+
+        margin-top:
+            20px !important;
+
+        color:
+            #21334F !important;
+
+        font-size:
+            0.89rem !important;
+
+        line-height:
+            1.67 !important;
+    }
+
+
+    .hero-actions {
+        width:
+            100% !important;
+
+        display:
+            grid !important;
+
+        grid-template-columns:
+            1fr !important;
+
+        gap:
+            9px !important;
+
+        margin-top:
+            23px !important;
+    }
+
+
+    .hero-actions .btn {
+        width:
+            100% !important;
+
+        min-width:
+            0 !important;
+    }
+
+
+    .hero-background-word {
+        top:
+            33% !important;
+
+        left:
+            54% !important;
+
+        font-size:
+            20vw !important;
+
+        color:
+            rgba(255,255,255,0.055) !important;
+    }
+
+
+    .hero-showcase-word {
+        left:
+            71% !important;
+
+        top:
+            67% !important;
+
+        font-size:
+            21vw !important;
+
+        color:
+            rgba(255,255,255,0.085) !important;
+    }
+
+}
+
+
+/* =========================================================
+   REMOVE OLD ART ELEMENT
+   ========================================================= */
+
+.hero-fist {
+    display:
+        none !important;
+} 
     
 </style>
     
