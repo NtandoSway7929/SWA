@@ -10416,7 +10416,7 @@ nav.scrolled {
 }
 
    /* =========================================================
-   SWAYPHICS — FULL-BLEED HERO
+   SWAYPHICS — FULL-BLEED EDITORIAL HERO
    ========================================================= */
 
 .hero {
@@ -10439,7 +10439,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   FULL HERO IMAGE
+   FULL-BLEED HERO IMAGE
    ========================================================= */
 
 .hero-showcase {
@@ -10453,7 +10453,6 @@ nav.scrolled {
     height: 100% !important;
 
     margin: 0 !important;
-
     padding: 0 !important;
 
     transform: none !important;
@@ -10473,7 +10472,6 @@ nav.scrolled {
     overflow: hidden !important;
 
     border: 0 !important;
-
     border-radius: 0 !important;
 
     background: #080D18 !important;
@@ -10492,22 +10490,26 @@ nav.scrolled {
     width: 100% !important;
     height: 100% !important;
 
-    display: block !important;
-
     max-width: none !important;
+
+    display: block !important;
 
     object-fit: cover !important;
 
-    object-position: center center !important;
+    object-position: 68% center !important;
 
-    transform: scale(1.015) !important;
+    transform: scale(1.035) !important;
 
     border-radius: 0 !important;
+
+    user-select: none !important;
+
+    pointer-events: none !important;
 }
 
 
 /* =========================================================
-   REMOVE CARD-ONLY ELEMENTS
+   HIDE CARD-ONLY FOOTER
    ========================================================= */
 
 .hero-showcase-footer {
@@ -10516,7 +10518,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   CINEMATIC READABILITY
+   IMAGE READABILITY
    ========================================================= */
 
 .hero-showcase-image::before {
@@ -10533,12 +10535,13 @@ nav.scrolled {
     background:
         linear-gradient(
             90deg,
-            rgba(255,255,255,0.98) 0%,
-            rgba(255,255,255,0.94) 18%,
-            rgba(255,255,255,0.78) 32%,
-            rgba(255,255,255,0.42) 45%,
-            rgba(255,255,255,0.10) 60%,
-            rgba(255,255,255,0) 76%
+            rgba(255,255,255,0.99) 0%,
+            rgba(255,255,255,0.96) 18%,
+            rgba(255,255,255,0.86) 30%,
+            rgba(255,255,255,0.58) 42%,
+            rgba(255,255,255,0.24) 53%,
+            rgba(255,255,255,0.06) 67%,
+            rgba(255,255,255,0) 100%
         );
 }
 
@@ -10557,15 +10560,15 @@ nav.scrolled {
     background:
         linear-gradient(
             180deg,
-            rgba(0,0,0,0.04) 0%,
+            rgba(0,0,0,0.02) 0%,
             rgba(0,0,0,0) 48%,
-            rgba(0,0,0,0.22) 100%
+            rgba(0,0,0,0.24) 100%
         );
 }
 
 
 /* =========================================================
-   LARGE TYPOGRAPHIC LAYER
+   BACKGROUND SWAYPHICS WORD
    ========================================================= */
 
 .hero-background-word {
@@ -10573,29 +10576,29 @@ nav.scrolled {
 
     z-index: 1 !important;
 
-    top: 50% !important;
+    top: 23% !important;
 
-    left: 48% !important;
+    left: 56% !important;
 
     transform:
-        translate(-50%, -50%) !important;
+        translateX(-50%) !important;
 
     margin: 0 !important;
 
     color:
-        rgba(255,255,255,0.115) !important;
+        rgba(255,255,255,0.09) !important;
 
     font-size:
-        clamp(8rem, 16vw, 18rem) !important;
+        clamp(7rem, 13vw, 15rem) !important;
 
     font-weight:
         900 !important;
 
     line-height:
-        0.78 !important;
+        0.82 !important;
 
     letter-spacing:
-        -0.095em !important;
+        -0.10em !important;
 
     white-space:
         nowrap !important;
@@ -10612,15 +10615,15 @@ nav.scrolled {
 
 
 /* =========================================================
-   IMAGE-LEVEL BRAND WORD
+   BRAND WORD OVER IMAGE
    ========================================================= */
 
 .hero-showcase-word {
     position: absolute !important;
 
-    left: 50% !important;
+    left: 72% !important;
 
-    top: 50% !important;
+    top: 61% !important;
 
     z-index: 4 !important;
 
@@ -10630,16 +10633,16 @@ nav.scrolled {
     margin: 0 !important;
 
     color:
-        rgba(255,255,255,0.15) !important;
+        rgba(255,255,255,0.14) !important;
 
     font-size:
-        clamp(7rem, 14vw, 15rem) !important;
-
-    line-height:
-        0.8 !important;
+        clamp(6rem, 11vw, 13rem) !important;
 
     font-weight:
         900 !important;
+
+    line-height:
+        0.82 !important;
 
     letter-spacing:
         -0.09em !important;
@@ -10656,7 +10659,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   MAIN CONTENT
+   HERO CONTENT
    ========================================================= */
 
 .hero-intro {
@@ -10675,7 +10678,7 @@ nav.scrolled {
     padding: 0 !important;
 
     transform:
-        translateY(-2vh);
+        translateY(-3vh) !important;
 }
 
 
@@ -10701,7 +10704,8 @@ nav.scrolled {
         -0.075em !important;
 
     text-shadow:
-        0 3px 18px rgba(255,255,255,0.82) !important;
+        0 3px 18px rgba(255,255,255,0.86),
+        0 10px 35px rgba(255,255,255,0.55) !important;
 }
 
 
@@ -10719,7 +10723,7 @@ nav.scrolled {
         25px !important;
 
     color:
-        #273650 !important;
+        #263650 !important;
 
     font-size:
         1rem !important;
@@ -10728,12 +10732,12 @@ nav.scrolled {
         1.72 !important;
 
     text-shadow:
-        0 2px 12px rgba(255,255,255,0.95) !important;
+        0 2px 12px rgba(255,255,255,0.98) !important;
 }
 
 
 /* =========================================================
-   BUTTONS
+   HERO ACTIONS
    ========================================================= */
 
 .hero-actions {
@@ -10741,17 +10745,14 @@ nav.scrolled {
 
     z-index: 10 !important;
 
-    grid-column: auto !important;
-
     display: flex !important;
 
     align-items: center !important;
 
     gap: 12px !important;
 
-    width: auto !important;
-
-    margin-top: 28px !important;
+    margin-top:
+        28px !important;
 }
 
 
@@ -10762,35 +10763,48 @@ nav.scrolled {
 
 
 /* =========================================================
-   DESKTOP COMPOSITION
+   REMOVE OLD HERO VISUAL
    ========================================================= */
 
-@media (min-width: 901px) {
+.hero-fist {
+    display:
+        none !important;
+}
 
-    .hero-intro {
-        width:
-            53vw !important;
 
-        max-width:
-            690px !important;
+/* =========================================================
+   LARGE DESKTOP
+   ========================================================= */
 
-        transform:
-            translateY(-3vh);
+@media (min-width: 1200px) {
+
+    .hero {
+        padding-left:
+            7vw !important;
+
+        padding-right:
+            5vw !important;
     }
 
 
     .hero-showcase-image img {
         object-position:
-            68% center !important;
+            69% center !important;
 
         transform:
-            scale(1.035) !important;
+            scale(1.04) !important;
     }
 
 
     .hero-background-word {
         left:
-            63% !important;
+            62% !important;
+
+        top:
+            22% !important;
+
+        font-size:
+            clamp(8rem, 13.5vw, 16rem) !important;
     }
 
 
@@ -10799,7 +10813,10 @@ nav.scrolled {
             72% !important;
 
         top:
-            54% !important;
+            61% !important;
+
+        font-size:
+            clamp(7rem, 11.5vw, 14rem) !important;
     }
 
 }
@@ -10828,7 +10845,7 @@ nav.scrolled {
 
     .hero-showcase-image img {
         object-position:
-            69% center !important;
+            70% center !important;
 
         transform:
             scale(1.08) !important;
@@ -10840,9 +10857,10 @@ nav.scrolled {
             linear-gradient(
                 180deg,
                 rgba(255,255,255,0.99) 0%,
-                rgba(255,255,255,0.94) 24%,
-                rgba(255,255,255,0.65) 43%,
-                rgba(255,255,255,0.18) 65%,
+                rgba(255,255,255,0.96) 21%,
+                rgba(255,255,255,0.78) 38%,
+                rgba(255,255,255,0.42) 53%,
+                rgba(255,255,255,0.12) 68%,
                 rgba(255,255,255,0) 100%
             );
     }
@@ -10869,27 +10887,33 @@ nav.scrolled {
     }
 
 
-    .hero-background-word {
-        left:
-            50% !important;
+    .hero-intro p {
+        max-width:
+            670px !important;
+    }
 
+
+    .hero-background-word {
         top:
-            58% !important;
+            28% !important;
+
+        left:
+            55% !important;
 
         font-size:
-            16vw !important;
+            14vw !important;
     }
 
 
     .hero-showcase-word {
         left:
-            67% !important;
+            68% !important;
 
         top:
-            62% !important;
+            64% !important;
 
         font-size:
-            16vw !important;
+            15vw !important;
     }
 
 }
@@ -10918,10 +10942,10 @@ nav.scrolled {
 
     .hero-showcase-image img {
         object-position:
-            70% center !important;
+            72% center !important;
 
         transform:
-            scale(1.16) !important;
+            scale(1.17) !important;
     }
 
 
@@ -10930,12 +10954,13 @@ nav.scrolled {
             linear-gradient(
                 180deg,
                 rgba(255,255,255,1) 0%,
-                rgba(255,255,255,0.99) 21%,
-                rgba(255,255,255,0.94) 37%,
-                rgba(255,255,255,0.70) 51%,
-                rgba(255,255,255,0.26) 67%,
-                rgba(255,255,255,0) 86%
-            );
+                rgba(255,255,255,0.995) 20%,
+                rgba(255,255,255,0.96) 34%,
+                rgba(255,255,255,0.78) 49%,
+                rgba(255,255,255,0.38) 63%,
+                rgba(255,255,255,0.10) 78%,
+                rgba(255,255,255,0) 92%
+            ) !important;
     }
 
 
@@ -10944,8 +10969,8 @@ nav.scrolled {
             linear-gradient(
                 180deg,
                 rgba(0,0,0,0) 0%,
-                rgba(0,0,0,0.04) 45%,
-                rgba(0,0,0,0.28) 100%
+                rgba(0,0,0,0.02) 45%,
+                rgba(0,0,0,0.26) 100%
             );
     }
 
@@ -10955,13 +10980,19 @@ nav.scrolled {
             100% !important;
 
         max-width:
-            none !important;
+            100% !important;
 
         padding-top:
             112px !important;
 
         transform:
             none !important;
+    }
+
+
+    .hero-intro .eyebrow {
+        margin-bottom:
+            17px !important;
     }
 
 
@@ -11017,45 +11048,36 @@ nav.scrolled {
 
 
     .hero-background-word {
-        left:
-            50% !important;
-
         top:
-            64% !important;
+            31% !important;
+
+        left:
+            55% !important;
 
         font-size:
-            23vw !important;
+            20vw !important;
 
         color:
-            rgba(255,255,255,0.08) !important;
+            rgba(255,255,255,0.07) !important;
     }
 
 
     .hero-showcase-word {
         left:
-            72% !important;
+            70% !important;
 
         top:
             66% !important;
 
         font-size:
-            23vw !important;
+            21vw !important;
 
         color:
-            rgba(255,255,255,0.12) !important;
+            rgba(255,255,255,0.11) !important;
     }
 
 }
 
-
-/* =========================================================
-   REMOVE THE OLD HERO ART
-   ========================================================= */
-
-.hero-fist {
-    display:
-        none !important;
-}
     
 </style>
     
