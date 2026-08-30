@@ -11832,6 +11832,907 @@ nav.scrolled {
 
 }
 
+    /* =========================================================
+   SWAYPHICS — HERO POLISH PASS
+   Premium editorial refinement
+   ========================================================= */
+
+
+/* =========================================================
+   01 — HERO FRAME
+   ========================================================= */
+
+.hero {
+    min-height: 92vh !important;
+    height: 92vh !important;
+
+    padding:
+        126px
+        5.2vw
+        58px !important;
+
+    grid-template-columns:
+        minmax(0, 0.94fr)
+        minmax(0, 1.06fr) !important;
+
+    column-gap:
+        3vw !important;
+
+    align-content:
+        center !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/* =========================================================
+   02 — ARTWORK
+   ========================================================= */
+
+.hero-showcase {
+    inset:
+        0 !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+}
+
+
+.hero-showcase-image {
+    inset:
+        0 !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    border-radius:
+        0 !important;
+
+    background:
+        #06122b !important;
+}
+
+
+.hero-showcase-image img {
+    inset:
+        0 !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    object-fit:
+        cover !important;
+
+    object-position:
+        72% center !important;
+
+    transform:
+        scale(1.065) !important;
+
+    opacity:
+        0.78 !important;
+
+    filter:
+        grayscale(100%)
+        contrast(1.14)
+        brightness(0.84) !important;
+}
+
+
+/* =========================================================
+   03 — BLUE DUOTONE
+   ========================================================= */
+
+.hero-showcase-image::before {
+    content:
+        "" !important;
+
+    position:
+        absolute !important;
+
+    inset:
+        0 !important;
+
+    z-index:
+        2 !important;
+
+    pointer-events:
+        none !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0, 32, 150, 0.68) 0%,
+            rgba(1, 82, 244, 0.28) 38%,
+            rgba(44, 145, 252, 0.07) 62%,
+            rgba(3, 10, 25, 0.84) 100%
+        ) !important;
+
+    mix-blend-mode:
+        color !important;
+
+    opacity:
+        0.94 !important;
+}
+
+
+/* =========================================================
+   04 — CONTROLLED READABILITY FIELD
+   ========================================================= */
+
+.hero-showcase-image::after {
+    content:
+        "" !important;
+
+    position:
+        absolute !important;
+
+    inset:
+        0 !important;
+
+    z-index:
+        3 !important;
+
+    pointer-events:
+        none !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(247, 249, 253, 0.99) 0%,
+            rgba(247, 249, 253, 0.98) 13%,
+            rgba(247, 249, 253, 0.91) 27%,
+            rgba(247, 249, 253, 0.67) 39%,
+            rgba(247, 249, 253, 0.35) 49%,
+            rgba(247, 249, 253, 0.12) 59%,
+            rgba(247, 249, 253, 0) 73%
+        ) !important;
+}
+
+
+/* Remove competing atmosphere from older hero systems */
+
+.hero::before,
+.hero::after {
+    content:
+        none !important;
+}
+
+.hero-fist,
+.hero-showcase-footer {
+    display:
+        none !important;
+}
+
+
+/* =========================================================
+   05 — BACKGROUND "SWAYPHICS"
+   ========================================================= */
+
+.hero-background-word {
+    top:
+        7% !important;
+
+    left:
+        72% !important;
+
+    transform:
+        translateX(-50%) !important;
+
+    z-index:
+        1 !important;
+
+    color:
+        rgba(255, 255, 255, 0.045) !important;
+
+    font-size:
+        clamp(8rem, 12vw, 15rem) !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        0.76 !important;
+
+    letter-spacing:
+        -0.105em !important;
+
+    white-space:
+        nowrap !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+/* =========================================================
+   06 — HERO CONTENT
+   ========================================================= */
+
+.hero-intro {
+    position:
+        relative !important;
+
+    z-index:
+        10 !important;
+
+    grid-column:
+        1 !important;
+
+    grid-row:
+        1 / span 2 !important;
+
+    align-self:
+        center !important;
+
+    width:
+        min(620px, 100%) !important;
+
+    max-width:
+        620px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    transform:
+        translateY(-1.5vh) !important;
+
+    text-align:
+        left !important;
+}
+
+
+/* =========================================================
+   07 — EYEBROW
+   ========================================================= */
+
+.hero-intro .eyebrow {
+    margin:
+        0 0 20px !important;
+
+    padding:
+        8px 12px !important;
+
+    background:
+        rgba(255, 255, 255, 0.78) !important;
+
+    border:
+        1px solid rgba(0, 32, 150, 0.09) !important;
+
+    border-radius:
+        999px !important;
+
+    color:
+        #002096 !important;
+
+    font-size:
+        0.62rem !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        0.15em !important;
+
+    backdrop-filter:
+        blur(16px) !important;
+
+    -webkit-backdrop-filter:
+        blur(16px) !important;
+}
+
+
+/* =========================================================
+   08 — MAIN HEADLINE
+   ========================================================= */
+
+.hero-intro h1 {
+    max-width:
+        600px !important;
+
+    margin:
+        0 !important;
+
+    color:
+        #06132f !important;
+
+    font-size:
+        clamp(4rem, 5.9vw, 6.5rem) !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        0.88 !important;
+
+    letter-spacing:
+        -0.08em !important;
+
+    text-align:
+        left !important;
+
+    text-shadow:
+        0 2px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+
+.hero-intro h1 span {
+    color:
+        #0152f4 !important;
+}
+
+
+/* =========================================================
+   09 — SUPPORTING COPY
+   ========================================================= */
+
+.hero-intro p {
+    max-width:
+        500px !important;
+
+    margin:
+        27px 0 0 !important;
+
+    color:
+        #273851 !important;
+
+    font-size:
+        0.94rem !important;
+
+    line-height:
+        1.72 !important;
+
+    text-align:
+        left !important;
+
+    text-shadow:
+        0 1px 8px rgba(255, 255, 255, 0.62) !important;
+}
+
+
+/* =========================================================
+   10 — CTA
+   ========================================================= */
+
+.hero-actions {
+    position:
+        relative !important;
+
+    z-index:
+        10 !important;
+
+    grid-column:
+        1 !important;
+
+    grid-row:
+        2 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        10px !important;
+
+    width:
+        fit-content !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+.hero-actions .btn {
+    min-height:
+        50px !important;
+
+    padding:
+        0 21px !important;
+
+    border-radius:
+        12px !important;
+
+    font-size:
+        0.73rem !important;
+
+    font-weight:
+        800 !important;
+}
+
+
+.hero-actions .btn-primary {
+    background:
+        #0152f4 !important;
+
+    color:
+        #ffffff !important;
+
+    box-shadow:
+        0 14px 32px rgba(1, 82, 244, 0.20) !important;
+}
+
+
+.hero-actions .btn-secondary {
+    background:
+        rgba(255, 255, 255, 0.78) !important;
+
+    color:
+        #07142f !important;
+
+    border:
+        1px solid rgba(0, 32, 150, 0.12) !important;
+
+    backdrop-filter:
+        blur(12px) !important;
+
+    -webkit-backdrop-filter:
+        blur(12px) !important;
+}
+
+
+/* =========================================================
+   11 — BRAND DEPTH TYPOGRAPHY
+   ========================================================= */
+
+.hero-showcase-word {
+    position:
+        absolute !important;
+
+    z-index:
+        4 !important;
+
+    top:
+        67% !important;
+
+    left:
+        78% !important;
+
+    transform:
+        translate(-50%, -50%) !important;
+
+    margin:
+        0 !important;
+
+    color:
+        rgba(255, 255, 255, 0.10) !important;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif !important;
+
+    font-size:
+        clamp(7rem, 11vw, 13.5rem) !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        0.78 !important;
+
+    letter-spacing:
+        -0.105em !important;
+
+    white-space:
+        nowrap !important;
+
+    pointer-events:
+        none !important;
+
+    user-select:
+        none !important;
+}
+
+
+/* =========================================================
+   12 — CHESS / BRAND DEPTH EFFECT
+   Creates a stronger separation between artwork and text.
+   ========================================================= */
+
+.hero-showcase-word::after {
+    content:
+        "" !important;
+
+    position:
+        absolute !important;
+
+    top:
+        0 !important;
+
+    right:
+        28% !important;
+
+    width:
+        150px !important;
+
+    height:
+        100% !important;
+
+    transform:
+        skewX(-8deg) !important;
+
+    background:
+        rgba(0, 0, 0, 0.035) !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+/* =========================================================
+   13 — LARGE DESKTOP
+   ========================================================= */
+
+@media (min-width: 1200px) {
+
+    .hero {
+        padding-left:
+            5.2vw !important;
+
+        padding-right:
+            5.2vw !important;
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            73% center !important;
+
+        transform:
+            scale(1.07) !important;
+    }
+
+
+    .hero-background-word {
+        top:
+            5% !important;
+
+        left:
+            73% !important;
+
+        font-size:
+            clamp(9rem, 12vw, 15rem) !important;
+    }
+
+
+    .hero-showcase-word {
+        top:
+            68% !important;
+
+        left:
+            78% !important;
+    }
+
+}
+
+
+/* =========================================================
+   14 — TABLET
+   ========================================================= */
+
+@media (max-width: 1050px) {
+
+    .hero {
+        min-height:
+            850px !important;
+
+        height:
+            auto !important;
+
+        display:
+            grid !important;
+
+        grid-template-columns:
+            1fr !important;
+
+        grid-template-rows:
+            auto auto !important;
+
+        align-content:
+            start !important;
+
+        padding:
+            138px 7% 72px !important;
+    }
+
+
+    .hero-intro {
+        grid-column:
+            1 !important;
+
+        grid-row:
+            1 !important;
+
+        width:
+            min(650px, 100%) !important;
+
+        max-width:
+            650px !important;
+
+        transform:
+            none !important;
+    }
+
+
+    .hero-actions {
+        grid-column:
+            1 !important;
+
+        grid-row:
+            2 !important;
+
+        margin-top:
+            28px !important;
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            72% center !important;
+
+        transform:
+            scale(1.11) !important;
+    }
+
+
+    .hero-showcase-image::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(247,249,253,0.99) 0%,
+                rgba(247,249,253,0.98) 17%,
+                rgba(247,249,253,0.91) 31%,
+                rgba(247,249,253,0.68) 46%,
+                rgba(247,249,253,0.34) 63%,
+                rgba(247,249,253,0.10) 78%,
+                rgba(247,249,253,0) 100%
+            ) !important;
+    }
+
+
+    .hero-background-word {
+        top:
+            27% !important;
+
+        left:
+            58% !important;
+
+        font-size:
+            14vw !important;
+    }
+
+
+    .hero-showcase-word {
+        top:
+            66% !important;
+
+        left:
+            71% !important;
+
+        font-size:
+            15vw !important;
+    }
+
+}
+
+
+/* =========================================================
+   15 — MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero {
+        min-height:
+            100svh !important;
+
+        height:
+            100svh !important;
+
+        display:
+            block !important;
+
+        padding:
+            112px 5% 40px !important;
+    }
+
+
+    .hero-intro {
+        width:
+            100% !important;
+
+        max-width:
+            100% !important;
+
+        transform:
+            none !important;
+    }
+
+
+    .hero-intro .eyebrow {
+        margin-bottom:
+            17px !important;
+
+        font-size:
+            0.57rem !important;
+    }
+
+
+    .hero-intro h1 {
+        max-width:
+            100% !important;
+
+        font-size:
+            clamp(3rem, 13.2vw, 4.6rem) !important;
+
+        line-height:
+            0.90 !important;
+
+        letter-spacing:
+            -0.075em !important;
+    }
+
+
+    .hero-intro p {
+        max-width:
+            100% !important;
+
+        margin-top:
+            20px !important;
+
+        font-size:
+            0.87rem !important;
+
+        line-height:
+            1.65 !important;
+    }
+
+
+    .hero-actions {
+        width:
+            100% !important;
+
+        display:
+            grid !important;
+
+        grid-template-columns:
+            1fr !important;
+
+        gap:
+            9px !important;
+
+        margin-top:
+            22px !important;
+    }
+
+
+    .hero-actions .btn {
+        width:
+            100% !important;
+
+        min-width:
+            0 !important;
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            74% center !important;
+
+        transform:
+            scale(1.19) !important;
+
+        opacity:
+            0.70 !important;
+    }
+
+
+    .hero-showcase-image::after {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(247,249,253,1) 0%,
+                rgba(247,249,253,1) 18%,
+                rgba(247,249,253,0.98) 31%,
+                rgba(247,249,253,0.89) 45%,
+                rgba(247,249,253,0.58) 61%,
+                rgba(247,249,253,0.22) 77%,
+                rgba(247,249,253,0.02) 92%,
+                rgba(247,249,253,0) 100%
+            ) !important;
+    }
+
+
+    .hero-background-word {
+        top:
+            30% !important;
+
+        left:
+            57% !important;
+
+        font-size:
+            19vw !important;
+
+        color:
+            rgba(255,255,255,0.035) !important;
+    }
+
+
+    .hero-showcase-word {
+        top:
+            70% !important;
+
+        left:
+            72% !important;
+
+        font-size:
+            20vw !important;
+
+        color:
+            rgba(255,255,255,0.075) !important;
+    }
+
+}
+
+
+/* =========================================================
+   16 — SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 430px) {
+
+    .hero {
+        padding-top:
+            108px !important;
+    }
+
+
+    .hero-intro h1 {
+        font-size:
+            clamp(2.75rem, 13vw, 3.7rem) !important;
+    }
+
+
+    .hero-intro p {
+        font-size:
+            0.84rem !important;
+
+        line-height:
+            1.62 !important;
+    }
+
+
+    .hero-showcase-image img {
+        object-position:
+            75% center !important;
+
+        transform:
+            scale(1.23) !important;
+    }
+
+}
+
 
     </style>
     
