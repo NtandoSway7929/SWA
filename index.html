@@ -12733,6 +12733,180 @@ nav.scrolled {
 
 }
 
+    /* =========================================================
+   SWAYPHICS — HERO SPACING + SECTION LABEL OVERRIDE
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   1. RESTORE HERO EYEBROW TO THE SITE-WIDE STYLE
+   --------------------------------------------------------- */
+
+.hero-intro .eyebrow {
+    display: block !important;
+
+    width: auto !important;
+
+    margin:
+        0 0 15px !important;
+
+    padding: 0 !important;
+
+    border: none !important;
+
+    border-radius: 0 !important;
+
+    background: transparent !important;
+
+    color:
+        #0152F4 !important;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif !important;
+
+    font-size:
+        0.7rem !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        2.5px !important;
+
+    line-height:
+        1.2 !important;
+
+    text-transform:
+        uppercase !important;
+
+    backdrop-filter: none !important;
+
+    -webkit-backdrop-filter: none !important;
+}
+
+
+/* Remove the blue dot from the newer pill design */
+
+.hero-intro .eyebrow::before {
+    content: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   2. GIVE THE PARAGRAPH AND BUTTONS REAL BREATHING ROOM
+   --------------------------------------------------------- */
+
+.hero {
+    row-gap:
+        42px !important;
+}
+
+
+.hero-intro p {
+    margin-bottom:
+        0 !important;
+}
+
+
+/* Keep the buttons clearly separated from the paragraph */
+
+.hero-actions {
+    margin-top:
+        0 !important;
+
+    transform:
+        translateY(6px) !important;
+}
+
+
+/* ---------------------------------------------------------
+   3. DESKTOP REFINEMENT
+   --------------------------------------------------------- */
+
+@media (min-width: 901px) {
+
+    .hero {
+        row-gap:
+            48px !important;
+    }
+
+
+    .hero-intro p {
+        max-width:
+            515px !important;
+
+        line-height:
+            1.78 !important;
+    }
+
+
+    .hero-actions {
+        transform:
+            translateY(8px) !important;
+    }
+
+}
+
+
+/* ---------------------------------------------------------
+   4. TABLET
+   --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+
+    .hero {
+        row-gap:
+            34px !important;
+    }
+
+}
+
+
+/* ---------------------------------------------------------
+   5. MOBILE
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+    .hero {
+        row-gap:
+            28px !important;
+    }
+
+
+    .hero-intro .eyebrow {
+        margin-bottom:
+            16px !important;
+
+        font-size:
+            0.65rem !important;
+
+        letter-spacing:
+            2px !important;
+    }
+
+
+    .hero-intro p {
+        margin-bottom:
+            0 !important;
+
+        line-height:
+            1.68 !important;
+    }
+
+
+    .hero-actions {
+        margin-top:
+            0 !important;
+
+        transform:
+            none !important;
+    }
+
+}
+
 
     </style>
     
