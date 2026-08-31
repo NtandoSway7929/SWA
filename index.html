@@ -14288,6 +14288,252 @@ html.reveal-ready .reveal-delay-4 {
     }
 
 }
+
+    /* =========================================================
+   SWAYPHICS — SECTION TRANSITION SYSTEM
+   ========================================================= */
+
+:root {
+    --sway-transition-blue: #0152F4;
+    --sway-transition-deep: #002096;
+    --sway-transition-light: #77C1FC;
+}
+
+
+/* =========================================================
+   SERVICES → WHY SWAYPHICS
+   ========================================================= */
+
+.services {
+    position: relative !important;
+    overflow: hidden !important;
+    isolation: isolate !important;
+}
+
+.services::after {
+    content: "";
+
+    position: absolute;
+
+    left: -5%;
+    bottom: -95px;
+
+    width: 110%;
+    height: 180px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(238,246,255,0) 0%,
+            rgba(238,246,255,0.55) 48%,
+            rgba(255,255,255,0.98) 100%
+        );
+
+    clip-path:
+        ellipse(65% 55% at 50% 100%);
+
+    pointer-events: none;
+
+    z-index: 3;
+}
+
+
+/* =========================================================
+   WHY SWAYPHICS → APPROACH
+   ========================================================= */
+
+.why-swayphics {
+    position: relative !important;
+    overflow: hidden !important;
+    isolation: isolate !important;
+}
+
+.why-swayphics::after {
+    content: "";
+
+    position: absolute;
+
+    left: -6%;
+    bottom: -100px;
+
+    width: 112%;
+    height: 185px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(238,246,255,0) 0%,
+            rgba(255,255,255,0.62) 52%,
+            rgba(255,255,255,1) 100%
+        );
+
+    clip-path:
+        ellipse(68% 55% at 50% 100%);
+
+    pointer-events: none;
+
+    z-index: 3;
+}
+
+
+/* =========================================================
+   WORK SECTION — FLOATING ENTRY
+   ========================================================= */
+
+#work {
+    position: relative !important;
+    overflow: hidden !important;
+    isolation: isolate !important;
+}
+
+#work::before {
+    content: "";
+
+    position: absolute;
+
+    left: 50%;
+    top: -120px;
+
+    width: 760px;
+    height: 240px;
+
+    transform:
+        translateX(-50%);
+
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(1,82,244,0.10) 0%,
+            rgba(44,145,252,0.045) 42%,
+            rgba(44,145,252,0) 76%
+        );
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+#work > * {
+    position: relative;
+    z-index: 2;
+}
+
+
+/* =========================================================
+   ABOUT → CTA
+   ========================================================= */
+
+.about {
+    position: relative !important;
+    overflow: hidden !important;
+    isolation: isolate !important;
+}
+
+.about::after {
+    content: "";
+
+    position: absolute;
+
+    left: -5%;
+    bottom: -110px;
+
+    width: 110%;
+    height: 210px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(238,246,255,0) 0%,
+            rgba(238,246,255,0.65) 48%,
+            rgba(255,255,255,0) 100%
+        );
+
+    clip-path:
+        ellipse(70% 55% at 50% 100%);
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+.about > * {
+    position: relative;
+    z-index: 2;
+}
+
+
+/* =========================================================
+   CTA ENTRY — DEEP BLUE ATMOSPHERE
+   ========================================================= */
+
+.cta {
+    position: relative !important;
+    overflow: hidden !important;
+    isolation: isolate !important;
+}
+
+.cta::before {
+    opacity: 0.85 !important;
+}
+
+.cta::after {
+    opacity: 0.75 !important;
+}
+
+
+/* =========================================================
+   SECTION EDGE HIGHLIGHTS
+   ========================================================= */
+
+.services,
+.why-swayphics,
+.about {
+    --section-edge-opacity: 0.65;
+}
+
+.services::before {
+    filter:
+        blur(30px);
+}
+
+.why-swayphics::before {
+    filter:
+        blur(30px);
+}
+
+.about::before {
+    filter:
+        blur(30px);
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .services::after {
+        bottom: -65px;
+        height: 125px;
+    }
+
+    .why-swayphics::after {
+        bottom: -65px;
+        height: 130px;
+    }
+
+    .about::after {
+        bottom: -70px;
+        height: 145px;
+    }
+
+    #work::before {
+        width: 120%;
+        height: 190px;
+    }
+
+}
     
     
     </style>
