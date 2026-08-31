@@ -12907,6 +12907,79 @@ nav.scrolled {
 
 }
 
+    /* =========================================================
+   SWAYPHICS — HERO CONTENT FLOW FIX
+   ========================================================= */
+
+.hero-intro {
+    grid-row:
+        1 !important;
+}
+
+
+.hero-actions {
+    grid-row:
+        2 !important;
+
+    margin-top:
+        0 !important;
+
+    align-self:
+        start !important;
+
+    transform:
+        none !important;
+}
+
+
+/* Give the paragraph its own breathing room */
+
+.hero-intro p {
+    margin-bottom:
+        0 !important;
+}
+
+
+/* Desktop */
+
+@media (min-width: 901px) {
+
+    .hero {
+        row-gap:
+            34px !important;
+    }
+
+}
+
+
+/* Tablet */
+
+@media (max-width: 1050px) {
+
+    .hero {
+        row-gap:
+            28px !important;
+    }
+
+}
+
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .hero {
+        row-gap:
+            20px !important;
+    }
+
+    .hero-actions {
+        margin-top:
+            0 !important;
+    }
+
+}
+
 
     </style>
     
