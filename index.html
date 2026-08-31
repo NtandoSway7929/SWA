@@ -1999,31 +1999,144 @@ footer {
     color: rgba(255, 255, 255, 0.8);
 }
 
-        /* SCROLL REVEAL ANIMATIONS */
+        /* =========================================================
+   SWAYPHICS — PREMIUM SCROLL REVEAL
+   ========================================================= */
 
 .reveal {
     opacity: 0;
-    transform: translateY(30px);
+
+    transform:
+        translate3d(0, 34px, 0)
+        scale(0.985);
+
+    filter:
+        blur(2px);
+
     transition:
-        opacity 0.7s ease,
-        transform 0.7s ease;
+        opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+        filter 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+
+    will-change:
+        opacity,
+        transform,
+        filter;
 }
+
 
 .reveal.visible {
     opacity: 1;
-    transform: translateY(0);
+
+    transform:
+        translate3d(0, 0, 0)
+        scale(1);
+
+    filter:
+        blur(0);
+
+    will-change:
+        auto;
 }
+
+
+/* =========================================================
+   STAGGER
+   ========================================================= */
 
 .reveal-delay-1 {
-    transition-delay: 0.1s;
+    transition-delay:
+        0.08s;
 }
+
 
 .reveal-delay-2 {
-    transition-delay: 0.2s;
+    transition-delay:
+        0.16s;
 }
 
+
 .reveal-delay-3 {
-    transition-delay: 0.3s;
+    transition-delay:
+        0.24s;
+}
+
+
+/* =========================================================
+   CARD REVEAL
+   ========================================================= */
+
+.package-card.reveal,
+.service-category.reveal,
+.why-card.reveal,
+.work-card.reveal {
+    transform:
+        translate3d(0, 28px, 0)
+        scale(0.975);
+}
+
+
+.package-card.reveal.visible,
+.service-category.reveal.visible,
+.why-card.reveal.visible,
+.work-card.reveal.visible {
+    transform:
+        translate3d(0, 0, 0)
+        scale(1);
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .reveal {
+        transform:
+            translate3d(0, 24px, 0)
+            scale(0.99);
+
+        filter:
+            blur(1px);
+
+        transition-duration:
+            0.7s;
+    }
+
+    .reveal.visible {
+        transform:
+            translate3d(0, 0, 0)
+            scale(1);
+
+        filter:
+            blur(0);
+    }
+
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .reveal,
+    .reveal.visible {
+        opacity:
+            1 !important;
+
+        transform:
+            none !important;
+
+        filter:
+            none !important;
+
+        transition:
+            none !important;
+    }
+
 }
 
 /* -------------------------
@@ -13608,6 +13721,86 @@ nav.scrolled {
     .footer-legal-links a {
         font-size: 0.74rem;
     }
+}
+
+    /* =========================================================
+   SWAYPHICS — PREMIUM SCROLL REVEAL SYSTEM
+   ========================================================= */
+
+/* Prevent a flash of hidden content before JavaScript loads */
+html.reveal-ready .scroll-reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition:
+        opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/* Revealed state */
+html.reveal-ready .scroll-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/* Slightly different treatment for cards */
+html.reveal-ready .scroll-reveal-card {
+    opacity: 0;
+    transform:
+        translateY(24px)
+        scale(0.985);
+
+    transition:
+        opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+html.reveal-ready .scroll-reveal-card.is-visible {
+    opacity: 1;
+    transform:
+        translateY(0)
+        scale(1);
+}
+
+
+/* Staggered timing */
+html.reveal-ready .reveal-delay-1 {
+    transition-delay: 0.08s;
+}
+
+html.reveal-ready .reveal-delay-2 {
+    transition-delay: 0.16s;
+}
+
+html.reveal-ready .reveal-delay-3 {
+    transition-delay: 0.24s;
+}
+
+html.reveal-ready .reveal-delay-4 {
+    transition-delay: 0.32s;
+}
+
+
+/* Don't animate the hero on initial page load */
+.hero .scroll-reveal,
+.hero .scroll-reveal-card {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+    html.reveal-ready .scroll-reveal,
+    html.reveal-ready .scroll-reveal-card {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
+
 }
 
     </style>
