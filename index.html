@@ -14534,6 +14534,304 @@ html.reveal-ready .reveal-delay-4 {
     }
 
 }
+
+    /* =========================================================
+   SWAYPHICS — LIGHTWEIGHT 3D SPATIAL MOTIF
+   ========================================================= */
+
+.sway-spatial {
+    position: fixed;
+
+    top: 50%;
+    right: 7vw;
+
+    width: 150px;
+    height: 150px;
+
+    z-index: 4;
+
+    pointer-events: none;
+
+    transform:
+        translate3d(0, -50%, 0)
+        rotateX(16deg)
+        rotateY(-24deg)
+        rotateZ(8deg);
+
+    transform-style:
+        preserve-3d;
+
+    perspective:
+        1200px;
+
+    opacity:
+        0;
+
+    transition:
+        opacity 0.7s ease;
+}
+
+
+/* =========================================================
+   MAIN 3D FORM
+   ========================================================= */
+
+.sway-spatial-core {
+    position: absolute;
+
+    inset: 0;
+
+    border-radius:
+        34px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(119,193,252,0.95) 0%,
+            rgba(44,145,252,0.90) 27%,
+            rgba(1,82,244,0.94) 62%,
+            rgba(0,32,150,0.98) 100%
+        );
+
+    border:
+        1px solid
+        rgba(255,255,255,0.42);
+
+    box-shadow:
+        -18px 25px 45px
+        rgba(0,32,150,0.20),
+
+        inset 7px 7px 18px
+        rgba(255,255,255,0.20),
+
+        inset -10px -12px 22px
+        rgba(0,15,70,0.24);
+
+    transform:
+        translateZ(0);
+
+    transform-style:
+        preserve-3d;
+
+    overflow:
+        hidden;
+}
+
+
+/* =========================================================
+   INNER DEPTH
+   ========================================================= */
+
+.sway-spatial-core::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 12px;
+
+    border-radius:
+        26px;
+
+    border:
+        1px solid
+        rgba(255,255,255,0.18);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.12),
+            rgba(255,255,255,0)
+        );
+
+    transform:
+        translateZ(22px);
+
+    box-shadow:
+        inset 0 0 24px
+        rgba(255,255,255,0.08);
+}
+
+
+/* =========================================================
+   LIGHT REFLECTION
+   ========================================================= */
+
+.sway-spatial-core::after {
+    content: "";
+
+    position: absolute;
+
+    width: 130px;
+    height: 55px;
+
+    left: -30px;
+    top: 20px;
+
+    border-radius:
+        50%;
+
+    background:
+        rgba(255,255,255,0.16);
+
+    filter:
+        blur(15px);
+
+    transform:
+        rotate(-18deg)
+        translateZ(35px);
+}
+
+
+/* =========================================================
+   INNER BRAND MARK
+   ========================================================= */
+
+.sway-spatial-mark {
+    position: absolute;
+
+    inset: 0;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    z-index: 3;
+
+    color:
+        rgba(255,255,255,0.90);
+
+    font-size:
+        2.4rem;
+
+    font-weight:
+        900;
+
+    letter-spacing:
+        -0.08em;
+
+    transform:
+        translateZ(32px);
+
+    text-shadow:
+        0 8px 18px
+        rgba(0,32,150,0.25);
+}
+
+
+/* =========================================================
+   FLOATING STATE
+   ========================================================= */
+
+.sway-spatial.is-visible {
+    opacity:
+        0.88;
+}
+
+
+.sway-spatial.is-active {
+    animation:
+        swaySpatialFloat 5.5s
+        ease-in-out
+        infinite;
+}
+
+
+@keyframes swaySpatialFloat {
+
+    0%,
+    100% {
+        margin-top:
+            0;
+
+        rotate:
+            0deg;
+    }
+
+    50% {
+        margin-top:
+            -12px;
+
+        rotate:
+            2deg;
+    }
+
+}
+
+
+/* =========================================================
+   SECTION POSITIONS
+   ========================================================= */
+
+.sway-spatial[data-section="services"] {
+    right:
+        8vw;
+}
+
+.sway-spatial[data-section="why"] {
+    right:
+        11vw;
+}
+
+.sway-spatial[data-section="work"] {
+    right:
+        7vw;
+}
+
+.sway-spatial[data-section="about"] {
+    right:
+        12vw;
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1050px) {
+
+    .sway-spatial {
+        width:
+            115px;
+
+        height:
+            115px;
+
+        right:
+            4vw;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .sway-spatial {
+        display:
+            none !important;
+    }
+
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .sway-spatial,
+    .sway-spatial.is-active {
+        animation:
+            none !important;
+    }
+
+}
     
     
     </style>
@@ -16194,6 +16492,266 @@ if (
         );
 
     });
+
+}
+
+    /* =========================================================
+   SWAYPHICS — SPATIAL 3D MOTIF
+   ========================================================= */
+
+const spatialSections = [
+    {
+        selector: ".services",
+        name: "services"
+    },
+    {
+        selector: ".why-swayphics",
+        name: "why"
+    },
+    {
+        selector: "#work",
+        name: "work"
+    },
+    {
+        selector: ".about",
+        name: "about"
+    },
+    {
+        selector: ".cta",
+        name: "cta"
+    }
+];
+
+
+/* ---------------------------------------------------------
+   Create the spatial element
+   --------------------------------------------------------- */
+
+const spatialElement =
+    document.createElement("div");
+
+spatialElement.className =
+    "sway-spatial";
+
+
+spatialElement.innerHTML = `
+    <div class="sway-spatial-core">
+        <div class="sway-spatial-mark">S</div>
+    </div>
+`;
+
+
+document.body.appendChild(
+    spatialElement
+);
+
+
+/* ---------------------------------------------------------
+   Section lookup
+   --------------------------------------------------------- */
+
+const spatialTargets =
+    spatialSections
+        .map((item) => {
+
+            const element =
+                document.querySelector(
+                    item.selector
+                );
+
+            if (!element) {
+                return null;
+            }
+
+            return {
+                ...item,
+                element
+            };
+
+        })
+        .filter(Boolean);
+
+
+/* ---------------------------------------------------------
+   Determine active section
+   --------------------------------------------------------- */
+
+const updateSpatialSection =
+    () => {
+
+        if (
+            window.matchMedia(
+                "(max-width: 700px)"
+            ).matches
+        ) {
+            return;
+        }
+
+
+        const viewportCenter =
+            window.innerHeight * 0.5;
+
+
+        let closest =
+            null;
+
+        let closestDistance =
+            Infinity;
+
+
+        spatialTargets.forEach(
+            (item) => {
+
+                const rect =
+                    item.element.getBoundingClientRect();
+
+
+                const sectionCenter =
+                    rect.top +
+                    (rect.height / 2);
+
+
+                const distance =
+                    Math.abs(
+                        sectionCenter -
+                        viewportCenter
+                    );
+
+
+                if (
+                    distance <
+                    closestDistance
+                ) {
+
+                    closestDistance =
+                        distance;
+
+                    closest =
+                        item;
+
+                }
+
+            }
+        );
+
+
+        if (!closest) {
+            return;
+        }
+
+
+        spatialElement.dataset.section =
+            closest.name;
+
+
+        spatialElement.classList.add(
+            "is-visible"
+        );
+
+    };
+
+
+/* ---------------------------------------------------------
+   Scroll-linked movement
+   --------------------------------------------------------- */
+
+let spatialTicking =
+    false;
+
+
+window.addEventListener(
+    "scroll",
+    () => {
+
+        if (spatialTicking) {
+            return;
+        }
+
+
+        spatialTicking =
+            true;
+
+
+        requestAnimationFrame(
+            () => {
+
+                const scrollY =
+                    window.scrollY;
+
+
+                const rotationY =
+                    -24 +
+                    Math.sin(
+                        scrollY * 0.0015
+                    ) * 5;
+
+
+                const rotationX =
+                    16 +
+                    Math.sin(
+                        scrollY * 0.001
+                    ) * 4;
+
+
+                const translateY =
+                    Math.sin(
+                        scrollY * 0.0012
+                    ) * 18;
+
+
+                spatialElement.style.transform =
+                    `
+                    translate3d(
+                        0,
+                        calc(-50% + ${translateY}px),
+                        0
+                    )
+                    rotateX(${rotationX}deg)
+                    rotateY(${rotationY}deg)
+                    rotateZ(8deg)
+                    `;
+
+
+                updateSpatialSection();
+
+
+                spatialTicking =
+                    false;
+
+            }
+        );
+
+    },
+    {
+        passive: true
+    }
+);
+
+
+/* ---------------------------------------------------------
+   Initial state
+   --------------------------------------------------------- */
+
+updateSpatialSection();
+
+spatialElement.classList.add(
+    "is-active"
+);
+
+
+/* ---------------------------------------------------------
+   Reduced motion
+   --------------------------------------------------------- */
+
+if (
+    window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+    ).matches
+) {
+
+    spatialElement.classList.remove(
+        "is-active"
+    );
 
 }
 
