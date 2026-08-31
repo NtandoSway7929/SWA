@@ -109,18 +109,17 @@
         }
 
         .brand {
-            color:
-                var(--ink);
+    display: inline-flex;
+    align-items: center;
+}
 
-            font-size:
-                0.95rem;
-
-            font-weight:
-                900;
-
-            letter-spacing:
-                2px;
-        }
+.brand img {
+    display: block;
+    width: 145px;
+    height: auto;
+    max-height: 42px;
+    object-fit: contain;
+}
 
         .back-link {
             display:
@@ -494,6 +493,11 @@
 
         @media (max-width: 760px) {
 
+            .brand img {
+        width: 125px;
+        max-height: 36px;
+    }
+
             .legal-nav {
                 padding:
                     16px 20px;
@@ -551,13 +555,12 @@
 
     <nav class="legal-nav">
 
-        <a
-            class="brand"
-            href="index.html"
-            aria-label="Swayphics home"
-        >
-            SWAYPHICS
-        </a>
+        <a 
+            class="brand" 
+            href="index.html" 
+            aria-label="Swayphics home">
+    <img src="logo.png" alt="Swayphics">
+</a>
 
         <a
             class="back-link"
