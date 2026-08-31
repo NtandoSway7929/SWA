@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Privacy Policy | Swayphics</title>
+
+    <meta
+        name="description"
+        content="Swayphics Privacy Policy. Learn how Swayphics collects, uses, protects and manages personal information."
+    >
+
+    <meta
+        name="robots"
+        content="index, follow"
+    >
+
+    <style>
+        :root {
+            --navy: #002096;
+            --blue: #0152F4;
+            --bright: #2C91FC;
+            --light-blue: #77C1FC;
+            --white: #FFFFFF;
+            --ink: #07132D;
+            --muted: #64708A;
+            --line: rgba(7, 19, 45, 0.10);
+            --surface: #F6F8FC;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family:
+                Inter,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            background:
+                var(--white);
+
+            color:
+                var(--ink);
+
+            line-height:
+                1.7;
+        }
+
+        a {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        a:hover {
+            text-decoration:
+                underline;
+        }
+
+        .legal-nav {
+            position:
+                sticky;
+
+            top:
+                0;
+
+            z-index:
+                100;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                space-between;
+
+            padding:
+                18px clamp(22px, 5vw, 72px);
+
+            background:
+                rgba(255,255,255,0.88);
+
+            backdrop-filter:
+                blur(18px);
+
+            -webkit-backdrop-filter:
+                blur(18px);
+
+            border-bottom:
+                1px solid var(--line);
+        }
+
+        .brand {
+            color:
+                var(--ink);
+
+            font-size:
+                0.95rem;
+
+            font-weight:
+                900;
+
+            letter-spacing:
+                2px;
+        }
+
+        .back-link {
+            display:
+                inline-flex;
+
+            align-items:
+                center;
+
+            gap:
+                8px;
+
+            color:
+                var(--ink);
+
+            font-size:
+                0.78rem;
+
+            font-weight:
+                700;
+        }
+
+        .back-link:hover {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        .legal-hero {
+            position:
+                relative;
+
+            overflow:
+                hidden;
+
+            padding:
+                clamp(80px, 12vw, 150px)
+                clamp(22px, 7vw, 110px)
+                clamp(70px, 9vw, 110px);
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #F7F9FF 0%,
+                    #FFFFFF 55%,
+                    #EEF5FF 100%
+                );
+        }
+
+        .legal-hero::before {
+            content: "";
+
+            position:
+                absolute;
+
+            width:
+                420px;
+
+            height:
+                420px;
+
+            right:
+                -160px;
+
+            top:
+                -180px;
+
+            border-radius:
+                50%;
+
+            background:
+                radial-gradient(
+                    circle,
+                    rgba(1,82,244,0.14),
+                    transparent 68%
+                );
+
+            pointer-events:
+                none;
+        }
+
+        .legal-eyebrow {
+            position:
+                relative;
+
+            color:
+                var(--blue);
+
+            font-size:
+                0.72rem;
+
+            font-weight:
+                850;
+
+            letter-spacing:
+                2.5px;
+
+            text-transform:
+                uppercase;
+
+            margin-bottom:
+                18px;
+        }
+
+        .legal-hero h1 {
+            position:
+                relative;
+
+            max-width:
+                900px;
+
+            font-size:
+                clamp(3rem, 8vw, 7rem);
+
+            line-height:
+                0.95;
+
+            letter-spacing:
+                -0.055em;
+
+            font-weight:
+                900;
+        }
+
+        .legal-hero p {
+            position:
+                relative;
+
+            max-width:
+                680px;
+
+            margin-top:
+                28px;
+
+            color:
+                var(--muted);
+
+            font-size:
+                clamp(1rem, 1.5vw, 1.12rem);
+        }
+
+        .legal-meta {
+            position:
+                relative;
+
+            margin-top:
+                28px;
+
+            color:
+                #7C879B;
+
+            font-size:
+                0.78rem;
+
+            font-weight:
+                650;
+        }
+
+        .legal-layout {
+            display:
+                grid;
+
+            grid-template-columns:
+                minmax(180px, 240px)
+                minmax(0, 760px);
+
+            gap:
+                clamp(40px, 8vw, 110px);
+
+            max-width:
+                1180px;
+
+            margin:
+                0 auto;
+
+            padding:
+                80px 24px 120px;
+        }
+
+        .legal-index {
+            position:
+                sticky;
+
+            top:
+                100px;
+
+            align-self:
+                start;
+        }
+
+        .legal-index-title {
+            color:
+                var(--ink);
+
+            font-size:
+                0.68rem;
+
+            font-weight:
+                850;
+
+            letter-spacing:
+                1.8px;
+
+            text-transform:
+                uppercase;
+
+            margin-bottom:
+                15px;
+        }
+
+        .legal-index a {
+            display:
+                block;
+
+            padding:
+                5px 0;
+
+            color:
+                var(--muted);
+
+            font-size:
+                0.76rem;
+
+            line-height:
+                1.4;
+        }
+
+        .legal-index a:hover {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        .legal-content section {
+            margin-bottom:
+                58px;
+
+            scroll-margin-top:
+                110px;
+        }
+
+        .legal-content h2 {
+            margin-bottom:
+                16px;
+
+            font-size:
+                clamp(1.35rem, 2.5vw, 1.8rem);
+
+            line-height:
+                1.2;
+
+            letter-spacing:
+                -0.025em;
+        }
+
+        .legal-content p {
+            margin-bottom:
+                15px;
+
+            color:
+                #4F5B72;
+
+            font-size:
+                0.96rem;
+        }
+
+        .legal-content ul {
+            margin:
+                14px 0 20px 22px;
+        }
+
+        .legal-content li {
+            margin-bottom:
+                8px;
+
+            color:
+                #4F5B72;
+
+            font-size:
+                0.96rem;
+        }
+
+        .legal-note {
+            margin:
+                25px 0;
+
+            padding:
+                22px 24px;
+
+            border:
+                1px solid rgba(1,82,244,0.14);
+
+            border-left:
+                3px solid var(--blue);
+
+            border-radius:
+                16px;
+
+            background:
+                rgba(1,82,244,0.035);
+        }
+
+        .legal-note p {
+            margin:
+                0;
+
+            color:
+                #46536B;
+        }
+
+        .legal-contact {
+            padding:
+                28px;
+
+            border-radius:
+                22px;
+
+            background:
+                var(--ink);
+
+            color:
+                var(--white);
+
+            box-shadow:
+                0 20px 60px
+                rgba(7,19,45,0.12);
+        }
+
+        .legal-contact h2 {
+            color:
+                var(--white);
+        }
+
+        .legal-contact p {
+            color:
+                rgba(255,255,255,0.68);
+        }
+
+        .legal-contact a {
+            color:
+                var(--light-blue);
+
+            font-weight:
+                700;
+        }
+
+        .legal-footer {
+            padding:
+                30px 24px;
+
+            text-align:
+                center;
+
+            border-top:
+                1px solid var(--line);
+
+            color:
+                #7C879B;
+
+            font-size:
+                0.76rem;
+        }
+
+        .legal-footer strong {
+            color:
+                var(--ink);
+        }
+
+        @media (max-width: 760px) {
+
+            .legal-nav {
+                padding:
+                    16px 20px;
+            }
+
+            .legal-hero {
+                padding:
+                    75px 22px 65px;
+            }
+
+            .legal-hero h1 {
+                font-size:
+                    clamp(3rem, 15vw, 5rem);
+            }
+
+            .legal-layout {
+                display:
+                    block;
+
+                padding:
+                    55px 22px 85px;
+            }
+
+            .legal-index {
+                position:
+                    static;
+
+                margin-bottom:
+                    55px;
+
+                padding-bottom:
+                    25px;
+
+                border-bottom:
+                    1px solid var(--line);
+            }
+
+            .legal-index a {
+                display:
+                    inline-block;
+
+                margin-right:
+                    15px;
+            }
+
+            .legal-content section {
+                margin-bottom:
+                    48px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="legal-nav">
+        <a
+            class="brand"
+            href="index.html"
+            aria-label="Swayphics home"
+        >
+            SWAYPHICS
+        </a>
+
+        <a
+            class="back-link"
+            href="index.html"
+        >
+            ← Back to website
+        </a>
+    </nav>
+
+
+    <header class="legal-hero">
+
+        <div class="legal-eyebrow">
+            SWAYPHICS · LEGAL
+        </div>
+
+        <h1>
+            Privacy<br>
+            Policy.
+        </h1>
+
+        <p>
+            We respect the information you entrust to Swayphics.
+            This policy explains what personal information we collect,
+            why we collect it, how we use it and the choices available
+            to you.
+        </p>
+
+        <div class="legal-meta">
+            Last updated: 30 August 2026
+        </div>
+
+    </header>
+
+
+    <main class="legal-layout">
+
+        <aside class="legal-index">
+
+            <div class="legal-index-title">
+                On this page
+            </div>
+
+            <a href="#who-we-are">01 · Who we are</a>
+            <a href="#information">02 · Information we collect</a>
+            <a href="#use">03 · How we use information</a>
+            <a href="#sharing">04 · Sharing information</a>
+            <a href="#supabase">05 · Service providers</a>
+            <a href="#retention">06 · Retention</a>
+            <a href="#security">07 · Security</a>
+            <a href="#rights">08 · Your rights</a>
+            <a href="#third-party">09 · Third-party services</a>
+            <a href="#children">10 · Children</a>
+            <a href="#changes">11 · Changes</a>
+            <a href="#contact">12 · Contact</a>
+
+        </aside>
+
+
+        <article class="legal-content">
+
+            <section id="who-we-are">
+
+                <h2>01 · Who we are</h2>
+
+                <p>
+                    Swayphics is a creative and design studio providing
+                    branding, visual design, digital experiences and
+                    related business services.
+                </p>
+
+                <p>
+                    For purposes of this Privacy Policy, Swayphics is
+                    referred to as “Swayphics”, “we”, “us” or “our”.
+                </p>
+
+            </section>
+
+
+            <section id="information">
+
+                <h2>02 · Information we collect</h2>
+
+                <p>
+                    We collect personal information that you voluntarily
+                    provide when interacting with our website or
+                    communicating with Swayphics.
+                </p>
+
+                <p>
+                    Depending on how you interact with us, this may include:
+                </p>
+
+                <ul>
+                    <li>Your name.</li>
+                    <li>Your email address.</li>
+                    <li>The service you are interested in.</li>
+                    <li>Information contained in your project enquiry.</li>
+                    <li>
+                        Information voluntarily submitted with a testimonial,
+                        including your name, business, role, review, rating
+                        and optional image.
+                    </li>
+                    <li>
+                        Information you choose to provide when communicating
+                        with us through email, WhatsApp or social media.
+                    </li>
+                </ul>
+
+                <p>
+                    We aim to collect information that is relevant and
+                    reasonably necessary for the purpose for which it is
+                    requested.
+                </p>
+
+            </section>
+
+
+            <section id="use">
+
+                <h2>03 · How we use information</h2>
+
+                <p>
+                    Swayphics may use personal information to:
+                </p>
+
+                <ul>
+                    <li>Respond to project enquiries and requests.</li>
+                    <li>Understand the services a prospective client requires.</li>
+                    <li>Communicate with clients and prospective clients.</li>
+                    <li>Provide and manage requested services.</li>
+                    <li>Process and manage voluntarily submitted testimonials.</li>
+                    <li>
+                        Publish an approved testimonial where the person
+                        has chosen to provide information for that purpose.
+                    </li>
+                    <li>
+                        Maintain, secure and improve our website and services.
+                    </li>
+                    <li>
+                        Meet applicable legal or regulatory obligations.
+                    </li>
+                </ul>
+
+                <div class="legal-note">
+
+                    <p>
+                        Swayphics does not sell personal information to
+                        third parties.
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <section id="sharing">
+
+                <h2>04 · Sharing information</h2>
+
+                <p>
+                    We do not sell or rent personal information.
+                </p>
+
+                <p>
+                    Personal information may be made available to trusted
+                    service providers where this is reasonably necessary
+                    to operate the website, process enquiries, provide
+                    services or maintain technical infrastructure.
+                </p>
+
+                <p>
+                    Information may also be disclosed where required or
+                    permitted by applicable law, or where necessary to
+                    protect our rights, users, systems or property.
+                </p>
+
+            </section>
+
+
+            <section id="supabase">
+
+                <h2>05 · Service providers</h2>
+
+                <p>
+                    Parts of the Swayphics website infrastructure use
+                    third-party technology providers to store and process
+                    information submitted through website functionality.
+                </p>
+
+                <p>
+                    Our website currently uses Supabase infrastructure for
+                    certain database and backend functions, including
+                    website enquiry and testimonial functionality.
+                </p>
+
+                <p>
+                    Third-party providers may process information on our
+                    behalf as necessary to provide their services. Their
+                    own terms and privacy practices may also apply.
+                </p>
+
+            </section>
+
+
+            <section id="retention">
+
+                <h2>06 · Retention of information</h2>
+
+                <p>
+                    We retain personal information only for as long as
+                    reasonably necessary for the purpose for which it was
+                    collected, to provide services, maintain appropriate
+                    business records, resolve disputes, enforce agreements,
+                    or comply with legal obligations.
+                </p>
+
+                <p>
+                    Where information is no longer reasonably required,
+                    we may securely delete or otherwise dispose of it,
+                    subject to applicable retention requirements.
+                </p>
+
+            </section>
+
+
+            <section id="security">
+
+                <h2>07 · Security</h2>
+
+                <p>
+                    Swayphics takes reasonable technical and organisational
+                    measures to protect personal information against
+                    unauthorised access, loss, misuse, alteration or
+                    disclosure.
+                </p>
+
+                <p>
+                    However, no method of transmitting or storing information
+                    electronically can be guaranteed to be completely secure.
+                </p>
+
+                <p>
+                    If Swayphics becomes aware of a security compromise
+                    affecting personal information, we will take appropriate
+                    steps in accordance with applicable law.
+                </p>
+
+            </section>
+
+
+            <section id="rights">
+
+                <h2>08 · Your rights</h2>
+
+                <p>
+                    Subject to applicable law, you may have rights relating
+                    to your personal information, including the right to:
+                </p>
+
+                <ul>
+                    <li>Request access to personal information we hold about you.</li>
+                    <li>Request correction of inaccurate or incomplete information.</li>
+                    <li>Object to certain processing of your information.</li>
+                    <li>
+                        Request deletion of information where applicable.
+                    </li>
+                    <li>
+                        Ask questions about how your information is processed.
+                    </li>
+                    <li>
+                        Lodge a complaint with the Information Regulator
+                        where you believe your privacy rights have been
+                        unlawfully interfered with.
+                    </li>
+                </ul>
+
+                <p>
+                    To make a privacy-related request, contact Swayphics
+                    using the details provided below.
+                </p>
+
+                <p>
+                    The Information Regulator provides official mechanisms
+                    for POPIA complaints and security-compromise reporting.
+                </p>
+
+            </section>
+
+
+            <section id="third-party">
+
+                <h2>09 · Third-party services and links</h2>
+
+                <p>
+                    The Swayphics website may contain links to third-party
+                    platforms including Instagram, TikTok, Facebook,
+                    WhatsApp and other external services.
+                </p>
+
+                <p>
+                    Once you leave the Swayphics website and interact with
+                    a third-party platform, that platform's own privacy
+                    policy and terms may apply.
+                </p>
+
+                <p>
+                    Swayphics is not responsible for the privacy practices
+                    or content of third-party websites and platforms.
+                </p>
+
+            </section>
+
+
+            <section id="children">
+
+                <h2>10 · Children's information</h2>
+
+                <p>
+                    Our services and website are intended primarily for
+                    businesses, organisations and individuals seeking
+                    professional creative and digital services.
+                </p>
+
+                <p>
+                    We do not knowingly seek to collect personal information
+                    from children for purposes unrelated to the provision of
+                    our services.
+                </p>
+
+            </section>
+
+
+            <section id="changes">
+
+                <h2>11 · Changes to this policy</h2>
+
+                <p>
+                    Swayphics may update this Privacy Policy from time to
+                    time to reflect changes to our website, services,
+                    technology or legal obligations.
+                </p>
+
+                <p>
+                    The latest version will be published on this page,
+                    together with the date on which it was last updated.
+                </p>
+
+            </section>
+
+
+            <section id="contact">
+
+                <div class="legal-contact">
+
+                    <h2>12 · Contact Swayphics</h2>
+
+                    <p>
+                        If you have a question about this Privacy Policy,
+                        want to request access to or correction of your
+                        personal information, or have another privacy-related
+                        concern, contact us directly.
+                    </p>
+
+                    <p>
+                        Email:
+                        <a href="mailto:info@swayphics.co.za">
+                            info@swayphics.co.za
+                        </a>
+                    </p>
+
+                    <p>
+                        Website:
+                        <a href="https://swayphics.co.za">
+                            swayphics.co.za
+                        </a>
+                    </p>
+
+                </div>
+
+            </section>
+
+        </article>
+
+    </main>
+
+
+    <footer class="legal-footer">
+
+        <strong>SWAYPHICS</strong>
+        · Empowering through design.
+
+        <br>
+
+        © 2026 Swayphics. All rights reserved.
+
+    </footer>
+
+</body>
+</html>
