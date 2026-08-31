@@ -13894,6 +13894,150 @@ html.reveal-ready .reveal-delay-4 {
 
 }
 
+    /* =========================================================
+   SWAYPHICS — THE SWAYPHICS APPROACH CARD FIX
+   ========================================================= */
+
+/* Keep the project image as a true full-card background */
+
+.work-card {
+    position: relative !important;
+
+    overflow: hidden !important;
+
+    isolation: isolate !important;
+}
+
+
+/* Restore the image to full-card absolute positioning */
+
+.work-card .work-image {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    max-width: none !important;
+
+    display: block !important;
+
+    object-fit: cover !important;
+
+    object-position: center center !important;
+
+    z-index: 0 !important;
+
+    margin: 0 !important;
+
+    padding: 0 !important;
+
+    transform: scale(1) !important;
+
+    transition:
+        transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+
+/* Keep the dark readability layer between image and text */
+
+.work-card::after {
+    z-index: 1 !important;
+}
+
+
+/* Restore text to the bottom of the card */
+
+.work-card .work-content {
+    position: absolute !important;
+
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+
+    z-index: 2 !important;
+
+    width: 100% !important;
+
+    margin: 0 !important;
+
+    padding: 35px !important;
+
+    text-align: left !important;
+}
+
+
+/* Keep the text stacked normally */
+
+.work-card .work-tag,
+.work-card h3,
+.work-card p {
+    position: relative !important;
+
+    z-index: 3 !important;
+}
+
+
+/* Preserve the existing typography */
+
+.work-card h3 {
+    margin:
+        8px 0 12px !important;
+}
+
+
+.work-card p {
+    margin:
+        0 !important;
+
+    max-width:
+        300px !important;
+}
+
+
+/* Image interaction */
+
+.work-card:hover .work-image {
+    transform:
+        scale(1.05) !important;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .work-card .work-content {
+        padding:
+            28px 24px !important;
+    }
+
+    .work-card .work-image {
+        object-position:
+            center center !important;
+    }
+
+}
+
+
+/* =========================================================
+   IMPORTANT — PREVENT THE CARD-TILT SCRIPT FROM
+   DISTORTING THE WORK CARD'S INTERNAL LAYOUT
+   ========================================================= */
+
+.work-card > .work-image {
+    position:
+        absolute !important;
+}
+
+.work-card > .work-content {
+    position:
+        absolute !important;
+}
+
     </style>
     
 </head>
