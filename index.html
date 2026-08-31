@@ -13264,6 +13264,310 @@ nav.scrolled {
 
 }
 
+  /* =========================================================
+   SWAYPHICS — PREMIUM SOCIAL CONNECTIONS
+   ========================================================= */
+
+.contact-social {
+    position: relative;
+
+    z-index: 3;
+
+    width: 100%;
+
+    margin-top: 60px;
+
+    padding-top: 30px;
+
+    border-top:
+        1px solid rgba(255,255,255,0.14);
+}
+
+
+.contact-social-heading {
+    text-align: center;
+
+    margin-bottom: 24px;
+}
+
+
+.contact-social-heading span {
+    display: block;
+
+    color:
+        #77C1FC;
+
+    font-size:
+        0.7rem;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        2px;
+
+    line-height:
+        1.2;
+
+    text-transform:
+        uppercase;
+}
+
+
+.contact-social-heading p {
+    margin-top: 8px;
+
+    color:
+        rgba(255,255,255,0.58);
+
+    font-size:
+        0.82rem;
+
+    line-height:
+        1.5;
+}
+
+
+/* =========================================================
+   SOCIAL LINKS
+   ========================================================= */
+
+.contact-social-links {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 10px;
+
+    flex-wrap: wrap;
+}
+
+
+.contact-social-link {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    min-height: 44px;
+
+    padding:
+        0 15px;
+
+    border:
+        1px solid rgba(255,255,255,0.14);
+
+    border-radius:
+        999px;
+
+    background:
+        rgba(255,255,255,0.055);
+
+    color:
+        rgba(255,255,255,0.82);
+
+    font-size:
+        0.72rem;
+
+    font-weight:
+        700;
+
+    text-decoration:
+        none;
+
+    backdrop-filter:
+        blur(12px);
+
+    -webkit-backdrop-filter:
+        blur(12px);
+
+    transition:
+        transform 0.25s ease,
+        background 0.25s ease,
+        border-color 0.25s ease,
+        color 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+
+.contact-social-link svg {
+    width:
+        17px;
+
+    height:
+        17px;
+
+    flex:
+        0 0 17px;
+
+    fill:
+        none;
+
+    stroke:
+        currentColor;
+
+    stroke-width:
+        1.8;
+
+    stroke-linecap:
+        round;
+
+    stroke-linejoin:
+        round;
+}
+
+
+.contact-social-link .contact-icon-fill {
+    fill:
+        currentColor;
+
+    stroke:
+        none;
+}
+
+
+.contact-social-link:hover {
+    transform:
+        translateY(-3px);
+
+    border-color:
+        rgba(119,193,252,0.38);
+
+    background:
+        rgba(119,193,252,0.10);
+
+    color:
+        #FFFFFF;
+
+    box-shadow:
+        0 10px 25px
+        rgba(0,0,0,0.12);
+}
+
+
+/* WhatsApp gets stronger conversion emphasis */
+
+.contact-social-whatsapp {
+    border-color:
+        rgba(119,193,252,0.24);
+
+    background:
+        rgba(1,82,244,0.16);
+
+    color:
+        #FFFFFF;
+}
+
+
+.contact-social-whatsapp:hover {
+    border-color:
+        rgba(119,193,252,0.52);
+
+    background:
+        rgba(1,82,244,0.30);
+
+    box-shadow:
+        0 12px 30px
+        rgba(1,82,244,0.18);
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .contact-social {
+        margin-top:
+            45px;
+
+        padding-top:
+            25px;
+    }
+
+
+    .contact-social-heading {
+        margin-bottom:
+            20px;
+    }
+
+
+    .contact-social-heading p {
+        max-width:
+            300px;
+
+        margin:
+            8px auto 0;
+
+        font-size:
+            0.76rem;
+    }
+
+
+    .contact-social-links {
+        display:
+            grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap:
+            9px;
+
+        width:
+            100%;
+    }
+
+
+    .contact-social-link {
+        justify-content:
+            center;
+
+        width:
+            100%;
+
+        min-height:
+            46px;
+
+        padding:
+            0 10px;
+
+        font-size:
+            0.69rem;
+    }
+
+
+    .contact-social-whatsapp {
+        grid-column:
+            1 / -1;
+    }
+
+}
+
+
+/* =========================================================
+   VERY SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+    .contact-social-links {
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .contact-social-whatsapp {
+        grid-column:
+            auto;
+    }
+
+}  
+
     </style>
     
 </head>
@@ -14443,18 +14747,160 @@ nav.scrolled {
     hidden
 ></div>
 
-    <div class="contact-email">
-        <span>Prefer social?</span>
+    <div class="contact-social">
 
-        <a
-            href="https://instagram.com/swayphics"
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            Instagram @swayphics
-        </a>
+    <div class="contact-social-heading">
+        <span>CONNECT WITH SWAYPHICS</span>
+
+        <p>
+            Follow the work, talk to us or start your next project.
+        </p>
     </div>
 
+
+    <div class="contact-social-links">
+
+        <!-- Instagram -->
+        <a
+            href="https://instagram.com/swayphics"
+            class="contact-social-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Swayphics on Instagram"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="5"
+                    ry="5"
+                ></rect>
+
+                <circle
+                    cx="12"
+                    cy="12"
+                    r="4.2"
+                ></circle>
+
+                <circle
+                    cx="17.4"
+                    cy="6.6"
+                    r="1"
+                    class="contact-icon-fill"
+                ></circle>
+            </svg>
+
+            <span>Instagram</span>
+        </a>
+
+
+        <!-- TikTok -->
+        <a
+            href="https://www.tiktok.com/@swayphics?_r=1&_t=ZS-99KZ6XTvYZh"
+            class="contact-social-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Swayphics on TikTok"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <path
+                    d="M14.2 3.5v10.2a3.6 3.6 0 1 1-3-3.55"
+                ></path>
+
+                <path
+                    d="M14.2 3.5c.55 2.15 1.8 3.65 4.3 4.05"
+                ></path>
+            </svg>
+
+            <span>TikTok</span>
+        </a>
+
+
+        <!-- Facebook -->
+        <a
+            href="https://www.facebook.com/share/1EiFqLLcj8/?mibextid=wwXIfr"
+            class="contact-social-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Swayphics on Facebook"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <path
+                    d="M13.2 20v-7h2.4l.4-2.8h-2.8V8.4c0-.8.25-1.35 1.45-1.35H16V4.55c-.4-.05-1.05-.1-1.8-.1-2.05 0-3.45 1.25-3.45 3.55v2.2H8.4V13h2.35v7h2.45Z"
+                    class="contact-icon-fill"
+                ></path>
+            </svg>
+
+            <span>Facebook</span>
+        </a>
+
+
+        <!-- WhatsApp -->
+        <a
+            href="https://wa.me/message/TNUQDUUWXFEIE1"
+            class="contact-social-link contact-social-whatsapp"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat with Swayphics on WhatsApp"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <path
+                    d="M12 3.2a8.7 8.7 0 0 0-7.6 13l-1 4 4.1-1a8.7 8.7 0 1 0 4.5-16Z"
+                ></path>
+
+                <path
+                    d="M8.6 8.1c.2-.4.4-.4.7-.4h.5c.2 0 .4.1.5.4l.6 1.5c.1.2.1.4-.1.6l-.5.6c-.1.1-.1.3 0 .5.4.8 1 1.5 1.8 1.9.2.1.4.1.5 0l.7-.5c.2-.1.4-.1.6 0l1.4.7c.2.1.3.3.2.6-.2.7-.7 1.2-1.4 1.4-.5.1-1.3-.1-2.2-.5-1.1-.5-2.1-1.2-2.9-2.1-.7-.8-1.2-1.7-1.4-2.5-.2-.8-.1-1.6.2-2.2Z"
+                    class="contact-icon-fill"
+                ></path>
+            </svg>
+
+            <span>WhatsApp</span>
+        </a>
+
+
+        <!-- Email -->
+        <a
+            href="mailto:info@swayphics.co.za"
+            class="contact-social-link"
+            aria-label="Email Swayphics"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <rect
+                    x="3"
+                    y="5"
+                    width="18"
+                    height="14"
+                    rx="2.5"
+                ></rect>
+
+                <path
+                    d="m4 7 8 6 8-6"
+                ></path>
+            </svg>
+
+            <span>Email</span>
+        </a>
+
+    </div>
+
+</div>
 </section>
 
     </main>
