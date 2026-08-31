@@ -15669,42 +15669,89 @@ html.reveal-ready .reveal-delay-4 {
         <!-- WORK -->
 <section id="work">
 
-    <div class="section-label">The Swayphics approach</div>
+    <div class="section-label">
+        The Swayphics approach
+    </div>
 
-    <h2 class="section-title">
-        From idea<br>
-        <span>to impact.</span>
-    </h2>
+    <div class="approach-header">
 
-    <p class="work-intro">
-        We combine creativity, strategy and technology to help
-        businesses build stronger brands, establish a digital presence
-        and communicate with confidence.
-    </p>
+        <div class="approach-copy">
+
+            <h2 class="section-title">
+                From idea<br>
+                <span>to impact.</span>
+            </h2>
+
+            <p class="work-intro">
+                We combine creativity, strategy and technology to help
+                businesses build stronger brands, establish a digital presence
+                and communicate with confidence.
+            </p>
+
+        </div>
+
+
+        <!-- Swayphics 3D Brand System -->
+
+        <div
+            class="brand-system-3d"
+            aria-hidden="true"
+        >
+
+            <div class="brand-system-orbit">
+
+                <div class="brand-system-layer brand-layer-1">
+                    <span>IDENTITY</span>
+                </div>
+
+                <div class="brand-system-layer brand-layer-2">
+                    <span>PRESENCE</span>
+                </div>
+
+                <div class="brand-system-layer brand-layer-3">
+                    <span>EXPRESSION</span>
+                </div>
+
+                <div class="brand-system-core">
+                    <span>S</span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
 
     <div class="work-grid">
 
         <div class="work-card">
 
             <img
-    src="identity.webp"
-    alt="Swayphics brand identity design"
-    width="1536"
-    height="1024"
-    class="work-image"
-    loading="lazy"
-    decoding="async"
->
+                src="identity.webp"
+                alt="Swayphics brand identity design"
+                width="1536"
+                height="1024"
+                class="work-image"
+                loading="lazy"
+                decoding="async"
+            >
 
             <div class="work-content">
-                <span class="work-tag">01 / BRAND</span>
 
-                <h3>Identity</h3>
+                <span class="work-tag">
+                    01 / BRAND
+                </span>
+
+                <h3>
+                    Identity
+                </h3>
 
                 <p>
                     Building distinctive visual identities that give
                     businesses something recognisable to own.
                 </p>
+
             </div>
 
         </div>
@@ -15713,24 +15760,30 @@ html.reveal-ready .reveal-delay-4 {
         <div class="work-card">
 
             <img
-    src="presence.webp"
-    alt="Swayphics digital presence design"
-    width="1536"
-    height="1024"
-    class="work-image"
-    loading="lazy"
-    decoding="async"
->
+                src="presence.webp"
+                alt="Swayphics digital presence design"
+                width="1536"
+                height="1024"
+                class="work-image"
+                loading="lazy"
+                decoding="async"
+            >
 
             <div class="work-content">
-                <span class="work-tag">02 / DIGITAL</span>
 
-                <h3>Presence</h3>
+                <span class="work-tag">
+                    02 / DIGITAL
+                </span>
+
+                <h3>
+                    Presence
+                </h3>
 
                 <p>
                     Creating digital experiences that help businesses
                     get discovered, understood and remembered.
                 </p>
+
             </div>
 
         </div>
@@ -15739,24 +15792,30 @@ html.reveal-ready .reveal-delay-4 {
         <div class="work-card">
 
             <img
-    src="expression.webp"
-    alt="Swayphics creative content design"
-    width="1536"
-    height="1024"
-    class="work-image"
-    loading="lazy"
-    decoding="async"
->
+                src="expression.webp"
+                alt="Swayphics creative content design"
+                width="1536"
+                height="1024"
+                class="work-image"
+                loading="lazy"
+                decoding="async"
+            >
 
             <div class="work-content">
-                <span class="work-tag">03 / CONTENT</span>
 
-                <h3>Expression</h3>
+                <span class="work-tag">
+                    03 / CONTENT
+                </span>
+
+                <h3>
+                    Expression
+                </h3>
 
                 <p>
                     Creating visual content that gives brands personality
                     and keeps them consistent across every platform.
                 </p>
+
             </div>
 
         </div>
@@ -15764,7 +15823,6 @@ html.reveal-ready .reveal-delay-4 {
     </div>
 
 </section>
-
         <!-- TESTIMONIALS -->
 <section class="testimonials" id="testimonials">
 
@@ -16500,6 +16558,95 @@ if (
         );
 
     });
+
+}
+
+    /* =========================================================
+   SWAYPHICS — BRAND SYSTEM 3D MICRO INTERACTION
+   ========================================================= */
+
+const brandSystem =
+    document.querySelector(
+        ".brand-system-3d"
+    );
+
+
+const brandSystemOrbit =
+    document.querySelector(
+        ".brand-system-orbit"
+    );
+
+
+if (
+    brandSystem &&
+    brandSystemOrbit &&
+    window.matchMedia(
+        "(hover: hover) and (pointer: fine)"
+    ).matches
+) {
+
+    brandSystem.addEventListener(
+        "mousemove",
+        (event) => {
+
+            const rect =
+                brandSystem.getBoundingClientRect();
+
+
+            const x =
+                event.clientX -
+                rect.left;
+
+
+            const y =
+                event.clientY -
+                rect.top;
+
+
+            const percentX =
+                (x / rect.width) -
+                0.5;
+
+
+            const percentY =
+                (y / rect.height) -
+                0.5;
+
+
+            const rotateZ =
+                -14 +
+                (percentX * 6);
+
+
+            const rotateX =
+                58 -
+                (percentY * 8);
+
+
+            brandSystemOrbit.style.transform =
+                `
+                rotateX(${rotateX}deg)
+                rotateZ(${rotateZ}deg)
+                scale(1.02)
+                `;
+
+        }
+    );
+
+
+    brandSystem.addEventListener(
+        "mouseleave",
+        () => {
+
+            brandSystemOrbit.style.transform =
+                `
+                rotateX(58deg)
+                rotateZ(-14deg)
+                scale(1)
+                `;
+
+        }
+    );
 
 }
 
