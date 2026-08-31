@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Terms & Conditions | Swayphics</title>
+
+    <meta
+        name="description"
+        content="Terms and Conditions governing the use of the Swayphics website and the provision of Swayphics creative and digital services."
+    >
+
+    <meta
+        name="robots"
+        content="index, follow"
+    >
+
+    <style>
+        :root {
+            --navy: #002096;
+            --blue: #0152F4;
+            --bright: #2C91FC;
+            --light-blue: #77C1FC;
+            --white: #FFFFFF;
+            --ink: #07132D;
+            --muted: #64708A;
+            --line: rgba(7, 19, 45, 0.10);
+            --surface: #F6F8FC;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family:
+                Inter,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            background:
+                var(--white);
+
+            color:
+                var(--ink);
+
+            line-height:
+                1.7;
+        }
+
+        a {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        a:hover {
+            text-decoration:
+                underline;
+        }
+
+        .legal-nav {
+            position:
+                sticky;
+
+            top:
+                0;
+
+            z-index:
+                100;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                space-between;
+
+            padding:
+                18px clamp(22px, 5vw, 72px);
+
+            background:
+                rgba(255,255,255,0.88);
+
+            backdrop-filter:
+                blur(18px);
+
+            -webkit-backdrop-filter:
+                blur(18px);
+
+            border-bottom:
+                1px solid var(--line);
+        }
+
+        .brand {
+            color:
+                var(--ink);
+
+            font-size:
+                0.95rem;
+
+            font-weight:
+                900;
+
+            letter-spacing:
+                2px;
+        }
+
+        .back-link {
+            display:
+                inline-flex;
+
+            align-items:
+                center;
+
+            gap:
+                8px;
+
+            color:
+                var(--ink);
+
+            font-size:
+                0.78rem;
+
+            font-weight:
+                700;
+        }
+
+        .back-link:hover {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        .legal-hero {
+            position:
+                relative;
+
+            overflow:
+                hidden;
+
+            padding:
+                clamp(80px, 12vw, 150px)
+                clamp(22px, 7vw, 110px)
+                clamp(70px, 9vw, 110px);
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #F7F9FF 0%,
+                    #FFFFFF 55%,
+                    #EEF5FF 100%
+                );
+        }
+
+        .legal-hero::before {
+            content: "";
+
+            position:
+                absolute;
+
+            width:
+                420px;
+
+            height:
+                420px;
+
+            right:
+                -160px;
+
+            top:
+                -180px;
+
+            border-radius:
+                50%;
+
+            background:
+                radial-gradient(
+                    circle,
+                    rgba(1,82,244,0.14),
+                    transparent 68%
+                );
+
+            pointer-events:
+                none;
+        }
+
+        .legal-eyebrow {
+            position:
+                relative;
+
+            color:
+                var(--blue);
+
+            font-size:
+                0.72rem;
+
+            font-weight:
+                850;
+
+            letter-spacing:
+                2.5px;
+
+            text-transform:
+                uppercase;
+
+            margin-bottom:
+                18px;
+        }
+
+        .legal-hero h1 {
+            position:
+                relative;
+
+            max-width:
+                900px;
+
+            font-size:
+                clamp(3rem, 8vw, 7rem);
+
+            line-height:
+                0.95;
+
+            letter-spacing:
+                -0.055em;
+
+            font-weight:
+                900;
+        }
+
+        .legal-hero p {
+            position:
+                relative;
+
+            max-width:
+                700px;
+
+            margin-top:
+                28px;
+
+            color:
+                var(--muted);
+
+            font-size:
+                clamp(1rem, 1.5vw, 1.12rem);
+        }
+
+        .legal-meta {
+            position:
+                relative;
+
+            margin-top:
+                28px;
+
+            color:
+                #7C879B;
+
+            font-size:
+                0.78rem;
+
+            font-weight:
+                650;
+        }
+
+        .legal-layout {
+            display:
+                grid;
+
+            grid-template-columns:
+                minmax(180px, 240px)
+                minmax(0, 760px);
+
+            gap:
+                clamp(40px, 8vw, 110px);
+
+            max-width:
+                1180px;
+
+            margin:
+                0 auto;
+
+            padding:
+                80px 24px 120px;
+        }
+
+        .legal-index {
+            position:
+                sticky;
+
+            top:
+                100px;
+
+            align-self:
+                start;
+        }
+
+        .legal-index-title {
+            color:
+                var(--ink);
+
+            font-size:
+                0.68rem;
+
+            font-weight:
+                850;
+
+            letter-spacing:
+                1.8px;
+
+            text-transform:
+                uppercase;
+
+            margin-bottom:
+                15px;
+        }
+
+        .legal-index a {
+            display:
+                block;
+
+            padding:
+                5px 0;
+
+            color:
+                var(--muted);
+
+            font-size:
+                0.76rem;
+
+            line-height:
+                1.4;
+        }
+
+        .legal-index a:hover {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        .legal-content section {
+            margin-bottom:
+                58px;
+
+            scroll-margin-top:
+                110px;
+        }
+
+        .legal-content h2 {
+            margin-bottom:
+                16px;
+
+            font-size:
+                clamp(1.35rem, 2.5vw, 1.8rem);
+
+            line-height:
+                1.2;
+
+            letter-spacing:
+                -0.025em;
+        }
+
+        .legal-content p {
+            margin-bottom:
+                15px;
+
+            color:
+                #4F5B72;
+
+            font-size:
+                0.96rem;
+        }
+
+        .legal-content ul {
+            margin:
+                14px 0 20px 22px;
+        }
+
+        .legal-content li {
+            margin-bottom:
+                8px;
+
+            color:
+                #4F5B72;
+
+            font-size:
+                0.96rem;
+        }
+
+        .legal-note {
+            margin:
+                25px 0;
+
+            padding:
+                22px 24px;
+
+            border:
+                1px solid rgba(1,82,244,0.14);
+
+            border-left:
+                3px solid var(--blue);
+
+            border-radius:
+                16px;
+
+            background:
+                rgba(1,82,244,0.035);
+        }
+
+        .legal-note p {
+            margin:
+                0;
+
+            color:
+                #46536B;
+        }
+
+        .legal-contact {
+            padding:
+                28px;
+
+            border-radius:
+                22px;
+
+            background:
+                var(--ink);
+
+            color:
+                var(--white);
+
+            box-shadow:
+                0 20px 60px
+                rgba(7,19,45,0.12);
+        }
+
+        .legal-contact h2 {
+            color:
+                var(--white);
+        }
+
+        .legal-contact p {
+            color:
+                rgba(255,255,255,0.68);
+        }
+
+        .legal-contact a {
+            color:
+                var(--light-blue);
+
+            font-weight:
+                700;
+        }
+
+        .legal-footer {
+            padding:
+                30px 24px;
+
+            text-align:
+                center;
+
+            border-top:
+                1px solid var(--line);
+
+            color:
+                #7C879B;
+
+            font-size:
+                0.76rem;
+        }
+
+        .legal-footer strong {
+            color:
+                var(--ink);
+        }
+
+        @media (max-width: 760px) {
+
+            .legal-nav {
+                padding:
+                    16px 20px;
+            }
+
+            .legal-hero {
+                padding:
+                    75px 22px 65px;
+            }
+
+            .legal-hero h1 {
+                font-size:
+                    clamp(3rem, 15vw, 5rem);
+            }
+
+            .legal-layout {
+                display:
+                    block;
+
+                padding:
+                    55px 22px 85px;
+            }
+
+            .legal-index {
+                position:
+                    static;
+
+                margin-bottom:
+                    55px;
+
+                padding-bottom:
+                    25px;
+
+                border-bottom:
+                    1px solid var(--line);
+            }
+
+            .legal-index a {
+                display:
+                    inline-block;
+
+                margin-right:
+                    15px;
+            }
+
+            .legal-content section {
+                margin-bottom:
+                    48px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="legal-nav">
+
+        <a
+            class="brand"
+            href="index.html"
+            aria-label="Swayphics home"
+        >
+            SWAYPHICS
+        </a>
+
+        <a
+            class="back-link"
+            href="index.html"
+        >
+            ← Back to website
+        </a>
+
+    </nav>
+
+
+    <header class="legal-hero">
+
+        <div class="legal-eyebrow">
+            SWAYPHICS · LEGAL
+        </div>
+
+        <h1>
+            Terms &<br>
+            Conditions.
+        </h1>
+
+        <p>
+            These Terms & Conditions establish the general framework
+            for using the Swayphics website and engaging Swayphics
+            for creative, branding, design and digital services.
+        </p>
+
+        <div class="legal-meta">
+            Last updated: 30 August 2026
+        </div>
+
+    </header>
+
+
+    <main class="legal-layout">
+
+        <aside class="legal-index">
+
+            <div class="legal-index-title">
+                On this page
+            </div>
+
+            <a href="#acceptance">01 · Acceptance</a>
+            <a href="#services">02 · Our services</a>
+            <a href="#quotes">03 · Quotes & approval</a>
+            <a href="#payments">04 · Payments</a>
+            <a href="#client">05 · Client responsibilities</a>
+            <a href="#revisions">06 · Revisions</a>
+            <a href="#delays">07 · Delays</a>
+            <a href="#third-party">08 · Third-party services</a>
+            <a href="#intellectual-property">09 · Intellectual property</a>
+            <a href="#portfolio">10 · Portfolio use</a>
+            <a href="#cancellation">11 · Cancellation</a>
+            <a href="#refunds">12 · Refunds</a>
+            <a href="#delivery">13 · Delivery & approval</a>
+            <a href="#website">14 · Website services</a>
+            <a href="#liability">15 · Liability</a>
+            <a href="#disputes">16 · Disputes</a>
+            <a href="#changes">17 · Changes</a>
+            <a href="#contact">18 · Contact</a>
+
+        </aside>
+
+
+        <article class="legal-content">
+
+            <section id="acceptance">
+
+                <h2>01 · Acceptance of these terms</h2>
+
+                <p>
+                    By using the Swayphics website or engaging Swayphics
+                    for services, you acknowledge that you have read and
+                    understood these Terms & Conditions.
+                </p>
+
+                <p>
+                    A specific project may also be governed by a quotation,
+                    proposal, invoice, project brief or other written
+                    agreement issued and accepted for that project.
+                </p>
+
+                <p>
+                    Where a project-specific written agreement conflicts
+                    with these general terms, the project-specific
+                    agreement will apply to the extent of the conflict.
+                </p>
+
+            </section>
+
+
+            <section id="services">
+
+                <h2>02 · Swayphics services</h2>
+
+                <p>
+                    Swayphics provides creative, branding, design and
+                    digital services. Services may include, depending on
+                    the agreed project:
+                </p>
+
+                <ul>
+                    <li>Logo and brand identity design.</li>
+                    <li>Business stationery and marketing design.</li>
+                    <li>Packaging and apparel design.</li>
+                    <li>Website design and development.</li>
+                    <li>Digital and visual content.</li>
+                    <li>Business-related digital setup services.</li>
+                    <li>Other creative or digital services agreed in writing.</li>
+                </ul>
+
+                <p>
+                    The exact scope, deliverables and price of each project
+                    will be determined by the applicable quotation,
+                    proposal or written agreement.
+                </p>
+
+            </section>
+
+
+            <section id="quotes">
+
+                <h2>03 · Quotes, proposals and project approval</h2>
+
+                <p>
+                    A quotation or proposal describes the services and
+                    deliverables Swayphics intends to provide based on
+                    the information available at the time it is prepared.
+                </p>
+
+                <p>
+                    A project becomes scheduled for commencement once
+                    the applicable quotation or proposal has been accepted
+                    and any required initial payment has been received,
+                    unless otherwise agreed in writing.
+                </p>
+
+                <p>
+                    Requests outside the agreed scope may require an
+                    additional quotation or fee.
+                </p>
+
+            </section>
+
+
+            <section id="payments">
+
+                <h2>04 · Payments</h2>
+
+                <p>
+                    Project pricing and payment requirements will be
+                    communicated before work begins.
+                </p>
+
+                <p>
+                    Where an upfront payment, deposit or milestone payment
+                    is required, Swayphics may delay commencement or
+                    continuation of work until the applicable payment
+                    requirement has been satisfied.
+                </p>
+
+                <p>
+                    Unless a project-specific agreement states otherwise,
+                    final deliverables may be withheld until all amounts
+                    due for the relevant project have been paid.
+                </p>
+
+                <div class="legal-note">
+
+                    <p>
+                        Payment terms remain subject to any rights and
+                        protections applicable to the client under South
+                        African law.
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <section id="client">
+
+                <h2>05 · Client responsibilities</h2>
+
+                <p>
+                    Clients are responsible for providing accurate,
+                    complete and timely information, materials and
+                    instructions reasonably required for a project.
+                </p>
+
+                <p>
+                    This may include:
+                </p>
+
+                <ul>
+                    <li>Brand information and business details.</li>
+                    <li>Approved text and content.</li>
+                    <li>Logos, photographs and other supplied assets.</li>
+                    <li>Access credentials where technically required.</li>
+                    <li>Feedback and approvals.</li>
+                    <li>Other materials identified in the project scope.</li>
+                </ul>
+
+                <p>
+                    The client must have the necessary rights or permissions
+                    to provide any third-party materials supplied to
+                    Swayphics.
+                </p>
+
+            </section>
+
+
+            <section id="revisions">
+
+                <h2>06 · Revisions and changes</h2>
+
+                <p>
+                    The number and nature of revisions included in a project
+                    will depend on the agreed scope.
+                </p>
+
+                <p>
+                    A revision means a reasonable modification to an
+                    existing concept or deliverable within the agreed
+                    project direction. A request to substantially change
+                    the direction, concept, scope or deliverable may be
+                    treated as additional work.
+                </p>
+
+                <p>
+                    Additional work outside the agreed scope may be quoted
+                    separately before it is undertaken.
+                </p>
+
+            </section>
+
+
+            <section id="delays">
+
+                <h2>07 · Client delays</h2>
+
+                <p>
+                    Project timelines depend partly on the timely provision
+                    of information, materials, feedback and approvals.
+                </p>
+
+                <p>
+                    Where a client substantially delays a project by failing
+                    to provide required information, feedback, approvals or
+                    access, the project timeline may need to be adjusted.
+                </p>
+
+                <p>
+                    Swayphics will communicate material timeline issues where
+                    reasonably practicable.
+                </p>
+
+            </section>
+
+
+            <section id="third-party">
+
+                <h2>08 · Third-party services and platforms</h2>
+
+                <p>
+                    Some projects may rely on services, software, hosting,
+                    domains, APIs, payment processors, email providers,
+                    databases, plugins or other technology supplied by
+                    third parties.
+                </p>
+
+                <p>
+                    Swayphics does not own or control those third-party
+                    services and cannot guarantee their continued
+                    availability, pricing, functionality, policies or
+                    performance.
+                </p>
+
+                <p>
+                    Where a third-party service is required for a project,
+                    the client may also be subject to that provider's own
+                    terms, policies and fees.
+                </p>
+
+            </section>
+
+
+            <section id="intellectual-property">
+
+                <h2>09 · Intellectual property</h2>
+
+                <p>
+                    Intellectual property ownership and licensing for a
+                    particular project will depend on the agreed scope,
+                    applicable payment status and any project-specific
+                    agreement.
+                </p>
+
+                <p>
+                    Unless otherwise agreed in writing, Swayphics retains
+                    ownership of its pre-existing materials, processes,
+                    reusable systems, concepts, templates, tools and
+                    know-how.
+                </p>
+
+                <p>
+                    Third-party materials remain subject to their respective
+                    licences and ownership rights.
+                </p>
+
+                <p>
+                    Where final project assets are intended to be transferred
+                    to the client, the applicable transfer or licence will
+                    take effect according to the project agreement and
+                    applicable payment requirements.
+                </p>
+
+            </section>
+
+
+            <section id="portfolio">
+
+                <h2>10 · Portfolio and publicity</h2>
+
+                <p>
+                    Swayphics may wish to display completed work in its
+                    portfolio, website, social media or promotional material
+                    to demonstrate its capabilities.
+                </p>
+
+                <p>
+                    Where a client has agreed to portfolio or publicity use,
+                    Swayphics may identify the relevant project or business
+                    in a reasonable manner.
+                </p>
+
+                <p>
+                    If a project has been expressly agreed to be confidential
+                    or not for public display, Swayphics will respect that
+                    agreement.
+                </p>
+
+            </section>
+
+
+            <section id="cancellation">
+
+                <h2>11 · Cancellation</h2>
+
+                <p>
+                    A client who wishes to cancel a project should notify
+                    Swayphics as soon as reasonably possible in writing.
+                </p>
+
+                <p>
+                    The effect of cancellation may depend on the stage of
+                    the project, work already completed, commitments made
+                    to third parties, materials purchased and applicable
+                    law.
+                </p>
+
+                <p>
+                    Any cancellation charge or amount retained by Swayphics
+                    will be based on the circumstances of the project and
+                    applicable law rather than an automatic blanket charge.
+                </p>
+
+            </section>
+
+
+            <section id="refunds">
+
+                <h2>12 · Refunds</h2>
+
+                <p>
+                    Refunds will be considered according to the applicable
+                    project agreement, work already performed, amounts
+                    properly due, cancellation circumstances and the rights
+                    available to the client under applicable law.
+                </p>
+
+                <p>
+                    Nothing in these Terms & Conditions is intended to
+                    exclude or restrict a consumer right that cannot
+                    lawfully be excluded or restricted.
+                </p>
+
+            </section>
+
+
+            <section id="delivery">
+
+                <h2>13 · Delivery and client approval</h2>
+
+                <p>
+                    The client is responsible for reviewing deliverables
+                    and providing feedback or approval within a reasonable
+                    period.
+                </p>
+
+                <p>
+                    Once a deliverable has been approved, later changes
+                    may constitute additional work unless the change is
+                    required to correct an error attributable to Swayphics.
+                </p>
+
+                <p>
+                    Final delivery formats will depend on the project scope
+                    and the formats agreed for the relevant service.
+                </p>
+
+            </section>
+
+
+            <section id="website">
+
+                <h2>14 · Website design and development</h2>
+
+                <p>
+                    Website projects may involve design, development,
+                    configuration, hosting, domain connections, databases,
+                    forms, integrations and other technical components.
+                </p>
+
+                <p>
+                    Unless specifically included in the project scope,
+                    ongoing hosting fees, domain registration, third-party
+                    subscriptions, premium software, external API fees,
+                    maintenance and future feature development are not
+                    automatically included in the initial project price.
+                </p>
+
+                <p>
+                    Website functionality may also depend on third-party
+                    services outside Swayphics' control.
+                </p>
+
+                <p>
+                    Where ongoing maintenance or support is required,
+                    it may be provided under a separate agreement or
+                    quotation.
+                </p>
+
+            </section>
+
+
+            <section id="liability">
+
+                <h2>15 · Liability and limitations</h2>
+
+                <p>
+                    Swayphics will perform its services with reasonable
+                    care and skill appropriate to the agreed service.
+                </p>
+
+                <p>
+                    Swayphics is not responsible for failures, losses or
+                    interruptions caused by circumstances outside its
+                    reasonable control, including failures of third-party
+                    platforms, hosting providers, internet services,
+                    domain providers, APIs or other external infrastructure.
+                </p>
+
+                <p>
+                    Nothing in these Terms & Conditions excludes or limits
+                    any liability or consumer right that cannot lawfully
+                    be excluded or limited under applicable South African
+                    law.
+                </p>
+
+            </section>
+
+
+            <section id="disputes">
+
+                <h2>16 · Disputes</h2>
+
+                <p>
+                    If a disagreement arises, both Swayphics and the client
+                    are encouraged to first attempt to resolve the matter
+                    through direct communication and good-faith discussion.
+                </p>
+
+                <p>
+                    Where appropriate, the parties may consider mediation
+                    or another lawful dispute-resolution process before
+                    pursuing formal proceedings.
+                </p>
+
+                <p>
+                    Nothing in this section prevents a party from exercising
+                    a right or remedy available under applicable law.
+                </p>
+
+            </section>
+
+
+            <section id="changes">
+
+                <h2>17 · Changes to these Terms</h2>
+
+                <p>
+                    Swayphics may update these general website Terms &
+                    Conditions from time to time.
+                </p>
+
+                <p>
+                    The latest version will be published on this page with
+                    the date on which it was last updated.
+                </p>
+
+                <p>
+                    Changes to the terms governing an existing project will
+                    not automatically alter a project-specific agreement
+                    already accepted by both parties unless the parties
+                    agree otherwise.
+                </p>
+
+            </section>
+
+
+            <section id="contact">
+
+                <div class="legal-contact">
+
+                    <h2>18 · Contact Swayphics</h2>
+
+                    <p>
+                        For questions regarding these Terms & Conditions,
+                        project agreements or Swayphics services, contact:
+                    </p>
+
+                    <p>
+                        Email:
+                        <a href="mailto:info@swayphics.co.za">
+                            info@swayphics.co.za
+                        </a>
+                    </p>
+
+                    <p>
+                        Website:
+                        <a href="https://swayphics.co.za">
+                            swayphics.co.za
+                        </a>
+                    </p>
+
+                </div>
+
+            </section>
+
+        </article>
+
+    </main>
+
+
+    <footer class="legal-footer">
+
+        <strong>SWAYPHICS</strong>
+        · Empowering through design.
+
+        <br>
+
+        © 2026 Swayphics. All rights reserved.
+
+    </footer>
+
+</body>
+</html>
