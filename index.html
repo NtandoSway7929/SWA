@@ -14227,6 +14227,68 @@ html.reveal-ready .reveal-delay-4 {
     }
 
 }
+
+/* =========================================================
+   SWAYPHICS — PREMIUM MAGNETIC BUTTONS
+   ========================================================= */
+
+.btn {
+    position: relative !important;
+
+    transform:
+        translate3d(0, 0, 0);
+
+    will-change:
+        transform;
+
+    transition:
+        transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.25s ease,
+        background 0.25s ease,
+        border-color 0.25s ease !important;
+}
+
+
+/* Keep button contents visually stable */
+
+.btn > * {
+    position:
+        relative;
+
+    z-index:
+        2;
+}
+
+
+/* Desktop only */
+
+@media (hover: hover) and (pointer: fine) {
+
+    .btn.magnetic-active {
+        transition:
+            transform 0.12s ease-out,
+            box-shadow 0.25s ease,
+            background 0.25s ease,
+            border-color 0.25s ease !important;
+    }
+
+}
+
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .btn {
+        transform:
+            none !important;
+
+        transition:
+            none !important;
+    }
+
+}
+    
     
     </style>
     
@@ -15801,7 +15863,93 @@ interactiveCards.forEach((card) => {
 
     });
 
-}); 
+});
+
+        /* =========================================================
+   SWAYPHICS — MAGNETIC BUTTONS
+   ========================================================= */
+
+const magneticButtons =
+    document.querySelectorAll(
+        ".btn"
+    );
+
+
+if (
+    window.matchMedia(
+        "(hover: hover) and (pointer: fine)"
+    ).matches
+) {
+
+    magneticButtons.forEach((button) => {
+
+        button.addEventListener(
+            "mousemove",
+            (event) => {
+
+                const rect =
+                    button.getBoundingClientRect();
+
+
+                const x =
+                    event.clientX - rect.left;
+
+
+                const y =
+                    event.clientY - rect.top;
+
+
+                const centerX =
+                    rect.width / 2;
+
+
+                const centerY =
+                    rect.height / 2;
+
+
+                /*
+                 * Keep the movement intentionally small.
+                 * This should feel responsive, not gimmicky.
+                 */
+
+                const moveX =
+                    (x - centerX) / centerX * 5;
+
+
+                const moveY =
+                    (y - centerY) / centerY * 4;
+
+
+                button.style.transform =
+                    `translate3d(${moveX}px, ${moveY}px, 0) scale(1.015)`;
+
+
+                button.classList.add(
+                    "magnetic-active"
+                );
+
+            }
+        );
+
+
+        button.addEventListener(
+            "mouseleave",
+            () => {
+
+                button.style.transform =
+                    "translate3d(0, 0, 0) scale(1)";
+
+
+                button.classList.remove(
+                    "magnetic-active"
+                );
+
+            }
+        );
+
+    });
+
+}
 
 /* =========================================================
    HERO VIDEO → IMAGE
