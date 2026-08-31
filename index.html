@@ -13150,6 +13150,119 @@ nav.scrolled {
 
 }
 
+    /* =========================================================
+   SWAYPHICS — HERO VIDEO → IMAGE TRANSITION
+   ========================================================= */
+
+.hero-showcase-image {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    overflow: hidden !important;
+
+    background: #06122B !important;
+
+    isolation: isolate !important;
+}
+
+
+/* Final still image sits underneath the video */
+
+.hero-image-final {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    z-index: 1 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    object-fit: cover !important;
+
+    object-position: 72% center !important;
+
+    display: block !important;
+
+    opacity: 1 !important;
+}
+
+
+/* Video sits above the final still */
+
+.hero-video {
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    z-index: 2 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    object-fit: cover !important;
+
+    object-position: 72% center !important;
+
+    display: block !important;
+
+    opacity: 1;
+
+    transition:
+        opacity 0.75s ease !important;
+}
+
+
+/* Keep the existing artwork treatment over BOTH */
+
+.hero-showcase-image::before {
+    z-index: 4 !important;
+}
+
+
+.hero-showcase-image::after {
+    z-index: 5 !important;
+}
+
+
+/* BRAND stays above the media */
+
+.hero-showcase-word {
+    z-index: 6 !important;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .hero-video,
+    .hero-image-final {
+        object-position:
+            74% center !important;
+    }
+
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .hero-video {
+        display: none !important;
+    }
+
+    .hero-image-final {
+        opacity: 1 !important;
+    }
+
+}
 
     </style>
     
@@ -13247,14 +13360,38 @@ nav.scrolled {
     </div>
 
 
-    <div class="hero-showcase">
+    <div class="hero-showcase" aria-hidden="true">
 
-        <div class="hero-showcase-image">
+    <div class="hero-showcase-image">
 
-            <img
-                src="hero-image.webp"
-                alt="Swayphics creative visual"
+        <video
+            class="hero-video"
+            autoplay
+            muted
+            playsinline
+            preload="auto"
+        >
+            <source
+                src="hero-video.mp4"
+                type="video/mp4"
             >
+        </video>
+
+        <img
+            class="hero-image-final"
+            src="hero-image.webp"
+            alt=""
+        >
+
+        <div
+            class="hero-showcase-word"
+        >
+            BRAND
+        </div>
+
+    </div>
+
+</div>
 
             <div class="hero-showcase-word" aria-hidden="true">
                 BRAND
@@ -14462,6 +14599,82 @@ if ("IntersectionObserver" in window) {
     });
 
 }
+
+/* =========================================================
+   HERO VIDEO → IMAGE
+   ========================================================= */
+
+const heroVideo =
+    document.querySelector(
+        ".hero-video"
+    );
+
+const heroFinalImage =
+    document.querySelector(
+        ".hero-image-final"
+    );
+
+
+if (
+    heroVideo &&
+    heroFinalImage
+) {
+
+    const showFinalImage =
+        () => {
+
+            heroVideo.style.opacity =
+                "0";
+
+        };
+
+
+    heroVideo.addEventListener(
+        "ended",
+        showFinalImage
+    );
+
+
+    heroVideo.addEventListener(
+        "error",
+        () => {
+
+            heroVideo.style.display =
+                "none";
+
+            heroFinalImage.style.opacity =
+                "1";
+
+        }
+    );
+
+
+    const playPromise =
+        heroVideo.play();
+
+
+    if (
+        playPromise &&
+        typeof playPromise.catch ===
+        "function"
+    ) {
+
+        playPromise.catch(
+            () => {
+
+                heroVideo.style.display =
+                    "none";
+
+                heroFinalImage.style.opacity =
+                    "1";
+
+            }
+        );
+
+    }
+
+}
+    
 </script>
 
 
@@ -14604,6 +14817,7 @@ if ("IntersectionObserver" in window) {
 
 </div>
 
+    
     <script>
 /* =========================================================
    SWAYPHICS — CONTACT FORM / SUPABASE
