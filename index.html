@@ -15690,35 +15690,18 @@ html.reveal-ready .reveal-delay-4 {
 
         </div>
 
+        <div class="section-label">The Swayphics approach</div>
 
-        <!-- Swayphics 3D Brand System -->
+<h2 class="section-title">
+    From idea<br>
+    <span>to impact.</span>
+</h2>
 
-        <div
-            class="brand-system-3d"
-            aria-hidden="true"
-        >
-
-            <div class="brand-system-orbit">
-
-                <div class="brand-system-layer brand-layer-1">
-                    <span>IDENTITY</span>
-                </div>
-
-                <div class="brand-system-layer brand-layer-2">
-                    <span>PRESENCE</span>
-                </div>
-
-                <div class="brand-system-layer brand-layer-3">
-                    <span>EXPRESSION</span>
-                </div>
-
-                <div class="brand-system-core">
-                    <span>S</span>
-                </div>
-
-            </div>
-
-        </div>
+<p class="work-intro">
+    We combine creativity, strategy and technology to help
+    businesses build stronger brands, establish a digital presence
+    and communicate with confidence.
+</p>
 
     </div>
 
@@ -16560,96 +16543,6 @@ if (
     });
 
 }
-
-    /* =========================================================
-   SWAYPHICS — BRAND SYSTEM 3D MICRO INTERACTION
-   ========================================================= */
-
-const brandSystem =
-    document.querySelector(
-        ".brand-system-3d"
-    );
-
-
-const brandSystemOrbit =
-    document.querySelector(
-        ".brand-system-orbit"
-    );
-
-
-if (
-    brandSystem &&
-    brandSystemOrbit &&
-    window.matchMedia(
-        "(hover: hover) and (pointer: fine)"
-    ).matches
-) {
-
-    brandSystem.addEventListener(
-        "mousemove",
-        (event) => {
-
-            const rect =
-                brandSystem.getBoundingClientRect();
-
-
-            const x =
-                event.clientX -
-                rect.left;
-
-
-            const y =
-                event.clientY -
-                rect.top;
-
-
-            const percentX =
-                (x / rect.width) -
-                0.5;
-
-
-            const percentY =
-                (y / rect.height) -
-                0.5;
-
-
-            const rotateZ =
-                -14 +
-                (percentX * 6);
-
-
-            const rotateX =
-                58 -
-                (percentY * 8);
-
-
-            brandSystemOrbit.style.transform =
-                `
-                rotateX(${rotateX}deg)
-                rotateZ(${rotateZ}deg)
-                scale(1.02)
-                `;
-
-        }
-    );
-
-
-    brandSystem.addEventListener(
-        "mouseleave",
-        () => {
-
-            brandSystemOrbit.style.transform =
-                `
-                rotateX(58deg)
-                rotateZ(-14deg)
-                scale(1)
-                `;
-
-        }
-    );
-
-}
-
 
 
 /* =========================================================
