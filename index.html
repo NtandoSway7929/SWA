@@ -14879,7 +14879,107 @@ html.reveal-ready .reveal-delay-4 {
 .sway-spatial {
     display: none !important;
 }
+
     
+ /* =========================================================
+   WHY SWAYPHICS — EDITORIAL IMAGE
+   ========================================================= */
+
+.why-swayphics .why-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.75fr);
+    gap: clamp(40px, 7vw, 100px);
+    align-items: end;
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 0 60px;
+    padding: 0;
+}
+
+.why-header-copy {
+    max-width: 760px;
+}
+
+.why-swayphics .why-header .section-title {
+    margin-bottom: 0;
+}
+
+.why-image {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 24px;
+    background: #EEF6FF;
+    border: 1px solid rgba(0, 32, 150, 0.10);
+    box-shadow:
+        0 18px 48px rgba(0, 32, 150, 0.10),
+        0 4px 16px rgba(0, 32, 150, 0.04);
+}
+
+.why-image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0, 32, 150, 0.08),
+            rgba(1, 82, 244, 0.02) 45%,
+            rgba(255, 255, 255, 0.04)
+        );
+    pointer-events: none;
+}
+
+.why-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transform: scale(1.01);
+    transition:
+        transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+        filter 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.why-image:hover img {
+    transform: scale(1.045);
+    filter: saturate(1.04);
+}
+
+@media (max-width: 800px) {
+
+    .why-swayphics .why-header {
+        grid-template-columns: 1fr;
+        gap: 30px;
+        align-items: start;
+    }
+
+    .why-header-copy {
+        max-width: 100%;
+    }
+
+    .why-image {
+        max-width: 620px;
+        aspect-ratio: 16 / 10;
+    }
+
+}
+
+@media (max-width: 700px) {
+
+    .why-swayphics .why-header {
+        margin-bottom: 40px;
+    }
+
+    .why-image {
+        border-radius: 20px;
+        aspect-ratio: 4 / 3;
+    }
+
+}   
     
     </style>
     
@@ -15594,18 +15694,30 @@ html.reveal-ready .reveal-delay-4 {
 
     <div class="why-header">
 
-        <div>
-            <div class="section-label">
-                Why Swayphics
-            </div>
+    <div class="why-header-copy">
 
-            <h2 class="section-title">
-                Your business deserves to look
-                <span>as serious as your ambition.</span>
-            </h2>
+        <div class="section-label">
+            Why Swayphics
         </div>
 
+        <h2 class="section-title">
+            Your business deserves to look
+            <span>as serious as your ambition.</span>
+        </h2>
+
     </div>
+
+   <figure class="why-image">
+    <img
+        src="why-swayphics.webp"
+        alt="Swayphics creative and digital work"
+        loading="lazy"
+        decoding="async"
+        width="2400"
+        height="1792"
+    >
+</figure>
+</div>
 
 
     <div class="why-grid">
