@@ -14882,7 +14882,7 @@ html.reveal-ready .reveal-delay-4 {
 
     
 /* =========================================================
-   WHY SWAYPHICS — IMAGE BACKGROUND / DUOTONE
+   WHY SWAYPHICS — NATURAL IMAGE BACKGROUND
    ========================================================= */
 
 .why-swayphics {
@@ -14893,15 +14893,18 @@ html.reveal-ready .reveal-delay-4 {
     width: 100%;
     padding: clamp(90px, 9vw, 130px) 7% clamp(85px, 8vw, 115px);
 
-    background: #00145F;
-    color: #FFFFFF;
+    background: #F7FAFF;
+    color: #081533;
 }
 
-/* Background image */
+/* ---------------------------------------------------------
+   IMAGE
+   --------------------------------------------------------- */
+
 .why-background {
     position: absolute;
     inset: 0;
-    z-index: -4;
+    z-index: -5;
 
     overflow: hidden;
     pointer-events: none;
@@ -14920,27 +14923,55 @@ html.reveal-ready .reveal-delay-4 {
     object-position: center center;
 
     /*
-       Original image is 2400 × 1792.
-       This keeps its composition intact while allowing
-       the browser to crop naturally on different screens.
+       Natural colour.
+       No duotone.
+       No grayscale.
     */
-    transform: scale(1.035);
-
     filter:
-        grayscale(100%)
-        contrast(1.08)
-        brightness(0.82)
-        saturate(0);
+        saturate(0.92)
+        contrast(1.02)
+        brightness(0.94);
 
-    opacity: 0.78;
+    opacity: 0.28;
+
+    transform: scale(1.025);
 
     transition:
         transform 900ms cubic-bezier(0.22, 1, 0.36, 1),
         opacity 700ms ease;
 }
 
-/* Swayphics blue duotone */
+/* ---------------------------------------------------------
+   TOP + BOTTOM BLENDING
+   --------------------------------------------------------- */
+
 .why-overlay {
+    position: absolute;
+    inset: -2px;
+    z-index: -4;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            180deg,
+            #EEF6FF 0%,
+            rgba(247,250,255,0.88) 8%,
+            rgba(247,250,255,0.30) 21%,
+            rgba(247,250,255,0.18) 50%,
+            rgba(247,250,255,0.42) 78%,
+            #FFFFFF 96%,
+            #FFFFFF 100%
+        );
+}
+
+/* ---------------------------------------------------------
+   SIDE EDGE BLENDING
+   --------------------------------------------------------- */
+
+.why-swayphics::before {
+    content: "";
+
     position: absolute;
     inset: 0;
     z-index: -3;
@@ -14949,19 +14980,23 @@ html.reveal-ready .reveal-delay-4 {
 
     background:
         linear-gradient(
-            135deg,
-            rgba(0, 20, 95, 0.96) 0%,
-            rgba(0, 32, 150, 0.90) 34%,
-            rgba(1, 82, 244, 0.76) 72%,
-            rgba(44, 145, 252, 0.58) 100%
+            90deg,
+            rgba(247,250,255,0.96) 0%,
+            rgba(247,250,255,0.72) 8%,
+            rgba(247,250,255,0.16) 22%,
+            rgba(247,250,255,0) 37%,
+            rgba(247,250,255,0) 63%,
+            rgba(247,250,255,0.16) 78%,
+            rgba(247,250,255,0.72) 92%,
+            rgba(247,250,255,0.96) 100%
         );
-
-    mix-blend-mode: multiply;
 }
 
-/* Additional controlled blue wash */
-.why-swayphics::before {
-    content: "";
+/* ---------------------------------------------------------
+   VERY SOFT BLUE ATMOSPHERE
+   --------------------------------------------------------- */
+
+.why-vignette {
     position: absolute;
     inset: 0;
     z-index: -2;
@@ -14969,44 +15004,34 @@ html.reveal-ready .reveal-delay-4 {
     pointer-events: none;
 
     background:
-        linear-gradient(
-            180deg,
-            rgba(0, 20, 95, 0.42) 0%,
-            rgba(0, 20, 95, 0.12) 42%,
-            rgba(0, 20, 95, 0.62) 100%
-        );
-}
-
-/* Premium vignette */
-.why-vignette {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-
-    pointer-events: none;
-
-    background:
         radial-gradient(
-            circle at 72% 35%,
-            rgba(119, 193, 252, 0.20) 0%,
-            rgba(119, 193, 252, 0.08) 24%,
-            rgba(0, 20, 95, 0) 55%
+            circle at 78% 30%,
+            rgba(119,193,252,0.14) 0%,
+            rgba(119,193,252,0.05) 23%,
+            rgba(119,193,252,0) 55%
         ),
-        linear-gradient(
-            90deg,
-            rgba(0, 20, 95, 0.42) 0%,
-            rgba(0, 20, 95, 0.08) 45%,
-            rgba(0, 20, 95, 0.30) 100%
+        radial-gradient(
+            circle at 18% 72%,
+            rgba(1,82,244,0.06) 0%,
+            rgba(1,82,244,0) 50%
         );
 }
 
-/* =========================================================
+/* ---------------------------------------------------------
+   SUBTLE IMAGE DEPTH
+   --------------------------------------------------------- */
+
+.why-swayphics:hover .why-background img {
+    transform: scale(1.04);
+}
+
+/* ---------------------------------------------------------
    HEADER
-   ========================================================= */
+   --------------------------------------------------------- */
 
 .why-swayphics .why-header {
     position: relative;
-    z-index: 2;
+    z-index: 3;
 
     display: block;
 
@@ -15020,35 +15045,15 @@ html.reveal-ready .reveal-delay-4 {
 }
 
 .why-swayphics .why-header .section-label {
-    margin: 0 0 16px;
-
-    color: #77C1FC;
-
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "SF Pro Display",
-        "SF Pro Text",
-        "Segoe UI",
-        system-ui,
-        sans-serif;
-
-    font-size: 0.68rem;
-    font-weight: 800;
-
-    letter-spacing: 0.18em;
-    line-height: 1.2;
-
-    text-transform: uppercase;
+    color: #0152F4;
 }
 
 .why-swayphics .why-header .section-title {
     max-width: 900px;
 
     margin: 0;
-    padding: 0;
 
-    color: #FFFFFF;
+    color: #081533;
 
     font-size: clamp(
         2.9rem,
@@ -15065,16 +15070,16 @@ html.reveal-ready .reveal-delay-4 {
 }
 
 .why-swayphics .why-header .section-title span {
-    color: #77C1FC;
+    color: #0152F4;
 }
 
-/* =========================================================
+/* ---------------------------------------------------------
    CARDS
-   ========================================================= */
+   --------------------------------------------------------- */
 
 .why-swayphics .why-grid {
     position: relative;
-    z-index: 2;
+    z-index: 3;
 
     display: grid;
 
@@ -15110,21 +15115,21 @@ html.reveal-ready .reveal-delay-4 {
     background:
         linear-gradient(
             145deg,
-            rgba(0, 20, 95, 0.74) 0%,
-            rgba(0, 32, 150, 0.56) 100%
+            rgba(255,255,255,0.78) 0%,
+            rgba(247,250,255,0.64) 100%
         );
 
     border:
-        1px solid rgba(255, 255, 255, 0.18);
+        1px solid rgba(0,32,150,0.10);
 
     border-radius: 22px;
 
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.12),
-        0 18px 40px rgba(0, 10, 55, 0.16);
+        0 18px 48px rgba(0,32,150,0.08),
+        inset 0 1px 0 rgba(255,255,255,0.85);
 
-    backdrop-filter: blur(8px) saturate(110%);
-    -webkit-backdrop-filter: blur(8px) saturate(110%);
+    backdrop-filter: blur(12px) saturate(115%);
+    -webkit-backdrop-filter: blur(12px) saturate(115%);
 
     transition:
         transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -15133,34 +15138,32 @@ html.reveal-ready .reveal-delay-4 {
         box-shadow 420ms ease;
 }
 
-/* Soft internal highlight */
-.why-swayphics .why-card::before {
-    content: "";
-
-    position: absolute;
-    inset: 0;
-
-    pointer-events: none;
+.why-swayphics .why-card:hover {
+    transform: translateY(-5px);
 
     background:
         linear-gradient(
-            135deg,
-            rgba(255,255,255,0.10) 0%,
-            rgba(255,255,255,0.025) 38%,
-            rgba(255,255,255,0) 65%
+            145deg,
+            rgba(255,255,255,0.90) 0%,
+            rgba(247,250,255,0.78) 100%
         );
 
-    opacity: 0.8;
+    border-color:
+        rgba(1,82,244,0.18);
+
+    box-shadow:
+        0 24px 58px rgba(0,32,150,0.12),
+        inset 0 1px 0 rgba(255,255,255,0.95);
 }
 
-/* Blue accent line */
+/* Blue accent */
 .why-swayphics .why-card::after {
     content: "";
 
     position: absolute;
 
-    top: 0;
     left: 0;
+    top: 0;
 
     width: 100%;
     height: 2px;
@@ -15168,264 +15171,13 @@ html.reveal-ready .reveal-delay-4 {
     background:
         linear-gradient(
             90deg,
-            #77C1FC 0%,
-            #2C91FC 45%,
-            rgba(44,145,252,0) 100%
+            #0152F4,
+            #77C1FC,
+            transparent
         );
 
-    opacity: 0.65;
-
-    transform:
-        scaleX(0.42);
-
-    transform-origin: left;
-
-    transition:
-        transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 420ms ease;
+    opacity: 0.62;
 }
-
-.why-swayphics .why-card:hover {
-    transform: translateY(-5px);
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(0, 20, 95, 0.84) 0%,
-            rgba(0, 32, 150, 0.70) 100%
-        );
-
-    border-color:
-        rgba(119, 193, 252, 0.34);
-
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.14),
-        0 24px 52px rgba(0, 10, 55, 0.24);
-}
-
-.why-swayphics .why-card:hover::after {
-    transform: scaleX(1);
-    opacity: 1;
-}
-
-/* =========================================================
-   CARD CONTENT
-   ========================================================= */
-
-.why-swayphics .why-number {
-    position: relative;
-    z-index: 2;
-
-    display: block;
-
-    margin: 0 0 22px;
-
-    color: #77C1FC;
-
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "SF Pro Display",
-        "SF Pro Text",
-        "Segoe UI",
-        system-ui,
-        sans-serif;
-
-    font-size: 0.68rem;
-    font-weight: 800;
-
-    letter-spacing: 0.14em;
-
-    line-height: 1;
-}
-
-.why-swayphics .why-card h3 {
-    position: relative;
-    z-index: 2;
-
-    margin: 0 0 11px;
-
-    color: #FFFFFF;
-
-    font-size: clamp(
-        1.35rem,
-        2vw,
-        1.75rem
-    );
-
-    font-weight: 700;
-    line-height: 1.08;
-
-    letter-spacing: -0.035em;
-}
-
-.why-swayphics .why-card p {
-    position: relative;
-    z-index: 2;
-
-    width: 100%;
-    max-width: 470px;
-
-    margin: 0;
-
-    color: rgba(255, 255, 255, 0.72);
-
-    font-size: 0.94rem;
-    line-height: 1.68;
-
-    letter-spacing: -0.005em;
-}
-
-/* =========================================================
-   FOOTER / CTA
-   ========================================================= */
-
-.why-swayphics .why-footer {
-    position: relative;
-    z-index: 2;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: space-between;
-
-    gap: 40px;
-
-    margin-top: 20px;
-    padding-top: 36px;
-
-    border-top:
-        1px solid rgba(255, 255, 255, 0.16);
-}
-
-.why-swayphics .why-footer-label {
-    display: block;
-
-    margin-bottom: 8px;
-
-    color: #77C1FC;
-
-    font-size: 0.67rem;
-    font-weight: 800;
-
-    letter-spacing: 0.16em;
-
-    line-height: 1.2;
-
-    text-transform: uppercase;
-}
-
-.why-swayphics .why-footer p {
-    max-width: 620px;
-
-    margin: 0;
-
-    color: rgba(255, 255, 255, 0.70);
-
-    font-size: 0.95rem;
-    line-height: 1.65;
-}
-
-.why-swayphics .why-footer .btn {
-    flex: 0 0 auto;
-}
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media (max-width: 850px) {
-
-    .why-swayphics {
-        padding:
-            90px 6% 85px;
-    }
-
-    .why-swayphics .why-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .why-swayphics .why-card {
-        min-height: 210px;
-    }
-
-    .why-swayphics .why-footer {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 24px;
-    }
-
-}
-
-@media (max-width: 700px) {
-
-    .why-swayphics {
-        padding:
-            82px 6% 75px;
-    }
-
-    .why-swayphics .why-header {
-        margin-bottom: 34px;
-    }
-
-    .why-swayphics .why-header .section-title {
-        font-size:
-            clamp(2.65rem, 12vw, 4.2rem);
-
-        line-height: 0.97;
-        letter-spacing: -0.05em;
-    }
-
-    .why-swayphics .why-background img {
-        transform: scale(1.06);
-        object-position: center center;
-    }
-
-    .why-swayphics .why-card {
-        min-height: 205px;
-
-        padding:
-            28px 24px;
-
-        border-radius: 20px;
-    }
-
-    .why-swayphics .why-card h3 {
-        font-size: 1.45rem;
-    }
-
-    .why-swayphics .why-card p {
-        font-size: 0.94rem;
-    }
-
-    .why-swayphics .why-footer {
-        margin-top: 18px;
-        padding-top: 28px;
-    }
-
-    .why-swayphics .why-footer .btn {
-        width: 100%;
-    }
-
-}
-
-/* =========================================================
-   REDUCED MOTION
-   ========================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-
-    .why-background img,
-    .why-swayphics .why-card,
-    .why-swayphics .why-card::after {
-        transition: none !important;
-    }
-
-    .why-swayphics .why-card:hover {
-        transform: none;
-    }
-
-} 
     
     </style>
     
