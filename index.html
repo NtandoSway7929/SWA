@@ -15435,6 +15435,278 @@ html.reveal-ready .reveal-delay-4 {
     }
 
 }
+
+    /* =========================================================
+   SWAYPHICS LIQUID GLASS NAVIGATION
+   Surgical material refinement only
+   Geometry + functionality remain unchanged
+   ========================================================= */
+
+nav {
+    --nav-glass-bg:
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.62) 0%,
+            rgba(255, 255, 255, 0.48) 38%,
+            rgba(247, 250, 255, 0.42) 68%,
+            rgba(119, 193, 252, 0.055) 100%
+        );
+
+    --nav-glass-border:
+        rgba(255, 255, 255, 0.62);
+
+    --nav-glass-blur:
+        24px;
+
+    --nav-glass-sat:
+        1.55;
+
+    --nav-glass-shadow:
+        0 8px 28px rgba(0, 32, 150, 0.10),
+        0 2px 7px rgba(0, 20, 95, 0.06),
+        inset 0 1px 0 rgba(255,255,255,0.68),
+        inset 0 -1px 0 rgba(0,32,150,0.07);
+
+    background: var(--nav-glass-bg) !important;
+
+    backdrop-filter:
+        blur(var(--nav-glass-blur))
+        saturate(var(--nav-glass-sat))
+        brightness(1.03);
+
+    -webkit-backdrop-filter:
+        blur(var(--nav-glass-blur))
+        saturate(var(--nav-glass-sat))
+        brightness(1.03);
+
+    border:
+        1px solid var(--nav-glass-border) !important;
+
+    border-bottom:
+        none !important;
+
+    box-shadow:
+        var(--nav-glass-shadow) !important;
+
+    isolation: isolate;
+}
+
+/* Thin specular highlight */
+nav::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 2%;
+    right: 2%;
+
+    height: 31%;
+
+    border-radius: 999px;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,0.23) 0%,
+            rgba(255,255,255,0.10) 22%,
+            rgba(255,255,255,0.025) 58%,
+            rgba(255,255,255,0) 100%
+        );
+
+    opacity: 0.92;
+}
+
+/* Bottom optical rim */
+nav::after {
+    content: "";
+
+    position: absolute;
+
+    left: 2%;
+    right: 2%;
+    bottom: 0;
+
+    height: 34%;
+
+    border-radius: 999px;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,0) 0%,
+            rgba(255,255,255,0.035) 42%,
+            rgba(0,32,150,0.045) 100%
+        );
+
+    box-shadow:
+        inset 0 -1px 0 rgba(0,32,150,0.055);
+
+    opacity: 0.85;
+}
+
+/* Preserve content above optical layers */
+nav > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* =========================================================
+   SCROLLED MATERIAL
+   ========================================================= */
+
+nav.scrolled {
+    --nav-glass-bg:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.76) 0%,
+            rgba(255,255,255,0.67) 42%,
+            rgba(247,250,255,0.62) 72%,
+            rgba(119,193,252,0.045) 100%
+        );
+
+    --nav-glass-border:
+        rgba(255,255,255,0.54);
+
+    --nav-glass-blur:
+        28px;
+
+    --nav-glass-sat:
+        1.65;
+
+    --nav-glass-shadow:
+        0 12px 36px rgba(0,32,150,0.10),
+        0 2px 8px rgba(0,20,95,0.055),
+        inset 0 1px 0 rgba(255,255,255,0.62),
+        inset 0 -1px 0 rgba(0,32,150,0.085);
+
+    background: var(--nav-glass-bg) !important;
+
+    backdrop-filter:
+        blur(var(--nav-glass-blur))
+        saturate(var(--nav-glass-sat))
+        brightness(1.04)
+        contrast(1.03);
+
+    -webkit-backdrop-filter:
+        blur(var(--nav-glass-blur))
+        saturate(var(--nav-glass-sat))
+        brightness(1.04)
+        contrast(1.03);
+
+    border:
+        1px solid var(--nav-glass-border) !important;
+
+    border-bottom:
+        none !important;
+
+    box-shadow:
+        var(--nav-glass-shadow) !important;
+}
+
+/* Slightly calmer sheen once scrolled */
+nav.scrolled::before {
+    opacity: 0.74;
+}
+
+nav.scrolled::after {
+    opacity: 0.72;
+}
+
+/* =========================================================
+   FALLBACK
+   ========================================================= */
+
+@supports not (
+    (backdrop-filter: blur(1px))
+    or
+    (-webkit-backdrop-filter: blur(1px))
+) {
+
+    nav {
+        background:
+            linear-gradient(
+                135deg,
+                rgba(255,255,255,0.91),
+                rgba(247,250,255,0.88)
+            ) !important;
+
+        border:
+            1px solid rgba(0,32,150,0.10) !important;
+
+        box-shadow:
+            0 10px 30px rgba(0,32,150,0.10),
+            inset 0 1px 0 rgba(255,255,255,0.85) !important;
+    }
+
+    nav.scrolled {
+        background:
+            linear-gradient(
+                135deg,
+                rgba(255,255,255,0.94),
+                rgba(247,250,255,0.92)
+            ) !important;
+    }
+
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    nav {
+        --nav-glass-bg:
+            linear-gradient(
+                135deg,
+                rgba(255,255,255,0.68) 0%,
+                rgba(255,255,255,0.56) 48%,
+                rgba(247,250,255,0.50) 100%
+            );
+
+        --nav-glass-blur:
+            22px;
+
+        --nav-glass-sat:
+            1.55;
+    }
+
+    nav.scrolled {
+        --nav-glass-bg:
+            linear-gradient(
+                135deg,
+                rgba(255,255,255,0.78) 0%,
+                rgba(255,255,255,0.70) 50%,
+                rgba(247,250,255,0.64) 100%
+            );
+
+        --nav-glass-blur:
+            24px;
+
+        --nav-glass-sat:
+            1.60;
+    }
+
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    nav,
+    nav::before,
+    nav::after {
+        transition: none !important;
+    }
+
+}
     
     </style>
     
