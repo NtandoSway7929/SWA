@@ -2043,7 +2043,11 @@ footer {
    ========================================================= */
 
 .reveal {
-    opacity: 0;
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+}
 
     transform:
         translate3d(0, 34px, 0)
@@ -2066,6 +2070,10 @@ footer {
 
 .reveal.visible {
     opacity: 1;
+    transform: none;
+    filter: none;
+    will-change: auto;
+}
 
     transform:
         translate3d(0, 0, 0)
@@ -2109,9 +2117,7 @@ footer {
 .service-category.reveal,
 .why-card.reveal,
 .work-card.reveal {
-    transform:
-        translate3d(0, 28px, 0)
-        scale(0.975);
+    transform: none;
 }
 
 
@@ -2119,11 +2125,8 @@ footer {
 .service-category.reveal.visible,
 .why-card.reveal.visible,
 .work-card.reveal.visible {
-    transform:
-        translate3d(0, 0, 0)
-        scale(1);
+    transform: none;
 }
-
 
 /* =========================================================
    MOBILE
@@ -2132,26 +2135,14 @@ footer {
 @media (max-width: 700px) {
 
     .reveal {
-        transform:
-            translate3d(0, 24px, 0)
-            scale(0.99);
-
-        filter:
-            blur(1px);
-
-        transition-duration:
-            0.7s;
-    }
-
+    transform: none;
+    filter: none;
+    transition-duration: 0s;
+}
     .reveal.visible {
-        transform:
-            translate3d(0, 0, 0)
-            scale(1);
-
-        filter:
-            blur(0);
-    }
-
+    transform: none;
+    filter: none;
+}
 }
 
 
@@ -17069,32 +17060,12 @@ nav.scrolled::after {
 </footer>
 
 <script>
+    
 /* =========================================================
    SWAYPHICS — SCROLL REVEAL SYSTEM
    ========================================================= */
 
 const revealSelectors = [
-    ".services-intro",
-    ".package-card",
-    ".custom-services-header",
-    ".service-category",
-    ".why-header",
-    ".why-card",
-    ".why-footer",
-    "#work .section-label",
-    "#work .section-title",
-    "#work .work-intro",
-    "#work .work-card",
-    ".selected-work .section-label",
-".selected-work-header",
-    ".about .section-label",
-    ".about-content",
-    ".about-belief",
-    ".cta .section-label",
-    ".cta h2",
-    ".cta > p",
-    ".project-form",
-    ".contact-email"
 ];
 
 const revealElements = document.querySelectorAll(
@@ -17116,10 +17087,6 @@ revealElements.forEach((element) => {
    --------------------------------------------------------- */
 
 const staggerGroups = [
-    ".package-grid",
-    ".service-catalog",
-    ".why-grid",
-    ".work-grid"
 ];
 
 staggerGroups.forEach((selector) => {
@@ -17170,21 +17137,6 @@ if ("IntersectionObserver" in window) {
     revealElements.forEach((element) => {
         revealObserver.observe(element);
     });
-
-
-    document
-        .querySelectorAll(
-            ".package-grid > *, .service-catalog > *, .why-grid > *, .work-grid > *"
-        )
-        .forEach((element) => {
-
-            if (!element.classList.contains("reveal")) {
-                element.classList.add("reveal");
-            }
-
-            revealObserver.observe(element);
-
-        });
 
 } else {
 
