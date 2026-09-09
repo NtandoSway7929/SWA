@@ -17968,7 +17968,7 @@ const portfolioLightboxClose =
     document.querySelector("#portfolio-lightbox-close");
 
 
-function openPortfolioLightbox(project, sourceCard = null) {
+function openPortfolioLightbox(project) {
     if (
         !portfolioLightbox ||
         !portfolioLightboxImage
@@ -17976,10 +17976,6 @@ function openPortfolioLightbox(project, sourceCard = null) {
         return;
     }
 
-    const sourceImage =
-        sourceCard
-            ? sourceCard.querySelector(".portfolio-image")
-            : null;
 
     portfolioLightboxImage.src =
         project.image_url || "";
@@ -17988,87 +17984,39 @@ function openPortfolioLightbox(project, sourceCard = null) {
         project.title ||
         "Swayphics project";
 
+
     if (portfolioLightboxTitle) {
         portfolioLightboxTitle.textContent =
             project.title || "";
     }
+
 
     if (portfolioLightboxCategory) {
         portfolioLightboxCategory.textContent =
             project.category || "";
     }
 
+
     portfolioLightbox.classList.add(
         "is-open"
     );
+
+
+    console.log(
+        "LIGHTBOX OPEN CLASS:",
+        portfolioLightbox.className
+    );
+
 
     portfolioLightbox.setAttribute(
         "aria-hidden",
         "false"
     );
 
+
     document.body.style.overflow =
         "hidden";
-
-    if (!sourceImage) {
-        return;
-    }
-
-    const sourceRect =
-        sourceImage.getBoundingClientRect();
-
-    requestAnimationFrame(() => {
-        const targetRect =
-            portfolioLightboxImage.getBoundingClientRect();
-
-        if (
-            !sourceRect.width ||
-            !sourceRect.height ||
-            !targetRect.width ||
-            !targetRect.height
-        ) {
-            return;
-        }
-
-        const deltaX =
-            sourceRect.left -
-            targetRect.left;
-
-        const deltaY =
-            sourceRect.top -
-            targetRect.top;
-
-        const scaleX =
-            sourceRect.width /
-            targetRect.width;
-
-        const scaleY =
-            sourceRect.height /
-            targetRect.height;
-
-        portfolioLightboxImage.animate(
-            [
-                {
-                    opacity: 0.92,
-                    transform:
-                        `translate(${deltaX}px, ${deltaY}px) scale(${scaleX}, ${scaleY})`
-                },
-                {
-                    opacity: 1,
-                    transform:
-                        "translate(0, 0) scale(1)"
-                }
-            ],
-            {
-                duration: 520,
-                easing:
-                    "cubic-bezier(0.16, 1, 0.3, 1)",
-                fill: "both"
-            }
-        );
-    });
 }
-
 
 function closePortfolioLightbox() {
 
@@ -18136,12 +18084,7 @@ openPortfolioLightbox({
         card.dataset.title,
     category:
         card.dataset.category
-}, card);
 });
-
-        }
-    );
-}
 
 
 /* =========================================================
