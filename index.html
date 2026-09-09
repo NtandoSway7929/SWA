@@ -135,12 +135,12 @@ nav {
     z-index: 1000;
 
     transition:
-        top 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-        width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-        padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-        background 0.45s ease,
-        box-shadow 0.45s ease,
-        border-color 0.45s ease;
+    top 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.42s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 
@@ -298,21 +298,10 @@ nav.scrolled .logo img {
    LET'S TALK CTA
    ========================================================= */
 
-.nav-links li:last-child a {
-    margin-left:
-        5px;
-
-    padding:
-        10px 17px;
-
-    background:
-        #0152F4;
-
-    color:
-        #FFFFFF;
-
-    box-shadow:
-        0 6px 18px rgba(1, 82, 244, 0.18);
+.nav-links li:last-child a:hover {
+    background: #002096;
+    color: #FFFFFF;
+    transform: translateY(-1px);
 }
 
 
@@ -380,6 +369,38 @@ nav.scrolled .logo img {
         padding:
             8px 11px;
     }
+
+    .nav-links li:last-child a {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.nav-links li:last-child a::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -120%;
+    width: 40%;
+    background:
+        linear-gradient(
+            105deg,
+            transparent 40%,
+            rgba(255, 255, 255, 0.20) 50%,
+            transparent 60%
+        );
+    transform: translateX(0);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.nav-links li:last-child a:hover::before {
+    transform: translateX(560%);
+    transition:
+        transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+    
 }
 
 
@@ -3393,6 +3414,37 @@ nav {
 
     color:
         #002096;
+}
+
+        .package-featured .package-button {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.package-featured .package-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -120%;
+    width: 40%;
+    background:
+        linear-gradient(
+            105deg,
+            transparent 40%,
+            rgba(1, 82, 244, 0.10) 50%,
+            transparent 60%
+        );
+    transform: translateX(0);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.package-featured .package-button:hover::before {
+    transform: translateX(560%);
+    transition:
+        transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 
@@ -8433,6 +8485,35 @@ nav::before {
     z-index: 0;
 }
 
+nav::after {
+    content: "";
+    position: absolute;
+    left: 2%;
+    right: 2%;
+    bottom: 0;
+    height: 34%;
+    border-radius: 999px;
+    pointer-events: none;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.035) 42%,
+            rgba(0, 32, 150, 0.045) 100%
+        );
+    box-shadow:
+        inset 0 -1px 0 rgba(0, 32, 150, 0.055);
+    opacity: 0.85;
+    z-index: 0;
+}    
+
+    nav.scrolled::before {
+    opacity: 0.74;
+}
+
+nav.scrolled::after {
+    opacity: 0.72;
+}
 
 /* Keep navigation content above reflection */
 
@@ -10897,6 +10978,41 @@ nav.scrolled {
     background: #0152F4 !important;
     color: #FFFFFF !important;
     box-shadow: 0 16px 35px rgba(1, 82, 244, 0.18) !important;
+}
+    .hero-actions .btn-primary {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.hero-actions .btn-primary::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -120%;
+    width: 40%;
+    background:
+        linear-gradient(
+            105deg,
+            transparent 40%,
+            rgba(255, 255, 255, 0.22) 50%,
+            transparent 60%
+        );
+    transform: translateX(0);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.hero-actions .btn-primary:hover::before {
+    transform: translateX(560%);
+    transition:
+        transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-actions .btn-primary > * {
+    position: relative;
+    z-index: 1;
 }
 
 
@@ -15687,6 +15803,36 @@ nav.scrolled::after {
     }
 
 }
+
+  /* =========================================================
+   SWAYPHICS — HERO OPTICAL SETTLE
+   ========================================================= */
+
+@keyframes swayHeroSettle {
+    0% {
+        opacity: 0.96;
+        transform: translateY(8px) scale(0.995);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.hero-content {
+    animation:
+        swayHeroSettle
+        720ms
+        cubic-bezier(0.16, 1, 0.3, 1)
+        both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-content {
+        animation: none;
+    }
+}  
     
     </style>
     
@@ -17822,8 +17968,7 @@ const portfolioLightboxClose =
     document.querySelector("#portfolio-lightbox-close");
 
 
-function openPortfolioLightbox(project) {
-
+function openPortfolioLightbox(project, sourceCard = null) {
     if (
         !portfolioLightbox ||
         !portfolioLightboxImage
@@ -17831,6 +17976,10 @@ function openPortfolioLightbox(project) {
         return;
     }
 
+    const sourceImage =
+        sourceCard
+            ? sourceCard.querySelector(".portfolio-image")
+            : null;
 
     portfolioLightboxImage.src =
         project.image_url || "";
@@ -17839,38 +17988,85 @@ function openPortfolioLightbox(project) {
         project.title ||
         "Swayphics project";
 
-
     if (portfolioLightboxTitle) {
-
         portfolioLightboxTitle.textContent =
             project.title || "";
     }
 
-
     if (portfolioLightboxCategory) {
-
         portfolioLightboxCategory.textContent =
             project.category || "";
     }
-
 
     portfolioLightbox.classList.add(
         "is-open"
     );
 
-console.log(
-    "LIGHTBOX OPEN CLASS:",
-    portfolioLightbox.className
-);
-    
     portfolioLightbox.setAttribute(
         "aria-hidden",
         "false"
     );
 
-
     document.body.style.overflow =
         "hidden";
+
+    if (!sourceImage) {
+        return;
+    }
+
+    const sourceRect =
+        sourceImage.getBoundingClientRect();
+
+    requestAnimationFrame(() => {
+        const targetRect =
+            portfolioLightboxImage.getBoundingClientRect();
+
+        if (
+            !sourceRect.width ||
+            !sourceRect.height ||
+            !targetRect.width ||
+            !targetRect.height
+        ) {
+            return;
+        }
+
+        const deltaX =
+            sourceRect.left -
+            targetRect.left;
+
+        const deltaY =
+            sourceRect.top -
+            targetRect.top;
+
+        const scaleX =
+            sourceRect.width /
+            targetRect.width;
+
+        const scaleY =
+            sourceRect.height /
+            targetRect.height;
+
+        portfolioLightboxImage.animate(
+            [
+                {
+                    opacity: 0.92,
+                    transform:
+                        `translate(${deltaX}px, ${deltaY}px) scale(${scaleX}, ${scaleY})`
+                },
+                {
+                    opacity: 1,
+                    transform:
+                        "translate(0, 0) scale(1)"
+                }
+            ],
+            {
+                duration: 520,
+                easing:
+                    "cubic-bezier(0.16, 1, 0.3, 1)",
+                fill: "both"
+            }
+        );
+    });
 }
 
 
@@ -17936,12 +18132,11 @@ if (portfolioGrid) {
 openPortfolioLightbox({
     image_url:
         card.dataset.imageUrl,
-
     title:
         card.dataset.title,
-
     category:
         card.dataset.category
+}, card);
 });
 
         }
