@@ -8414,26 +8414,22 @@ nav {
 
 nav::before {
     content: "";
-
     position: absolute;
-
     top: 0;
-    left: 0;
-
-    width: 100%;
-    height: 45%;
-
+    left: 2%;
+    right: 2%;
+    height: 31%;
+    border-radius: 999px;
+    pointer-events: none;
     background:
         linear-gradient(
             180deg,
-            rgba(255, 255, 255, 0.28),
-            rgba(255, 255, 255, 0)
+            rgba(255, 255, 255, 0.23) 0%,
+            rgba(255, 255, 255, 0.10) 22%,
+            rgba(255, 255, 255, 0.025) 58%,
+            rgba(255, 255, 255, 0) 100%
         );
-
-    border-radius: 999px;
-
-    pointer-events: none;
-
+    opacity: 0.92;
     z-index: 0;
 }
 
