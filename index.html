@@ -13525,17 +13525,10 @@ nav.scrolled {
    ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-
     .hero-video {
-        display: none !important;
+        display: block !important;
     }
-
-    .hero-image-final {
-        opacity: 1 !important;
-    }
-
 }
-
   /* =========================================================
    SWAYPHICS — PREMIUM SOCIAL CONNECTIONS
    ========================================================= */
@@ -16120,80 +16113,6 @@ nav.scrolled::after {
         flex-basis: 18px;
     }
 } 
-
-    .hero-showcase-image::before,
-.hero-showcase-image::after,
-.hero-showcase-word {
-    pointer-events: none !important;
-}
-
-.hero-video {
-    pointer-events: auto !important;
-}
-
-    .hero-showcase-image::before,
-.hero-showcase-image::after {
-    pointer-events: none !important;
-}
-
-.hero-video {
-    z-index: 3 !important;
-    opacity: 1 !important;
-}
-
-    .hero-image-final {
-    z-index: 1 !important;
-}
-
-  .hero-video {
-    position: absolute !important;
-    inset: 0 !important;
-    z-index: 3 !important;
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-    display: block !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-}
-
-.hero-image-final {
-    z-index: 1 !important;
-}
-
-.hero-showcase-image::before,
-.hero-showcase-image::after {
-    pointer-events: none !important;
-}  
-
-    .hero-image-final {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    z-index: 1 !important;
-}
-
-.hero-video {
-    z-index: 3 !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}
-
-    .hero-video {
-    pointer-events: none !important;
-}
-
-.hero-video::-webkit-media-controls {
-    display: none !important;
-}
-
-.hero-video::-webkit-media-controls-start-playback-button {
-    display: none !important;
-    -webkit-appearance: none !important;
-}
-
-.hero-video::-webkit-media-controls-panel {
-    display: none !important;
-}
     
     </style>
 
@@ -16300,41 +16219,25 @@ nav.scrolled::after {
     <div class="hero-showcase" aria-hidden="true">
 
     <div class="hero-showcase-image">
-
-        <video
-    class="hero-video"
-    autoplay
-    muted
-    playsinline
-    webkit-playsinline
-    loop
-    preload="auto"
-    tabindex="-1"
-    aria-hidden="true"
->
-    <source
-        src="hero-video.mp4"
-        type="video/mp4"
+    <video
+        class="hero-video"
+        autoplay
+        muted
+        playsinline
+        webkit-playsinline
+        loop
+        preload="auto"
+        tabindex="-1"
+        aria-hidden="true"
+        poster="hero-image.webp"
     >
-</video>
-       <img
-    class="hero-image-final"
-    src="hero-image.webp"
-    alt=""
-    width="1536"
-    height="1024"
-    loading="eager"
-    fetchpriority="high"
-    decoding="async"
->
+        <source src="hero-video.mp4" type="video/mp4">
+    </video>
 
-        <div
-            class="hero-showcase-word"
-        >
-            BRAND
-        </div>
-
+    <div class="hero-showcase-word">
+        BRAND
     </div>
+</div>
 
 </div>
 
@@ -17695,51 +17598,7 @@ if ("IntersectionObserver" in window) {
 }
 
 
-/* =========================================================
-   HERO VIDEO
-   ========================================================= */
 
-const heroVideo =
-    document.querySelector(".hero-video");
-
-if (heroVideo) {
-    heroVideo.muted = true;
-    heroVideo.defaultMuted = true;
-    heroVideo.autoplay = true;
-    heroVideo.playsInline = true;
-    heroVideo.loop = true;
-
-    const startHeroVideo = () => {
-        heroVideo.muted = true;
-        heroVideo.defaultMuted = true;
-
-        const playPromise =
-            heroVideo.play();
-
-        if (
-            playPromise &&
-            typeof playPromise.catch === "function"
-        ) {
-            playPromise.catch(() => {});
-        }
-    };
-
-    heroVideo.addEventListener(
-        "loadeddata",
-        startHeroVideo,
-        { once: true }
-    );
-
-    heroVideo.addEventListener(
-        "canplay",
-        startHeroVideo,
-        { once: true }
-    );
-
-    if (heroVideo.readyState >= 2) {
-        startHeroVideo();
-    }
-}
 
     </script>
 
