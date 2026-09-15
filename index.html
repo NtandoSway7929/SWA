@@ -16056,9 +16056,72 @@ nav.scrolled::after {
     .sway-cookie-button {
         transition: none !important;
     }
-}    
+} 
+
+    .form-consent {
+    margin:
+        4px
+        0
+        22px;
+}
+
+.form-consent-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+
+    color: #56627A;
+
+    font-size: 0.78rem;
+    line-height: 1.6;
+
+    cursor: pointer;
+}
+
+.form-consent-label input {
+    width: 17px;
+    height: 17px;
+
+    flex: 0 0 17px;
+
+    margin-top: 2px;
+
+    accent-color: #0152F4;
+
+    cursor: pointer;
+}
+
+.form-consent-label span {
+    flex: 1;
+}
+
+.form-consent-label a {
+    color: #0152F4;
+
+    font-weight: 700;
+
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.form-consent-label input:focus-visible {
+    outline:
+        3px solid
+        #77C1FC;
+
+    outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+    .form-consent-label {
+        font-size: 0.76rem;
+        gap: 10px;
+    }
+}
     
     </style>
+
+    
     
 </head>
 
@@ -17243,6 +17306,26 @@ nav.scrolled::after {
         autocomplete="off"
     >
 </div>
+
+<div class="form-consent">
+    <label class="form-consent-label">
+        <input
+            type="checkbox"
+            id="form-consent"
+            name="privacy_consent"
+            required
+        >
+        <span>
+            I have read and agree to the
+            <a href="privacy-policy.html" target="_blank" rel="noopener">
+                Privacy Policy
+            </a>
+            and consent to Swayphics processing the information I provide
+            to respond to my enquiry.
+        </span>
+    </label>
+</div>
+        
         <button type="submit" class="btn btn-primary">
             Send Enquiry →
         </button>
@@ -18399,6 +18482,9 @@ if (projectForm) {
         const message =
             document.querySelector("#message");
 
+        const consent =
+            document.querySelector("#form-consent");
+
         const website =
             document.querySelector("#website");
 
@@ -18444,6 +18530,11 @@ if (projectForm) {
            Browser validation
            ------------------------------------------------- */
 
+        if (!consent.checked) {
+            consent.focus();
+            return;
+        }
+        
         if (!name.checkValidity()) {
 
             name.setAttribute(
