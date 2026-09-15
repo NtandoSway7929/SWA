@@ -16058,36 +16058,27 @@ nav.scrolled::after {
     }
 } 
 
-    .form-consent {
-    margin:
-        4px
-        0
-        22px;
+.form-consent {
+    margin: 8px 0 24px;
 }
 
 .form-consent-label {
     display: flex;
     align-items: flex-start;
-    gap: 11px;
-
-    color: #56627A;
-
-    font-size: 0.78rem;
-    line-height: 1.6;
-
+    gap: 12px;
+    color: #26324A;
+    font-size: 0.86rem;
+    font-weight: 500;
+    line-height: 1.65;
     cursor: pointer;
 }
 
 .form-consent-label input {
-    width: 17px;
-    height: 17px;
-
-    flex: 0 0 17px;
-
-    margin-top: 2px;
-
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    margin-top: 3px;
     accent-color: #0152F4;
-
     cursor: pointer;
 }
 
@@ -16096,29 +16087,31 @@ nav.scrolled::after {
 }
 
 .form-consent-label a {
-    color: #0152F4;
-
+    color: #002096;
     font-weight: 700;
-
     text-decoration: underline;
-    text-underline-offset: 2px;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
 }
 
 .form-consent-label input:focus-visible {
-    outline:
-        3px solid
-        #77C1FC;
-
+    outline: 3px solid #77C1FC;
     outline-offset: 3px;
 }
 
 @media (max-width: 700px) {
     .form-consent-label {
-        font-size: 0.76rem;
-        gap: 10px;
+        font-size: 0.84rem;
+        line-height: 1.65;
+        gap: 11px;
     }
-}
-    
+
+    .form-consent-label input {
+        width: 18px;
+        height: 18px;
+        flex-basis: 18px;
+    }
+}    
     </style>
 
     
