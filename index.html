@@ -17617,84 +17617,44 @@ HERO VIDEO → IMAGE
 ========================================================= */
 
 const heroVideo =
-    document.querySelector(
-        ".hero-video"
-    );
+    document.querySelector(".hero-video");
 
-const heroFinalImage =
-    document.querySelector(
-        ".hero-image-final"
-    );
-
-if (
-    heroVideo &&
-    heroFinalImage
-) {
-    heroVideo.loop = true;
+if (heroVideo) {
     heroVideo.muted = true;
+    heroVideo.defaultMuted = true;
+    heroVideo.autoplay = true;
     heroVideo.playsInline = true;
+    heroVideo.loop = true;
 
-    const attemptPlay = () => {
-        const playPromise =
-            heroVideo.play();
+    const startHeroVideo = () => {
+        heroVideo.muted = true;
+        heroVideo.defaultMuted = true;
+
+        const playPromise = heroVideo.play();
 
         if (
             playPromise &&
-            typeof playPromise.catch ===
-            "function"
+            typeof playPromise.catch === "function"
         ) {
             playPromise.catch(() => {});
         }
     };
 
-    attemptPlay();
-
-    document.addEventListener(
-        "visibilitychange",
-        () => {
-            if (
-                document.visibilityState ===
-                "visible"
-            ) {
-                attemptPlay();
-            }
-        }
+    heroVideo.addEventListener(
+        "loadeddata",
+        startHeroVideo,
+        { once: true }
     );
-}
 
     heroVideo.addEventListener(
-        "error",
-        () => {
-
-            heroVideo.style.display =
-                "none";
-
-            heroFinalImage.style.opacity =
-                "1";
-
-        }
+        "canplay",
+        startHeroVideo,
+        { once: true }
     );
 
-
-    const playPromise =
-        heroVideo.play();
-
-
-    if (
-        playPromise &&
-        typeof playPromise.catch ===
-        "function"
-    ) {
-
-        playPromise.catch(
-            () => {
-
-                heroVideo.style.display =
-                    "none";
-
-                heroFinalImage.style.opacity =
-                    "1";
-
+    if (heroVideo.readyState >= 2) {
+        startHeroVideo();
+    }
             }
         );
 
