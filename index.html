@@ -3804,13 +3804,13 @@ nav {
 }
 
 .identity-item {
+    background: rgba(255, 255, 255, 0.04);
     border-color: rgba(255, 255, 255, 0.16);
 }
 
 .identity-item:hover {
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.08);
 }
-
 .identity-number {
     color: var(--sway-highlight);
 }
@@ -13837,12 +13837,11 @@ nav.scrolled {
 }
 
 .footer-legal-links a {
-    color: inherit;
+    color: rgba(255, 255, 255, 0.75);
     text-decoration: none;
     font-size: 0.78rem;
     font-weight: 600;
-    opacity: 0.72;
-    transition: opacity 0.25s ease, color 0.25s ease;
+    transition: color 0.25s ease;
 }
 
 .footer-legal-links a:hover {
@@ -15970,11 +15969,16 @@ nav.scrolled {
 }
 
 .form-consent-label a {
-    color: #002096;
+    color: #77C1FC;
     font-weight: 700;
     text-decoration: underline;
     text-decoration-thickness: 1.5px;
     text-underline-offset: 3px;
+    transition: color 0.2s ease;
+}
+
+.form-consent-label a:hover {
+    color: #FFFFFF;
 }
 
 .form-consent-label input:focus-visible {
