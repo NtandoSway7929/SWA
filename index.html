@@ -17628,10 +17628,21 @@ if (
         };
 
 
-    heroVideo.addEventListener(
-        "ended",
-        showFinalImage
-    );
+    heroVideo.addEventListener("ended", () => {
+    heroVideo.currentTime = 0;
+
+    const restartPromise = heroVideo.play();
+
+    if (
+        restartPromise &&
+        typeof restartPromise.catch === "function"
+    ) {
+        restartPromise.catch(() => {
+            heroVideo.style.display = "none";
+            heroFinalImage.style.opacity = "1";
+        });
+    }
+});
 
 
     heroVideo.addEventListener(
