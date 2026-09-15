@@ -16215,12 +16215,13 @@ nav.scrolled::after {
     <div class="hero-showcase-image">
 
         <video
-            class="hero-video"
-            autoplay
-            muted
-            playsinline
-            preload="auto"
-        >
+    class="hero-video"
+    autoplay
+    muted
+    playsinline
+    loop
+    preload="auto"
+>
             <source
                 src="hero-video.mp4"
                 type="video/mp4"
@@ -17628,21 +17629,66 @@ if (
         };
 
 
-    heroVideo.addEventListener("ended", () => {
-    heroVideo.currentTime = 0;
+const heroVideo =
+    document.querySelector(
+        ".hero-video"
+    );
 
-    const restartPromise = heroVideo.play();
+const heroFinalImage =
+    document.querySelector(
+        ".hero-image-final"
+    );
+
+if (
+    heroVideo &&
+    heroFinalImage
+) {
+    heroVideo.loop = true;
+
+    heroVideo.addEventListener(
+        "error",
+        () => {
+            heroFinalImage.style.opacity =
+                "1";
+        }
+    );
+
+    const attemptPlay =
+        () => {
+            const playPromise =
+                heroVideo.play();
+
+            if (
+                playPromise &&
+                typeof playPromise.catch ===
+                "function"
+            ) {
+                playPromise.catch(() => {
+                    heroFinalImage.style.opacity =
+                        "1";
+                });
+            }
+        };
 
     if (
-        restartPromise &&
-        typeof restartPromise.catch === "function"
+        document.visibilityState ===
+        "visible"
     ) {
-        restartPromise.catch(() => {
-            heroVideo.style.display = "none";
-            heroFinalImage.style.opacity = "1";
-        });
+        attemptPlay();
     }
-});
+
+    document.addEventListener(
+        "visibilitychange",
+        () => {
+            if (
+                document.visibilityState ===
+                "visible"
+            ) {
+                attemptPlay();
+            }
+        }
+    );
+}
 
 
     heroVideo.addEventListener(
