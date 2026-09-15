@@ -16113,6 +16113,26 @@ nav.scrolled::after {
         flex-basis: 18px;
     }
 } 
+
+    /* =========================================================
+   HERO VIDEO — STACKING ORDER FIX
+   ========================================================= */
+
+.hero-video {
+    z-index: 1 !important;
+}
+
+.hero-showcase-image::before {
+    z-index: 2 !important;
+}
+
+.hero-showcase-image::after {
+    z-index: 3 !important;
+}
+
+.hero-showcase-word {
+    z-index: 4 !important;
+}
     
     </style>
 
