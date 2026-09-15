@@ -15523,62 +15523,172 @@ html.reveal-ready .reveal-delay-4 {
 
 }
 
-  /* =========================================================
-   SWAYPHICS LIQUID GLASS NAVIGATION 2.0
-   Apple-Inspired Premium Material
+/* =========================================================
+   SWAYPHICS LIQUID GLASS NAVIGATION 4.0
+   Authentic Optical Material & Progressive Bevel
    ========================================================= */
 
+/* LAYER 1: OPTICAL CORE
+   Uses low translucency and high saturation to pull environmental colors. */
 nav {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.76) 0%, rgba(255, 255, 255, 0.60) 100%) !important;
-    backdrop-filter: blur(28px) saturate(180%) brightness(1.02) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.02) !important;
-    border: 1px solid rgba(255, 255, 255, 0.65) !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(28px) saturate(220%) brightness(1.05) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(1.05) !important;
+    
+    border: none !important; 
+    
+    /* LAYER 3: SPECULAR / DEPTH */
     box-shadow:
-        0 12px 32px rgba(0, 32, 150, 0.06),
-        inset 0 1px 1px rgba(255, 255, 255, 0.95),
-        inset 0 -1px 1px rgba(255, 255, 255, 0.25) !important;
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.85),
+        inset 0 -1px 1px rgba(0, 32, 150, 0.05),
+        0 14px 34px rgba(0, 32, 150, 0.08) !important;
+        
     isolation: isolate;
 }
 
-/* Eliminate dated pseudo-element reflections */
-nav::before,
+/* Eliminate dated geometric pseudo-element overlays */
 nav::after {
     display: none !important;
 }
 
-/* Scrolled state: slightly more grounded and opaque */
+/* Hide the bevel by default for progressive enhancement safety */
+nav::before {
+    display: none !important;
+}
+
+/* Ensure interactive elements stay above the material layers */
+nav > * {
+    position: relative;
+    z-index: 3;
+}
+
+/* LAYER 2: REFRACTIVE BEVEL (APPROXIMATION)
+   PROGRESSIVE ENHANCEMENT ONLY: Renders only if the browser explicitly supports 
+   both backdrop-filter AND the complex mask-composite logic required to hollow it out. */
+@supports ((-webkit-mask-composite: xor) or (mask-composite: exclude)) and ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    nav::before {
+        display: block !important;
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        border-radius: inherit;
+        pointer-events: none;
+        
+        /* Mask out the center, leaving only the 1.5px bevel edge */
+        padding: 1.5px;
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+        
+        /* Stronger optical concentration at the edge */
+        backdrop-filter: blur(8px) saturate(300%) brightness(1.15) !important;
+        -webkit-backdrop-filter: blur(8px) saturate(300%) brightness(1.15) !important;
+        
+        background: rgba(255, 255, 255, 0.18);
+    }
+}
+
+/* =========================================================
+   SCROLLED MATERIAL ADAPTATION
+   ========================================================= */
+
 nav.scrolled {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.75) 100%) !important;
-    border-color: rgba(255, 255, 255, 0.80) !important;
+    /* Becomes denser to preserve legibility over moving content */
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(34px) saturate(180%) brightness(1.02) !important;
+    -webkit-backdrop-filter: blur(34px) saturate(180%) brightness(1.02) !important;
+    
     box-shadow:
-        0 16px 40px rgba(0, 32, 150, 0.08),
-        0 4px 12px rgba(0, 32, 150, 0.04),
-        inset 0 1px 1px rgba(255, 255, 255, 1),
-        inset 0 -1px 1px rgba(255, 255, 255, 0.35) !important;
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+        inset 0 -1px 1px rgba(0, 32, 150, 0.08),
+        0 18px 45px rgba(0, 32, 150, 0.10) !important;
 }
 
-/* Apply identical premium glass material to the mobile menu panel */
+/* =========================================================
+   THICK MATERIAL: MOBILE MENU
+   Larger surfaces require visually denser material hierarchy.
+   ========================================================= */
+
 .mobile-menu {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.72) 100%) !important;
-    backdrop-filter: blur(28px) saturate(180%) brightness(1.02) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.02) !important;
-    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(48px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(48px) saturate(200%) !important;
+    
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    
     box-shadow:
-        0 24px 54px rgba(0, 32, 150, 0.12),
-        inset 0 1px 1px rgba(255, 255, 255, 0.95),
-        inset 0 -1px 1px rgba(255, 255, 255, 0.2) !important;
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+        inset 0 -1px 1px rgba(0, 32, 150, 0.05),
+        0 32px 64px rgba(0, 32, 150, 0.12) !important;
 }
 
-/* Fallback for older browsers */
+/* =========================================================
+   NAVIGATION INTERACTION STATES
+   ========================================================= */
+
+/* Active Section: Subtle Swayphics tint, no heavy borders */
+.nav-links a.active {
+    color: #0152F4 !important;
+    background: rgba(1, 82, 244, 0.04) !important;
+    box-shadow: none !important;
+    font-weight: 700 !important;
+}
+
+/* Main CTA Button */
+.nav-links li:last-child a.active {
+    color: #FFFFFF !important;
+    background: #0152F4 !important;
+    box-shadow: 0 8px 24px rgba(1, 82, 244, 0.22) !important;
+}
+
+/* Hover: Restrained physical response */
+@media (hover: hover) {
+    .nav-links a:hover {
+        background: rgba(0, 32, 150, 0.03) !important;
+        color: #0152F4 !important;
+        transform: translateY(-0.5px) !important;
+    }
+    .nav-links li:last-child a:hover {
+        background: #002096 !important;
+        color: #FFFFFF !important;
+        transform: translateY(-0.5px) !important;
+    }
+}
+
+/* =========================================================
+   MATERIAL ACCESSIBILITY FALLBACKS
+   ========================================================= */
+
+/* Base fallback for browsers lacking backdrop-filter entirely */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    nav { background: rgba(255, 255, 255, 0.96) !important; box-shadow: 0 10px 30px rgba(0,32,150,0.08), inset 0 1px 0 rgba(255,255,255,0.85) !important; }
-    nav.scrolled { background: rgba(255, 255, 255, 0.98) !important; }
-    .mobile-menu { background: rgba(255, 255, 255, 0.98) !important; }
+    nav, nav.scrolled, .mobile-menu {
+        background: rgba(255, 255, 255, 0.98) !important;
+        border: 1px solid rgba(0, 32, 150, 0.08) !important;
+        box-shadow: 0 10px 30px rgba(0, 32, 150, 0.08) !important;
+    }
+    nav::before { display: none !important; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    nav, .mobile-menu { transition: none !important; }
+/* High Contrast / Reduced Transparency mode (User OS Preference) */
+@media (prefers-reduced-transparency: reduce) {
+    nav, nav.scrolled, .mobile-menu {
+        background: rgba(255, 255, 255, 0.98) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 1px solid rgba(0, 32, 150, 0.08) !important;
+    }
+    nav::before { display: none !important; }
 }
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    nav, nav::before, .mobile-menu, .nav-links a {
+        transition: none !important;
+    }
+}
+    
   /* =========================================================
    SWAYPHICS — HERO OPTICAL SETTLE
    ========================================================= */
