@@ -16136,6 +16136,27 @@ nav.scrolled::after {
     .hero-image-final {
     z-index: 1 !important;
 }
+
+  .hero-video {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 3 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+.hero-image-final {
+    z-index: 1 !important;
+}
+
+.hero-showcase-image::before,
+.hero-showcase-image::after {
+    pointer-events: none !important;
+}  
     
     </style>
 
@@ -16149,9 +16170,13 @@ nav.scrolled::after {
 
     <a href="#top" class="logo">
         <img
-            src="swayphics-logo.png"
-            alt="Swayphics — Empowering through design"
-        >
+    src="swayphics-logo.png"
+    alt="Swayphics — Empowering through design"
+    width="200"
+    height="48"
+    decoding="async"
+    fetchpriority="high"
+>
     </a>
 
     <ul class="nav-links">
@@ -16253,11 +16278,16 @@ nav.scrolled::after {
             >
         </video>
 
-        <img
-            class="hero-image-final"
-            src="hero-image.webp"
-            alt=""
-        >
+       <img
+    class="hero-image-final"
+    src="hero-image.webp"
+    alt=""
+    width="1536"
+    height="1024"
+    loading="eager"
+    fetchpriority="high"
+    decoding="async"
+>
 
         <div
             class="hero-showcase-word"
