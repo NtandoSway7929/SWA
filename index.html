@@ -17611,36 +17611,10 @@ if ("IntersectionObserver" in window) {
 
 }
 
-// TEMPORARILY DISABLED
-/*
-=========================================================
+
+/* =========================================================
 HERO VIDEO → IMAGE
-=========================================================
-
-const heroVideo =
-    document.querySelector(
-        ".hero-video"
-    );
-
-const heroFinalImage =
-    document.querySelector(
-        ".hero-image-final"
-    );
-
-
-if (
-    heroVideo &&
-    heroFinalImage
-) {
-
-    const showFinalImage =
-        () => {
-
-            heroVideo.style.opacity =
-                "0";
-
-        };
-
+========================================================= */
 
 const heroVideo =
     document.querySelector(
@@ -17657,38 +17631,23 @@ if (
     heroFinalImage
 ) {
     heroVideo.loop = true;
+    heroVideo.muted = true;
+    heroVideo.playsInline = true;
 
-    heroVideo.addEventListener(
-        "error",
-        () => {
-            heroFinalImage.style.opacity =
-                "1";
+    const attemptPlay = () => {
+        const playPromise =
+            heroVideo.play();
+
+        if (
+            playPromise &&
+            typeof playPromise.catch ===
+            "function"
+        ) {
+            playPromise.catch(() => {});
         }
-    );
+    };
 
-    const attemptPlay =
-        () => {
-            const playPromise =
-                heroVideo.play();
-
-            if (
-                playPromise &&
-                typeof playPromise.catch ===
-                "function"
-            ) {
-                playPromise.catch(() => {
-                    heroFinalImage.style.opacity =
-                        "1";
-                });
-            }
-        };
-
-    if (
-        document.visibilityState ===
-        "visible"
-    ) {
-        attemptPlay();
-    }
+    attemptPlay();
 
     document.addEventListener(
         "visibilitychange",
@@ -17702,7 +17661,6 @@ if (
         }
     );
 }
-
 
     heroVideo.addEventListener(
         "error",
@@ -17742,7 +17700,7 @@ if (
 
     }
 
-}*/
+}
     
 </script>
 
