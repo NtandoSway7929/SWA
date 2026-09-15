@@ -18864,23 +18864,30 @@ if (formStatus) {
     </div>
 </div>
 
-    <script>
+   <script>
 (function () {
     "use strict";
 
-    const CONSENT_KEY = "swayphics_cookie_consent";
+    const CONSENT_KEY =
+        "swayphics_cookie_consent";
 
-    const banner = document.getElementById(
-        "sway-cookie-banner"
-    );
+    const GA_MEASUREMENT_ID =
+        "G-YNVEVHGFTZ";
 
-    const acceptButton = document.getElementById(
-        "sway-cookie-accept"
-    );
+    const banner =
+        document.getElementById(
+            "sway-cookie-banner"
+        );
 
-    const rejectButton = document.getElementById(
-        "sway-cookie-reject"
-    );
+    const acceptButton =
+        document.getElementById(
+            "sway-cookie-accept"
+        );
+
+    const rejectButton =
+        document.getElementById(
+            "sway-cookie-reject"
+        );
 
     if (
         !banner ||
@@ -18892,7 +18899,9 @@ if (formStatus) {
 
     function getConsent() {
         try {
-            return localStorage.getItem(CONSENT_KEY);
+            return localStorage.getItem(
+                CONSENT_KEY
+            );
         } catch (error) {
             return null;
         }
@@ -18912,16 +18921,66 @@ if (formStatus) {
         }
     }
 
+    function loadAnalytics() {
+        if (
+            window.swayphicsAnalyticsLoaded
+        ) {
+            return;
+        }
+
+        window.swayphicsAnalyticsLoaded = true;
+
+        window.dataLayer =
+            window.dataLayer || [];
+
+        function gtag() {
+            window.dataLayer.push(
+                arguments
+            );
+        }
+
+        window.gtag = gtag;
+
+        gtag(
+            "js",
+            new Date()
+        );
+
+        gtag(
+            "config",
+            GA_MEASUREMENT_ID
+        );
+
+        const script =
+            document.createElement("script");
+
+        script.async = true;
+
+        script.src =
+            "https://www.googletagmanager.com/gtag/js?id=" +
+            encodeURIComponent(
+                GA_MEASUREMENT_ID
+            );
+
+        document.head.appendChild(
+            script
+        );
+    }
+
     function openBanner() {
         banner.hidden = false;
 
         requestAnimationFrame(() => {
-            banner.classList.add("is-visible");
+            banner.classList.add(
+                "is-visible"
+            );
         });
     }
 
     function closeBanner() {
-        banner.classList.remove("is-visible");
+        banner.classList.remove(
+            "is-visible"
+        );
 
         window.setTimeout(() => {
             banner.hidden = true;
@@ -18932,6 +18991,9 @@ if (formStatus) {
         "click",
         () => {
             setConsent("accepted");
+
+            loadAnalytics();
+
             closeBanner();
         }
     );
@@ -18940,13 +19002,25 @@ if (formStatus) {
         "click",
         () => {
             setConsent("rejected");
+
             closeBanner();
         }
     );
 
-    const existingConsent = getConsent();
+    const existingConsent =
+        getConsent();
 
-    if (!existingConsent) {
+    if (
+        existingConsent ===
+        "accepted"
+    ) {
+        loadAnalytics();
+    } else if (
+        existingConsent ===
+        "rejected"
+    ) {
+        banner.hidden = true;
+    } else {
         openBanner();
     }
 })();
