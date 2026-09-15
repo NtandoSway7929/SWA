@@ -15832,7 +15832,169 @@ nav.scrolled::after {
     .hero-content {
         animation: none;
     }
-}  
+} 
+
+/* =========================================================
+   SWAYPHICS — COOKIE CONSENT
+   ========================================================= */
+
+.sway-cookie-banner {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    width: min(520px, calc(100vw - 48px));
+    padding: 22px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 24px;
+    box-shadow:
+        0 20px 60px rgba(0, 32, 150, 0.16),
+        0 2px 10px rgba(0, 20, 95, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(28px) saturate(155%);
+    -webkit-backdrop-filter: blur(28px) saturate(155%);
+    color: #081533;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(18px);
+    transition:
+        opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        visibility 0.35s ease;
+}
+
+.sway-cookie-banner.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.sway-cookie-banner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.36),
+            rgba(255, 255, 255, 0)
+        );
+}
+
+.sway-cookie-content {
+    position: relative;
+    z-index: 1;
+}
+
+.sway-cookie-title {
+    margin: 0 0 8px;
+    color: #081533;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.sway-cookie-text {
+    margin: 0;
+    color: #56627A;
+    font-size: 0.86rem;
+    line-height: 1.65;
+}
+
+.sway-cookie-text a {
+    color: #0152F4;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.sway-cookie-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 17px;
+}
+
+.sway-cookie-button {
+    min-height: 42px;
+    padding: 0 17px;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.sway-cookie-button:hover {
+    transform: translateY(-1px);
+}
+
+.sway-cookie-button:focus-visible {
+    outline: 3px solid #77C1FC;
+    outline-offset: 3px;
+}
+
+.sway-cookie-reject {
+    background: rgba(255, 255, 255, 0.64);
+    color: #002096;
+    border: 1px solid rgba(0, 32, 150, 0.14);
+}
+
+.sway-cookie-reject:hover {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(0, 32, 150, 0.22);
+}
+
+.sway-cookie-accept {
+    background: #0152F4;
+    color: #FFFFFF;
+    border: 1px solid #0152F4;
+    box-shadow: 0 8px 22px rgba(1, 82, 244, 0.20);
+}
+
+.sway-cookie-accept:hover {
+    background: #002096;
+    border-color: #002096;
+}
+
+@media (max-width: 700px) {
+    .sway-cookie-banner {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        width: auto;
+        padding: 19px;
+        border-radius: 21px;
+    }
+
+    .sway-cookie-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .sway-cookie-button {
+        width: 100%;
+        min-height: 46px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sway-cookie-banner,
+    .sway-cookie-button {
+        transition: none !important;
+    }
+}    
     
     </style>
     
@@ -18589,6 +18751,144 @@ if (formStatus) {
 })();
 </script>
 
+    <!-- SWAYPHICS COOKIE CONSENT -->
+<div
+    class="sway-cookie-banner"
+    id="sway-cookie-banner"
+    role="dialog"
+    aria-modal="false"
+    aria-labelledby="sway-cookie-title"
+    aria-describedby="sway-cookie-text"
+    hidden
+>
+    <div class="sway-cookie-content">
+        <h2
+            class="sway-cookie-title"
+            id="sway-cookie-title"
+        >
+            Cookies on Swayphics
+        </h2>
+
+        <p
+            class="sway-cookie-text"
+            id="sway-cookie-text"
+        >
+            We use necessary cookies to keep this website
+            functioning. With your permission, we may also use
+            analytics cookies to understand how visitors use
+            our website.
+            <a href="privacy-policy.html">
+                Privacy Policy
+            </a>
+        </p>
+
+        <div class="sway-cookie-actions">
+            <button
+                type="button"
+                class="sway-cookie-button sway-cookie-reject"
+                id="sway-cookie-reject"
+            >
+                Reject Analytics
+            </button>
+
+            <button
+                type="button"
+                class="sway-cookie-button sway-cookie-accept"
+                id="sway-cookie-accept"
+            >
+                Accept Analytics
+            </button>
+        </div>
+    </div>
+</div>
+
+    <script>
+(function () {
+    "use strict";
+
+    const CONSENT_KEY = "swayphics_cookie_consent";
+
+    const banner = document.getElementById(
+        "sway-cookie-banner"
+    );
+
+    const acceptButton = document.getElementById(
+        "sway-cookie-accept"
+    );
+
+    const rejectButton = document.getElementById(
+        "sway-cookie-reject"
+    );
+
+    if (
+        !banner ||
+        !acceptButton ||
+        !rejectButton
+    ) {
+        return;
+    }
+
+    function getConsent() {
+        try {
+            return localStorage.getItem(CONSENT_KEY);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function setConsent(value) {
+        try {
+            localStorage.setItem(
+                CONSENT_KEY,
+                value
+            );
+        } catch (error) {
+            console.warn(
+                "Cookie consent could not be stored.",
+                error
+            );
+        }
+    }
+
+    function openBanner() {
+        banner.hidden = false;
+
+        requestAnimationFrame(() => {
+            banner.classList.add("is-visible");
+        });
+    }
+
+    function closeBanner() {
+        banner.classList.remove("is-visible");
+
+        window.setTimeout(() => {
+            banner.hidden = true;
+        }, 350);
+    }
+
+    acceptButton.addEventListener(
+        "click",
+        () => {
+            setConsent("accepted");
+            closeBanner();
+        }
+    );
+
+    rejectButton.addEventListener(
+        "click",
+        () => {
+            setConsent("rejected");
+            closeBanner();
+        }
+    );
+
+    const existingConsent = getConsent();
+
+    if (!existingConsent) {
+        openBanner();
+    }
+})();
+</script>
 
 </body>
 </html>
