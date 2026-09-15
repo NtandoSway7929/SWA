@@ -16177,6 +16177,23 @@ nav.scrolled::after {
     opacity: 1 !important;
     visibility: visible !important;
 }
+
+    .hero-video {
+    pointer-events: none !important;
+}
+
+.hero-video::-webkit-media-controls {
+    display: none !important;
+}
+
+.hero-video::-webkit-media-controls-start-playback-button {
+    display: none !important;
+    -webkit-appearance: none !important;
+}
+
+.hero-video::-webkit-media-controls-panel {
+    display: none !important;
+}
     
     </style>
 
@@ -16289,15 +16306,17 @@ nav.scrolled::after {
     autoplay
     muted
     playsinline
+    webkit-playsinline
     loop
     preload="auto"
+    tabindex="-1"
+    aria-hidden="true"
 >
-            <source
-                src="hero-video.mp4"
-                type="video/mp4"
-            >
-        </video>
-
+    <source
+        src="hero-video.mp4"
+        type="video/mp4"
+    >
+</video>
        <img
     class="hero-image-final"
     src="hero-image.webp"
