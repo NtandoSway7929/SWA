@@ -77,6 +77,14 @@
       type="image/webp" 
       href="favicon.webp">
 
+    <link
+    rel="preload"
+    as="video"
+    href="hero-video.mp4"
+    type="video/mp4"
+    fetchpriority="high"
+>
+
     <style>
         * {
             margin: 0;
@@ -16157,6 +16165,18 @@ nav.scrolled::after {
 .hero-showcase-image::after {
     pointer-events: none !important;
 }  
+
+    .hero-image-final {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    z-index: 1 !important;
+}
+
+.hero-video {
+    z-index: 3 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
     
     </style>
 
@@ -17657,8 +17677,8 @@ if ("IntersectionObserver" in window) {
 
 
 /* =========================================================
-HERO VIDEO → IMAGE
-========================================================= */
+   HERO VIDEO
+   ========================================================= */
 
 const heroVideo =
     document.querySelector(".hero-video");
@@ -17674,7 +17694,8 @@ if (heroVideo) {
         heroVideo.muted = true;
         heroVideo.defaultMuted = true;
 
-        const playPromise = heroVideo.play();
+        const playPromise =
+            heroVideo.play();
 
         if (
             playPromise &&
@@ -17699,15 +17720,9 @@ if (heroVideo) {
     if (heroVideo.readyState >= 2) {
         startHeroVideo();
     }
-            }
-        );
-
-    }
-
 }
-    
-</script>
 
+    </script>
 
     <script>
     /* =========================================================
