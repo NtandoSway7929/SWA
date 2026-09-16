@@ -16023,6 +16023,18 @@ nav.scrolled {
     nav::before {
     display: none !important;
 }
+
+  button.portfolio-image-wrap {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    display: block;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+}  
     
     </style>
 
@@ -17968,19 +17980,17 @@ async function loadPortfolio() {
     data-category="${project.category || ""}"
 >
 
-                    <div class="portfolio-image-wrap">
 
-                        <img
-    src="${project.image_url || ""}"
-    alt="${project.title || "Swayphics project"}"
-    class="portfolio-image"
-    loading="lazy"
-    decoding="async"
-    onerror="this.style.display='none'; this.parentElement.classList.add('image-error');"
->
-
-                    </div>
-
+                    <button type="button" class="portfolio-image-wrap" aria-label="View larger image: ${project.title || "Swayphics project"}">
+    <img
+        src="${project.image_url || ""}"
+        alt=""
+        class="portfolio-image"
+        loading="lazy"
+        decoding="async"
+        onerror="this.style.display='none'; this.parentElement.classList.add('image-error');"
+    >
+</button>
                     <div class="portfolio-content">
 
     <div class="portfolio-meta">
@@ -18103,89 +18113,62 @@ const portfolioLightboxClose =
     document.querySelector("#portfolio-lightbox-close");
 
 
-function openPortfolioLightbox(project) {
-    if (
-        !portfolioLightbox ||
-        !portfolioLightboxImage
-    ) {
+let activeLightboxCard = null;
+
+function openPortfolioLightbox(project, cardElement = null) {
+    if (!portfolioLightbox || !portfolioLightboxImage) {
         return;
     }
 
+    activeLightboxCard = cardElement;
 
-    portfolioLightboxImage.src =
-        project.image_url || "";
-
-    portfolioLightboxImage.alt =
-        project.title ||
-        "Swayphics project";
-
+    portfolioLightboxImage.src = project.image_url || "";
+    portfolioLightboxImage.alt = project.title || "Swayphics project";
 
     if (portfolioLightboxTitle) {
-        portfolioLightboxTitle.textContent =
-            project.title || "";
+        portfolioLightboxTitle.textContent = project.title || "";
     }
-
 
     if (portfolioLightboxCategory) {
-        portfolioLightboxCategory.textContent =
-            project.category || "";
+        portfolioLightboxCategory.textContent = project.category || "";
     }
 
+    portfolioLightbox.classList.add("is-open");
+    portfolioLightbox.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
 
-    portfolioLightbox.classList.add(
-        "is-open"
-    );
-
-
-    console.log(
-        "LIGHTBOX OPEN CLASS:",
-        portfolioLightbox.className
-    );
-
-
-    portfolioLightbox.setAttribute(
-        "aria-hidden",
-        "false"
-    );
-
-
-    document.body.style.overflow =
-        "hidden";
+    // Transfer focus safely to the close button
+    setTimeout(() => {
+        if (portfolioLightboxClose) {
+            portfolioLightboxClose.focus();
+        }
+    }, 100);
 }
 
 function closePortfolioLightbox() {
-
     if (!portfolioLightbox) {
         return;
     }
 
-
-    portfolioLightbox.classList.remove(
-        "is-open"
-    );
-
-
-    portfolioLightbox.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-
-    document.body.style.overflow =
-        "";
-
+    portfolioLightbox.classList.remove("is-open");
+    portfolioLightbox.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
 
     setTimeout(() => {
-
         if (portfolioLightboxImage) {
-
-            portfolioLightboxImage.src =
-                "";
+            portfolioLightboxImage.src = "";
         }
-
+        
+        // Return focus to the specific card's interactive image button
+        if (activeLightboxCard) {
+            const focusTarget = activeLightboxCard.querySelector('.portfolio-image-wrap');
+            if (focusTarget) {
+                focusTarget.focus();
+            }
+            activeLightboxCard = null;
+        }
     }, 350);
 }
-
 
 /* =========================================================
    CARD CLICK
