@@ -850,57 +850,7 @@ nav.scrolled .logo img {
             margin-bottom: 50px;
         }
 
-        /* -------------------------
-   SWAYPHICS APPROACH
-   ------------------------- */
-
-.work-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
-
-    gap: 20px;
-}
-
-
-/* =========================================================
-   SWAYPHICS APPROACH — IMAGE CARDS
-   ========================================================= */
-
-.work-card {
-    position: relative;
-
-    min-height: 430px;
-
-    display: flex;
-    align-items: flex-end;
-
-    padding: 35px;
-
-    overflow: hidden;
-
-    background:
-        #081533;
-
-    border:
-        1px solid rgba(0,32,150,0.09);
-
-    border-radius:
-        24px;
-
-    box-shadow:
-        0 14px 40px rgba(0,32,150,0.08);
-
-    isolation:
-        isolate;
-
-    transition:
-        transform 0.35s ease,
-        box-shadow 0.35s ease,
-        border-color 0.35s ease;
-}
-
+        
 
 /* Image */
 
@@ -976,81 +926,7 @@ nav.scrolled .logo img {
     letter-spacing: 0.12em;
 }
 
-.work-card h3 {
-    margin: 8px 0 12px;
 
-    color: #FFFFFF;
-
-    font-size: 3rem;
-
-    line-height: 0.95;
-
-    letter-spacing: -2px;
-}
-
-.work-card p {
-    max-width: 300px;
-
-    margin: 0;
-
-    color: rgba(255,255,255,0.82);
-
-    line-height: 1.7;
-}
-
-
-/* Hover */
-
-.work-card:hover {
-    transform:
-        translateY(-8px);
-
-    border-color:
-        rgba(119,193,252,0.38);
-
-    box-shadow:
-        0 25px 55px rgba(0,32,150,0.16);
-}
-
-.work-card:hover .work-image {
-    transform:
-        scale(1.05);
-}
-
-.work-card:hover h3 {
-    color:
-        #77C1FC;
-}
-
-
-/* Mobile */
-
-@media (max-width: 900px) {
-
-    .work-card {
-        min-height:
-            360px;
-    }
-}
-
-@media (max-width: 700px) {
-
-    .work-card {
-        min-height:
-            320px;
-
-        padding:
-            28px 24px;
-
-        border-radius:
-            20px;
-    }
-
-    .work-card h3 {
-        font-size:
-            2.6rem;
-    }
-}
 
 .work-tag {
     font-size: 0.7rem;
@@ -1737,37 +1613,7 @@ footer {
             normal;
     }
 }
-        .brand-strip {
-    overflow: hidden;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-    background: #002096;
-    padding: 18px 0;
-}
-
-.brand-strip-track {
-    display: flex;
-    width: max-content;
-    animation: marquee 25s linear infinite;
-}
-
-.brand-strip span {
-    display: flex;
-    align-items: center;
-    gap: 30px;
-    padding: 0 30px;
-    color: #FFFFFF;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 3px;
-}
-
-.brand-strip span::after {
-    content: "✦";
-    color: #77C1FC;
-}
-
-}
+       
         /*  SERVICE */
 
 .-service {
@@ -2475,19 +2321,7 @@ footer {
         margin-bottom: 30px;
     }
 
-    .work-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .work-card {
-        min-height: 320px;
-        padding: 30px;
-    }
-
-    .work-card h3 {
-        font-size: 2.5rem;
-    }
-
+    
     .about-content p {
         font-size: 1.15rem;
     }
@@ -3857,43 +3691,7 @@ nav {
     gap: 18px;
 }
 
-.work-card {
-    border: 0;
-    border-radius: 24px;
-    background:
-        linear-gradient(
-            145deg,
-            #002096,
-            #0152F4
-        );
-    box-shadow:
-        0 18px 45px rgba(0, 32, 150, 0.12);
-}
 
-.work-card:nth-child(2) {
-    background:
-        linear-gradient(
-            145deg,
-            #0031C5,
-            #2C91FC
-        );
-}
-
-.work-card:nth-child(3) {
-    background:
-        linear-gradient(
-            145deg,
-            #0152F4,
-            #77C1FC
-        );
-}
-
-.work-card:hover {
-    transform: translateY(-8px);
-    border-color: transparent;
-    box-shadow:
-        0 25px 55px rgba(0, 32, 150, 0.18);
-}
 
 
 /* -------------------------
@@ -4011,9 +3809,7 @@ footer strong {
         border-radius: 18px;
     }
 
-    .work-card {
-        border-radius: 20px;
-    }
+   
 
     .-service {
         background:
@@ -7748,33 +7544,7 @@ body {
             40px;
     }
 
-    .work-grid {
-        display:
-            flex;
-
-        flex-direction:
-            column;
-
-        gap:
-            20px;
-
-        width:
-            100%;
-    }
-
-    .work-card {
-        width:
-            100%;
-
-        max-width:
-            100%;
-
-        box-sizing:
-            border-box;
-
-        overflow:
-            hidden;
-    }
+    
 
     .work-image {
         display:
@@ -8373,41 +8143,7 @@ a.btn.btn-primary[href="#contact"]:hover {
         0 12px 30px rgba(1, 82, 244, 0.22);
 }
 
-/* =========================================================
-   SWAYPHICS — APPROACH CARDS MOBILE IMAGE FIX
-   ========================================================= */
 
-@media (max-width: 700px) {
-
-    .work-card .work-image {
-        object-fit: contain;
-        object-position: center center;
-    }
-
-}
-
-    /* =========================================================
-   SWAYPHICS — APPROACH CARDS MOBILE
-   Preserve full image composition
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .work-card {
-        min-height: 0 !important;
-        aspect-ratio: 3 / 2;
-        padding: 28px 24px;
-    }
-
-    .work-card .work-image {
-        width: 100% !important;
-        height: 100% !important;
-
-        object-fit: cover !important;
-        object-position: center center !important;
-    }
-
-}
 
     /* =========================================================
    SWAYPHICS — WORK INTRO MOBILE SPACING
@@ -14035,79 +13771,6 @@ html.reveal-ready .reveal-delay-4 {
 
 }
 
-    /* =========================================================
-   SWAYPHICS — THE SWAYPHICS APPROACH CARD FIX
-   ========================================================= */
-
-/* Keep the project image as a true full-card background */
-
-.work-card {
-    position: relative !important;
-
-    overflow: hidden !important;
-
-    isolation: isolate !important;
-}
-
-
-/* Restore the image to full-card absolute positioning */
-
-.work-card .work-image {
-    position: absolute !important;
-
-    inset: 0 !important;
-
-    width: 100% !important;
-    height: 100% !important;
-
-    max-width: none !important;
-
-    display: block !important;
-
-    object-fit: cover !important;
-
-    object-position: center center !important;
-
-    z-index: 0 !important;
-
-    margin: 0 !important;
-
-    padding: 0 !important;
-
-    transform: scale(1) !important;
-
-    transition:
-        transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) !important;
-}
-
-
-/* Keep the dark readability layer between image and text */
-
-.work-card::after {
-    z-index: 1 !important;
-}
-
-
-/* Restore text to the bottom of the card */
-
-.work-card .work-content {
-    position: absolute !important;
-
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-
-    z-index: 2 !important;
-
-    width: 100% !important;
-
-    margin: 0 !important;
-
-    padding: 35px !important;
-
-    text-align: left !important;
-}
-
 
 /* Keep the text stacked normally */
 
@@ -14120,64 +13783,6 @@ html.reveal-ready .reveal-delay-4 {
 }
 
 
-/* Preserve the existing typography */
-
-.work-card h3 {
-    margin:
-        8px 0 12px !important;
-}
-
-
-.work-card p {
-    margin:
-        0 !important;
-
-    max-width:
-        300px !important;
-}
-
-
-/* Image interaction */
-
-.work-card:hover .work-image {
-    transform:
-        scale(1.05) !important;
-}
-
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .work-card .work-content {
-        padding:
-            28px 24px !important;
-    }
-
-    .work-card .work-image {
-        object-position:
-            center center !important;
-    }
-
-}
-
-
-/* =========================================================
-   IMPORTANT — PREVENT THE CARD-TILT SCRIPT FROM
-   DISTORTING THE WORK CARD'S INTERNAL LAYOUT
-   ========================================================= */
-
-.work-card > .work-image {
-    position:
-        absolute !important;
-}
-
-.work-card > .work-content {
-    position:
-        absolute !important;
-}
 
     /* =========================================================
    SWAYPHICS — LAUNCH PACKAGE HEADER SPACING FIX
@@ -16052,6 +15657,45 @@ nav.scrolled {
 .form-privacy-notice a:hover {
     color: #FFFFFF;
 }
+
+ /* =========================================================
+   SWAYPHICS — REFINED CARD SCALE
+   Slightly more compact card proportions
+   ========================================================= */
+
+.service {
+    min-height: 195px !important;
+    padding: 34px !important;
+}
+
+
+.identity-item {
+    padding: 32px !important;
+}
+
+.testimonial-card {
+    min-height: 285px !important;
+    padding: 28px !important;
+}
+
+@media (max-width: 700px) {
+
+    .service {
+        min-height: 180px !important;
+        padding: 26px !important;
+    }
+
+
+    .identity-item {
+        padding: 26px 22px !important;
+    }
+
+    .testimonial-card {
+        min-height: 265px !important;
+        padding: 24px !important;
+    }
+
+}   
     
     </style>
 
@@ -16223,75 +15867,7 @@ nav.scrolled {
     </div>
 
 </section>
-                <!-- SWAYPHICS CAPABILITIES STRIP -->
-<div class="brand-strip">
-
-    <div class="brand-strip-label">
-        <span>WHAT WE DO</span>
-    </div>
-
-    <div class="brand-strip-window">
-
-        <div class="brand-strip-track">
-
-            <div class="brand-strip-group">
-
-                <span>BRANDING</span>
-                <i>✦</i>
-
-                <span>DIGITAL PRESENCE</span>
-                <i>✦</i>
-
-                <span>WEBSITES</span>
-                <i>✦</i>
-
-                <span>BUSINESS SYSTEMS</span>
-                <i>✦</i>
-
-                <span>CONTENT</span>
-                <i>✦</i>
-
-                <span>BRAND LAUNCH</span>
-                <i>✦</i>
-
-                <span>GROWTH</span>
-                <i>✦</i>
-
-            </div>
-
-            <div
-                class="brand-strip-group"
-                aria-hidden="true"
-            >
-
-                <span>BRANDING</span>
-                <i>✦</i>
-
-                <span>DIGITAL PRESENCE</span>
-                <i>✦</i>
-
-                <span>WEBSITES</span>
-                <i>✦</i>
-
-                <span>BUSINESS SYSTEMS</span>
-                <i>✦</i>
-
-                <span>CONTENT</span>
-                <i>✦</i>
-
-                <span>BRAND LAUNCH</span>
-                <i>✦</i>
-
-                <span>GROWTH</span>
-                <i>✦</i>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
+                
         <!-- SERVICES -->
 <section class="services" id="services">
 
@@ -16876,124 +16452,7 @@ nav.scrolled {
     </div>
 
 </section>
-        <!-- WORK -->
-<section id="work">
-        <div class="section-label">The Swayphics approach</div>
-
-<h2 class="section-title">
-    From idea<br>
-    <span>to impact.</span>
-</h2>
-
-<p class="work-intro">
-    We combine creativity, strategy and technology to help
-    businesses build stronger brands, establish a digital presence
-    and communicate with confidence.
-</p>
-
-    </div>
-
-
-    <div class="work-grid">
-
-        <div class="work-card">
-
-            <img
-                src="identity.webp"
-                alt="Swayphics brand identity design"
-                width="1536"
-                height="1024"
-                class="work-image"
-                loading="lazy"
-                decoding="async"
-            >
-
-            <div class="work-content">
-
-                <span class="work-tag">
-                    01 / BRAND
-                </span>
-
-                <h3>
-                    Identity
-                </h3>
-
-                <p>
-                    Building distinctive visual identities that give
-                    businesses something recognisable to own.
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="work-card">
-
-            <img
-                src="presence.webp"
-                alt="Swayphics digital presence design"
-                width="1536"
-                height="1024"
-                class="work-image"
-                loading="lazy"
-                decoding="async"
-            >
-
-            <div class="work-content">
-
-                <span class="work-tag">
-                    02 / DIGITAL
-                </span>
-
-                <h3>
-                    Presence
-                </h3>
-
-                <p>
-                    Creating digital experiences that help businesses
-                    get discovered, understood and remembered.
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="work-card">
-
-            <img
-                src="expression.webp"
-                alt="Swayphics creative content design"
-                width="1536"
-                height="1024"
-                class="work-image"
-                loading="lazy"
-                decoding="async"
-            >
-
-            <div class="work-content">
-
-                <span class="work-tag">
-                    03 / CONTENT
-                </span>
-
-                <h3>
-                    Expression
-                </h3>
-
-                <p>
-                    Creating visual content that gives brands personality
-                    and keeps them consistent across every platform.
-                </p>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</section>
+        
         <!-- TESTIMONIALS -->
 <section class="testimonials" id="testimonials">
 
