@@ -15770,25 +15770,34 @@ body {
     z-index: 1;
 }
 
-    /* =========================================================
+/* =========================================================
    SWAYPHICS — 3D CYLINDRICAL SELECTED WORK
    ========================================================= */
 
 .portfolio-carousel-viewport {
     position: relative;
+
     width: 100%;
     height: 620px;
+
     margin: 30px 0 10px;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    perspective: 1500px;
-    perspective-origin: 50% 48%;
+
+    perspective: 1250px;
+    perspective-origin: 50% 47%;
+
     overflow: hidden;
+
     touch-action: pan-y;
+
     cursor: grab;
+
     outline: none;
-    z-index: 1;
+
+    z-index: 2;
 }
 
 .portfolio-carousel-viewport:active {
@@ -15796,18 +15805,30 @@ body {
 }
 
 .portfolio-carousel-viewport:focus-visible {
-    box-shadow: 0 0 0 3px rgba(119, 193, 252, 0.35);
+    box-shadow:
+        0 0 0 3px rgba(119, 193, 252, 0.35);
+
     border-radius: 28px;
 }
 
+
+/* =========================================================
+   CYLINDER TRACK
+   ========================================================= */
+
 .portfolio-carousel-track {
     position: relative;
+
     width: 400px;
     height: 520px;
+
     flex: 0 0 auto;
+
     transform-style: preserve-3d;
+
     will-change: transform;
 }
+
 
 /* =========================================================
    CARD SHELL
@@ -15815,6 +15836,7 @@ body {
 
 .portfolio-carousel-track .portfolio-card {
     position: absolute;
+
     top: 0;
     left: 0;
 
@@ -15824,14 +15846,22 @@ body {
     margin: 0;
     padding: 0;
 
+    display: block;
+
     background: transparent;
+
     border: 0;
+
     border-radius: 30px;
 
     overflow: visible;
 
+    box-shadow: none !important;
+
     transform-origin: center center;
+
     transform-style: preserve-3d;
+
     backface-visibility: visible;
 
     cursor: pointer;
@@ -15840,22 +15870,29 @@ body {
         transform,
         opacity,
         filter;
-
-    transition:
-        box-shadow 0.35s ease,
-        border-color 0.35s ease;
 }
 
+
 /*
-   Physical thickness behind the card.
-   This creates a subtle rear slab so the cards feel
-   like physical portfolio pieces rather than flat divs.
+   Prevent the older global portfolio hover rule
+   from visually fighting the 3D cylinder.
 */
+.portfolio-carousel-track .portfolio-card:hover {
+    box-shadow: none !important;
+}
+
+
+/* =========================================================
+   SUBTLE PHYSICAL CARD THICKNESS
+   ========================================================= */
+
 .portfolio-carousel-track .portfolio-card::before {
     content: "";
 
     position: absolute;
-    inset: 12px -10px -12px 10px;
+
+    inset:
+        10px -9px -10px 9px;
 
     border-radius: 30px;
 
@@ -15863,23 +15900,25 @@ body {
         linear-gradient(
             135deg,
             #DCEAFF 0%,
-            #EAF3FF 55%,
+            #EDF5FF 52%,
             #D7E7FB 100%
         );
 
-    transform: translateZ(-18px);
+    transform:
+        translateZ(-18px);
 
     box-shadow:
-        0 18px 45px rgba(0, 32, 150, 0.10);
+        0 18px 42px rgba(0, 32, 150, 0.08);
 
     pointer-events: none;
 }
+
 
 /* =========================================================
    CARD FACE
    ========================================================= */
 
-.portfolio-card-face {
+.portfolio-carousel-track .portfolio-card-face {
     position: relative;
 
     width: 100%;
@@ -15901,14 +15940,8 @@ body {
         0 22px 55px rgba(0, 32, 150, 0.10);
 
     transform-style: preserve-3d;
-
-    /*
-       The JS applies a small counter-rotation to the face.
-       This lets cards farther around the cylinder remain
-       visually understandable instead of becoming mirrored.
-    */
-    will-change: transform;
 }
+
 
 /* =========================================================
    IMAGE
@@ -15963,7 +15996,7 @@ body {
     object-position: center center;
 
     transition:
-        transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .portfolio-carousel-track
@@ -15971,6 +16004,7 @@ body {
 .portfolio-image:hover {
     transform: scale(1.035);
 }
+
 
 /* =========================================================
    CONTENT
@@ -15980,9 +16014,9 @@ body {
     display: flex;
     flex-direction: column;
 
-    min-height: 0;
-
     flex: 1;
+
+    min-height: 0;
 
     padding:
         24px 28px 28px;
@@ -16009,7 +16043,8 @@ body {
 }
 
 .portfolio-carousel-track .portfolio-content h3 {
-    margin: 0 0 10px;
+    margin:
+        0 0 10px;
 
     color: var(--text-dark);
 
@@ -16024,13 +16059,13 @@ body {
 .portfolio-carousel-track .portfolio-content p {
     margin: 0;
 
-    max-width: 100%;
-
     color: var(--text-muted);
 
     font-size: 0.96rem;
+
     line-height: 1.65;
 }
+
 
 /* =========================================================
    PROJECT LINK
@@ -16039,6 +16074,7 @@ body {
 .portfolio-carousel-track .portfolio-project-link {
     display: inline-flex;
     align-items: center;
+
     gap: 8px;
 
     margin-top: auto;
@@ -16063,28 +16099,21 @@ body {
     opacity: 0.75;
 }
 
+
 /* =========================================================
-   ACTIVE / DEPTH STATES
+   ACTIVE CARD
    ========================================================= */
 
-.portfolio-carousel-track .portfolio-card.is-active .portfolio-card-face {
+.portfolio-carousel-track
+.portfolio-card.is-active
+.portfolio-card-face {
     box-shadow:
         0 34px 75px rgba(0, 32, 150, 0.16);
 }
 
-.portfolio-carousel-track .portfolio-card:not(.is-active) {
-    cursor: pointer;
-}
-
-.portfolio-carousel-track
-.portfolio-card:not(.is-active)
-.portfolio-card-face {
-    box-shadow:
-        0 18px 42px rgba(0, 32, 150, 0.07);
-}
 
 /* =========================================================
-   CONTROLS
+   CAROUSEL CONTROLS
    ========================================================= */
 
 .portfolio-carousel-controls {
@@ -16103,6 +16132,7 @@ body {
 
 .carousel-btn {
     display: inline-flex;
+
     align-items: center;
     justify-content: center;
 
@@ -16117,7 +16147,7 @@ body {
     border-radius: 50%;
 
     background:
-        rgba(255, 255, 255, 0.88);
+        rgba(255, 255, 255, 0.90);
 
     color: #0152F4;
 
@@ -16137,6 +16167,7 @@ body {
 
 .carousel-btn:hover {
     background: #0152F4;
+
     color: #FFFFFF;
 
     transform:
@@ -16148,13 +16179,14 @@ body {
 
 .carousel-btn:focus-visible {
     outline:
-        3px solid rgba(119, 193, 252, 0.6);
+        3px solid rgba(119, 193, 252, 0.60);
 
     outline-offset: 3px;
 }
 
+
 /* =========================================================
-   COUNTER
+   POSITION COUNTER
    ========================================================= */
 
 .portfolio-carousel-counter {
@@ -16182,15 +16214,18 @@ body {
     opacity: 0.35;
 }
 
+
 /* =========================================================
-   RESPONSIVE
+   TABLET
    ========================================================= */
 
 @media (max-width: 900px) {
 
     .portfolio-carousel-viewport {
-        height: 555px;
-        perspective: 1200px;
+        height: 560px;
+
+        perspective:
+            1050px;
     }
 
     .portfolio-carousel-track {
@@ -16198,26 +16233,37 @@ body {
         height: 450px;
     }
 
-    .portfolio-carousel-track .portfolio-image-wrap {
+    .portfolio-carousel-track
+    .portfolio-image-wrap {
         height: 245px;
     }
 
-    .portfolio-carousel-track .portfolio-content {
+    .portfolio-carousel-track
+    .portfolio-content {
         padding:
             20px 23px 24px;
     }
 
 }
 
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
 @media (max-width: 700px) {
 
     .portfolio-carousel-viewport {
         height: 500px;
+
         margin:
             15px 0 5px;
 
-        perspective: 950px;
-        perspective-origin: 50% 46%;
+        perspective:
+            900px;
+
+        perspective-origin:
+            50% 46%;
     }
 
     .portfolio-carousel-track {
@@ -16225,27 +16271,39 @@ body {
         height: 400px;
     }
 
-    .portfolio-carousel-track .portfolio-card,
-    .portfolio-carousel-track .portfolio-card-face {
+    .portfolio-carousel-track
+    .portfolio-card-face {
         border-radius: 23px;
     }
 
-    .portfolio-carousel-track .portfolio-image-wrap {
+    .portfolio-carousel-track
+    .portfolio-card::before {
+        border-radius: 23px;
+    }
+
+    .portfolio-carousel-track
+    .portfolio-image-wrap {
         height: 215px;
     }
 
-    .portfolio-carousel-track .portfolio-content {
+    .portfolio-carousel-track
+    .portfolio-content {
         padding:
             18px 20px 21px;
     }
 
-    .portfolio-carousel-track .portfolio-content h3 {
+    .portfolio-carousel-track
+    .portfolio-content h3 {
         font-size: 1.55rem;
-        letter-spacing: -1.1px;
+
+        letter-spacing:
+            -1.1px;
     }
 
-    .portfolio-carousel-track .portfolio-content p {
+    .portfolio-carousel-track
+    .portfolio-content p {
         font-size: 0.86rem;
+
         line-height: 1.55;
     }
 
@@ -16260,14 +16318,21 @@ body {
 
     .portfolio-carousel-counter {
         min-width: 62px;
+
         font-size: 0.68rem;
     }
 
 }
 
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
 @media (prefers-reduced-motion: reduce) {
 
-    .portfolio-carousel-track .portfolio-image,
+    .portfolio-carousel-track
+    .portfolio-image,
     .carousel-btn {
         transition: none !important;
     }
@@ -17118,7 +17183,7 @@ body {
             class="portfolio-carousel-track"
             id="portfolio-carousel-track"
         >
-            <!-- Projects injected dynamically -->
+            <!-- Projects are injected dynamically -->
         </div>
 
     </div>
@@ -18798,16 +18863,23 @@ function updatePortfolioCarouselGeometry() {
         */
 
         portfolioCarouselState.radius =
-            (
-                width / 2
-            ) /
-            Math.tan(
-                Math.PI /
-                portfolioCarouselState.count
-            );
+    (
+        width / 2
+    ) /
+    Math.tan(
+        Math.PI /
+        portfolioCarouselState.count
+    );
 
-        portfolioCarouselState.radius *=
-            1.04;
+/*
+   Deliberately bring the cards slightly closer
+   to the centre of the cylinder.
+
+   This creates the partial overlap seen in
+   the intended Swayphics carousel design.
+*/
+portfolioCarouselState.radius *=
+    0.92;
 
     }
 
@@ -18887,234 +18959,287 @@ function renderPortfolioCarousel() {
         `;
 
 
-    /* ---------------------------------------------
-       Individual card depth
-       --------------------------------------------- */
+/* ---------------------------------------------
+   CYLINDRICAL CARD DEPTH
+   --------------------------------------------- */
 
-    portfolioCarouselState.cards
-        .forEach(
-            (card, index) => {
+portfolioCarouselState.cards.forEach(
+    (card, index) => {
 
-                if (
-                    portfolioCarouselState.count === 1
-                ) {
+        if (
+            portfolioCarouselState.count === 1
+        ) {
 
-                    card.style.opacity = "1";
+            card.style.opacity =
+                "1";
 
-                    card.style.filter =
-                        "none";
+            card.style.filter =
+                "none";
 
-                    card.style.zIndex =
-                        "100";
+            card.style.zIndex =
+                "200";
 
-                    card.classList.add(
-                        "is-active"
-                    );
+            card.classList.add(
+                "is-active"
+            );
 
-                    return;
-                }
-
-
-                const cardAngle =
-                    index *
-                    portfolioCarouselState.theta;
+            return;
+        }
 
 
-                let worldAngle =
-                    (
-                        cardAngle +
-                        portfolioCarouselState.currentRotation
-                    ) % 360;
+        /*
+           Every card has a permanent physical
+           position around the cylinder.
+        */
+
+        const cardAngle =
+            index *
+            portfolioCarouselState.theta;
 
 
-                if (
-                    worldAngle > 180
-                ) {
-                    worldAngle -= 360;
-                }
+        /*
+           Calculate where that card currently
+           sits relative to the visitor.
+        */
 
-                if (
-                    worldAngle < -180
-                ) {
-                    worldAngle += 360;
-                }
-
-
-                const distance =
-                    Math.abs(
-                        worldAngle
-                    );
+        let worldAngle =
+            (
+                cardAngle +
+                portfolioCarouselState.currentRotation
+            ) % 360;
 
 
-                /*
-                   0°   = directly in front
-                   45°  = strong side card
-                   90°  = deep side card
-                   135° = far/rear card
-                   180° = directly behind
-                */
+        if (
+            worldAngle > 180
+        ) {
 
-                const depth =
-                    Math.min(
-                        distance / 180,
-                        1
-                    );
+            worldAngle -= 360;
+
+        }
 
 
-                let opacity =
-                    1 -
-                    (
-                        depth *
-                        0.78
-                    );
+        if (
+            worldAngle < -180
+        ) {
+
+            worldAngle += 360;
+
+        }
 
 
-                let scale =
-                    1 -
-                    (
-                        depth *
-                        0.19
-                    );
+        const distance =
+            Math.abs(
+                worldAngle
+            );
 
 
-                let blur =
-                    reducedMotion
-                        ? 0
-                        : depth * 3.2;
+        /*
+           0°   = directly in front
+           ±theta = immediate neighbour
+           180° = directly behind
+        */
+
+        const depth =
+            Math.min(
+                distance / 180,
+                1
+            );
 
 
-                /*
-                   Keep the immediate side cards
-                   quite visible, matching the sketch.
-                */
+        /* -----------------------------------------
+           BASE DEPTH APPEARANCE
+           ----------------------------------------- */
 
-                if (
-                    distance <=
-                    portfolioCarouselState.theta * 0.65
-                ) {
-
-                    opacity =
-                        Math.max(
-                            opacity,
-                            0.72
-                        );
-
-                }
+        let opacity =
+            1 -
+            (
+                depth *
+                0.70
+            );
 
 
-                card.style.opacity =
-                    opacity.toFixed(3);
-
-                card.style.filter =
-                    `
-                        brightness(
-                            ${
-                                (
-                                    1 -
-                                    depth * 0.18
-                                ).toFixed(3)
-                            }
-                        )
-                        blur(
-                            ${
-                                blur.toFixed(2)
-                            }px
-                        )
-                    `;
+        let scale =
+            1 -
+            (
+                depth *
+                0.10
+            );
 
 
-                /*
-                   The physical card revolves
-                   around the cylinder.
-                */
-
-                card.style.transform =
-                    `
-                        rotateY(${cardAngle}deg)
-                        translateZ(${portfolioCarouselState.radius}px)
-                        scale(${scale.toFixed(3)})
-                    `;
+        let blur =
+            depth *
+            2.2;
 
 
-                /*
-                   Depth-based stacking.
+        /*
+           IMMEDIATE PREVIOUS / NEXT CARDS
 
-                   Front cards must paint above
-                   the cards behind them.
-                */
+           These are deliberately kept highly
+           visible so the portfolio advertises
+           its own depth without relying on the
+           01 / XX counter.
+        */
 
-                const zDepth =
-                    Math.round(
-                        Math.cos(
-                            worldAngle *
-                            Math.PI /
-                            180
-                        ) *
-                        100
-                    );
+        if (
+            distance <=
+            portfolioCarouselState.theta *
+            1.08
+        ) {
 
-                card.style.zIndex =
-                    String(
-                        zDepth + 100
-                    );
+            opacity =
+                Math.max(
+                    opacity,
+                    0.90
+                );
+
+            scale =
+                Math.max(
+                    scale,
+                    0.95
+                );
+
+            blur =
+                Math.min(
+                    blur,
+                    0.45
+                );
+
+        }
 
 
-                /*
-                   Keep the card face readable while
-                   preserving the cylindrical position.
+        /*
+           SECOND RING
 
-                   45% compensation leaves the side
-                   cards visibly angled rather than
-                   completely flat.
-                */
+           Still visible, but clearly further
+           around the cylinder.
+        */
 
-                const face =
-                    card.querySelector(
-                        ".portfolio-card-face"
-                    );
+        else if (
+            distance <=
+            portfolioCarouselState.theta *
+            2.10
+        ) {
 
-                if (face) {
+            opacity =
+                Math.max(
+                    opacity,
+                    0.56
+                );
 
-                    const faceRotation =
+            scale =
+                Math.max(
+                    scale,
+                    0.89
+                );
+
+            blur =
+                Math.min(
+                    blur,
+                    1.8
+                );
+
+        }
+
+
+        /* -----------------------------------------
+           APPLY DEPTH
+           ----------------------------------------- */
+
+        card.style.opacity =
+            opacity.toFixed(3);
+
+
+        card.style.filter =
+            `
+                brightness(
+                    ${
                         (
-                            worldAngle *
-                            -0.45
-                        );
-
-                    face.style.transform =
-                        `
-                            rotateY(
-                                ${faceRotation}deg
-                            )
-                        `;
-
-                }
-
-
-                const active =
-                    distance <
-                    (
-                        portfolioCarouselState.theta /
-                        2
-                    );
+                            1 -
+                            depth *
+                            0.10
+                        ).toFixed(3)
+                    }
+                )
+                blur(
+                    ${
+                        blur.toFixed(2)
+                    }px
+                )
+            `;
 
 
-                if (active) {
+        /*
+           IMPORTANT:
 
-                    card.classList.add(
-                        "is-active"
-                    );
+           Do NOT counter-rotate the card face.
 
-                } else {
+           The visible side cards must actually
+           remain tilted around the cylinder.
+        */
 
-                    card.classList.remove(
-                        "is-active"
-                    );
+        card.style.transform =
+            `
+                rotateY(
+                    ${cardAngle}deg
+                )
+                translateZ(
+                    ${portfolioCarouselState.radius}px
+                )
+                scale(
+                    ${scale.toFixed(3)}
+                )
+            `;
 
-                }
 
-            }
-        );
+        /* -----------------------------------------
+           3D PAINT ORDER
+           ----------------------------------------- */
+
+        const zDepth =
+            Math.round(
+                Math.cos(
+                    worldAngle *
+                    Math.PI /
+                    180
+                ) *
+                100
+            );
+
+
+        card.style.zIndex =
+            String(
+                zDepth + 100
+            );
+
+
+        /* -----------------------------------------
+           ACTIVE PROJECT
+           ----------------------------------------- */
+
+        const isActive =
+            distance <
+            (
+                portfolioCarouselState.theta /
+                2
+            );
+
+
+        if (isActive) {
+
+            card.classList.add(
+                "is-active"
+            );
+
+        } else {
+
+            card.classList.remove(
+                "is-active"
+            );
+
+        }
+
+    }
+);
 
 
     updatePortfolioCarouselCounter();
