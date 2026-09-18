@@ -525,6 +525,8 @@
     }
 
     async function refreshData() {
+        await processStaleLeads();
+
         const results = await Promise.all([
             api("/rest/v1/admin_users?select=user_id,full_name,email,role,active,created_at&order=created_at.asc"),
             api("/rest/v1/tasks?select=*&order=created_at.desc"),
@@ -568,8 +570,6 @@
                     item.active === true
                 );
             }) || state.currentAdmin;
-
-        await processStaleLeads();
     }
 
     function viewMeta(view) {
