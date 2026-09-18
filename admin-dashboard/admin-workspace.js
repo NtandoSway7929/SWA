@@ -2044,6 +2044,10 @@
                             "+ Add follow-up",
                             "followup"
                         ) +
+                        quickButton(
+                            "+ New invoice",
+                            "invoice"
+                        ) +
                         '<button class="sway-quick-action" type="button" data-view-target="enquiries">View enquiries</button>' +
                     "</div>"
                 ) +
@@ -3954,12 +3958,16 @@
                         "</td>" +
                         "<td>" +
                             '<div class="sway-row-actions">' +
-                                '<button class="sway-row-action" data-edit="services" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
-                                '<button class="sway-row-action danger" data-delete="services" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
+                                (
+                                    state.currentAdmin.role === "owner"
+                                        ? '<button class="sway-row-action" data-edit="services" data-id="' +
+                                          esc(item.id) +
+                                          '">Edit</button>' +
+                                          '<button class="sway-row-action danger" data-delete="services" data-id="' +
+                                          esc(item.id) +
+                                          '">Delete</button>'
+                                        : ""
+                                ) +
                             "</div>" +
                         "</td>" +
                     "</tr>"
