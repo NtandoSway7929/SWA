@@ -119,20 +119,132 @@
         }).format(Number(value || 0));
     }
 
+    const SOUTH_AFRICA_TIME_ZONE =
+        "Africa/Johannesburg";
+
+    function parseDashboardDate(value) {
+        if (!value) return null;
+
+        const raw = String(value);
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+            const parsed = new Date(
+                raw + "T00:00:00+02:00"
+            );
+
+            return Number.isNaN(parsed.getTime())
+                ? null
+                : parsed;
+        }
+
+        const parsed = new Date(raw);
+
+        return Number.isNaN(parsed.getTime())
+            ? null
+            : parsed;
+    }
+
+    function dashboardNow() {
+        return new Date(
+            new Date().toLocaleString(
+                "en-US",
+                {
+                    timeZone:
+                        SOUTH_AFRICA_TIME_ZONE
+                }
+            )
+        );
+    }
+
+    function dashboardTodayISO() {
+        return new Intl.DateTimeFormat(
+            "en-CA",
+            {
+                timeZone:
+                    SOUTH_AFRICA_TIME_ZONE,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+            }
+        ).format(new Date());
+    }
+
+    function dashboardMonthKey(value) {
+        const parsed =
+            parseDashboardDate(value);
+
+        if (!parsed) return null;
+
+        return parsed.toLocaleDateString(
+            "en-CA",
+            {
+                timeZone:
+                    SOUTH_AFRICA_TIME_ZONE,
+                year: "numeric",
+                month: "2-digit"
+            }
+        );
+    }
+
+    function dashboardHourKey(value) {
+        const parsed =
+            parseDashboardDate(value);
+
+        if (!parsed) return null;
+
+        const parts =
+            new Intl.DateTimeFormat(
+                "en-CA",
+                {
+                    timeZone:
+                        SOUTH_AFRICA_TIME_ZONE,
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    hourCycle: "h23"
+                }
+            ).formatToParts(parsed);
+
+        const map = {};
+
+        parts.forEach(function (part) {
+            if (part.type !== "literal") {
+                map[part.type] = part.value;
+            }
+        });
+
+        return (
+            map.year +
+            "-" +
+            map.month +
+            "-" +
+            map.day +
+            "-" +
+            map.hour
+        );
+    }
+
     function date(value) {
         if (!value) return "—";
 
-        const parsed = new Date(value);
+        const parsed =
+            parseDashboardDate(value);
 
-        if (Number.isNaN(parsed.getTime())) {
+        if (!parsed) {
             return String(value);
         }
 
-        return parsed.toLocaleDateString("en-ZA", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric"
-        });
+        return parsed.toLocaleDateString(
+            "en-ZA",
+            {
+                timeZone:
+                    SOUTH_AFRICA_TIME_ZONE,
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            }
+        );
     }
 
     function dateInput(value) {
@@ -621,25 +733,41 @@
 
 
     function chartMonths() {
-        const now = new Date();
-        now.setDate(1);
-        now.setHours(0, 0, 0, 0);
+        const now =
+            dashboardNow();
 
         const months = [];
 
+        const currentYear =
+            now.getFullYear();
+
+        const currentMonth =
+            now.getMonth();
+
         for (let i = 11; i >= 0; i -= 1) {
-            const point = new Date(now);
-            point.setMonth(now.getMonth() - i);
+            const point =
+                new Date(
+                    currentYear,
+                    currentMonth - i,
+                    1
+                );
 
             months.push({
                 key:
                     point.getFullYear() +
                     "-" +
-                    String(point.getMonth() + 1).padStart(2, "0"),
+                    String(
+                        point.getMonth() + 1
+                    ).padStart(2, "0"),
                 label:
-                    point.toLocaleDateString("en-ZA", {
-                        month: "short"
-                    })
+                    point.toLocaleDateString(
+                        "en-ZA",
+                        {
+                            timeZone:
+                                SOUTH_AFRICA_TIME_ZONE,
+                            month: "short"
+                        }
+                    )
             });
         }
 
@@ -647,19 +775,7 @@
     }
 
     function chartMonthKey(value) {
-        if (!value) return null;
-
-        const point = new Date(value);
-
-        if (Number.isNaN(point.getTime())) {
-            return null;
-        }
-
-        return (
-            point.getFullYear() +
-            "-" +
-            String(point.getMonth() + 1).padStart(2, "0")
-        );
+        return dashboardMonthKey(value);
     }
 
     function liveBadge() {
@@ -1601,45 +1717,41 @@
                     "Live activity pulse",
                     "Operational activity recorded in the last 24 hours.",
                     (function () {
-                        const now = new Date();
-                        now.setMinutes(0, 0, 0);
+                        const now =
+                            new Date();
+
+                        const currentHour =
+                            new Date(
+                                now.getTime()
+                            );
+
+                        currentHour.setMinutes(
+                            0,
+                            0,
+                            0
+                        );
 
                         const labels24 = [];
                         const values24 = [];
 
                         for (let i = 23; i >= 0; i -= 1) {
                             const point =
-                                new Date(now);
-
-                            point.setHours(
-                                now.getHours() - i
-                            );
-
-                            const y =
-                                point.getFullYear();
-                            const m =
-                                String(
-                                    point.getMonth() + 1
-                                ).padStart(2, "0");
-                            const d =
-                                String(
-                                    point.getDate()
-                                ).padStart(2, "0");
-                            const h =
-                                String(
-                                    point.getHours()
-                                ).padStart(2, "0");
+                                new Date(
+                                    currentHour.getTime() -
+                                    i * 60 * 60 * 1000
+                                );
 
                             const key =
-                                y + "-" +
-                                m + "-" +
-                                d + "-" +
-                                h;
+                                dashboardHourKey(
+                                    point
+                                );
 
                             labels24.push(
                                 point.toLocaleTimeString(
                                     "en-ZA",
                                     {
+                                        timeZone:
+                                            SOUTH_AFRICA_TIME_ZONE,
                                         hour: "2-digit",
                                         minute: "2-digit"
                                     }
@@ -1648,29 +1760,10 @@
 
                             values24.push(
                                 state.activities.filter(function (item) {
-                                    const created =
-                                        new Date(
-                                            item.created_at
-                                        );
-
                                     return (
-                                        !Number.isNaN(
-                                            created.getTime()
-                                        ) &&
-                                        created.getFullYear() +
-                                            "-" +
-                                            String(
-                                                created.getMonth() + 1
-                                            ).padStart(2, "0") +
-                                            "-" +
-                                            String(
-                                                created.getDate()
-                                            ).padStart(2, "0") +
-                                            "-" +
-                                            String(
-                                                created.getHours()
-                                            ).padStart(2, "0") ===
-                                            key
+                                        dashboardHourKey(
+                                            item.created_at
+                                        ) === key
                                     );
                                 }).length
                             );
@@ -1877,7 +1970,7 @@
 
     function renderOverview() {
         const today =
-            new Date().toISOString().slice(0, 10);
+            dashboardTodayISO();
 
         const myOpenTasks =
             state.tasks.filter(function (item) {
@@ -2766,7 +2859,7 @@
                                     esc(
                                         invoice
                                             ? dateInput(invoice.issue_date)
-                                            : new Date().toISOString().slice(0, 10)
+                                            : dashboardTodayISO()
                                     ) +
                                     '" required>' +
                             "</div>" +
@@ -3397,7 +3490,7 @@
                     projectId || null,
                 issue_date:
                     issueDate ||
-                    new Date().toISOString().slice(0, 10),
+                    dashboardTodayISO(),
                 due_date:
                     dueDate || null,
                 status:
