@@ -3000,7 +3000,7 @@
     }
 
     const name =
-        swayPrompt(
+        await swayPrompt(
             "Client name:",
             testimonial.name || ""
         );
@@ -3008,7 +3008,7 @@
     if (name === null) return;
 
     const business =
-        swayPrompt(
+        await swayPrompt(
             "Business:",
             testimonial.business || ""
         );
@@ -3016,7 +3016,7 @@
     if (business === null) return;
 
     const role =
-        swayPrompt(
+        await swayPrompt(
             "Role:",
             testimonial.role || ""
         );
@@ -3024,7 +3024,7 @@
     if (role === null) return;
 
     const quote =
-        swayPrompt(
+        await swayPrompt(
             "Testimonial:",
             testimonial.quote || ""
         );
@@ -3032,7 +3032,7 @@
     if (quote === null) return;
 
     const ratingInput =
-        swayPrompt(
+        await swayPrompt(
             "Rating (1-5):",
             String(testimonial.rating || 5)
         );
@@ -3049,7 +3049,7 @@
         );
 
     const imageUrl =
-        swayPrompt(
+        await swayPrompt(
             "Image URL (leave blank to remove):",
             testimonial.image_url || ""
         );
@@ -3149,7 +3149,7 @@
             "Delete the testimonial from " +
             (testimonial.name || "this client") +
             "? This cannot be undone."
-        )
+        ))
     ) {
         return;
     }
