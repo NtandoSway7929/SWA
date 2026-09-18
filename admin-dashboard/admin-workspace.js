@@ -31,26 +31,66 @@
         realtimeClient: null
     };
 
-    const nav = [
-        ["overview", "Overview"],
-        ["insights", "Insights"],
-        ["tasks", "Tasks"],
-        ["leads", "Leads"],
-        ["followups", "Follow-ups"],
-        ["clients", "Clients"],
-        ["projects", "Projects"],
-        ["quotes", "Quotes"],
-        ["payments", "Payments"],
-        ["invoices", "Invoices"],
-        ["services", "Services"],
-        ["invoice-settings", "Invoice settings"],
-        ["enquiries", "Enquiries"],
-        ["content", "Website content"],
-        ["activity", "Activity"],
-        ["team", "Team"],
-        ["portfolio", "Portfolio"],
-        ["testimonials", "Testimonials"]
+    const navGroups = [
+        {
+            id: "overview",
+            label: "Overview",
+            items: [
+                ["overview", "Overview"],
+                ["insights", "Insights"]
+            ]
+        },
+        {
+            id: "crm",
+            label: "Clients & pipeline",
+            items: [
+                ["enquiries", "Enquiries"],
+                ["leads", "Leads"],
+                ["clients", "Clients"],
+                ["followups", "Follow-ups"]
+            ]
+        },
+        {
+            id: "delivery",
+            label: "Work & portfolio",
+            items: [
+                ["projects", "Projects"],
+                ["tasks", "Tasks"],
+                ["portfolio", "Portfolio"]
+            ]
+        },
+        {
+            id: "billing",
+            label: "Sales & billing",
+            items: [
+                ["quotes", "Quotes"],
+                ["invoices", "Invoices"],
+                ["payments", "Payments"],
+                ["services", "Services"],
+                ["invoice-settings", "Invoice settings"]
+            ]
+        },
+        {
+            id: "website",
+            label: "Website",
+            items: [
+                ["content", "Website content"],
+                ["testimonials", "Testimonials"]
+            ]
+        },
+        {
+            id: "admin",
+            label: "Administration",
+            items: [
+                ["activity", "Activity"],
+                ["team", "Team"]
+            ]
+        }
     ];
+
+    const nav = navGroups.reduce(function (all, group) {
+        return all.concat(group.items);
+    }, []);
 
     function token() {
         return localStorage.getItem("swayphics_admin_access_token");
@@ -635,56 +675,228 @@
     }
 
     function renderShell() {
+        let openGroups = {};
+
+        try {
+            openGroups =
+                JSON.parse(
+                    localStorage.getItem(
+                        "swayphics_admin_nav_groups"
+                    ) || "{}"
+                );
+        } catch (error) {
+            openGroups = {};
+        }
+
+        const sidebar =
+            '<div class="sway-workspace-sidebar-head">' +
+                '<div class="sway-workspace-sidebar-brand">' +
+                    '<span class="sway-workspace-sidebar-kicker">SWAYPHICS</span>' +
+                    '<strong>Workspace</strong>' +
+                '</div>' +
+                '<button type="button" class="sway-workspace-mobile-close" aria-label="Close navigation">×</button>' +
+            '</div>' +
+            '<div class="sway-workspace-nav-scroll">' +
+                navGroups.map(function (group) {
+                    const containsCurrent =
+                        group.items.some(function (item) {
+                            return item[0] === state.currentView;
+                        });
+
+                    const isOpen =
+                        containsCurrent ||
+                        openGroups[group.id] === true;
+
+                    return (
+                        '<section class="sway-workspace-nav-group ' +
+                        (isOpen ? "open" : "collapsed") +
+                        '" data-nav-group="' +
+                        esc(group.id) +
+                        '">' +
+                            '<button type="button" class="sway-workspace-nav-group-toggle" aria-expanded="' +
+                                (isOpen ? "true" : "false") +
+                                '" data-nav-group-toggle="' +
+                                esc(group.id) +
+                            '">' +
+                                '<span>' +
+                                    esc(group.label) +
+                                '</span>' +
+                                '<i aria-hidden="true">⌄</i>' +
+                            '</button>' +
+                            '<div class="sway-workspace-nav-items">' +
+                                group.items.map(navButton).join("") +
+                            '</div>' +
+                        '</section>'
+                    );
+                }).join("") +
+            '</div>';
+
         workspace.innerHTML =
             '<div class="sway-workspace-shell">' +
                 '<aside class="sway-workspace-sidebar" aria-label="Admin workspace navigation">' +
-                    nav.map(navButton).join("") +
+                    sidebar +
                 "</aside>" +
-                '<div class="sway-workspace-main" id="sway-workspace-main"></div>' +
+                '<div class="sway-workspace-main" id="sway-workspace-main">' +
+                    '<button type="button" class="sway-workspace-mobile-toggle" aria-label="Open workspace navigation">' +
+                        '<span></span><span></span><span></span>' +
+                    '</button>' +
+                "</div>" +
             "</div>";
+
+        const mobileToggle =
+            workspace.querySelector(
+                ".sway-workspace-mobile-toggle"
+            );
+
+        const mobileClose =
+            workspace.querySelector(
+                ".sway-workspace-mobile-close"
+            );
+
+        const sidebarElement =
+            workspace.querySelector(
+                ".sway-workspace-sidebar"
+            );
+
+        if (mobileToggle && sidebarElement) {
+            mobileToggle.addEventListener(
+                "click",
+                function () {
+                    sidebarElement.classList.add(
+                        "mobile-open"
+                    );
+
+                    workspace.classList.add(
+                        "nav-open"
+                    );
+                }
+            );
+        }
+
+        if (mobileClose && sidebarElement) {
+            mobileClose.addEventListener(
+                "click",
+                function () {
+                    sidebarElement.classList.remove(
+                        "mobile-open"
+                    );
+
+                    workspace.classList.remove(
+                        "nav-open"
+                    );
+                }
+            );
+        }
+
+        workspace
+            .querySelectorAll("[data-nav-group-toggle]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        const group =
+                            button.closest(
+                                "[data-nav-group]"
+                            );
+
+                        if (!group) return;
+
+                        const groupId =
+                            button.dataset.navGroupToggle;
+
+                        const isOpen =
+                            group.classList.contains(
+                                "open"
+                            );
+
+                        group.classList.toggle(
+                            "open",
+                            !isOpen
+                        );
+
+                        group.classList.toggle(
+                            "collapsed",
+                            isOpen
+                        );
+
+                        button.setAttribute(
+                            "aria-expanded",
+                            String(!isOpen)
+                        );
+
+                        let saved = {};
+
+                        try {
+                            saved =
+                                JSON.parse(
+                                    localStorage.getItem(
+                                        "swayphics_admin_nav_groups"
+                                    ) || "{}"
+                                );
+                        } catch (error) {
+                            saved = {};
+                        }
+
+                        saved[groupId] = !isOpen;
+
+                        localStorage.setItem(
+                            "swayphics_admin_nav_groups",
+                            JSON.stringify(saved)
+                        );
+                    }
+                );
+            });
 
         workspace
             .querySelectorAll("[data-view]")
             .forEach(function (button) {
-                button.addEventListener("click", function () {
-                    const view = button.dataset.view;
-                    state.currentView = view;
+                button.addEventListener(
+                    "click",
+                    function () {
+                        const view =
+                            button.dataset.view;
 
-                    if (view === "portfolio") {
-                        const target =
-                            document.querySelector(
-                                ".portfolio-manager"
+                        state.currentView =
+                            view;
+
+                        if (window.innerWidth <= 760) {
+                            if (sidebarElement) {
+                                sidebarElement.classList.remove(
+                                    "mobile-open"
+                                );
+                            }
+
+                            workspace.classList.remove(
+                                "nav-open"
                             );
-
-                        if (target) {
-                            target.scrollIntoView({
-                                behavior: "smooth",
-                                block: "start"
-                            });
                         }
 
-                        return;
-                    }
+                        if (
+                            view === "portfolio" ||
+                            view === "testimonials"
+                        ) {
+                            const target =
+                                document.querySelector(
+                                    view === "portfolio"
+                                        ? ".portfolio-manager"
+                                        : "#testimonials-admin-section"
+                                );
 
-                    if (view === "testimonials") {
-                        const target =
-                            document.querySelector(
-                                "#testimonials-admin-section"
-                            );
+                            if (target) {
+                                target.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "start"
+                                });
+                            }
 
-                        if (target) {
-                            target.scrollIntoView({
-                                behavior: "smooth",
-                                block: "start"
-                            });
+                            renderShell();
+                            return;
                         }
 
-                        return;
+                        renderShell();
+                        renderView();
                     }
-
-                    renderShell();
-                    renderView();
-                });
+                );
             });
     }
 
