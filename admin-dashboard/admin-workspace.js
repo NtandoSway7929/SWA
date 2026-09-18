@@ -3888,7 +3888,7 @@
                     '<div class="value">' +
                         overdue.length +
                     "</div>" +
-                    '<div class="hint">Past due and not fully paid.</div>" +
+                    '<div class="hint">Past due and not fully paid.</div>' +
                 "</div>" +
                 '<div class="sway-stat-card">' +
                     '<span class="label">Catalogue services</span>' +
