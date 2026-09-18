@@ -40,6 +40,25 @@ revoke all on function public.is_swayphics_owner() from public;
 grant execute on function public.is_swayphics_admin() to authenticated;
 grant execute on function public.is_swayphics_owner() to authenticated;
 
+-- Grant Data API privileges for the authenticated workspace role.
+-- RLS policies below still control which rows this role may access.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on table public.admin_users to authenticated;
+grant select, insert, update, delete on table public.clients to authenticated;
+grant select, insert, update, delete on table public.leads to authenticated;
+grant select, insert, update, delete on table public.client_projects to authenticated;
+grant select, insert, update, delete on table public.tasks to authenticated;
+grant select, insert, update, delete on table public.follow_ups to authenticated;
+grant select, insert, update, delete on table public.quotes to authenticated;
+grant select, insert, update, delete on table public.payments to authenticated;
+grant select, insert, update, delete on table public.website_enquiries to authenticated;
+grant select, insert, update, delete on table public.site_announcements to authenticated;
+grant select, insert, update, delete on table public.activity_log to authenticated;
+
+-- Existing public-facing tables also need SELECT privileges for browser reads.
+grant select on table public.portfolio_projects to anon, authenticated;
+grant select on table public.testimonials to anon, authenticated;
+
 alter table public.admin_users enable row level security;
 
 drop policy if exists "Swayphics admins can manage admin users" on public.admin_users;
