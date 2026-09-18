@@ -1136,3 +1136,178 @@
         width: 100%;
     }
 }
+
+
+/* =========================================================
+   SWAYPHICS BRANDED ADMIN DIALOGS
+   ========================================================= */
+
+.sway-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(8, 21, 51, 0.42);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: sway-dialog-fade 0.18s ease;
+}
+
+.sway-dialog {
+    width: min(440px, 100%);
+    overflow: hidden;
+    border: 1px solid rgba(0, 32, 150, 0.10);
+    border-radius: 20px;
+    background: #FFFFFF;
+    box-shadow: 0 28px 90px rgba(8, 21, 51, 0.20);
+    animation: sway-dialog-rise 0.22s ease;
+}
+
+.sway-dialog-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid rgba(0, 32, 150, 0.08);
+}
+
+.sway-dialog-brand img {
+    width: 118px;
+    height: auto;
+    display: block;
+}
+
+.sway-dialog-brand-mark {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--sway-deep), var(--sway-blue));
+    color: #FFFFFF;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.sway-dialog-body {
+    padding: 22px 20px 8px;
+}
+
+.sway-dialog-title {
+    margin: 0 0 8px;
+    color: var(--sway-dark);
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.sway-dialog-message {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.sway-dialog-field {
+    display: grid;
+    gap: 7px;
+    margin-top: 14px;
+}
+
+.sway-dialog-field label {
+    color: var(--sway-dark);
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.sway-dialog-field input,
+.sway-dialog-field textarea {
+    width: 100%;
+    border: 1px solid rgba(0, 32, 150, 0.14);
+    border-radius: 11px;
+    padding: 11px 12px;
+    outline: none;
+    background: #FFFFFF;
+    color: var(--sway-dark);
+    font: inherit;
+    font-size: 0.78rem;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sway-dialog-field textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+.sway-dialog-field input:focus,
+.sway-dialog-field textarea:focus {
+    border-color: rgba(1, 82, 244, 0.42);
+    box-shadow: 0 0 0 4px rgba(1, 82, 244, 0.08);
+}
+
+.sway-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 18px 20px 20px;
+}
+
+.sway-dialog-button {
+    min-width: 88px;
+    border: 1px solid rgba(0, 32, 150, 0.12);
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: #FFFFFF;
+    color: var(--sway-dark);
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.sway-dialog-button.primary {
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--sway-deep), var(--sway-blue));
+    color: #FFFFFF;
+    box-shadow: 0 9px 22px rgba(1, 82, 244, 0.18);
+}
+
+.sway-dialog-button:hover {
+    transform: translateY(-1px);
+}
+
+@keyframes sway-dialog-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes sway-dialog-rise {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 520px) {
+    .sway-dialog-backdrop {
+        padding: 14px;
+    }
+
+    .sway-dialog-actions {
+        flex-direction: column-reverse;
+    }
+
+    .sway-dialog-button {
+        width: 100%;
+    }
+}
