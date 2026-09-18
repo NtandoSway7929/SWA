@@ -1661,6 +1661,343 @@
 
 
         /* =====================================================
+           SWAYPHICS DASHBOARD — MATERIAL-STYLE REDESIGN
+           ===================================================== */
+
+        :root {
+            --sway-dashboard-bg: #F1F5F9;
+            --sway-surface: #FFFFFF;
+            --sway-shadow:
+                0 10px 30px rgba(15, 23, 42, 0.07);
+        }
+
+        body {
+            background: var(--sway-dashboard-bg);
+        }
+
+        .admin-header {
+            background:
+                linear-gradient(
+                    135deg,
+                    var(--sway-deep) 0%,
+                    var(--sway-blue) 72%,
+                    #2C91FC 100%
+                );
+            border-bottom: 0;
+            box-shadow:
+                0 5px 18px rgba(0, 32, 150, 0.14);
+        }
+
+        .admin-header-inner {
+            width: min(1440px, calc(100% - 36px));
+            min-height: 64px;
+        }
+
+        .admin-brand {
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.96);
+        }
+
+        .admin-brand-logo {
+            width: 132px;
+        }
+
+        .admin-status {
+            color: rgba(255,255,255,0.88);
+        }
+
+        .admin-status-dot {
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.12);
+        }
+
+        .logout-button {
+            border-color: rgba(255,255,255,0.26);
+            background: rgba(255,255,255,0.10);
+            color: #FFFFFF;
+        }
+
+        .logout-button:hover {
+            border-color: rgba(255,255,255,0.42);
+            background: rgba(255,255,255,0.16);
+            color: #FFFFFF;
+        }
+
+        .admin-main {
+            width: min(1440px, calc(100% - 36px));
+            padding: 28px 0 70px;
+        }
+
+        .admin-intro {
+            position: relative;
+            isolation: isolate;
+            overflow: hidden;
+            margin-bottom: 24px;
+            padding: 28px 32px;
+            border-radius: 18px;
+            background:
+                linear-gradient(
+                    135deg,
+                    var(--sway-deep),
+                    var(--sway-blue)
+                );
+            color: #FFFFFF;
+            box-shadow:
+                0 14px 35px rgba(0,32,150,0.13);
+        }
+
+        .admin-intro::before,
+        .admin-intro::after {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            transform: rotate(38deg);
+            border: 1px solid rgba(255,255,255,0.09);
+            background: rgba(255,255,255,0.04);
+        }
+
+        .admin-intro::before {
+            width: 300px;
+            height: 300px;
+            top: -210px;
+            right: 12%;
+        }
+
+        .admin-intro::after {
+            width: 230px;
+            height: 230px;
+            top: -150px;
+            right: -55px;
+        }
+
+        .admin-intro .admin-label {
+            margin-bottom: 8px;
+            color: rgba(255,255,255,0.72);
+            font-size: 0.60rem;
+        }
+
+        .admin-intro h1 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            letter-spacing: -0.055em;
+        }
+
+        .admin-intro h1 span {
+            color: #FFFFFF;
+        }
+
+        .admin-intro p {
+            max-width: 620px;
+            margin-top: 10px;
+            color: rgba(255,255,255,0.82);
+            font-size: 0.78rem;
+            line-height: 1.7;
+        }
+
+        .sway-workspace-shell {
+            grid-template-columns: 242px minmax(0, 1fr);
+            gap: 20px;
+        }
+
+        .sway-workspace-sidebar {
+            top: 84px;
+            height: calc(100vh - 106px);
+            max-height: calc(100vh - 106px);
+            min-height: 0;
+            border: 0;
+            border-radius: 16px;
+            background: #FFFFFF;
+            box-shadow: var(--sway-shadow);
+        }
+
+        .sway-workspace-sidebar-head {
+            padding: 12px 12px 15px;
+            border-bottom: 1px solid #E8EEF6;
+        }
+
+        .sway-workspace-sidebar-kicker {
+            color: var(--sway-blue);
+            font-size: 0.50rem;
+            letter-spacing: 0.18em;
+        }
+
+        .sway-workspace-sidebar-brand strong {
+            font-size: 0.88rem;
+        }
+
+        .sway-workspace-nav-scroll {
+            padding-top: 10px;
+        }
+
+        .sway-workspace-nav-group {
+            padding: 0 4px 4px;
+            margin-bottom: 5px;
+        }
+
+        .sway-workspace-nav-group-toggle {
+            padding: 8px 9px;
+            color: #8190A5;
+            font-size: 0.52rem;
+            letter-spacing: 0.12em;
+        }
+
+        .sway-workspace-nav-group-toggle:hover {
+            background: #F5F8FC;
+        }
+
+        .sway-workspace-nav-button {
+            min-height: 39px;
+            border-radius: 9px;
+            color: #65748B;
+            font-size: 0.66rem;
+        }
+
+        .sway-workspace-nav-button:hover {
+            background: #F4F7FC;
+            color: var(--sway-deep);
+        }
+
+        .sway-workspace-nav-button.active {
+            background:
+                linear-gradient(
+                    135deg,
+                    #3A82F6,
+                    var(--sway-blue)
+                );
+            box-shadow:
+                0 7px 18px rgba(1,82,244,0.16);
+        }
+
+        .sway-stat-card,
+        .sway-panel {
+            border: 0;
+            background: var(--sway-surface);
+            box-shadow: var(--sway-shadow);
+        }
+
+        .sway-stat-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            padding: 18px;
+        }
+
+        .sway-stat-card::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background:
+                linear-gradient(
+                    180deg,
+                    var(--sway-blue),
+                    #77C1FC
+                );
+            opacity: 0.9;
+        }
+
+        .sway-stat-card .label {
+            color: #7890A8;
+            font-size: 0.58rem;
+        }
+
+        .sway-stat-card .value {
+            color: #40546C;
+            font-size: 1.5rem;
+        }
+
+        .sway-stat-card .hint {
+            color: #95A3B5;
+            font-size: 0.61rem;
+        }
+
+        .sway-panel {
+            border-radius: 14px;
+        }
+
+        .sway-panel-title {
+            padding-bottom: 12px;
+            border-bottom: 1px solid #E9EFF6;
+        }
+
+        .sway-panel-title h3 {
+            color: #40546C;
+        }
+
+        .sway-table th {
+            color: #8A99AD;
+        }
+
+        .sway-table td {
+            color: #40546C;
+        }
+
+        .sway-chip {
+            background: #EEF4FF;
+            color: var(--sway-deep);
+        }
+
+        .sway-quick-action {
+            border: 0;
+            box-shadow: var(--sway-shadow);
+        }
+
+        .sway-live-toolbar {
+            border: 0;
+            box-shadow: var(--sway-shadow);
+            background: #FFFFFF;
+        }
+
+        .sway-modal-card {
+            border: 0;
+            box-shadow:
+                0 28px 80px rgba(15,23,42,0.20);
+        }
+
+        .sway-workspace-heading {
+            padding-bottom: 2px;
+        }
+
+        .sway-workspace-heading h2 {
+            color: #40546C;
+        }
+
+        .sway-workspace-heading p {
+            color: #8291A5;
+        }
+
+        .sway-workspace-button.primary {
+            box-shadow:
+                0 7px 18px rgba(1,82,244,0.14);
+        }
+
+        @media (max-width: 760px) {
+            .admin-header-inner {
+                width: min(100% - 28px, 1440px);
+            }
+
+            .admin-main {
+                width: min(100% - 28px, 1440px);
+                padding-top: 18px;
+            }
+
+            .admin-intro {
+                padding: 24px;
+                border-radius: 16px;
+            }
+
+            .sway-workspace-sidebar {
+                top: 76px;
+                height: calc(100vh - 90px);
+            }
+
+            .sway-workspace-heading {
+                padding-left: 58px;
+            }
+        }
+
+        /* =====================================================
            WORKSPACE VISUAL CONSISTENCY
            ===================================================== */
 
