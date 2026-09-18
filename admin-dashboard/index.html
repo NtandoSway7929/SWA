@@ -2861,7 +2861,7 @@
         }
 
 
-        alert(
+        swayAlert(
             error.message ||
             "Unable to update testimonial."
         );
@@ -2890,7 +2890,7 @@
     }
 
     const name =
-        window.prompt(
+        swayPrompt(
             "Client name:",
             testimonial.name || ""
         );
@@ -2898,7 +2898,7 @@
     if (name === null) return;
 
     const business =
-        window.prompt(
+        swayPrompt(
             "Business:",
             testimonial.business || ""
         );
@@ -2906,7 +2906,7 @@
     if (business === null) return;
 
     const role =
-        window.prompt(
+        swayPrompt(
             "Role:",
             testimonial.role || ""
         );
@@ -2914,7 +2914,7 @@
     if (role === null) return;
 
     const quote =
-        window.prompt(
+        swayPrompt(
             "Testimonial:",
             testimonial.quote || ""
         );
@@ -2922,7 +2922,7 @@
     if (quote === null) return;
 
     const ratingInput =
-        window.prompt(
+        swayPrompt(
             "Rating (1-5):",
             String(testimonial.rating || 5)
         );
@@ -2939,7 +2939,7 @@
         );
 
     const imageUrl =
-        window.prompt(
+        swayPrompt(
             "Image URL (leave blank to remove):",
             testimonial.image_url || ""
         );
@@ -3010,7 +3010,7 @@
             error
         );
 
-        alert(
+        swayAlert(
             error.message ||
             "Unable to update testimonial."
         );
@@ -3035,7 +3035,7 @@
     }
 
     if (
-        !window.confirm(
+        !(await swayConfirm(
             "Delete the testimonial from " +
             (testimonial.name || "this client") +
             "? This cannot be undone."
@@ -3099,7 +3099,7 @@
             error
         );
 
-        alert(
+        swayAlert(
             error.message ||
             "Unable to delete testimonial."
         );
@@ -3633,7 +3633,7 @@ async function editPortfolioProject(projectId) {
         );
 
 
-        alert(
+        swayAlert(
             error.message ||
             "Unable to load this project."
         );
@@ -3818,7 +3818,7 @@ async function togglePortfolioPublished(projectId) {
             error
         );
 
-        alert(
+        swayAlert(
             error.message ||
             "Unable to update publication status."
         );
@@ -3842,7 +3842,7 @@ async function deletePortfolioProject(projectId) {
     }
 
     const confirmed =
-        window.confirm(
+        await swayConfirm(
             "Are you sure you want to delete this portfolio project?"
         );
 
@@ -3885,7 +3885,7 @@ async function deletePortfolioProject(projectId) {
             error
         );
 
-        alert(
+        swayAlert(
             error.message ||
             "Unable to delete portfolio project."
         );
