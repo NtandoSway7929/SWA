@@ -2793,7 +2793,8 @@
 
                         '<div class="sway-invoice-lines">' +
                             '<div class="sway-invoice-line-head">' +
-                                "<span>Service / description</span>" +
+                                "<span>Service</span>" +
+                                "<span>Description</span>" +
                                 "<span>Qty</span>" +
                                 "<span>Unit price</span>" +
                                 "<span>Total</span>" +
@@ -3014,6 +3015,9 @@
                                         line.service_id
                                     ) +
                                 "</select>" +
+                                '<input type="text" data-line-description value="' +
+                                    esc(line.description) +
+                                '">' +
                                 '<input type="number" min="0.01" step="0.01" data-line-qty value="' +
                                     esc(line.quantity) +
                                 '">' +
@@ -3103,6 +3107,25 @@
 
                             renderLines();
                             updateTotals();
+                        }
+                    );
+                });
+
+            root
+                .querySelectorAll("[data-line-description]")
+                .forEach(function (input) {
+                    input.addEventListener(
+                        "input",
+                        function () {
+                            const index =
+                                Number(
+                                    input.closest(
+                                        "[data-line-index]"
+                                    ).dataset.lineIndex
+                                );
+
+                            localLines[index].description =
+                                input.value;
                         }
                     );
                 });
@@ -3276,16 +3299,7 @@
         ).addEventListener(
             "click",
             function () {
-                const defaultService =
-                    state.services.find(function (service) {
-                        return service.active;
-                    });
-
-                addLine(
-                    defaultService
-                        ? defaultService.id
-                        : ""
-                );
+                addLine("");
             }
         );
 
@@ -3594,21 +3608,7 @@
         );
 
         renderLines();
-
-        if (!localLines.length) {
-            const firstService =
-                state.services.find(function (service) {
-                    return service.active;
-                });
-
-            if (firstService) {
-                addLine(
-                    firstService.id
-                );
-            }
-        } else {
-            updateTotals();
-        }
+        updateTotals();
     }
 
     function base64ToBytes(base64) {
@@ -3749,10 +3749,24 @@
         invoiceId,
         confirmFirst
     ) {
-        const invoice =
+        let invoice =
             state.invoices.find(function (item) {
                 return item.id === invoiceId;
             });
+
+        if (!invoice) {
+            const fetched =
+                await api(
+                    "/rest/v1/invoices?id=eq." +
+                    encodeURIComponent(invoiceId) +
+                    "&select=*"
+                );
+
+            invoice =
+                Array.isArray(fetched)
+                    ? fetched[0]
+                    : fetched;
+        }
 
         if (!invoice) {
             throw new Error(
