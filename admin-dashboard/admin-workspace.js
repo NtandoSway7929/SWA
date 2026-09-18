@@ -567,6 +567,8 @@
                     item.active === true
                 );
             }) || state.currentAdmin;
+
+        await processStaleLeads();
     }
 
     function viewMeta(view) {
@@ -6662,89 +6664,43 @@
 
         if (
             !(await swayConfirm(
-                "Convert " +
+                "Move " +
                 lead.business_name +
-                " into a client?"
+                " into Clients? This marks the lead as won."
             ))
         ) {
             return;
         }
 
-        let clientId = null;
-
-        const existing =
-            state.clients.find(function (item) {
-                return (
-                    item.email &&
-                    lead.email &&
-                    item.email.toLowerCase() ===
-                    lead.email.toLowerCase()
-                );
-            });
-
-        if (existing) {
-            clientId = existing.id;
-        } else {
-            const created =
-                await api(
-                    "/rest/v1/clients",
-                    {
-                        method: "POST",
-                        headers: headers({
-                            "Prefer":
-                                "return=representation"
-                        }),
-                        body:
-                            JSON.stringify({
-                                business_name:
-                                    lead.business_name,
-                                contact_name:
-                                    lead.contact_name,
-                                email:
-                                    lead.email,
-                                phone:
-                                    lead.phone,
-                                assigned_to:
-                                    lead.assigned_to ||
-                                    state.currentAdmin.user_id,
-                                status:
-                                    "active",
-                                notes:
-                                    lead.notes
-                            })
-                    }
-                );
-
-            clientId =
-                Array.isArray(created) &&
-                created[0]
-                    ? created[0].id
-                    : null;
-        }
-
-        await api(
-            "/rest/v1/leads?id=eq." +
-            encodeURIComponent(id),
-            {
-                method: "PATCH",
-                headers: headers({
-                    "Prefer":
-                        "return=minimal"
-                }),
-                body:
-                    JSON.stringify({
-                        status: "won",
-                        converted_client_id:
-                            clientId
-                    })
-            }
-        );
+        const clientId =
+            await api(
+                "/rest/v1/rpc/convert_swayphics_lead_to_client",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Prefer":
+                            "return=representation"
+                    }),
+                    body:
+                        JSON.stringify({
+                            p_lead_id: id
+                        })
+                }
+            );
 
         await logActivity(
             "Converted lead to client",
             "leads",
             id
         );
+
+        if (clientId) {
+            await logActivity(
+                "Created client from lead",
+                "clients",
+                clientId
+            );
+        }
 
         await refreshData();
         renderShell();
@@ -6755,32 +6711,195 @@
         id,
         status
     ) {
-        await api(
-            "/rest/v1/website_enquiries?id=eq." +
-            encodeURIComponent(id),
-            {
-                method: "PATCH",
-                headers: headers({
-                    "Prefer":
-                        "return=minimal"
-                }),
-                body:
-                    JSON.stringify({
-                        status: status
-                    })
-            }
-        );
+        if (status === "contacted") {
+            const leadId =
+                await api(
+                    "/rest/v1/rpc/convert_swayphics_enquiry_to_lead",
+                    {
+                        method: "POST",
+                        headers: headers({
+                            "Prefer":
+                                "return=representation"
+                        }),
+                        body:
+                            JSON.stringify({
+                                p_enquiry_id: id
+                            })
+                    }
+                );
 
-        await logActivity(
-            "Updated website enquiry to " +
-            status,
-            "website_enquiries",
-            id
-        );
+            await logActivity(
+                "Contacted enquiry and moved it to Leads",
+                "website_enquiries",
+                id
+            );
+
+            if (leadId) {
+                await logActivity(
+                    "Created lead from website enquiry",
+                    "leads",
+                    leadId
+                );
+            }
+        } else {
+            await api(
+                "/rest/v1/website_enquiries?id=eq." +
+                encodeURIComponent(id),
+                {
+                    method: "PATCH",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    }),
+                    body:
+                        JSON.stringify({
+                            status: status
+                        })
+                }
+            );
+
+            await logActivity(
+                "Updated website enquiry to " +
+                status,
+                "website_enquiries",
+                id
+            );
+        }
 
         await refreshData();
         renderShell();
         renderView();
+    }
+
+    async function processStaleLeads() {
+        try {
+            return await api(
+                "/rest/v1/rpc/process_swayphics_stale_leads",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Prefer":
+                            "return=representation"
+                    }),
+                    body: "{}"
+                }
+            );
+        } catch (error) {
+            console.warn(
+                "Stale lead automation could not run.",
+                error
+            );
+            return 0;
+        }
+    }
+
+    async function requestClientReview(projectId) {
+        const response =
+            await fetch(
+                SUPABASE_URL +
+                "/functions/v1/request-client-review",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+                        "Authorization":
+                            "Bearer " +
+                            token()
+                    },
+                    body:
+                        JSON.stringify({
+                            project_id:
+                                projectId
+                        })
+                }
+            );
+
+        const responseText =
+            await response.text();
+
+        let result = null;
+
+        try {
+            result =
+                responseText
+                    ? JSON.parse(responseText)
+                    : null;
+        } catch (error) {
+            result = {
+                error:
+                    responseText
+            };
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                result &&
+                result.error
+                    ? result.error
+                    : "Unable to send the client review email."
+            );
+        }
+
+        return result;
+    }
+
+    async function handleProjectCompletion(
+        projectId,
+        wasCompleted
+    ) {
+        if (
+            !projectId ||
+            wasCompleted
+        ) {
+            return;
+        }
+
+        try {
+            const result =
+                await requestClientReview(
+                    projectId
+                );
+
+            if (!result.already_sent) {
+                await logActivity(
+                    "Sent client review request",
+                    "client_projects",
+                    projectId
+                );
+            }
+        } catch (error) {
+            console.warn(
+                "Client review email was not sent:",
+                error
+            );
+
+            await logActivity(
+                "Client review request needs attention: " +
+                error.message,
+                "client_projects",
+                projectId
+            );
+
+            swayAlert(
+                "The project was completed and added to Portfolio. The client review email could not be sent yet. Check the client's email and Resend configuration, then retry it from the project."
+            );
+        }
+
+        if (
+            typeof window.loadAdminPortfolio === "function"
+        ) {
+            try {
+                await window.loadAdminPortfolio();
+            } catch (error) {
+                console.warn(
+                    "Portfolio refresh after project completion failed.",
+                    error
+                );
+            }
+        }
     }
 
     async function toggleAdmin(id) {
