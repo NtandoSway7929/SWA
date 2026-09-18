@@ -5779,8 +5779,9 @@
                     },
                     {
                         key: "amount",
-                        label: "Amount (ZAR)",
+                        label: "Amount received (ZAR)",
                         type: "number",
+                        required: true,
                         required: true,
                         value: item.amount
                     },
@@ -5833,6 +5834,43 @@
             title: "Payment",
             fields: function (item) {
                 return [
+                    {
+                        key: "invoice_id",
+                        label: "Invoice number",
+                        type: "select",
+                        required: true,
+                        options:
+                            '<option value="">Select invoice...</option>' +
+                            state.invoices
+                                .filter(function (invoice) {
+                                    return invoice.status !== "cancelled";
+                                })
+                                .map(function (invoice) {
+                                    return (
+                                        '<option value="' +
+                                        esc(invoice.id) +
+                                        '"' +
+                                        (
+                                            invoice.id === item.invoice_id
+                                                ? " selected"
+                                                : ""
+                                        ) +
+                                        ">" +
+                                        esc(invoice.invoice_number) +
+                                        " — " +
+                                        esc(clientName(invoice.client_id)) +
+                                        " — Outstanding " +
+                                        esc(
+                                            money(
+                                                invoice.amount_outstanding != null
+                                                    ? invoice.amount_outstanding
+                                                    : invoice.total || 0
+                                            )
+                                        ) +
+                                        "</option>"
+                                    );
+                                }).join("")
+                    },
                     {
                         key: "client_id",
                         label: "Client",
@@ -6419,7 +6457,7 @@
         );
     }
 
-    async function createOrEdit(type, id) {
+    async function createOrEdit(type, id, prefill) {
         const config = configs[type];
 
         if (!config) return;
@@ -6451,7 +6489,10 @@
                         );
                     }) || {}
                 )
-                : {};
+                : Object.assign(
+                    {},
+                    prefill || {}
+                );
 
         const fields =
             config.fields(item);
@@ -6461,6 +6502,61 @@
             config.title,
             fields,
             async function (payload) {
+                const previousStatus =
+                    item &&
+                    item.status;
+
+                if (
+                    type === "payments"
+                ) {
+                    const invoice =
+                        state.invoices.find(function (entry) {
+                            return entry.id === payload.invoice_id;
+                        });
+
+                    if (!invoice) {
+                        throw new Error(
+                            "Select a valid invoice number before recording a payment."
+                        );
+                    }
+
+                    const outstanding =
+                        Number(
+                            invoice.amount_outstanding != null
+                                ? invoice.amount_outstanding
+                                : invoice.total || 0
+                        );
+
+                    const amount =
+                        Number(
+                            payload.amount || 0
+                        );
+
+                    if (
+                        amount <= 0 ||
+                        amount > outstanding
+                    ) {
+                        throw new Error(
+                            "Payment amount must be greater than R0 and no more than the invoice's current outstanding balance of " +
+                            money(outstanding) +
+                            "."
+                        );
+                    }
+
+                    payload.client_id =
+                        invoice.client_id;
+
+                    payload.project_id =
+                        invoice.project_id || null;
+
+                    payload.status = "paid";
+
+                    if (!payload.paid_at) {
+                        payload.paid_at =
+                            dashboardTodayISO();
+                    }
+                }
+
                 if (
                     type === "team" &&
                     state.currentAdmin.role !== "owner"
@@ -6500,25 +6596,42 @@
                                 : ""
                         );
 
-                    await api(
-                        endpoint,
-                        {
-                            method:
-                                id
-                                    ? "PATCH"
-                                    : "POST",
-                            headers: headers({
-                                "Prefer":
+                    const savedRecord =
+                        await api(
+                            endpoint,
+                            {
+                                method:
                                     id
-                                        ? "return=minimal"
-                                        : "return=representation"
-                            }),
-                            body:
-                                JSON.stringify(
-                                    payload
-                                )
-                        }
-                    );
+                                        ? "PATCH"
+                                        : "POST",
+                                headers: headers({
+                                    "Prefer":
+                                        "return=representation"
+                                }),
+                                body:
+                                    JSON.stringify(
+                                        payload
+                                    )
+                            }
+                        );
+
+                    const savedProjectId =
+                        id ||
+                        (
+                            Array.isArray(savedRecord)
+                                ? savedRecord[0]?.id
+                                : savedRecord?.id
+                        );
+
+                    if (
+                        type === "projects" &&
+                        payload.status === "completed"
+                    ) {
+                        await handleProjectCompletion(
+                            savedProjectId,
+                            previousStatus === "completed"
+                        );
+                    }
                 }
 
                 await logActivity(
