@@ -2519,6 +2519,1690 @@
         );
     }
 
+
+    function invoiceServicePrice(service) {
+        if (!service) {
+            return 0;
+        }
+
+        if (
+            service.default_price !== null &&
+            service.default_price !== undefined &&
+            Number(service.default_price) >= 0
+        ) {
+            return Number(service.default_price);
+        }
+
+        if (
+            service.minimum_price !== null &&
+            service.minimum_price !== undefined
+        ) {
+            return Number(service.minimum_price);
+        }
+
+        return 0;
+    }
+
+    function invoiceServiceLabel(service) {
+        if (!service) {
+            return "Custom item";
+        }
+
+        return (
+            service.name +
+            (
+                service.price_label
+                    ? " — " +
+                      service.price_label
+                    : ""
+            )
+        );
+    }
+
+    function invoiceTotals(lines, discount, vatRate) {
+        const subtotal =
+            lines.reduce(function (sum, line) {
+                return sum +
+                    (
+                        Number(line.quantity || 0) *
+                        Number(line.unit_price || 0)
+                    );
+            }, 0);
+
+        const safeDiscount =
+            Math.min(
+                Math.max(
+                    Number(discount || 0),
+                    0
+                ),
+                subtotal
+            );
+
+        const taxable =
+            subtotal -
+            safeDiscount;
+
+        const safeVatRate =
+            Math.max(
+                0,
+                Number(vatRate || 0)
+            );
+
+        const vatAmount =
+            taxable *
+            safeVatRate /
+            100;
+
+        return {
+            subtotal: subtotal,
+            discount: safeDiscount,
+            vatRate: safeVatRate,
+            vatAmount: vatAmount,
+            total:
+                taxable +
+                vatAmount
+        };
+    }
+
+    async function fetchInvoiceItems(invoiceId) {
+        return await api(
+            "/rest/v1/invoice_items?select=id,invoice_id,service_id,description,quantity,unit_price,line_total&invoice_id=eq." +
+            encodeURIComponent(invoiceId) +
+            "&order=created_at.asc"
+        );
+    }
+
+    function invoiceModalMarkup(invoice, lines) {
+        const settings =
+            state.invoiceSettings || {};
+
+        const clientOptions =
+            '<option value="">Select client...</option>' +
+            state.clients
+                .filter(function (client) {
+                    return client.status !== "archived";
+                })
+                .map(function (client) {
+                    return (
+                        '<option value="' +
+                        esc(client.id) +
+                        '"' +
+                        (
+                            invoice &&
+                            invoice.client_id === client.id
+                                ? " selected"
+                                : ""
+                        ) +
+                        ">" +
+                        esc(client.business_name) +
+                        "</option>"
+                    );
+                }).join("");
+
+        const projectOptions =
+            '<option value="">No project</option>' +
+            state.projects.map(function (project) {
+                return (
+                    '<option value="' +
+                    esc(project.id) +
+                    '"' +
+                    (
+                        invoice &&
+                        invoice.project_id === project.id
+                            ? " selected"
+                            : ""
+                    ) +
+                    ">" +
+                    esc(project.name) +
+                    "</option>"
+                );
+            }).join("");
+
+        return (
+            '<div class="sway-modal sway-invoice-modal">' +
+                '<div class="sway-modal-backdrop" data-invoice-close></div>' +
+                '<div class="sway-modal-card sway-invoice-builder-card" role="dialog" aria-modal="true">' +
+                    '<div class="sway-modal-header">' +
+                        '<div>' +
+                            '<span class="admin-label">Swayphics billing</span>' +
+                            '<h3>' +
+                                esc(
+                                    invoice
+                                        ? "Edit invoice " + invoice.invoice_number
+                                        : "Create invoice"
+                                ) +
+                            "</h3>" +
+                            '<p class="sway-invoice-modal-subtitle">' +
+                                "Select services. Prices and totals are calculated automatically." +
+                            "</p>" +
+                        "</div>" +
+                        '<button class="sway-modal-close" type="button" data-invoice-close aria-label="Close">×</button>' +
+                    "</div>" +
+
+                    '<form id="sway-invoice-form">' +
+                        '<div class="sway-form-grid">' +
+                            '<div class="sway-form-field">' +
+                                '<label for="sway-invoice-client">Client</label>' +
+                                '<select id="sway-invoice-client" required>' +
+                                    clientOptions +
+                                "</select>" +
+                            "</div>" +
+
+                            '<div class="sway-form-field">' +
+                                '<label for="sway-invoice-project">Project</label>' +
+                                '<select id="sway-invoice-project">' +
+                                    projectOptions +
+                                "</select>" +
+                            "</div>" +
+
+                            '<div class="sway-form-field">' +
+                                '<label for="sway-invoice-issue-date">Issue date</label>' +
+                                '<input id="sway-invoice-issue-date" type="date" value="' +
+                                    esc(
+                                        invoice
+                                            ? dateInput(invoice.issue_date)
+                                            : new Date().toISOString().slice(0, 10)
+                                    ) +
+                                    '" required>' +
+                            "</div>" +
+
+                            '<div class="sway-form-field">' +
+                                '<label for="sway-invoice-due-date">Due date</label>' +
+                                '<input id="sway-invoice-due-date" type="date" value="' +
+                                    esc(
+                                        invoice
+                                            ? dateInput(invoice.due_date)
+                                            : ""
+                                    ) +
+                                '">' +
+                            "</div>" +
+                        "</div>" +
+
+                        '<div class="sway-invoice-lines-header">' +
+                            '<div>' +
+                                '<strong>Invoice items</strong>' +
+                                '<span>Choose from the active service catalogue or use a custom line.</span>' +
+                            "</div>" +
+                            '<button type="button" class="sway-workspace-button" id="sway-invoice-add-line">+ Add service</button>' +
+                        "</div>" +
+
+                        '<div class="sway-invoice-lines">' +
+                            '<div class="sway-invoice-line-head">' +
+                                "<span>Service / description</span>" +
+                                "<span>Qty</span>" +
+                                "<span>Unit price</span>" +
+                                "<span>Total</span>" +
+                                "<span></span>" +
+                            "</div>" +
+                            '<div id="sway-invoice-line-list"></div>' +
+                        "</div>" +
+
+                        '<div class="sway-invoice-add-custom">' +
+                            '<button type="button" class="sway-row-action" id="sway-invoice-add-custom">+ Add custom item</button>' +
+                        "</div>" +
+
+                        '<div class="sway-invoice-financials">' +
+                            '<div class="sway-form-grid">' +
+                                '<div class="sway-form-field">' +
+                                    '<label for="sway-invoice-discount">Discount (ZAR)</label>' +
+                                    '<input id="sway-invoice-discount" type="number" min="0" step="0.01" value="' +
+                                        esc(
+                                            invoice
+                                                ? Number(invoice.discount || 0)
+                                                : 0
+                                        ) +
+                                    '">' +
+                                "</div>" +
+                                '<div class="sway-form-field">' +
+                                    '<label for="sway-invoice-vat-rate">VAT rate (%)</label>' +
+                                    '<input id="sway-invoice-vat-rate" type="number" min="0" step="0.01" value="' +
+                                        esc(
+                                            invoice
+                                                ? Number(invoice.vat_rate || 0)
+                                                : (
+                                                    settings.vat_registered
+                                                        ? 15
+                                                        : 0
+                                                )
+                                        ) +
+                                    '">' +
+                                    '<small>' +
+                                        (
+                                            settings.vat_registered
+                                                ? "VAT is enabled in Invoice settings."
+                                                : "VAT is currently disabled in Invoice settings."
+                                        ) +
+                                    "</small>" +
+                                "</div>" +
+                                '<div class="sway-form-field full">' +
+                                    '<label for="sway-invoice-notes">Notes</label>' +
+                                    '<textarea id="sway-invoice-notes" rows="3">' +
+                                        esc(
+                                            invoice &&
+                                            invoice.notes
+                                                ? invoice.notes
+                                                : "Thank you for choosing Swayphics."
+                                        ) +
+                                    "</textarea>" +
+                                "</div>" +
+                            "</div>" +
+
+                            '<div class="sway-invoice-summary">' +
+                                '<div><span>Subtotal</span><strong id="sway-invoice-subtotal">R0.00</strong></div>' +
+                                '<div><span>Discount</span><strong id="sway-invoice-discount-total">R0.00</strong></div>' +
+                                '<div><span>VAT</span><strong id="sway-invoice-vat-total">R0.00</strong></div>' +
+                                '<div class="total"><span>Total</span><strong id="sway-invoice-total">R0.00</strong></div>' +
+                            "</div>" +
+                        "</div>" +
+
+                        '<div class="sway-modal-actions">' +
+                            '<button type="button" class="sway-workspace-button" data-invoice-close>Cancel</button>' +
+                            '<button type="button" class="sway-workspace-button" id="sway-invoice-save">Save draft</button>' +
+                            '<button type="button" class="sway-workspace-button primary" id="sway-invoice-send">Generate &amp; Send</button>' +
+                        "</div>" +
+                    "</form>" +
+                "</div>" +
+            "</div>"
+        );
+    }
+
+    async function openInvoiceBuilder(invoiceId) {
+        const invoice =
+            invoiceId
+                ? state.invoices.find(function (item) {
+                    return item.id === invoiceId;
+                })
+                : null;
+
+        if (
+            invoice &&
+            invoice.status !== "draft"
+        ) {
+            alert(
+                "Only draft invoices can be edited. Use a new invoice for changes after sending."
+            );
+            return;
+        }
+
+        let lines = [];
+
+        if (invoiceId) {
+            try {
+                lines = await fetchInvoiceItems(invoiceId);
+            } catch (error) {
+                alert(
+                    error.message ||
+                    "Unable to load invoice items."
+                );
+                return;
+            }
+        }
+
+        const modal =
+            document.createElement("div");
+
+        modal.innerHTML =
+            invoiceModalMarkup(
+                invoice,
+                lines
+            );
+
+        document.body.appendChild(
+            modal.firstElementChild
+        );
+
+        const root =
+            document.body.lastElementChild;
+
+        const lineList =
+            root.querySelector(
+                "#sway-invoice-line-list"
+            );
+
+        const discountInput =
+            root.querySelector(
+                "#sway-invoice-discount"
+            );
+
+        const vatRateInput =
+            root.querySelector(
+                "#sway-invoice-vat-rate"
+            );
+
+        const subtotalOutput =
+            root.querySelector(
+                "#sway-invoice-subtotal"
+            );
+
+        const discountOutput =
+            root.querySelector(
+                "#sway-invoice-discount-total"
+            );
+
+        const vatOutput =
+            root.querySelector(
+                "#sway-invoice-vat-total"
+            );
+
+        const totalOutput =
+            root.querySelector(
+                "#sway-invoice-total"
+            );
+
+        let localLines =
+            (lines || []).map(function (line) {
+                return {
+                    service_id:
+                        line.service_id || "",
+                    description:
+                        line.description || "",
+                    quantity:
+                        Number(line.quantity || 1),
+                    unit_price:
+                        Number(line.unit_price || 0)
+                };
+            });
+
+        function closeModal() {
+            root.remove();
+        }
+
+        function serviceOptions(selectedId) {
+            return (
+                '<option value="">Custom item</option>' +
+                state.services
+                    .filter(function (service) {
+                        return service.active;
+                    })
+                    .map(function (service) {
+                        return (
+                            '<option value="' +
+                            esc(service.id) +
+                            '"' +
+                            (
+                                selectedId === service.id
+                                    ? " selected"
+                                    : ""
+                            ) +
+                            ">" +
+                            esc(
+                                invoiceServiceLabel(
+                                    service
+                                )
+                            ) +
+                            "</option>"
+                        );
+                    }).join("")
+            );
+        }
+
+        function renderLines() {
+            lineList.innerHTML =
+                localLines.length
+                    ? localLines.map(function (line, index) {
+                        return (
+                            '<div class="sway-invoice-line" data-line-index="' +
+                            index +
+                            '">' +
+                                '<select data-line-service>' +
+                                    serviceOptions(
+                                        line.service_id
+                                    ) +
+                                "</select>" +
+                                '<input type="number" min="0.01" step="0.01" data-line-qty value="' +
+                                    esc(line.quantity) +
+                                '">' +
+                                '<input type="number" min="0" step="0.01" data-line-price value="' +
+                                    esc(line.unit_price) +
+                                '">' +
+                                '<strong data-line-total>' +
+                                    esc(
+                                        money(
+                                            Number(line.quantity || 0) *
+                                            Number(line.unit_price || 0)
+                                        )
+                                    ) +
+                                "</strong>" +
+                                '<button type="button" class="sway-row-action danger" data-remove-line aria-label="Remove item">×</button>' +
+                                (
+                                    line.service_id
+                                        ? '<small class="sway-invoice-line-hint">' +
+                                          esc(
+                                              (
+                                                  state.services.find(function (service) {
+                                                      return service.id === line.service_id;
+                                                  }) || {}
+                                              ).price_label ||
+                                              ""
+                                          ) +
+                                          "</small>"
+                                        : '<small class="sway-invoice-line-hint">Custom amount</small>'
+                                ) +
+                            "</div>"
+                        );
+                    }).join("")
+                    : empty(
+                        "No invoice items yet. Add a service to begin."
+                    );
+
+            root
+                .querySelectorAll("[data-line-service]")
+                .forEach(function (select) {
+                    select.addEventListener(
+                        "change",
+                        function () {
+                            const index =
+                                Number(
+                                    select.closest(
+                                        "[data-line-index]"
+                                    ).dataset.lineIndex
+                                );
+
+                            const line =
+                                localLines[index];
+
+                            const service =
+                                state.services.find(function (item) {
+                                    return item.id === select.value;
+                                });
+
+                            line.service_id =
+                                service
+                                    ? service.id
+                                    : "";
+
+                            if (service) {
+                                line.description =
+                                    service.name;
+
+                                line.unit_price =
+                                    invoiceServicePrice(
+                                        service
+                                    );
+
+                                const lineRoot =
+                                    select.closest(
+                                        "[data-line-index]"
+                                    );
+
+                                const priceInput =
+                                    lineRoot.querySelector(
+                                        "[data-line-price]"
+                                    );
+
+                                if (priceInput) {
+                                    priceInput.value =
+                                        line.unit_price;
+                                }
+                            }
+
+                            renderLines();
+                            updateTotals();
+                        }
+                    );
+                });
+
+            root
+                .querySelectorAll("[data-line-qty]")
+                .forEach(function (input) {
+                    input.addEventListener(
+                        "input",
+                        function () {
+                            const index =
+                                Number(
+                                    input.closest(
+                                        "[data-line-index]"
+                                    ).dataset.lineIndex
+                                );
+
+                            localLines[index].quantity =
+                                Math.max(
+                                    0.01,
+                                    Number(
+                                        input.value ||
+                                        0.01
+                                    )
+                                );
+
+                            const total =
+                                (
+                                    localLines[index].quantity *
+                                    localLines[index].unit_price
+                                );
+
+                            const output =
+                                input.closest(
+                                    "[data-line-index]"
+                                ).querySelector(
+                                    "[data-line-total]"
+                                );
+
+                            if (output) {
+                                output.textContent =
+                                    money(total);
+                            }
+
+                            updateTotals();
+                        }
+                    );
+                });
+
+            root
+                .querySelectorAll("[data-line-price]")
+                .forEach(function (input) {
+                    input.addEventListener(
+                        "input",
+                        function () {
+                            const index =
+                                Number(
+                                    input.closest(
+                                        "[data-line-index]"
+                                    ).dataset.lineIndex
+                                );
+
+                            localLines[index].unit_price =
+                                Math.max(
+                                    0,
+                                    Number(
+                                        input.value ||
+                                        0
+                                    )
+                                );
+
+                            const total =
+                                (
+                                    localLines[index].quantity *
+                                    localLines[index].unit_price
+                                );
+
+                            const output =
+                                input.closest(
+                                    "[data-line-index]"
+                                ).querySelector(
+                                    "[data-line-total]"
+                                );
+
+                            if (output) {
+                                output.textContent =
+                                    money(total);
+                            }
+
+                            updateTotals();
+                        }
+                    );
+                });
+
+            root
+                .querySelectorAll("[data-remove-line]")
+                .forEach(function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            const index =
+                                Number(
+                                    button.closest(
+                                        "[data-line-index]"
+                                    ).dataset.lineIndex
+                                );
+
+                            localLines.splice(
+                                index,
+                                1
+                            );
+
+                            renderLines();
+                            updateTotals();
+                        }
+                    );
+                });
+        }
+
+        function updateTotals() {
+            const totals =
+                invoiceTotals(
+                    localLines,
+                    discountInput.value,
+                    vatRateInput.value
+                );
+
+            subtotalOutput.textContent =
+                money(totals.subtotal);
+
+            discountOutput.textContent =
+                money(totals.discount);
+
+            vatOutput.textContent =
+                money(totals.vatAmount);
+
+            totalOutput.textContent =
+                money(totals.total);
+        }
+
+        function addLine(serviceId) {
+            const service =
+                state.services.find(function (item) {
+                    return item.id === serviceId;
+                });
+
+            localLines.push({
+                service_id:
+                    service
+                        ? service.id
+                        : "",
+                description:
+                    service
+                        ? service.name
+                        : "Custom item",
+                quantity: 1,
+                unit_price:
+                    service
+                        ? invoiceServicePrice(
+                            service
+                        )
+                        : 0
+            });
+
+            renderLines();
+            updateTotals();
+        }
+
+        root.querySelector(
+            "#sway-invoice-add-line"
+        ).addEventListener(
+            "click",
+            function () {
+                const defaultService =
+                    state.services.find(function (service) {
+                        return service.active;
+                    });
+
+                addLine(
+                    defaultService
+                        ? defaultService.id
+                        : ""
+                );
+            }
+        );
+
+        root.querySelector(
+            "#sway-invoice-add-custom"
+        ).addEventListener(
+            "click",
+            function () {
+                addLine("");
+            }
+        );
+
+        [
+            discountInput,
+            vatRateInput
+        ].forEach(function (input) {
+            input.addEventListener(
+                "input",
+                updateTotals
+            );
+        });
+
+        root.querySelectorAll(
+            "[data-invoice-close]"
+        ).forEach(function (button) {
+            button.addEventListener(
+                "click",
+                closeModal
+            );
+        });
+
+        async function saveInvoice(
+            shouldSend
+        ) {
+            const clientId =
+                root.querySelector(
+                    "#sway-invoice-client"
+                ).value;
+
+            const projectId =
+                root.querySelector(
+                    "#sway-invoice-project"
+                ).value;
+
+            const issueDate =
+                root.querySelector(
+                    "#sway-invoice-issue-date"
+                ).value;
+
+            const dueDate =
+                root.querySelector(
+                    "#sway-invoice-due-date"
+                ).value;
+
+            const notes =
+                root.querySelector(
+                    "#sway-invoice-notes"
+                ).value.trim();
+
+            if (!clientId) {
+                alert("Select a client.");
+                return;
+            }
+
+            if (!localLines.length) {
+                alert("Add at least one invoice item.");
+                return;
+            }
+
+            if (
+                localLines.some(function (line) {
+                    return (
+                        !line.description.trim() ||
+                        Number(line.quantity) <= 0 ||
+                        Number(line.unit_price) < 0
+                    );
+                })
+            ) {
+                alert(
+                    "Every invoice item needs a description, quantity and valid price."
+                );
+                return;
+            }
+
+            const totals =
+                invoiceTotals(
+                    localLines,
+                    discountInput.value,
+                    vatRateInput.value
+                );
+
+            const invoicePayload = {
+                client_id: clientId,
+                project_id:
+                    projectId || null,
+                issue_date:
+                    issueDate ||
+                    new Date().toISOString().slice(0, 10),
+                due_date:
+                    dueDate || null,
+                status:
+                    invoice
+                        ? invoice.status
+                        : "draft",
+                subtotal:
+                    totals.subtotal,
+                discount:
+                    totals.discount,
+                vat_rate:
+                    totals.vatRate,
+                vat_amount:
+                    totals.vatAmount,
+                total:
+                    totals.total,
+                notes:
+                    notes || null,
+                created_by:
+                    state.currentUser.id
+            };
+
+            const saveButton =
+                root.querySelector(
+                    "#sway-invoice-save"
+                );
+
+            const sendButton =
+                root.querySelector(
+                    "#sway-invoice-send"
+                );
+
+            saveButton.disabled = true;
+            sendButton.disabled = true;
+
+            try {
+                let savedId =
+                    invoice
+                        ? invoice.id
+                        : null;
+
+                let savedInvoice =
+                    invoice;
+
+                if (savedId) {
+                    await api(
+                        "/rest/v1/invoices?id=eq." +
+                        encodeURIComponent(savedId),
+                        {
+                            method: "PATCH",
+                            headers: headers({
+                                "Prefer":
+                                    "return=representation"
+                            }),
+                            body:
+                                JSON.stringify(
+                                    invoicePayload
+                                )
+                        }
+                    );
+
+                    await api(
+                        "/rest/v1/invoice_items?invoice_id=eq." +
+                        encodeURIComponent(savedId),
+                        {
+                            method: "DELETE",
+                            headers: headers({
+                                "Prefer":
+                                    "return=minimal"
+                            })
+                        }
+                    );
+                } else {
+                    const created =
+                        await api(
+                            "/rest/v1/invoices",
+                            {
+                                method: "POST",
+                                headers: headers({
+                                    "Prefer":
+                                        "return=representation"
+                                }),
+                                body:
+                                    JSON.stringify(
+                                        invoicePayload
+                                    )
+                            }
+                        );
+
+                    savedInvoice =
+                        Array.isArray(created)
+                            ? created[0]
+                            : created;
+
+                    savedId =
+                        savedInvoice &&
+                        savedInvoice.id;
+
+                    if (!savedId) {
+                        throw new Error(
+                            "Invoice could not be created."
+                        );
+                    }
+                }
+
+                await api(
+                    "/rest/v1/invoice_items",
+                    {
+                        method: "POST",
+                        headers: headers({
+                            "Prefer":
+                                "return=minimal"
+                        }),
+                        body:
+                            JSON.stringify(
+                                localLines.map(function (line) {
+                                    return {
+                                        invoice_id:
+                                            savedId,
+                                        service_id:
+                                            line.service_id ||
+                                            null,
+                                        description:
+                                            line.description.trim(),
+                                        quantity:
+                                            Number(
+                                                line.quantity
+                                            ),
+                                        unit_price:
+                                            Number(
+                                                line.unit_price
+                                            )
+                                    };
+                                })
+                            )
+                    }
+                );
+
+                await logActivity(
+                    (
+                        invoice
+                            ? "Updated "
+                            : "Created "
+                    ) +
+                    "invoice " +
+                    (
+                        savedInvoice &&
+                        savedInvoice.invoice_number
+                            ? savedInvoice.invoice_number
+                            : savedId
+                    ),
+                    "invoices",
+                    savedId
+                );
+
+                if (shouldSend) {
+                    await sendInvoiceById(
+                        savedId,
+                        false
+                    );
+
+                    await logActivity(
+                        "Sent invoice " +
+                        (
+                            savedInvoice &&
+                            savedInvoice.invoice_number
+                                ? savedInvoice.invoice_number
+                                : savedId
+                        ),
+                        "invoices",
+                        savedId
+                    );
+                }
+
+                closeModal();
+
+                await refreshData();
+                renderShell();
+                renderView();
+
+            } catch (error) {
+                alert(
+                    error.message ||
+                    "Unable to save invoice."
+                );
+
+                saveButton.disabled = false;
+                sendButton.disabled = false;
+            }
+        }
+
+        root.querySelector(
+            "#sway-invoice-save"
+        ).addEventListener(
+            "click",
+            function () {
+                saveInvoice(false);
+            }
+        );
+
+        root.querySelector(
+            "#sway-invoice-send"
+        ).addEventListener(
+            "click",
+            function () {
+                saveInvoice(true);
+            }
+        );
+
+        renderLines();
+
+        if (!localLines.length) {
+            const firstService =
+                state.services.find(function (service) {
+                    return service.active;
+                });
+
+            if (firstService) {
+                addLine(
+                    firstService.id
+                );
+            }
+        } else {
+            updateTotals();
+        }
+    }
+
+    function base64ToBytes(base64) {
+        const binary =
+            atob(base64);
+
+        const bytes =
+            new Uint8Array(
+                binary.length
+            );
+
+        for (
+            let index = 0;
+            index < binary.length;
+            index += 1
+        ) {
+            bytes[index] =
+                binary.charCodeAt(index);
+        }
+
+        return bytes;
+    }
+
+    async function invokeInvoiceFunction(
+        invoiceId,
+        action
+    ) {
+        const response =
+            await fetch(
+                SUPABASE_URL +
+                "/functions/v1/generate-invoice",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+                        "Authorization":
+                            "Bearer " +
+                            token()
+                    },
+                    body:
+                        JSON.stringify({
+                            invoice_id:
+                                invoiceId,
+                            action:
+                                action
+                        })
+                }
+            );
+
+        const responseText =
+            await response.text();
+
+        let result = null;
+
+        try {
+            result =
+                responseText
+                    ? JSON.parse(
+                        responseText
+                    )
+                    : null;
+        } catch {
+            result = {
+                error:
+                    responseText
+            };
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                result &&
+                result.error
+                    ? result.error
+                    : (
+                        "Invoice function failed with " +
+                        response.status
+                    )
+            );
+        }
+
+        return result;
+    }
+
+    async function downloadInvoicePdf(
+        invoiceId
+    ) {
+        const result =
+            await invokeInvoiceFunction(
+                invoiceId,
+                "pdf"
+            );
+
+        const bytes =
+            base64ToBytes(
+                result.pdf_base64
+            );
+
+        const blob =
+            new Blob(
+                [bytes],
+                {
+                    type:
+                        "application/pdf"
+                }
+            );
+
+        const url =
+            URL.createObjectURL(
+                blob
+            );
+
+        const link =
+            document.createElement("a");
+
+        link.href =
+            url;
+
+        link.download =
+            result.filename ||
+            "Swayphics-Invoice.pdf";
+
+        document.body.appendChild(
+            link
+        );
+
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(
+            url
+        );
+    }
+
+    async function sendInvoiceById(
+        invoiceId,
+        confirmFirst
+    ) {
+        const invoice =
+            state.invoices.find(function (item) {
+                return item.id === invoiceId;
+            });
+
+        if (!invoice) {
+            throw new Error(
+                "Invoice could not be found."
+            );
+        }
+
+        const client =
+            state.clients.find(function (item) {
+                return item.id === invoice.client_id;
+            });
+
+        if (
+            !client ||
+            !client.email
+        ) {
+            throw new Error(
+                "This client does not have an email address."
+            );
+        }
+
+        if (
+            confirmFirst &&
+            !window.confirm(
+                "Send invoice " +
+                invoice.invoice_number +
+                " to " +
+                client.email +
+                "?"
+            )
+        ) {
+            return;
+        }
+
+        const result =
+            await invokeInvoiceFunction(
+                invoiceId,
+                "send"
+            );
+
+        await refreshData();
+
+        return result;
+    }
+
+    function renderInvoices() {
+        const totalBilled =
+            state.invoices.reduce(function (sum, invoice) {
+                return sum +
+                    Number(invoice.total || 0);
+            }, 0);
+
+        const totalSent =
+            state.invoices
+                .filter(function (invoice) {
+                    return [
+                        "sent",
+                        "partially paid",
+                        "paid",
+                        "overdue"
+                    ].includes(invoice.status);
+                })
+                .reduce(function (sum, invoice) {
+                    return sum +
+                        Number(invoice.total || 0);
+                }, 0);
+
+        const overdue =
+            state.invoices.filter(function (invoice) {
+                return (
+                    invoice.status !== "paid" &&
+                    invoice.status !== "cancelled" &&
+                    invoice.due_date &&
+                    isOverdue(invoice.due_date)
+                );
+            });
+
+        const rows =
+            state.invoices.map(function (item) {
+                const overdueNow =
+                    item.status !== "paid" &&
+                    item.status !== "cancelled" &&
+                    isOverdue(item.due_date);
+
+                return (
+                    "<tr>" +
+                        "<td>" +
+                            "<strong>" +
+                                esc(item.invoice_number) +
+                            "</strong>" +
+                            '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
+                                esc(
+                                    clientName(
+                                        item.client_id
+                                    )
+                                ) +
+                            "</span>" +
+                        "</td>" +
+                        "<td>" +
+                            esc(
+                                money(
+                                    item.total
+                                )
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            chip(
+                                overdueNow
+                                    ? "overdue"
+                                    : item.status
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(
+                                date(
+                                    item.due_date
+                                )
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            chip(
+                                item.email_status
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            '<div class="sway-row-actions">' +
+                                (
+                                    item.status === "draft"
+                                        ? '<button class="sway-row-action" data-invoice-action="edit" data-id="' +
+                                          esc(item.id) +
+                                          '">Edit</button>'
+                                        : ""
+                                ) +
+                                '<button class="sway-row-action" data-invoice-action="pdf" data-id="' +
+                                    esc(item.id) +
+                                '">PDF</button>' +
+                                (
+                                    item.status !== "paid" &&
+                                    item.status !== "cancelled"
+                                        ? '<button class="sway-row-action" data-invoice-action="send" data-id="' +
+                                          esc(item.id) +
+                                          '">' +
+                                          (
+                                              item.email_status === "sent"
+                                                  ? "Resend"
+                                                  : "Send"
+                                          ) +
+                                          "</button>"
+                                        : ""
+                                ) +
+                                (
+                                    item.status === "draft"
+                                        ? '<button class="sway-row-action danger" data-invoice-action="delete" data-id="' +
+                                          esc(item.id) +
+                                          '">Delete</button>'
+                                        : ""
+                                ) +
+                            "</div>" +
+                        "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+
+        return (
+            heading(
+                '<button class="sway-workspace-button" data-view-target="services">Manage services</button>' +
+                '<button class="sway-workspace-button primary" data-add-invoice>+ New invoice</button>'
+            ) +
+
+            '<div class="sway-workspace-grid">' +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Total billed</span>' +
+                    '<div class="value">' +
+                        esc(
+                            money(
+                                totalBilled
+                            )
+                        ) +
+                    "</div>" +
+                    '<div class="hint">' +
+                        state.invoices.length +
+                        " invoices recorded." +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Sent value</span>' +
+                    '<div class="value">' +
+                        esc(
+                            money(
+                                totalSent
+                            )
+                        ) +
+                    "</div>" +
+                    '<div class="hint">Invoices that reached sent status.</div>' +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Overdue invoices</span>' +
+                    '<div class="value">' +
+                        overdue.length +
+                    "</div>" +
+                    '<div class="hint">Past due and not fully paid.</div>" +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Catalogue services</span>' +
+                    '<div class="value">' +
+                        state.services.filter(function (service) {
+                            return service.active;
+                        }).length +
+                    "</div>" +
+                    '<div class="hint">Active services available for billing.</div>' +
+                "</div>" +
+            "</div>" +
+
+            panel(
+                "Invoices",
+                "Branded invoice records connected to clients and the finance layer.",
+                state.invoices.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Invoice</th><th>Total</th><th>Status</th><th>Due</th><th>Email</th><th></th></tr></thead><tbody>' +
+                      rows +
+                      "</tbody></table></div>"
+                    : empty(
+                        "No invoices yet. Create the first invoice from the button above."
+                    )
+            )
+        );
+    }
+
+    function renderServices() {
+        const rows =
+            state.services.map(function (item) {
+                const pricing =
+                    item.price_label ||
+                    (
+                        item.default_price !== null
+                            ? money(item.default_price)
+                            : "Custom"
+                    );
+
+                return (
+                    "<tr>" +
+                        "<td>" +
+                            "<strong>" +
+                                esc(item.name) +
+                            "</strong>" +
+                            (
+                                item.description
+                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
+                                      esc(item.description) +
+                                      "</span>"
+                                    : ""
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(
+                                item.category ||
+                                "—"
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(pricing) +
+                        "</td>" +
+                        "<td>" +
+                            chip(item.active ? "active" : "inactive") +
+                        "</td>" +
+                        "<td>" +
+                            '<div class="sway-row-actions">' +
+                                '<button class="sway-row-action" data-edit="services" data-id="' +
+                                    esc(item.id) +
+                                '">Edit</button>' +
+                                '<button class="sway-row-action danger" data-delete="services" data-id="' +
+                                    esc(item.id) +
+                                '">Delete</button>' +
+                            "</div>" +
+                        "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+
+        return (
+            heading(
+                '<button class="sway-workspace-button" data-view-target="invoice-settings">Invoice settings</button>' +
+                (
+                    state.currentAdmin.role === "owner"
+                        ? '<button class="sway-workspace-button primary" data-add="services">+ New service</button>'
+                        : ""
+                )
+            ) +
+            panel(
+                "Service catalogue",
+                "These prices feed directly into the invoice builder. Owner access controls price changes.",
+                state.services.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Service</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>' +
+                      rows +
+                      "</tbody></table></div>"
+                    : empty("No services configured.")
+            )
+        );
+    }
+
+    async function editInvoiceSettings() {
+        if (
+            state.currentAdmin.role !== "owner"
+        ) {
+            alert(
+                "Only the owner can change invoice settings."
+            );
+            return;
+        }
+
+        const settings =
+            state.invoiceSettings || {
+                id: 1
+            };
+
+        showModal(
+            "Invoice settings",
+            [
+                {
+                    key: "business_name",
+                    label: "Business name",
+                    type: "text",
+                    required: true,
+                    value: settings.business_name
+                },
+                {
+                    key: "slogan",
+                    label: "Slogan",
+                    type: "text",
+                    value: settings.slogan
+                },
+                {
+                    key: "email",
+                    label: "Business email",
+                    type: "email",
+                    value:
+                        settings.email ||
+                        "info@swayphics.co.za"
+                },
+                {
+                    key: "phone",
+                    label: "Business phone",
+                    type: "text",
+                    value: settings.phone
+                },
+                {
+                    key: "website",
+                    label: "Website",
+                    type: "url",
+                    value:
+                        settings.website ||
+                        "https://swayphics.co.za"
+                },
+                {
+                    key: "address",
+                    label: "Business address",
+                    type: "textarea",
+                    full: true,
+                    value: settings.address
+                },
+                {
+                    key: "bank_name",
+                    label: "Bank",
+                    type: "text",
+                    value: settings.bank_name
+                },
+                {
+                    key: "account_name",
+                    label: "Account name",
+                    type: "text",
+                    value: settings.account_name
+                },
+                {
+                    key: "account_number",
+                    label: "Account number",
+                    type: "text",
+                    value: settings.account_number
+                },
+                {
+                    key: "account_type",
+                    label: "Account type",
+                    type: "text",
+                    value: settings.account_type
+                },
+                {
+                    key: "branch_code",
+                    label: "Branch code",
+                    type: "text",
+                    value: settings.branch_code
+                },
+                {
+                    key: "payment_instructions",
+                    label: "Payment instructions",
+                    type: "textarea",
+                    full: true,
+                    value: settings.payment_instructions
+                },
+                {
+                    key: "vat_registered",
+                    label: "VAT registered",
+                    type: "select",
+                    options:
+                        '<option value="false"' +
+                        (
+                            settings.vat_registered
+                                ? ""
+                                : " selected"
+                        ) +
+                        ">No</option>" +
+                        '<option value="true"' +
+                        (
+                            settings.vat_registered
+                                ? " selected"
+                                : ""
+                        ) +
+                        ">Yes</option>"
+                },
+                {
+                    key: "vat_number",
+                    label: "VAT number",
+                    type: "text",
+                    value: settings.vat_number
+                }
+            ],
+            async function (payload) {
+                payload.id = 1;
+
+                await api(
+                    "/rest/v1/invoice_settings?id=eq.1",
+                    {
+                        method: "PATCH",
+                        headers: headers({
+                            "Prefer":
+                                "return=minimal"
+                        }),
+                        body:
+                            JSON.stringify(
+                                payload
+                            )
+                    }
+                );
+
+                await logActivity(
+                    "Updated invoice settings",
+                    "invoice_settings",
+                    null
+                );
+            }
+        );
+    }
+
+    function renderInvoiceSettings() {
+        const s =
+            state.invoiceSettings || {};
+
+        return (
+            heading(
+                '<button class="sway-workspace-button" data-view-target="services">Services</button>' +
+                (
+                    state.currentAdmin.role === "owner"
+                        ? '<button class="sway-workspace-button primary" data-settings-edit>Edit settings</button>'
+                        : ""
+                )
+            ) +
+            panel(
+                "Invoice settings",
+                "These details are inserted into the branded PDF and the invoice email.",
+                '<div class="sway-settings-grid">' +
+                    '<div><span>Business</span><strong>' +
+                        esc(s.business_name || "Swayphics") +
+                    "</strong></div>" +
+                    '<div><span>Email</span><strong>' +
+                        esc(s.email || "info@swayphics.co.za") +
+                    "</strong></div>" +
+                    '<div><span>Phone</span><strong>' +
+                        esc(s.phone || "Not configured") +
+                    "</strong></div>" +
+                    '<div><span>Website</span><strong>' +
+                        esc(s.website || "https://swayphics.co.za") +
+                    "</strong></div>" +
+                    '<div class="full"><span>Address</span><strong>' +
+                        esc(s.address || "Not configured") +
+                    "</strong></div>" +
+                    '<div><span>Bank</span><strong>' +
+                        esc(s.bank_name || "Not configured") +
+                    "</strong></div>" +
+                    '<div><span>Account name</span><strong>' +
+                        esc(s.account_name || "Not configured") +
+                    "</strong></div>" +
+                    '<div><span>Account number</span><strong>' +
+                        esc(s.account_number || "Not configured") +
+                    "</strong></div>" +
+                    '<div><span>Account type</span><strong>' +
+                        esc(s.account_type || "Not configured") +
+                    "</strong></div>" +
+                    '<div><span>Branch code</span><strong>' +
+                        esc(s.branch_code || "Not configured") +
+                    "</strong></div>" +
+                    '<div class="full"><span>Payment instructions</span><strong>' +
+                        esc(s.payment_instructions || "Not configured") +
+                    "</strong></div>" +
+                    '<div><span>VAT status</span><strong>' +
+                        (
+                            s.vat_registered
+                                ? "VAT registered"
+                                : "Not VAT registered"
+                        ) +
+                    "</strong></div>" +
+                    '<div><span>VAT number</span><strong>' +
+                        esc(s.vat_number || "Not configured") +
+                    "</strong></div>" +
+                "</div>"
+            )
+        );
+    }
+
     function renderPayments() {
         const rows =
             state.payments.map(function (item) {
@@ -4090,7 +5774,7 @@
 
                     if (
                         field.type === "select" &&
-                        ["published", "active"].includes(field.key)
+                        ["published", "active", "vat_registered"].includes(field.key)
                     ) {
                         value =
                             value === "true";
