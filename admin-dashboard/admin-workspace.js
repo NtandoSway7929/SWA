@@ -666,7 +666,7 @@
 
         if (view === "leads") {
             count = state.leads.filter(function (item) {
-                return !["won", "lost"].includes(item.status);
+                return !["won", "lost", "follow-up"].includes(item.status);
             }).length;
         }
 
