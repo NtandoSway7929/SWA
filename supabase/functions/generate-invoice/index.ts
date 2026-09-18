@@ -1033,11 +1033,42 @@ Deno.serve(async (req) => {
         },
       );
 
+    const publicApiKey =
+      req.headers.get("apikey") ||
+      Deno.env.get("SUPABASE_ANON_KEY") ||
+      Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+
+    if (!publicApiKey) {
+      throw new Error(
+        "Supabase public API key is missing.",
+      );
+    }
+
+    const authSupabase =
+      createClient(
+        supabaseUrl,
+        publicApiKey,
+        {
+          global: {
+            headers: {
+              Authorization:
+                "Bearer " +
+                accessToken,
+            },
+          },
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+            detectSessionInUrl: false,
+          },
+        },
+      );
+
     const {
       data: userData,
       error: userError,
     } =
-      await supabase.auth.getUser(
+      await authSupabase.auth.getUser(
         accessToken,
       );
 
@@ -1055,26 +1086,16 @@ Deno.serve(async (req) => {
     }
 
     const {
-      data: admin,
+      data: isAdmin,
       error: adminError,
-    } = await supabase
-      .from("admin_users")
-      .select(
-        "user_id,active",
-      )
-      .eq(
-        "user_id",
-        userData.user.id,
-      )
-      .eq(
-        "active",
-        true,
-      )
-      .maybeSingle();
+    } =
+      await authSupabase.rpc(
+        "is_swayphics_admin",
+      );
 
     if (
       adminError ||
-      !admin
+      isAdmin !== true
     ) {
       return Response.json(
         {
