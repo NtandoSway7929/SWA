@@ -1115,23 +1115,51 @@ Deno.serve(async (req) => {
     } =
       await supabase
         .from("invoices")
-        .select(
-          "*, client:clients(id,business_name,contact_name,email,phone)",
-        )
+        .select("*")
         .eq(
           "id",
           invoiceId,
         )
-        .single();
+        .maybeSingle();
 
-    if (
-      invoiceError ||
-      !invoice
-    ) {
+    if (invoiceError) {
       throw new Error(
-        "Invoice could not be found.",
+        "Invoice lookup failed: " +
+        invoiceError.message,
       );
     }
+
+    if (!invoice) {
+      throw new Error(
+        "Invoice could not be found for ID " +
+        invoiceId +
+        ".",
+      );
+    }
+
+    const {
+      data: client,
+      error: clientError,
+    } =
+      await supabase
+        .from("clients")
+        .select(
+          "id,business_name,contact_name,email,phone",
+        )
+        .eq(
+          "id",
+          invoice.client_id,
+        )
+        .maybeSingle();
+
+    if (clientError) {
+      throw new Error(
+        "Client lookup failed: " +
+        clientError.message,
+      );
+    }
+
+    invoice.client = client || null;
 
     const {
       data: items,
