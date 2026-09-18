@@ -1835,7 +1835,7 @@
 
             renderInsightsOverview() +
 
-            '<div class="sway-inline-note" style="margin-bottom:2px;"> +
+            '<div class="sway-inline-note" style="margin-bottom:2px;">' +
                 "Good day, " +
                 "<strong>" +
                 esc(currentUserName()) +
