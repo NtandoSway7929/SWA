@@ -1159,7 +1159,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    invoice.client = client || null;
+    if (!client) {
+      throw new Error(
+        "Client could not be found for this invoice.",
+      );
+    }
+
+    invoice.client = client;
+
+    if (
+      action === "send" &&
+      !String(client.email || "").trim()
+    ) {
+      throw new Error(
+        "Client does not have an email address. Add a client email before sending the invoice.",
+      );
+    }
 
     const {
       data: items,
