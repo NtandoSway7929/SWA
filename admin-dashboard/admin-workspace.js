@@ -5314,6 +5314,30 @@
                             }).join("")
                     },
                     {
+                        key: "invoice_id",
+                        label: "Invoice",
+                        type: "select",
+                        options:
+                            '<option value="">No invoice</option>' +
+                            state.invoices.map(function (invoice) {
+                                return (
+                                    '<option value="' +
+                                    esc(invoice.id) +
+                                    '"' +
+                                    (
+                                        invoice.id === item.invoice_id
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(invoice.invoice_number) +
+                                    " — " +
+                                    esc(clientName(invoice.client_id)) +
+                                    "</option>"
+                                );
+                            }).join("")
+                    },
+                    {
                         key: "amount",
                         label: "Amount (ZAR)",
                         type: "number",
@@ -5497,6 +5521,130 @@
                         type: "textarea",
                         full: true,
                         value: item.notes
+                    }
+                ];
+            }
+        },
+
+
+        services: {
+            table: "services",
+            title: "Service",
+            fields: function (item) {
+                return [
+                    {
+                        key: "name",
+                        label: "Service name",
+                        type: "text",
+                        required: true,
+                        value: item.name
+                    },
+                    {
+                        key: "category",
+                        label: "Category",
+                        type: "text",
+                        value: item.category
+                    },
+                    {
+                        key: "description",
+                        label: "Description",
+                        type: "textarea",
+                        full: true,
+                        value: item.description
+                    },
+                    {
+                        key: "pricing_type",
+                        label: "Pricing type",
+                        type: "select",
+                        options:
+                            ["fixed", "range", "from", "custom"]
+                                .map(function (value) {
+                                    return (
+                                        '<option value="' +
+                                        value +
+                                        '"' +
+                                        (
+                                            value === item.pricing_type
+                                                ? " selected"
+                                                : ""
+                                        ) +
+                                        ">" +
+                                        value.charAt(0).toUpperCase() +
+                                        value.slice(1) +
+                                        "</option>"
+                                    );
+                                }).join("")
+                    },
+                    {
+                        key: "default_price",
+                        label: "Default invoice price (ZAR)",
+                        type: "number",
+                        value: item.default_price
+                    },
+                    {
+                        key: "minimum_price",
+                        label: "Minimum price (ZAR)",
+                        type: "number",
+                        value: item.minimum_price
+                    },
+                    {
+                        key: "maximum_price",
+                        label: "Maximum price (ZAR)",
+                        type: "number",
+                        value: item.maximum_price
+                    },
+                    {
+                        key: "price_label",
+                        label: "Customer-facing price label",
+                        type: "text",
+                        value: item.price_label
+                    },
+                    {
+                        key: "recurring_interval",
+                        label: "Recurring",
+                        type: "select",
+                        options:
+                            ["none", "monthly", "yearly"]
+                                .map(function (value) {
+                                    return (
+                                        '<option value="' +
+                                        value +
+                                        '"' +
+                                        (
+                                            value === item.recurring_interval
+                                                ? " selected"
+                                                : ""
+                                        ) +
+                                        ">" +
+                                        (
+                                            value === "none"
+                                                ? "None"
+                                                : value.charAt(0).toUpperCase() +
+                                                  value.slice(1)
+                                        ) +
+                                        "</option>"
+                                    );
+                                }).join("")
+                    },
+                    {
+                        key: "active",
+                        label: "Active",
+                        type: "select",
+                        options:
+                            '<option value="true"' +
+                            (
+                                item.active !== false
+                                    ? " selected"
+                                    : ""
+                            ) +
+                            ">Active</option>" +
+                            '<option value="false"' +
+                            (
+                                item.active === false
+                                    ? " selected"
+                                    : ""
+                            ) +
+                            ">Inactive</option>"
                     }
                 ];
             }
