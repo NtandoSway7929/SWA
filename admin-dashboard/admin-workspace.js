@@ -750,7 +750,7 @@
                     : empty("Nothing is currently assigned to you.")
             ) +
 
-            '<div class="sway-workspace-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">' +
+            '<div class="sway-overview-split">' +
 
                 panel(
                     "Recent activity",
