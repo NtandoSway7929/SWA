@@ -1693,3 +1693,51 @@
         display: none;
     }
 }
+
+
+/* Sidebar group icons */
+.sway-workspace-nav-group-toggle {
+    gap: 10px;
+}
+
+.sway-workspace-nav-group-label {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.sway-workspace-nav-group-icon {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(1,82,244,0.06);
+    color: var(--sway-blue);
+}
+
+.sway-workspace-nav-group-icon svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.sway-workspace-nav-group.open
+.sway-workspace-nav-group-toggle .sway-workspace-nav-group-icon {
+    background: rgba(1,82,244,0.09);
+    color: var(--sway-deep);
+}
+
+@media (max-width: 760px) {
+    .sway-workspace-nav-group-icon {
+        width: 28px;
+        height: 28px;
+        flex-basis: 28px;
+    }
+}
