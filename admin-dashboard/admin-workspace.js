@@ -35,6 +35,7 @@
         {
             id: "overview",
             label: "Overview",
+            icon: "grid",
             items: [
                 ["overview", "Overview"],
                 ["insights", "Insights"]
@@ -43,6 +44,7 @@
         {
             id: "crm",
             label: "Clients & pipeline",
+            icon: "users",
             items: [
                 ["enquiries", "Enquiries"],
                 ["leads", "Leads"],
@@ -53,6 +55,7 @@
         {
             id: "delivery",
             label: "Work & portfolio",
+            icon: "briefcase",
             items: [
                 ["projects", "Projects"],
                 ["tasks", "Tasks"],
@@ -62,6 +65,7 @@
         {
             id: "billing",
             label: "Sales & billing",
+            icon: "receipt",
             items: [
                 ["quotes", "Quotes"],
                 ["invoices", "Invoices"],
@@ -73,6 +77,7 @@
         {
             id: "website",
             label: "Website",
+            icon: "globe",
             items: [
                 ["content", "Website content"],
                 ["testimonials", "Testimonials"]
@@ -81,6 +86,7 @@
         {
             id: "admin",
             label: "Administration",
+            icon: "settings",
             items: [
                 ["activity", "Activity"],
                 ["team", "Team"]
@@ -91,6 +97,25 @@
     const nav = navGroups.reduce(function (all, group) {
         return all.concat(group.items);
     }, []);
+
+    function navGroupIcon(name) {
+        const icons = {
+            grid:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><rect x="4" y="14" width="6" height="6" rx="1"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></svg>',
+            users:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.8 19c.5-3.2 2.3-4.8 5.2-4.8s4.7 1.6 5.2 4.8"></path><path d="M15 5.4c2.5-.2 4.1 1.5 4.1 3.5 0 1.5-.8 2.7-2.1 3.2"></path><path d="M16.1 14.2c2.4.4 3.8 2 4.1 4.8"></path></svg>',
+            briefcase:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="7" width="17" height="12.5" rx="2"></rect><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7"></path><path d="M3.8 11h16.4"></path><path d="M10 11v2h4v-2"></path></svg>',
+            receipt:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.8h12v16.4l-3-1.7-3 1.7-3-1.7-3 1.7z"></path><path d="M9 8h6"></path><path d="M9 11.5h6"></path><path d="M9 15h3.5"></path></svg>',
+            globe:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M3.7 12h16.6"></path><path d="M12 3.5c2.2 2.3 3.3 5.1 3.3 8.5s-1.1 6.2-3.3 8.5c-2.2-2.3-3.3-5.1-3.3-8.5S9.8 5.8 12 3.5z"></path></svg>',
+            settings:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.8l1.2 1.9 2.3.5 2 .2.7 2.2-.9 2.1 1.1 2 2 .9-.7 2.2-2.1.2-1.7 1.6.1 2.1-2 1.1-1.8-1.1-2.1.1-1.1 2-2.2-.7-.2-2.1-1.7-1.7-2.1-.2-.9-2.1 2-1.1 1-2-.9-2.1.7-2.2 2-.2 2.1.5L12 3.8z"></path><circle cx="12" cy="12" r="2.8"></circle></svg>'
+        };
+
+        return icons[name] || icons.grid;
+    }
 
     function token() {
         return localStorage.getItem("swayphics_admin_access_token");
@@ -718,8 +743,13 @@
                                 '" data-nav-group-toggle="' +
                                 esc(group.id) +
                             '">' +
-                                '<span>' +
-                                    esc(group.label) +
+                                '<span class="sway-workspace-nav-group-label">' +
+                                    '<span class="sway-workspace-nav-group-icon">' +
+                                        navGroupIcon(group.icon) +
+                                    '</span>' +
+                                    '<span>' +
+                                        esc(group.label) +
+                                    '</span>' +
                                 '</span>' +
                                 '<i aria-hidden="true">⌄</i>' +
                             '</button>' +
