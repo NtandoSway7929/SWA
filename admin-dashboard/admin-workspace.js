@@ -3056,7 +3056,11 @@
         );
     }
 
-    function invoiceModalMarkup(invoice, lines) {
+    function invoiceModalMarkup(
+        invoice,
+        lines,
+        prefillClientId
+    ) {
         const settings =
             state.invoiceSettings || {};
 
@@ -3072,8 +3076,11 @@
                         esc(client.id) +
                         '"' +
                         (
-                            invoice &&
-                            invoice.client_id === client.id
+                            (
+                                invoice
+                                    ? invoice.client_id
+                                    : prefillClientId
+                            ) === client.id
                                 ? " selected"
                                 : ""
                         ) +
@@ -3251,7 +3258,10 @@
         );
     }
 
-    async function openInvoiceBuilder(invoiceId) {
+    async function openInvoiceBuilder(
+        invoiceId,
+        prefillClientId
+    ) {
         const invoice =
             invoiceId
                 ? state.invoices.find(function (item) {
@@ -3289,7 +3299,8 @@
         modal.innerHTML =
             invoiceModalMarkup(
                 invoice,
-                lines
+                lines,
+                prefillClientId
             );
 
         document.body.appendChild(
@@ -6697,6 +6708,13 @@
         const config = configs[type];
 
         if (!config) return;
+
+        if (type === "clients") {
+            swayAlert(
+                "Client records are retained permanently. Use Edit to archive a client instead of deleting the relationship."
+            );
+            return;
+        }
 
         if (
             type === "team"
