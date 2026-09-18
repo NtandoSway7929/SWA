@@ -947,7 +947,7 @@
 .sway-invoice-line-head,
 .sway-invoice-line {
     display: grid;
-    grid-template-columns: minmax(250px, 1fr) 90px 135px 110px 42px;
+    grid-template-columns: 150px minmax(180px, 1fr) 70px 120px 110px 42px;
     gap: 8px;
     align-items: center;
 }
@@ -1105,7 +1105,7 @@
 
     .sway-invoice-line > [data-remove-line] {
         grid-column: 2;
-        grid-row: 4;
+        grid-row: 5;
         justify-self: end;
     }
 
