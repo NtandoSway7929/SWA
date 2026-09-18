@@ -2556,8 +2556,13 @@
     }
 
     function renderLeads() {
+        const visibleLeads =
+            state.leads.filter(function (item) {
+                return item.status !== "follow-up";
+            });
+
         const rows =
-            state.leads.map(function (item) {
+            visibleLeads.map(function (item) {
                 return (
                     "<tr>" +
                         "<td>" +
@@ -2604,10 +2609,10 @@
                                     esc(item.id) +
                                 '">Edit</button>' +
                                 (
-                                    item.status !== "won"
+                                    !["won", "lost"].includes(item.status)
                                         ? '<button class="sway-row-action" data-convert-lead="' +
                                           esc(item.id) +
-                                          '">Convert</button>'
+                                          '">Convert to client</button>'
                                         : ""
                                 ) +
                                 '<button class="sway-row-action danger" data-delete="leads" data-id="' +
@@ -2625,7 +2630,7 @@
             ) +
             panel(
                 "Lead pipeline",
-                "Capture opportunities from email, WhatsApp, calls, social media and referrals.",
+                "Active prospects only. Leads needing extra attention automatically move to Follow-ups after the no-response window.",
                 state.leads.length
                     ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
                       rows +
@@ -2762,9 +2767,12 @@
                                 '<button class="sway-row-action" data-edit="clients" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
-                                '<button class="sway-row-action danger" data-delete="clients" data-id="' +
+                                '<button class="sway-row-action" data-new-project-client="' +
                                     esc(item.id) +
-                                '">Delete</button>' +
+                                '">Project</button>' +
+                                '<button class="sway-row-action" data-new-invoice-client="' +
+                                    esc(item.id) +
+                                '">Invoice</button>' +
                             "</div>" +
                         "</td>" +
                     "</tr>"
@@ -2777,7 +2785,7 @@
             ) +
             panel(
                 "Clients",
-                "Keep client contact details, ownership and internal notes together.",
+                "Permanent client records. Start new projects and invoices directly from each relationship.",
                 state.clients.length
                     ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Contact</th><th>Owner</th><th>Projects</th><th>Status</th><th></th></tr></thead><tbody>' +
                       rows +
@@ -2837,6 +2845,19 @@
                             ) +
                         "</td>" +
                         "<td>" +
+                            (
+                                item.status === "completed"
+                                    ? chip(
+                                        item.review_email_status === "sent"
+                                            ? "review sent"
+                                            : item.review_email_status === "failed"
+                                                ? "review failed"
+                                                : "review queued"
+                                    )
+                                    : "—"
+                            ) +
+                        "</td>" +
+                        "<td>" +
                             '<div class="sway-row-actions">' +
                                 '<button class="sway-row-action" data-edit="projects" data-id="' +
                                     esc(item.id) +
@@ -2858,7 +2879,7 @@
                 "Projects",
                 "Track delivery, ownership, deadlines and payment state.",
                 state.projects.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Project</th><th>Client</th><th>Owner</th><th>Status</th><th>Due</th><th>Payment</th><th>Value</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Project</th><th>Client</th><th>Owner</th><th>Status</th><th>Due</th><th>Payment</th><th>Value</th><th>Review</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No projects yet.")
@@ -4230,6 +4251,24 @@
                             ) +
                         "</td>" +
                         "<td>" +
+                            esc(
+                                money(
+                                    item.amount_paid != null
+                                        ? item.amount_paid
+                                        : 0
+                                )
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(
+                                money(
+                                    item.amount_outstanding != null
+                                        ? item.amount_outstanding
+                                        : item.total
+                                )
+                            ) +
+                        "</td>" +
+                        "<td>" +
                             chip(
                                 overdueNow
                                     ? "overdue"
@@ -4260,6 +4299,9 @@
                                 '<button class="sway-row-action" data-invoice-action="pdf" data-id="' +
                                     esc(item.id) +
                                 '">PDF</button>' +
+                                '<button class="sway-row-action" data-new-payment-invoice="' +
+                                    esc(item.id) +
+                                '">Payment</button>' +
                                 (
                                     item.status !== "paid" &&
                                     item.status !== "cancelled"
@@ -4341,7 +4383,7 @@
                 "Invoices",
                 "Branded invoice records connected to clients and the finance layer.",
                 state.invoices.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Invoice</th><th>Total</th><th>Status</th><th>Due</th><th>Email</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Invoice</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Due</th><th>Email</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty(
@@ -4718,8 +4760,13 @@
     }
 
     function renderEnquiries() {
+        const activeEnquiries =
+            state.enquiries.filter(function (item) {
+                return item.status === "new";
+            });
+
         const rows =
-            state.enquiries.map(function (item) {
+            activeEnquiries.map(function (item) {
                 return (
                     "<tr>" +
                         "<td>" +
@@ -4758,10 +4805,7 @@
                             '<div class="sway-row-actions">' +
                                 '<button class="sway-row-action" data-enquiry-status="' +
                                     esc(item.id) +
-                                    '" data-status-next="contacted">Contacted</button>' +
-                                '<button class="sway-row-action" data-enquiry-status="' +
-                                    esc(item.id) +
-                                    '" data-status-next="converted">Converted</button>' +
+                                    '" data-status-next="contacted">Contacted → Lead</button>' +
                                 '<button class="sway-row-action danger" data-enquiry-status="' +
                                     esc(item.id) +
                                     '" data-status-next="closed">Close</button>' +
@@ -4777,13 +4821,13 @@
             ) +
             panel(
                 "Website enquiries",
-                "New contact-form submissions can be worked from here.",
-                state.enquiries.length
+                "New enquiries are your inbox. Contacting one moves it directly into Leads.",
+                activeEnquiries.length
                     ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Enquirer</th><th>Service</th><th>Status</th><th>Received</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty(
-                        "No website enquiries are currently stored. Your existing submit-enquiry function still needs to write records into website_enquiries."
+                        "No new enquiries. Contacted enquiries now live in Leads."
                     )
             )
         );
