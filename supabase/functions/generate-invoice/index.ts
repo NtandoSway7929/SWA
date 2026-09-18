@@ -159,62 +159,82 @@ async function buildPdf(
   const pageHeight = 841.89;
   const margin = 42;
 
+  const logoBytes = await loadLogo();
+
+  let logo = null;
+
+  if (logoBytes) {
+    try {
+      logo =
+        await pdfDoc.embedPng(
+          logoBytes,
+        );
+    } catch {
+      logo = null;
+    }
+  }
+
+  function drawWatermark(targetPage) {
+    if (!logo) return;
+
+    const maxWatermarkSize = 260;
+    const watermarkScale = Math.min(
+      maxWatermarkSize / logo.width,
+      maxWatermarkSize / logo.height,
+    );
+
+    const watermarkWidth =
+      logo.width * watermarkScale;
+
+    const watermarkHeight =
+      logo.height * watermarkScale;
+
+    targetPage.drawImage(logo, {
+      x:
+        (pageWidth - watermarkWidth) / 2,
+      y:
+        (pageHeight - watermarkHeight) / 2,
+      width: watermarkWidth,
+      height: watermarkHeight,
+      opacity: 0.075,
+    });
+  }
+
   let page = pdfDoc.addPage([
     pageWidth,
     pageHeight,
   ]);
 
+  drawWatermark(page);
+
   let y = pageHeight - margin;
 
-  const logoBytes = await loadLogo();
+  if (logo) {
+    const maxWidth = 145;
+    const maxHeight = 55;
+    const scale = Math.min(
+      maxWidth / logo.width,
+      maxHeight / logo.height,
+    );
 
-  if (logoBytes) {
-    try {
-      const logo =
-        await pdfDoc.embedPng(
-          logoBytes,
-        );
-
-      const maxWidth = 145;
-      const maxHeight = 55;
-      const scale = Math.min(
-        maxWidth / logo.width,
-        maxHeight / logo.height,
-      );
-
-      page.drawImage(logo, {
-        x: margin,
-        y:
-          y -
-          logo.height *
-            scale,
-        width:
-          logo.width *
-          scale,
-        height:
-          logo.height *
-          scale,
-      });
-
-      y -=
+    page.drawImage(logo, {
+      x: margin,
+      y:
+        y -
         logo.height *
-          scale +
-        18;
-    } catch {
-      page.drawText(
-        settings.business_name ||
-          "SWAYPHICS",
-        {
-          x: margin,
-          y,
-          size: 24,
-          font: bold,
-          color: BRAND,
-        },
-      );
+          scale,
+      width:
+        logo.width *
+        scale,
+      height:
+        logo.height *
+        scale,
+    });
 
-      y -= 34;
-    }
+    y -=
+      logo.height *
+        scale +
+      24;
   } else {
     page.drawText(
       settings.business_name ||
@@ -231,18 +251,20 @@ async function buildPdf(
     y -= 34;
   }
 
-  page.drawText(
-    settings.slogan ||
-      "EMPOWERING THROUGH DESIGN",
-    {
-      x: margin,
-      y,
-      size: 7.5,
-      font: bold,
-      color: MUTED,
-      characterSpacing: 1.2,
-    },
-  );
+
+      settings.business_name ||
+        "SWAYPHICS",
+      {
+        x: margin,
+        y,
+        size: 24,
+        font: bold,
+        color: BRAND,
+      },
+    );
+
+    y -= 34;
+  }
 
   page.drawText(
     "INVOICE",
@@ -478,6 +500,8 @@ async function buildPdf(
         pageHeight,
       ]);
 
+      drawWatermark(page);
+
       y = pageHeight - margin;
 
       page.drawText(
@@ -597,6 +621,7 @@ async function buildPdf(
 
   const summaryX = 380;
   const valueX = 515;
+  const totalRightX = pageWidth - margin - 12;
 
   page.drawText(
     "Subtotal",
@@ -678,14 +703,14 @@ async function buildPdf(
   y -= 24;
 
   page.drawRectangle({
-    x: summaryX - 10,
-    y: y - 9,
+    x: summaryX - 12,
+    y: y - 11,
     width:
       pageWidth -
       margin -
       summaryX +
-      10,
-    height: 31,
+      12,
+    height: 36,
     color: BRAND,
   });
 
@@ -700,11 +725,18 @@ async function buildPdf(
     },
   );
 
+  const totalAmount =
+    money(invoice.total);
+
   page.drawText(
-    money(invoice.total),
+    totalAmount,
     {
       x:
-        valueX - 2,
+        totalRightX -
+        bold.widthOfTextAtSize(
+          totalAmount,
+          10,
+        ),
       y: y + 1,
       size: 10,
       font: bold,
