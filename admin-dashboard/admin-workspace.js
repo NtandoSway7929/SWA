@@ -23,6 +23,9 @@
         enquiries: [],
         activities: [],
         announcements: [],
+        services: [],
+        invoices: [],
+        invoiceSettings: null,
         realtimeStatus: "connecting",
         lastLiveUpdate: null,
         realtimeClient: null
@@ -38,6 +41,9 @@
         ["projects", "Projects"],
         ["quotes", "Quotes"],
         ["payments", "Payments"],
+        ["invoices", "Invoices"],
+        ["services", "Services"],
+        ["invoice-settings", "Invoice settings"],
         ["enquiries", "Enquiries"],
         ["content", "Website content"],
         ["activity", "Activity"],
@@ -294,7 +300,10 @@
             api("/rest/v1/payments?select=*&order=created_at.desc"),
             api("/rest/v1/website_enquiries?select=*&order=created_at.desc"),
             api("/rest/v1/activity_log?select=*&order=created_at.desc&limit=50"),
-            api("/rest/v1/site_announcements?select=*&order=created_at.desc")
+            api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
+            api("/rest/v1/services?select=*&order=active.desc,name.asc"),
+            api("/rest/v1/invoices?select=*&order=created_at.desc"),
+            api("/rest/v1/invoice_settings?select=*&id=eq.1")
         ]);
 
         state.tasks = results[0] || [];
@@ -307,6 +316,13 @@
         state.enquiries = results[7] || [];
         state.activities = results[8] || [];
         state.announcements = results[9] || [];
+        state.services = results[10] || [];
+        state.invoices = results[11] || [];
+        state.invoiceSettings =
+            Array.isArray(results[12]) &&
+            results[12][0]
+                ? results[12][0]
+                : null;
     }
 
     async function refreshData() {
@@ -321,7 +337,10 @@
             api("/rest/v1/payments?select=*&order=created_at.desc"),
             api("/rest/v1/website_enquiries?select=*&order=created_at.desc"),
             api("/rest/v1/activity_log?select=*&order=created_at.desc&limit=50"),
-            api("/rest/v1/site_announcements?select=*&order=created_at.desc")
+            api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
+            api("/rest/v1/services?select=*&order=active.desc,name.asc"),
+            api("/rest/v1/invoices?select=*&order=created_at.desc"),
+            api("/rest/v1/invoice_settings?select=*&id=eq.1")
         ]);
 
         state.admins = results[0] || [];
@@ -335,6 +354,13 @@
         state.enquiries = results[8] || [];
         state.activities = results[9] || [];
         state.announcements = results[10] || [];
+        state.services = results[11] || [];
+        state.invoices = results[12] || [];
+        state.invoiceSettings =
+            Array.isArray(results[13]) &&
+            results[13][0]
+                ? results[13][0]
+                : null;
 
         state.currentAdmin =
             state.admins.find(function (item) {
@@ -382,6 +408,18 @@
             payments: [
                 "Payments",
                 "Track what is paid, due and outstanding."
+            ],
+            invoices: [
+                "Invoices",
+                "Create, send and track branded Swayphics invoices."
+            ],
+            services: [
+                "Services",
+                "Control the services and prices used on invoices."
+            ],
+            "invoice-settings": [
+                "Invoice settings",
+                "Control the business and payment details shown on invoices."
             ],
             enquiries: [
                 "Website enquiries",
@@ -1644,6 +1682,10 @@
                 "follow_ups",
                 "quotes",
                 "payments",
+                "invoices",
+                "invoice_items",
+                "services",
+                "invoice_settings",
                 "website_enquiries",
                 "site_announcements",
                 "activity_log"
@@ -4605,6 +4647,21 @@
             if (state.currentView === "payments") {
                 main.innerHTML =
                     renderPayments();
+            }
+
+            if (state.currentView === "invoices") {
+                main.innerHTML =
+                    renderInvoices();
+            }
+
+            if (state.currentView === "services") {
+                main.innerHTML =
+                    renderServices();
+            }
+
+            if (state.currentView === "invoice-settings") {
+                main.innerHTML =
+                    renderInvoiceSettings();
             }
 
             if (state.currentView === "enquiries") {
