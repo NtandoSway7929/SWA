@@ -6561,6 +6561,124 @@
                     }
                 );
             });
+
+        workspace
+            .querySelectorAll("[data-invoice-action]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    async function () {
+                        const action =
+                            button.dataset.invoiceAction;
+
+                        const id =
+                            button.dataset.id;
+
+                        try {
+                            button.disabled = true;
+
+                            if (action === "edit") {
+                                await openInvoiceBuilder(id);
+                            }
+
+                            if (action === "pdf") {
+                                await downloadInvoicePdf(id);
+                            }
+
+                            if (action === "send") {
+                                await sendInvoiceById(
+                                    id,
+                                    true
+                                );
+
+                                await logActivity(
+                                    "Sent invoice",
+                                    "invoices",
+                                    id
+                                );
+
+                                await refreshData();
+                                renderShell();
+                                renderView();
+                            }
+
+                            if (action === "delete") {
+                                if (
+                                    !window.confirm(
+                                        "Delete this draft invoice? This cannot be undone."
+                                    )
+                                ) {
+                                    return;
+                                }
+
+                                await api(
+                                    "/rest/v1/invoice_items?invoice_id=eq." +
+                                    encodeURIComponent(id),
+                                    {
+                                        method: "DELETE",
+                                        headers: headers({
+                                            "Prefer":
+                                                "return=minimal"
+                                        })
+                                    }
+                                );
+
+                                await api(
+                                    "/rest/v1/invoices?id=eq." +
+                                    encodeURIComponent(id),
+                                    {
+                                        method: "DELETE",
+                                        headers: headers({
+                                            "Prefer":
+                                                "return=minimal"
+                                        })
+                                    }
+                                );
+
+                                await logActivity(
+                                    "Deleted invoice draft",
+                                    "invoices",
+                                    id
+                                );
+
+                                await refreshData();
+                                renderShell();
+                                renderView();
+                            }
+                        } catch (error) {
+                            alert(
+                                error.message ||
+                                "Unable to process invoice."
+                            );
+                        } finally {
+                            button.disabled = false;
+                        }
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-add-invoice]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openInvoiceBuilder(null);
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-settings-edit]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        editInvoiceSettings();
+                    }
+                );
+            });
+
         workspace
             .querySelectorAll("[data-add]")
             .forEach(function (button) {
@@ -6706,9 +6824,16 @@
                             );
                         }
 
+
                         if (type === "followup") {
                             createOrEdit(
                                 "followups",
+                                null
+                            );
+                        }
+
+                        if (type === "invoice") {
+                            openInvoiceBuilder(
                                 null
                             );
                         }
