@@ -736,11 +736,10 @@
                 '<aside class="sway-workspace-sidebar" aria-label="Admin workspace navigation">' +
                     sidebar +
                 "</aside>" +
-                '<div class="sway-workspace-main" id="sway-workspace-main">' +
-                    '<button type="button" class="sway-workspace-mobile-toggle" aria-label="Open workspace navigation">' +
-                        '<span></span><span></span><span></span>' +
-                    '</button>' +
-                "</div>" +
+                '<div class="sway-workspace-main" id="sway-workspace-main"></div>' +
+                '<button type="button" class="sway-workspace-mobile-toggle" aria-label="Open workspace navigation">' +
+                    '<span></span><span></span><span></span>' +
+                '</button>' +
             "</div>";
 
         const mobileToggle =
