@@ -2862,6 +2862,7 @@
                                 '<button class="sway-row-action" data-edit="projects" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
+                                projectReviewAction +
                                 '<button class="sway-row-action danger" data-delete="projects" data-id="' +
                                     esc(item.id) +
                                 '">Delete</button>' +
@@ -7379,6 +7380,90 @@
                     "click",
                     function () {
                         openInvoiceBuilder(null);
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-new-project-client]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        createOrEdit(
+                            "projects",
+                            null,
+                            {
+                                client_id:
+                                    button.dataset.newProjectClient
+                            }
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-new-invoice-client]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openInvoiceBuilder(
+                            null,
+                            button.dataset.newInvoiceClient
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-new-payment-invoice]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        createOrEdit(
+                            "payments",
+                            null,
+                            {
+                                invoice_id:
+                                    button.dataset.newPaymentInvoice
+                            }
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-request-review]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    async function () {
+                        try {
+                            button.disabled = true;
+                            button.textContent = "Sending...";
+
+                            await requestClientReview(
+                                button.dataset.requestReview
+                            );
+
+                            await logActivity(
+                                "Sent client review request",
+                                "client_projects",
+                                button.dataset.requestReview
+                            );
+
+                            await refreshData();
+                            renderShell();
+                            renderView();
+                        } catch (error) {
+                            swayAlert(
+                                error.message ||
+                                "Unable to send the client review email."
+                            );
+                            button.disabled = false;
+                        }
                     }
                 );
             });
