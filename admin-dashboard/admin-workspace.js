@@ -349,16 +349,37 @@
         );
     }
 
+    function dashboardDateKey(value) {
+        const parsed =
+            parseDashboardDate(value);
+
+        if (!parsed) return null;
+
+        return parsed.toLocaleDateString(
+            "en-CA",
+            {
+                timeZone:
+                    SOUTH_AFRICA_TIME_ZONE,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+            }
+        );
+    }
+
     function isOverdue(value) {
         if (!value) return false;
 
-        const today = new Date();
-        const due = new Date(value);
+        const today =
+            dashboardTodayISO();
 
-        today.setHours(0, 0, 0, 0);
-        due.setHours(0, 0, 0, 0);
+        const due =
+            dashboardDateKey(value);
 
-        return due < today;
+        return Boolean(
+            due &&
+            due < today
+        );
     }
 
     function currentUserName() {
