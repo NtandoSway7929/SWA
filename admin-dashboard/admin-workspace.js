@@ -2884,7 +2884,7 @@
             invoice &&
             invoice.status !== "draft"
         ) {
-            alert(
+            swayAlert(
                 "Only draft invoices can be edited. Use a new invoice for changes after sending."
             );
             return;
@@ -2896,7 +2896,7 @@
             try {
                 lines = await fetchInvoiceItems(invoiceId);
             } catch (error) {
-                alert(
+                swayAlert(
                     error.message ||
                     "Unable to load invoice items."
                 );
@@ -3360,12 +3360,12 @@
                 ).value.trim();
 
             if (!clientId) {
-                alert("Select a client.");
+                swayAlert("Select a client.");
                 return;
             }
 
             if (!localLines.length) {
-                alert("Add at least one invoice item.");
+                swayAlert("Add at least one invoice item.");
                 return;
             }
 
@@ -3378,7 +3378,7 @@
                     );
                 })
             ) {
-                alert(
+                swayAlert(
                     "Every invoice item needs a description, quantity and valid price."
                 );
                 return;
@@ -3579,7 +3579,7 @@
                 renderView();
 
             } catch (error) {
-                alert(
+                swayAlert(
                     error.message ||
                     "Unable to save invoice."
                 );
@@ -3790,13 +3790,13 @@
 
         if (
             confirmFirst &&
-            !window.confirm(
+            !(await swayConfirm(
                 "Send invoice " +
                 invoice.invoice_number +
                 " to " +
                 client.email +
                 "?"
-            )
+            ))
         ) {
             return;
         }
@@ -4074,7 +4074,7 @@
         if (
             state.currentAdmin.role !== "owner"
         ) {
-            alert(
+            swayAlert(
                 "Only the owner can change invoice settings."
             );
             return;
@@ -6050,7 +6050,7 @@
                     renderShell();
                     renderView();
                 } catch (error) {
-                    alert(
+                    swayAlert(
                         error.message ||
                         "Unable to save record."
                     );
@@ -6071,7 +6071,7 @@
             type === "team" &&
             state.currentAdmin.role !== "owner"
         ) {
-            alert(
+            swayAlert(
                 "Only the owner can manage team access."
             );
             return;
@@ -6189,24 +6189,24 @@
             if (
                 state.currentAdmin.role !== "owner"
             ) {
-                alert(
+                swayAlert(
                     "Only the owner can manage team access."
                 );
                 return;
             }
 
-            alert(
+            swayAlert(
                 "Use Activate, Deactivate or Edit for team members. Team members are not deleted from this workspace."
             );
             return;
         }
 
         if (
-            !confirm(
+            !(await swayConfirm(
                 "Delete this " +
                 config.title.toLowerCase() +
                 "?"
-            )
+            ))
         ) {
             return;
         }
@@ -6306,11 +6306,11 @@
         if (!lead) return;
 
         if (
-            !confirm(
+            !(await swayConfirm(
                 "Convert " +
                 lead.business_name +
                 " into a client?"
-            )
+            ))
         ) {
             return;
         }
@@ -6633,7 +6633,7 @@
                             renderShell();
                             renderView();
                         } catch (error) {
-                            alert(
+                            swayAlert(
                                 error.message ||
                                 "Unable to refresh workspace data."
                             );
@@ -6688,9 +6688,9 @@
 
                             if (action === "delete") {
                                 if (
-                                    !window.confirm(
+                                    !(await swayConfirm(
                                         "Delete this draft invoice? This cannot be undone."
-                                    )
+                                    ))
                                 ) {
                                     return;
                                 }
@@ -6730,7 +6730,7 @@
                                 renderView();
                             }
                         } catch (error) {
-                            alert(
+                            swayAlert(
                                 error.message ||
                                 "Unable to process invoice."
                             );
