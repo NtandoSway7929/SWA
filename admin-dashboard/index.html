@@ -2674,6 +2674,242 @@
 }
 
 
+        async function editTestimonial(testimonialId) {
+
+    const testimonial =
+        testimonials.find(function (item) {
+            return item.id === testimonialId;
+        });
+
+    if (!testimonial) {
+        return;
+    }
+
+    const name =
+        window.prompt(
+            "Client name:",
+            testimonial.name || ""
+        );
+
+    if (name === null) return;
+
+    const business =
+        window.prompt(
+            "Business:",
+            testimonial.business || ""
+        );
+
+    if (business === null) return;
+
+    const role =
+        window.prompt(
+            "Role:",
+            testimonial.role || ""
+        );
+
+    if (role === null) return;
+
+    const quote =
+        window.prompt(
+            "Testimonial:",
+            testimonial.quote || ""
+        );
+
+    if (quote === null) return;
+
+    const ratingInput =
+        window.prompt(
+            "Rating (1-5):",
+            String(testimonial.rating || 5)
+        );
+
+    if (ratingInput === null) return;
+
+    const rating =
+        Math.min(
+            5,
+            Math.max(
+                1,
+                Number(ratingInput) || 5
+            )
+        );
+
+    const imageUrl =
+        window.prompt(
+            "Image URL (leave blank to remove):",
+            testimonial.image_url || ""
+        );
+
+    if (imageUrl === null) return;
+
+    const button =
+        document.querySelector(
+            '[data-testimonial-action="edit"][data-testimonial-id="' +
+            testimonialId +
+            '"]'
+        );
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Saving...";
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                SUPABASE_URL +
+                "/rest/v1/testimonials?id=eq." +
+                encodeURIComponent(testimonialId),
+                {
+                    method: "PATCH",
+                    headers: {
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+                        "Authorization":
+                            "Bearer " + accessToken,
+                        "Content-Type":
+                            "application/json",
+                        "Prefer":
+                            "return=minimal"
+                    },
+                    body:
+                        JSON.stringify({
+                            name: name.trim(),
+                            business: business.trim(),
+                            role: role.trim(),
+                            quote: quote.trim(),
+                            rating: rating,
+                            image_url: imageUrl.trim()
+                        })
+                }
+            );
+
+        const responseText =
+            await response.text();
+
+        if (!response.ok) {
+            throw new Error(
+                "Supabase returned " +
+                response.status +
+                ": " +
+                responseText
+            );
+        }
+
+        await loadAdminTestimonials();
+
+    } catch (error) {
+
+        console.error(
+            "Unable to edit testimonial:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Unable to update testimonial."
+        );
+
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Edit";
+        }
+    }
+}
+
+
+        async function deleteTestimonial(testimonialId) {
+
+    const testimonial =
+        testimonials.find(function (item) {
+            return item.id === testimonialId;
+        });
+
+    if (!testimonial) {
+        return;
+    }
+
+    if (
+        !window.confirm(
+            "Delete the testimonial from " +
+            (testimonial.name || "this client") +
+            "? This cannot be undone."
+        )
+    ) {
+        return;
+    }
+
+    const button =
+        document.querySelector(
+            '[data-testimonial-action="delete"][data-testimonial-id="' +
+            testimonialId +
+            '"]'
+        );
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Deleting...";
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                SUPABASE_URL +
+                "/rest/v1/testimonials?id=eq." +
+                encodeURIComponent(testimonialId),
+                {
+                    method: "DELETE",
+                    headers: {
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+                        "Authorization":
+                            "Bearer " + accessToken,
+                        "Content-Type":
+                            "application/json",
+                        "Prefer":
+                            "return=minimal"
+                    }
+                }
+            );
+
+        const responseText =
+            await response.text();
+
+        if (!response.ok) {
+            throw new Error(
+                "Supabase returned " +
+                response.status +
+                ": " +
+                responseText
+            );
+        }
+
+        await loadAdminTestimonials();
+
+    } catch (error) {
+
+        console.error(
+            "Unable to delete testimonial:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Unable to delete testimonial."
+        );
+
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Delete";
+        }
+    }
+}
+
+
+
+
 
         const testimonialsAdminList =
     document.getElementById(
@@ -2712,6 +2948,30 @@ if (testimonialsAdminList) {
             ) {
 
                 toggleTestimonialApproval(
+                    testimonialId
+                );
+
+                return;
+
+            }
+
+            if (
+                action === "edit"
+            ) {
+
+                editTestimonial(
+                    testimonialId
+                );
+
+                return;
+
+            }
+
+            if (
+                action === "delete"
+            ) {
+
+                deleteTestimonial(
                     testimonialId
                 );
 
@@ -2863,7 +3123,7 @@ if (testimonialsAdminList) {
                                 <button
                                     type="button"
                                     class="testimonial-admin-action"
-                                    data-testimonial-action="toggle-approval"
+                                    data-testimonial-action="edit"
                                     data-testimonial-id="${testimonial.id}"
                                 >
                                     Edit
@@ -2895,7 +3155,7 @@ if (testimonialsAdminList) {
                                         testimonial-admin-action
                                         delete
                                     "
-                                   data-testimonial-action="toggle-approval"
+                                   data-testimonial-action="delete"
                                    data-testimonial-id="${testimonial.id}"
                                 >
                                     Delete
