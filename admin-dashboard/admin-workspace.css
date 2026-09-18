@@ -1342,6 +1342,7 @@
 #testimonials-admin-section .testimonials-admin-header,
 #testimonials-admin-section .admin-section-header {
     margin-bottom: 18px;
+    align-items: flex-start;
 }
 
 .manager-heading h2,
@@ -1442,7 +1443,7 @@
 /* Keep section actions visually separated from the content panels below. */
 .sway-workspace-heading {
     align-items: flex-start;
-    margin-bottom: 2px;
+    margin-bottom: 14px;
 }
 
 .sway-workspace-heading-actions {
