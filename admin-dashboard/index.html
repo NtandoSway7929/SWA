@@ -2186,6 +2186,7 @@
                 const cancelButton = dialog.querySelector("[data-dialog-cancel]");
 
                 function finish(value) {
+                    cleanup();
                     backdrop.remove();
                     resolve(value);
                 }
@@ -2288,7 +2289,7 @@
 
         window.swayConfirm = function (message, title) {
             return createDialog({
-                title: title || "Confirm action",
+                title: title || "Swayphics",
                 message: message,
                 mode: "confirm",
                 confirmText: "Continue",
