@@ -772,7 +772,7 @@ begin
             false,
             new.id
         )
-        on conflict (source_project_id) do nothing;
+        on conflict do nothing;
 
         if new.client_id is not null then
             select email
