@@ -184,6 +184,11 @@ grant select, update on table public.invoice_settings to authenticated;
 grant select, insert, update, delete on table public.invoices to authenticated;
 grant select, insert, update, delete on table public.invoice_items to authenticated;
 
+grant all privileges on table public.services to service_role;
+grant all privileges on table public.invoice_settings to service_role;
+grant all privileges on table public.invoices to service_role;
+grant all privileges on table public.invoice_items to service_role;
+
 grant select, update on table public.payments to authenticated;
 
 drop policy if exists "Swayphics admins can view services" on public.services;
