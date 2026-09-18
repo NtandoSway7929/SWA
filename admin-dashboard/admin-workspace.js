@@ -2259,12 +2259,19 @@
             }).length;
 
         const outstanding =
-            state.payments
-                .filter(function (item) {
-                    return item.status !== "paid";
+            state.invoices
+                .filter(function (invoice) {
+                    return invoice.status !== "cancelled";
                 })
-                .reduce(function (sum, item) {
-                    return sum + Number(item.amount || 0);
+                .reduce(function (sum, invoice) {
+                    return (
+                        sum +
+                        Number(
+                            invoice.amount_outstanding != null
+                                ? invoice.amount_outstanding
+                                : invoice.total || 0
+                        )
+                    );
                 }, 0);
 
         const pipeline =
@@ -4762,9 +4769,9 @@
             ) +
             panel(
                 "Payments",
-                "Track cash collection without replacing proper accounting records.",
+                "Every payment must be attached to a specific invoice. The invoice balance decreases automatically as money is recorded.",
                 state.payments.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Client / project</th><th>Amount</th><th>Status</th><th>Due</th><th>Method</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Client / project</th><th>Invoice</th><th>Amount received</th><th>Status</th><th>Due</th><th>Method</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No payment records yet.")
