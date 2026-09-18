@@ -27,6 +27,7 @@
 
     const nav = [
         ["overview", "Overview"],
+        ["insights", "Insights"],
         ["tasks", "Tasks"],
         ["leads", "Leads"],
         ["followups", "Follow-ups"],
@@ -347,6 +348,10 @@
                 "Overview",
                 "Your operational picture at a glance."
             ],
+            insights: [
+                "Insights",
+                "Live financial, sales and delivery intelligence."
+            ],
             tasks: [
                 "Tasks",
                 "Assignments, deadlines and delivery status."
@@ -573,6 +578,1197 @@
         );
     }
 
+
+    function chartMonths() {
+        const now = new Date();
+        now.setDate(1);
+        now.setHours(0, 0, 0, 0);
+
+        const months = [];
+
+        for (let i = 11; i >= 0; i -= 1) {
+            const point = new Date(now);
+            point.setMonth(now.getMonth() - i);
+
+            months.push({
+                key:
+                    point.getFullYear() +
+                    "-" +
+                    String(point.getMonth() + 1).padStart(2, "0"),
+                label:
+                    point.toLocaleDateString("en-ZA", {
+                        month: "short"
+                    })
+            });
+        }
+
+        return months;
+    }
+
+    function chartMonthKey(value) {
+        if (!value) return null;
+
+        const point = new Date(value);
+
+        if (Number.isNaN(point.getTime())) {
+            return null;
+        }
+
+        return (
+            point.getFullYear() +
+            "-" +
+            String(point.getMonth() + 1).padStart(2, "0")
+        );
+    }
+
+    function liveBadge() {
+        const status = state.realtimeStatus || "connecting";
+
+        return (
+            '<span class="sway-live-badge ' +
+            esc(status) +
+            '">' +
+            '<i></i>' +
+            (
+                status === "live"
+                    ? "LIVE"
+                    : status === "polling"
+                        ? "LIVE SYNC"
+                        : "CONNECTING"
+            ) +
+            "</span>"
+        );
+    }
+
+    function liveUpdateText() {
+        if (!state.lastLiveUpdate) {
+            return "Waiting for live updates";
+        }
+
+        const seconds = Math.floor(
+            Math.max(
+                0,
+                Date.now() -
+                state.lastLiveUpdate
+            ) / 1000
+        );
+
+        if (seconds < 5) {
+            return "Updated just now";
+        }
+
+        if (seconds < 60) {
+            return "Updated " + seconds + "s ago";
+        }
+
+        return "Updated " +
+            Math.floor(seconds / 60) +
+            "m ago";
+    }
+
+    function trendChart(values, labels, color, label, currency) {
+        const width = 680;
+        const height = 250;
+        const left = 44;
+        const right = 18;
+        const top = 20;
+        const bottom = 34;
+        const plotWidth = width - left - right;
+        const plotHeight = height - top - bottom;
+
+        const maxValue =
+            Math.max.apply(
+                null,
+                values
+                    .map(function (value) {
+                        return Number(value || 0);
+                    })
+                    .concat([1])
+            ) || 1;
+
+        const points =
+            values.map(function (value, index) {
+                const x =
+                    values.length === 1
+                        ? width / 2
+                        : left +
+                          (
+                              index /
+                              (values.length - 1)
+                          ) *
+                          plotWidth;
+
+                const y =
+                    top +
+                    plotHeight -
+                    (
+                        Number(value || 0) /
+                        maxValue
+                    ) *
+                    plotHeight;
+
+                return {
+                    x: x,
+                    y: y
+                };
+            });
+
+        const pointString =
+            points.map(function (point) {
+                return (
+                    point.x +
+                    "," +
+                    point.y
+                );
+            }).join(" ");
+
+        let grid = "";
+
+        for (let i = 0; i <= 4; i += 1) {
+            const y =
+                top +
+                plotHeight -
+                (
+                    i / 4
+                ) *
+                plotHeight;
+
+            grid +=
+                '<line x1="' +
+                left +
+                '" y1="' +
+                y +
+                '" x2="' +
+                (width - right) +
+                '" y2="' +
+                y +
+                '" class="sway-chart-grid-line"></line>';
+        }
+
+        const circles =
+            points.map(function (point) {
+                return (
+                    '<circle cx="' +
+                    point.x +
+                    '" cy="' +
+                    point.y +
+                    '" r="4" fill="' +
+                    color +
+                    '" class="sway-chart-point"></circle>'
+                );
+            }).join("");
+
+        const xLabels =
+            labels.map(function (item, index) {
+                if (
+                    labels.length > 7 &&
+                    index % 2 !== 0 &&
+                    index !== labels.length - 1
+                ) {
+                    return "";
+                }
+
+                return (
+                    '<text x="' +
+                    points[index].x +
+                    '" y="' +
+                    (height - 10) +
+                    '" text-anchor="middle" class="sway-chart-axis-label">' +
+                    esc(item) +
+                    "</text>"
+                );
+            }).join("");
+
+        return (
+            '<div class="sway-chart-wrap">' +
+                '<svg class="sway-chart" viewBox="0 0 ' +
+                    width +
+                    " " +
+                    height +
+                    '" role="img" aria-label="' +
+                    esc(label) +
+                    '">' +
+                    grid +
+                    '<polyline points="' +
+                        pointString +
+                        '" fill="none" stroke="' +
+                        color +
+                        '" class="sway-chart-line"></polyline>' +
+                    circles +
+                    xLabels +
+                "</svg>" +
+            "</div>"
+        );
+    }
+
+    function barChartSimple(values, labels, color, label, currency) {
+        const width = 680;
+        const height = 250;
+        const left = 44;
+        const right = 18;
+        const top = 20;
+        const bottom = 34;
+        const plotWidth = width - left - right;
+        const plotHeight = height - top - bottom;
+        const maxValue =
+            Math.max.apply(
+                null,
+                values
+                    .map(function (value) {
+                        return Number(value || 0);
+                    })
+                    .concat([1])
+            ) || 1;
+
+        const groupWidth =
+            plotWidth /
+            Math.max(1, values.length);
+
+        const bars =
+            values.map(function (value, index) {
+                const numeric =
+                    Number(value || 0);
+
+                const barHeight =
+                    (
+                        numeric /
+                        maxValue
+                    ) *
+                    plotHeight;
+
+                return (
+                    '<rect x="' +
+                    (
+                        left +
+                        index * groupWidth +
+                        groupWidth * 0.19
+                    ) +
+                    '" y="' +
+                    (
+                        top +
+                        plotHeight -
+                        barHeight
+                    ) +
+                    '" width="' +
+                    (
+                        groupWidth * 0.62
+                    ) +
+                    '" height="' +
+                    Math.max(2, barHeight) +
+                    '" rx="5" fill="' +
+                    color +
+                    '" class="sway-chart-bar"></rect>' +
+                    '<text x="' +
+                    (
+                        left +
+                        index * groupWidth +
+                        groupWidth / 2
+                    ) +
+                    '" y="' +
+                    (height - 10) +
+                    '" text-anchor="middle" class="sway-chart-axis-label">' +
+                    esc(labels[index]) +
+                    "</text>"
+                );
+            }).join("");
+
+        let grid = "";
+
+        for (let i = 0; i <= 4; i += 1) {
+            const y =
+                top +
+                plotHeight -
+                (
+                    i / 4
+                ) *
+                plotHeight;
+
+            grid +=
+                '<line x1="' +
+                left +
+                '" y1="' +
+                y +
+                '" x2="' +
+                (width - right) +
+                '" y2="' +
+                y +
+                '" class="sway-chart-grid-line"></line>';
+        }
+
+        return (
+            '<div class="sway-chart-wrap">' +
+                '<svg class="sway-chart" viewBox="0 0 ' +
+                    width +
+                    " " +
+                    height +
+                    '" role="img" aria-label="' +
+                    esc(label) +
+                    '">' +
+                    grid +
+                    bars +
+                "</svg>" +
+            "</div>"
+        );
+    }
+
+    function simpleBars(items, color) {
+        const max =
+            Math.max.apply(
+                null,
+                items
+                    .map(function (item) {
+                        return Number(item.value || 0);
+                    })
+                    .concat([1])
+            ) || 1;
+
+        return (
+            '<div class="sway-simple-bars">' +
+            items.map(function (item) {
+                const value =
+                    Number(item.value || 0);
+
+                return (
+                    '<div class="sway-simple-bar-row">' +
+                        '<div class="sway-simple-bar-head">' +
+                            "<span>" +
+                                esc(item.label) +
+                            "</span>" +
+                            "<strong>" +
+                                (
+                                    item.currency
+                                        ? esc(money(value))
+                                        : value
+                                ) +
+                            "</strong>" +
+                        "</div>" +
+                        '<div class="sway-simple-bar-track">' +
+                            '<span style="width:' +
+                                (
+                                    value /
+                                    max *
+                                    100
+                                ) +
+                                "%;background:" +
+                                color +
+                                ';"></span>' +
+                        "</div>" +
+                    "</div>"
+                );
+            }).join("") +
+            "</div>"
+        );
+    }
+
+    function insightData() {
+        const months = chartMonths();
+
+        return {
+            months: months,
+            revenue: months.map(function (month) {
+                return state.payments
+                    .filter(function (payment) {
+                        return (
+                            payment.status === "paid" &&
+                            chartMonthKey(
+                                payment.paid_at ||
+                                payment.created_at
+                            ) === month.key
+                        );
+                    })
+                    .reduce(function (sum, payment) {
+                        return sum +
+                            Number(payment.amount || 0);
+                    }, 0);
+            }),
+            pipeline: months.map(function (month) {
+                return state.leads
+                    .filter(function (lead) {
+                        return chartMonthKey(
+                            lead.created_at
+                        ) === month.key;
+                    })
+                    .reduce(function (sum, lead) {
+                        return sum +
+                            Number(
+                                lead.estimated_value ||
+                                0
+                            );
+                    }, 0);
+            }),
+            enquiries: months.map(function (month) {
+                return state.enquiries.filter(function (item) {
+                    return chartMonthKey(
+                        item.created_at
+                    ) === month.key;
+                }).length;
+            }),
+            tasksCreated: months.map(function (month) {
+                return state.tasks.filter(function (item) {
+                    return chartMonthKey(
+                        item.created_at
+                    ) === month.key;
+                }).length;
+            }),
+            tasksCompleted: months.map(function (month) {
+                return state.tasks.filter(function (item) {
+                    return (
+                        item.status === "completed" &&
+                        chartMonthKey(
+                            item.completed_at ||
+                            item.updated_at
+                        ) === month.key
+                    );
+                }).length;
+            })
+        };
+    }
+
+    function insightPanel(title, subtitle, content) {
+        return (
+            '<section class="sway-panel sway-insight-panel">' +
+                '<div class="sway-panel-title">' +
+                    "<div>" +
+                        "<h3>" +
+                            esc(title) +
+                        "</h3>" +
+                        (
+                            subtitle
+                                ? "<p>" +
+                                  esc(subtitle) +
+                                  "</p>"
+                                : ""
+                        ) +
+                    "</div>" +
+                "</div>" +
+                content +
+            "</section>"
+        );
+    }
+
+    function renderInsightsOverview() {
+        const data = insightData();
+        const labels =
+            data.months.map(function (month) {
+                return month.label;
+            });
+
+        return (
+            '<div class="sway-live-toolbar">' +
+                "<div>" +
+                    "<strong>Live business movement</strong>" +
+                    "<span>" +
+                        esc(liveUpdateText()) +
+                    "</span>" +
+                "</div>" +
+                liveBadge() +
+            "</div>" +
+
+            '<div class="sway-insight-grid">' +
+                insightPanel(
+                    "Revenue collected",
+                    "Paid payments by month.",
+                    trendChart(
+                        data.revenue,
+                        labels,
+                        "#002096",
+                        "Revenue collected",
+                        true
+                    )
+                ) +
+                insightPanel(
+                    "Pipeline created",
+                    "Estimated lead value entering the pipeline.",
+                    trendChart(
+                        data.pipeline,
+                        labels,
+                        "#0152F4",
+                        "Pipeline created",
+                        true
+                    )
+                ) +
+            "</div>" +
+
+            '<div class="sway-insight-grid">' +
+                insightPanel(
+                    "Website demand",
+                    "New enquiries received each month.",
+                    barChartSimple(
+                        data.enquiries,
+                        labels,
+                        "#2C91FC",
+                        "Website demand"
+                    )
+                ) +
+                insightPanel(
+                    "Delivery throughput",
+                    "Tasks created each month.",
+                    barChartSimple(
+                        data.tasksCreated,
+                        labels,
+                        "#77C1FC",
+                        "Task creation"
+                    )
+                ) +
+            "</div>"
+        );
+    }
+
+    function renderInsights() {
+        const data = insightData();
+        const labels =
+            data.months.map(function (month) {
+                return month.label;
+            });
+
+        const paid =
+            state.payments
+                .filter(function (item) {
+                    return item.status === "paid";
+                })
+                .reduce(function (sum, item) {
+                    return sum +
+                        Number(item.amount || 0);
+                }, 0);
+
+        const outstanding =
+            state.payments
+                .filter(function (item) {
+                    return item.status !== "paid";
+                })
+                .reduce(function (sum, item) {
+                    return sum +
+                        Number(item.amount || 0);
+                }, 0);
+
+        const activePipeline =
+            state.leads
+                .filter(function (item) {
+                    return !["won", "lost"].includes(
+                        item.status
+                    );
+                })
+                .reduce(function (sum, item) {
+                    return sum +
+                        Number(
+                            item.estimated_value || 0
+                        );
+                }, 0);
+
+        const tasksDone =
+            state.tasks.filter(function (item) {
+                return item.status === "completed";
+            }).length;
+
+        const taskRate =
+            state.tasks.length
+                ? (
+                    tasksDone /
+                    state.tasks.length
+                ) * 100
+                : 0;
+
+        const won =
+            state.leads.filter(function (item) {
+                return item.status === "won";
+            }).length;
+
+        const conversionRate =
+            state.leads.length
+                ? (
+                    won /
+                    state.leads.length
+                ) * 100
+                : 0;
+
+        const leadStages = [
+            "new",
+            "contacted",
+            "interested",
+            "proposal sent",
+            "negotiating",
+            "won",
+            "lost"
+        ].map(function (status) {
+            return {
+                label:
+                    status.replace(
+                        /\b\w/g,
+                        function (match) {
+                            return match.toUpperCase();
+                        }
+                    ),
+                value:
+                    state.leads.filter(function (lead) {
+                        return lead.status === status;
+                    }).length
+            };
+        }).filter(function (item) {
+            return item.value > 0;
+        });
+
+        const projectStages = [
+            "planning",
+            "in progress",
+            "review",
+            "completed",
+            "paused",
+            "cancelled"
+        ].map(function (status) {
+            return {
+                label:
+                    status.replace(
+                        /\b\w/g,
+                        function (match) {
+                            return match.toUpperCase();
+                        }
+                    ),
+                value:
+                    state.projects.filter(function (project) {
+                        return project.status === status;
+                    }).length
+            };
+        }).filter(function (item) {
+            return item.value > 0;
+        });
+
+        const services = {};
+
+        state.enquiries.forEach(function (item) {
+            const key =
+                item.service ||
+                "Unspecified";
+
+            services[key] =
+                (services[key] || 0) + 1;
+        });
+
+        state.leads.forEach(function (item) {
+            const key =
+                item.service_interest ||
+                "Unspecified";
+
+            services[key] =
+                (services[key] || 0) + 1;
+        });
+
+        const serviceDemand =
+            Object.keys(services)
+                .map(function (key) {
+                    return {
+                        label: key,
+                        value: services[key]
+                    };
+                })
+                .sort(function (a, b) {
+                    return b.value - a.value;
+                })
+                .slice(0, 6);
+
+        return (
+            heading(
+                '<button type="button" class="sway-workspace-button" data-refresh-workspace>Refresh data</button>'
+            ) +
+            '<div class="sway-live-toolbar">' +
+                "<div>" +
+                    "<strong>Real-time business intelligence</strong>" +
+                    "<span>" +
+                        esc(liveUpdateText()) +
+                    "</span>" +
+                "</div>" +
+                liveBadge() +
+            "</div>" +
+
+            '<div class="sway-workspace-grid">' +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Cash collected</span>' +
+                    '<div class="value">' +
+                        esc(money(paid)) +
+                    "</div>" +
+                    '<div class="hint">Recorded paid payments.</div>' +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Outstanding</span>' +
+                    '<div class="value">' +
+                        esc(money(outstanding)) +
+                    "</div>" +
+                    '<div class="hint">Unpaid and partially paid amounts.</div>' +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Active pipeline</span>' +
+                    '<div class="value">' +
+                        esc(money(activePipeline)) +
+                    "</div>" +
+                    '<div class="hint">Open lead estimated value.</div>' +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Lead conversion</span>' +
+                    '<div class="value">' +
+                        conversionRate.toFixed(0) +
+                        "%" +
+                    "</div>" +
+                    '<div class="hint">Current won leads / total leads.</div>' +
+                "</div>" +
+            "</div>" +
+
+            '<div class="sway-workspace-grid">' +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Task completion</span>' +
+                    '<div class="value">' +
+                        taskRate.toFixed(0) +
+                        "%" +
+                    "</div>" +
+                    '<div class="hint">Completed / total tasks.</div>' +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Active projects</span>' +
+                    '<div class="value">' +
+                        state.projects.filter(function (project) {
+                            return ![
+                                "completed",
+                                "cancelled"
+                            ].includes(project.status);
+                        }).length +
+                    "</div>" +
+                    '<div class="hint">Projects currently in motion.</div>' +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Website enquiries</span>' +
+                    '<div class="value">' +
+                        state.enquiries.length +
+                    "</div>" +
+                    '<div class="hint">All recorded website enquiries.</div>' +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Active clients</span>' +
+                    '<div class="value">' +
+                        state.clients.filter(function (item) {
+                            return item.status === "active";
+                        }).length +
+                    "</div>" +
+                    '<div class="hint">Current client relationships.</div>' +
+                "</div>" +
+            "</div>" +
+
+            '<div class="sway-insight-grid">' +
+                insightPanel(
+                    "Revenue movement",
+                    "Cash collected from paid payments.",
+                    trendChart(
+                        data.revenue,
+                        labels,
+                        "#002096",
+                        "Revenue movement"
+                    )
+                ) +
+                insightPanel(
+                    "Pipeline movement",
+                    "Estimated value of newly created leads.",
+                    trendChart(
+                        data.pipeline,
+                        labels,
+                        "#0152F4",
+                        "Pipeline movement"
+                    )
+                ) +
+            "</div>" +
+
+            '<div class="sway-insight-grid">' +
+                insightPanel(
+                    "Website demand",
+                    "Enquiries received by month.",
+                    barChartSimple(
+                        data.enquiries,
+                        labels,
+                        "#2C91FC",
+                        "Website enquiry movement"
+                    )
+                ) +
+                insightPanel(
+                    "Delivery throughput",
+                    "Tasks created by month.",
+                    barChartSimple(
+                        data.tasksCreated,
+                        labels,
+                        "#77C1FC",
+                        "Task creation movement"
+                    )
+                ) +
+            "</div>" +
+
+            '<div class="sway-insight-grid">' +
+                insightPanel(
+                    "Lead funnel",
+                    "Current distribution across pipeline stages.",
+                    simpleBars(
+                        leadStages,
+                        "#0152F4"
+                    )
+                ) +
+                insightPanel(
+                    "Project workload",
+                    "Current distribution across project stages.",
+                    simpleBars(
+                        projectStages,
+                        "#2C91FC"
+                    )
+                ) +
+            "</div>" +
+
+            '<div class="sway-insight-grid">' +
+                insightPanel(
+                    "Financial position",
+                    "Current paid versus outstanding amounts.",
+                    simpleBars(
+                        [
+                            {
+                                label: "Paid",
+                                value: paid,
+                                currency: true
+                            },
+                            {
+                                label: "Outstanding",
+                                value: outstanding,
+                                currency: true
+                            }
+                        ],
+                        "#002096"
+                    )
+                ) +
+                insightPanel(
+                    "Service demand",
+                    "Combined enquiry and lead interest volume.",
+                    simpleBars(
+                        serviceDemand,
+                        "#0152F4"
+                    )
+                ) +
+            "</div>" +
+
+            '<div class="sway-insight-grid">' +
+                insightPanel(
+                    "Task throughput",
+                    "Created versus completed tasks by month.",
+                    '<div class="sway-chart-legend">' +
+                        '<span class="sway-chart-legend-item"><i style="background:#77C1FC"></i>Created</span>' +
+                        '<span class="sway-chart-legend-item"><i style="background:#002096"></i>Completed</span>' +
+                    "</div>" +
+                    '<div class="sway-mini-bar-series">' +
+                        data.tasksCreated.map(function (value, index) {
+                            const created =
+                                Number(value || 0);
+                            const completed =
+                                Number(
+                                    data.tasksCompleted[index] ||
+                                    0
+                                );
+                            const max =
+                                Math.max(
+                                    created,
+                                    completed,
+                                    1
+                                );
+
+                            return (
+                                '<div class="sway-mini-bar-group">' +
+                                    '<span class="sway-mini-bar created" style="height:' +
+                                        (
+                                            created /
+                                            max *
+                                            100
+                                        ) +
+                                        '%"></span>' +
+                                    '<span class="sway-mini-bar completed" style="height:' +
+                                        (
+                                            completed /
+                                            max *
+                                            100
+                                        ) +
+                                        '%"></span>' +
+                                    '<small>' +
+                                        esc(
+                                            labels[index]
+                                        ) +
+                                    "</small>" +
+                                "</div>"
+                            );
+                        }).join("") +
+                    "</div>"
+                ) +
+                insightPanel(
+                    "Live activity pulse",
+                    "Operational activity recorded in the last 24 hours.",
+                    (function () {
+                        const now = new Date();
+                        now.setMinutes(0, 0, 0);
+
+                        const labels24 = [];
+                        const values24 = [];
+
+                        for (let i = 23; i >= 0; i -= 1) {
+                            const point =
+                                new Date(now);
+
+                            point.setHours(
+                                now.getHours() - i
+                            );
+
+                            const y =
+                                point.getFullYear();
+                            const m =
+                                String(
+                                    point.getMonth() + 1
+                                ).padStart(2, "0");
+                            const d =
+                                String(
+                                    point.getDate()
+                                ).padStart(2, "0");
+                            const h =
+                                String(
+                                    point.getHours()
+                                ).padStart(2, "0");
+
+                            const key =
+                                y + "-" +
+                                m + "-" +
+                                d + "-" +
+                                h;
+
+                            labels24.push(
+                                point.toLocaleTimeString(
+                                    "en-ZA",
+                                    {
+                                        hour: "2-digit",
+                                        minute: "2-digit"
+                                    }
+                                )
+                            );
+
+                            values24.push(
+                                state.activities.filter(function (item) {
+                                    const created =
+                                        new Date(
+                                            item.created_at
+                                        );
+
+                                    return (
+                                        !Number.isNaN(
+                                            created.getTime()
+                                        ) &&
+                                        created.getFullYear() +
+                                            "-" +
+                                            String(
+                                                created.getMonth() + 1
+                                            ).padStart(2, "0") +
+                                            "-" +
+                                            String(
+                                                created.getDate()
+                                            ).padStart(2, "0") +
+                                            "-" +
+                                            String(
+                                                created.getHours()
+                                            ).padStart(2, "0") ===
+                                            key
+                                    );
+                                }).length
+                            );
+                        }
+
+                        return trendChart(
+                            values24,
+                            labels24,
+                            "#002096",
+                            "Live activity pulse"
+                        );
+                    })()
+                ) +
+            "</div>" +
+
+            '<div class="sway-insight-note">' +
+                "<strong>Data note:</strong> " +
+                "Charts update from the records currently stored in Swayphics. " +
+                "Because the current lead table stores the latest stage rather than a stage-history timeline, " +
+                "conversion movement is a current-record view, not a historical stage-change audit." +
+            "</div>"
+        );
+    }
+
+    function setupRealtime() {
+        if (
+            !window.supabase ||
+            typeof window.supabase.createClient !== "function"
+        ) {
+            state.realtimeStatus = "polling";
+            return;
+        }
+
+        const accessToken = token();
+
+        if (!accessToken) {
+            state.realtimeStatus = "polling";
+            return;
+        }
+
+        try {
+            const client =
+                window.supabase.createClient(
+                    SUPABASE_URL,
+                    SUPABASE_PUBLISHABLE_KEY,
+                    {
+                        auth: {
+                            persistSession: false,
+                            autoRefreshToken: false,
+                            detectSessionInUrl: false
+                        }
+                    }
+                );
+
+            client.realtime.setAuth(
+                accessToken
+            );
+
+            const channel =
+                client.channel(
+                    "swayphics-admin-live"
+                );
+
+            const tables = [
+                "admin_users",
+                "clients",
+                "leads",
+                "client_projects",
+                "tasks",
+                "follow_ups",
+                "quotes",
+                "payments",
+                "website_enquiries",
+                "site_announcements",
+                "activity_log"
+            ];
+
+            let refreshTimer = null;
+
+            const queueRefresh = function () {
+                if (refreshTimer) {
+                    clearTimeout(refreshTimer);
+                }
+
+                refreshTimer =
+                    setTimeout(
+                        async function () {
+                            refreshTimer = null;
+
+                            try {
+                                await refreshData();
+
+                                state.lastLiveUpdate =
+                                    Date.now();
+
+                                renderShell();
+                                renderView();
+                            } catch (error) {
+                                console.warn(
+                                    "Live workspace refresh failed.",
+                                    error
+                                );
+                            }
+                        },
+                        300
+                    );
+            };
+
+            tables.forEach(function (table) {
+                channel.on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: table
+                    },
+                    queueRefresh
+                );
+            });
+
+            channel.subscribe(
+                function (status, error) {
+                    if (
+                        status === "SUBSCRIBED"
+                    ) {
+                        state.realtimeStatus =
+                            "live";
+
+                        state.lastLiveUpdate =
+                            Date.now();
+
+                        if (
+                            state.currentView === "overview" ||
+                            state.currentView === "insights"
+                        ) {
+                            renderView();
+                        }
+                    }
+
+                    if (
+                        status === "CHANNEL_ERROR" ||
+                        status === "TIMED_OUT"
+                    ) {
+                        state.realtimeStatus =
+                            "polling";
+
+                        console.warn(
+                            "Swayphics Realtime unavailable:",
+                            error
+                        );
+
+                        if (
+                            state.currentView === "overview" ||
+                            state.currentView === "insights"
+                        ) {
+                            renderView();
+                        }
+                    }
+                }
+            );
+
+            window.setInterval(
+                async function () {
+                    if (
+                        state.realtimeStatus !== "live"
+                    ) {
+                        try {
+                            await refreshData();
+
+                            state.lastLiveUpdate =
+                                Date.now();
+
+                            renderShell();
+                            renderView();
+                        } catch (error) {
+                            console.warn(
+                                "Workspace sync failed.",
+                                error
+                            );
+                        }
+                    }
+                },
+                30000
+            );
+
+            state.realtimeClient =
+                client;
+
+        } catch (error) {
+            state.realtimeStatus =
+                "polling";
+
+            console.warn(
+                "Unable to initialise Swayphics Realtime.",
+                error
+            );
+        }
+    }
+
+
     function renderOverview() {
         const today =
             new Date().toISOString().slice(0, 10);
@@ -637,7 +1833,9 @@
                 '<button type="button" class="sway-workspace-button" data-quick="lead">+ New lead</button>'
             ) +
 
-            '<div class="sway-inline-note" style="margin-bottom:2px;">' +
+            renderInsightsOverview() +
+
+            '<div class="sway-inline-note" style="margin-bottom:2px;"> +
                 "Good day, " +
                 "<strong>" +
                 esc(currentUserName()) +
@@ -3366,6 +4564,11 @@
                     renderOverview();
             }
 
+            if (state.currentView === "insights") {
+                main.innerHTML =
+                    renderInsights();
+            }
+
             if (state.currentView === "tasks") {
                 main.innerHTML =
                     renderTasks();
@@ -3610,6 +4813,7 @@
             await loadState();
             renderShell();
             renderView();
+            setupRealtime();
         } catch (error) {
             workspace.innerHTML =
                 '<div class="sway-error">' +
