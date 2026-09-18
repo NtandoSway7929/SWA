@@ -62,7 +62,14 @@ grant insert on table public.website_enquiries to service_role;
 
 -- Existing public-facing tables also need SELECT privileges for browser reads.
 grant select on table public.portfolio_projects to anon, authenticated;
-grant select on table public.testimonials to anon, authenticated;
+
+grant select, insert, update, delete
+on table public.testimonials
+to authenticated;
+
+grant select
+on table public.testimonials
+to anon;
 
 alter table public.admin_users enable row level security;
 
