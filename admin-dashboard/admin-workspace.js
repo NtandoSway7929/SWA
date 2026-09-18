@@ -6016,7 +6016,8 @@
                             "assigned_to",
                             "client_id",
                             "project_id",
-                            "lead_id"
+                            "lead_id",
+                            "invoice_id"
                         ].includes(field.key) &&
                         value === ""
                     ) {
