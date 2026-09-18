@@ -40,6 +40,9 @@ create table if not exists public.services (
 create index if not exists services_active_idx
     on public.services(active);
 
+create unique index if not exists services_name_unique_idx
+    on public.services(lower(name));
+
 create table if not exists public.invoice_settings (
     id smallint primary key default 1 check (id = 1),
     business_name text not null default 'Swayphics',
@@ -257,7 +260,46 @@ with check (
     )
 );
 
-alter publication supabase_realtime add table public.invoices;
-alter publication supabase_realtime add table public.invoice_items;
-alter publication supabase_realtime add table public.services;
-alter publication supabase_realtime add table public.invoice_settings;
+do $
+begin
+    if not exists (
+        select 1
+        from pg_publication_tables
+        where pubname = 'supabase_realtime'
+          and schemaname = 'public'
+          and tablename = 'invoices'
+    ) then
+        alter publication supabase_realtime add table public.invoices;
+    end if;
+
+    if not exists (
+        select 1
+        from pg_publication_tables
+        where pubname = 'supabase_realtime'
+          and schemaname = 'public'
+          and tablename = 'invoice_items'
+    ) then
+        alter publication supabase_realtime add table public.invoice_items;
+    end if;
+
+    if not exists (
+        select 1
+        from pg_publication_tables
+        where pubname = 'supabase_realtime'
+          and schemaname = 'public'
+          and tablename = 'services'
+    ) then
+        alter publication supabase_realtime add table public.services;
+    end if;
+
+    if not exists (
+        select 1
+        from pg_publication_tables
+        where pubname = 'supabase_realtime'
+          and schemaname = 'public'
+          and tablename = 'invoice_settings'
+    ) then
+        alter publication supabase_realtime add table public.invoice_settings;
+    end if;
+end
+$;
