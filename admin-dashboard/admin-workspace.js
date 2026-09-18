@@ -2277,7 +2277,7 @@
         const pipeline =
             state.leads
                 .filter(function (item) {
-                    return !["won", "lost"].includes(item.status);
+                    return !["won", "lost", "follow-up"].includes(item.status);
                 })
                 .reduce(function (sum, item) {
                     return sum + Number(item.estimated_value || 0);
