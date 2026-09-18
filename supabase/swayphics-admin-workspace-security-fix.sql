@@ -55,6 +55,11 @@ grant select, insert, update, delete on table public.website_enquiries to authen
 grant select, insert, update, delete on table public.site_announcements to authenticated;
 grant select, insert, update, delete on table public.activity_log to authenticated;
 
+-- The public contact form is handled by the submit-enquiry Edge Function.
+-- It uses the server-side service_role key to insert enquiries without exposing
+-- write access to the browser.
+grant insert on table public.website_enquiries to service_role;
+
 -- Existing public-facing tables also need SELECT privileges for browser reads.
 grant select on table public.portfolio_projects to anon, authenticated;
 grant select on table public.testimonials to anon, authenticated;
