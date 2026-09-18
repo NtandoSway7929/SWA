@@ -4708,6 +4708,11 @@
     function renderPayments() {
         const rows =
             state.payments.map(function (item) {
+                const invoice =
+                    state.invoices.find(function (entry) {
+                        return entry.id === item.invoice_id;
+                    });
+
                 return (
                     "<tr>" +
                         "<td>" +
@@ -4728,6 +4733,13 @@
                         "</td>" +
                         "<td>" +
                             esc(
+                                invoice
+                                    ? invoice.invoice_number
+                                    : "No invoice"
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(
                                 money(
                                     item.amount
                                 )
@@ -4738,9 +4750,15 @@
                         "</td>" +
                         "<td>" +
                             (
-                                item.due_date && isOverdue(item.due_date) && item.status !== "paid"
+                                item.due_date &&
+                                isOverdue(item.due_date) &&
+                                item.status !== "paid"
                                     ? chip("overdue")
-                                    : esc(date(item.due_date))
+                                    : esc(
+                                        date(
+                                            item.due_date
+                                        )
+                                    )
                             ) +
                         "</td>" +
                         "<td>" +
