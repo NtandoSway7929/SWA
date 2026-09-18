@@ -1022,6 +1022,23 @@
                             Number(payment.amount || 0);
                     }, 0);
             }),
+
+            invoiced: months.map(function (month) {
+                return state.invoices
+                    .filter(function (invoice) {
+                        return (
+                            invoice.status !== "cancelled" &&
+                            chartMonthKey(
+                                invoice.issue_date ||
+                                invoice.created_at
+                            ) === month.key
+                        );
+                    })
+                    .reduce(function (sum, invoice) {
+                        return sum +
+                            Number(invoice.total || 0);
+                    }, 0);
+            }),
             pipeline: months.map(function (month) {
                 return state.leads
                     .filter(function (lead) {
@@ -1329,11 +1346,37 @@
                     '<div class="hint">Recorded paid payments.</div>' +
                 "</div>" +
                 '<div class="sway-stat-card">' +
-                    '<span class="label">Outstanding</span>' +
+                    '<span class="label">Invoiced</span>' +
                     '<div class="value">' +
-                        esc(money(outstanding)) +
+                        esc(money(
+                            state.invoices
+                                .filter(function (invoice) {
+                                    return invoice.status !== "cancelled";
+                                })
+                                .reduce(function (sum, invoice) {
+                                    return sum + Number(invoice.total || 0);
+                                }, 0)
+                        )) +
                     "</div>" +
-                    '<div class="hint">Unpaid and partially paid amounts.</div>' +
+                    '<div class="hint">All non-cancelled invoices.</div>' +
+                "</div>" +
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Outstanding invoices</span>' +
+                    '<div class="value">' +
+                        esc(money(
+                            state.invoices
+                                .filter(function (invoice) {
+                                    return ![
+                                        "paid",
+                                        "cancelled"
+                                    ].includes(invoice.status);
+                                })
+                                .reduce(function (sum, invoice) {
+                                    return sum + Number(invoice.total || 0);
+                                }, 0)
+                        )) +
+                    "</div>" +
+                    '<div class="hint">Invoices not fully paid.</div>' +
                 "</div>" +
                 '<div class="sway-stat-card">' +
                     '<span class="label">Active pipeline</span>' +
@@ -1374,11 +1417,16 @@
                     '<div class="hint">Projects currently in motion.</div>' +
                 "</div>" +
                 '<div class="sway-stat-card">' +
-                    '<span class="label">Website enquiries</span>' +
+                    '<span class="label">Outstanding invoices</span>' +
                     '<div class="value">' +
-                        state.enquiries.length +
+                        state.invoices.filter(function (invoice) {
+                            return ![
+                                "paid",
+                                "cancelled"
+                            ].includes(invoice.status);
+                        }).length +
                     "</div>" +
-                    '<div class="hint">All recorded website enquiries.</div>' +
+                    '<div class="hint">Invoices still requiring collection.</div>' +
                 "</div>" +
                 '<div class="sway-stat-card">' +
                     '<span class="label">Active clients</span>' +
@@ -1402,6 +1450,19 @@
                         "Revenue movement"
                     )
                 ) +
+                insightPanel(
+                    "Billed value movement",
+                    "Invoice value issued by month.",
+                    trendChart(
+                        data.invoiced,
+                        labels,
+                        "#2C91FC",
+                        "Billed value movement"
+                    )
+                ) +
+            '</div>' +
+
+            '<div class="sway-insight-grid">' +
                 insightPanel(
                     "Pipeline movement",
                     "Estimated value of newly created leads.",
