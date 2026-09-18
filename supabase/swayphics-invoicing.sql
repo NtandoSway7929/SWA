@@ -176,6 +176,8 @@ alter table public.invoice_items enable row level security;
 
 grant usage on schema public to authenticated;
 
+grant usage, select on sequence public.swayphics_invoice_number_seq to authenticated;
+
 grant select on table public.services to authenticated;
 grant insert, update, delete on table public.services to authenticated;
 
