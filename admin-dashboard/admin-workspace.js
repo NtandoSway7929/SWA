@@ -399,7 +399,8 @@
                 "draft",
                 "invoice sent",
                 "partially paid",
-                "interested"
+                "interested",
+                "follow-up"
             ].includes(lower)
         ) {
             className = "warning";
@@ -6801,6 +6802,11 @@
     }
 
     async function completeFollowup(id) {
+        const followup =
+            state.followups.find(function (item) {
+                return item.id === id;
+            });
+
         await api(
             "/rest/v1/follow_ups?id=eq." +
             encodeURIComponent(id),
@@ -6819,8 +6825,32 @@
             }
         );
 
+        if (followup && followup.lead_id) {
+            await api(
+                "/rest/v1/leads?id=eq." +
+                encodeURIComponent(followup.lead_id),
+                {
+                    method: "PATCH",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    }),
+                    body:
+                        JSON.stringify({
+                            status: "contacted",
+                            last_contacted_at:
+                                new Date().toISOString(),
+                            next_follow_up:
+                                null
+                        })
+                }
+            );
+        }
+
         await logActivity(
-            "Completed follow-up",
+            followup && followup.lead_id
+                ? "Completed lead follow-up and returned lead to active pipeline"
+                : "Completed follow-up",
             "follow_ups",
             id
         );
@@ -7681,6 +7711,10 @@
 
         try {
             await loadState();
+
+            await processStaleLeads();
+
+            await refreshData();
 
             state.lastLiveUpdate =
                 Date.now();
