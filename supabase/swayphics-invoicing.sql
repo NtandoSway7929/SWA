@@ -191,6 +191,10 @@ grant all privileges on table public.invoice_settings to service_role;
 grant all privileges on table public.invoices to service_role;
 grant all privileges on table public.invoice_items to service_role;
 
+-- Backend invoice generation also reads the related client/project records.
+grant all privileges on table public.clients to service_role;
+grant all privileges on table public.client_projects to service_role;
+
 grant select, update on table public.payments to authenticated;
 
 drop policy if exists "Swayphics admins can view services" on public.services;
