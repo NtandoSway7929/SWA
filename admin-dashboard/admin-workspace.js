@@ -22,7 +22,10 @@
         payments: [],
         enquiries: [],
         activities: [],
-        announcements: []
+        announcements: [],
+        realtimeStatus: "connecting",
+        lastLiveUpdate: null,
+        realtimeClient: null
     };
 
     const nav = [
@@ -4634,6 +4637,41 @@
     }
 
     function bindViewActions() {
+
+        workspace
+            .querySelectorAll("[data-refresh-workspace]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    async function () {
+                        button.disabled = true;
+                        const originalText =
+                            button.textContent;
+
+                        button.textContent =
+                            "Refreshing...";
+
+                        try {
+                            await refreshData();
+
+                            state.lastLiveUpdate =
+                                Date.now();
+
+                            renderShell();
+                            renderView();
+                        } catch (error) {
+                            alert(
+                                error.message ||
+                                "Unable to refresh workspace data."
+                            );
+
+                            button.disabled = false;
+                            button.textContent =
+                                originalText;
+                        }
+                    }
+                );
+            });
         workspace
             .querySelectorAll("[data-add]")
             .forEach(function (button) {
@@ -4811,6 +4849,10 @@
 
         try {
             await loadState();
+
+            state.lastLiveUpdate =
+                Date.now();
+
             renderShell();
             renderView();
             setupRealtime();
