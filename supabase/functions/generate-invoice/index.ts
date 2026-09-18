@@ -686,17 +686,21 @@ async function buildPdf(
     );
   }
 
-  y -= 24;
+  y -= 40;
+
+  const totalBoxX = summaryX - 12;
+  const totalBoxWidth =
+    pageWidth -
+    margin -
+    totalBoxX;
+  const totalBoxY = y - 10;
+  const totalBoxHeight = 34;
 
   page.drawRectangle({
-    x: summaryX - 12,
-    y: y - 11,
-    width:
-      pageWidth -
-      margin -
-      summaryX +
-      12,
-    height: 36,
+    x: totalBoxX,
+    y: totalBoxY,
+    width: totalBoxWidth,
+    height: totalBoxHeight,
     color: BRAND,
   });
 
