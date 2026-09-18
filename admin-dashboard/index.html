@@ -2106,6 +2106,210 @@
 <script>
 
     /* =========================================================
+       SWAYPHICS BRANDED DIALOGS
+       ========================================================= */
+
+    (function () {
+        "use strict";
+
+        if (window.swayAlert) {
+            return;
+        }
+
+        function createDialog(options) {
+            const settings = Object.assign({
+                title: "Swayphics",
+                message: "",
+                mode: "alert",
+                value: "",
+                placeholder: "",
+                confirmText: "Continue",
+                cancelText: "Cancel"
+            }, options || {});
+
+            return new Promise(function (resolve) {
+                const backdrop = document.createElement("div");
+                backdrop.className = "sway-dialog-backdrop";
+
+                const dialog = document.createElement("div");
+                dialog.className = "sway-dialog";
+                dialog.setAttribute("role", "dialog");
+                dialog.setAttribute("aria-modal", "true");
+
+                const needsInput =
+                    settings.mode === "prompt";
+
+                dialog.innerHTML =
+                    '<div class="sway-dialog-brand">' +
+                        '<div class="sway-dialog-brand-mark">S</div>' +
+                        '<img src="../swayphics-logo.png" alt="Swayphics">' +
+                    "</div>" +
+                    '<div class="sway-dialog-body">' +
+                        '<h3 class="sway-dialog-title">' +
+                            escapeDialogHtml(settings.title) +
+                        "</h3>" +
+                        '<p class="sway-dialog-message">' +
+                            escapeDialogHtml(settings.message) +
+                        "</p>" +
+                        (
+                            needsInput
+                                ? '<div class="sway-dialog-field">' +
+                                      '<label for="sway-dialog-input">Response</label>' +
+                                      '<textarea id="sway-dialog-input" placeholder="' +
+                                          escapeDialogAttribute(settings.placeholder) +
+                                      '">' +
+                                          escapeDialogHtml(settings.value) +
+                                      "</textarea>" +
+                                  "</div>"
+                                : ""
+                        ) +
+                    "</div>" +
+                    '<div class="sway-dialog-actions">' +
+                        (
+                            settings.mode === "confirm" ||
+                            needsInput
+                                ? '<button type="button" class="sway-dialog-button" data-dialog-cancel>' +
+                                      escapeDialogHtml(settings.cancelText) +
+                                  "</button>"
+                                : ""
+                        ) +
+                        '<button type="button" class="sway-dialog-button primary" data-dialog-confirm>' +
+                            escapeDialogHtml(settings.confirmText) +
+                        "</button>" +
+                    "</div>";
+
+                backdrop.appendChild(dialog);
+                document.body.appendChild(backdrop);
+
+                const input = dialog.querySelector("#sway-dialog-input");
+                const confirmButton = dialog.querySelector("[data-dialog-confirm]");
+                const cancelButton = dialog.querySelector("[data-dialog-cancel]");
+
+                function finish(value) {
+                    backdrop.remove();
+                    resolve(value);
+                }
+
+                confirmButton.addEventListener("click", function () {
+                    finish(
+                        needsInput
+                            ? input.value
+                            : true
+                    );
+                });
+
+                if (cancelButton) {
+                    cancelButton.addEventListener("click", function () {
+                        finish(
+                            needsInput
+                                ? null
+                                : false
+                        );
+                    });
+                }
+
+                backdrop.addEventListener("click", function (event) {
+                    if (event.target === backdrop) {
+                        finish(
+                            settings.mode === "confirm" || needsInput
+                                ? (needsInput ? null : false)
+                                : true
+                        );
+                    }
+                });
+
+                function onKeydown(event) {
+                    if (event.key === "Escape") {
+                        event.preventDefault();
+
+                        finish(
+                            settings.mode === "confirm" || needsInput
+                                ? (needsInput ? null : false)
+                                : true
+                        );
+
+                        cleanup();
+                    }
+
+                    if (
+                        event.key === "Enter" &&
+                        !event.shiftKey &&
+                        document.activeElement !== input
+                    ) {
+                        event.preventDefault();
+                        confirmButton.click();
+                    }
+                }
+
+                function cleanup() {
+                    document.removeEventListener(
+                        "keydown",
+                        onKeydown
+                    );
+                }
+
+                document.addEventListener(
+                    "keydown",
+                    onKeydown
+                );
+
+                setTimeout(function () {
+                    if (needsInput) {
+                        input.focus();
+                        input.select();
+                    } else {
+                        confirmButton.focus();
+                    }
+                }, 0);
+            });
+        }
+
+        function escapeDialogHtml(value) {
+            return String(value == null ? "" : value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function escapeDialogAttribute(value) {
+            return escapeDialogHtml(value);
+        }
+
+        window.swayAlert = function (message, title) {
+            return createDialog({
+                title: title || "Swayphics",
+                message: message,
+                mode: "alert",
+                confirmText: "OK"
+            });
+        };
+
+        window.swayConfirm = function (message, title) {
+            return createDialog({
+                title: title || "Confirm action",
+                message: message,
+                mode: "confirm",
+                confirmText: "Continue",
+                cancelText: "Cancel"
+            });
+        };
+
+        window.swayPrompt = function (message, value, title) {
+            return createDialog({
+                title: title || "Swayphics",
+                message: message,
+                mode: "prompt",
+                value: value || "",
+                confirmText: "Save",
+                cancelText: "Cancel"
+            });
+        };
+    })();
+
+
+    /* =========================================================
        SUPABASE
        ========================================================= */
 
