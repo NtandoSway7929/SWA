@@ -237,20 +237,6 @@ async function buildPdf(
       24;
   } else {
     page.drawText(
-      settings.business_name ||
-        "SWAYPHICS",
-      {
-        x: margin,
-        y,
-        size: 24,
-        font: bold,
-        color: BRAND,
-      },
-    );
-
-    y -= 34;
-  }
-
 
       settings.business_name ||
         "SWAYPHICS",
