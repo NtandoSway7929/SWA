@@ -1760,18 +1760,23 @@
 #sway-admin-workspace::before {
     content: "";
     position: absolute;
-    top: 7%;
-    right: 4%;
-    z-index: -1;
-    width: min(470px, 42vw);
+    top: 5%;
+    right: 3%;
+    z-index: 0;
+    width: min(560px, 46vw);
     aspect-ratio: 1;
     background-image: url("../FIST.webp");
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
-    opacity: 0.075;
+    opacity: 0.11;
     pointer-events: none;
     filter: saturate(0.9);
+}
+
+#sway-admin-workspace > * {
+    position: relative;
+    z-index: 1;
 }
 
 .sway-workspace-main {
@@ -1807,9 +1812,9 @@
 
     #sway-admin-workspace::before {
         top: 8%;
-        right: -12%;
-        width: 360px;
-        opacity: 0.06;
+        right: -14%;
+        width: 390px;
+        opacity: 0.085;
     }
 }
 
