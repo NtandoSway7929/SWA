@@ -57,6 +57,8 @@
 
         body {
 
+            position: relative;
+
             min-height: 100vh;
 
             background:
@@ -84,6 +86,40 @@
 
             -webkit-font-smoothing:
                 antialiased;
+        }
+
+
+        body::before {
+
+            content: "";
+
+            position: fixed;
+
+            top: 50%;
+
+            right: -40px;
+
+            width: min(620px, 48vw);
+
+            aspect-ratio: 1;
+
+            transform: translateY(-50%);
+
+            background-image: url("../FIST.webp");
+
+            background-repeat: no-repeat;
+
+            background-position: center;
+
+            background-size: contain;
+
+            opacity: 0.075;
+
+            pointer-events: none;
+
+            z-index: 0;
+
+            filter: saturate(0.9);
         }
 
 
