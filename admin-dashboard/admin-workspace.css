@@ -175,7 +175,7 @@
     font-size: 0.62rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    text-transform: uppercase;
+    text-transform: none;
 }
 
 .sway-stat-card .value {
@@ -241,7 +241,7 @@
     font-size: 0.58rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    text-transform: uppercase;
+    text-transform: none;
 }
 
 .sway-table td {
@@ -270,7 +270,7 @@
     color: var(--sway-deep);
     font-size: 0.55rem;
     font-weight: 800;
-    text-transform: uppercase;
+    text-transform: none;
 }
 
 .sway-chip.success {
@@ -958,7 +958,7 @@
     font-size: 0.55rem;
     font-weight: 800;
     letter-spacing: 0.06em;
-    text-transform: uppercase;
+    text-transform: none;
 }
 
 .sway-invoice-line {
@@ -1071,7 +1071,7 @@
     font-size: 0.56rem;
     font-weight: 800;
     letter-spacing: 0.07em;
-    text-transform: uppercase;
+    text-transform: none;
 }
 
 .sway-settings-grid strong {
@@ -1532,7 +1532,7 @@
     font-weight: 900;
     letter-spacing: 0.10em;
     text-align: left;
-    text-transform: uppercase;
+    text-transform: none;
     cursor: pointer;
 }
 
