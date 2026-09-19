@@ -712,6 +712,23 @@
         );
     }
 
+    function setStandaloneManagerVisibility(view) {
+        const portfolioManager = document.querySelector(".portfolio-manager");
+        const testimonialsSection = document.getElementById("testimonials-admin-section");
+
+        if (portfolioManager) {
+            const showPortfolio = view === "portfolio";
+            portfolioManager.hidden = !showPortfolio;
+            portfolioManager.setAttribute("aria-hidden", String(!showPortfolio));
+        }
+
+        if (testimonialsSection) {
+            const showTestimonials = view === "testimonials";
+            testimonialsSection.hidden = !showTestimonials;
+            testimonialsSection.setAttribute("aria-hidden", String(!showTestimonials));
+        }
+    }
+
     function renderShell() {
         let openGroups = {};
 
@@ -912,6 +929,8 @@
                                 "nav-open"
                             );
                         }
+
+                        setStandaloneManagerVisibility(view);
 
                         if (
                             view === "portfolio" ||
@@ -7755,6 +7774,7 @@
 
             renderShell();
             renderView();
+            setStandaloneManagerVisibility(state.currentView);
             setupRealtime();
         } catch (error) {
             workspace.innerHTML =
