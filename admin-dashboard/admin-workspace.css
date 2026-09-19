@@ -1740,6 +1740,7 @@
 
 @media (max-width: 760px) {
     .sway-workspace-sidebar {
+        gap: 0;
         top: 76px;
         left: 12px;
         width: min(310px, calc(100vw - 24px));
