@@ -63,20 +63,20 @@
 
             background:
                 radial-gradient(
-                    circle at 92% 8%,
-                    rgba(1,82,244,0.10) 0%,
+                    circle at 88% 8%,
+                    rgba(1,82,244,0.09) 0%,
                     rgba(1,82,244,0) 30%
                 ),
                 radial-gradient(
-                    circle at 8% 82%,
-                    rgba(44,145,252,0.07) 0%,
-                    rgba(44,145,252,0) 28%
+                    circle at 8% 86%,
+                    rgba(119,193,252,0.065) 0%,
+                    rgba(119,193,252,0) 28%
                 ),
                 linear-gradient(
                     135deg,
-                    #FFFFFF 0%,
-                    #F8FBFF 48%,
-                    #EDF6FF 100%
+                    #F7F9FF 0%,
+                    #FFFFFF 52%,
+                    #EEF5FF 100%
                 );
 
             color:
@@ -138,30 +138,36 @@
 
             width: 100%;
 
+            padding-top:
+                18px;
+
             border-bottom:
-                1px solid var(--border);
+                0;
 
             background:
-                rgba(255,255,255,0.88);
+                transparent;
 
             backdrop-filter:
-                blur(20px);
+                none;
 
             -webkit-backdrop-filter:
-                blur(20px);
+                none;
         }
 
 
         .admin-header-inner {
 
             width:
-                min(1180px, calc(100% - 40px));
+                min(1180px, 92%);
 
             min-height:
-                76px;
+                62px;
 
             margin:
                 0 auto;
+
+            padding:
+                10px 18px;
 
             display:
                 flex;
@@ -174,6 +180,26 @@
 
             gap:
                 20px;
+
+            border:
+                1px solid
+                rgba(255,255,255,0.65);
+
+            border-radius:
+                999px;
+
+            background:
+                rgba(255,255,255,0.72);
+
+            box-shadow:
+                0 10px 35px
+                rgba(0,32,150,0.08);
+
+            backdrop-filter:
+                blur(22px);
+
+            -webkit-backdrop-filter:
+                blur(22px);
         }
 
 
@@ -224,11 +250,24 @@
             gap:
                 7px;
 
+            padding:
+                7px 11px;
+
+            border:
+                1px solid
+                rgba(0,32,150,0.07);
+
+            border-radius:
+                999px;
+
+            background:
+                rgba(255,255,255,0.56);
+
             color:
                 var(--text-muted);
 
             font-size:
-                0.72rem;
+                0.68rem;
 
             font-weight:
                 700;
@@ -255,16 +294,16 @@
 
             border:
                 1px solid
-                rgba(0,32,150,0.12);
+                rgba(0,32,150,0.10);
 
             border-radius:
-                10px;
+                999px;
 
             padding:
-                9px 13px;
+                9px 15px;
 
             background:
-                #FFFFFF;
+                rgba(255,255,255,0.82);
 
             color:
                 var(--sway-dark);
@@ -302,13 +341,13 @@
         .admin-main {
 
             width:
-                min(1180px, calc(100% - 40px));
+                min(1180px, 92%);
 
             margin:
                 0 auto;
 
             padding:
-                70px 0 90px;
+                52px 0 100px;
         }
 
 
@@ -347,13 +386,16 @@
         .admin-intro h1 {
 
             font-size:
-                clamp(2.4rem, 6vw, 4.5rem);
+                clamp(2.8rem, 6vw, 4.8rem);
 
             line-height:
-                0.98;
+                0.94;
+
+            font-weight:
+                700;
 
             letter-spacing:
-                -0.06em;
+                -0.05em;
         }
 
 
