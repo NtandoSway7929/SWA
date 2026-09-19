@@ -1888,3 +1888,234 @@
             rgba(1,82,244,0.16);
     }
 }
+
+/* =========================================================
+   HOMEPAGE DESIGN LANGUAGE — ADMIN DASHBOARD
+   ========================================================= */
+
+#sway-admin-workspace {
+    margin-top: 4px;
+}
+
+.sway-workspace-shell {
+    gap: 28px;
+}
+
+.sway-workspace-sidebar {
+    border-color: rgba(255,255,255,0.72);
+    border-radius: 22px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.90) 0%,
+            rgba(247,250,255,0.78) 100%
+        );
+    box-shadow:
+        0 20px 55px rgba(0,32,150,0.07),
+        0 2px 8px rgba(0,20,95,0.04);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+}
+
+.sway-workspace-nav-button {
+    border-radius: 999px;
+    color: #26334D;
+    font-weight: 600;
+    transition:
+        color 0.3s ease,
+        background 0.3s ease,
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.sway-workspace-nav-button:hover {
+    color: #0152F4;
+    background: rgba(1,82,244,0.07);
+    transform: translateY(-1px);
+}
+
+.sway-workspace-nav-button.active {
+    background:
+        linear-gradient(
+            135deg,
+            #002096 0%,
+            #0152F4 100%
+        );
+    box-shadow:
+        0 10px 28px rgba(1,82,244,0.18);
+}
+
+.sway-workspace-heading {
+    gap: 24px;
+}
+
+.sway-workspace-heading h2 {
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.05em;
+}
+
+.sway-workspace-heading p {
+    max-width: 680px;
+    color: #56627A;
+}
+
+.sway-workspace-button {
+    border-radius: 999px;
+    border-color: rgba(0,32,150,0.09);
+    background: rgba(255,255,255,0.78);
+    color: #26334D;
+    box-shadow: 0 4px 14px rgba(0,32,150,0.03);
+    transition:
+        color 0.3s ease,
+        background 0.3s ease,
+        border-color 0.3s ease,
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.sway-workspace-button:hover {
+    border-color: rgba(1,82,244,0.20);
+    color: #0152F4;
+    background: rgba(255,255,255,0.92);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(0,32,150,0.06);
+}
+
+.sway-workspace-button.primary {
+    border-color: transparent;
+    background:
+        linear-gradient(
+            135deg,
+            #002096 0%,
+            #0152F4 100%
+        );
+    color: #FFFFFF;
+    box-shadow:
+        0 10px 26px rgba(1,82,244,0.18);
+}
+
+.sway-workspace-button.primary:hover {
+    background:
+        linear-gradient(
+            135deg,
+            #0031C5 0%,
+            #0152F4 100%
+        );
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow:
+        0 13px 31px rgba(1,82,244,0.25);
+}
+
+.sway-stat-card,
+.sway-panel {
+    border-color: rgba(255,255,255,0.70);
+    border-radius: 24px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.92) 0%,
+            rgba(248,251,255,0.82) 100%
+        );
+    box-shadow:
+        0 20px 55px rgba(0,32,150,0.07),
+        0 2px 8px rgba(0,20,95,0.035);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.sway-stat-card .label,
+.sway-table th {
+    color: #56627A;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.sway-stat-card .label {
+    text-transform: none;
+}
+
+.sway-panel-title h3 {
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+.sway-table th {
+    text-transform: none;
+}
+
+.sway-table th,
+.sway-table td {
+    border-bottom-color: rgba(0,32,150,0.065);
+}
+
+.sway-table-empty {
+    border-radius: 16px;
+}
+
+.sway-row-action,
+.sway-quick-action {
+    border-radius: 11px;
+    border-color: rgba(0,32,150,0.08);
+    background: rgba(255,255,255,0.78);
+    box-shadow: 0 4px 12px rgba(0,32,150,0.025);
+}
+
+.sway-quick-action {
+    border-radius: 16px;
+    transition:
+        transform 0.3s ease,
+        border-color 0.3s ease,
+        background 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.sway-quick-action:hover {
+    transform: translateY(-2px);
+    border-color: rgba(1,82,244,0.16);
+    background: rgba(255,255,255,0.94);
+    box-shadow: 0 10px 24px rgba(0,32,150,0.055);
+}
+
+.sway-inline-note,
+.sway-insight-note,
+.sway-live-toolbar {
+    border-color: rgba(255,255,255,0.72);
+    background:
+        linear-gradient(
+            135deg,
+            rgba(247,250,255,0.82) 0%,
+            rgba(255,255,255,0.68) 100%
+        );
+    box-shadow: 0 8px 24px rgba(0,32,150,0.035);
+}
+
+.sway-live-toolbar {
+    border-radius: 16px;
+}
+
+.sway-modal-card,
+.sway-dialog {
+    border-radius: 24px;
+    border-color: rgba(255,255,255,0.68);
+    box-shadow:
+        0 28px 80px rgba(0,32,150,0.13),
+        0 2px 10px rgba(0,20,95,0.04);
+}
+
+@media (max-width: 760px) {
+    .sway-workspace-shell {
+        gap: 18px;
+    }
+
+    .sway-workspace-sidebar {
+        border-radius: 22px;
+    }
+
+    .sway-stat-card,
+    .sway-panel {
+        border-radius: 20px;
+    }
+}
+
