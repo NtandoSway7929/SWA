@@ -761,7 +761,7 @@
                                         navGroupIcon(group.icon) +
                                     '</span>' +
                                     '<span>' +
-                                        esc(group.label) +
+                                        esc(formatDisplayText(group.label)) +
                                     '</span>' +
                                 '</span>' +
                                 '<i aria-hidden="true">⌄</i>' +
@@ -949,7 +949,7 @@
             '<div class="sway-workspace-heading">' +
                 '<div class="sway-workspace-heading-copy">' +
                     '<span class="admin-label">' +
-                        esc(meta[0]) +
+                        esc(formatDisplayText(meta[0])) +
                     "</span>" +
                     "<h2>" +
                         esc(meta[0]) +
@@ -971,7 +971,7 @@
                 '<div class="sway-panel-title">' +
                     "<div>" +
                         "<h3>" +
-                            esc(title) +
+                            esc(formatDisplayText(title)) +
                         "</h3>" +
                         (
                             subtitle
