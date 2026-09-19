@@ -5943,7 +5943,22 @@
                             '<option value="">Select invoice...</option>' +
                             state.invoices
                                 .filter(function (invoice) {
-                                    return invoice.status !== "cancelled";
+                                    const outstanding =
+                                        Number(
+                                            invoice.amount_outstanding != null
+                                                ? invoice.amount_outstanding
+                                                : invoice.total || 0
+                                        );
+
+                                    return (
+                                        invoice.status !== "cancelled" &&
+                                        (
+                                            Boolean(item.id) &&
+                                            invoice.id === item.invoice_id
+                                            ||
+                                            outstanding > 0
+                                        )
+                                    );
                                 })
                                 .map(function (invoice) {
                                     return (
