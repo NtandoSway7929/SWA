@@ -5935,6 +5935,10 @@
                         label: "Invoice number",
                         type: "select",
                         required: true,
+                        disabled: Boolean(item.id),
+                        help: item.id
+                            ? "Invoice linkage is locked after a payment is created."
+                            : "The selected invoice determines the client and project automatically.",
                         options:
                             '<option value="">Select invoice...</option>' +
                             state.invoices
@@ -5968,81 +5972,11 @@
                                 }).join("")
                     },
                     {
-                        key: "client_id",
-                        label: "Client",
-                        type: "select",
-                        options:
-                            '<option value="">No client</option>' +
-                            state.clients.map(function (client) {
-                                return (
-                                    '<option value="' +
-                                    esc(client.id) +
-                                    '"' +
-                                    (
-                                        client.id === item.client_id
-                                            ? " selected"
-                                            : ""
-                                    ) +
-                                    ">" +
-                                    esc(client.business_name) +
-                                    "</option>"
-                                );
-                            }).join("")
-                    },
-                    {
-                        key: "project_id",
-                        label: "Project",
-                        type: "select",
-                        options:
-                            '<option value="">No project</option>' +
-                            state.projects.map(function (project) {
-                                return (
-                                    '<option value="' +
-                                    esc(project.id) +
-                                    '"' +
-                                    (
-                                        project.id === item.project_id
-                                            ? " selected"
-                                            : ""
-                                    ) +
-                                    ">" +
-                                    esc(project.name) +
-                                    "</option>"
-                                );
-                            }).join("")
-                    },
-                    {
                         key: "amount",
-                        label: "Amount (ZAR)",
+                        label: "Amount received (ZAR)",
                         type: "number",
                         required: true,
                         value: item.amount
-                    },
-                    {
-                        key: "status",
-                        label: "Status",
-                        type: "select",
-                        options:
-                            [
-                                "due",
-                                "partially paid",
-                                "paid",
-                                "overdue"
-                            ].map(function (value) {
-                                return (
-                                    '<option value="' +
-                                    value +
-                                    '"' +
-                                    (
-                                        value === item.status
-                                            ? " selected"
-                                            : ""
-                                    ) +
-                                    ">" +
-                                    value +
-                                    "</option>"
-                                );
-                            }).join("")
                     },
                     {
                         key: "method",
@@ -6078,16 +6012,10 @@
                         value: item.reference
                     },
                     {
-                        key: "due_date",
-                        label: "Due date",
-                        type: "date",
-                        value: dateInput(item.due_date)
-                    },
-                    {
                         key: "paid_at",
-                        label: "Paid at",
+                        label: "Payment date",
                         type: "date",
-                        value: dateInput(item.paid_at)
+                        value: dateInput(item.paid_at) || dashboardTodayISO()
                     },
                     {
                         key: "notes",
@@ -6376,18 +6304,32 @@
                         ? ""
                         : field.value;
 
+                const disabledAttribute =
+                    field.disabled
+                        ? " disabled"
+                        : "";
+
+                const requiredAttribute =
+                    field.required && !field.disabled
+                        ? " required"
+                        : "";
+
                 if (field.type === "textarea") {
                     control =
                         '<textarea id="sway-field-' +
                         esc(field.key) +
-                        '" rows="4">' +
+                        '" rows="4"' +
+                        disabledAttribute +
+                        ">" +
                         esc(value) +
                         "</textarea>";
                 } else if (field.type === "select") {
                     control =
                         '<select id="sway-field-' +
                         esc(field.key) +
-                        '">' +
+                        '"' +
+                        disabledAttribute +
+                        ">" +
                         field.options +
                         "</select>";
                 } else {
@@ -6402,11 +6344,8 @@
                         '" value="' +
                         esc(value) +
                         '"' +
-                        (
-                            field.required
-                                ? " required"
-                                : ""
-                        ) +
+                        requiredAttribute +
+                        disabledAttribute +
                         ">";
                 }
 
@@ -6616,11 +6555,40 @@
                         );
                     }
 
+                    if (invoice.status === "cancelled") {
+                        throw new Error(
+                            "Cancelled invoices cannot receive payments."
+                        );
+                    }
+
+                    if (
+                        id &&
+                        item.invoice_id &&
+                        payload.invoice_id !== item.invoice_id
+                    ) {
+                        throw new Error(
+                            "The invoice attached to an existing payment cannot be changed."
+                        );
+                    }
+
                     const outstanding =
                         Number(
                             invoice.amount_outstanding != null
                                 ? invoice.amount_outstanding
                                 : invoice.total || 0
+                        );
+
+                    const existingPaymentAmount =
+                        id &&
+                        item.invoice_id === invoice.id
+                            ? Number(item.amount || 0)
+                            : 0;
+
+                    const availableBalance =
+                        Math.max(
+                            0,
+                            outstanding +
+                            existingPaymentAmount
                         );
 
                     const amount =
@@ -6630,11 +6598,11 @@
 
                     if (
                         amount <= 0 ||
-                        amount > outstanding
+                        amount > availableBalance
                     ) {
                         throw new Error(
-                            "Payment amount must be greater than R0 and no more than the invoice's current outstanding balance of " +
-                            money(outstanding) +
+                            "Payment amount must be greater than R0 and no more than the invoice's available balance of " +
+                            money(availableBalance) +
                             "."
                         );
                     }
