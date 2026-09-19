@@ -43,7 +43,7 @@
         },
         {
             id: "crm",
-            label: "Clients & pipeline",
+            label: "Clients & Pipeline",
             icon: "users",
             items: [
                 ["enquiries", "Enquiries"],
@@ -54,7 +54,7 @@
         },
         {
             id: "delivery",
-            label: "Work & portfolio",
+            label: "Work & Portfolio",
             icon: "briefcase",
             items: [
                 ["projects", "Projects"],
@@ -64,7 +64,7 @@
         },
         {
             id: "billing",
-            label: "Sales & billing",
+            label: "Sales & Billing",
             icon: "receipt",
             items: [
                 ["quotes", "Quotes"],
@@ -174,6 +174,16 @@
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+
+    function formatDisplayText(value) {
+        return String(value == null ? "" : value)
+            .replace(/_/g, " ")
+            .replace(/\s+/g, " ")
+            .replace(/\b([a-z])/g, function (match, character) {
+                return character.toUpperCase();
+            });
     }
 
     function money(value) {
@@ -410,7 +420,7 @@
             '<span class="sway-chip ' +
             className +
             '">' +
-            esc(text.replace(/_/g, " ")) +
+            esc(formatDisplayText(text)) +
             "</span>"
         );
     }
@@ -689,7 +699,7 @@
             esc(view) +
             '">' +
             '<span>' +
-            esc(item[1]) +
+            esc(formatDisplayText(item[1])) +
             "</span>" +
             (
                 count
@@ -2441,8 +2451,10 @@
                                     ) +
                                     " · " +
                                     esc(
-                                        item.entity_type ||
-                                        "workspace"
+                                        formatDisplayText(
+                                            item.entity_type ||
+                                            "workspace"
+                                        )
                                     ) +
                                     " · " +
                                     esc(
@@ -5149,7 +5161,7 @@
                                                 : ""
                                         ) +
                                         ">" +
-                                        value +
+                                        formatDisplayText(value) +
                                         "</option>"
                                     );
                                 }).join("")
@@ -5171,7 +5183,7 @@
                                                 : ""
                                         ) +
                                         ">" +
-                                        value +
+                                        formatDisplayText(value) +
                                         "</option>"
                                     );
                                 }).join("")
