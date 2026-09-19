@@ -2806,6 +2806,20 @@
     function renderProjects() {
         const rows =
             state.projects.map(function (item) {
+                const projectReviewAction =
+                    item.status === "completed" &&
+                    item.review_email_status !== "sent"
+                        ? '<button class="sway-row-action" data-request-review="' +
+                          esc(item.id) +
+                          '">' +
+                          (
+                              item.review_email_status === "failed"
+                                  ? "Retry review"
+                                  : "Send review"
+                          ) +
+                          "</button>"
+                        : "";
+
                 return (
                     "<tr>" +
                         "<td>" +
