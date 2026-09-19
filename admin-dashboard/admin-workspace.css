@@ -1734,6 +1734,85 @@
 }
 
 
+
+/* =========================================================
+   SWAYPHICS BACKGROUND WATERMARK
+   ========================================================= */
+
+#sway-admin-workspace {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    border-radius: 28px;
+    background:
+        radial-gradient(
+            circle at 82% 12%,
+            rgba(1,82,244,0.075) 0%,
+            rgba(1,82,244,0) 28%
+        ),
+        radial-gradient(
+            circle at 12% 88%,
+            rgba(119,193,252,0.055) 0%,
+            rgba(119,193,252,0) 26%
+        );
+}
+
+#sway-admin-workspace::before {
+    content: "";
+    position: absolute;
+    top: 7%;
+    right: 4%;
+    z-index: -1;
+    width: min(470px, 42vw);
+    aspect-ratio: 1;
+    background-image: url("../FIST.webp");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    opacity: 0.075;
+    pointer-events: none;
+    filter: saturate(0.9);
+}
+
+.sway-workspace-main {
+    position: relative;
+    z-index: 1;
+}
+
+.sway-workspace-sidebar {
+    position: relative;
+    z-index: 2;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,0.96) 0%,
+            rgba(248,251,255,0.92) 100%
+        );
+}
+
+.sway-panel,
+.sway-stat-card {
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.96) 0%,
+            rgba(248,251,255,0.88) 100%
+        );
+}
+
+@media (max-width: 760px) {
+    #sway-admin-workspace {
+        border-radius: 22px;
+    }
+
+    #sway-admin-workspace::before {
+        top: 8%;
+        right: -12%;
+        width: 360px;
+        opacity: 0.06;
+    }
+}
+
 /* =========================================================
    MOBILE WORKSPACE SIDEBAR — REFINED HEADER
    ========================================================= */
