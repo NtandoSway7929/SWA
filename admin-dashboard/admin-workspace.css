@@ -1,3 +1,10 @@
+
+.admin-main,
+.admin-header {
+    position: relative;
+    z-index: 1;
+}
+
 /* =========================================================
    SWAYPHICS ADMIN WORKSPACE
    ========================================================= */
@@ -1736,62 +1743,21 @@
 
 
 /* =========================================================
-   SWAYPHICS BACKGROUND WATERMARK
+   SWAYPHICS PAGE BACKGROUND
    ========================================================= */
 
 #sway-admin-workspace {
     position: relative;
-    isolation: isolate;
-    overflow: clip;
-    border-radius: 28px;
     background:
         radial-gradient(
             circle at 82% 12%,
-            rgba(1,82,244,0.075) 0%,
+            rgba(1,82,244,0.055) 0%,
             rgba(1,82,244,0) 28%
         ),
         radial-gradient(
             circle at 12% 88%,
-            rgba(119,193,252,0.055) 0%,
+            rgba(119,193,252,0.045) 0%,
             rgba(119,193,252,0) 26%
-        );
-}
-
-#sway-admin-workspace::before {
-    content: "";
-    position: absolute;
-    top: 5%;
-    right: 3%;
-    z-index: 0;
-    width: min(560px, 46vw);
-    aspect-ratio: 1;
-    background-image: url("../FIST.webp");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-    opacity: 0.11;
-    pointer-events: none;
-    filter: saturate(0.9);
-}
-
-#sway-admin-workspace > * {
-    position: relative;
-    z-index: 1;
-}
-
-.sway-workspace-main {
-    position: relative;
-    z-index: 1;
-}
-
-.sway-workspace-sidebar {
-    position: relative;
-    z-index: 2;
-    background:
-        linear-gradient(
-            180deg,
-            rgba(255,255,255,0.96) 0%,
-            rgba(248,251,255,0.92) 100%
         );
 }
 
@@ -1808,13 +1774,6 @@
 @media (max-width: 760px) {
     #sway-admin-workspace {
         border-radius: 22px;
-    }
-
-    #sway-admin-workspace::before {
-        top: 8%;
-        right: -14%;
-        width: 390px;
-        opacity: 0.085;
     }
 }
 
