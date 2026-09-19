@@ -1740,6 +1740,8 @@
 
 @media (max-width: 760px) {
     .sway-workspace-sidebar {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
         gap: 0;
         top: 76px;
         left: 12px;
