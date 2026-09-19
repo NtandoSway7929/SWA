@@ -726,36 +726,6 @@ before insert or update on public.invoices
 for each row
 execute function public.sync_swayphics_invoice_after_change();
 
--- Keep project payment status synchronized whenever an invoice changes.
-create or replace function public.sync_swayphics_invoice_project_after_change()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $
-begin
-    if tg_op = 'UPDATE'
-       and old.project_id is not null
-       and old.project_id is distinct from new.project_id then
-        perform public.sync_swayphics_project_payment_status(old.project_id);
-    end if;
-
-    if new.project_id is not null then
-        perform public.sync_swayphics_project_payment_status(new.project_id);
-    end if;
-
-    return new;
-end;
-$;
-
-drop trigger if exists trg_sync_swayphics_invoice_project_after_change
-on public.invoices;
-
-create trigger trg_sync_swayphics_invoice_project_after_change
-after insert or update on public.invoices
-for each row
-execute function public.sync_swayphics_invoice_project_after_change();
-
 -- Project completion automation:
 --   * create a portfolio record if one does not exist
 --   * queue a client review request exactly once
