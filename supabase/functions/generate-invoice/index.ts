@@ -801,10 +801,6 @@ async function buildPdf(
         ? "Account holder: " +
           settings.account_name
         : "",
-      settings.account_number
-        ? "Account number: " +
-          settings.account_number
-        : "",
       settings.account_type
         ? "Account type: " +
           settings.account_type
@@ -838,6 +834,42 @@ async function buildPdf(
 
         y -= 11;
       }
+    }
+
+    if (settings.account_number) {
+      y -= 6;
+
+      page.drawText("ACCOUNT NUMBER", {
+        x: margin,
+        y,
+        size: 7,
+        font: bold,
+        color: BRAND,
+        characterSpacing: 1,
+      });
+
+      y -= 16;
+
+      page.drawRectangle({
+        x: margin,
+        y: y - 8,
+        width: 220,
+        height: 24,
+        color: rgb(0.97, 0.98, 1),
+        borderColor: BORDER,
+        borderWidth: 0.7,
+      });
+
+      page.drawText(String(settings.account_number), {
+        x: margin + 10,
+        y: y - 1,
+        size: 10,
+        font: bold,
+        color: DARK,
+        characterSpacing: 0.8,
+      });
+
+      y -= 30;
     }
   }
 
@@ -966,13 +998,17 @@ function emailHtml(
           settings.swift_bic
             ? `
         <div style="margin-top:18px;padding:16px 18px;border-radius:12px;background:#F7FAFF;border:1px solid #E0E6F0;font-size:12px;line-height:1.75;color:#56627A;">
-          <strong style="display:block;margin-bottom:6px;color:#081533;">Banking details</strong>
+          <strong style="display:block;margin-bottom:8px;color:#081533;">Banking details</strong>
           ${settings.bank_name ? `Bank: ${escapeHtml(settings.bank_name)}<br>` : ""}
           ${settings.account_name ? `Account holder: ${escapeHtml(settings.account_name)}<br>` : ""}
-          ${settings.account_number ? `Account number: ${escapeHtml(settings.account_number)}<br>` : ""}
           ${settings.account_type ? `Account type: ${escapeHtml(settings.account_type)}<br>` : ""}
           ${settings.branch_code ? `Branch code: ${escapeHtml(settings.branch_code)}<br>` : ""}
-          ${settings.swift_bic ? `SWIFT / BIC: ${escapeHtml(settings.swift_bic)}` : ""}
+          ${settings.swift_bic ? `SWIFT / BIC: ${escapeHtml(settings.swift_bic)}<br>` : ""}
+          ${settings.account_number ? `
+          <div style="margin-top:12px;padding:12px 14px;border-radius:10px;background:#FFFFFF;border:1px solid #D9E2F0;">
+            <div style="font-size:10px;font-weight:800;letter-spacing:.12em;color:#0152F4;">ACCOUNT NUMBER</div>
+            <div style="margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:17px;font-weight:800;letter-spacing:.08em;color:#081533;user-select:text;-webkit-user-select:text;">${escapeHtml(String(settings.account_number))}</div>
+          </div>` : ""}
         </div>`
             : ""
         }
