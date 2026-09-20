@@ -4169,7 +4169,10 @@ function renderShell() {
                 "activity_log",
                 "communication_logs",
                 "portfolio_projects",
-                "testimonials"
+                "testimonials",
+                "social_accounts",
+                "social_posts",
+                "social_metrics"
             ];
 
             let refreshTimer = null;
