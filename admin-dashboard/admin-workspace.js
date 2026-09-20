@@ -1279,7 +1279,12 @@
     }
 
     function notificationTimeValue(item) {
-        const raw = notificationDateValue(item);
+        const raw =
+            typeof item === "string" ||
+            typeof item === "number"
+                ? item
+                : notificationDateValue(item);
+
         const time = new Date(raw).getTime();
 
         return Number.isFinite(time)
