@@ -407,9 +407,24 @@ Deno.serve(async (req) => {
         secondaryLookup.type;
     }
 
+    /*
+     * The dashboard already supplies the recipient email from the selected
+     * lead/client. Resolve the record when possible for auditing and
+     * communication logging, but do not block a legitimate admin send merely
+     * because the contact row cannot be resolved at that exact moment.
+     */
+    if (!contact && requestedRecipientEmail) {
+      contact = {
+        id: contactId || "",
+        business_name: "",
+        contact_name: "",
+        email: requestedRecipientEmail,
+      };
+    }
+
     if (!contact) {
       console.error(
-        "Recipient lookup failed:",
+        "Recipient lookup failed and no usable recipient email was supplied:",
         {
           requested_contact_type: contactType,
           contact_id: contactId,
@@ -419,12 +434,16 @@ Deno.serve(async (req) => {
       );
 
       throw new Error(
-        "The selected recipient could not be found in the Swayphics contacts. Refresh the dashboard and select the recipient again.",
+        "A valid recipient email address is required to send this message.",
       );
     }
 
     const recipientEmail =
-      String(contact.email || "").trim().toLowerCase();
+      String(
+        contact.email ||
+        requestedRecipientEmail ||
+        "",
+      ).trim().toLowerCase();
 
     if (!recipientEmail) {
       return Response.json(
@@ -441,24 +460,12 @@ Deno.serve(async (req) => {
 
     if (
       requestedRecipientEmail &&
+      contact.email &&
       recipientEmail !==
         requestedRecipientEmail
     ) {
       throw new Error(
         "The selected recipient email does not match the saved contact. Refresh the dashboard and select the recipient again.",
-      );
-    }
-
-    if (!recipientEmail) {
-      return Response.json(
-        {
-          error:
-            "The selected contact does not have an email address.",
-        },
-        {
-          status: 422,
-          headers: corsHeaders,
-        },
       );
     }
 
@@ -547,31 +554,45 @@ Deno.serve(async (req) => {
       result?.id ||
       null;
 
+    const canLogContact =
+      Boolean(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          String(contact.id || ""),
+        ),
+      );
+
     let communicationInsert =
-      await supabase
-        .from("communication_logs")
-        .insert({
-          client_id:
-            resolvedContactType === "client"
-              ? contact.id
-              : null,
-          lead_id:
-            resolvedContactType === "lead"
-              ? contact.id
-              : null,
-          channel: "Email",
-          direction: "outbound",
-          subject,
-          message,
-          contacted_at:
-            new Date().toISOString(),
-          created_by:
-            userData.user.id,
-        });
+      canLogContact
+        ? await supabase
+            .from("communication_logs")
+            .insert({
+              client_id:
+                resolvedContactType === "client"
+                  ? contact.id
+                  : null,
+              lead_id:
+                resolvedContactType === "lead"
+                  ? contact.id
+                  : null,
+              channel: "Email",
+              direction: "outbound",
+              subject,
+              message,
+              contacted_at:
+                new Date().toISOString(),
+              created_by:
+                userData.user.id,
+            })
+        : {
+            error: {
+              message:
+                "The email was sent, but the selected contact record could not be resolved for communication logging.",
+            },
+          };
 
     // Retry once using the normalized contact type. This protects against
     // stale client/lead selections after a contact has been converted.
-    if (communicationInsert.error) {
+    if (communicationInsert.error && canLogContact) {
       const retryPayload =
         resolvedContactType === "client"
           ? {
@@ -624,11 +645,17 @@ Deno.serve(async (req) => {
             recipientEmail,
           ).trim(),
         entity_type:
-          resolvedContactType === "client"
-            ? "clients"
-            : "leads",
+          canLogContact
+            ? (
+                resolvedContactType === "client"
+                  ? "clients"
+                  : "leads"
+              )
+            : "email",
         entity_id:
-          contact.id,
+          canLogContact
+            ? contact.id
+            : null,
       });
 
     return Response.json(
