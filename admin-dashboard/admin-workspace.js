@@ -818,6 +818,7 @@
             api("/rest/v1/payments?select=*&order=created_at.desc"),
             api("/rest/v1/website_enquiries?select=*&order=created_at.desc"),
             api("/rest/v1/activity_log?select=*&order=created_at.desc&limit=20"),
+            api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
             api("/rest/v1/invoices?select=*&order=created_at.desc")
         ]);
 
@@ -830,7 +831,8 @@
         state.payments = results[6] || [];
         state.enquiries = results[7] || [];
         state.activities = results[8] || [];
-        state.invoices = results[9] || [];
+        state.announcements = results[9] || [];
+        state.invoices = results[10] || [];
 
         state.initialDataLoaded = true;
         state.initialDataLoading = false;
