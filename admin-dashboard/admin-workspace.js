@@ -15364,7 +15364,7 @@ function simpleBars(items, color) {
 
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client? Linked projects, tasks, follow-ups and payments may also be removed because some of these records use cascading deletion."
+                ? "Permanently delete this client? This removes the client and linked projects, tasks, follow-ups, payments, communication logs and invoices. Quotes are retained without the client link. This cannot be undone."
                 : "Delete this " +
                   config.title.toLowerCase() +
                   "?";
@@ -15373,6 +15373,27 @@ function simpleBars(items, color) {
             !(await swayConfirm(confirmMessage))
         ) {
             return;
+        }
+
+        if (type === "clients") {
+            const clientInvoices =
+                state.invoices.filter(function (invoice) {
+                    return invoice.client_id === id;
+                });
+
+            for (const invoice of clientInvoices) {
+                await api(
+                    "/rest/v1/invoices?id=eq." +
+                    encodeURIComponent(invoice.id),
+                    {
+                        method: "DELETE",
+                        headers: headers({
+                            "Prefer":
+                                "return=minimal"
+                        })
+                    }
+                );
+            }
         }
 
         await api(
