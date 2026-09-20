@@ -5319,3 +5319,17 @@
     }
 }
 
+
+.sway-chart-area {
+    pointer-events: none;
+}
+
+.sway-chart-baseline {
+    stroke: rgba(0,32,150,0.12);
+    stroke-width: 1.2;
+}
+
+.sway-chart-point-group {
+    outline: none;
+}
+
