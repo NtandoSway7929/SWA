@@ -3204,6 +3204,425 @@
             color: #F4F7FF;
         }
 
+
+        /* Dark mode readability refinements */
+        body.sway-dark-mode {
+            color-scheme: dark;
+            --sway-dashboard-bg: #07101F;
+            --sway-surface: #0E1A2D;
+            --sway-dark: #F6F8FD;
+            --text-muted: #B4C1D3;
+            --sway-outline: rgba(255,255,255,0.12);
+            --sway-soft-surface: rgba(255,255,255,0.055);
+            --sway-soft-hover: rgba(255,255,255,0.09);
+        }
+
+        body.sway-dark-mode .admin-brand-logo {
+            filter: brightness(1.05);
+        }
+
+        body.sway-dark-mode .admin-global-search-icon {
+            color: #AAB9CD;
+        }
+
+        body.sway-dark-mode .admin-global-search-field kbd {
+            border-color: rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.07);
+            color: #AAB9CD;
+        }
+
+        body.sway-dark-mode .admin-global-search-result {
+            color: #F6F8FD;
+        }
+
+        body.sway-dark-mode .admin-global-search-result:hover,
+        body.sway-dark-mode .admin-global-search-result:focus-visible,
+        body.sway-dark-mode .sway-notification-item:hover,
+        body.sway-dark-mode .sway-notification-item:focus-visible {
+            background: rgba(1,82,244,0.12);
+            border-color: rgba(119,193,252,0.16);
+        }
+
+        body.sway-dark-mode .admin-global-search-result-icon {
+            background: rgba(119,193,252,0.11);
+            color: #78C3FF;
+        }
+
+        body.sway-dark-mode .admin-global-search-result-type,
+        body.sway-dark-mode .admin-global-search-hint,
+        body.sway-dark-mode .admin-global-search-empty {
+            color: #A9B8CC;
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-group-icon {
+            background: rgba(119,193,252,0.08);
+            color: #78C3FF;
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-group.open .sway-workspace-nav-group-icon {
+            background: rgba(119,193,252,0.12);
+            color: #A7D8FF;
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-button.active {
+            color: #FFFFFF;
+            background: linear-gradient(135deg, #003CCB 0%, #176FFF 100%);
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-button.active:hover {
+            color: #FFFFFF;
+            background: linear-gradient(135deg, #0A48D8 0%, #2C83FF 100%);
+        }
+
+        body.sway-dark-mode .sway-workspace-heading h2,
+        body.sway-dark-mode .sway-workspace-heading p,
+        body.sway-dark-mode .sway-workspace-heading .admin-label {
+            text-shadow: 0 1px 16px rgba(0,0,0,0.18);
+        }
+
+        body.sway-dark-mode .sway-inline-note,
+        body.sway-dark-mode .sway-insight-note,
+        body.sway-dark-mode .sway-live-toolbar {
+            color: #D5DFEB;
+            border-color: rgba(255,255,255,0.11);
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(20,35,58,0.92) 0%,
+                    rgba(12,24,42,0.86) 100%
+                );
+        }
+
+        body.sway-dark-mode .sway-inline-note strong,
+        body.sway-dark-mode .sway-insight-note strong,
+        body.sway-dark-mode .sway-live-toolbar strong {
+            color: #F6F8FD;
+        }
+
+        body.sway-dark-mode .sway-stat-card,
+        body.sway-dark-mode .sway-panel,
+        body.sway-dark-mode .sway-cash-flow,
+        body.sway-dark-mode .sway-revenue-pipeline,
+        body.sway-dark-mode .sway-attention-panel,
+        body.sway-dark-mode .sway-followup-automation {
+            border-color: rgba(255,255,255,0.11);
+        }
+
+        body.sway-dark-mode .sway-panel-title h3,
+        body.sway-dark-mode .sway-cash-flow-head h3,
+        body.sway-dark-mode .sway-revenue-pipeline-head h3,
+        body.sway-dark-mode .sway-attention-header h3,
+        body.sway-dark-mode .sway-followup-automation-head h3,
+        body.sway-dark-mode .sway-stat-card .value {
+            color: #F7F9FD;
+        }
+
+        body.sway-dark-mode .sway-panel-title p,
+        body.sway-dark-mode .sway-cash-flow-head p,
+        body.sway-dark-mode .sway-revenue-pipeline-head p,
+        body.sway-dark-mode .sway-attention-header p,
+        body.sway-dark-mode .sway-followup-automation-head p,
+        body.sway-dark-mode .sway-stat-card .label,
+        body.sway-dark-mode .sway-stat-card .hint {
+            color: #B2C0D2;
+        }
+
+        body.sway-dark-mode .sway-table th {
+            color: #B7C5D7;
+        }
+
+        body.sway-dark-mode .sway-table td {
+            color: #F1F5FB;
+        }
+
+        body.sway-dark-mode .sway-table tbody tr:hover td {
+            background: rgba(119,193,252,0.035);
+        }
+
+        body.sway-dark-mode .sway-table-empty {
+            color: #AEBCCE;
+        }
+
+        body.sway-dark-mode .sway-row-action,
+        body.sway-dark-mode .sway-quick-action,
+        body.sway-dark-mode .sway-quick-create-item,
+        body.sway-dark-mode .sway-revenue-stage,
+        body.sway-dark-mode .sway-revenue-quote-row,
+        body.sway-dark-mode .sway-attention-item {
+            border-color: rgba(255,255,255,0.105);
+            background: rgba(255,255,255,0.045);
+            color: #EFF4FB;
+        }
+
+        body.sway-dark-mode .sway-row-action:hover,
+        body.sway-dark-mode .sway-quick-action:hover,
+        body.sway-dark-mode .sway-quick-create-item:hover,
+        body.sway-dark-mode .sway-revenue-stage:hover,
+        body.sway-dark-mode .sway-revenue-quote-row:hover,
+        body.sway-dark-mode .sway-attention-item:hover {
+            border-color: rgba(119,193,252,0.20);
+            background: rgba(119,193,252,0.075);
+            color: #FFFFFF;
+        }
+
+        body.sway-dark-mode .sway-row-action.danger,
+        body.sway-dark-mode .sway-workspace-button.danger,
+        body.sway-dark-mode .sway-cash-flow-stat.danger strong {
+            color: #FF9C9C;
+        }
+
+        body.sway-dark-mode .sway-chip {
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        body.sway-dark-mode .sway-chip.neutral {
+            color: #C0CCDB;
+            background: rgba(255,255,255,0.075);
+        }
+
+        body.sway-dark-mode .sway-chip.warning {
+            color: #FFD98A;
+            background: rgba(245,158,11,0.15);
+        }
+
+        body.sway-dark-mode .sway-chip.success {
+            color: #91E8B0;
+            background: rgba(34,197,94,0.14);
+        }
+
+        body.sway-dark-mode .sway-chip.danger {
+            color: #FFB0B0;
+            background: rgba(248,113,113,0.14);
+        }
+
+        body.sway-dark-mode .sway-chart-grid-line {
+            stroke: rgba(255,255,255,0.105) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-baseline {
+            stroke: rgba(255,255,255,0.15) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-axis-label,
+        body.sway-dark-mode .sway-chart-y-label {
+            fill: #AAB9CD !important;
+        }
+
+        body.sway-dark-mode .sway-chart-value-label {
+            fill: #F7F9FD !important;
+            stroke: rgba(7,16,31,0.92) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-point {
+            fill: #73BEFF !important;
+        }
+
+        body.sway-dark-mode .sway-chart-line {
+            stroke: #73BEFF !important;
+        }
+
+        body.sway-dark-mode .sway-chart-area {
+            fill: #73BEFF !important;
+            fill-opacity: 0.08 !important;
+        }
+
+        body.sway-dark-mode .sway-chart-bar {
+            fill: #5FB1FF !important;
+        }
+
+        body.sway-dark-mode .sway-chart-bar-group:hover .sway-chart-bar {
+            filter: brightness(1.10) saturate(1.05);
+        }
+
+        body.sway-dark-mode .sway-chart-summary-item {
+            border-color: rgba(255,255,255,0.09);
+            background: rgba(255,255,255,0.045);
+        }
+
+        body.sway-dark-mode .sway-chart-summary-item span {
+            color: #AAB9CD;
+        }
+
+        body.sway-dark-mode .sway-chart-summary-item strong {
+            color: #F3F7FC;
+        }
+
+        body.sway-dark-mode .sway-chart-summary-item small {
+            color: #91A2B8;
+        }
+
+        body.sway-dark-mode .sway-simple-bar-head span,
+        body.sway-dark-mode .sway-revenue-stage-top span,
+        body.sway-dark-mode .sway-revenue-quote-row strong,
+        body.sway-dark-mode .sway-cash-flow-table-head h4,
+        body.sway-dark-mode .sway-cash-flow-stat strong {
+            color: #F3F7FC;
+        }
+
+        body.sway-dark-mode .sway-simple-bar-head strong,
+        body.sway-dark-mode .sway-revenue-stage-foot small,
+        body.sway-dark-mode .sway-revenue-quote-row small,
+        body.sway-dark-mode .sway-cash-flow-table-head p,
+        body.sway-dark-mode .sway-cash-flow-stat span,
+        body.sway-dark-mode .sway-cash-flow-stat small {
+            color: #AEBCCE;
+        }
+
+        body.sway-dark-mode .sway-simple-bar-track,
+        body.sway-dark-mode .sway-revenue-stage-track {
+            background: rgba(255,255,255,0.10);
+        }
+
+        body.sway-dark-mode .sway-mini-bar-series {
+            border-bottom-color: rgba(255,255,255,0.10);
+        }
+
+        body.sway-dark-mode .sway-mini-bar.created {
+            background: #8ED0FF;
+        }
+
+        body.sway-dark-mode .sway-mini-bar.completed {
+            background: #4D8FFF;
+        }
+
+        body.sway-dark-mode .sway-mini-bar-group small {
+            color: #AAB9CD;
+        }
+
+        body.sway-dark-mode .sway-cash-flow-stat,
+        body.sway-dark-mode .sway-cash-flow-table,
+        body.sway-dark-mode .sway-revenue-pipeline-stages,
+        body.sway-dark-mode .sway-revenue-quotes {
+            border-color: rgba(255,255,255,0.095);
+            background: rgba(255,255,255,0.038);
+        }
+
+        body.sway-dark-mode .sway-cash-flow-stat.danger {
+            border-color: rgba(248,113,113,0.18);
+            background: rgba(248,113,113,0.06);
+        }
+
+        body.sway-dark-mode .sway-cash-flow-due-item,
+        body.sway-dark-mode .sway-cash-flow-collection-item {
+            border-color: rgba(255,255,255,0.075);
+            background: rgba(255,255,255,0.035);
+            color: #EEF3F9;
+        }
+
+        body.sway-dark-mode .sway-revenue-pipeline-totals span {
+            color: #AEBCCE;
+        }
+
+        body.sway-dark-mode .sway-revenue-pipeline-totals strong,
+        body.sway-dark-mode .sway-revenue-stage-top strong,
+        body.sway-dark-mode .sway-revenue-quote-row b {
+            color: #78C3FF;
+        }
+
+        body.sway-dark-mode .sway-attention-item-copy strong,
+        body.sway-dark-mode .sway-followup-automation-copy strong {
+            color: #F5F8FD;
+        }
+
+        body.sway-dark-mode .sway-attention-item-copy span,
+        body.sway-dark-mode .sway-followup-automation-copy span,
+        body.sway-dark-mode .sway-followup-automation-copy small {
+            color: #AEBCCE;
+        }
+
+        body.sway-dark-mode .sway-client360-section,
+        body.sway-dark-mode .sway-client360-notes,
+        body.sway-dark-mode .sway-client360-history {
+            border-color: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.032);
+        }
+
+        body.sway-dark-mode .sway-client360-section-head h4,
+        body.sway-dark-mode .sway-client360-contact span,
+        body.sway-dark-mode .sway-client360-note-body,
+        body.sway-dark-mode .sway-client360-history-item strong {
+            color: #F2F6FC;
+        }
+
+        body.sway-dark-mode .sway-client360-section-head span,
+        body.sway-dark-mode .sway-client360-list-item small,
+        body.sway-dark-mode .sway-client360-history-item span {
+            color: #AEBCCE;
+        }
+
+        body.sway-dark-mode .sway-client360-list-item {
+            border-color: rgba(255,255,255,0.07);
+            background: rgba(255,255,255,0.035);
+            color: #F2F6FC;
+        }
+
+        body.sway-dark-mode .sway-client360-list-item:hover {
+            background: rgba(119,193,252,0.075);
+            border-color: rgba(119,193,252,0.17);
+        }
+
+        body.sway-dark-mode .sway-form-field input::placeholder,
+        body.sway-dark-mode .sway-form-field textarea::placeholder,
+        body.sway-dark-mode .sway-dialog-field input::placeholder,
+        body.sway-dark-mode .sway-dialog-field textarea::placeholder {
+            color: #7F91A8 !important;
+        }
+
+        body.sway-dark-mode select option {
+            background: #0B1526;
+            color: #F3F7FE;
+        }
+
+        body.sway-dark-mode .sway-workspace-button:not(.primary) {
+            color: #EAF1F9;
+        }
+
+        body.sway-dark-mode .sway-workspace-button:not(.primary):hover {
+            color: #FFFFFF;
+        }
+
+        body.sway-dark-mode .portfolio-admin-item,
+        body.sway-dark-mode #testimonials-admin-section .testimonial-admin-card {
+            border-color: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.038);
+        }
+
+        body.sway-dark-mode .portfolio-admin-item strong,
+        body.sway-dark-mode #testimonials-admin-section .testimonial-admin-card strong {
+            color: #F4F7FC;
+        }
+
+        body.sway-dark-mode .portfolio-admin-item span,
+        body.sway-dark-mode #testimonials-admin-section .testimonial-admin-card span {
+            color: #AEBCCE;
+        }
+
+        body.sway-dark-mode .sway-notification-icon {
+            background: rgba(119,193,252,0.10);
+            color: #78C3FF;
+        }
+
+        body.sway-dark-mode .sway-notification-item-danger .sway-notification-icon {
+            background: rgba(248,113,113,0.13);
+            color: #FF9A9A;
+        }
+
+        body.sway-dark-mode .sway-notification-item-warning .sway-notification-icon {
+            background: rgba(245,158,11,0.13);
+            color: #FFD17A;
+        }
+
+        body.sway-dark-mode .sway-notification-item-success .sway-notification-icon {
+            background: rgba(34,197,94,0.13);
+            color: #8FE7AA;
+        }
+
+        body.sway-dark-mode .admin-notification-kicker,
+        body.sway-dark-mode .sway-live-badge {
+            color: #79C4FF;
+        }
+
+
         @media (max-width: 760px) {
             #sway-admin-workspace {
                 font-size: 14px;
