@@ -6350,6 +6350,49 @@ function renderShell() {
                     "</section>" +
                 "</div>" +
 
+                '<div class="sway-client360-communications">' +
+                    '<section class="sway-client360-section">' +
+                        '<div class="sway-client360-section-head"><h4>Documents</h4><span>' +
+                            state.documents.filter(function (item) {
+                                return item.client_id === clientId;
+                            }).length +
+                        "</span></div>" +
+                        (
+                            state.documents.filter(function (item) {
+                                return item.client_id === clientId;
+                            }).length
+                                ? '<div class="sway-client360-list">' +
+                                    state.documents.filter(function (item) {
+                                        return item.client_id === clientId;
+                                    }).slice(0, 8).map(function (item) {
+                                        return (
+                                            '<div class="sway-client360-list-item">' +
+                                                "<span><strong>" +
+                                                    esc(item.file_name) +
+                                                "</strong><small>" +
+                                                    esc(
+                                                        item.project_id
+                                                            ? projectName(item.project_id)
+                                                            : "Client document"
+                                                    ) +
+                                                "</small></span>" +
+                                                '<button type="button" class="sway-row-action" data-download-document="' +
+                                                    esc(item.id) +
+                                                '">Download</button>' +
+                                            "</div>"
+                                        );
+                                    }).join("") +
+                                  "</div>"
+                                : '<div class="sway-client360-empty">No documents uploaded for this client yet.</div>'
+                        ) +
+                        '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
+                            '<button type="button" class="sway-workspace-button" data-upload-client-document="' +
+                                esc(clientId) +
+                            '">+ Upload document</button>' +
+                        "</div>" +
+                    "</section>" +
+                "</div>" +
+
                 '<div class="sway-client360-lower">' +
                     '<section class="sway-client360-notes">' +
                         '<div class="sway-client360-section-head"><h4>Client notes</h4></div>' +
@@ -6468,6 +6511,20 @@ function renderShell() {
         modal.querySelectorAll("[data-client-portal]").forEach(function (button) {
             button.addEventListener("click", function () {
                 createClientPortalLink(button.dataset.clientPortal);
+            });
+        });
+
+        modal.querySelectorAll("[data-download-document]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                downloadClientDocument(button.dataset.downloadDocument);
+            });
+        });
+
+        modal.querySelectorAll("[data-upload-client-document]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                openDocumentUploadModal(
+                    button.dataset.uploadClientDocument
+                );
             });
         });
 
@@ -9991,6 +10048,7 @@ function renderShell() {
             enquiries: state.enquiries,
             announcements: state.announcements,
             portal_requests: state.portalRequests,
+            documents: state.documents,
             activities: state.activities
         };
 
@@ -10064,6 +10122,488 @@ function renderShell() {
                 );
             }, index * 180);
         });
+    }
+
+
+    const CLIENT_DOCUMENT_BUCKET =
+        "swayphics-client-files";
+
+    function storageObjectUrl(path) {
+        return (
+            SUPABASE_URL +
+            "/storage/v1/object/" +
+            CLIENT_DOCUMENT_BUCKET +
+            "/" +
+            String(path || "")
+                .split("/")
+                .map(encodeURIComponent)
+                .join("/")
+        );
+    }
+
+    async function uploadClientDocument(clientId, file, projectId) {
+        if (!clientId || !file) {
+            throw new Error(
+                "Select a client and a file."
+            );
+        }
+
+        const maxBytes =
+            20 * 1024 * 1024;
+
+        if (file.size > maxBytes) {
+            throw new Error(
+                "Files must be 20 MB or smaller."
+            );
+        }
+
+        const originalName =
+            String(file.name || "document")
+                .replace(/[^a-zA-Z0-9._-]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .slice(0, 160) ||
+            "document";
+
+        const uniqueName =
+            Date.now() +
+            "-" +
+            randomPortalToken().slice(0, 16) +
+            "-" +
+            originalName;
+
+        const storagePath =
+            String(clientId) +
+            "/" +
+            uniqueName;
+
+        const uploadResponse =
+            await fetch(
+                storageObjectUrl(storagePath),
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type":
+                            file.type ||
+                            "application/octet-stream",
+                        "x-upsert": "false"
+                    }),
+                    body: file
+                }
+            );
+
+        if (!uploadResponse.ok) {
+            const message =
+                await uploadResponse.text();
+
+            throw new Error(
+                "File upload failed: " +
+                (
+                    message ||
+                    "Storage rejected the file."
+                )
+            );
+        }
+
+        try {
+            await api(
+                "/rest/v1/client_documents",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    }),
+                    body:
+                        JSON.stringify({
+                            client_id: clientId,
+                            project_id:
+                                projectId || null,
+                            file_name:
+                                file.name,
+                            storage_path:
+                                storagePath,
+                            mime_type:
+                                file.type || null,
+                            size_bytes:
+                                Number(file.size || 0),
+                            uploaded_by:
+                                state.currentUser.id
+                        })
+                }
+            );
+        } catch (error) {
+            await fetch(
+                storageObjectUrl(storagePath),
+                {
+                    method: "DELETE",
+                    headers: headers()
+                }
+            ).catch(function () {
+                // Best-effort rollback.
+            });
+
+            throw error;
+        }
+
+        await logActivity(
+            "Uploaded client document",
+            "client_documents",
+            null
+        );
+    }
+
+    async function downloadClientDocument(documentId) {
+        const documentRecord =
+            state.documents.find(function (item) {
+                return item.id === documentId;
+            });
+
+        if (!documentRecord) return;
+
+        try {
+            const response =
+                await fetch(
+                    storageObjectUrl(
+                        documentRecord.storage_path
+                    ),
+                    {
+                        method: "GET",
+                        headers: headers()
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    "The file could not be downloaded."
+                );
+            }
+
+            const blob =
+                await response.blob();
+
+            const url =
+                URL.createObjectURL(blob);
+
+            const anchor =
+                document.createElement("a");
+
+            anchor.href = url;
+            anchor.download =
+                documentRecord.file_name ||
+                "document";
+
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+
+            window.setTimeout(function () {
+                URL.revokeObjectURL(url);
+            }, 1000);
+        } catch (error) {
+            swayAlert(
+                error.message ||
+                "Unable to download the document."
+            );
+        }
+    }
+
+    async function deleteClientDocument(documentId) {
+        const documentRecord =
+            state.documents.find(function (item) {
+                return item.id === documentId;
+            });
+
+        if (!documentRecord) return;
+
+        if (
+            !(await swayConfirm(
+                "Delete this document? The stored file will also be removed."
+            ))
+        ) {
+            return;
+        }
+
+        try {
+            const storageResponse =
+                await fetch(
+                    storageObjectUrl(
+                        documentRecord.storage_path
+                    ),
+                    {
+                        method: "DELETE",
+                        headers: headers()
+                    }
+                );
+
+            if (!storageResponse.ok) {
+                throw new Error(
+                    "The stored file could not be removed."
+                );
+            }
+
+            await api(
+                "/rest/v1/client_documents?id=eq." +
+                encodeURIComponent(documentId),
+                {
+                    method: "DELETE",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    })
+                }
+            );
+
+            await logActivity(
+                "Deleted client document",
+                "client_documents",
+                documentId
+            );
+
+            await refreshData();
+            renderShell();
+            renderView();
+        } catch (error) {
+            swayAlert(
+                error.message ||
+                "Unable to delete the document."
+            );
+        }
+    }
+
+    async function openDocumentUploadModal(prefillClientId, prefillProjectId) {
+        const modal =
+            document.createElement("div");
+
+        modal.className =
+            "sway-modal";
+
+        const clientOptions =
+            '<option value="">Select client...</option>' +
+            state.clients
+                .filter(function (client) {
+                    return client.status !== "archived";
+                })
+                .map(function (client) {
+                    return (
+                        '<option value="' +
+                        esc(client.id) +
+                        '"' +
+                        (
+                            client.id === prefillClientId
+                                ? " selected"
+                                : ""
+                        ) +
+                        ">" +
+                        esc(client.business_name) +
+                        "</option>"
+                    );
+                }).join("");
+
+        const projectOptions =
+            '<option value="">No project</option>' +
+            state.projects.map(function (project) {
+                return (
+                    '<option value="' +
+                    esc(project.id) +
+                    '"' +
+                    (
+                        project.id === prefillProjectId
+                            ? " selected"
+                            : ""
+                    ) +
+                    ">" +
+                    esc(project.name) +
+                    " — " +
+                    esc(clientName(project.client_id)) +
+                    "</option>"
+                );
+            }).join("");
+
+        modal.innerHTML =
+            '<div class="sway-modal-backdrop"></div>' +
+            '<div class="sway-modal-card" role="dialog" aria-modal="true">' +
+                '<div class="sway-modal-header">' +
+                    '<div><span class="admin-label">Documents</span><h3>Upload document</h3></div>' +
+                    '<button type="button" class="sway-modal-close" data-document-close aria-label="Close">×</button>' +
+                "</div>" +
+                '<div class="sway-form-grid">' +
+                    '<div class="sway-form-field">' +
+                        '<label for="sway-document-client">Client</label>' +
+                        '<select id="sway-document-client" required>' +
+                            clientOptions +
+                        "</select>" +
+                    "</div>" +
+                    '<div class="sway-form-field">' +
+                        '<label for="sway-document-project">Project</label>' +
+                        '<select id="sway-document-project">' +
+                            projectOptions +
+                        "</select>" +
+                    "</div>" +
+                    '<div class="sway-form-field full">' +
+                        '<label for="sway-document-file">File</label>' +
+                        '<input type="file" id="sway-document-file" required>' +
+                        '<small>Private storage · maximum 20 MB.</small>' +
+                    "</div>" +
+                    '<div class="sway-form-field full">' +
+                        '<div class="sway-modal-actions">' +
+                            '<button type="button" class="sway-workspace-button" data-document-close>Cancel</button>' +
+                            '<button type="button" class="sway-workspace-button primary" id="sway-document-upload">Upload</button>' +
+                        "</div>" +
+                    "</div>" +
+                "</div>" +
+            "</div>";
+
+        document.body.appendChild(modal);
+
+        function close() {
+            modal.remove();
+        }
+
+        modal
+            .querySelectorAll("[data-document-close]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    close
+                );
+            });
+
+        modal
+            .querySelector("#sway-document-upload")
+            .addEventListener(
+                "click",
+                async function () {
+                    const button =
+                        modal.querySelector(
+                            "#sway-document-upload"
+                        );
+
+                    const clientSelect =
+                        modal.querySelector(
+                            "#sway-document-client"
+                        );
+
+                    const projectSelect =
+                        modal.querySelector(
+                            "#sway-document-project"
+                        );
+
+                    const fileInput =
+                        modal.querySelector(
+                            "#sway-document-file"
+                        );
+
+                    const file =
+                        fileInput.files &&
+                        fileInput.files[0];
+
+                    if (!clientSelect.value || !file) {
+                        swayAlert(
+                            "Select a client and a file before uploading."
+                        );
+                        return;
+                    }
+
+                    button.disabled = true;
+                    button.textContent =
+                        "Uploading...";
+
+                    try {
+                        await uploadClientDocument(
+                            clientSelect.value,
+                            file,
+                            projectSelect.value || null
+                        );
+
+                        await refreshData();
+                        close();
+                        renderShell();
+                        renderView();
+
+                        swayAlert(
+                            "Document uploaded."
+                        );
+                    } catch (error) {
+                        swayAlert(
+                            error.message ||
+                            "Unable to upload the document."
+                        );
+                    } finally {
+                        button.disabled = false;
+                        button.textContent =
+                            "Upload";
+                    }
+                }
+            );
+    }
+
+    function renderDocuments() {
+        const rows =
+            state.documents.map(function (item) {
+                return (
+                    "<tr>" +
+                        "<td><strong>" +
+                            esc(item.file_name) +
+                        "</strong></td>" +
+                        "<td>" +
+                            esc(clientName(item.client_id)) +
+                        "</td>" +
+                        "<td>" +
+                            (
+                                item.project_id
+                                    ? esc(projectName(item.project_id))
+                                    : "—"
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(
+                                item.mime_type ||
+                                "File"
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(
+                                Math.max(
+                                    1,
+                                    Math.round(
+                                        Number(item.size_bytes || 0) /
+                                        1024
+                                    )
+                                ) +
+                                " KB"
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(dateTime(item.created_at)) +
+                        "</td>" +
+                        "<td>" +
+                            '<div class="sway-row-actions">' +
+                                '<button type="button" class="sway-row-action" data-download-document="' +
+                                    esc(item.id) +
+                                '">Download</button>' +
+                                '<button type="button" class="sway-row-action danger" data-delete-document="' +
+                                    esc(item.id) +
+                                '">Delete</button>' +
+                            "</div>" +
+                        "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+
+        return (
+            heading(
+                '<button type="button" class="sway-workspace-button primary" data-upload-document>+ Upload document</button>'
+            ) +
+            panel(
+                "Private documents",
+                "Client and project files stored in private Supabase Storage. Files are only accessible to authenticated Swayphics admins.",
+                rows
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>File</th><th>Client</th><th>Project</th><th>Type</th><th>Size</th><th>Uploaded</th><th></th></tr></thead><tbody>' +
+                      rows +
+                      "</tbody></table></div>"
+                    : empty("No documents uploaded yet. Use Client 360 or Upload document to add files.")
+            )
+        );
     }
 
     function renderPortalRequests() {
@@ -13218,6 +13758,43 @@ function renderShell() {
                                 "Unable to update the portal request."
                             );
                         }
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-upload-document]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openDocumentUploadModal();
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-download-document]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        downloadClientDocument(
+                            button.dataset.downloadDocument
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-delete-document]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        deleteClientDocument(
+                            button.dataset.deleteDocument
+                        );
                     }
                 );
             });
