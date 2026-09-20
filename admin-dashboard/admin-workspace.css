@@ -5109,3 +5109,213 @@
     }
 }
 
+
+/* =========================================================
+   WORKSPACE SPACING SYSTEM
+   ========================================================= */
+
+#sway-admin-workspace {
+    --sway-card-gap: 20px;
+    --sway-section-gap: 24px;
+}
+
+.sway-workspace-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sway-section-gap);
+    min-width: 0;
+}
+
+.sway-workspace-main > * {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.sway-workspace-grid,
+.sway-insight-grid,
+.sway-overview-split,
+.sway-quick-actions,
+.sway-cash-flow-stats,
+.sway-cash-flow-charts,
+.sway-cash-flow-lower,
+.sway-revenue-pipeline-layout,
+.sway-revenue-pipeline-checkpoint-grid,
+.sway-service-profitability-grid,
+.sway-lead-source-grid,
+.sway-client-health-grid {
+    gap: var(--sway-card-gap);
+}
+
+.sway-panel,
+.sway-stat-card,
+.sway-attention-panel,
+.sway-followup-automation,
+.sway-revenue-pipeline,
+.sway-cash-flow {
+    margin-top: 0;
+}
+
+.sway-workspace-heading {
+    margin-bottom: 0;
+}
+
+.sway-insight-grid + .sway-insight-grid {
+    margin-top: 0;
+}
+
+.sway-chart-wrap {
+    padding-top: 3px;
+}
+
+.sway-chart-stage {
+    min-height: 290px;
+    padding: 8px 0 0;
+}
+
+.sway-chart {
+    min-height: 290px;
+}
+
+.sway-chart-grid-line {
+    stroke: rgba(0,32,150,0.085);
+    stroke-width: 1;
+}
+
+.sway-chart-axis-label {
+    fill: #64748B;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.sway-chart-y-label {
+    fill: #56627A;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+.sway-chart-value-label {
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.sway-chart-point {
+    transition:
+        r 0.18s ease,
+        opacity 0.18s ease;
+}
+
+.sway-chart-point-group:hover .sway-chart-point,
+.sway-chart-point-group:focus .sway-chart-point {
+    r: 7.5;
+    opacity: 1;
+}
+
+.sway-chart-point-group:focus {
+    outline: none;
+}
+
+.sway-chart-bar {
+    transition:
+        opacity 0.18s ease,
+        filter 0.18s ease;
+}
+
+.sway-chart-bar-group:hover .sway-chart-bar,
+.sway-chart-bar-group:focus .sway-chart-bar {
+    opacity: 0.84;
+    filter: brightness(0.94);
+}
+
+.sway-chart-bar-group:focus {
+    outline: none;
+}
+
+.sway-chart-summary {
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.sway-chart-summary-item {
+    min-height: 70px;
+    padding: 10px 11px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.82) 0%,
+            rgba(247,250,255,0.76) 100%
+        );
+}
+
+.sway-chart-summary-item span {
+    color: #6B7890;
+    font-size: 0.52rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+
+.sway-chart-summary-item strong {
+    color: var(--sway-dark);
+    font-size: 0.70rem;
+    line-height: 1.25;
+}
+
+.sway-chart-summary-item small {
+    color: #7A8494;
+    font-size: 0.50rem;
+}
+
+.sway-chart-reading {
+    display: grid;
+    gap: 3px;
+    margin-top: 9px;
+    padding: 10px 12px;
+    border: 1px solid rgba(1,82,244,0.065);
+    border-radius: 12px;
+    background: rgba(1,82,244,0.025);
+}
+
+.sway-chart-reading span {
+    color: var(--sway-blue);
+    font-size: 0.51rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: none;
+}
+
+.sway-chart-reading p {
+    margin: 0;
+    color: #56627A;
+    font-size: 0.58rem;
+    line-height: 1.55;
+}
+
+@media (max-width: 920px) {
+    .sway-chart-summary {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    #sway-admin-workspace {
+        --sway-card-gap: 16px;
+        --sway-section-gap: 18px;
+    }
+
+    .sway-chart-stage,
+    .sway-chart {
+        min-height: 250px;
+    }
+
+    .sway-chart-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sway-chart-point,
+    .sway-chart-bar {
+        transition: none;
+    }
+}
+
