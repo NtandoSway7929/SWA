@@ -775,6 +775,18 @@
             testimonials: [
                 "Testimonials",
                 "Review client feedback connected to the website."
+            ],
+            "social-overview": [
+                "Social media",
+                "Bring your Swayphics social accounts, publishing workflow and performance into one workspace."
+            ],
+            "social-content": [
+                "Social content",
+                "Prepare, organise and track content before it is published through the official platform integrations."
+            ],
+            "social-analytics": [
+                "Social performance",
+                "Monitor audience growth, reach, engagement and traffic once platform integrations are connected."
             ]
         };
 
@@ -959,6 +971,8 @@
             ["communications", "Communication", state.communications],
             ["services", "Service", state.services],
             ["announcements", "Announcement", state.announcements],
+            ["social-accounts", "Social account", state.socialAccounts],
+            ["social-posts", "Social post", state.socialPosts],
             ["activities", "Activity", state.activities],
             ["admins", "Team member", state.admins]
         ];
@@ -1049,6 +1063,8 @@
             services: "S",
             announcements: "A",
             activities: "↗",
+            "social-accounts": "S",
+            "social-posts": "P",
             admins: "T"
         };
 
@@ -1082,9 +1098,12 @@
                                                     ? "content"
                                                     : type === "activities"
                                                         ? "activity"
-                                                        : type === "admins"
-                                                            ? "team"
-                                                            : "overview";
+                                                        : type === "social-accounts" ||
+                                                  type === "social-posts"
+                                                    ? "social-content"
+                                                    : type === "admins"
+                                                        ? "team"
+                                                        : "overview";
     }
 
     function renderGlobalSearchResults(results, query) {
