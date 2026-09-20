@@ -15324,7 +15324,7 @@ function simpleBars(items, color) {
         renderView();
     }
 
-    async async function deleteClient(id) {
+    function deleteClient(id) {
         const client =
             state.clients.find(function (item) {
                 return item.id === id;
