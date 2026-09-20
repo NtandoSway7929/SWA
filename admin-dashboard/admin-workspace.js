@@ -31,7 +31,8 @@
         realtimeClient: null,
         syncInFlight: false,
         syncQueued: false,
-        backgroundSyncTimer: null
+        backgroundSyncTimer: null,
+        communications: []
     };
 
     const navGroups = [
@@ -52,6 +53,7 @@
                 ["enquiries", "Enquiries"],
                 ["leads", "Leads"],
                 ["clients", "Clients"],
+                ["communications", "Communication log"],
                 ["followups", "Follow-ups"]
             ]
         },
@@ -329,6 +331,46 @@
         return value ? String(value).slice(0, 10) : "";
     }
 
+    function dateTimeInput(value) {
+        const parsed = parseDashboardDate(value);
+
+        if (!parsed) return "";
+
+        const parts =
+            new Intl.DateTimeFormat(
+                "en-CA",
+                {
+                    timeZone: SOUTH_AFRICA_TIME_ZONE,
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hourCycle: "h23"
+                }
+            ).formatToParts(parsed);
+
+        const map = {};
+
+        parts.forEach(function (part) {
+            if (part.type !== "literal") {
+                map[part.type] = part.value;
+            }
+        });
+
+        return (
+            map.year +
+            "-" +
+            map.month +
+            "-" +
+            map.day +
+            "T" +
+            map.hour +
+            ":" +
+            map.minute
+        );
+    }
+
     function dateTime(value) {
         if (!value) return "—";
 
@@ -540,7 +582,11 @@
             api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
             api("/rest/v1/services?select=*&order=active.desc,name.asc"),
             api("/rest/v1/invoices?select=*&order=created_at.desc"),
-            api("/rest/v1/invoice_settings?select=*&id=eq.1")
+            api("/rest/v1/invoice_settings?select=*&id=eq.1"),
+            api("/rest/v1/communication_logs?select=*&order=contacted_at.desc")
+                .catch(function () {
+                    return [];
+                })
         ]);
 
         state.tasks = results[0] || [];
@@ -560,6 +606,7 @@
             results[12][0]
                 ? results[12][0]
                 : null;
+        state.communications = results[13] || [];
     }
 
     async function refreshData() {
@@ -579,7 +626,11 @@
             api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
             api("/rest/v1/services?select=*&order=active.desc,name.asc"),
             api("/rest/v1/invoices?select=*&order=created_at.desc"),
-            api("/rest/v1/invoice_settings?select=*&id=eq.1")
+            api("/rest/v1/invoice_settings?select=*&id=eq.1"),
+            api("/rest/v1/communication_logs?select=*&order=contacted_at.desc")
+                .catch(function () {
+                    return [];
+                })
         ]);
 
         state.admins = results[0] || [];
@@ -600,6 +651,7 @@
             results[13][0]
                 ? results[13][0]
                 : null;
+        state.communications = results[14] || [];
 
         state.currentAdmin =
             state.admins.find(function (item) {
@@ -675,6 +727,10 @@
             team: [
                 "Team",
                 "Manage who can use the Swayphics workspace."
+            ],
+            communications: [
+                "Communication log",
+                "Record and review every important client and lead interaction."
             ],
             portfolio: [
                 "Portfolio",
@@ -838,6 +894,18 @@
             parts.push(formatDisplayText(value.entity_type));
         }
 
+        if (type === "communications") {
+            if (value.client_id) {
+                parts.push(clientName(value.client_id));
+            } else if (value.lead_id) {
+                parts.push(leadName(value.lead_id));
+            }
+
+            if (value.channel) {
+                parts.push(value.channel);
+            }
+        }
+
         return parts.filter(Boolean).slice(0, 2).join(" · ");
     }
 
@@ -852,6 +920,7 @@
             ["quotes", "Quote", state.quotes],
             ["invoices", "Invoice", state.invoices],
             ["payments", "Payment", state.payments],
+            ["communications", "Communication", state.communications],
             ["services", "Service", state.services],
             ["announcements", "Announcement", state.announcements],
             ["activities", "Activity", state.activities],
@@ -940,6 +1009,7 @@
             quotes: "Q",
             invoices: "I",
             payments: "R",
+            communications: "C",
             services: "S",
             announcements: "A",
             activities: "↗",
@@ -968,7 +1038,9 @@
                                         ? "invoices"
                                         : type === "payments"
                                             ? "payments"
-                                            : type === "services"
+                                            : type === "communications"
+                                                ? "communications"
+                                                : type === "services"
                                                 ? "services"
                                                 : type === "announcements"
                                                     ? "content"
@@ -1960,6 +2032,7 @@ function renderShell() {
                             '<button type="button" class="sway-quick-create-item" data-global-quick="project">Project</button>' +
                             '<button type="button" class="sway-quick-create-item" data-global-quick="task">Task</button>' +
                             '<button type="button" class="sway-quick-create-item" data-global-quick="followup">Follow-up</button>' +
+                            '<button type="button" class="sway-quick-create-item" data-global-quick="communication">Communication</button>' +
                             '<button type="button" class="sway-quick-create-item" data-global-quick="quote">Quote</button>' +
                             '<button type="button" class="sway-quick-create-item" data-global-quick="invoice">Invoice</button>' +
                             '<button type="button" class="sway-quick-create-item" data-global-quick="payment">Payment</button>' +
@@ -2072,6 +2145,11 @@ function renderShell() {
 
                             if (type === "followup") {
                                 createOrEdit("followups", null);
+                                return;
+                            }
+
+                            if (type === "communication") {
+                                createOrEdit("communications", null);
                                 return;
                             }
 
@@ -4015,6 +4093,7 @@ function renderShell() {
                 "website_enquiries",
                 "site_announcements",
                 "activity_log",
+                "communication_logs",
                 "portfolio_projects",
                 "testimonials"
             ];
@@ -5255,6 +5334,10 @@ function renderShell() {
             return item.entity_id === clientId;
         });
 
+        const communications = state.communications.filter(function (item) {
+            return item.client_id === clientId;
+        });
+
         const projectValue = projects.reduce(function (sum, item) {
             return sum + Number(item.value || 0);
         }, 0);
@@ -5406,6 +5489,31 @@ function renderShell() {
                         "</div>" +
                     "</section>" +
 
+                    '<section class="sway-client360-history sway-client360-communications">' +
+                        '<div class="sway-client360-section-head"><h4>Communications</h4><span>' + communications.length + "</span></div>" +
+                        (
+                            communications.length
+                                ? '<div class="sway-client360-history-list">' +
+                                    communications.slice(0, 8).map(function (item) {
+                                        return '<div class="sway-client360-history-item">' +
+                                            "<strong>" +
+                                                esc(
+                                                    (item.channel || "Communication") +
+                                                    (item.direction ? " · " + formatDisplayText(item.direction) : "")
+                                                ) +
+                                            "</strong>" +
+                                            "<span>" +
+                                                esc(item.subject || item.message || "No subject") +
+                                                " · " +
+                                                esc(dateTime(item.contacted_at)) +
+                                            "</span>" +
+                                        "</div>";
+                                    }).join("") +
+                                  "</div>"
+                                : '<div class="sway-client360-empty">No communications have been logged for this client yet.</div>'
+                        ) +
+                    "</section>" +
+
                     '<section class="sway-client360-history">' +
                         '<div class="sway-client360-section-head"><h4>Relationship history</h4><span>' + activities.length + "</span></div>" +
                         (
@@ -5434,7 +5542,8 @@ function renderShell() {
                 '<div class="sway-client360-footer">' +
                     '<button type="button" class="sway-workspace-button" data-new-project-client="' + esc(client.id) + '">+ Project</button>' +
                     '<button type="button" class="sway-workspace-button" data-new-invoice-client="' + esc(client.id) + '">+ Invoice</button>' +
-                    '<button type="button" class="sway-workspace-button primary" data-close-client360>Done</button>' +
+                    '<button type="button" class="sway-workspace-button" data-new-communication-client="' + esc(client.id) + '">+ Communication</button>' +
+                    '<button type="button" class="sway-workspace-button primary" data-close-client360>Done</button> +
                 "</div>" +
             "</section>";
 
@@ -5473,6 +5582,17 @@ function renderShell() {
                 const id = button.dataset.newInvoiceClient;
                 modal.remove();
                 openInvoiceBuilder(null, id);
+            });
+        });
+
+        modal.querySelectorAll("[data-new-communication-client]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const id = button.dataset.newCommunicationClient;
+                modal.remove();
+                createOrEdit("communications", null, {
+                    client_id: id,
+                    assigned_to: state.currentUser.id
+                });
             });
         });
 
@@ -7723,6 +7843,75 @@ function renderShell() {
         );
     }
 
+    function renderCommunications() {
+        const rows =
+            state.communications.map(function (item) {
+                const contact =
+                    item.client_id
+                        ? clientName(item.client_id)
+                        : leadName(item.lead_id);
+
+                return (
+                    "<tr>" +
+                        "<td>" +
+                            "<strong>" +
+                                esc(contact) +
+                            "</strong>" +
+                            (
+                                item.subject
+                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
+                                      esc(item.subject) +
+                                      "</span>"
+                                    : ""
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(item.channel || "—") +
+                        "</td>" +
+                        "<td>" +
+                            chip(item.direction || "outbound") +
+                        "</td>" +
+                        "<td>" +
+                            esc(dateTime(item.contacted_at)) +
+                        "</td>" +
+                        "<td>" +
+                            '<div class="sway-communication-message">' +
+                                esc(item.message || "—") +
+                            "</div>" +
+                        "</td>" +
+                        "<td>" +
+                            esc(adminName(item.created_by)) +
+                        "</td>" +
+                        "<td>" +
+                            '<div class="sway-row-actions">' +
+                                '<button class="sway-row-action" data-edit="communications" data-id="' +
+                                    esc(item.id) +
+                                '">Edit</button>' +
+                                '<button class="sway-row-action danger" data-delete="communications" data-id="' +
+                                    esc(item.id) +
+                                '">Delete</button>' +
+                            "</div>" +
+                        "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+
+        return (
+            heading(
+                '<button class="sway-workspace-button primary" data-add="communications">+ Log communication</button>'
+            ) +
+            panel(
+                "Communication log",
+                "Keep a durable record of important client and lead conversations across every channel.",
+                state.communications.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Channel</th><th>Direction</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th></tr></thead><tbody>' +
+                      rows +
+                      "</tbody></table></div>"
+                    : empty("No communications logged yet. Use “Log communication” to start the relationship history.")
+            )
+        );
+    }
+
     function renderActivity() {
         const rows =
             state.activities.map(function (item) {
@@ -9085,7 +9274,139 @@ function renderShell() {
                 ];
             }
         }
-    };
+            communications: {
+            table: "communication_logs",
+            title: "Communication",
+            fields: function (item) {
+                return [
+                    {
+                        key: "client_id",
+                        label: "Client",
+                        type: "select",
+                        options:
+                            '<option value="">Select client...</option>' +
+                            state.clients
+                                .map(function (client) {
+                                    return (
+                                        '<option value="' +
+                                        esc(client.id) +
+                                        '"' +
+                                        (
+                                            client.id === item.client_id
+                                                ? " selected"
+                                                : ""
+                                        ) +
+                                        ">" +
+                                        esc(client.business_name) +
+                                        "</option>"
+                                    );
+                                }).join("")
+                    },
+                    {
+                        key: "lead_id",
+                        label: "Lead",
+                        type: "select",
+                        options:
+                            '<option value="">Select lead...</option>' +
+                            state.leads
+                                .map(function (lead) {
+                                    return (
+                                        '<option value="' +
+                                        esc(lead.id) +
+                                        '"' +
+                                        (
+                                            lead.id === item.lead_id
+                                                ? " selected"
+                                                : ""
+                                        ) +
+                                        ">" +
+                                        esc(lead.business_name) +
+                                        "</option>"
+                                    );
+                                }).join("")
+                    },
+                    {
+                        key: "channel",
+                        label: "Channel",
+                        type: "select",
+                        required: true,
+                        options:
+                            [
+                                "Email",
+                                "WhatsApp",
+                                "Phone",
+                                "Meeting",
+                                "SMS",
+                                "Other"
+                            ].map(function (value) {
+                                return (
+                                    '<option value="' +
+                                    value +
+                                    '"' +
+                                    (
+                                        value === item.channel
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    value +
+                                    "</option>"
+                                );
+                            }).join("")
+                    },
+                    {
+                        key: "direction",
+                        label: "Direction",
+                        type: "select",
+                        required: true,
+                        options:
+                            [
+                                ["outbound", "Outbound"],
+                                ["inbound", "Inbound"]
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    option[0] +
+                                    '"' +
+                                    (
+                                        option[0] === item.direction
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    option[1] +
+                                    "</option>"
+                                );
+                            }).join("")
+                    },
+                    {
+                        key: "subject",
+                        label: "Subject / topic",
+                        type: "text",
+                        value: item.subject
+                    },
+                    {
+                        key: "contacted_at",
+                        label: "Date & time",
+                        type: "datetime-local",
+                        required: true,
+                        value:
+                            dateTimeInput(item.contacted_at) ||
+                            dateTimeInput(new Date())
+                    },
+                    {
+                        key: "message",
+                        label: "Communication notes",
+                        type: "textarea",
+                        required: true,
+                        full: true,
+                        value: item.message
+                    }
+                ];
+            }
+        },
+
+};
 
     function showModal(title, fields, onSubmit) {
         const modal =
@@ -9360,6 +9681,26 @@ function renderShell() {
                 const previousStatus =
                     item &&
                     item.status;
+
+                if (type === "communications") {
+                    if (!payload.client_id && !payload.lead_id) {
+                        throw new Error(
+                            "Link the communication to a client or lead before saving."
+                        );
+                    }
+
+                    payload.created_by =
+                        item.created_by ||
+                        state.currentUser.id;
+
+                    payload.contacted_at =
+                        payload.contacted_at
+                            ? new Date(payload.contacted_at).toISOString()
+                            : new Date().toISOString();
+
+                    payload.updated_at =
+                        new Date().toISOString();
+                }
 
                 if (
                     type === "payments"
@@ -10090,6 +10431,11 @@ function renderShell() {
             if (state.currentView === "enquiries") {
                 main.innerHTML =
                     renderEnquiries();
+            }
+
+            if (state.currentView === "communications") {
+                main.innerHTML =
+                    renderCommunications();
             }
 
             if (state.currentView === "content") {
