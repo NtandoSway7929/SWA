@@ -1782,6 +1782,7 @@
 
         state.invoices.forEach(function (invoice) {
             if (
+                invoice.archived === true ||
                 invoice.status === "cancelled" ||
                 invoice.status === "paid"
             ) {
@@ -4156,6 +4157,7 @@ function simpleBars(items, color) {
         const outstandingInvoices =
             state.invoices.filter(function (invoice) {
                 return (
+                    invoice.archived !== true &&
                     invoice.status !== "paid" &&
                     invoice.status !== "cancelled" &&
                     Number(
