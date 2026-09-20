@@ -15382,33 +15382,53 @@ function simpleBars(items, color) {
                 });
 
             for (const invoice of clientInvoices) {
-                await api(
-                    "/rest/v1/invoices?id=eq." +
-                    encodeURIComponent(invoice.id),
-                    {
-                        method: "DELETE",
-                        headers: headers({
-                            "Prefer":
-                                "return=minimal"
-                        })
-                    }
-                );
+                const deletedInvoices =
+                    await api(
+                        "/rest/v1/invoices?id=eq." +
+                        encodeURIComponent(invoice.id),
+                        {
+                            method: "DELETE",
+                            headers: headers({
+                                "Prefer":
+                                    "return=representation"
+                            })
+                        }
+                    );
+
+                if (
+                    Array.isArray(deletedInvoices) &&
+                    deletedInvoices.length === 0
+                ) {
+                    throw new Error(
+                        "The invoice could not be deleted. Your current Supabase permissions may not allow invoice deletion."
+                    );
+                }
             }
         }
 
-        await api(
-            "/rest/v1/" +
-            config.table +
-            "?id=eq." +
-            encodeURIComponent(id),
-            {
-                method: "DELETE",
-                headers: headers({
-                    "Prefer":
-                        "return=minimal"
-                })
-            }
-        );
+        const deletedRecords =
+            await api(
+                "/rest/v1/" +
+                config.table +
+                "?id=eq." +
+                encodeURIComponent(id),
+                {
+                    method: "DELETE",
+                    headers: headers({
+                        "Prefer":
+                            "return=representation"
+                    })
+                }
+            );
+
+        if (
+            Array.isArray(deletedRecords) &&
+            deletedRecords.length === 0
+        ) {
+            throw new Error(
+                "The record was not deleted. Supabase returned no deleted rows, which usually means the current database permissions or RLS policy is blocking this action."
+            );
+        }
 
         await logActivity(
             "Deleted " +
@@ -16764,11 +16784,33 @@ function simpleBars(items, color) {
             .forEach(function (button) {
                 button.addEventListener(
                     "click",
-                    function () {
-                        removeRecord(
-                            button.dataset.delete,
-                            button.dataset.id
-                        );
+                    async function () {
+                        if (button.disabled) {
+                            return;
+                        }
+
+                        button.disabled = true;
+                        const originalText =
+                            button.textContent;
+
+                        button.textContent =
+                            "Deleting...";
+
+                        try {
+                            await removeRecord(
+                                button.dataset.delete,
+                                button.dataset.id
+                            );
+                        } catch (error) {
+                            swayAlert(
+                                error.message ||
+                                "Unable to delete this record."
+                            );
+                        } finally {
+                            button.disabled = false;
+                            button.textContent =
+                                originalText;
+                        }
                     }
                 );
             });
