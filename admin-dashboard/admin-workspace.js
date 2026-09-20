@@ -2242,6 +2242,149 @@
         updateNotificationCenter();
     }
 
+
+    function setMobileSidebarOpen(open) {
+        const sidebar =
+            workspace.querySelector(
+                ".sway-workspace-sidebar"
+            );
+
+        const toggle =
+            workspace.querySelector(
+                ".sway-workspace-mobile-toggle"
+            );
+
+        if (!sidebar || window.innerWidth > 760) {
+            return;
+        }
+
+        sidebar.classList.toggle(
+            "mobile-open",
+            Boolean(open)
+        );
+
+        workspace.classList.toggle(
+            "nav-open",
+            Boolean(open)
+        );
+
+        if (toggle) {
+            toggle.setAttribute(
+                "aria-expanded",
+                String(Boolean(open))
+            );
+        }
+    }
+
+    function setupMobileSidebarInteractions(
+        sidebarElement,
+        mobileToggle,
+        mobileClose
+    ) {
+        if (!sidebarElement) {
+            return;
+        }
+
+        if (mobileToggle) {
+            mobileToggle.setAttribute(
+                "aria-expanded",
+                String(
+                    sidebarElement.classList.contains(
+                        "mobile-open"
+                    )
+                )
+            );
+
+            mobileToggle.onclick = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                setMobileSidebarOpen(
+                    !sidebarElement.classList.contains(
+                        "mobile-open"
+                    )
+                );
+            };
+        }
+
+        if (mobileClose) {
+            mobileClose.onclick = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                setMobileSidebarOpen(false);
+            };
+        }
+
+        let startX = 0;
+        let startY = 0;
+        let trackingSwipe = false;
+
+        sidebarElement.addEventListener(
+            "touchstart",
+            function (event) {
+                if (
+                    window.innerWidth > 760 ||
+                    !event.touches ||
+                    event.touches.length !== 1
+                ) {
+                    trackingSwipe = false;
+                    return;
+                }
+
+                const touch =
+                    event.touches[0];
+
+                startX = touch.clientX;
+                startY = touch.clientY;
+                trackingSwipe = true;
+            },
+            {
+                passive: true
+            }
+        );
+
+        sidebarElement.addEventListener(
+            "touchend",
+            function (event) {
+                if (
+                    !trackingSwipe ||
+                    window.innerWidth > 760 ||
+                    !event.changedTouches ||
+                    !event.changedTouches.length
+                ) {
+                    trackingSwipe = false;
+                    return;
+                }
+
+                const touch =
+                    event.changedTouches[0];
+
+                const deltaX =
+                    touch.clientX - startX;
+
+                const deltaY =
+                    touch.clientY - startY;
+
+                trackingSwipe = false;
+
+                if (
+                    Math.abs(deltaX) < 70 ||
+                    Math.abs(deltaX) < Math.abs(deltaY) * 1.35
+                ) {
+                    return;
+                }
+
+                if (deltaX < 0) {
+                    setMobileSidebarOpen(false);
+                }
+            },
+            {
+                passive: true
+            }
+        );
+    }
+
 function renderShell() {
         const preserveMobileNavOpen =
             workspace.classList.contains("nav-open");
@@ -2381,8 +2524,25 @@ function renderShell() {
             sidebarElement &&
             window.innerWidth <= 760
         ) {
-            sidebarElement.classList.add("mobile-open");
-            workspace.classList.add("nav-open");
+            sidebarElement.classList.add(
+                "sway-sidebar-restoring"
+            );
+
+            sidebarElement.classList.add(
+                "mobile-open"
+            );
+
+            workspace.classList.add(
+                "nav-open"
+            );
+
+            window.requestAnimationFrame(
+                function () {
+                    sidebarElement.classList.remove(
+                        "sway-sidebar-restoring"
+                    );
+                }
+            );
         }
 
         const quickCreate =
@@ -2492,35 +2652,11 @@ function renderShell() {
                 });
         }
 
-        if (mobileToggle && sidebarElement) {
-            mobileToggle.addEventListener(
-                "click",
-                function () {
-                    sidebarElement.classList.add(
-                        "mobile-open"
-                    );
-
-                    workspace.classList.add(
-                        "nav-open"
-                    );
-                }
-            );
-        }
-
-        if (mobileClose && sidebarElement) {
-            mobileClose.addEventListener(
-                "click",
-                function () {
-                    sidebarElement.classList.remove(
-                        "mobile-open"
-                    );
-
-                    workspace.classList.remove(
-                        "nav-open"
-                    );
-                }
-            );
-        }
+        setupMobileSidebarInteractions(
+            sidebarElement,
+            mobileToggle,
+            mobileClose
+        );
 
         workspace
             .querySelectorAll("[data-nav-group-toggle]")
@@ -2594,15 +2730,7 @@ function renderShell() {
                             view;
 
                         if (window.innerWidth <= 760) {
-                            if (sidebarElement) {
-                                sidebarElement.classList.remove(
-                                    "mobile-open"
-                                );
-                            }
-
-                            workspace.classList.remove(
-                                "nav-open"
-                            );
+                            setMobileSidebarOpen(false);
                         }
 
                         setStandaloneManagerVisibility(view);
