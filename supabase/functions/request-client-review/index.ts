@@ -26,9 +26,8 @@ function reviewEmailHtml(
   reviewUrl: string,
 ) {
   const clientName =
-    client.business_name ||
-    client.contact_name ||
-    "there";
+    String(client.business_name || "").trim() ||
+    "Business";
 
   return `
 <!doctype html>
