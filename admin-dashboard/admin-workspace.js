@@ -8199,6 +8199,9 @@ function simpleBars(items, color) {
                                           esc(item.id) +
                                           '">Archive</button>'
                                 ) +
+                                '<button class="sway-row-action danger" data-delete="clients" data-id="' +
+                                    esc(item.id) +
+                                '">Delete</button>' +
 
                             "</div>" +
                         "</td>" +
@@ -8212,7 +8215,7 @@ function simpleBars(items, color) {
             ) +
             panel(
                 "Clients",
-                "Manage active and archived client relationships. Archive to retain history without removing the client record.",
+                "Manage active and archived client relationships. Delete permanently when a client record and its linked history should be removed.",
                 state.clients.length
                     ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Contact</th><th>Owner</th><th>Projects</th><th>Health</th><th>Status</th><th></th></tr></thead><tbody>' +
                       rows +
@@ -15359,12 +15362,15 @@ function simpleBars(items, color) {
             return;
         }
 
+        const confirmMessage =
+            type === "clients"
+                ? "Permanently delete this client? Linked projects, tasks, follow-ups and payments may also be removed because some of these records use cascading deletion."
+                : "Delete this " +
+                  config.title.toLowerCase() +
+                  "?";
+
         if (
-            !(await swayConfirm(
-                "Delete this " +
-                config.title.toLowerCase() +
-                "?"
-            ))
+            !(await swayConfirm(confirmMessage))
         ) {
             return;
         }
