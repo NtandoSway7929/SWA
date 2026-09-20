@@ -168,7 +168,10 @@ Deno.serve(async (req) => {
     const message =
       String(body.message || "").trim();
 
-    if (!contactType || !contactId) {
+    if (
+      !contactType ||
+      (!contactId && !requestedRecipientEmail)
+    ) {
       return Response.json(
         { error: "A lead or client recipient is required." },
         {
