@@ -26,8 +26,8 @@ function reviewEmailHtml(
   reviewUrl: string,
 ) {
   const clientName =
-    client.contact_name ||
     client.business_name ||
+    client.contact_name ||
     "there";
 
   return `
@@ -76,8 +76,13 @@ function reviewEmailHtml(
         </p>
       </div>
 
-      <div style="padding:18px 30px;background:#F7FAFF;font-size:11px;color:#7A899D;">
-        Swayphics · Empowering businesses through design
+      <div style="padding:18px 30px;background:#F7FAFF;font-size:11px;line-height:1.75;color:#7A899D;">
+        <strong style="color:#081533;">Swayphics</strong> · Empowering Through Design<br>
+        <a href="https://swayphics.co.za/privacy-policy/" style="color:#56627A;text-decoration:underline;">Privacy Policy</a>
+        <span style="padding:0 6px;color:#B4BFCE;">·</span>
+        <a href="https://swayphics.co.za/terms-and-conditions/" style="color:#56627A;text-decoration:underline;">Terms &amp; Conditions</a><br>
+        <span style="color:#8A97A8;">© 2026 Swayphics. All rights reserved.</span><br>
+        <span style="color:#8A97A8;">This email and any attachments are intended only for the addressed recipient. If received in error, please notify the sender and delete it.</span>
       </div>
     </div>
   </div>
