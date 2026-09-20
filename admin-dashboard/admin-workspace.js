@@ -862,6 +862,12 @@
             }).length;
         }
 
+        if (view === "portal-requests") {
+            count = state.portalRequests.filter(function (item) {
+                return item.status === "new";
+            }).length;
+        }
+
         return (
             '<button type="button" class="sway-workspace-nav-button ' +
             (state.currentView === view ? "active" : "") +
@@ -1667,6 +1673,30 @@
                     view: "invoices"
                 });
             }
+        });
+
+        state.portalRequests.forEach(function (item) {
+            if (item.status !== "new") {
+                return;
+            }
+
+            notifications.push({
+                key:
+                    "portal-request:" +
+                    String(item.id) +
+                    ":" +
+                    String(item.status),
+                type: "info",
+                icon: "R",
+                title: "New client portal request",
+                detail:
+                    clientName(item.client_id) +
+                    " · " +
+                    (item.subject || "Client request"),
+                timestamp:
+                    notificationTimeValue(item.created_at),
+                view: "portal-requests"
+            });
         });
 
         state.quotes.forEach(function (quote) {
@@ -3701,6 +3731,8 @@ function renderShell() {
 
             renderLeadSourceAnalytics() +
 
+            renderLeadConversionAnalytics() +
+
             renderServiceProfitability() +
 
             '<div class="sway-workspace-grid">' +
@@ -4812,6 +4844,81 @@ function renderShell() {
                     " interest.",
                 clientId: null,
                 leadId: lead.id,
+                actionLabel: "Schedule"
+            });
+        });
+
+        state.projects.forEach(function (project) {
+            if (
+                !project.client_id ||
+                ["completed", "cancelled"].includes(project.status) ||
+                !project.due_date ||
+                hasPendingFollowupForContact(
+                    project.client_id,
+                    null
+                )
+            ) {
+                return;
+            }
+
+            const due =
+                dashboardDateKey(project.due_date);
+
+            if (!due) {
+                return;
+            }
+
+            const today =
+                dashboardTodayISO();
+
+            const daysUntil =
+                Math.round(
+                    (
+                        new Date(due + "T00:00:00+02:00").getTime() -
+                        new Date(today + "T00:00:00+02:00").getTime()
+                    ) /
+                    (24 * 60 * 60 * 1000)
+                );
+
+            if (daysUntil < 0 || daysUntil > 3) {
+                return;
+            }
+
+            suggestions.push({
+                kind: "project",
+                priority:
+                    daysUntil <= 1
+                        ? "danger"
+                        : "warning",
+                icon: "P",
+                title:
+                    project.name ||
+                    "Project deadline",
+                contact:
+                    clientName(project.client_id),
+                reason:
+                    "Project deadline is " +
+                    (
+                        daysUntil === 0
+                            ? "today."
+                            : daysUntil === 1
+                                ? "tomorrow."
+                                : "within " + daysUntil + " days."
+                    ),
+                suggestedDate:
+                    today,
+                note:
+                    "Check in with " +
+                    clientName(project.client_id) +
+                    " about " +
+                    (
+                        project.name ||
+                        "the project"
+                    ) +
+                    " before the delivery deadline.",
+                clientId:
+                    project.client_id,
+                leadId: null,
                 actionLabel: "Schedule"
             });
         });
@@ -6392,10 +6499,13 @@ function renderShell() {
                             count +
                         "</td>" +
                         "<td>" +
-                            chip(item.status) +
+                            clientHealthChip(item.id) +
                         "</td>" +
                         "<td>" +
                             '<div class="sway-row-actions">' +
+                                '<button class="sway-row-action" data-client-portal="' +
+                                    esc(item.id) +
+                                '">Portal</button>' +
                                 '<button class="sway-row-action" data-client360="' +
                                     esc(item.id) +
                                 '">View</button>' +
@@ -8971,6 +9081,92 @@ function renderShell() {
         );
     }
 
+
+    function renderLeadConversionAnalytics() {
+        const stages = [
+            "new",
+            "contacted",
+            "interested",
+            "proposal sent",
+            "negotiating",
+            "won",
+            "lost"
+        ];
+
+        const stageCounts = {};
+
+        stages.forEach(function (stage) {
+            stageCounts[stage] = new Set();
+        });
+
+        state.leadStageHistory.forEach(function (entry) {
+            if (
+                entry.lead_id &&
+                stageCounts[entry.to_status]
+            ) {
+                stageCounts[entry.to_status].add(
+                    entry.lead_id
+                );
+            }
+        });
+
+        const rows =
+            stages.map(function (stage) {
+                const historical =
+                    stageCounts[stage].size;
+
+                const current =
+                    state.leads.filter(function (lead) {
+                        return lead.status === stage;
+                    }).length;
+
+                return {
+                    stage: stage,
+                    historical: historical,
+                    current: current
+                };
+            }).filter(function (item) {
+                return (
+                    item.historical ||
+                    item.current
+                );
+            });
+
+        return (
+            '<section class="sway-lead-conversion-panel">' +
+                '<div class="sway-lead-source-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Pipeline movement</span>' +
+                        "<h3>Lead conversion analytics</h3>" +
+                        "<p>Historical stage entries are counted from the point stage tracking was enabled.</p>" +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-table-wrap">' +
+                    '<table class="sway-table">' +
+                        "<thead><tr><th>Stage</th><th>Leads ever entering stage</th><th>Currently here</th></tr></thead>" +
+                        "<tbody>" +
+                            rows.map(function (item) {
+                                return (
+                                    "<tr>" +
+                                        "<td><strong>" +
+                                            esc(formatDisplayText(item.stage)) +
+                                        "</strong></td>" +
+                                        "<td>" +
+                                            item.historical +
+                                        "</td>" +
+                                        "<td>" +
+                                            item.current +
+                                        "</td>" +
+                                    "</tr>"
+                                );
+                            }).join("") +
+                        "</tbody>" +
+                    "</table>" +
+                "</div>" +
+            "</section>"
+        );
+    }
+
     function renderLeadSourceAnalytics() {
         const buckets = {};
 
@@ -9468,6 +9664,43 @@ function renderShell() {
         }
     }
 
+
+    async function revokeClientPortalLinks(clientId) {
+        try {
+            await api(
+                "/rest/v1/client_portal_tokens?client_id=eq." +
+                encodeURIComponent(clientId) +
+                "&active=eq.true",
+                {
+                    method: "PATCH",
+                    headers: headers({
+                        "Prefer": "return=minimal"
+                    }),
+                    body: JSON.stringify({
+                        active: false
+                    })
+                }
+            );
+
+            await logActivity(
+                "Revoked client portal links",
+                "clients",
+                clientId
+            );
+
+            await refreshData();
+
+            swayAlert(
+                "All active portal links for this client have been revoked."
+            );
+        } catch (error) {
+            swayAlert(
+                error.message ||
+                "Unable to revoke the client portal links."
+            );
+        }
+    }
+
     function randomPortalToken() {
         const bytes =
             new Uint8Array(32);
@@ -9624,6 +9857,7 @@ function renderShell() {
                 "</div>" +
                 '<div class="sway-project-timeline-footer">' +
                     '<button type="button" class="sway-workspace-button" data-close-client-portal-link>Close</button>' +
+                    '<button type="button" class="sway-workspace-button" id="sway-revoke-client-portal-link">Revoke all links</button>' +
                     '<button type="button" class="sway-workspace-button primary" id="sway-copy-client-portal-link">Copy link</button>' +
                 "</div>" +
             "</section>";
@@ -9640,6 +9874,24 @@ function renderShell() {
                     }
                 );
             });
+
+        modal
+            .querySelector("#sway-revoke-client-portal-link")
+            ?.addEventListener(
+                "click",
+                async function () {
+                    if (
+                        !(await swayConfirm(
+                            "Revoke all active portal links for this client?"
+                        ))
+                    ) {
+                        return;
+                    }
+
+                    await revokeClientPortalLinks(client.id);
+                    modal.remove();
+                }
+            );
 
         modal
             .querySelector("#sway-copy-client-portal-link")
