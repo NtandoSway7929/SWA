@@ -634,6 +634,141 @@
         }
     }
 
+
+    function workspaceCacheKey() {
+        return (
+            "swayphics_admin_workspace_snapshot_" +
+            String(
+                state.currentUser && state.currentUser.id
+                    ? state.currentUser.id
+                    : "guest"
+            )
+        );
+    }
+
+    function saveWorkspaceSnapshot() {
+        if (
+            !state.currentUser ||
+            !state.currentUser.id
+        ) {
+            return;
+        }
+
+        try {
+            sessionStorage.setItem(
+                workspaceCacheKey(),
+                JSON.stringify({
+                    version: 1,
+                    saved_at: Date.now(),
+                    admins: state.admins,
+                    tasks: state.tasks,
+                    leads: state.leads,
+                    followups: state.followups,
+                    clients: state.clients,
+                    projects: state.projects,
+                    quotes: state.quotes,
+                    payments: state.payments,
+                    enquiries: state.enquiries,
+                    activities: state.activities,
+                    announcements: state.announcements,
+                    services: state.services,
+                    invoices: state.invoices,
+                    invoiceSettings: state.invoiceSettings,
+                    communications: state.communications,
+                    documents: state.documents,
+                    leadStageHistory: state.leadStageHistory,
+                    portalRequests: state.portalRequests,
+                    portalTokens: state.portalTokens
+                })
+            );
+        } catch (error) {
+            // Cache is an optimisation only.
+        }
+    }
+
+    function restoreWorkspaceSnapshot() {
+        if (
+            !state.currentUser ||
+            !state.currentUser.id
+        ) {
+            return false;
+        }
+
+        try {
+            const raw =
+                sessionStorage.getItem(
+                    workspaceCacheKey()
+                );
+
+            if (!raw) {
+                return false;
+            }
+
+            const snapshot =
+                JSON.parse(raw);
+
+            if (
+                !snapshot ||
+                snapshot.version !== 1
+            ) {
+                return false;
+            }
+
+            const collections = [
+                "admins",
+                "tasks",
+                "leads",
+                "followups",
+                "clients",
+                "projects",
+                "quotes",
+                "payments",
+                "enquiries",
+                "activities",
+                "announcements",
+                "services",
+                "invoices",
+                "communications",
+                "documents",
+                "leadStageHistory",
+                "portalRequests",
+                "portalTokens"
+            ];
+
+            collections.forEach(function (key) {
+                if (Array.isArray(snapshot[key])) {
+                    state[key] =
+                        snapshot[key];
+                }
+            });
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    snapshot,
+                    "invoiceSettings"
+                )
+            ) {
+                state.invoiceSettings =
+                    snapshot.invoiceSettings;
+            }
+
+            state.currentAdmin =
+                state.admins.find(function (item) {
+                    return (
+                        item.user_id === state.currentUser.id &&
+                        item.active === true
+                    );
+                }) || state.currentAdmin;
+
+            state.initialDataLoaded = true;
+            state.initialDataLoading = false;
+
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
     async function loadState() {
         const decodedUser =
             decodeAccessTokenUser();
@@ -677,11 +812,12 @@
                 "Your account is authenticated, but it is not active in the Swayphics admin team."
             );
         }
+
+        restoreWorkspaceSnapshot();
     }
 
     async function refreshData() {
         const results = await Promise.all([
-            api("/rest/v1/admin_users?select=user_id,full_name,email,role,active,created_at&order=created_at.asc"),
             api("/rest/v1/tasks?select=*&order=created_at.desc"),
             api("/rest/v1/leads?select=*&order=created_at.desc"),
             api("/rest/v1/follow_ups?select=*&order=scheduled_for.asc"),
@@ -690,31 +826,20 @@
             api("/rest/v1/quotes?select=*&order=created_at.desc"),
             api("/rest/v1/payments?select=*&order=created_at.desc"),
             api("/rest/v1/website_enquiries?select=*&order=created_at.desc"),
-            api("/rest/v1/activity_log?select=*&order=created_at.desc&limit=50"),
-            api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
-            api("/rest/v1/services?select=*&order=active.desc,name.asc"),
-            api("/rest/v1/invoices?select=*&order=created_at.desc"),
-            api("/rest/v1/invoice_settings?select=*&id=eq.1")
+            api("/rest/v1/activity_log?select=*&order=created_at.desc&limit=20"),
+            api("/rest/v1/invoices?select=*&order=created_at.desc")
         ]);
 
-        state.admins = results[0] || [];
-        state.tasks = results[1] || [];
-        state.leads = results[2] || [];
-        state.followups = results[3] || [];
-        state.clients = results[4] || [];
-        state.projects = results[5] || [];
-        state.quotes = results[6] || [];
-        state.payments = results[7] || [];
-        state.enquiries = results[8] || [];
-        state.activities = results[9] || [];
-        state.announcements = results[10] || [];
-        state.services = results[11] || [];
-        state.invoices = results[12] || [];
-        state.invoiceSettings =
-            Array.isArray(results[13]) &&
-            results[13][0]
-                ? results[13][0]
-                : null;
+        state.tasks = results[0] || [];
+        state.leads = results[1] || [];
+        state.followups = results[2] || [];
+        state.clients = results[3] || [];
+        state.projects = results[4] || [];
+        state.quotes = results[5] || [];
+        state.payments = results[6] || [];
+        state.enquiries = results[7] || [];
+        state.activities = results[8] || [];
+        state.invoices = results[9] || [];
 
         state.initialDataLoaded = true;
         state.initialDataLoading = false;
@@ -727,6 +852,8 @@
                     item.active === true
                 );
             }) || state.currentAdmin;
+
+        saveWorkspaceSnapshot();
     }
 
     async function refreshSecondaryData() {
@@ -773,6 +900,8 @@
         state.socialAccounts = results[5] || [];
         state.socialPosts = results[6] || [];
         state.socialMetrics = results[7] || [];
+
+        saveWorkspaceSnapshot();
     }
 
 
