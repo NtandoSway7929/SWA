@@ -2383,6 +2383,66 @@
                 passive: true
             }
         );
+
+        let edgeStartX = 0;
+        let edgeStartY = 0;
+        let trackingEdgeSwipe = false;
+
+        workspace.ontouchstart = function (event) {
+            if (
+                window.innerWidth > 760 ||
+                workspace.classList.contains("nav-open") ||
+                !event.touches ||
+                event.touches.length !== 1
+            ) {
+                trackingEdgeSwipe = false;
+                return;
+            }
+
+            const touch =
+                event.touches[0];
+
+            if (touch.clientX > 26) {
+                trackingEdgeSwipe = false;
+                return;
+            }
+
+            edgeStartX = touch.clientX;
+            edgeStartY = touch.clientY;
+            trackingEdgeSwipe = true;
+        };
+
+        workspace.ontouchend = function (event) {
+            if (
+                !trackingEdgeSwipe ||
+                window.innerWidth > 760 ||
+                !event.changedTouches ||
+                !event.changedTouches.length
+            ) {
+                trackingEdgeSwipe = false;
+                return;
+            }
+
+            const touch =
+                event.changedTouches[0];
+
+            const deltaX =
+                touch.clientX - edgeStartX;
+
+            const deltaY =
+                touch.clientY - edgeStartY;
+
+            trackingEdgeSwipe = false;
+
+            if (
+                deltaX < 70 ||
+                Math.abs(deltaX) < Math.abs(deltaY) * 1.35
+            ) {
+                return;
+            }
+
+            setMobileSidebarOpen(true);
+        };
     }
 
 function renderShell() {
