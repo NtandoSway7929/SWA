@@ -1033,6 +1033,32 @@
         resultsBox.hidden = false;
     }
 
+    function closeQuickCreateMenu() {
+        const wrapper =
+            document.querySelector(".sway-quick-create");
+
+        if (!wrapper) return;
+
+        const menu =
+            wrapper.querySelector(".sway-quick-create-menu");
+
+        const toggle =
+            wrapper.querySelector(".sway-quick-create-toggle");
+
+        if (menu) {
+            menu.hidden = true;
+        }
+
+        if (toggle) {
+            toggle.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+        }
+
+        wrapper.classList.remove("open");
+    }
+
     function closeGlobalSearch() {
         const input = document.getElementById("admin-global-search-input");
         const resultsBox = document.getElementById("admin-global-search-results");
@@ -1159,10 +1185,22 @@
             if (!wrapper.contains(event.target)) {
                 closeGlobalSearch();
             }
+
+            const quickCreate =
+                document.querySelector(".sway-quick-create");
+
+            if (
+                quickCreate &&
+                !quickCreate.contains(event.target)
+            ) {
+                closeQuickCreateMenu();
+            }
         });
 
         document.addEventListener("keydown", function (event) {
             if (event.key === "Escape") {
+                closeQuickCreateMenu();
+
                 const client360Modal =
                     document.getElementById(
                         "sway-client360-modal"
@@ -1253,6 +1291,28 @@ function renderShell() {
                     sidebar +
                 "</aside>" +
                 '<div class="sway-workspace-main" id="sway-workspace-main"></div>' +
+                '<div class="sway-quick-create">' +
+                    '<button type="button" class="sway-quick-create-toggle" aria-expanded="false" aria-controls="sway-quick-create-menu">' +
+                        '<span class="sway-quick-create-plus" aria-hidden="true">+</span>' +
+                        '<span>New</span>' +
+                    '</button>' +
+                    '<div class="sway-quick-create-menu" id="sway-quick-create-menu" hidden>' +
+                        '<div class="sway-quick-create-heading">' +
+                            '<span>Quick actions</span>' +
+                            '<small>Create a new record</small>' +
+                        '</div>' +
+                        '<div class="sway-quick-create-grid">' +
+                            '<button type="button" class="sway-quick-create-item" data-global-quick="client">Client</button>' +
+                            '<button type="button" class="sway-quick-create-item" data-global-quick="lead">Lead</button>' +
+                            '<button type="button" class="sway-quick-create-item" data-global-quick="project">Project</button>' +
+                            '<button type="button" class="sway-quick-create-item" data-global-quick="task">Task</button>' +
+                            '<button type="button" class="sway-quick-create-item" data-global-quick="followup">Follow-up</button>' +
+                            '<button type="button" class="sway-quick-create-item" data-global-quick="quote">Quote</button>' +
+                            '<button type="button" class="sway-quick-create-item" data-global-quick="invoice">Invoice</button>' +
+                            '<button type="button" class="sway-quick-create-item" data-global-quick="payment">Payment</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
                 '<button type="button" class="sway-workspace-mobile-toggle" aria-label="Open workspace navigation">' +
                     '<span></span><span></span><span></span>' +
                 '</button>' +
@@ -1272,6 +1332,108 @@ function renderShell() {
             workspace.querySelector(
                 ".sway-workspace-sidebar"
             );
+
+        const quickCreate =
+            workspace.querySelector(
+                ".sway-quick-create"
+            );
+
+        const quickCreateToggle =
+            workspace.querySelector(
+                ".sway-quick-create-toggle"
+            );
+
+        const quickCreateMenu =
+            workspace.querySelector(
+                ".sway-quick-create-menu"
+            );
+
+        if (
+            quickCreateToggle &&
+            quickCreateMenu &&
+            quickCreate
+        ) {
+            quickCreateToggle.addEventListener(
+                "click",
+                function () {
+                    const isOpen =
+                        !quickCreateMenu.hidden;
+
+                    quickCreateMenu.hidden =
+                        isOpen;
+
+                    quickCreateToggle.setAttribute(
+                        "aria-expanded",
+                        String(!isOpen)
+                    );
+
+                    quickCreate.classList.toggle(
+                        "open",
+                        !isOpen
+                    );
+                }
+            );
+
+            workspace
+                .querySelectorAll("[data-global-quick]")
+                .forEach(function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            const type =
+                                button.dataset.globalQuick;
+
+                            quickCreateMenu.hidden = true;
+                            quickCreateToggle.setAttribute(
+                                "aria-expanded",
+                                "false"
+                            );
+                            quickCreate.classList.remove(
+                                "open"
+                            );
+
+                            if (type === "invoice") {
+                                openInvoiceBuilder(null);
+                                return;
+                            }
+
+                            if (type === "client") {
+                                createOrEdit("clients", null);
+                                return;
+                            }
+
+                            if (type === "lead") {
+                                createOrEdit("leads", null);
+                                return;
+                            }
+
+                            if (type === "project") {
+                                createOrEdit("projects", null);
+                                return;
+                            }
+
+                            if (type === "task") {
+                                createOrEdit("tasks", null);
+                                return;
+                            }
+
+                            if (type === "followup") {
+                                createOrEdit("followups", null);
+                                return;
+                            }
+
+                            if (type === "quote") {
+                                createOrEdit("quotes", null);
+                                return;
+                            }
+
+                            if (type === "payment") {
+                                createOrEdit("payments", null);
+                            }
+                        }
+                    );
+                });
+        }
 
         if (mobileToggle && sidebarElement) {
             mobileToggle.addEventListener(
