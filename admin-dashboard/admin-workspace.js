@@ -7867,6 +7867,9 @@ function simpleBars(items, color) {
                             clientHealthChip(item.id) +
                         "</td>" +
                         "<td>" +
+                            chip(item.status) +
+                        "</td>" +
+                        "<td>" +
                             '<div class="sway-row-actions">' +
                                 '<button class="sway-row-action" data-client-portal="' +
                                     esc(item.id) +
@@ -7883,6 +7886,18 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action" data-new-invoice-client="' +
                                     esc(item.id) +
                                 '">Invoice</button>' +
+                                (
+                                    item.status === "archived"
+                                        ? '<button class="sway-row-action" data-restore-client="' +
+                                          esc(item.id) +
+                                          '">Restore</button>'
+                                        : '<button class="sway-row-action" data-archive-client="' +
+                                          esc(item.id) +
+                                          '">Archive</button>'
+                                ) +
+                                '<button class="sway-row-action danger" data-delete-client="' +
+                                    esc(item.id) +
+                                '">Delete</button>' +
                             "</div>" +
                         "</td>" +
                     "</tr>"
@@ -7895,7 +7910,7 @@ function simpleBars(items, color) {
             ) +
             panel(
                 "Clients",
-                "Permanent client records. Start new projects and invoices directly from each relationship.",
+                "Manage active and archived client relationships. Archive to retain history, or delete when the record and its linked work can safely be removed.",
                 state.clients.length
                     ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Contact</th><th>Owner</th><th>Projects</th><th>Health</th><th>Status</th><th></th></tr></thead><tbody>' +
                       rows +
@@ -14064,17 +14079,196 @@ function simpleBars(items, color) {
         );
     }
 
+    async function archiveClient(id) {
+        const client =
+            state.clients.find(function (item) {
+                return item.id === id;
+            });
+
+        if (!client) return;
+
+        const archived =
+            client.status === "archived";
+
+        if (
+            !(await swayConfirm(
+                archived
+                    ? "Restore " +
+                      client.business_name +
+                      " to active clients?"
+                    : "Archive " +
+                      client.business_name +
+                      "? The client and its history will be retained."
+            ))
+        ) {
+            return;
+        }
+
+        await api(
+            "/rest/v1/clients?id=eq." +
+            encodeURIComponent(id),
+            {
+                method: "PATCH",
+                headers: headers({
+                    "Prefer":
+                        "return=minimal"
+                }),
+                body:
+                    JSON.stringify({
+                        status:
+                            archived
+                                ? "active"
+                                : "archived",
+                        updated_at:
+                            new Date().toISOString()
+                    })
+            }
+        );
+
+        await logActivity(
+            archived
+                ? "Restored client"
+                : "Archived client",
+            "clients",
+            id
+        );
+
+        await refreshData();
+        renderShell();
+        renderView();
+    }
+
+    async function deleteClient(id) {
+        const client =
+            state.clients.find(function (item) {
+                return item.id === id;
+            });
+
+        if (!client) return;
+
+        const invoices =
+            state.invoices.filter(function (invoice) {
+                return invoice.client_id === id;
+            }).length;
+
+        if (invoices) {
+            swayAlert(
+                "This client cannot be deleted while " +
+                invoices +
+                " invoice" +
+                (invoices === 1 ? "" : "s") +
+                " still reference the client. Archive the client instead, or handle those invoices first."
+            );
+            return;
+        }
+
+        const projectCount =
+            state.projects.filter(function (item) {
+                return item.client_id === id;
+            }).length;
+
+        const taskCount =
+            state.tasks.filter(function (item) {
+                return item.client_id === id;
+            }).length;
+
+        const paymentCount =
+            state.payments.filter(function (item) {
+                return item.client_id === id;
+            }).length;
+
+        const followupCount =
+            state.followups.filter(function (item) {
+                return item.client_id === id;
+            }).length;
+
+        const relatedParts = [];
+
+        if (projectCount) {
+            relatedParts.push(
+                projectCount +
+                " project" +
+                (projectCount === 1 ? "" : "s")
+            );
+        }
+
+        if (taskCount) {
+            relatedParts.push(
+                taskCount +
+                " task" +
+                (taskCount === 1 ? "" : "s")
+            );
+        }
+
+        if (paymentCount) {
+            relatedParts.push(
+                paymentCount +
+                " payment" +
+                (paymentCount === 1 ? "" : "s")
+            );
+        }
+
+        if (followupCount) {
+            relatedParts.push(
+                followupCount +
+                " follow-up" +
+                (followupCount === 1 ? "" : "s")
+            );
+        }
+
+        const warning =
+            relatedParts.length
+                ? " This will also permanently remove linked " +
+                  relatedParts.join(", ") +
+                  " because of the current database relationships."
+                : "";
+
+        if (
+            !(await swayConfirm(
+                "Delete " +
+                client.business_name +
+                " permanently? This cannot be undone." +
+                warning
+            ))
+        ) {
+            return;
+        }
+
+        try {
+            await api(
+                "/rest/v1/clients?id=eq." +
+                encodeURIComponent(id),
+                {
+                    method: "DELETE",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    })
+                }
+            );
+        } catch (error) {
+            swayAlert(
+                error.message ||
+                "Unable to delete this client."
+            );
+            return;
+        }
+
+        await logActivity(
+            "Deleted client",
+            "clients",
+            id
+        );
+
+        await refreshData();
+        renderShell();
+        renderView();
+    }
+
     async function removeRecord(type, id) {
         const config = configs[type];
 
         if (!config) return;
-
-        if (type === "clients") {
-            swayAlert(
-                "Client records are retained permanently. Use Edit to archive a client instead of deleting the relationship."
-            );
-            return;
-        }
 
         if (
             type === "team"
@@ -14953,6 +15147,33 @@ function simpleBars(items, color) {
                     function () {
                         openClient360(
                             button.dataset.client360
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-archive-client], [data-restore-client]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        archiveClient(
+                            button.dataset.archiveClient ||
+                            button.dataset.restoreClient
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-delete-client]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        deleteClient(
+                            button.dataset.deleteClient
                         );
                     }
                 );
