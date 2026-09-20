@@ -3148,125 +3148,165 @@ function renderShell() {
         }).format(numeric);
     }
 
-    function chartSummary(values, labels, currency) {
+    function compactChartPeriodLabel(label, index, total) {
+        const value = String(label || "");
+        if (total <= 6) return value;
+        return index % 2 === 0 || index === total - 1
+            ? value
+            : "";
+    }
+
+    function chartReading(values, labels, currency, label) {
         const numbers = values.map(function (value) {
             return Number(value || 0);
         });
+
+        if (!numbers.length) {
+            return {
+                latest: 0,
+                previous: null,
+                average: 0,
+                peakValue: 0,
+                peakIndex: -1,
+                total: 0,
+                changePercent: null,
+                direction: "No movement",
+                detail: "There is no recorded activity in the selected period."
+            };
+        }
+
+        const latest = numbers[numbers.length - 1];
+        const previous = numbers.length > 1
+            ? numbers[numbers.length - 2]
+            : null;
 
         const total = numbers.reduce(function (sum, value) {
             return sum + value;
         }, 0);
 
-        const peakValue =
-            Math.max.apply(null, numbers.concat([0]));
+        const average = total / numbers.length;
+        const peakValue = Math.max.apply(null, numbers.concat([0]));
+        const peakIndex = numbers.indexOf(peakValue);
 
-        const peakIndex =
-            numbers.indexOf(peakValue);
-
-        const latest =
-            numbers.length
-                ? numbers[numbers.length - 1]
-                : 0;
-
-        const previous =
-            numbers.length > 1
-                ? numbers[numbers.length - 2]
-                : null;
-
-        const average =
-            numbers.length
-                ? total / numbers.length
-                : 0;
-
-        let trendText = "No recent movement";
         let changePercent = null;
-        let trendDetail = "Waiting for another period to compare.";
+        let direction = "Holding steady";
+        let detail = "The latest period is in line with recent activity.";
 
         if (previous !== null) {
             if (previous === 0 && latest > 0) {
-                trendText = "New activity";
+                direction = "New activity";
+                detail = "The latest period started from zero activity.";
             } else if (previous === 0 && latest === 0) {
-                trendText = "Still quiet";
-            } else if (previous > 0) {
+                direction = "Still quiet";
+                detail = "Both of the latest periods recorded no activity.";
+            } else if (previous !== 0) {
                 changePercent =
-                    ((latest - previous) / previous) * 100;
+                    ((latest - previous) / Math.abs(previous)) * 100;
 
                 if (Math.abs(changePercent) < 0.5) {
-                    trendText = "Holding steady";
-                } else {
-                    trendText =
-                        (
-                            changePercent > 0
-                                ? "↑ "
-                                : "↓ "
-                        ) +
-                        Math.abs(changePercent).toFixed(0) +
-                        "% vs previous";
-                }
-            }
-        }
-
-        let readText = "No activity recorded in this period.";
-
-        if (previous !== null) {
-            if (previous === 0 && latest === 0) {
-                trendDetail = "Both periods recorded no activity.";
-            } else if (previous === 0 && latest > 0) {
-                trendDetail = "The latest period moved up from zero activity.";
-            } else if (previous > 0) {
-                changePercent = ((latest - previous) / previous) * 100;
-
-                if (Math.abs(changePercent) < 0.5) {
-                    trendText = "Holding steady";
-                    trendDetail = "The latest period is broadly in line with the previous period.";
+                    direction = "Holding steady";
+                    detail = "The latest period is broadly in line with the previous one.";
                 } else if (changePercent > 0) {
-                    trendText = "↑ " + Math.abs(changePercent).toFixed(0) + "% vs previous";
-                    trendDetail = "Momentum is higher than the previous period.";
+                    direction = "Up " + Math.abs(changePercent).toFixed(0) + "%";
+                    detail = "The latest period increased compared with the previous period.";
                 } else {
-                    trendText = "↓ " + Math.abs(changePercent).toFixed(0) + "% vs previous";
-                    trendDetail = "Momentum is lower than the previous period.";
+                    direction = "Down " + Math.abs(changePercent).toFixed(0) + "%";
+                    detail = "The latest period decreased compared with the previous period.";
                 }
             }
         }
 
-        if (numbers.length) {
-            if (latest === 0 && total === 0) {
-                readText =
-                    "There is no recorded activity in the selected period.";
-            } else if (previous === null) {
-                readText =
-                    "The latest period is the first recorded point.";
-            } else if (
-                previous === 0 &&
-                latest > 0
-            ) {
-                readText =
-                    "Activity has started in the latest period.";
-            } else if (latest > previous) {
-                readText =
-                    "The latest period is higher than the previous period.";
-            } else if (latest < previous) {
-                readText =
-                    "The latest period is lower than the previous period.";
-            } else {
-                readText =
-                    "The latest period is in line with the previous period.";
-            }
-
-            if (
-                average > 0 &&
-                latest > average
-            ) {
-                readText +=
-                    " It is also above the period average.";
-            } else if (
-                average > 0 &&
-                latest < average
-            ) {
-                readText +=
-                    " It is below the period average.";
-            }
+        if (average > 0 && latest > average) {
+            detail += " It is above the period average.";
+        } else if (average > 0 && latest < average) {
+            detail += " It is below the period average.";
         }
+
+        return {
+            latest: latest,
+            previous: previous,
+            average: average,
+            peakValue: peakValue,
+            peakIndex: peakIndex,
+            total: total,
+            changePercent: changePercent,
+            direction: direction,
+            detail: detail
+        };
+    }
+
+    function chartPeriodBreakdown(values, labels, currency) {
+        const numbers = values.map(function (value) {
+            return Number(value || 0);
+        });
+
+        const maxValue = Math.max.apply(
+            null,
+            numbers.concat([1])
+        );
+
+        return (
+            '<div class="sway-chart-periods" aria-label="Period breakdown">' +
+                labels.map(function (periodLabel, index) {
+                    const value = numbers[index] || 0;
+                    const width =
+                        value > 0
+                            ? Math.max(
+                                7,
+                                (value / maxValue) * 100
+                            )
+                            : 0;
+
+                    return (
+                        '<div class="sway-chart-period" title="' +
+                            esc(
+                                String(periodLabel || "Period") +
+                                ": " +
+                                formatChartValue(value, currency)
+                            ) +
+                        '">' +
+                            '<div class="sway-chart-period-label">' +
+                                esc(periodLabel || "Period") +
+                            "</div>" +
+                            '<div class="sway-chart-period-track">' +
+                                '<span style="width:' +
+                                    width +
+                                '%"></span>' +
+                            "</div>" +
+                            '<strong>' +
+                                esc(
+                                    formatChartValue(
+                                        value,
+                                        currency
+                                    )
+                                ) +
+                            "</strong>" +
+                        "</div>"
+                    );
+                }).join("") +
+            "</div>"
+        );
+    }
+
+    function chartSummary(values, labels, currency, label) {
+        const reading =
+            chartReading(
+                values,
+                labels,
+                currency,
+                label
+            );
+
+        const peakLabel =
+            reading.peakIndex >= 0 &&
+            labels[reading.peakIndex]
+                ? labels[reading.peakIndex]
+                : "No peak yet";
+
+        const comparison =
+            reading.previous !== null
+                ? formatChartValue(reading.previous, currency)
+                : "First period";
 
         return (
             '<div class="sway-chart-summary">' +
@@ -3275,93 +3315,93 @@ function renderShell() {
                     "<strong>" +
                         esc(
                             formatChartValue(
-                                latest,
+                                reading.latest,
                                 currency
                             )
                         ) +
                     "</strong>" +
-                    (
-                        labels.length
-                            ? "<small>" +
-                              esc(
-                                  labels[labels.length - 1]
-                              ) +
-                              "</small>"
-                            : ""
-                    ) +
+                    '<small>' +
+                        esc(
+                            labels.length
+                                ? labels[labels.length - 1]
+                                : "Current period"
+                        ) +
+                    "</small>" +
+                "</div>" +
+                '<div class="sway-chart-summary-item">' +
+                    "<span>Vs previous</span>" +
+                    "<strong>" +
+                        esc(
+                            reading.changePercent === null
+                                ? comparison
+                                : (
+                                    reading.changePercent >= 0
+                                        ? "↑ "
+                                        : "↓ "
+                                ) +
+                                Math.abs(
+                                    reading.changePercent
+                                ).toFixed(0) +
+                                "%"
+                        ) +
+                    "</strong>" +
+                    "<small>Previous: " +
+                        esc(comparison) +
+                    "</small>" +
                 "</div>" +
                 '<div class="sway-chart-summary-item">' +
                     "<span>Average</span>" +
                     "<strong>" +
                         esc(
                             formatChartValue(
-                                average,
+                                reading.average,
                                 currency
                             )
                         ) +
                     "</strong>" +
-                    "<small>Per period</small>" +
+                    "<small>Across all periods</small>" +
                 "</div>" +
                 '<div class="sway-chart-summary-item">' +
                     "<span>Peak</span>" +
                     "<strong>" +
                         esc(
                             formatChartValue(
-                                peakValue,
+                                reading.peakValue,
                                 currency
                             )
                         ) +
                     "</strong>" +
-                    (
-                        peakIndex >= 0 &&
-                        labels[peakIndex]
-                            ? "<small>" +
-                              esc(
-                                  labels[peakIndex]
-                              ) +
-                              "</small>"
-                            : ""
-                    ) +
-                "</div>" +
-                '<div class="sway-chart-summary-item">' +
-                    "<span>Trend</span>" +
-                    "<strong>" +
-                        esc(trendText) +
-                    "</strong>" +
                     "<small>" +
-                        esc(trendDetail) +
+                        esc(peakLabel) +
                     "</small>" +
                 "</div>" +
             "</div>" +
             '<div class="sway-chart-reading">' +
-                "<span>How to read it</span>" +
+                '<div class="sway-chart-reading-title">' +
+                    '<span>What this tells you</span>' +
+                    '<strong>' +
+                        esc(reading.direction) +
+                    "</strong>" +
+                "</div>" +
                 "<p>" +
-                    esc(readText) +
-                    (
-                        changePercent !== null
-                            ? " That is " +
-                              (
-                                  changePercent >= 0
-                                      ? "an increase of "
-                                      : "a decrease of "
-                              ) +
-                              Math.abs(changePercent).toFixed(0) +
-                              "% from the previous period."
-                            : ""
-                    ) +
+                    esc(reading.detail) +
                 "</p>" +
+                chartPeriodBreakdown(
+                    values,
+                    labels,
+                    currency
+                ) +
             "</div>"
         );
     }
 
-
     function trendChart(values, labels, color, label, currency) {
-        const width = 820;
-        const height = 350;
-        const left = 82;
-        const right = 28;
-        const top = 34;
-        const bottom = 64;
+        const width = 900;
+        const height = 390;
+        const left = 88;
+        const right = 30;
+        const top = 42;
+        const bottom = 76;
         const plotWidth = width - left - right;
         const plotHeight = height - top - bottom;
 
@@ -3379,13 +3419,13 @@ function renderShell() {
         const paddedMax =
             maxValue === 1
                 ? 1
-                : maxValue * 1.16;
+                : maxValue * 1.18;
 
         const points =
             numbers.map(function (value, index) {
                 const x =
                     numbers.length === 1
-                        ? width / 2
+                        ? left + plotWidth / 2
                         : left +
                           (
                               index /
@@ -3404,17 +3444,15 @@ function renderShell() {
 
                 return {
                     x: x,
-                    y: y
+                    y: y,
+                    value: value,
+                    index: index
                 };
             });
 
         const pointString =
             points.map(function (point) {
-                return (
-                    point.x +
-                    "," +
-                    point.y
-                );
+                return point.x + "," + point.y;
             }).join(" ");
 
         let grid = "";
@@ -3442,7 +3480,7 @@ function renderShell() {
                 y +
                 '" class="sway-chart-grid-line"></line>' +
                 '<text x="' +
-                (left - 13) +
+                (left - 15) +
                 '" y="' +
                 (y + 4) +
                 '" text-anchor="end" class="sway-chart-y-label">' +
@@ -3457,47 +3495,73 @@ function renderShell() {
 
         const peakValue =
             Math.max.apply(null, numbers.concat([0]));
-
         const latestIndex =
             numbers.length - 1;
+        const peakIndex =
+            numbers.indexOf(peakValue);
 
         const pointMarks =
             points.map(function (point, index) {
-                const value = numbers[index];
                 const isPeak =
-                    value === peakValue &&
+                    index === peakIndex &&
                     peakValue > 0;
+
                 const isLatest =
                     index === latestIndex;
 
+                const showValue =
+                    isPeak ||
+                    isLatest ||
+                    numbers.length <= 5;
+
                 const labelY =
                     Math.max(
-                        17,
+                        20,
                         point.y -
                         (
                             isPeak || isLatest
-                                ? 13
-                                : 9
+                                ? 15
+                                : 10
                         )
                     );
 
                 return (
                     '<g class="sway-chart-point-group" tabindex="0" role="img" aria-label="' +
                         esc(
-                            String(labels[index] || "Period") +
+                            String(
+                                labels[index] ||
+                                "Period"
+                            ) +
                             ": " +
                             formatChartValue(
-                                value,
+                                point.value,
                                 currency
                             )
                         ) +
                     '">' +
+                        (
+                            isLatest
+                                ? '<line x1="' +
+                                  point.x +
+                                  '" y1="' +
+                                  top +
+                                  '" x2="' +
+                                  point.x +
+                                  '" y2="' +
+                                  (top + plotHeight) +
+                                  '" class="sway-chart-current-guide"></line>'
+                                : ""
+                        ) +
                         '<circle cx="' +
                             point.x +
                         '" cy="' +
                             point.y +
                         '" r="' +
-                            (isPeak || isLatest ? 6.5 : 4.8) +
+                            (
+                                isPeak || isLatest
+                                    ? 7
+                                    : 5
+                            ) +
                         '" fill="' +
                             color +
                         '" class="sway-chart-point">' +
@@ -3507,16 +3571,16 @@ function renderShell() {
                                         labels[index] ||
                                         "Period"
                                     ) +
-                                    ": " +
+                                    " · " +
                                     formatChartValue(
-                                        value,
+                                        point.value,
                                         currency
                                     )
                                 ) +
                             "</title>" +
                         "</circle>" +
                         (
-                            isPeak || isLatest
+                            showValue
                                 ? '<text x="' +
                                   point.x +
                                   '" y="' +
@@ -3524,7 +3588,7 @@ function renderShell() {
                                   '" text-anchor="middle" class="sway-chart-value-label">' +
                                   esc(
                                       formatChartValue(
-                                          value,
+                                          point.value,
                                           currency
                                       )
                                   ) +
@@ -3537,21 +3601,19 @@ function renderShell() {
 
         const xLabels =
             labels.map(function (item, index) {
-                if (
-                    labels.length > 7 &&
-                    index % 2 !== 0 &&
-                    index !== labels.length - 1
-                ) {
-                    return "";
-                }
-
                 return (
                     '<text x="' +
                     points[index].x +
                     '" y="' +
-                    (height - 19) +
+                    (height - 25) +
                     '" text-anchor="middle" class="sway-chart-axis-label">' +
-                    esc(item) +
+                        esc(
+                            compactChartPeriodLabel(
+                                item,
+                                index,
+                                labels.length
+                            )
+                        ) +
                     "</text>"
                 );
             }).join("");
@@ -3559,6 +3621,16 @@ function renderShell() {
         return (
             '<div class="sway-chart-wrap">' +
                 '<div class="sway-chart-stage">' +
+                    '<div class="sway-chart-guide">' +
+                        "<span>Higher is more activity</span>" +
+                        "<span>" +
+                            esc(
+                                currency
+                                    ? "ZAR values"
+                                    : "Count of records"
+                            ) +
+                        "</span>" +
+                    "</div>" +
                     '<svg class="sway-chart" viewBox="0 0 ' +
                         width +
                         " " +
@@ -3581,7 +3653,7 @@ function renderShell() {
                                   (top + plotHeight) +
                                   '" fill="' +
                                   color +
-                                  '" fill-opacity="0.055" class="sway-chart-area"></polygon>'
+                                  '" fill-opacity="0.045" class="sway-chart-area"></polygon>'
                                 : ""
                         ) +
                         '<line x1="' +
@@ -3605,19 +3677,20 @@ function renderShell() {
                 chartSummary(
                     numbers,
                     labels,
-                    currency
+                    currency,
+                    label
                 ) +
             "</div>"
         );
     }
 
     function barChartSimple(values, labels, color, label, currency) {
-        const width = 820;
-        const height = 350;
-        const left = 82;
-        const right = 28;
-        const top = 34;
-        const bottom = 64;
+        const width = 900;
+        const height = 390;
+        const left = 88;
+        const right = 30;
+        const top = 42;
+        const bottom = 76;
         const plotWidth = width - left - right;
         const plotHeight = height - top - bottom;
 
@@ -3635,7 +3708,7 @@ function renderShell() {
         const paddedMax =
             maxValue === 1
                 ? 1
-                : maxValue * 1.16;
+                : maxValue * 1.18;
 
         const groupWidth =
             plotWidth /
@@ -3669,7 +3742,7 @@ function renderShell() {
                 y +
                 '" class="sway-chart-grid-line"></line>' +
                 '<text x="' +
-                (left - 13) +
+                (left - 15) +
                 '" y="' +
                 (y + 4) +
                 '" text-anchor="end" class="sway-chart-y-label">' +
@@ -3684,6 +3757,9 @@ function renderShell() {
 
         const peakValue =
             Math.max.apply(null, numbers.concat([0]));
+
+        const peakIndex =
+            numbers.indexOf(peakValue);
 
         const latestIndex =
             numbers.length - 1;
@@ -3704,7 +3780,7 @@ function renderShell() {
 
                 const barWidth =
                     Math.max(
-                        10,
+                        12,
                         groupWidth * 0.68
                     );
 
@@ -3714,7 +3790,7 @@ function renderShell() {
                     barHeight;
 
                 const isPeak =
-                    value === peakValue &&
+                    index === peakIndex &&
                     peakValue > 0;
 
                 const isLatest =
@@ -3723,15 +3799,15 @@ function renderShell() {
                 const showValue =
                     isPeak ||
                     isLatest ||
-                    (
-                        value > 0 &&
-                        numbers.length <= 6
-                    );
+                    numbers.length <= 5;
 
                 return (
                     '<g class="sway-chart-bar-group" tabindex="0" role="img" aria-label="' +
                         esc(
-                            String(labels[index] || "Period") +
+                            String(
+                                labels[index] ||
+                                "Period"
+                            ) +
                             ": " +
                             formatChartValue(
                                 value,
@@ -3739,6 +3815,19 @@ function renderShell() {
                             )
                         ) +
                     '">' +
+                        (
+                            isLatest
+                                ? '<line x1="' +
+                                  (x + barWidth / 2) +
+                                  '" y1="' +
+                                  top +
+                                  '" x2="' +
+                                  (x + barWidth / 2) +
+                                  '" y2="' +
+                                  (top + plotHeight) +
+                                  '" class="sway-chart-current-guide"></line>'
+                                : ""
+                        ) +
                         '<rect x="' +
                             x +
                         '" y="' +
@@ -3746,8 +3835,11 @@ function renderShell() {
                         '" width="' +
                             barWidth +
                         '" height="' +
-                            Math.max(4, barHeight) +
-                        '" rx="8" fill="' +
+                            Math.max(
+                                5,
+                                barHeight
+                            ) +
+                        '" rx="9" fill="' +
                             color +
                         '" class="sway-chart-bar">' +
                             "<title>" +
@@ -3756,7 +3848,7 @@ function renderShell() {
                                         labels[index] ||
                                         "Period"
                                     ) +
-                                    ": " +
+                                    " · " +
                                     formatChartValue(
                                         value,
                                         currency
@@ -3770,8 +3862,8 @@ function renderShell() {
                                   (x + barWidth / 2) +
                                   '" y="' +
                                   Math.max(
-                                      17,
-                                      y - 8
+                                      20,
+                                      y - 9
                                   ) +
                                   '" text-anchor="middle" class="sway-chart-value-label">' +
                                   esc(
@@ -3785,15 +3877,15 @@ function renderShell() {
                         ) +
                         '<text x="' +
                             (x + barWidth / 2) +
-                        '" y="' +
-                            (height - 19) +
-                        '" text-anchor="middle" class="sway-chart-axis-label">' +
-                            (
-                                labels.length > 7 &&
-                                index % 2 !== 0 &&
-                                index !== labels.length - 1
-                                    ? ""
-                                    : esc(labels[index])
+                            '" y="' +
+                            (height - 25) +
+                            '" text-anchor="middle" class="sway-chart-axis-label">' +
+                            esc(
+                                compactChartPeriodLabel(
+                                    labels[index],
+                                    index,
+                                    labels.length
+                                )
                             ) +
                         "</text>" +
                     "</g>"
@@ -3803,6 +3895,16 @@ function renderShell() {
         return (
             '<div class="sway-chart-wrap">' +
                 '<div class="sway-chart-stage">' +
+                    '<div class="sway-chart-guide">' +
+                        "<span>Higher bars mean more activity</span>" +
+                        "<span>" +
+                            esc(
+                                currency
+                                    ? "ZAR values"
+                                    : "Count of records"
+                            ) +
+                        "</span>" +
+                    "</div>" +
                     '<svg class="sway-chart" viewBox="0 0 ' +
                         width +
                         " " +
@@ -3817,12 +3919,12 @@ function renderShell() {
                 chartSummary(
                     numbers,
                     labels,
-                    currency
+                    currency,
+                    label
                 ) +
             "</div>"
         );
     }
-
 
 function simpleBars(items, color) {
         const max =
