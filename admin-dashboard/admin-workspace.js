@@ -5079,11 +5079,13 @@
                 return (
                     "<tr>" +
                         "<td>" +
-                            esc(
-                                date(
-                                    item.created_at
-                                )
-                            ) +
+                            '<span class="sway-activity-datetime">' +
+                                esc(
+                                    dateTime(
+                                        item.created_at
+                                    )
+                                ) +
+                            "</span>" +
                         "</td>" +
                         "<td>" +
                             esc(
