@@ -9,6 +9,7 @@ const corsHeaders = {
 interface EmailRequest {
   contact_type?: "client" | "lead";
   contact_id?: string;
+  recipient_email?: string;
   subject?: string;
   message?: string;
 }
@@ -141,6 +142,11 @@ Deno.serve(async (req) => {
 
     const contactId =
       String(body.contact_id || "").trim();
+
+    const requestedRecipientEmail =
+      String(body.recipient_email || "")
+        .trim()
+        .toLowerCase();
 
     const message =
       String(body.message || "").trim();
@@ -294,24 +300,67 @@ Deno.serve(async (req) => {
         ? "id,business_name,contact_name,email"
         : "id,business_name,contact_name,email";
 
-    const {
-      data: contact,
-      error: contactError,
-    } =
-      await supabase
-        .from(table)
-        .select(columns)
-        .eq("id", contactId)
-        .single();
+    let contact: {
+      id: string;
+      business_name?: string | null;
+      contact_name?: string | null;
+      email?: string | null;
+    } | null = null;
 
-    if (contactError || !contact) {
+    let contactError: unknown = null;
+
+    if (contactId) {
+      const byId =
+        await supabase
+          .from(table)
+          .select(columns)
+          .eq("id", contactId)
+          .maybeSingle();
+
+      contact = byId.data || null;
+      contactError = byId.error || null;
+    }
+
+    if (!contact && requestedRecipientEmail) {
+      const byEmail =
+        await supabase
+          .from(table)
+          .select(columns)
+          .ilike("email", requestedRecipientEmail)
+          .maybeSingle();
+
+      contact = byEmail.data || null;
+      contactError = byEmail.error || contactError;
+    }
+
+    if (!contact) {
+      console.error(
+        "Recipient lookup failed:",
+        {
+          table,
+          contact_id: contactId,
+          recipient_email: requestedRecipientEmail,
+          error: contactError,
+        },
+      );
+
       throw new Error(
-        "The selected recipient could not be found.",
+        "The selected recipient could not be found. Refresh the dashboard and try selecting the contact again.",
       );
     }
 
     const recipientEmail =
       String(contact.email || "").trim();
+
+    if (
+      requestedRecipientEmail &&
+      recipientEmail.toLowerCase() !==
+        requestedRecipientEmail
+    ) {
+      throw new Error(
+        "The selected recipient details changed. Refresh the dashboard and select the recipient again.",
+      );
+    }
 
     if (!recipientEmail) {
       return Response.json(
