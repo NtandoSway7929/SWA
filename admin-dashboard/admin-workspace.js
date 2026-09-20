@@ -10211,7 +10211,13 @@ function simpleBars(items, color) {
                         swayAlert(
                             "Email sent to " +
                             contact.email +
-                            ", but the communication log could not be saved."
+                            ", but the communication log could not be saved." +
+                            (
+                                result.communication_log_error
+                                    ? " " +
+                                      result.communication_log_error
+                                    : ""
+                            )
                         );
                     } else {
                         swayAlert(
