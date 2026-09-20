@@ -38,27 +38,35 @@ function emailParagraphs(value: string) {
     .join("");
 }
 
+function cleanRecipientName(value: unknown) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function brandedEmailHtml(
   recipientName: string,
   businessName: string,
   message: string,
 ) {
   const normalizedRecipientName =
-    String(recipientName || "").trim();
+    cleanRecipientName(recipientName);
 
   const normalizedBusinessName =
-    String(businessName || "").trim();
+    cleanRecipientName(businessName);
 
   /*
-   * Prefer the saved contact person. If no contact person was recorded,
-   * use the business name rather than falling back to a generic greeting.
+   * A saved contact person must always take precedence over the business
+   * name. The generic "Hello," greeting is only used when neither value
+   * exists.
    */
   const greetingName =
-    normalizedRecipientName ||
-    normalizedBusinessName;
+    normalizedRecipientName.length > 0
+      ? normalizedRecipientName
+      : normalizedBusinessName;
 
   const greetingMarkup =
-    greetingName
+    greetingName.length > 0
       ? "Hi " + escapeHtml(greetingName) + ","
       : "Hello,";
   return `<!doctype html>
@@ -450,6 +458,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    const recipientName =
+      cleanRecipientName(
+        contact.contact_name,
+      );
+
+    const recipientBusinessName =
+      cleanRecipientName(
+        contact.business_name,
+      );
+
+    console.log(
+      "Swayphics email recipient resolved:",
+      {
+        contact_type: resolvedContactType,
+        contact_id: contact.id || null,
+        contact_name: recipientName,
+        business_name: recipientBusinessName,
+        recipient_email: contact.email || requestedRecipientEmail,
+      },
+    );
+
     const recipientEmail =
       String(
         contact.email ||
@@ -526,8 +555,8 @@ Deno.serve(async (req) => {
             subject,
             html:
               brandedEmailHtml(
-                String(contact.contact_name || "").trim(),
-                String(contact.business_name || "").trim(),
+                recipientName,
+                recipientBusinessName,
                 message,
               ),
           }),
