@@ -10644,10 +10644,10 @@ function renderShell() {
                 Date.now();
 
             setupGlobalSearch();
-            setupNotificationCenter();
 
             renderShell();
             renderView();
+            setupNotificationCenter();
             setStandaloneManagerVisibility(state.currentView);
             setupRealtime();
         } catch (error) {
