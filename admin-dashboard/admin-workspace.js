@@ -6508,6 +6508,9 @@ function simpleBars(items, color) {
                             clientHealthChip(item.id) +
                         "</td>" +
                         "<td>" +
+                            chip(item.status) +
+                        "</td>" +
+                        "<td>" +
                             '<div class="sway-row-actions">' +
                                 '<button class="sway-row-action" data-client-portal="' +
                                     esc(item.id) +
@@ -7302,6 +7305,8 @@ function simpleBars(items, color) {
         return (
             '<span class="sway-client-health-chip ' +
                 esc(health.level) +
+                '" title="' +
+                esc(health.reasons.join(" · ")) +
             '">' +
                 esc(health.label) +
             "</span>"
@@ -7665,7 +7670,7 @@ function simpleBars(items, color) {
                 "Clients",
                 "Permanent client records. Start new projects and invoices directly from each relationship.",
                 state.clients.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Contact</th><th>Owner</th><th>Projects</th><th>Health</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Contact</th><th>Owner</th><th>Projects</th><th>Health</th><th>Status</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No clients yet.")
