@@ -4394,3 +4394,369 @@
 }
 
 
+/* =========================================================
+   DASHBOARD BUSINESS UPGRADES
+   ========================================================= */
+
+.sway-client-health-chip {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 0.52rem;
+    font-weight: 800;
+    line-height: 1;
+    background: rgba(86,98,122,0.07);
+    color: #56627A;
+}
+
+.sway-client-health-chip.success {
+    background: rgba(22,163,74,0.08);
+    color: #16803A;
+}
+
+.sway-client-health-chip.warning {
+    background: rgba(217,119,6,0.09);
+    color: #B45309;
+}
+
+.sway-client-health-chip.danger {
+    background: rgba(220,38,38,0.075);
+    color: #B42318;
+}
+
+.sway-lead-source-panel,
+.sway-lead-conversion-panel,
+.sway-service-profitability {
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid rgba(0,32,150,0.09);
+    border-radius: 20px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.92) 0%,
+            rgba(247,250,255,0.86) 100%
+        );
+    box-shadow:
+        0 16px 42px rgba(0,32,150,0.05),
+        inset 0 1px 0 rgba(255,255,255,0.70);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.sway-lead-source-head,
+.sway-service-profitability-head {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 13px;
+}
+
+.sway-lead-source-head h3,
+.sway-service-profitability-head h3 {
+    color: var(--sway-dark);
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+}
+
+.sway-lead-source-head p,
+.sway-service-profitability-head p {
+    max-width: 760px;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.61rem;
+    line-height: 1.5;
+}
+
+.sway-project-timeline-modal,
+.sway-client-portal-link-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.sway-project-timeline-backdrop,
+.sway-client-portal-link-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8,21,51,0.44);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.sway-project-timeline-card,
+.sway-client-portal-link-card {
+    position: relative;
+    z-index: 1;
+    width: min(760px,100%);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    padding: 24px;
+    border: 1px solid rgba(255,255,255,0.64);
+    border-radius: 24px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.97) 0%,
+            rgba(247,250,255,0.94) 100%
+        );
+    box-shadow:
+        0 34px 100px rgba(0,32,150,0.20),
+        inset 0 1px 0 rgba(255,255,255,0.76);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+
+.sway-project-timeline-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.sway-project-timeline-head h3 {
+    color: var(--sway-dark);
+    font-size: 1.25rem;
+    letter-spacing: -0.04em;
+}
+
+.sway-project-timeline-head p {
+    margin-top: 5px;
+    color: var(--text-muted);
+    font-size: 0.64rem;
+}
+
+.sway-project-timeline-track {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+    gap: 8px;
+    padding: 6px 0 18px;
+}
+
+.sway-project-timeline-step {
+    position: relative;
+    min-height: 82px;
+    padding: 12px 10px;
+    border: 1px solid rgba(0,32,150,0.08);
+    border-radius: 15px;
+    background: rgba(255,255,255,0.62);
+}
+
+.sway-project-timeline-step.complete {
+    border-color: rgba(1,82,244,0.12);
+    background: rgba(1,82,244,0.045);
+}
+
+.sway-project-timeline-step.current {
+    box-shadow: 0 9px 24px rgba(1,82,244,0.10);
+}
+
+.sway-project-timeline-node {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 8px;
+    border-radius: 50%;
+    background: rgba(86,98,122,0.08);
+    color: #56627A;
+    font-size: 0.56rem;
+    font-weight: 900;
+}
+
+.sway-project-timeline-step.complete .sway-project-timeline-node {
+    background: linear-gradient(135deg,var(--sway-deep),var(--sway-blue));
+    color: #FFFFFF;
+}
+
+.sway-project-timeline-step strong {
+    display: block;
+    color: var(--sway-dark);
+    font-size: 0.62rem;
+    font-weight: 800;
+}
+
+.sway-project-timeline-step small {
+    display: block;
+    margin-top: 4px;
+    color: var(--sway-blue);
+    font-size: 0.5rem;
+    font-weight: 700;
+}
+
+.sway-project-timeline-meta {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(0,32,150,0.065);
+}
+
+.sway-project-timeline-meta > div {
+    display: grid;
+    gap: 4px;
+    padding: 11px;
+    border-radius: 13px;
+    background: rgba(255,255,255,0.56);
+}
+
+.sway-project-timeline-meta span {
+    color: var(--text-muted);
+    font-size: 0.51rem;
+    font-weight: 700;
+}
+
+.sway-project-timeline-meta strong {
+    color: var(--sway-dark);
+    font-size: 0.64rem;
+}
+
+.sway-project-timeline-special {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 11px;
+    border-radius: 14px;
+    background: rgba(86,98,122,0.045);
+    color: var(--text-muted);
+    font-size: 0.61rem;
+    line-height: 1.5;
+}
+
+.sway-project-timeline-footer,
+.sway-client-portal-link-card .sway-project-timeline-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.sway-client-portal-link-card .sway-form-field {
+    margin-top: 4px;
+}
+
+.sway-client-portal-link-card input {
+    font-size: 0.67rem;
+}
+
+.sway-client-portal-link-note {
+    margin-top: 12px;
+    padding: 11px 12px;
+    border-radius: 13px;
+    background: rgba(1,82,244,0.045);
+    color: var(--text-muted);
+    font-size: 0.59rem;
+    line-height: 1.5;
+}
+
+.sway-client-portal-link-note strong {
+    color: var(--sway-dark);
+}
+
+.sway-portal-request-message {
+    max-width: 420px;
+    color: var(--text-muted);
+    font-size: 0.61rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.sway-export-grid {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 14px;
+}
+
+.sway-export-card {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 18px;
+    border: 1px solid rgba(0,32,150,0.07);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.62);
+}
+
+.sway-export-card strong {
+    color: var(--sway-dark);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.sway-export-card p {
+    color: var(--text-muted);
+    font-size: 0.61rem;
+    line-height: 1.55;
+}
+
+.sway-export-card .sway-workspace-button {
+    width: fit-content;
+    margin-top: 3px;
+}
+
+.sway-client360-communications {
+    margin-top: 18px;
+}
+
+.sway-client360-communications .sway-client360-section {
+    min-width: 0;
+}
+
+.sway-client360-communications .sway-client360-list-item {
+    width: 100%;
+    border: 1px solid rgba(0,32,150,0.055);
+    background: rgba(255,255,255,0.62);
+    cursor: default;
+}
+
+@media (max-width: 760px) {
+    .sway-project-timeline-modal,
+    .sway-client-portal-link-modal {
+        padding: 10px;
+    }
+
+    .sway-project-timeline-card,
+    .sway-client-portal-link-card {
+        max-height: calc(100vh - 20px);
+        padding: 18px;
+        border-radius: 19px;
+    }
+
+    .sway-project-timeline-track {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+
+    .sway-project-timeline-meta {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+
+    .sway-project-timeline-footer,
+    .sway-client-portal-link-card .sway-project-timeline-footer {
+        flex-wrap: wrap;
+    }
+
+    .sway-project-timeline-footer .sway-workspace-button {
+        flex: 1 1 130px;
+    }
+
+    .sway-export-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-lead-source-panel,
+    .sway-lead-conversion-panel,
+    .sway-service-profitability {
+        padding: 16px;
+        border-radius: 17px;
+    }
+}
+
