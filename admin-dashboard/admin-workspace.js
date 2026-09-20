@@ -2237,6 +2237,16 @@ function renderShell() {
         const preserveMobileNavOpen =
             workspace.classList.contains("nav-open");
 
+        const existingNavScroll =
+            workspace.querySelector(
+                ".sway-workspace-nav-scroll"
+            );
+
+        const preserveSidebarScrollTop =
+            existingNavScroll
+                ? existingNavScroll.scrollTop
+                : 0;
+
         let openGroups = {};
 
         try {
@@ -2331,6 +2341,16 @@ function renderShell() {
                     '<span></span><span></span><span></span>' +
                 '</button>' +
             "</div>";
+
+        const newNavScroll =
+            workspace.querySelector(
+                ".sway-workspace-nav-scroll"
+            );
+
+        if (newNavScroll) {
+            newNavScroll.scrollTop =
+                preserveSidebarScrollTop;
+        }
 
         const mobileToggle =
             workspace.querySelector(
