@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Private Swayphics client portal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/webp" href="../FIST.webp">
+<title>Swayphics Client Portal</title>
+<style>
+:root {
+    --deep:#002096;
+    --blue:#0152F4;
+    --light:#77C1FC;
+    --dark:#081533;
+    --muted:#56627A;
+    --bg:#F6F9FF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+    min-height:100vh;
+    font-family:'Plus Jakarta Sans',sans-serif;
+    color:var(--dark);
+    background:
+        radial-gradient(circle at 88% 8%,rgba(1,82,244,.10),transparent 30%),
+        radial-gradient(circle at 8% 88%,rgba(119,193,252,.08),transparent 28%),
+        linear-gradient(135deg,#F7F9FF 0%,#FFFFFF 55%,#EEF5FF 100%);
+    -webkit-font-smoothing:antialiased;
+}
+.portal-wrap{width:min(1080px,92%);margin:0 auto;padding:30px 0 70px}
+.portal-nav{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:20px;padding:11px 16px;
+    border:1px solid rgba(255,255,255,.68);
+    border-radius:999px;
+    background:rgba(255,255,255,.72);
+    box-shadow:0 14px 38px rgba(0,32,150,.08);
+    backdrop-filter:blur(22px);
+}
+.portal-logo{width:130px}
+.portal-badge{
+    padding:7px 10px;border-radius:999px;
+    background:rgba(1,82,244,.07);color:var(--blue);
+    font-size:.58rem;font-weight:800
+}
+.portal-hero{padding:62px 4px 30px}
+.portal-kicker{color:var(--blue);font-size:.58rem;font-weight:900;letter-spacing:.18em}
+.portal-hero h1{margin-top:10px;font-size:clamp(2.2rem,5vw,4rem);line-height:.98;letter-spacing:-.055em}
+.portal-hero p{max-width:650px;margin-top:16px;color:var(--muted);font-size:.85rem;line-height:1.7}
+.portal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.portal-card{
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:22px;padding:20px;
+    background:linear-gradient(145deg,rgba(255,255,255,.93),rgba(247,250,255,.86));
+    box-shadow:0 18px 50px rgba(0,32,150,.06);
+    backdrop-filter:blur(18px);
+}
+.portal-card.full{grid-column:1/-1}
+.portal-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+.portal-card-head h2{font-size:1rem;letter-spacing:-.03em}
+.portal-card-head span{color:var(--muted);font-size:.56rem}
+.portal-list{display:grid;gap:9px}
+.portal-item{
+    padding:12px;border:1px solid rgba(0,32,150,.07);border-radius:14px;background:rgba(255,255,255,.62)
+}
+.portal-item-top{display:flex;justify-content:space-between;gap:12px}
+.portal-item strong{font-size:.67rem}
+.portal-item small{display:block;margin-top:4px;color:var(--muted);font-size:.56rem;line-height:1.5}
+.portal-item b{font-size:.62rem}
+.status{display:inline-flex;padding:5px 8px;border-radius:999px;background:rgba(1,82,244,.07);color:var(--blue);font-size:.5rem;font-weight:800}
+.empty{padding:16px;color:var(--muted);font-size:.66rem}
+.request-form{display:grid;gap:10px}
+.field{display:grid;gap:6px}
+.field label{font-size:.6rem;font-weight:800}
+.field input,.field textarea{
+    width:100%;border:1px solid rgba(0,32,150,.12);border-radius:12px;padding:11px 12px;
+    font:inherit;font-size:.68rem;color:var(--dark);background:#fff;outline:none
+}
+.field textarea{min-height:115px;resize:vertical}
+.field input:focus,.field textarea:focus{border-color:rgba(1,82,244,.35);box-shadow:0 0 0 4px rgba(1,82,244,.07)}
+.portal-button{
+    border:0;border-radius:999px;padding:11px 16px;
+    background:linear-gradient(135deg,var(--deep),var(--blue));
+    color:#fff;font:inherit;font-size:.62rem;font-weight:800;cursor:pointer
+}
+.portal-button:disabled{opacity:.6;cursor:wait}
+.message{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(1,82,244,.06);color:var(--muted);font-size:.6rem;line-height:1.5}
+.loading,.error{min-height:60vh;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:.75rem}
+.error strong{display:block;color:var(--dark);font-size:1rem;margin-bottom:7px}
+@media(max-width:760px){
+    .portal-wrap{width:min(100% - 28px,1080px);padding-top:14px}
+    .portal-nav{padding:9px 12px}
+    .portal-logo{width:112px}
+    .portal-hero{padding:44px 2px 24px}
+    .portal-grid{grid-template-columns:1fr}
+    .portal-card.full{grid-column:auto}
+}
+</style>
+</head>
+<body>
+<div id="app" class="loading">Loading your Swayphics portal...</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+    const SUPABASE_URL="https://sqifhribgsqfaxgtobsa.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY="sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
+    const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+    const app=document.getElementById("app");
+    const params=new URLSearchParams(window.location.search);
+    const token=params.get("token")||"";
+
+    function esc(value){
+        return String(value==null?"":value)
+            .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+            .replace(/>/g,"&gt;").replace(/"/g,"&quot;")
+            .replace(/'/g,"&#039;");
+    }
+
+    function money(value){
+        return new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0})
+            .format(Number(value||0));
+    }
+
+    function date(value){
+        if(!value)return "—";
+        const d=new Date(value);
+        if(Number.isNaN(d.getTime()))return String(value);
+        return d.toLocaleDateString("en-ZA",{day:"2-digit",month:"short",year:"numeric",timeZone:"Africa/Johannesburg"});
+    }
+
+    function status(value){
+        return '<span class="status">'+esc(String(value||"").replace(/\b\w/g,function(m){return m.toUpperCase()}))+"</span>";
+    }
+
+    function list(items, renderer, emptyText){
+        return items&&items.length
+            ? '<div class="portal-list">'+items.map(renderer).join("")+"</div>"
+            : '<div class="empty">'+esc(emptyText)+"</div>";
+    }
+
+    function render(data){
+        const c=data.client||{};
+        app.className="portal-wrap";
+        app.innerHTML=
+            '<nav class="portal-nav">'+
+                '<img src="../swayphics-logo.png" class="portal-logo" alt="Swayphics">'+
+                '<span class="portal-badge">Private client portal</span>'+
+            "</nav>"+
+            '<section class="portal-hero">'+
+                '<span class="portal-kicker">SWAYPHICS CLIENT PORTAL</span>'+
+                "<h1>Welcome, "+esc(c.contact_name||c.business_name||"Client")+"."+"</h1>"+
+                "<p>View your current Swayphics projects, quotes, invoices and payments in one private workspace. You can also send a request directly to the Swayphics team.</p>"+
+            "</section>"+
+            '<div class="portal-grid">'+
+                '<section class="portal-card">'+
+                    '<div class="portal-card-head"><h2>Projects</h2><span>'+((data.projects||[]).length)+"</span></div>"+
+                    list(data.projects,function(item){
+                        return '<article class="portal-item"><div class="portal-item-top"><strong>'+esc(item.name)+'</strong>'+status(item.status)+'</div>'+
+                            '<small>'+esc(item.service||"Swayphics project")+
+                            (item.due_date?" · Due "+esc(date(item.due_date)):"")+"</small></article>";
+                    },"No projects are currently listed.")+
+                "</section>"+
+                '<section class="portal-card">'+
+                    '<div class="portal-card-head"><h2>Quotes</h2><span>'+((data.quotes||[]).length)+"</span></div>"+
+                    list(data.quotes,function(item){
+                        return '<article class="portal-item"><div class="portal-item-top"><strong>'+esc(item.quote_number||item.title||"Quote")+'</strong><b>'+money(item.amount)+'</b></div>'+
+                            '<small>'+esc(item.title||"")+" · "+esc(date(item.valid_until))+" · "+esc(item.status||"")+"</small></article>";
+                    },"No quotes are currently listed.")+
+                "</section>"+
+                '<section class="portal-card full">'+
+                    '<div class="portal-card-head"><h2>Invoices</h2><span>'+((data.invoices||[]).length)+"</span></div>"+
+                    list(data.invoices,function(item){
+                        return '<article class="portal-item"><div class="portal-item-top"><strong>'+esc(item.invoice_number)+'</strong><b>'+money(item.total)+'</b></div>'+
+                            '<small>Issued '+esc(date(item.issue_date))+
+                            (item.due_date?" · Due "+esc(date(item.due_date)):"")+
+                            " · "+esc(item.status||"")+
+                            (Number(item.amount_outstanding||0)>0?" · Outstanding "+money(item.amount_outstanding):"")+
+                            "</small></article>";
+                    },"No invoices are currently listed.")+
+                "</section>"+
+                '<section class="portal-card">'+
+                    '<div class="portal-card-head"><h2>Payments</h2><span>'+((data.payments||[]).length)+"</span></div>"+
+                    list(data.payments,function(item){
+                        return '<article class="portal-item"><div class="portal-item-top"><strong>'+money(item.amount)+'</strong>'+status("Paid")+'</div>'+
+                            '<small>'+esc(date(item.paid_at))+(item.reference?" · "+esc(item.reference):"")+
+                            (item.method?" · "+esc(item.method):"")+"</small></article>";
+                    },"No recorded payments yet.")+
+                "</section>"+
+                '<section class="portal-card">'+
+                    '<div class="portal-card-head"><h2>Send a request</h2><span>Direct to Swayphics</span></div>'+
+                    '<form class="request-form" id="request-form">'+
+                        '<div class="field"><label for="request-subject">Subject</label><input id="request-subject" required maxlength="180" placeholder="What do you need help with?"></div>'+
+                        '<div class="field"><label for="request-message">Message</label><textarea id="request-message" required maxlength="5000" placeholder="Tell us what you need."></textarea></div>'+
+                        '<button class="portal-button" type="submit">Send request</button>'+
+                        '<div id="request-message-status" class="message" hidden></div>'+
+                    "</form>"+
+                "</section>"+
+            "</div>";
+
+        document.getElementById("request-form").addEventListener("submit",async function(event){
+            event.preventDefault();
+            const button=event.target.querySelector("button");
+            const statusBox=document.getElementById("request-message-status");
+            button.disabled=true;
+            statusBox.hidden=false;
+            statusBox.textContent="Sending request...";
+            try{
+                const result=await client.rpc("submit_client_portal_request",{
+                    p_token:token,
+                    p_subject:document.getElementById("request-subject").value,
+                    p_message:document.getElementById("request-message").value
+                });
+                const payload=result.data;
+                if(result.error)throw result.error;
+                if(!payload||!payload.ok)throw new Error(payload&&payload.error||"Unable to send request.");
+                statusBox.textContent="Your request has been sent to Swayphics.";
+                event.target.reset();
+            }catch(error){
+                statusBox.textContent=error.message||"Unable to send request.";
+            }finally{
+                button.disabled=false;
+            }
+        });
+    }
+
+    async function load(){
+        if(!token){
+            app.className="error portal-wrap";
+            app.innerHTML="<div><strong>Portal link required</strong>This page needs a valid private Swayphics portal link.</div>";
+            return;
+        }
+
+        try{
+            const result=await client.rpc("get_client_portal",{p_token:token});
+            if(result.error)throw result.error;
+            if(!result.data||!result.data.ok){
+                throw new Error(result.data&&result.data.error||"This portal link is invalid or expired.");
+            }
+            render(result.data);
+        }catch(error){
+            app.className="error portal-wrap";
+            app.innerHTML="<div><strong>Unable to open portal</strong>"+esc(error.message||"This portal link is invalid or expired.")+"</div>";
+        }
+    }
+
+    load();
+})();
+</script>
+</body>
+</html>
