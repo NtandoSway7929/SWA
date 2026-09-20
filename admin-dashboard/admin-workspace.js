@@ -17049,7 +17049,10 @@ function simpleBars(items, color) {
         renderView();
 
         try {
-            await loadState();
+            await Promise.all([
+                loadState(),
+                refreshData()
+            ]);
 
             renderShell();
             renderView();
@@ -17057,37 +17060,93 @@ function simpleBars(items, color) {
             setStandaloneManagerVisibility(
                 state.currentView
             );
-
             setupGlobalSearch();
+            setupRealtime();
 
-            refreshData()
-                .then(async function () {
-                    const remindersCreated =
-                        await processAutomatedReminders();
+            /*
+             * Startup-critical data is now rendered before any automation
+             * or secondary workspace work runs. This prevents the dashboard
+             * from appearing, changing, and re-rendering several times during
+             * the initial load.
+             */
 
-                    if (remindersCreated) {
-                        await refreshData();
+            processAutomatedReminders()
+                .then(function (created) {
+                    if (!created) {
+                        return;
                     }
 
-                    renderShell();
-                    renderView();
-                    setupNotificationCenter();
-                    setStandaloneManagerVisibility(
-                        state.currentView
+                    return refreshData();
+                })
+                .then(function () {
+                    updateNotificationCenter();
+
+                    if (
+                        state.currentView === "reminders" ||
+                        state.currentView === "followups"
+                    ) {
+                        renderView();
+                        setupNotificationCenter();
+                        setStandaloneManagerVisibility(
+                            state.currentView
+                        );
+                    }
+                })
+                .catch(function (error) {
+                    console.warn(
+                        "Background reminder automation failed.",
+                        error
                     );
+                });
 
-                    setupRealtime();
+            refreshSecondaryData()
+                .then(function () {
+                    updateNotificationCenter();
 
-                    refreshSecondaryData()
-                        .then(function () {
-                            const modalOpen = Boolean(
-                                document.querySelector(
-                                    ".sway-modal:not([hidden]), .portfolio-modal:not([hidden])"
-                                )
-                            );
+                    if (
+                        [
+                            "communications",
+                            "email",
+                            "documents",
+                            "portal-requests"
+                        ].includes(state.currentView)
+                    ) {
+                        renderView();
+                        setupNotificationCenter();
+                        setStandaloneManagerVisibility(
+                            state.currentView
+                        );
+                    }
+                })
+                .catch(function (error) {
+                    console.warn(
+                        "Secondary workspace data could not be loaded.",
+                        error
+                    );
+                });
 
-                            if (!modalOpen) {
-                                renderShell();
+            window.setTimeout(
+                function () {
+                    processStaleLeads()
+                        .then(function (changed) {
+                            if (!changed) {
+                                return;
+                            }
+
+                            return refreshData();
+                        })
+                        .then(function (changed) {
+                            if (!changed) {
+                                return;
+                            }
+
+                            updateNotificationCenter();
+
+                            if (
+                                state.currentView === "leads" ||
+                                state.currentView === "followups" ||
+                                state.currentView === "reminders"
+                            ) {
                                 renderView();
                                 setupNotificationCenter();
                                 setStandaloneManagerVisibility(
@@ -17097,78 +17156,32 @@ function simpleBars(items, color) {
                         })
                         .catch(function (error) {
                             console.warn(
-                                "Secondary workspace data could not be loaded.",
+                                "Background stale-lead automation failed.",
                                 error
                             );
                         });
-
-                    window.setTimeout(
-                        function () {
-                            processStaleLeads()
-                                .then(function (changed) {
-                                    if (changed) {
-                                        refreshData()
-                                            .then(function () {
-                                                renderShell();
-                                                renderView();
-                                                setupNotificationCenter();
-                                                setStandaloneManagerVisibility(
-                                                    state.currentView
-                                                );
-                                            })
-                                            .catch(function (error) {
-                                                console.warn(
-                                                    "Post-load lead automation refresh failed.",
-                                                    error
-                                                );
-                                            });
-                                    }
-                                })
-                                .catch(function (error) {
-                                    console.warn(
-                                        "Stale lead automation could not run.",
-                                        error
-                                    );
-                                });
-                        },
-                        1500
-                    );
-                })
-                .catch(function (error) {
-                    state.initialDataError =
-                        error.message ||
-                        "Unable to load workspace data.";
-
-                    state.initialDataLoading =
-                        false;
-
-                    const main =
-                        document.getElementById(
-                            "sway-workspace-main"
-                        );
-
-                    if (main) {
-                        main.innerHTML =
-                            '<div class="sway-error">' +
-                                esc(
-                                    state.initialDataError
-                                ) +
-                            "</div>";
-                    }
-
-                    console.error(
-                        "Swayphics workspace data failed to load:",
-                        error
-                    );
-                });
+                },
+                1500
+            );
         } catch (error) {
             state.initialDataLoading = false;
+            state.initialDataError =
+                error.message ||
+                "Unable to load workspace data.";
 
-            workspace.innerHTML =
-                '<div class="sway-error">' +
-                    esc(error.message) +
-                    '<br><br><strong>Workspace setup:</strong> confirm that the Swayphics admin SQL has been run in Supabase and that your account exists in admin_users.' +
-                "</div>";
+            const main =
+                document.getElementById(
+                    "sway-workspace-main"
+                );
+
+            if (main) {
+                main.innerHTML =
+                    '<div class="sway-error">' +
+                        esc(
+                            state.initialDataError
+                        ) +
+                    "</div>";
+            }
 
             console.error(
                 "Swayphics workspace failed to initialise:",
