@@ -3200,6 +3200,344 @@ function renderShell() {
         );
     }
 
+    function addDashboardDays(value, days) {
+        const key = dashboardDateKey(value || dashboardTodayISO());
+
+        if (!key) {
+            return dashboardTodayISO();
+        }
+
+        const parsed = new Date(
+            key + "T00:00:00+02:00"
+        );
+
+        parsed.setDate(
+            parsed.getDate() + Number(days || 0)
+        );
+
+        return (
+            parsed.getFullYear() +
+            "-" +
+            String(parsed.getMonth() + 1).padStart(2, "0") +
+            "-" +
+            String(parsed.getDate()).padStart(2, "0")
+        );
+    }
+
+    function dashboardDaysSince(value) {
+        const key = dashboardDateKey(value);
+
+        if (!key) return 0;
+
+        const start = new Date(
+            key + "T00:00:00+02:00"
+        );
+
+        const today = new Date(
+            dashboardTodayISO() + "T00:00:00+02:00"
+        );
+
+        return Math.floor(
+            (
+                today.getTime() -
+                start.getTime()
+            ) /
+            86400000
+        );
+    }
+
+    function hasPendingFollowupForContact(clientId, leadId) {
+        return state.followups.some(function (item) {
+            return (
+                item.status === "pending" &&
+                (
+                    (clientId && item.client_id === clientId) ||
+                    (leadId && item.lead_id === leadId)
+                )
+            );
+        });
+    }
+
+    function followupAutomationSuggestions() {
+        const suggestions = [];
+
+        state.quotes.forEach(function (quote) {
+            if (
+                quote.status !== "sent" ||
+                !quote.client_id ||
+                hasPendingFollowupForContact(
+                    quote.client_id,
+                    quote.lead_id
+                )
+            ) {
+                return;
+            }
+
+            const referenceDate =
+                quote.updated_at ||
+                quote.created_at;
+
+            const daysSince =
+                dashboardDaysSince(referenceDate);
+
+            if (daysSince < 3) {
+                return;
+            }
+
+            suggestions.push({
+                kind: "quote",
+                priority: daysSince >= 7 ? "danger" : "warning",
+                icon: "Q",
+                title:
+                    quote.quote_number ||
+                    quote.title ||
+                    "Quote follow-up",
+                contact:
+                    clientName(quote.client_id),
+                reason:
+                    "Quote sent " +
+                    daysSince +
+                    " days ago with no pending follow-up.",
+                suggestedDate:
+                    addDashboardDays(
+                        dashboardTodayISO(),
+                        0
+                    ),
+                note:
+                    "Follow up on " +
+                    (
+                        quote.quote_number ||
+                        "the quote"
+                    ) +
+                    " and confirm whether the client would like to proceed.",
+                clientId:
+                    quote.client_id,
+                leadId:
+                    quote.lead_id || null,
+                actionLabel: "Schedule"
+            });
+        });
+
+        state.invoices.forEach(function (invoice) {
+            if (
+                !invoice.client_id ||
+                invoice.status === "paid" ||
+                invoice.status === "cancelled" ||
+                hasPendingFollowupForContact(
+                    invoice.client_id,
+                    null
+                )
+            ) {
+                return;
+            }
+
+            const outstanding =
+                Number(
+                    invoice.amount_outstanding != null
+                        ? invoice.amount_outstanding
+                        : invoice.total || 0
+                );
+
+            if (outstanding <= 0) {
+                return;
+            }
+
+            const overdue =
+                invoice.status === "overdue" ||
+                (
+                    invoice.due_date &&
+                    isOverdue(invoice.due_date)
+                );
+
+            const daysSinceSent =
+                dashboardDaysSince(
+                    invoice.sent_at ||
+                    invoice.updated_at ||
+                    invoice.created_at
+                );
+
+            if (!overdue && daysSinceSent < 7) {
+                return;
+            }
+
+            suggestions.push({
+                kind: "invoice",
+                priority: overdue ? "danger" : "warning",
+                icon: "I",
+                title:
+                    invoice.invoice_number ||
+                    "Payment follow-up",
+                contact:
+                    clientName(invoice.client_id),
+                reason:
+                    overdue
+                        ? "Invoice is overdue with " +
+                          money(outstanding) +
+                          " outstanding."
+                        : "Invoice has been outstanding for " +
+                          daysSinceSent +
+                          " days.",
+                suggestedDate:
+                    dashboardTodayISO(),
+                note:
+                    overdue
+                        ? "Follow up on " +
+                          (
+                              invoice.invoice_number ||
+                              "the invoice"
+                          ) +
+                          " regarding the outstanding balance of " +
+                          money(outstanding) +
+                          "."
+                        : "Check in on " +
+                          (
+                              invoice.invoice_number ||
+                              "the invoice"
+                          ) +
+                          " and confirm the payment timeline.",
+                clientId:
+                    invoice.client_id,
+                leadId: null,
+                actionLabel: "Schedule"
+            });
+        });
+
+        state.leads.forEach(function (lead) {
+            if (
+                !lead.assigned_to ||
+                lead.assigned_to !== state.currentUser.id ||
+                ["won", "lost", "follow-up"].includes(lead.status) ||
+                hasPendingFollowupForContact(
+                    lead.converted_client_id || null,
+                    lead.id
+                )
+            ) {
+                return;
+            }
+
+            const daysSince =
+                dashboardDaysSince(
+                    lead.updated_at ||
+                    lead.created_at
+                );
+
+            if (
+                daysSince < 3 ||
+                ![
+                    "contacted",
+                    "interested",
+                    "proposal sent",
+                    "negotiating"
+                ].includes(lead.status)
+            ) {
+                return;
+            }
+
+            suggestions.push({
+                kind: "lead",
+                priority:
+                    daysSince >= 7
+                        ? "danger"
+                        : "info",
+                icon: "L",
+                title:
+                    lead.business_name ||
+                    "Lead follow-up",
+                contact:
+                    lead.contact_name ||
+                    "Prospect",
+                reason:
+                    "No pending follow-up and the lead has been active for " +
+                    daysSince +
+                    " days.",
+                suggestedDate:
+                    dashboardTodayISO(),
+                note:
+                    "Follow up with " +
+                    (
+                        lead.business_name ||
+                        "the prospect"
+                    ) +
+                    " regarding their " +
+                    (
+                        lead.service_interest ||
+                        "requested service"
+                    ) +
+                    " interest.",
+                clientId: null,
+                leadId: lead.id,
+                actionLabel: "Schedule"
+            });
+        });
+
+        const priorityRank = {
+            danger: 0,
+            warning: 1,
+            info: 2
+        };
+
+        suggestions.sort(function (a, b) {
+            return (
+                priorityRank[a.priority] -
+                priorityRank[b.priority]
+            );
+        });
+
+        return suggestions.slice(0, 8);
+    }
+
+    function renderFollowupAutomation() {
+        const suggestions =
+            followupAutomationSuggestions();
+
+        if (!suggestions.length) {
+            return "";
+        }
+
+        return (
+            '<section class="sway-followup-automation">' +
+                '<div class="sway-followup-automation-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Automation</span>' +
+                        "<h3>Recommended follow-ups</h3>" +
+                        "<p>Based on activity and outstanding client actions, these contacts are ready for a follow-up.</p>" +
+                    "</div>" +
+                    '<span class="sway-followup-automation-badge">' +
+                        suggestions.length +
+                        " suggested" +
+                    "</span>" +
+                "</div>" +
+                '<div class="sway-followup-automation-list">' +
+                    suggestions.map(function (item, index) {
+                        return (
+                            '<div class="sway-followup-automation-item ' +
+                                esc(item.priority) +
+                                '">' +
+                                '<span class="sway-followup-automation-icon" aria-hidden="true">' +
+                                    esc(item.icon) +
+                                "</span>" +
+                                '<div class="sway-followup-automation-copy">' +
+                                    "<strong>" +
+                                        esc(formatDisplayText(item.title)) +
+                                    "</strong>" +
+                                    "<span>" +
+                                        esc(item.contact) +
+                                    "</span>" +
+                                    "<small>" +
+                                        esc(item.reason) +
+                                    "</small>" +
+                                "</div>" +
+                                '<button type="button" class="sway-row-action" data-automation-followup="' +
+                                    index +
+                                '">Schedule</button>' +
+                            "</div>"
+                        );
+                    }).join("") +
+                "</div>" +
+            "</section>"
+        );
+    }
+
     function renderOverview() {
         const today =
             dashboardTodayISO();
@@ -3282,6 +3620,8 @@ function renderShell() {
             "</div>" +
 
             renderNeedsAttention() +
+
+            renderFollowupAutomation() +
 
             '<div class="sway-workspace-grid">' +
 
@@ -3687,6 +4027,7 @@ function renderShell() {
             heading(
                 '<button class="sway-workspace-button primary" data-add="followups">+ New follow-up</button>'
             ) +
+            renderFollowupAutomation() +
             panel(
                 "Follow-up queue",
                 "Keep outreach and client communication from falling through the cracks.",
@@ -8899,6 +9240,48 @@ function renderShell() {
                         state.currentView = view;
                         renderShell();
                         renderView();
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-automation-followup]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        const suggestions =
+                            followupAutomationSuggestions();
+
+                        const suggestion =
+                            suggestions[
+                                Number(
+                                    button.dataset.automationFollowup
+                                )
+                            ];
+
+                        if (!suggestion) return;
+
+                        createOrEdit(
+                            "followups",
+                            null,
+                            {
+                                lead_id:
+                                    suggestion.leadId,
+                                client_id:
+                                    suggestion.clientId,
+                                assigned_to:
+                                    state.currentUser.id,
+                                scheduled_for:
+                                    suggestion.suggestedDate,
+                                channel:
+                                    "WhatsApp",
+                                status:
+                                    "pending",
+                                note:
+                                    suggestion.note
+                            }
+                        );
                     }
                 );
             });
