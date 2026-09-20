@@ -2200,6 +2200,167 @@ function renderShell() {
         );
     }
 
+    function renderRevenuePipeline() {
+        const stages = [
+            "new",
+            "contacted",
+            "interested",
+            "proposal sent",
+            "negotiating",
+            "won"
+        ].map(function (status) {
+            const leads = state.leads.filter(function (lead) {
+                return lead.status === status;
+            });
+
+            return {
+                status: status,
+                label: formatDisplayText(status),
+                count: leads.length,
+                value: leads.reduce(function (sum, lead) {
+                    return sum + Number(lead.estimated_value || 0);
+                }, 0)
+            };
+        });
+
+        const openValue = stages
+            .filter(function (stage) {
+                return stage.status !== "won";
+            })
+            .reduce(function (sum, stage) {
+                return sum + stage.value;
+            }, 0);
+
+        const wonValue = stages
+            .filter(function (stage) {
+                return stage.status === "won";
+            })
+            .reduce(function (sum, stage) {
+                return sum + stage.value;
+            }, 0);
+
+        const quoteStats = [
+            "sent",
+            "accepted",
+            "rejected",
+            "expired"
+        ].map(function (status) {
+            const quotes = state.quotes.filter(function (quote) {
+                return quote.status === status;
+            });
+
+            return {
+                label: formatDisplayText(status),
+                count: quotes.length,
+                value: quotes.reduce(function (sum, quote) {
+                    return sum + Number(quote.amount || 0);
+                }, 0)
+            };
+        });
+
+        const maxValue = Math.max.apply(
+            null,
+            stages.map(function (stage) {
+                return stage.value;
+            }).concat([1])
+        );
+
+        return (
+            '<section class="sway-revenue-pipeline">' +
+                '<div class="sway-revenue-pipeline-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Sales pipeline</span>' +
+                        "<h3>Revenue pipeline</h3>" +
+                        "<p>Estimated value across current lead stages, with quote checkpoints alongside it.</p>" +
+                    "</div>" +
+                    '<div class="sway-revenue-pipeline-totals">' +
+                        '<div><span>Open opportunity</span><strong>' +
+                            esc(money(openValue)) +
+                        "</strong></div>" +
+                        '<div><span>Won value</span><strong>' +
+                            esc(money(wonValue)) +
+                        "</strong></div>" +
+                    "</div>" +
+                "</div>" +
+
+                '<div class="sway-revenue-pipeline-layout">' +
+                    '<div class="sway-revenue-pipeline-stages">' +
+                        stages.map(function (stage) {
+                            const width =
+                                stage.value > 0
+                                    ? Math.max(
+                                        6,
+                                        stage.value / maxValue * 100
+                                    )
+                                    : 0;
+
+                            return (
+                                '<button type="button" class="sway-revenue-stage" data-view-target="leads">' +
+                                    '<div class="sway-revenue-stage-top">' +
+                                        "<span>" +
+                                            esc(stage.label) +
+                                        "</span>" +
+                                        "<strong>" +
+                                            esc(money(stage.value)) +
+                                        "</strong>" +
+                                    "</div>" +
+                                    '<div class="sway-revenue-stage-track">' +
+                                        '<span style="width:' +
+                                            width +
+                                        '%"></span>' +
+                                    "</div>" +
+                                    '<div class="sway-revenue-stage-foot">' +
+                                        "<small>" +
+                                            stage.count +
+                                            (
+                                                stage.count === 1
+                                                    ? " lead"
+                                                    : " leads"
+                                            ) +
+                                        "</small>" +
+                                        "<small>Current stage</small>" +
+                                    "</div>" +
+                                "</button>"
+                            );
+                        }).join("") +
+                    "</div>" +
+
+                    '<div class="sway-revenue-quotes">' +
+                        '<div class="sway-revenue-quotes-head">' +
+                            "<h4>Quote checkpoint</h4>" +
+                            '<button type="button" class="sway-row-action" data-view-target="quotes">View quotes</button>' +
+                        "</div>" +
+                        '<div class="sway-revenue-quote-list">' +
+                            quoteStats.map(function (item) {
+                                return (
+                                    '<button type="button" class="sway-revenue-quote-row" data-view-target="quotes">' +
+                                        "<span>" +
+                                            "<strong>" +
+                                                esc(item.label) +
+                                            "</strong>" +
+                                            "<small>" +
+                                                item.count +
+                                                (
+                                                    item.count === 1
+                                                        ? " quote"
+                                                        : " quotes"
+                                                ) +
+                                            "</small>" +
+                                        "</span>" +
+                                        "<b>" +
+                                            esc(money(item.value)) +
+                                        "</b>" +
+                                    "</button>"
+                                );
+                            }).join("") +
+                        "</div>" +
+                        '<div class="sway-revenue-pipeline-note">Lead stages are a current-state view because stage-change history is not stored.</div>' +
+                    "</div>" +
+                "</div>" +
+            "</section>"
+        );
+    }
+
     function renderInsights() {
         const data = insightData();
         const labels =
@@ -2466,6 +2627,8 @@ function renderShell() {
                     '<div class="hint">Current client relationships.</div>' +
                 "</div>" +
             "</div>" +
+
+            renderRevenuePipeline() +
 
             '<div class="sway-insight-grid">' +
                 insightPanel(
