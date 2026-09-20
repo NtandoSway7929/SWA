@@ -4854,6 +4854,596 @@ function renderShell() {
         );
     }
 
+
+    function socialPlatformIcon(platform) {
+        const icons = {
+            Instagram: "IG",
+            Facebook: "FB",
+            TikTok: "TK"
+        };
+
+        return icons[platform] || "SM";
+    }
+
+    function socialAccountFor(platform) {
+        return state.socialAccounts.find(function (item) {
+            return item.platform === platform;
+        }) || null;
+    }
+
+    function socialLatestMetric(accountId) {
+        return state.socialMetrics
+            .filter(function (item) {
+                return item.social_account_id === accountId;
+            })
+            .sort(function (a, b) {
+                return String(b.metric_date || "").localeCompare(
+                    String(a.metric_date || "")
+                );
+            })[0] || null;
+    }
+
+    function socialNumber(value) {
+        const number = Number(value || 0);
+
+        if (number >= 1000000) {
+            return (
+                (number / 1000000)
+                    .toFixed(number >= 10000000 ? 0 : 1)
+                    .replace(/\.0$/, "") +
+                "M"
+            );
+        }
+
+        if (number >= 1000) {
+            return (
+                (number / 1000)
+                    .toFixed(number >= 100000 ? 0 : 1)
+                    .replace(/\.0$/, "") +
+                "K"
+            );
+        }
+
+        return new Intl.NumberFormat("en-ZA").format(number);
+    }
+
+    function renderSocialOverview() {
+        const platforms = [
+            "Instagram",
+            "Facebook",
+            "TikTok"
+        ];
+
+        const connectedCount =
+            state.socialAccounts.filter(function (item) {
+                return item.status === "connected";
+            }).length;
+
+        const recentPosts =
+            state.socialPosts
+                .slice()
+                .sort(function (a, b) {
+                    return (
+                        String(b.created_at || "")
+                            .localeCompare(
+                                String(a.created_at || "")
+                            )
+                    );
+                })
+                .slice(0, 5);
+
+        const accountCards =
+            platforms.map(function (platform) {
+                const account =
+                    socialAccountFor(platform);
+
+                const metric =
+                    account
+                        ? socialLatestMetric(account.id)
+                        : null;
+
+                return (
+                    '<article class="sway-social-account-card">' +
+                        '<div class="sway-social-account-top">' +
+                            '<span class="sway-social-platform-icon">' +
+                                esc(socialPlatformIcon(platform)) +
+                            "</span>" +
+                            '<div class="sway-social-account-heading">' +
+                                "<strong>" +
+                                    esc(platform) +
+                                "</strong>" +
+                                "<span>" +
+                                    esc(
+                                        account
+                                            ? (
+                                                account.handle
+                                                    ? "@" + account.handle
+                                                    : account.account_name
+                                            )
+                                            : "No account connected"
+                                    ) +
+                                "</span>" +
+                            "</div>" +
+                            '<span class="sway-social-account-status ' +
+                                (
+                                    account &&
+                                    account.status === "connected"
+                                        ? "connected"
+                                        : ""
+                                ) +
+                            '">' +
+                                (
+                                    account
+                                        ? formatDisplayText(account.status)
+                                        : "Not configured"
+                                ) +
+                            "</span>" +
+                        "</div>" +
+                        '<div class="sway-social-account-stats">' +
+                            "<div><span>Followers</span><strong>" +
+                                esc(
+                                    metric
+                                        ? socialNumber(metric.followers)
+                                        : "—"
+                                ) +
+                            "</strong></div>" +
+                            "<div><span>Reach</span><strong>" +
+                                esc(
+                                    metric
+                                        ? socialNumber(metric.reach)
+                                        : "—"
+                                ) +
+                            "</strong></div>" +
+                            "<div><span>Views</span><strong>" +
+                                esc(
+                                    metric
+                                        ? socialNumber(metric.views)
+                                        : "—"
+                                ) +
+                            "</strong></div>" +
+                        "</div>" +
+                        '<div class="sway-social-account-actions">' +
+                            (
+                                account
+                                    ? '<button type="button" class="sway-row-action" data-edit="socialAccounts" data-id="' +
+                                      esc(account.id) +
+                                      '">Edit account</button>'
+                                    : '<button type="button" class="sway-row-action" data-social-add-account="' +
+                                      esc(platform) +
+                                      '">Add account</button>'
+                            ) +
+                            (
+                                account && account.profile_url
+                                    ? '<a class="sway-row-action sway-social-profile-link" href="' +
+                                      esc(account.profile_url) +
+                                      '" target="_blank" rel="noopener noreferrer">Open profile</a>'
+                                    : ""
+                            ) +
+                        "</div>" +
+                    "</article>"
+                );
+            }).join("");
+
+        return (
+            heading(
+                '<button type="button" class="sway-workspace-button" data-add="socialAccounts">+ Add account</button>' +
+                '<button type="button" class="sway-workspace-button primary" data-add="socialPosts">+ New post</button>'
+            ) +
+
+            '<section class="sway-social-summary">' +
+                '<div>' +
+                    '<span class="admin-label">Social control centre</span>' +
+                    "<h3>One view of Swayphics social.</h3>" +
+                    "<p>Accounts, publishing work and performance are being brought into the same operating system as your clients and sales pipeline.</p>" +
+                "</div>" +
+                '<div class="sway-social-summary-stats">' +
+                    '<div><span>Connected accounts</span><strong>' +
+                        connectedCount +
+                    "</strong></div>" +
+                    '<div><span>Content records</span><strong>' +
+                        state.socialPosts.length +
+                    "</strong></div>" +
+                    '<div><span>Metric snapshots</span><strong>' +
+                        state.socialMetrics.length +
+                    "</strong></div>" +
+                "</div>" +
+            "</section>" +
+
+            '<div class="sway-social-account-grid">' +
+                accountCards +
+            "</div>" +
+
+            panel(
+                "Recent content",
+                "The dashboard queue for content that has been drafted, scheduled or published.",
+                recentPosts.length
+                    ? '<div class="sway-social-recent-list">' +
+                        recentPosts.map(function (post) {
+                            return (
+                                '<button type="button" class="sway-social-recent-item" data-view-target="social-content">' +
+                                    '<span class="sway-social-recent-icon">' +
+                                        esc(
+                                            socialPlatformIcon(
+                                                post.platform
+                                            )
+                                        ) +
+                                    "</span>" +
+                                    '<span class="sway-social-recent-copy">' +
+                                        "<strong>" +
+                                            esc(
+                                                post.title ||
+                                                post.caption ||
+                                                "Untitled post"
+                                            ) +
+                                        "</strong>" +
+                                        "<small>" +
+                                            esc(
+                                                formatDisplayText(
+                                                    post.status
+                                                ) +
+                                                " · " +
+                                                formatDisplayText(
+                                                    post.platform
+                                                )
+                                            ) +
+                                        "</small>" +
+                                    "</span>" +
+                                    '<span class="sway-social-recent-date">' +
+                                        esc(
+                                            post.published_at
+                                                ? date(post.published_at)
+                                                : post.scheduled_for
+                                                    ? dateTime(post.scheduled_for)
+                                                    : date(post.created_at)
+                                        ) +
+                                    "</span>" +
+                                "</button>"
+                            );
+                        }).join("") +
+                      "</div>"
+                    : empty(
+                        "No social content has been created yet."
+                    )
+            ) +
+
+            '<div class="sway-social-integration-note">' +
+                "<strong>Live platform connection</strong>" +
+                "<p>Official Meta and TikTok authentication will populate the account status, publishing results and performance snapshots here. No access tokens are stored in the dashboard tables.</p>" +
+            "</div>"
+        );
+    }
+
+    function renderSocialContent() {
+        const rows =
+            state.socialPosts.map(function (post) {
+                return (
+                    "<tr>" +
+                        "<td>" +
+                            "<strong>" +
+                                esc(
+                                    post.title ||
+                                    post.caption ||
+                                    "Untitled post"
+                                ) +
+                            "</strong>" +
+                            (
+                                post.caption &&
+                                post.title
+                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
+                                      esc(
+                                          post.caption
+                                              .slice(0, 100)
+                                      ) +
+                                      (
+                                          post.caption.length > 100
+                                              ? "..."
+                                              : ""
+                                      ) +
+                                      "</span>"
+                                    : ""
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(formatDisplayText(post.platform)) +
+                        "</td>" +
+                        "<td>" +
+                            chip(post.status) +
+                        "</td>" +
+                        "<td>" +
+                            esc(
+                                post.published_at
+                                    ? dateTime(post.published_at)
+                                    : post.scheduled_for
+                                        ? dateTime(post.scheduled_for)
+                                        : dateTime(post.created_at)
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            '<div class="sway-row-actions">' +
+                                '<button type="button" class="sway-row-action" data-edit="socialPosts" data-id="' +
+                                    esc(post.id) +
+                                '">Edit</button>' +
+                                (
+                                    post.external_post_url
+                                        ? '<a class="sway-row-action" href="' +
+                                          esc(post.external_post_url) +
+                                          '" target="_blank" rel="noopener noreferrer">Open</a>'
+                                        : ""
+                                ) +
+                                '<button type="button" class="sway-row-action danger" data-delete="socialPosts" data-id="' +
+                                    esc(post.id) +
+                                '">Delete</button>' +
+                            "</div>" +
+                        "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+
+        return (
+            heading(
+                '<button type="button" class="sway-workspace-button primary" data-add="socialPosts">+ New social post</button>'
+            ) +
+
+            '<div class="sway-social-content-toolbar">' +
+                '<div>' +
+                    "<strong>Publishing queue</strong>" +
+                    "<span>" +
+                        state.socialPosts.filter(function (item) {
+                            return item.status === "scheduled";
+                        }).length +
+                        " scheduled · " +
+                        state.socialPosts.filter(function (item) {
+                            return item.status === "draft";
+                        }).length +
+                        " drafts" +
+                    "</span>" +
+                "</div>" +
+                '<span>Publishing automation comes with the official platform connections.</span>' +
+            "</div>" +
+
+            panel(
+                "Content library",
+                "Prepare captions and media references now; authenticated publishing will use the same records.",
+                rows
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Content</th><th>Platform</th><th>Status</th><th>Timing</th><th></th></tr></thead><tbody>' +
+                      rows +
+                      "</tbody></table></div>"
+                    : empty(
+                        "No social posts yet. Create the first piece of content."
+                    )
+            )
+        );
+    }
+
+    function renderSocialAnalytics() {
+        const accounts =
+            state.socialAccounts;
+
+        const latestByAccount =
+            accounts.map(function (account) {
+                return {
+                    account: account,
+                    metric: socialLatestMetric(account.id)
+                };
+            });
+
+        const followers =
+            latestByAccount.reduce(function (sum, item) {
+                return (
+                    sum +
+                    Number(
+                        item.metric
+                            ? item.metric.followers
+                            : 0
+                    )
+                );
+            }, 0);
+
+        const cutoff =
+            new Date(
+                Date.now() -
+                (30 * 24 * 60 * 60 * 1000)
+            );
+
+        const recentMetrics =
+            state.socialMetrics.filter(function (item) {
+                const parsed =
+                    new Date(
+                        String(item.metric_date || "") +
+                        "T23:59:59+02:00"
+                    );
+
+                return (
+                    !Number.isNaN(parsed.getTime()) &&
+                    parsed >= cutoff
+                );
+            });
+
+        const reach =
+            recentMetrics.reduce(function (sum, item) {
+                return sum + Number(item.reach || 0);
+            }, 0);
+
+        const views =
+            recentMetrics.reduce(function (sum, item) {
+                return sum + Number(item.views || 0);
+            }, 0);
+
+        const engagement =
+            recentMetrics.reduce(function (sum, item) {
+                return (
+                    sum +
+                    Number(item.likes || 0) +
+                    Number(item.comments || 0) +
+                    Number(item.shares || 0)
+                );
+            }, 0);
+
+        const engagementRate =
+            reach > 0
+                ? engagement / reach * 100
+                : 0;
+
+        const labels =
+            chartMonths().map(function (item) {
+                return item.label;
+            });
+
+        const keys =
+            chartMonths().map(function (item) {
+                return item.key;
+            });
+
+        const reachByMonth =
+            keys.map(function (key) {
+                return recentMetrics
+                    .filter(function (item) {
+                        return dashboardMonthKey(item.metric_date) === key;
+                    })
+                    .reduce(function (sum, item) {
+                        return sum + Number(item.reach || 0);
+                    }, 0);
+            });
+
+        const viewsByMonth =
+            keys.map(function (key) {
+                return recentMetrics
+                    .filter(function (item) {
+                        return dashboardMonthKey(item.metric_date) === key;
+                    })
+                    .reduce(function (sum, item) {
+                        return sum + Number(item.views || 0);
+                    }, 0);
+            });
+
+        return (
+            heading(
+                '<button type="button" class="sway-workspace-button" data-refresh-workspace>Refresh</button>'
+            ) +
+
+            '<div class="sway-workspace-grid">' +
+                '<div class="sway-stat-card"><span class="label">Followers</span><div class="value">' +
+                    esc(
+                        accounts.length
+                            ? socialNumber(followers)
+                            : "—"
+                    ) +
+                "</div><div class=\"hint\">Latest synced audience across connected accounts.</div></div>" +
+                '<div class="sway-stat-card"><span class="label">30-day reach</span><div class="value">' +
+                    esc(socialNumber(reach)) +
+                "</div><div class=\"hint\">Sum of daily reach snapshots in the current window.</div></div>" +
+                '<div class="sway-stat-card"><span class="label">30-day views</span><div class="value">' +
+                    esc(socialNumber(views)) +
+                "</div><div class=\"hint\">Video or content views reported by the connected platforms.</div></div>" +
+                '<div class="sway-stat-card"><span class="label">Engagement rate</span><div class="value">' +
+                    esc(
+                        engagementRate
+                            ? engagementRate.toFixed(1) + "%"
+                            : "—"
+                    ) +
+                "</div><div class=\"hint\">Likes + comments + shares divided by reach.</div></div>" +
+            "</div>" +
+
+            (
+                state.socialMetrics.length
+                    ? (
+                        '<div class="sway-insight-grid">' +
+                            insightPanel(
+                                "Reach",
+                                "Monthly reach from synced social metric snapshots.",
+                                barChartSimple(
+                                    reachByMonth,
+                                    labels,
+                                    "#0152F4",
+                                    "Social reach"
+                                )
+                            ) +
+                            insightPanel(
+                                "Views",
+                                "Monthly views from synced social metric snapshots.",
+                                trendChart(
+                                    viewsByMonth,
+                                    labels,
+                                    "#2C91FC",
+                                    "Social views",
+                                    false
+                                )
+                            ) +
+                        "</div>"
+                    )
+                    : panel(
+                        "Waiting for synced metrics",
+                        "Performance data will appear here after the official platform connections begin writing daily snapshots.",
+                        '<div class="sway-social-analytics-empty">' +
+                            '<span>01</span><div><strong>Connect your accounts</strong><p>Once authentication and platform permissions are configured, follower, reach, view and engagement data can be pulled into this screen.</p></div>' +
+                        "</div>"
+                    )
+            ) +
+
+            panel(
+                "Account performance",
+                "Latest available snapshot for each configured account.",
+                accounts.length
+                    ? '<div class="sway-social-performance-list">' +
+                        latestByAccount.map(function (item) {
+                            const metric = item.metric;
+
+                            return (
+                                '<div class="sway-social-performance-row">' +
+                                    '<div><span class="sway-social-platform-icon">' +
+                                        esc(
+                                            socialPlatformIcon(
+                                                item.account.platform
+                                            )
+                                        ) +
+                                    "</span><strong>" +
+                                        esc(item.account.account_name) +
+                                    "</strong><small>" +
+                                        esc(
+                                            item.account.handle
+                                                ? "@" + item.account.handle
+                                                : item.account.platform
+                                        ) +
+                                    "</small></div>" +
+                                    "<span>" +
+                                        esc(
+                                            metric
+                                                ? socialNumber(metric.followers)
+                                                : "—"
+                                        ) +
+                                        "<small>followers</small>" +
+                                    "</span>" +
+                                    "<span>" +
+                                        esc(
+                                            metric
+                                                ? socialNumber(metric.reach)
+                                                : "—"
+                                        ) +
+                                        "<small>reach</small>" +
+                                    "</span>" +
+                                    "<span>" +
+                                        esc(
+                                            metric
+                                                ? socialNumber(
+                                                    Number(metric.likes || 0) +
+                                                    Number(metric.comments || 0) +
+                                                    Number(metric.shares || 0)
+                                                )
+                                                : "—"
+                                        ) +
+                                        "<small>engagements</small>" +
+                                    "</span>" +
+                                "</div>"
+                            );
+                        }).join("") +
+                      "</div>"
+                    : empty(
+                        "Add the Swayphics social accounts first."
+                    )
+            )
+        );
+    }
+
     function renderOverview() {
         const today =
             dashboardTodayISO();
@@ -10690,6 +11280,21 @@ function renderShell() {
                     renderCommunications();
             }
 
+            if (state.currentView === "social-overview") {
+                main.innerHTML =
+                    renderSocialOverview();
+            }
+
+            if (state.currentView === "social-content") {
+                main.innerHTML =
+                    renderSocialContent();
+            }
+
+            if (state.currentView === "social-analytics") {
+                main.innerHTML =
+                    renderSocialAnalytics();
+            }
+
             if (state.currentView === "content") {
                 main.innerHTML =
                     renderContent();
@@ -11056,6 +11661,25 @@ function renderShell() {
                         createOrEdit(
                             button.dataset.add,
                             null
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-social-add-account]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        createOrEdit(
+                            "socialAccounts",
+                            null,
+                            {
+                                platform:
+                                    button.dataset.socialAddAccount,
+                                status: "disconnected"
+                            }
                         );
                     }
                 );
