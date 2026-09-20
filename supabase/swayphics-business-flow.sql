@@ -134,26 +134,8 @@ create unique index if not exists portfolio_source_project_unique_idx
     on public.portfolio_projects(source_project_id)
     where source_project_id is not null;
 
--- Keep clients in the system permanently. Archive rather than delete.
-create or replace function public.prevent_swayphics_client_delete()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-    raise exception
-        'Swayphics clients are retained permanently. Archive the client instead of deleting the record.';
-end;
-$$;
-
-drop trigger if exists trg_prevent_swayphics_client_delete
-on public.clients;
-
-create trigger trg_prevent_swayphics_client_delete
-before delete on public.clients
-for each row
-execute function public.prevent_swayphics_client_delete();
+-- Client records may be deleted from the admin workspace. Related records
+-- use their existing foreign-key delete behavior.
 
 -- When a lead enters a contacted/progressed stage, update the last-contacted clock.
 create or replace function public.touch_swayphics_lead_contacted()
