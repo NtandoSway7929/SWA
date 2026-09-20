@@ -1422,6 +1422,279 @@
    LIVE INSIGHTS & CHARTS
    ========================================================= */
 
+.sway-revenue-pipeline {
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid rgba(0,32,150,0.09);
+    border-radius: 20px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.90) 0%,
+            rgba(247,250,255,0.84) 72%,
+            rgba(119,193,252,0.065) 100%
+        );
+    box-shadow:
+        0 16px 42px rgba(0,32,150,0.055),
+        inset 0 1px 0 rgba(255,255,255,0.70);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.sway-revenue-pipeline::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(
+            110deg,
+            rgba(255,255,255,0.28) 0%,
+            rgba(255,255,255,0) 55%,
+            rgba(119,193,252,0.06) 100%
+        );
+}
+
+.sway-revenue-pipeline-head,
+.sway-revenue-pipeline-layout {
+    position: relative;
+    z-index: 1;
+}
+
+.sway-revenue-pipeline-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.sway-revenue-pipeline-head .admin-label {
+    margin-bottom: 5px;
+    font-size: 0.57rem;
+}
+
+.sway-revenue-pipeline-head h3 {
+    color: var(--sway-dark);
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+}
+
+.sway-revenue-pipeline-head p {
+    max-width: 650px;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.61rem;
+    line-height: 1.5;
+}
+
+.sway-revenue-pipeline-totals {
+    display: flex;
+    gap: 18px;
+    flex-shrink: 0;
+}
+
+.sway-revenue-pipeline-totals > div {
+    display: grid;
+    gap: 3px;
+}
+
+.sway-revenue-pipeline-totals span {
+    color: var(--text-muted);
+    font-size: 0.55rem;
+    font-weight: 700;
+}
+
+.sway-revenue-pipeline-totals strong {
+    color: var(--sway-dark);
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.sway-revenue-pipeline-layout {
+    display: grid;
+    grid-template-columns: minmax(0,1.35fr) minmax(250px,0.65fr);
+    gap: 14px;
+    margin-top: 17px;
+}
+
+.sway-revenue-pipeline-stages,
+.sway-revenue-quotes {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid rgba(0,32,150,0.065);
+    border-radius: 15px;
+    background: rgba(255,255,255,0.58);
+}
+
+.sway-revenue-pipeline-stages {
+    display: grid;
+    gap: 7px;
+}
+
+.sway-revenue-stage {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid rgba(0,32,150,0.055);
+    border-radius: 11px;
+    background: rgba(255,255,255,0.62);
+    color: var(--sway-dark);
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    transition:
+        border-color 0.18s ease,
+        background 0.18s ease,
+        transform 0.18s ease;
+}
+
+.sway-revenue-stage:hover {
+    transform: translateY(-1px);
+    border-color: rgba(1,82,244,0.16);
+    background: rgba(1,82,244,0.035);
+}
+
+.sway-revenue-stage-top,
+.sway-revenue-stage-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.sway-revenue-stage-top span {
+    color: var(--sway-dark);
+    font-size: 0.63rem;
+    font-weight: 800;
+}
+
+.sway-revenue-stage-top strong {
+    color: var(--sway-blue);
+    font-size: 0.63rem;
+    font-weight: 800;
+}
+
+.sway-revenue-stage-track {
+    height: 5px;
+    margin: 7px 0 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(0,32,150,0.055);
+}
+
+.sway-revenue-stage-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg,#002096,#0152F4,#2C91FC);
+}
+
+.sway-revenue-stage-foot small {
+    color: var(--text-muted);
+    font-size: 0.52rem;
+    font-weight: 600;
+}
+
+.sway-revenue-quotes {
+    display: flex;
+    flex-direction: column;
+}
+
+.sway-revenue-quotes-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 7px;
+}
+
+.sway-revenue-quotes-head h4 {
+    color: var(--sway-dark);
+    font-size: 0.70rem;
+    font-weight: 800;
+}
+
+.sway-revenue-quote-list {
+    display: grid;
+    gap: 5px;
+}
+
+.sway-revenue-quote-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 9px;
+    border: 1px solid rgba(0,32,150,0.05);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.52);
+    color: var(--sway-dark);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sway-revenue-quote-row:hover {
+    background: rgba(1,82,244,0.035);
+}
+
+.sway-revenue-quote-row > span {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.sway-revenue-quote-row strong {
+    font-size: 0.60rem;
+    font-weight: 800;
+}
+
+.sway-revenue-quote-row small {
+    color: var(--text-muted);
+    font-size: 0.51rem;
+    font-weight: 600;
+}
+
+.sway-revenue-quote-row b {
+    flex-shrink: 0;
+    color: var(--sway-blue);
+    font-size: 0.57rem;
+    font-weight: 800;
+}
+
+.sway-revenue-pipeline-note {
+    margin-top: auto;
+    padding-top: 9px;
+    color: var(--text-muted);
+    font-size: 0.52rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 820px) {
+    .sway-revenue-pipeline-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .sway-revenue-pipeline {
+        padding: 16px;
+        border-radius: 17px;
+    }
+
+    .sway-revenue-pipeline-head {
+        flex-direction: column;
+    }
+
+    .sway-revenue-pipeline-totals {
+        width: 100%;
+        justify-content: space-between;
+        gap: 12px;
+    }
+}
+
 .sway-insight-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
