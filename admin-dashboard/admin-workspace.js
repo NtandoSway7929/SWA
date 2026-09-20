@@ -33,6 +33,9 @@
         syncQueued: false,
         backgroundSyncTimer: null,
         communications: [],
+        leadStageHistory: [],
+        portalRequests: [],
+        portalTokens: [],
         socialAccounts: [],
         socialPosts: [],
         socialMetrics: []
@@ -107,6 +110,8 @@
             icon: "settings",
             items: [
                 ["activity", "Activity"],
+                ["portal-requests", "Portal requests"],
+                ["data-export", "Data & backup"],
                 ["team", "Team"]
             ]
         }
@@ -626,10 +631,10 @@
             api("/rest/v1/services?select=*&order=active.desc,name.asc"),
             api("/rest/v1/invoices?select=*&order=created_at.desc"),
             api("/rest/v1/invoice_settings?select=*&id=eq.1"),
-            api("/rest/v1/communication_logs?select=*&order=contacted_at.desc")
-                .catch(function () {
-                    return [];
-                }),
+            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
+            optionalApi("/rest/v1/lead_stage_history?select=*&order=changed_at.asc", []),
+            optionalApi("/rest/v1/client_portal_requests?select=*&order=created_at.desc", []),
+            optionalApi("/rest/v1/client_portal_tokens?select=id,client_id,active,expires_at,last_used_at,created_at&order=created_at.desc", []),
             optionalApi("/rest/v1/social_accounts?select=*&order=platform.asc,created_at.asc", []),
             optionalApi("/rest/v1/social_posts?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/social_metrics?select=*&order=metric_date.desc", [])
@@ -653,9 +658,12 @@
                 ? results[12][0]
                 : null;
         state.communications = results[13] || [];
-        state.socialAccounts = results[14] || [];
-        state.socialPosts = results[15] || [];
-        state.socialMetrics = results[16] || [];
+        state.leadStageHistory = results[14] || [];
+        state.portalRequests = results[15] || [];
+        state.portalTokens = results[16] || [];
+        state.socialAccounts = results[17] || [];
+        state.socialPosts = results[18] || [];
+        state.socialMetrics = results[19] || [];
     }
 
     async function refreshData() {
@@ -676,10 +684,10 @@
             api("/rest/v1/services?select=*&order=active.desc,name.asc"),
             api("/rest/v1/invoices?select=*&order=created_at.desc"),
             api("/rest/v1/invoice_settings?select=*&id=eq.1"),
-            api("/rest/v1/communication_logs?select=*&order=contacted_at.desc")
-                .catch(function () {
-                    return [];
-                }),
+            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
+            optionalApi("/rest/v1/lead_stage_history?select=*&order=changed_at.asc", []),
+            optionalApi("/rest/v1/client_portal_requests?select=*&order=created_at.desc", []),
+            optionalApi("/rest/v1/client_portal_tokens?select=id,client_id,active,expires_at,last_used_at,created_at&order=created_at.desc", []),
             optionalApi("/rest/v1/social_accounts?select=*&order=platform.asc,created_at.asc", []),
             optionalApi("/rest/v1/social_posts?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/social_metrics?select=*&order=metric_date.desc", [])
@@ -704,9 +712,12 @@
                 ? results[13][0]
                 : null;
         state.communications = results[14] || [];
-        state.socialAccounts = results[15] || [];
-        state.socialPosts = results[16] || [];
-        state.socialMetrics = results[17] || [];
+        state.leadStageHistory = results[15] || [];
+        state.portalRequests = results[16] || [];
+        state.portalTokens = results[17] || [];
+        state.socialAccounts = results[18] || [];
+        state.socialPosts = results[19] || [];
+        state.socialMetrics = results[20] || [];
 
         state.currentAdmin =
             state.admins.find(function (item) {
@@ -778,6 +789,14 @@
             activity: [
                 "Activity",
                 "See the shared operational history."
+            ],
+            "portal-requests": [
+                "Portal requests",
+                "Review requests submitted by clients from their private portal."
+            ],
+            "data-export": [
+                "Data & backup",
+                "Export Swayphics workspace records for offline backup."
             ],
             team: [
                 "Team",
@@ -988,6 +1007,7 @@
             ["invoices", "Invoice", state.invoices],
             ["payments", "Payment", state.payments],
             ["communications", "Communication", state.communications],
+            ["portal-requests", "Portal request", state.portalRequests],
             ["services", "Service", state.services],
             ["announcements", "Announcement", state.announcements],
             ["social-accounts", "Social account", state.socialAccounts],
@@ -1111,6 +1131,8 @@
                                             ? "payments"
                                             : type === "communications"
                                                 ? "communications"
+                                                : type === "portal-requests"
+                                                    ? "portal-requests"
                                                 : type === "services"
                                                 ? "services"
                                                 : type === "announcements"
@@ -11306,6 +11328,16 @@ function renderShell() {
             if (state.currentView === "activity") {
                 main.innerHTML =
                     renderActivity();
+            }
+
+            if (state.currentView === "portal-requests") {
+                main.innerHTML =
+                    renderPortalRequests();
+            }
+
+            if (state.currentView === "data-export") {
+                main.innerHTML =
+                    renderDataExport();
             }
 
             if (state.currentView === "team") {
