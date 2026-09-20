@@ -395,6 +395,25 @@
         );
     }
 
+    function socialDateTimeInput(value) {
+        if (!value) {
+            return "";
+        }
+
+        const parsed = new Date(value);
+
+        if (Number.isNaN(parsed.getTime())) {
+            return String(value).slice(0, 16);
+        }
+
+        const offset =
+            parsed.getTimezoneOffset() * 60000;
+
+        return new Date(
+            parsed.getTime() - offset
+        ).toISOString().slice(0, 16);
+    }
+
     function dateTime(value) {
         if (!value) return "—";
 
@@ -9065,6 +9084,183 @@ function renderShell() {
             }
         },
 
+
+        socialAccounts: {
+            table: "social_accounts",
+            title: "Social account",
+            fields: function (item) {
+                return [
+                    {
+                        key: "platform",
+                        label: "Platform",
+                        type: "select",
+                        required: true,
+                        options:
+                            ["Instagram", "Facebook", "TikTok"]
+                                .map(function (value) {
+                                    return (
+                                        '<option value="' +
+                                        value +
+                                        '"' +
+                                        (
+                                            value === item.platform
+                                                ? " selected"
+                                                : ""
+                                        ) +
+                                        ">" +
+                                        value +
+                                        "</option>"
+                                    );
+                                }).join("")
+                    },
+                    {
+                        key: "account_name",
+                        label: "Account name",
+                        type: "text",
+                        required: true,
+                        value: item.account_name
+                    },
+                    {
+                        key: "handle",
+                        label: "Handle / username",
+                        type: "text",
+                        value: item.handle
+                    },
+                    {
+                        key: "external_account_id",
+                        label: "Platform account ID",
+                        type: "text",
+                        value: item.external_account_id,
+                        help: "Used by the official API integration. Do not enter a password or access token here."
+                    },
+                    {
+                        key: "profile_url",
+                        label: "Profile URL",
+                        type: "url",
+                        value: item.profile_url
+                    },
+                    {
+                        key: "status",
+                        label: "Connection status",
+                        type: "select",
+                        options:
+                            ["disconnected", "pending", "connected"]
+                                .map(function (value) {
+                                    return (
+                                        '<option value="' +
+                                        value +
+                                        '"' +
+                                        (
+                                            value === item.status
+                                                ? " selected"
+                                                : ""
+                                        ) +
+                                        ">" +
+                                        formatDisplayText(value) +
+                                        "</option>"
+                                    );
+                                }).join("")
+                    }
+                ];
+            }
+        },
+
+        socialPosts: {
+            table: "social_posts",
+            title: "Social post",
+            fields: function (item) {
+                return [
+                    {
+                        key: "title",
+                        label: "Internal title",
+                        type: "text",
+                        value: item.title
+                    },
+                    {
+                        key: "caption",
+                        label: "Caption",
+                        type: "textarea",
+                        required: true,
+                        full: true,
+                        value: item.caption
+                    },
+                    {
+                        key: "platform",
+                        label: "Platform",
+                        type: "select",
+                        required: true,
+                        options:
+                            [
+                                "Instagram",
+                                "Facebook",
+                                "TikTok",
+                                "Multi-platform"
+                            ]
+                            .map(function (value) {
+                                return (
+                                    '<option value="' +
+                                    value +
+                                    '"' +
+                                    (
+                                        value === item.platform
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    value +
+                                    "</option>"
+                                );
+                            }).join("")
+                    },
+                    {
+                        key: "status",
+                        label: "Status",
+                        type: "select",
+                        options:
+                            [
+                                "draft",
+                                "scheduled",
+                                "published",
+                                "failed"
+                            ]
+                            .map(function (value) {
+                                return (
+                                    '<option value="' +
+                                    value +
+                                    '"' +
+                                    (
+                                        value === item.status
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    formatDisplayText(value) +
+                                    "</option>"
+                                );
+                            }).join("")
+                    },
+                    {
+                        key: "media_url",
+                        label: "Media URL",
+                        type: "url",
+                        value: item.media_url,
+                        help: "The later publishing integration will handle authenticated media transfer."
+                    },
+                    {
+                        key: "scheduled_for",
+                        label: "Scheduled date and time",
+                        type: "datetime-local",
+                        value: socialDateTimeInput(item.scheduled_for)
+                    },
+                    {
+                        key: "external_post_url",
+                        label: "Published post URL",
+                        type: "url",
+                        value: item.external_post_url
+                    }
+                ];
+            }
+        },
 
         services: {
             table: "services",
