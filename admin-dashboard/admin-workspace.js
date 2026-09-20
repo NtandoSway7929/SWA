@@ -9733,12 +9733,18 @@ function simpleBars(items, color) {
                     ) +
                     ">" +
                     esc(
-                        item.business_name ||
                         item.contact_name ||
+                        item.business_name ||
                         item.email
                     ) +
-                    " · " +
-                    esc(item.email) +
+                    (
+                        item.contact_name &&
+                        item.business_name
+                            ? " · " +
+                              esc(item.business_name)
+                            : " · " +
+                              esc(item.email)
+                    ) +
                     "</option>"
                 );
             }).join("")
@@ -9849,8 +9855,15 @@ function simpleBars(items, color) {
                 return (
                     "<tr>" +
                         "<td><strong>" +
-                            esc(contact) +
+                            esc(contactDetails.primary) +
                         "</strong>" +
+                        (
+                            contactDetails.secondary
+                                ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
+                                  esc(contactDetails.secondary) +
+                                  "</span>"
+                                : ""
+                        ) +
                         (
                             item.subject
                                 ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
