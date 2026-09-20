@@ -1217,7 +1217,7 @@
         if (!normalized) return [];
 
         const words = normalized
-            .split(/s+/)
+            .split(/\s+/)
             .filter(Boolean);
 
         return searchRecordData()
@@ -3172,6 +3172,32 @@ function renderShell() {
                         esc(label) +
                         '">' +
                         grid +
+                        (
+                            points.length > 1
+                                ? '<polygon points="' +
+                                  left +
+                                  "," +
+                                  (top + plotHeight) +
+                                  " " +
+                                  pointString +
+                                  " " +
+                                  points[points.length - 1].x +
+                                  "," +
+                                  (top + plotHeight) +
+                                  '" fill="' +
+                                  color +
+                                  '" fill-opacity="0.055" class="sway-chart-area"></polygon>'
+                                : ""
+                        ) +
+                        '<line x1="' +
+                            left +
+                            '" y1="' +
+                            (top + plotHeight) +
+                            '" x2="' +
+                            (width - right) +
+                            '" y2="' +
+                            (top + plotHeight) +
+                            '" class="sway-chart-baseline"></line>' +
                         '<polyline points="' +
                             pointString +
                             '" fill="none" stroke="' +
