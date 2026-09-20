@@ -16515,6 +16515,31 @@ function simpleBars(items, color) {
             });
 
         workspace
+            .querySelectorAll("[data-send-email-type]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openEmailComposer(
+                            button.dataset.sendEmailType,
+                            button.dataset.sendEmailId
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-compose-email]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openEmailComposer();
+                    }
+                );
+            });
+
+        workspace
             .querySelectorAll("[data-delete]")
             .forEach(function (button) {
                 button.addEventListener(
