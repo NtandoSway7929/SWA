@@ -47,6 +47,10 @@ function brandedEmailHtml(
     String(recipientName || "").trim() ||
     String(businessName || "").trim();
 
+  const greetingMarkup =
+    greetingName
+      ? "Hi " + escapeHtml(greetingName) + ","
+      : "Hello,";
   return `<!doctype html>
 <html>
 <body style="margin:0;background:#F4F7FC;font-family:Arial,Helvetica,sans-serif;color:#081533;">
@@ -63,11 +67,7 @@ function brandedEmailHtml(
 
       <div style="padding:34px 30px 26px;">
         <p style="margin:0 0 20px;font-size:15px;line-height:1.8;color:#56627A;">
-          ${
-            greetingName
-              ? "Hi " + escapeHtml(greetingName) + ",",
-              : "Hello,"
-          }
+          ${greetingMarkup}
         </p>
 
         ${emailParagraphs(message)}
