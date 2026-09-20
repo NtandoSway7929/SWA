@@ -1422,6 +1422,231 @@
    LIVE INSIGHTS & CHARTS
    ========================================================= */
 
+.sway-cash-flow {
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid rgba(0,32,150,0.09);
+    border-radius: 20px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.90) 0%,
+            rgba(247,250,255,0.84) 72%,
+            rgba(119,193,252,0.065) 100%
+        );
+    box-shadow:
+        0 16px 42px rgba(0,32,150,0.055),
+        inset 0 1px 0 rgba(255,255,255,0.70);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.sway-cash-flow-head,
+.sway-cash-flow-stats,
+.sway-cash-flow-charts,
+.sway-cash-flow-lower {
+    position: relative;
+    z-index: 1;
+}
+
+.sway-cash-flow-head .admin-label {
+    margin-bottom: 5px;
+    font-size: 0.57rem;
+}
+
+.sway-cash-flow-head h3 {
+    color: var(--sway-dark);
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+}
+
+.sway-cash-flow-head p {
+    max-width: 760px;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.61rem;
+    line-height: 1.5;
+}
+
+.sway-cash-flow-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 9px;
+    margin-top: 17px;
+}
+
+.sway-cash-flow-stat {
+    padding: 13px;
+    border: 1px solid rgba(0,32,150,0.065);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.62);
+}
+
+.sway-cash-flow-stat.danger {
+    border-color: rgba(180,30,30,0.10);
+    background: rgba(180,30,30,0.025);
+}
+
+.sway-cash-flow-stat span,
+.sway-cash-flow-stat small {
+    display: block;
+    color: var(--text-muted);
+}
+
+.sway-cash-flow-stat span {
+    font-size: 0.56rem;
+    font-weight: 800;
+}
+
+.sway-cash-flow-stat strong {
+    display: block;
+    margin-top: 5px;
+    color: var(--sway-dark);
+    font-size: 0.90rem;
+    font-weight: 800;
+}
+
+.sway-cash-flow-stat.danger strong {
+    color: #9B1C1C;
+}
+
+.sway-cash-flow-stat small {
+    margin-top: 3px;
+    font-size: 0.52rem;
+    line-height: 1.45;
+}
+
+.sway-cash-flow-charts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 13px;
+    margin-top: 14px;
+}
+
+.sway-cash-flow-lower {
+    display: grid;
+    grid-template-columns: minmax(0,1.15fr) minmax(0,0.85fr);
+    gap: 13px;
+    margin-top: 13px;
+}
+
+.sway-cash-flow-table {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid rgba(0,32,150,0.065);
+    border-radius: 15px;
+    background: rgba(255,255,255,0.58);
+}
+
+.sway-cash-flow-table-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 9px;
+}
+
+.sway-cash-flow-table-head h4 {
+    color: var(--sway-dark);
+    font-size: 0.70rem;
+    font-weight: 800;
+}
+
+.sway-cash-flow-table-head p {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 0.53rem;
+    line-height: 1.45;
+}
+
+.sway-cash-flow-due-list {
+    display: grid;
+    gap: 5px;
+}
+
+.sway-cash-flow-due-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 9px;
+    border: 1px solid rgba(0,32,150,0.05);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.55);
+    color: var(--sway-dark);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        background 0.18s ease;
+}
+
+.sway-cash-flow-due-row:hover {
+    border-color: rgba(1,82,244,0.15);
+    background: rgba(1,82,244,0.035);
+}
+
+.sway-cash-flow-due-row > span {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.sway-cash-flow-due-row strong {
+    overflow: hidden;
+    font-size: 0.59rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-cash-flow-due-row small {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.51rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-cash-flow-due-row b {
+    flex-shrink: 0;
+    color: var(--sway-blue);
+    font-size: 0.57rem;
+    font-weight: 800;
+}
+
+@media (max-width: 920px) {
+    .sway-cash-flow-stats {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+    }
+
+    .sway-cash-flow-charts,
+    .sway-cash-flow-lower {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .sway-cash-flow {
+        padding: 16px;
+        border-radius: 17px;
+    }
+
+    .sway-cash-flow-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-cash-flow-table-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
 .sway-revenue-pipeline {
     position: relative;
     overflow: hidden;
