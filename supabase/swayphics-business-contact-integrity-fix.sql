@@ -4,6 +4,68 @@
 -- email to the wrong business and refreshes matched CRM records
 -- with the current business/contact details.
 
+-- Repair existing linked CRM records first.
+update public.leads l
+set
+    business_name =
+        coalesce(
+            nullif(trim(e.business_name), ''),
+            nullif(trim(e.name), ''),
+            l.business_name
+        ),
+    contact_name =
+        coalesce(
+            nullif(trim(e.name), ''),
+            l.contact_name
+        ),
+    email =
+        coalesce(
+            nullif(trim(e.email), ''),
+            l.email
+        ),
+    phone =
+        coalesce(
+            nullif(trim(e.phone), ''),
+            l.phone
+        ),
+    service_interest =
+        coalesce(
+            nullif(trim(e.service), ''),
+            l.service_interest
+        ),
+    updated_at = now()
+from public.website_enquiries e
+where e.converted_lead_id = l.id;
+
+update public.clients c
+set
+    business_name =
+        coalesce(
+            nullif(trim(l.business_name), ''),
+            c.business_name
+        ),
+    contact_name =
+        coalesce(
+            nullif(trim(l.contact_name), ''),
+            c.contact_name
+        ),
+    email =
+        coalesce(
+            nullif(trim(l.email), ''),
+            c.email
+        ),
+    phone =
+        coalesce(
+            nullif(trim(l.phone), ''),
+            c.phone
+        ),
+    updated_at = now()
+from public.leads l
+where (
+    c.source_lead_id = l.id
+    or l.converted_client_id = c.id
+);
+
 create or replace function public.convert_swayphics_enquiry_to_lead(
     p_enquiry_id uuid
 )
