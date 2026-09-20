@@ -5503,3 +5503,28 @@
     outline: none;
 }
 
+
+/* =========================================================
+   STABLE MOBILE SIDEBAR INTERACTION
+   ========================================================= */
+
+@media (max-width: 760px) {
+    .sway-workspace-sidebar {
+        touch-action: pan-y;
+        will-change: transform;
+        overscroll-behavior: contain;
+    }
+
+    .sway-workspace-sidebar.sway-sidebar-restoring {
+        transition: none !important;
+    }
+
+    .sway-workspace-mobile-toggle,
+    .sway-workspace-mobile-close {
+        touch-action: manipulation;
+    }
+
+    #sway-admin-workspace.nav-open {
+        overscroll-behavior: none;
+    }
+}
