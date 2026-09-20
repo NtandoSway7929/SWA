@@ -134,6 +134,8 @@ create table if not exists public.site_announcements (
     id uuid primary key default gen_random_uuid(),
     title text not null,
     message text,
+    placement text not null default 'top-bar'
+        check (placement in ('top-bar','hero','bottom')),
     published boolean not null default false,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
