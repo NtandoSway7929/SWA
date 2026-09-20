@@ -594,13 +594,33 @@
     }
 
     function currentUserName() {
-        return (
+        const adminName =
             state.currentAdmin &&
             (
                 state.currentAdmin.full_name ||
                 state.currentAdmin.email
-            )
-        ) || "there";
+            );
+
+        const metadataName =
+            state.currentUser &&
+            state.currentUser.user_metadata &&
+            (
+                state.currentUser.user_metadata.full_name ||
+                state.currentUser.user_metadata.name
+            );
+
+        const emailName =
+            state.currentUser &&
+            state.currentUser.email
+                ? String(state.currentUser.email).split("@")[0]
+                : "";
+
+        return (
+            adminName ||
+            metadataName ||
+            emailName ||
+            "Swayphics"
+        );
     }
 
     function decodeAccessTokenUser() {
