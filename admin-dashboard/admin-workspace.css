@@ -1133,6 +1133,184 @@
 }
 
 
+.sway-followup-automation {
+    position: relative;
+    overflow: hidden;
+    margin: 0 0 20px;
+    padding: 19px;
+    border: 1px solid rgba(1,82,244,0.11);
+    border-radius: 19px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.89) 0%,
+            rgba(247,250,255,0.82) 74%,
+            rgba(119,193,252,0.065) 100%
+        );
+    box-shadow:
+        0 13px 36px rgba(0,32,150,0.055),
+        inset 0 1px 0 rgba(255,255,255,0.68);
+    backdrop-filter: blur(17px) saturate(140%);
+    -webkit-backdrop-filter: blur(17px) saturate(140%);
+}
+
+.sway-followup-automation::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(
+            112deg,
+            rgba(255,255,255,0.27) 0%,
+            rgba(255,255,255,0) 55%,
+            rgba(119,193,252,0.06) 100%
+        );
+}
+
+.sway-followup-automation-head {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.sway-followup-automation-head .admin-label {
+    margin-bottom: 5px;
+    font-size: 0.57rem;
+}
+
+.sway-followup-automation-head h3 {
+    color: var(--sway-dark);
+    font-size: 0.96rem;
+    letter-spacing: -0.03em;
+}
+
+.sway-followup-automation-head p {
+    max-width: 610px;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.61rem;
+    line-height: 1.5;
+}
+
+.sway-followup-automation-badge {
+    flex-shrink: 0;
+    padding: 6px 9px;
+    border: 1px solid rgba(1,82,244,0.10);
+    border-radius: 999px;
+    background: rgba(1,82,244,0.055);
+    color: var(--sway-blue);
+    font-size: 0.56rem;
+    font-weight: 800;
+}
+
+.sway-followup-automation-list {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 7px;
+}
+
+.sway-followup-automation-item {
+    display: grid;
+    grid-template-columns: 30px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 9px;
+    border: 1px solid rgba(0,32,150,0.055);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.60);
+}
+
+.sway-followup-automation-item.danger {
+    border-color: rgba(180,30,30,0.10);
+}
+
+.sway-followup-automation-item.warning {
+    border-color: rgba(245,158,11,0.11);
+}
+
+.sway-followup-automation-icon {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: rgba(1,82,244,0.07);
+    color: var(--sway-blue);
+    font-size: 0.59rem;
+    font-weight: 900;
+}
+
+.sway-followup-automation-item.danger .sway-followup-automation-icon {
+    background: rgba(180,30,30,0.07);
+    color: #9B1C1C;
+}
+
+.sway-followup-automation-item.warning .sway-followup-automation-icon {
+    background: rgba(245,158,11,0.09);
+    color: #A16207;
+}
+
+.sway-followup-automation-copy {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.sway-followup-automation-copy strong {
+    overflow: hidden;
+    color: var(--sway-dark);
+    font-size: 0.64rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-followup-automation-copy span {
+    overflow: hidden;
+    color: var(--sway-blue);
+    font-size: 0.56rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-followup-automation-copy small {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.55rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+    .sway-followup-automation {
+        padding: 16px;
+        border-radius: 17px;
+    }
+
+    .sway-followup-automation-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sway-followup-automation-item {
+        grid-template-columns: 28px minmax(0,1fr);
+    }
+
+    .sway-followup-automation-item .sway-row-action {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
+
 .sway-overview-split {
     display: grid;
     grid-template-columns: repeat(2, minmax(0,1fr));
