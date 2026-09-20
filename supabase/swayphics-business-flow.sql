@@ -226,12 +226,21 @@ begin
     from public.leads
     where (
         v_enquiry.email is not null
-        and lower(email) = lower(v_enquiry.email)
+        and nullif(trim(v_enquiry.business_name), '') is not null
+        and lower(trim(email)) = lower(trim(v_enquiry.email))
+        and lower(trim(business_name)) =
+            lower(trim(v_enquiry.business_name))
     )
     or (
-        business_name is not null
-        and v_enquiry.business_name is not null
-        and lower(business_name) = lower(v_enquiry.business_name)
+        v_enquiry.email is null
+        and nullif(trim(v_enquiry.business_name), '') is not null
+        and lower(trim(business_name)) =
+            lower(trim(v_enquiry.business_name))
+    )
+    or (
+        nullif(trim(v_enquiry.business_name), '') is null
+        and v_enquiry.email is not null
+        and lower(trim(email)) = lower(trim(v_enquiry.email))
     )
     order by created_at desc
     limit 1;
@@ -246,6 +255,31 @@ begin
 
         update public.leads
         set
+            business_name =
+                coalesce(
+                    nullif(trim(v_enquiry.business_name), ''),
+                    business_name
+                ),
+            contact_name =
+                coalesce(
+                    nullif(trim(v_enquiry.name), ''),
+                    contact_name
+                ),
+            email =
+                coalesce(
+                    nullif(trim(v_enquiry.email), ''),
+                    email
+                ),
+            phone =
+                coalesce(
+                    nullif(trim(v_enquiry.phone), ''),
+                    phone
+                ),
+            service_interest =
+                coalesce(
+                    nullif(trim(v_enquiry.service), ''),
+                    service_interest
+                ),
             status = case
                 when status in ('won', 'lost') then 'contacted'
                 else 'contacted'
@@ -338,7 +372,21 @@ begin
     from public.clients
     where (
         v_lead.email is not null
-        and lower(email) = lower(v_lead.email)
+        and nullif(trim(v_lead.business_name), '') is not null
+        and lower(trim(email)) = lower(trim(v_lead.email))
+        and lower(trim(business_name)) =
+            lower(trim(v_lead.business_name))
+    )
+    or (
+        v_lead.email is null
+        and nullif(trim(v_lead.business_name), '') is not null
+        and lower(trim(business_name)) =
+            lower(trim(v_lead.business_name))
+    )
+    or (
+        nullif(trim(v_lead.business_name), '') is null
+        and v_lead.email is not null
+        and lower(trim(email)) = lower(trim(v_lead.email))
     )
     order by created_at desc
     limit 1;
@@ -348,6 +396,26 @@ begin
 
         update public.clients
         set
+            business_name =
+                coalesce(
+                    nullif(trim(v_lead.business_name), ''),
+                    business_name
+                ),
+            contact_name =
+                coalesce(
+                    nullif(trim(v_lead.contact_name), ''),
+                    contact_name
+                ),
+            email =
+                coalesce(
+                    nullif(trim(v_lead.email), ''),
+                    email
+                ),
+            phone =
+                coalesce(
+                    nullif(trim(v_lead.phone), ''),
+                    phone
+                ),
             status = 'active',
             source_lead_id = p_lead_id,
             updated_at = now()
