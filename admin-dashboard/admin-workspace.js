@@ -1606,6 +1606,10 @@
     }
 
     function notificationDateValue(item) {
+        if (!item) {
+            return "";
+        }
+
         return (
             item.created_at ||
             item.updated_at ||
