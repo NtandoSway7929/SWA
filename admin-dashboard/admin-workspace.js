@@ -2829,27 +2829,76 @@ function renderShell() {
                 ? numbers[numbers.length - 2]
                 : null;
 
+        const average =
+            numbers.length
+                ? total / numbers.length
+                : 0;
+
         let trendText = "No recent movement";
+        let changePercent = null;
 
         if (previous !== null) {
             if (previous === 0 && latest > 0) {
                 trendText = "New activity";
+            } else if (previous === 0 && latest === 0) {
+                trendText = "Still quiet";
             } else if (previous > 0) {
-                const change =
+                changePercent =
                     ((latest - previous) / previous) * 100;
 
-                if (Math.abs(change) < 0.5) {
+                if (Math.abs(changePercent) < 0.5) {
                     trendText = "Holding steady";
                 } else {
                     trendText =
                         (
-                            change > 0
+                            changePercent > 0
                                 ? "↑ "
                                 : "↓ "
                         ) +
-                        Math.abs(change).toFixed(0) +
+                        Math.abs(changePercent).toFixed(0) +
                         "% vs previous";
                 }
+            }
+        }
+
+        let readText = "No activity recorded in this period.";
+
+        if (numbers.length) {
+            if (latest === 0 && total === 0) {
+                readText =
+                    "There is no recorded activity in the selected period.";
+            } else if (previous === null) {
+                readText =
+                    "The latest period is the first recorded point.";
+            } else if (
+                previous === 0 &&
+                latest > 0
+            ) {
+                readText =
+                    "Activity has started in the latest period.";
+            } else if (latest > previous) {
+                readText =
+                    "The latest period is higher than the previous period.";
+            } else if (latest < previous) {
+                readText =
+                    "The latest period is lower than the previous period.";
+            } else {
+                readText =
+                    "The latest period is in line with the previous period.";
+            }
+
+            if (
+                average > 0 &&
+                latest > average
+            ) {
+                readText +=
+                    " It is also above the period average.";
+            } else if (
+                average > 0 &&
+                latest < average
+            ) {
+                readText +=
+                    " It is below the period average.";
             }
         }
 
@@ -2865,6 +2914,27 @@ function renderShell() {
                             )
                         ) +
                     "</strong>" +
+                    (
+                        labels.length
+                            ? "<small>" +
+                              esc(
+                                  labels[labels.length - 1]
+                              ) +
+                              "</small>"
+                            : ""
+                    ) +
+                "</div>" +
+                '<div class="sway-chart-summary-item">' +
+                    "<span>Average</span>" +
+                    "<strong>" +
+                        esc(
+                            formatChartValue(
+                                average,
+                                currency
+                            )
+                        ) +
+                    "</strong>" +
+                    "<small>Per period</small>" +
                 "</div>" +
                 '<div class="sway-chart-summary-item">' +
                     "<span>Peak</span>" +
@@ -2888,22 +2958,41 @@ function renderShell() {
                     ) +
                 "</div>" +
                 '<div class="sway-chart-summary-item">' +
-                    "<span>Read</span>" +
+                    "<span>Trend</span>" +
                     "<strong>" +
                         esc(trendText) +
                     "</strong>" +
                 "</div>" +
+            "</div>" +
+            '<div class="sway-chart-reading">' +
+                "<span>How to read it</span>" +
+                "<p>" +
+                    esc(readText) +
+                    (
+                        changePercent !== null
+                            ? " That is " +
+                              (
+                                  changePercent >= 0
+                                      ? "an increase of "
+                                      : "a decrease of "
+                              ) +
+                              Math.abs(changePercent).toFixed(0) +
+                              "% from the previous period."
+                            : ""
+                    ) +
+                "</p>" +
             "</div>"
         );
     }
 
+
     function trendChart(values, labels, color, label, currency) {
-        const width = 760;
-        const height = 320;
-        const left = 70;
-        const right = 24;
-        const top = 28;
-        const bottom = 58;
+        const width = 820;
+        const height = 350;
+        const left = 82;
+        const right = 28;
+        const top = 34;
+        const bottom = 64;
         const plotWidth = width - left - right;
         const plotHeight = height - top - bottom;
 
@@ -2921,7 +3010,7 @@ function renderShell() {
         const paddedMax =
             maxValue === 1
                 ? 1
-                : maxValue * 1.12;
+                : maxValue * 1.16;
 
         const points =
             numbers.map(function (value, index) {
@@ -2961,8 +3050,8 @@ function renderShell() {
 
         let grid = "";
 
-        for (let i = 0; i <= 4; i += 1) {
-            const ratio = i / 4;
+        for (let i = 0; i <= 5; i += 1) {
+            const ratio = i / 5;
             const y =
                 top +
                 plotHeight -
@@ -2984,7 +3073,7 @@ function renderShell() {
                 y +
                 '" class="sway-chart-grid-line"></line>' +
                 '<text x="' +
-                (left - 11) +
+                (left - 13) +
                 '" y="' +
                 (y + 4) +
                 '" text-anchor="end" class="sway-chart-y-label">' +
@@ -3012,14 +3101,34 @@ function renderShell() {
                 const isLatest =
                     index === latestIndex;
 
+                const labelY =
+                    Math.max(
+                        17,
+                        point.y -
+                        (
+                            isPeak || isLatest
+                                ? 13
+                                : 9
+                        )
+                    );
+
                 return (
-                    '<g class="sway-chart-point-group">' +
+                    '<g class="sway-chart-point-group" tabindex="0" role="img" aria-label="' +
+                        esc(
+                            String(labels[index] || "Period") +
+                            ": " +
+                            formatChartValue(
+                                value,
+                                currency
+                            )
+                        ) +
+                    '">' +
                         '<circle cx="' +
                             point.x +
                         '" cy="' +
                             point.y +
                         '" r="' +
-                            (isPeak || isLatest ? 5.5 : 4.5) +
+                            (isPeak || isLatest ? 6.5 : 4.8) +
                         '" fill="' +
                             color +
                         '" class="sway-chart-point">' +
@@ -3042,10 +3151,7 @@ function renderShell() {
                                 ? '<text x="' +
                                   point.x +
                                   '" y="' +
-                                  Math.max(
-                                      15,
-                                      point.y - 11
-                                  ) +
+                                  labelY +
                                   '" text-anchor="middle" class="sway-chart-value-label">' +
                                   esc(
                                       formatChartValue(
@@ -3074,7 +3180,7 @@ function renderShell() {
                     '<text x="' +
                     points[index].x +
                     '" y="' +
-                    (height - 18) +
+                    (height - 19) +
                     '" text-anchor="middle" class="sway-chart-axis-label">' +
                     esc(item) +
                     "</text>"
@@ -3111,12 +3217,12 @@ function renderShell() {
     }
 
     function barChartSimple(values, labels, color, label, currency) {
-        const width = 760;
-        const height = 320;
-        const left = 70;
-        const right = 24;
-        const top = 28;
-        const bottom = 58;
+        const width = 820;
+        const height = 350;
+        const left = 82;
+        const right = 28;
+        const top = 34;
+        const bottom = 64;
         const plotWidth = width - left - right;
         const plotHeight = height - top - bottom;
 
@@ -3134,7 +3240,7 @@ function renderShell() {
         const paddedMax =
             maxValue === 1
                 ? 1
-                : maxValue * 1.12;
+                : maxValue * 1.16;
 
         const groupWidth =
             plotWidth /
@@ -3145,8 +3251,8 @@ function renderShell() {
 
         let grid = "";
 
-        for (let i = 0; i <= 4; i += 1) {
-            const ratio = i / 4;
+        for (let i = 0; i <= 5; i += 1) {
+            const ratio = i / 5;
             const y =
                 top +
                 plotHeight -
@@ -3168,7 +3274,7 @@ function renderShell() {
                 y +
                 '" class="sway-chart-grid-line"></line>' +
                 '<text x="' +
-                (left - 11) +
+                (left - 13) +
                 '" y="' +
                 (y + 4) +
                 '" text-anchor="end" class="sway-chart-y-label">' +
@@ -3183,6 +3289,9 @@ function renderShell() {
 
         const peakValue =
             Math.max.apply(null, numbers.concat([0]));
+
+        const latestIndex =
+            numbers.length - 1;
 
         const bars =
             numbers.map(function (value, index) {
@@ -3199,7 +3308,10 @@ function renderShell() {
                     groupWidth * 0.16;
 
                 const barWidth =
-                    groupWidth * 0.68;
+                    Math.max(
+                        10,
+                        groupWidth * 0.68
+                    );
 
                 const y =
                     top +
@@ -3210,8 +3322,28 @@ function renderShell() {
                     value === peakValue &&
                     peakValue > 0;
 
+                const isLatest =
+                    index === latestIndex;
+
+                const showValue =
+                    isPeak ||
+                    isLatest ||
+                    (
+                        value > 0 &&
+                        numbers.length <= 6
+                    );
+
                 return (
-                    '<g class="sway-chart-bar-group">' +
+                    '<g class="sway-chart-bar-group" tabindex="0" role="img" aria-label="' +
+                        esc(
+                            String(labels[index] || "Period") +
+                            ": " +
+                            formatChartValue(
+                                value,
+                                currency
+                            )
+                        ) +
+                    '">' +
                         '<rect x="' +
                             x +
                         '" y="' +
@@ -3219,8 +3351,8 @@ function renderShell() {
                         '" width="' +
                             barWidth +
                         '" height="' +
-                            Math.max(3, barHeight) +
-                        '" rx="7" fill="' +
+                            Math.max(4, barHeight) +
+                        '" rx="8" fill="' +
                             color +
                         '" class="sway-chart-bar">' +
                             "<title>" +
@@ -3238,12 +3370,12 @@ function renderShell() {
                             "</title>" +
                         "</rect>" +
                         (
-                            isPeak
+                            showValue
                                 ? '<text x="' +
                                   (x + barWidth / 2) +
                                   '" y="' +
                                   Math.max(
-                                      16,
+                                      17,
                                       y - 8
                                   ) +
                                   '" text-anchor="middle" class="sway-chart-value-label">' +
@@ -3259,7 +3391,7 @@ function renderShell() {
                         '<text x="' +
                             (x + barWidth / 2) +
                         '" y="' +
-                            (height - 18) +
+                            (height - 19) +
                         '" text-anchor="middle" class="sway-chart-axis-label">' +
                             (
                                 labels.length > 7 &&
@@ -3295,6 +3427,7 @@ function renderShell() {
             "</div>"
         );
     }
+
 
 function simpleBars(items, color) {
         const max =
