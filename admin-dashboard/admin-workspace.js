@@ -7141,6 +7141,157 @@ function simpleBars(items, color) {
         });
     }
 
+
+    function clientHealth(clientId) {
+        const today = dashboardTodayISO();
+
+        const projects = state.projects.filter(function (project) {
+            return project.client_id === clientId &&
+                project.status !== "cancelled";
+        });
+
+        const activeProjects = projects.filter(function (project) {
+            return !["completed", "cancelled"].includes(project.status);
+        });
+
+        const overdueInvoices = state.invoices.filter(function (invoice) {
+            if (
+                invoice.client_id !== clientId ||
+                invoice.status === "paid" ||
+                invoice.status === "cancelled"
+            ) {
+                return false;
+            }
+
+            const outstanding = Number(
+                invoice.amount_outstanding != null
+                    ? invoice.amount_outstanding
+                    : invoice.total || 0
+            );
+
+            if (outstanding <= 0) {
+                return false;
+            }
+
+            const due = dashboardDateKey(invoice.due_date);
+
+            return (
+                invoice.status === "overdue" ||
+                (due && due < today)
+            );
+        });
+
+        const pendingFollowups = state.followups.filter(function (item) {
+            return (
+                item.client_id === clientId &&
+                item.status === "pending"
+            );
+        });
+
+        const recentCommunication = state.communications
+            .filter(function (item) {
+                return item.client_id === clientId;
+            })
+            .sort(function (a, b) {
+                return notificationTimeValue(b) - notificationTimeValue(a);
+            })[0];
+
+        const activityTimes = state.activities
+            .filter(function (item) {
+                return item.entity_id === clientId;
+            })
+            .map(notificationTimeValue);
+
+        const lastActivity = Math.max(
+            notificationTimeValue(recentCommunication),
+            ...activityTimes,
+            0
+        );
+
+        const daysSinceActivity = lastActivity
+            ? Math.max(
+                0,
+                Math.floor(
+                    (Date.now() - lastActivity) / 86400000
+                )
+            )
+            : Infinity;
+
+        const reasons = [];
+        let level = "healthy";
+
+        if (overdueInvoices.length) {
+            level = "at-risk";
+            reasons.push(
+                overdueInvoices.length === 1
+                    ? "1 overdue invoice"
+                    : overdueInvoices.length + " overdue invoices"
+            );
+        }
+
+        if (
+            activeProjects.some(function (project) {
+                const due = dashboardDateKey(project.due_date);
+                return Boolean(due && due < today);
+            })
+        ) {
+            level = "at-risk";
+            reasons.push("overdue project work");
+        }
+
+        if (
+            level !== "at-risk" &&
+            !pendingFollowups.length &&
+            activeProjects.length &&
+            daysSinceActivity >= 21
+        ) {
+            level = "needs-attention";
+            reasons.push("no recent relationship activity");
+        }
+
+        if (
+            level !== "at-risk" &&
+            !pendingFollowups.length &&
+            daysSinceActivity >= 14
+        ) {
+            level = "needs-attention";
+            reasons.push("no recent communication");
+        }
+
+        if (!reasons.length) {
+            reasons.push(
+                activeProjects.length ||
+                recentCommunication ||
+                pendingFollowups.length
+                    ? "active relationship"
+                    : "no immediate issues detected"
+            );
+        }
+
+        return {
+            level: level,
+            label:
+                level === "at-risk"
+                    ? "At risk"
+                    : level === "needs-attention"
+                        ? "Needs attention"
+                        : "Healthy",
+            reasons: reasons
+        };
+    }
+
+    function clientHealthChip(clientId) {
+        const health = clientHealth(clientId);
+
+        return (
+            '<span class="sway-client-health-chip ' +
+                esc(health.level) +
+            '">' +
+                esc(health.label) +
+            "</span>"
+        );
+    }
+
     function renderClients() {
         const rows =
             state.clients.map(function (item) {
