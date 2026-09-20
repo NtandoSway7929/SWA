@@ -28,7 +28,10 @@
         invoiceSettings: null,
         realtimeStatus: "connecting",
         lastLiveUpdate: null,
-        realtimeClient: null
+        realtimeClient: null,
+        syncInFlight: false,
+        syncQueued: false,
+        backgroundSyncTimer: null
     };
 
     const navGroups = [
@@ -2082,12 +2085,85 @@
         );
     }
 
+    async function syncWorkspaceData(options) {
+        const settings = options || {};
+
+        if (state.syncInFlight) {
+            state.syncQueued = true;
+            return;
+        }
+
+        state.syncInFlight = true;
+
+        try {
+            await refreshData();
+
+            state.lastLiveUpdate = Date.now();
+
+            if (settings.status) {
+                state.realtimeStatus = settings.status;
+            }
+
+            renderShell();
+            renderView();
+        } catch (error) {
+            if (settings.fallbackToPolling) {
+                state.realtimeStatus = "polling";
+            }
+
+            throw error;
+        } finally {
+            state.syncInFlight = false;
+
+            if (state.syncQueued) {
+                state.syncQueued = false;
+                window.setTimeout(function () {
+                    syncWorkspaceData({ fallbackToPolling: true }).catch(function (error) {
+                        console.warn("Queued workspace sync failed.", error);
+                    });
+                }, 0);
+            }
+        }
+    }
+
     function setupRealtime() {
+        const beginBackgroundSync = function () {
+            if (state.backgroundSyncTimer) {
+                window.clearInterval(state.backgroundSyncTimer);
+            }
+
+            state.backgroundSyncTimer = window.setInterval(function () {
+                if (document.visibilityState !== "visible") {
+                    return;
+                }
+
+                syncWorkspaceData({ fallbackToPolling: true }).catch(function (error) {
+                    console.warn("Background workspace sync failed.", error);
+                });
+            }, 10000);
+        };
+
+        const syncOnReturn = function () {
+            if (document.visibilityState !== "visible") {
+                return;
+            }
+
+            syncWorkspaceData({ fallbackToPolling: true }).catch(function (error) {
+                console.warn("Workspace sync after tab return failed.", error);
+            });
+        };
+
+        document.addEventListener("visibilitychange", syncOnReturn);
+        window.addEventListener("online", syncOnReturn);
+
+        beginBackgroundSync();
+
         if (
             !window.supabase ||
             typeof window.supabase.createClient !== "function"
         ) {
             state.realtimeStatus = "polling";
+            syncOnReturn();
             return;
         }
 
@@ -2112,9 +2188,12 @@
                     }
                 );
 
-            client.realtime.setAuth(
-                accessToken
-            );
+            if (
+                client.realtime &&
+                typeof client.realtime.setAuth === "function"
+            ) {
+                client.realtime.setAuth(accessToken);
+            }
 
             const channel =
                 client.channel(
@@ -2136,7 +2215,9 @@
                 "invoice_settings",
                 "website_enquiries",
                 "site_announcements",
-                "activity_log"
+                "activity_log",
+                "portfolio_projects",
+                "testimonials"
             ];
 
             let refreshTimer = null;
@@ -2148,25 +2229,19 @@
 
                 refreshTimer =
                     setTimeout(
-                        async function () {
+                        function () {
                             refreshTimer = null;
 
-                            try {
-                                await refreshData();
-
-                                state.lastLiveUpdate =
-                                    Date.now();
-
-                                renderShell();
-                                renderView();
-                            } catch (error) {
+                            syncWorkspaceData({
+                                fallbackToPolling: true
+                            }).catch(function (error) {
                                 console.warn(
                                     "Live workspace refresh failed.",
                                     error
                                 );
-                            }
+                            });
                         },
-                        300
+                        250
                     );
             };
 
@@ -2184,75 +2259,38 @@
 
             channel.subscribe(
                 function (status, error) {
-                    if (
-                        status === "SUBSCRIBED"
-                    ) {
-                        state.realtimeStatus =
-                            "live";
+                    if (status === "SUBSCRIBED") {
+                        state.realtimeStatus = "live";
+                        state.lastLiveUpdate = Date.now();
 
-                        state.lastLiveUpdate =
-                            Date.now();
+                        syncWorkspaceData({ status: "live" }).catch(function (syncError) {
+                            console.warn(
+                                "Initial live workspace sync failed.",
+                                syncError
+                            );
+                        });
 
-                        if (
-                            state.currentView === "overview" ||
-                            state.currentView === "insights"
-                        ) {
-                            renderView();
-                        }
+                        return;
                     }
 
                     if (
                         status === "CHANNEL_ERROR" ||
-                        status === "TIMED_OUT"
+                        status === "TIMED_OUT" ||
+                        status === "CLOSED"
                     ) {
-                        state.realtimeStatus =
-                            "polling";
+                        state.realtimeStatus = "polling";
 
                         console.warn(
                             "Swayphics Realtime unavailable:",
                             error
                         );
-
-                        if (
-                            state.currentView === "overview" ||
-                            state.currentView === "insights"
-                        ) {
-                            renderView();
-                        }
                     }
                 }
             );
 
-            window.setInterval(
-                async function () {
-                    if (
-                        state.realtimeStatus !== "live"
-                    ) {
-                        try {
-                            await refreshData();
-
-                            state.lastLiveUpdate =
-                                Date.now();
-
-                            renderShell();
-                            renderView();
-                        } catch (error) {
-                            console.warn(
-                                "Workspace sync failed.",
-                                error
-                            );
-                        }
-                    }
-                },
-                30000
-            );
-
-            state.realtimeClient =
-                client;
-
+            state.realtimeClient = client;
         } catch (error) {
-            state.realtimeStatus =
-                "polling";
+            state.realtimeStatus = "polling";
 
             console.warn(
                 "Unable to initialise Swayphics Realtime.",
@@ -7358,19 +7396,15 @@
                             "Refreshing...";
 
                         try {
-                            await refreshData();
-
-                            state.lastLiveUpdate =
-                                Date.now();
-
-                            renderShell();
-                            renderView();
+                            await syncWorkspaceData({
+                                fallbackToPolling: true
+                            });
                         } catch (error) {
                             swayAlert(
                                 error.message ||
                                 "Unable to refresh workspace data."
                             );
-
+                        } finally {
                             button.disabled = false;
                             button.textContent =
                                 originalText;
