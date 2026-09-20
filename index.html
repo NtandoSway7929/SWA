@@ -16380,13 +16380,12 @@ body {
     align-items: start;
     padding: 14px 17px;
     border: 1px solid rgba(255,255,255,0.58);
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 13px;
-    align-items: start;
-    padding: 14px 17px;
-    border: 1px solid rgba(255,255,255,0.58);
     border-radius: 20px;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity 0.45s ease,
+        transform 0.45s ease;
     background:
         linear-gradient(
             135deg,
