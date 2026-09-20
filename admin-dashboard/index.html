@@ -2536,6 +2536,136 @@
             }
         }
 
+        /* =====================================================
+           FINAL WORKSPACE SPACING SYSTEM
+           ===================================================== */
+
+        #sway-admin-workspace {
+            --workspace-space-sm: 12px;
+            --workspace-space-md: 20px;
+            --workspace-space-lg: 24px;
+        }
+
+        #sway-admin-workspace .sway-workspace-main {
+            display: flex;
+            flex-direction: column;
+            gap: var(--workspace-space-lg);
+            min-width: 0;
+        }
+
+        #sway-admin-workspace .sway-workspace-main > * {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-heading {
+            margin-bottom: 0 !important;
+            padding-bottom: 2px;
+        }
+
+        #sway-admin-workspace .sway-workspace-grid,
+        #sway-admin-workspace .sway-overview-split,
+        #sway-admin-workspace .sway-insight-grid {
+            gap: var(--workspace-space-md);
+        }
+
+        #sway-admin-workspace .sway-stat-card {
+            min-height: 124px;
+            padding: 20px;
+        }
+
+        #sway-admin-workspace .sway-panel {
+            padding: 20px;
+        }
+
+        #sway-admin-workspace .sway-panel-title {
+            margin-bottom: var(--workspace-space-md);
+        }
+
+        #sway-admin-workspace .sway-cash-flow,
+        #sway-admin-workspace .sway-revenue-pipeline,
+        #sway-admin-workspace .sway-attention-panel,
+        #sway-admin-workspace .sway-followup-automation,
+        #sway-admin-workspace .sway-live-toolbar,
+        #sway-admin-workspace .sway-inline-note,
+        #sway-admin-workspace .sway-insight-note {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        #sway-admin-workspace .sway-cash-flow-stats,
+        #sway-admin-workspace .sway-cash-flow-charts,
+        #sway-admin-workspace .sway-cash-flow-lower,
+        #sway-admin-workspace .sway-revenue-pipeline-layout {
+            gap: var(--workspace-space-md);
+        }
+
+        #sway-admin-workspace .sway-cash-flow-charts,
+        #sway-admin-workspace .sway-cash-flow-lower,
+        #sway-admin-workspace .sway-revenue-pipeline-layout {
+            margin-top: var(--workspace-space-md);
+        }
+
+        #sway-admin-workspace .sway-attention-list,
+        #sway-admin-workspace .sway-followup-automation-list {
+            gap: var(--workspace-space-sm);
+        }
+
+        #sway-admin-workspace .sway-quick-actions {
+            gap: var(--workspace-space-md);
+        }
+
+        #sway-admin-workspace .sway-table-wrap {
+            margin-top: 0;
+        }
+
+        #sway-admin-workspace .sway-table th,
+        #sway-admin-workspace .sway-table td {
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+
+        #sway-admin-workspace .sway-table tr:first-child td {
+            padding-top: 12px;
+        }
+
+        @media (max-width: 980px) {
+            #sway-admin-workspace .sway-workspace-main {
+                gap: 20px;
+            }
+
+            #sway-admin-workspace .sway-workspace-grid,
+            #sway-admin-workspace .sway-overview-split,
+            #sway-admin-workspace .sway-insight-grid,
+            #sway-admin-workspace .sway-cash-flow-stats,
+            #sway-admin-workspace .sway-cash-flow-charts,
+            #sway-admin-workspace .sway-cash-flow-lower,
+            #sway-admin-workspace .sway-revenue-pipeline-layout {
+                gap: 18px;
+            }
+        }
+
+        @media (max-width: 760px) {
+            #sway-admin-workspace .sway-workspace-main {
+                gap: 16px;
+            }
+
+            #sway-admin-workspace .sway-workspace-grid,
+            #sway-admin-workspace .sway-overview-split,
+            #sway-admin-workspace .sway-insight-grid,
+            #sway-admin-workspace .sway-cash-flow-stats,
+            #sway-admin-workspace .sway-cash-flow-charts,
+            #sway-admin-workspace .sway-cash-flow-lower,
+            #sway-admin-workspace .sway-revenue-pipeline-layout {
+                gap: 14px;
+            }
+
+            #sway-admin-workspace .sway-stat-card,
+            #sway-admin-workspace .sway-panel {
+                padding: 17px;
+            }
+        }
+
         </style>
 
 </head>
