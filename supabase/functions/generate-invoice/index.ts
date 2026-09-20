@@ -964,7 +964,11 @@ function emailHtml(
         <div style="font-size:12px;color:#56627A;">Invoice ${escapeHtml(invoice.invoice_number)}</div>
         <h1 style="margin:6px 0 18px;font-size:24px;color:#081533;">Your Swayphics invoice</h1>
         <p style="font-size:14px;line-height:1.7;color:#56627A;">
-          Hi ${escapeHtml(invoice.client?.business_name || "Business")},<br><br>
+          Hi ${escapeHtml(
+            invoice.client?.contact_name ||
+              invoice.client?.business_name ||
+              "Business"
+          )},<br><br>
           Please find your invoice attached. Thank you for choosing Swayphics.
         </p>
         <table style="width:100%;border-collapse:collapse;margin-top:24px;">
