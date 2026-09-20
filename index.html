@@ -16357,6 +16357,171 @@ body {
 
     
     
+<style id="sway-public-announcements">
+/* =========================================================
+   SWAYPHICS PUBLIC ANNOUNCEMENTS
+   ========================================================= */
+
+.site-announcement-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.site-announcement-slot[hidden] {
+    display: none !important;
+}
+
+.site-announcement {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 13px;
+    align-items: start;
+    padding: 14px 17px;
+    border: 1px solid rgba(255,255,255,0.58);
+    border-radius: 20px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.78) 0%,
+            rgba(255,255,255,0.66) 45%,
+            rgba(247,250,255,0.58) 72%,
+            rgba(119,193,252,0.09) 100%
+        );
+    box-shadow:
+        0 16px 42px rgba(0,32,150,0.12),
+        0 4px 12px rgba(0,20,95,0.05),
+        inset 0 1px 0 rgba(255,255,255,0.68),
+        inset 0 -1px 0 rgba(0,32,150,0.06);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    color: #081533;
+    overflow: hidden;
+}
+
+.site-announcement::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(
+            110deg,
+            rgba(255,255,255,0.34) 0%,
+            rgba(255,255,255,0.08) 28%,
+            rgba(255,255,255,0) 58%,
+            rgba(119,193,252,0.08) 100%
+        );
+}
+
+.site-announcement-icon,
+.site-announcement-copy {
+    position: relative;
+    z-index: 1;
+}
+
+.site-announcement-icon {
+    width: 30px;
+    height: 30px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 10px;
+    background:
+        linear-gradient(
+            135deg,
+            #002096,
+            #0152F4
+        );
+    box-shadow:
+        0 8px 18px rgba(1,82,244,0.18);
+}
+
+.site-announcement-icon::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    box-shadow: 0 0 0 5px rgba(255,255,255,0.14);
+}
+
+.site-announcement-title {
+    margin: 0;
+    color: #081533;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+}
+
+.site-announcement-message {
+    margin: 4px 0 0;
+    color: #56627A;
+    font-size: 0.68rem;
+    font-weight: 500;
+    line-height: 1.55;
+}
+
+.site-announcement-top {
+    position: fixed;
+    top: 94px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(1050px, 88%);
+    z-index: 95;
+    pointer-events: none;
+}
+
+.site-announcement-top .site-announcement {
+    pointer-events: auto;
+}
+
+.site-announcement-hero {
+    width: min(640px, 100%);
+    margin-top: 24px;
+}
+
+.site-announcement-bottom {
+    width: min(1050px, 86%);
+    margin: 0 auto 90px;
+}
+
+@media (max-width: 760px) {
+    .site-announcement-top {
+        top: 82px;
+        width: min(94%, 1050px);
+    }
+
+    .site-announcement {
+        padding: 13px 14px;
+        border-radius: 17px;
+    }
+
+    .site-announcement-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .site-announcement-title {
+        font-size: 0.73rem;
+    }
+
+    .site-announcement-message {
+        font-size: 0.65rem;
+    }
+
+    .site-announcement-hero {
+        margin-top: 20px;
+    }
+
+    .site-announcement-bottom {
+        width: calc(100% - 28px);
+        margin-bottom: 64px;
+    }
+}
+</style>
+
 </head>
 
 <body>
@@ -16425,6 +16590,14 @@ body {
 
 </div>
 
+<div
+    class="site-announcement-slot site-announcement-top"
+    id="site-announcement-top"
+    aria-live="polite"
+    aria-atomic="true"
+    hidden
+></div>
+
     <main>
 
       <!-- HERO -->
@@ -16451,6 +16624,14 @@ body {
             brands, compelling content and visual experiences built
             to stand out and move business forward.
         </p>
+
+        <div
+            class="site-announcement-slot site-announcement-hero"
+            id="site-announcement-hero"
+            aria-live="polite"
+            aria-atomic="true"
+            hidden
+        ></div>
 
     </div>
 
@@ -17288,6 +17469,14 @@ body {
 </section>
 
         
+<div
+    class="site-announcement-slot site-announcement-bottom"
+    id="site-announcement-bottom"
+    aria-live="polite"
+    aria-atomic="true"
+    hidden
+></div>
+
 <!-- CTA -->
 <section class="cta" id="contact">
 
@@ -17895,6 +18084,107 @@ const SUPABASE_URL =
 
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
+
+/* =========================================================
+   PUBLIC SITE ANNOUNCEMENTS
+   ========================================================= */
+
+function renderPublicAnnouncements() {
+    const slots = {
+        "top-bar": document.getElementById("site-announcement-top"),
+        hero: document.getElementById("site-announcement-hero"),
+        bottom: document.getElementById("site-announcement-bottom")
+    };
+
+    Object.keys(slots).forEach(function (placement) {
+        const slot = slots[placement];
+        if (slot) {
+            slot.replaceChildren();
+            slot.hidden = true;
+        }
+    });
+
+    return slots;
+}
+
+function appendAnnouncement(slot, announcement) {
+    if (!slot) return;
+
+    const card = document.createElement("article");
+    card.className = "site-announcement";
+
+    const icon = document.createElement("span");
+    icon.className = "site-announcement-icon";
+    icon.setAttribute("aria-hidden", "true");
+
+    const copy = document.createElement("div");
+    copy.className = "site-announcement-copy";
+
+    const title = document.createElement("h2");
+    title.className = "site-announcement-title";
+    title.textContent = announcement.title || "Swayphics announcement";
+
+    copy.appendChild(title);
+
+    if (announcement.message) {
+        const message = document.createElement("p");
+        message.className = "site-announcement-message";
+        message.textContent = announcement.message;
+        copy.appendChild(message);
+    }
+
+    card.appendChild(icon);
+    card.appendChild(copy);
+    slot.appendChild(card);
+    slot.hidden = false;
+}
+
+async function loadPublicAnnouncements() {
+    const slots = renderPublicAnnouncements();
+
+    try {
+        const response = await fetch(
+            SUPABASE_URL +
+            "/rest/v1/site_announcements?select=id,title,message,placement,created_at&published=eq.true&order=created_at.desc",
+            {
+                method: "GET",
+                headers: {
+                    "apikey": SUPABASE_PUBLISHABLE_KEY,
+                    "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Published announcements request failed.");
+        }
+
+        const announcements = await response.json();
+
+        if (!Array.isArray(announcements)) {
+            return;
+        }
+
+        announcements.forEach(function (announcement) {
+            const placement =
+                slots[announcement.placement || "top-bar"]
+                    ? (announcement.placement || "top-bar")
+                    : "top-bar";
+
+            appendAnnouncement(
+                slots[placement],
+                announcement
+            );
+        });
+    } catch (error) {
+        console.warn(
+            "Public announcements could not be loaded.",
+            error
+        );
+    }
+}
+
+loadPublicAnnouncements();
 
         /* =========================================================
    TESTIMONIALS
