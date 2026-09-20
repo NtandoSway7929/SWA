@@ -1099,6 +1099,7 @@
             invoices: "I",
             payments: "R",
             communications: "C",
+            "portal-requests": "R",
             services: "S",
             announcements: "A",
             activities: "↗",
@@ -3698,6 +3699,10 @@ function renderShell() {
 
             renderCashFlow() +
 
+            renderLeadSourceAnalytics() +
+
+            renderServiceProfitability() +
+
             '<div class="sway-workspace-grid">' +
                 '<div class="sway-stat-card">' +
                     '<span class="label">Cash collected</span>' +
@@ -5766,10 +5771,13 @@ function renderShell() {
                             ) +
                         "</td>" +
                         "<td>" +
-                            chip(item.status) +
+                            clientHealthChip(item.id) +
                         "</td>" +
                         "<td>" +
                             '<div class="sway-row-actions">' +
+                                '<button class="sway-row-action" data-client-portal="' +
+                                    esc(item.id) +
+                                '">Portal</button>' +
                                 (
                                     item.status !== "completed"
                                         ? '<button class="sway-row-action" data-complete-task="' +
@@ -6078,7 +6086,10 @@ function renderShell() {
                     '<span>' + esc(client.email || "No email") + "</span>" +
                     '<span>' + esc(client.phone || "No phone") + "</span>" +
                     '<span>' + esc(adminName(client.assigned_to)) + "</span>" +
-                    chip(client.status) +
+                    clientHealthChip(client.id) +
+                    '<button type="button" class="sway-row-action" data-client-portal="' +
+                        esc(client.id) +
+                    '">Portal link</button>' +
                 "</div>" +
 
                 '<div class="sway-client360-stats">' +
@@ -6168,6 +6179,55 @@ function renderShell() {
                         }) +
                     "</section>" +
 
+                "</div>" +
+
+                '<div class="sway-client360-communications">' +
+                    '<section class="sway-client360-section">' +
+                        '<div class="sway-client360-section-head"><h4>Communication log</h4><span>' +
+                            state.communications.filter(function (item) {
+                                return item.client_id === clientId;
+                            }).length +
+                        "</span></div>" +
+                        (
+                            state.communications.filter(function (item) {
+                                return item.client_id === clientId;
+                            }).length
+                                ? '<div class="sway-client360-list">' +
+                                    state.communications
+                                        .filter(function (item) {
+                                            return item.client_id === clientId;
+                                        })
+                                        .slice(0, 8)
+                                        .map(function (item) {
+                                            return (
+                                                '<div class="sway-client360-list-item">' +
+                                                    "<span><strong>" +
+                                                        esc(
+                                                            item.subject ||
+                                                            item.channel ||
+                                                            "Communication"
+                                                        ) +
+                                                    "</strong><small>" +
+                                                        esc(
+                                                            formatDisplayText(item.channel || "Other") +
+                                                            " · " +
+                                                            formatDisplayText(item.direction || "outbound")
+                                                        ) +
+                                                    "</small></span><b>" +
+                                                        esc(dateTime(item.contacted_at)) +
+                                                    "</b>" +
+                                                "</div>"
+                                            );
+                                        }).join("") +
+                                  "</div>"
+                                : '<div class="sway-client360-empty">No communications have been logged for this client.</div>'
+                        ) +
+                        '<div style="margin-top:12px;">' +
+                            '<button type="button" class="sway-workspace-button" data-add-communication-client="' +
+                                esc(clientId) +
+                            '">+ Log communication</button>' +
+                        "</div>" +
+                    "</section>" +
                 "</div>" +
 
                 '<div class="sway-client360-lower">' +
@@ -6362,7 +6422,7 @@ function renderShell() {
                 "Clients",
                 "Permanent client records. Start new projects and invoices directly from each relationship.",
                 state.clients.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Contact</th><th>Owner</th><th>Projects</th><th>Status</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Contact</th><th>Owner</th><th>Projects</th><th>Health</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No clients yet.")
@@ -6435,6 +6495,13 @@ function renderShell() {
                         "</td>" +
                         "<td>" +
                             (
+                                Number(item.estimated_cost || 0)
+                                    ? esc(money(item.estimated_cost))
+                                    : "—"
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            (
                                 item.status === "completed"
                                     ? chip(
                                         item.review_email_status === "sent"
@@ -6448,6 +6515,9 @@ function renderShell() {
                         "</td>" +
                         "<td>" +
                             '<div class="sway-row-actions">' +
+                                '<button class="sway-row-action" data-project-timeline="' +
+                                    esc(item.id) +
+                                '">Timeline</button>' +
                                 '<button class="sway-row-action" data-edit="projects" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
@@ -6469,7 +6539,7 @@ function renderShell() {
                 "Projects",
                 "Track delivery, ownership, deadlines and payment state.",
                 state.projects.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Project</th><th>Client</th><th>Owner</th><th>Status</th><th>Due</th><th>Payment</th><th>Value</th><th>Review</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Project</th><th>Client</th><th>Owner</th><th>Status</th><th>Due</th><th>Payment</th><th>Value</th><th>Cost</th><th>Review</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No projects yet.")
@@ -6524,6 +6594,15 @@ function renderShell() {
                         "</td>" +
                         "<td>" +
                             '<div class="sway-row-actions">' +
+                                (
+                                    item.status === "accepted" && !item.invoice_id
+                                        ? '<button class="sway-row-action" data-create-invoice-from-quote="' +
+                                          esc(item.id) +
+                                          '">Create invoice</button>'
+                                        : item.invoice_id
+                                            ? '<span class="sway-chip success">Invoice linked</span>'
+                                            : ""
+                                ) +
                                 '<button class="sway-row-action" data-edit="quotes" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
@@ -8738,6 +8817,1072 @@ function renderShell() {
         );
     }
 
+
+    function clientHealth(clientId) {
+        const today = dashboardTodayISO();
+        const client =
+            state.clients.find(function (item) {
+                return item.id === clientId;
+            });
+
+        if (!client) {
+            return {
+                label: "Unknown",
+                tone: "neutral",
+                reason: "Client record unavailable."
+            };
+        }
+
+        const overdueInvoices =
+            state.invoices.filter(function (invoice) {
+                if (
+                    invoice.client_id !== clientId ||
+                    invoice.status === "cancelled" ||
+                    invoice.status === "paid"
+                ) {
+                    return false;
+                }
+
+                const outstanding = Number(
+                    invoice.amount_outstanding != null
+                        ? invoice.amount_outstanding
+                        : invoice.total || 0
+                );
+
+                return (
+                    outstanding > 0 &&
+                    (
+                        invoice.status === "overdue" ||
+                        (
+                            dashboardDateKey(invoice.due_date) &&
+                            dashboardDateKey(invoice.due_date) < today
+                        )
+                    )
+                );
+            }).length;
+
+        if (overdueInvoices) {
+            return {
+                label: "Needs attention",
+                tone: "danger",
+                reason:
+                    overdueInvoices +
+                    " overdue invoice" +
+                    (overdueInvoices === 1 ? "" : "s") +
+                    " still require collection."
+            };
+        }
+
+        const activeProjects =
+            state.projects.filter(function (project) {
+                return (
+                    project.client_id === clientId &&
+                    !["completed", "cancelled"].includes(project.status)
+                );
+            });
+
+        const clientCommunications =
+            state.communications
+                .filter(function (item) {
+                    return item.client_id === clientId;
+                })
+                .slice()
+                .sort(function (a, b) {
+                    return (
+                        notificationTimeValue(b.contacted_at) -
+                        notificationTimeValue(a.contacted_at)
+                    );
+                });
+
+        const daysSinceCommunication =
+            clientCommunications.length
+                ? Math.floor(
+                    (
+                        Date.now() -
+                        notificationTimeValue(
+                            clientCommunications[0].contacted_at
+                        )
+                    ) /
+                    (24 * 60 * 60 * 1000)
+                )
+                : null;
+
+        if (
+            activeProjects.length &&
+            (
+                daysSinceCommunication === null ||
+                daysSinceCommunication >= 14
+            )
+        ) {
+            return {
+                label: "Needs attention",
+                tone: "warning",
+                reason:
+                    "An active project has had no recorded communication for " +
+                    (
+                        daysSinceCommunication === null
+                            ? "14+"
+                            : daysSinceCommunication
+                    ) +
+                    " days."
+            };
+        }
+
+        if (
+            !activeProjects.length &&
+            (
+                daysSinceCommunication === null ||
+                daysSinceCommunication >= 30
+            )
+        ) {
+            return {
+                label:
+                    client.created_at &&
+                    dashboardDateKey(client.created_at) === today
+                        ? "New"
+                        : "Quiet",
+                tone: "neutral",
+                reason:
+                    daysSinceCommunication === null
+                        ? "No communication has been logged yet."
+                        : "No communication has been logged in the last 30 days."
+            };
+        }
+
+        return {
+            label: "Active",
+            tone: "success",
+            reason:
+                activeProjects.length
+                    ? "Active work and recent relationship activity are recorded."
+                    : "Recent relationship activity is recorded."
+        };
+    }
+
+    function clientHealthChip(clientId) {
+        const health = clientHealth(clientId);
+
+        return (
+            '<span class="sway-client-health-chip ' +
+                esc(health.tone) +
+            '">' +
+                esc(health.label) +
+            "</span>"
+        );
+    }
+
+    function renderLeadSourceAnalytics() {
+        const buckets = {};
+
+        state.leads.forEach(function (lead) {
+            const key =
+                lead.source ||
+                "Unspecified";
+
+            if (!buckets[key]) {
+                buckets[key] = {
+                    source: key,
+                    leads: 0,
+                    won: 0,
+                    pipeline: 0,
+                    wonValue: 0
+                };
+            }
+
+            buckets[key].leads += 1;
+            buckets[key].pipeline += Number(
+                lead.estimated_value || 0
+            );
+
+            if (lead.status === "won") {
+                buckets[key].won += 1;
+                buckets[key].wonValue += Number(
+                    lead.estimated_value || 0
+                );
+            }
+        });
+
+        const rows =
+            Object.keys(buckets)
+                .map(function (key) {
+                    const item = buckets[key];
+
+                    return {
+                        source: item.source,
+                        leads: item.leads,
+                        won: item.won,
+                        rate:
+                            item.leads
+                                ? item.won /
+                                  item.leads *
+                                  100
+                                : 0,
+                        pipeline: item.pipeline,
+                        wonValue: item.wonValue
+                    };
+                })
+                .sort(function (a, b) {
+                    if (b.wonValue !== a.wonValue) {
+                        return b.wonValue - a.wonValue;
+                    }
+
+                    return b.leads - a.leads;
+                });
+
+        if (!rows.length) {
+            return panel(
+                "Lead source intelligence",
+                "Track where prospects are entering the pipeline.",
+                empty("No lead-source data yet.")
+            );
+        }
+
+        return (
+            '<section class="sway-lead-source-panel">' +
+                '<div class="sway-lead-source-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Acquisition</span>' +
+                        "<h3>Lead source intelligence</h3>" +
+                        "<p>Compare volume, current conversion and estimated value by recorded lead source.</p>" +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-table-wrap">' +
+                    '<table class="sway-table">' +
+                        "<thead><tr>" +
+                            "<th>Source</th>" +
+                            "<th>Leads</th>" +
+                            "<th>Won</th>" +
+                            "<th>Conversion</th>" +
+                            "<th>Pipeline</th>" +
+                            "<th>Won value</th>" +
+                        "</tr></thead>" +
+                        "<tbody>" +
+                            rows.map(function (item) {
+                                return (
+                                    "<tr>" +
+                                        "<td><strong>" +
+                                            esc(formatDisplayText(item.source)) +
+                                        "</strong></td>" +
+                                        "<td>" + item.leads + "</td>" +
+                                        "<td>" + item.won + "</td>" +
+                                        "<td>" + item.rate.toFixed(0) + "%</td>" +
+                                        "<td>" + esc(money(item.pipeline)) + "</td>" +
+                                        "<td>" + esc(money(item.wonValue)) + "</td>" +
+                                    "</tr>"
+                                );
+                            }).join("") +
+                        "</tbody>" +
+                    "</table>" +
+                "</div>" +
+            "</section>"
+        );
+    }
+
+    function renderServiceProfitability() {
+        const buckets = {};
+
+        state.projects.forEach(function (project) {
+            const service =
+                project.service ||
+                "Unspecified";
+
+            if (!buckets[service]) {
+                buckets[service] = {
+                    service: service,
+                    projects: 0,
+                    revenue: 0,
+                    cost: 0
+                };
+            }
+
+            buckets[service].projects += 1;
+            buckets[service].revenue += Number(
+                project.value || 0
+            );
+            buckets[service].cost += Math.max(
+                0,
+                Number(project.estimated_cost || 0)
+            );
+        });
+
+        const rows =
+            Object.keys(buckets)
+                .map(function (key) {
+                    const item = buckets[key];
+                    const profit =
+                        item.revenue -
+                        item.cost;
+
+                    return {
+                        service: item.service,
+                        projects: item.projects,
+                        revenue: item.revenue,
+                        cost: item.cost,
+                        profit: profit,
+                        margin:
+                            item.revenue
+                                ? profit /
+                                  item.revenue *
+                                  100
+                                : 0
+                    };
+                })
+                .sort(function (a, b) {
+                    return b.profit - a.profit;
+                });
+
+        return (
+            '<section class="sway-service-profitability">' +
+                '<div class="sway-service-profitability-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Economics</span>' +
+                        "<h3>Service profitability</h3>" +
+                        "<p>Estimated revenue less the internal project cost you record against each service.</p>" +
+                    "</div>" +
+                "</div>" +
+                (
+                    rows.length
+                        ? '<div class="sway-table-wrap">' +
+                            '<table class="sway-table">' +
+                                "<thead><tr>" +
+                                    "<th>Service</th>" +
+                                    "<th>Projects</th>" +
+                                    "<th>Revenue</th>" +
+                                    "<th>Cost</th>" +
+                                    "<th>Gross profit</th>" +
+                                    "<th>Margin</th>" +
+                                "</tr></thead>" +
+                                "<tbody>" +
+                                    rows.map(function (item) {
+                                        return (
+                                            "<tr>" +
+                                                "<td><strong>" +
+                                                    esc(formatDisplayText(item.service)) +
+                                                "</strong></td>" +
+                                                "<td>" + item.projects + "</td>" +
+                                                "<td>" + esc(money(item.revenue)) + "</td>" +
+                                                "<td>" + (
+                                                    item.cost
+                                                        ? esc(money(item.cost))
+                                                        : '<span style="color:var(--text-muted);">Not recorded</span>'
+                                                ) + "</td>" +
+                                                "<td>" + esc(money(item.profit)) + "</td>" +
+                                                "<td>" + item.margin.toFixed(0) + "%</td>" +
+                                            "</tr>"
+                                        );
+                                    }).join("") +
+                                "</tbody>" +
+                            "</table>" +
+                          "</div>"
+                        : empty("No project service data yet.")
+                ) +
+                '<div class="sway-inline-note" style="margin-top:12px;">' +
+                    "<strong>Important:</strong> profitability depends on the estimated internal costs recorded on projects. Revenue without cost records is not a true margin calculation." +
+                "</div>" +
+            "</section>"
+        );
+    }
+
+    function projectTimelineStage(status) {
+        const stages = [
+            "planning",
+            "in progress",
+            "review",
+            "completed"
+        ];
+
+        const index = stages.indexOf(status);
+
+        return {
+            stages: stages,
+            currentIndex:
+                index >= 0
+                    ? index
+                    : status === "paused"
+                        ? Math.max(0, stages.indexOf("in progress"))
+                        : -1
+        };
+    }
+
+    function openProjectTimeline(projectId) {
+        const project =
+            state.projects.find(function (item) {
+                return item.id === projectId;
+            });
+
+        if (!project) return;
+
+        const timeline =
+            projectTimelineStage(project.status);
+
+        document.getElementById(
+            "sway-project-timeline-modal"
+        )?.remove();
+
+        const modal =
+            document.createElement("div");
+
+        modal.className =
+            "sway-project-timeline-modal";
+
+        modal.id =
+            "sway-project-timeline-modal";
+
+        modal.innerHTML =
+            '<div class="sway-project-timeline-backdrop" data-close-project-timeline></div>' +
+            '<section class="sway-project-timeline-card" role="dialog" aria-modal="true" aria-labelledby="sway-project-timeline-title">' +
+                '<div class="sway-project-timeline-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Project timeline</span>' +
+                        '<h3 id="sway-project-timeline-title">' +
+                            esc(project.name) +
+                        "</h3>" +
+                        '<p>' +
+                            esc(clientName(project.client_id)) +
+                            (
+                                project.service
+                                    ? " · " + esc(project.service)
+                                    : ""
+                            ) +
+                        "</p>" +
+                    "</div>" +
+                    '<button type="button" class="sway-client360-close" data-close-project-timeline aria-label="Close">×</button>' +
+                "</div>" +
+                (
+                    ["paused", "cancelled"].includes(project.status)
+                        ? '<div class="sway-project-timeline-special">' +
+                            chip(project.status) +
+                            "<span>This project is outside the active delivery path. Edit the project to resume or close it.</span>" +
+                          "</div>"
+                        : '<div class="sway-project-timeline-track">' +
+                            timeline.stages.map(function (stage, index) {
+                                const complete =
+                                    timeline.currentIndex >= index;
+
+                                return (
+                                    '<div class="sway-project-timeline-step ' +
+                                        (complete ? "complete" : "") +
+                                        (
+                                            timeline.currentIndex === index &&
+                                            stage !== "completed"
+                                                ? " current"
+                                                : ""
+                                        ) +
+                                    '">' +
+                                        '<span class="sway-project-timeline-node">' +
+                                            (complete ? "✓" : String(index + 1)) +
+                                        "</span>" +
+                                        '<strong>' +
+                                            esc(formatDisplayText(stage)) +
+                                        "</strong>" +
+                                        (
+                                            timeline.currentIndex === index
+                                                ? "<small>Current stage</small>"
+                                                : ""
+                                        ) +
+                                    "</div>"
+                                );
+                            }).join("") +
+                          "</div>"
+                ) +
+                '<div class="sway-project-timeline-meta">' +
+                    '<div><span>Due</span><strong>' +
+                        esc(
+                            project.due_date
+                                ? date(project.due_date)
+                                : "No deadline"
+                        ) +
+                    "</strong></div>" +
+                    '<div><span>Project value</span><strong>' +
+                        esc(money(project.value)) +
+                    "</strong></div>" +
+                    '<div><span>Estimated cost</span><strong>' +
+                        esc(
+                            Number(project.estimated_cost || 0)
+                                ? money(project.estimated_cost)
+                                : "Not recorded"
+                        ) +
+                    "</strong></div>" +
+                    '<div><span>Payment</span>' +
+                        chip(project.payment_status) +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-project-timeline-footer">' +
+                    '<button type="button" class="sway-workspace-button" data-edit="projects" data-id="' +
+                        esc(project.id) +
+                    '">Edit project</button>' +
+                    '<button type="button" class="sway-workspace-button primary" data-close-project-timeline>Close</button>' +
+                "</div>" +
+            "</section>";
+
+        document.body.appendChild(modal);
+
+        modal
+            .querySelectorAll("[data-close-project-timeline]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        modal.remove();
+                    }
+                );
+            });
+
+        modal
+            .querySelector("[data-edit='projects']")
+            ?.addEventListener(
+                "click",
+                function () {
+                    modal.remove();
+                    createOrEdit(
+                        "projects",
+                        project.id
+                    );
+                }
+            );
+    }
+
+    async function createInvoiceFromQuote(quoteId) {
+        const quote =
+            state.quotes.find(function (item) {
+                return item.id === quoteId;
+            });
+
+        if (!quote) return;
+
+        if (quote.status !== "accepted") {
+            swayAlert(
+                "Only accepted quotes can be converted into invoices."
+            );
+            return;
+        }
+
+        if (quote.invoice_id) {
+            swayAlert(
+                "This quote is already linked to an invoice."
+            );
+            return;
+        }
+
+        if (!quote.client_id) {
+            swayAlert(
+                "Convert the lead to a client before creating the invoice."
+            );
+            return;
+        }
+
+        try {
+            const created =
+                await api(
+                    "/rest/v1/invoices",
+                    {
+                        method: "POST",
+                        headers: headers({
+                            "Prefer":
+                                "return=representation"
+                        }),
+                        body:
+                            JSON.stringify({
+                                client_id: quote.client_id,
+                                issue_date: dashboardTodayISO(),
+                                status: "draft",
+                                currency: "ZAR",
+                                subtotal: Number(quote.amount || 0),
+                                total: Number(quote.amount || 0),
+                                notes:
+                                    "Created from " +
+                                    (
+                                        quote.quote_number ||
+                                        "accepted quote"
+                                    ) +
+                                    "."
+                            })
+                    }
+                );
+
+            const invoiceId =
+                Array.isArray(created)
+                    ? created[0]?.id
+                    : created?.id;
+
+            if (!invoiceId) {
+                throw new Error(
+                    "The invoice was not created."
+                );
+            }
+
+            await api(
+                "/rest/v1/invoice_items",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    }),
+                    body:
+                        JSON.stringify({
+                            invoice_id: invoiceId,
+                            description:
+                                quote.title ||
+                                "Quoted services",
+                            quantity: 1,
+                            unit_price:
+                                Number(quote.amount || 0)
+                        })
+                }
+            );
+
+            await api(
+                "/rest/v1/quotes?id=eq." +
+                encodeURIComponent(quote.id),
+                {
+                    method: "PATCH",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    }),
+                    body:
+                        JSON.stringify({
+                            invoice_id: invoiceId,
+                            updated_at: new Date().toISOString()
+                        })
+                }
+            );
+
+            await logActivity(
+                "Created invoice from accepted quote",
+                "invoices",
+                invoiceId
+            );
+
+            await refreshData();
+            renderShell();
+            renderView();
+
+            await openInvoiceBuilder(invoiceId);
+        } catch (error) {
+            swayAlert(
+                error.message ||
+                "Unable to create the invoice from this quote."
+            );
+        }
+    }
+
+    function randomPortalToken() {
+        const bytes =
+            new Uint8Array(32);
+
+        window.crypto.getRandomValues(bytes);
+
+        return Array.from(bytes)
+            .map(function (byte) {
+                return byte
+                    .toString(16)
+                    .padStart(2, "0");
+            })
+            .join("");
+    }
+
+    async function sha256Hex(value) {
+        if (
+            !window.crypto ||
+            !window.crypto.subtle
+        ) {
+            throw new Error(
+                "Your browser does not support the secure portal link generator."
+            );
+        }
+
+        const encoded =
+            new TextEncoder().encode(
+                String(value)
+            );
+
+        const digest =
+            await window.crypto.subtle.digest(
+                "SHA-256",
+                encoded
+            );
+
+        return Array.from(
+            new Uint8Array(digest)
+        ).map(function (byte) {
+            return byte.toString(16).padStart(2, "0");
+        }).join("");
+    }
+
+    async function createClientPortalLink(clientId) {
+        const client =
+            state.clients.find(function (item) {
+                return item.id === clientId;
+            });
+
+        if (!client) return;
+
+        try {
+            const rawToken =
+                randomPortalToken();
+
+            const hash =
+                await sha256Hex(rawToken);
+
+            const expires =
+                new Date(
+                    Date.now() +
+                    90 * 24 * 60 * 60 * 1000
+                ).toISOString();
+
+            await api(
+                "/rest/v1/client_portal_tokens",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    }),
+                    body:
+                        JSON.stringify({
+                            client_id: clientId,
+                            token_hash: hash,
+                            active: true,
+                            expires_at: expires,
+                            created_by:
+                                state.currentUser.id
+                        })
+                }
+            );
+
+            const base =
+                window.location.origin +
+                window.location.pathname
+                    .split("/admin-dashboard/")[0]
+                    .replace(/\/$/, "");
+
+            const link =
+                base +
+                "/client-portal/?token=" +
+                encodeURIComponent(rawToken);
+
+            openClientPortalLinkModal(
+                client,
+                link,
+                expires
+            );
+
+            await logActivity(
+                "Created client portal link",
+                "clients",
+                clientId
+            );
+
+            await refreshData();
+        } catch (error) {
+            swayAlert(
+                error.message ||
+                "Unable to create a secure client portal link."
+            );
+        }
+    }
+
+    function openClientPortalLinkModal(client, link, expires) {
+        document.getElementById(
+            "sway-client-portal-link-modal"
+        )?.remove();
+
+        const modal =
+            document.createElement("div");
+
+        modal.className =
+            "sway-client-portal-link-modal";
+
+        modal.id =
+            "sway-client-portal-link-modal";
+
+        modal.innerHTML =
+            '<div class="sway-client-portal-link-backdrop" data-close-client-portal-link></div>' +
+            '<section class="sway-client-portal-link-card" role="dialog" aria-modal="true" aria-labelledby="sway-client-portal-link-title">' +
+                '<div class="sway-project-timeline-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Client portal</span>' +
+                        '<h3 id="sway-client-portal-link-title">Secure access link</h3>' +
+                        '<p>' +
+                            esc(client.business_name) +
+                            " · expires " +
+                            esc(dateTime(expires)) +
+                        "</p>" +
+                    "</div>" +
+                    '<button type="button" class="sway-client360-close" data-close-client-portal-link aria-label="Close">×</button>' +
+                "</div>" +
+                '<div class="sway-form-field">' +
+                    '<label for="sway-client-portal-link-input">Portal link</label>' +
+                    '<input id="sway-client-portal-link-input" type="text" readonly value="' +
+                        esc(link) +
+                    '">' +
+                "</div>" +
+                '<div class="sway-client-portal-link-note">' +
+                    "<strong>Keep this link private.</strong> Anyone who has it can access this client's portal until it expires or is revoked." +
+                "</div>" +
+                '<div class="sway-project-timeline-footer">' +
+                    '<button type="button" class="sway-workspace-button" data-close-client-portal-link>Close</button>' +
+                    '<button type="button" class="sway-workspace-button primary" id="sway-copy-client-portal-link">Copy link</button>' +
+                "</div>" +
+            "</section>";
+
+        document.body.appendChild(modal);
+
+        modal
+            .querySelectorAll("[data-close-client-portal-link]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        modal.remove();
+                    }
+                );
+            });
+
+        modal
+            .querySelector("#sway-copy-client-portal-link")
+            ?.addEventListener(
+                "click",
+                async function () {
+                    try {
+                        await navigator.clipboard.writeText(
+                            link
+                        );
+                        swayAlert("Portal link copied.");
+                    } catch (error) {
+                        const input =
+                            modal.querySelector(
+                                "#sway-client-portal-link-input"
+                            );
+
+                        input.select();
+                        document.execCommand("copy");
+                        swayAlert("Portal link copied.");
+                    }
+                }
+            );
+    }
+
+    function csvCell(value) {
+        return '"' +
+            String(value == null ? "" : value)
+                .replace(/"/g, '""') +
+            '"';
+    }
+
+    function downloadTextFile(filename, content, type) {
+        const blob =
+            new Blob(
+                [content],
+                {
+                    type:
+                        type ||
+                        "text/plain;charset=utf-8"
+                }
+            );
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const anchor =
+            document.createElement("a");
+
+        anchor.href = url;
+        anchor.download = filename;
+
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+
+        window.setTimeout(function () {
+            URL.revokeObjectURL(url);
+        }, 1000);
+    }
+
+    function exportWorkspaceJson() {
+        const payload = {
+            exported_at: new Date().toISOString(),
+            note: "Operational Swayphics workspace backup. Private invoice bank settings are intentionally excluded.",
+            admins: state.admins,
+            clients: state.clients,
+            leads: state.leads,
+            lead_stage_history: state.leadStageHistory,
+            projects: state.projects,
+            tasks: state.tasks,
+            followups: state.followups,
+            communications: state.communications,
+            quotes: state.quotes,
+            payments: state.payments,
+            invoices: state.invoices,
+            services: state.services,
+            enquiries: state.enquiries,
+            announcements: state.announcements,
+            portal_requests: state.portalRequests,
+            activities: state.activities
+        };
+
+        downloadTextFile(
+            "swayphics-workspace-backup-" +
+            dashboardTodayISO() +
+            ".json",
+            JSON.stringify(payload, null, 2),
+            "application/json;charset=utf-8"
+        );
+    }
+
+    function exportWorkspaceCsv() {
+        const datasets = {
+            clients: state.clients,
+            leads: state.leads,
+            projects: state.projects,
+            tasks: state.tasks,
+            followups: state.followups,
+            communications: state.communications,
+            quotes: state.quotes,
+            invoices: state.invoices,
+            payments: state.payments,
+            services: state.services,
+            enquiries: state.enquiries,
+            portal_requests: state.portalRequests,
+            activities: state.activities
+        };
+
+        Object.keys(datasets).forEach(function (name, index) {
+            const rows = Array.isArray(datasets[name])
+                ? datasets[name]
+                : [];
+
+            if (!rows.length) {
+                return;
+            }
+
+            const columns =
+                Array.from(
+                    rows.reduce(function (set, row) {
+                        Object.keys(row || {}).forEach(function (key) {
+                            set.add(key);
+                        });
+
+                        return set;
+                    }, new Set())
+                );
+
+            const csv =
+                [
+                    columns.map(csvCell).join(","),
+                    ...rows.map(function (row) {
+                        return columns
+                            .map(function (column) {
+                                return csvCell(row[column]);
+                            })
+                            .join(",");
+                    })
+                ].join("\r\n");
+
+            window.setTimeout(function () {
+                downloadTextFile(
+                    "swayphics-" +
+                    name +
+                    "-" +
+                    dashboardTodayISO() +
+                    ".csv",
+                    csv,
+                    "text/csv;charset=utf-8"
+                );
+            }, index * 180);
+        });
+    }
+
+    function renderPortalRequests() {
+        const rows =
+            state.portalRequests.map(function (item) {
+                return (
+                    "<tr>" +
+                        "<td><strong>" +
+                            esc(clientName(item.client_id)) +
+                        "</strong></td>" +
+                        "<td>" +
+                            esc(item.subject) +
+                        "</td>" +
+                        "<td>" +
+                            '<div class="sway-portal-request-message">' +
+                                esc(item.message) +
+                            "</div>" +
+                        "</td>" +
+                        "<td>" +
+                            esc(dateTime(item.created_at)) +
+                        "</td>" +
+                        "<td>" +
+                            chip(item.status) +
+                        "</td>" +
+                        "<td>" +
+                            '<div class="sway-row-actions">' +
+                                (
+                                    item.status !== "in progress"
+                                        ? '<button class="sway-row-action" data-portal-request-status="in progress" data-id="' +
+                                          esc(item.id) +
+                                          '">Start</button>'
+                                        : ""
+                                ) +
+                                (
+                                    item.status !== "completed"
+                                        ? '<button class="sway-row-action" data-portal-request-status="completed" data-id="' +
+                                          esc(item.id) +
+                                          '">Complete</button>'
+                                        : ""
+                                ) +
+                            "</div>" +
+                        "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+
+        return (
+            heading(
+                '<button type="button" class="sway-workspace-button" data-refresh-workspace>Refresh data</button>'
+            ) +
+            panel(
+                "Client portal requests",
+                "Requests submitted by clients from their secure portal.",
+                rows
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Client</th><th>Subject</th><th>Request</th><th>Received</th><th>Status</th><th></th></tr></thead><tbody>' +
+                      rows +
+                      "</tbody></table></div>"
+                    : empty("No portal requests yet.")
+            )
+        );
+    }
+
+    function renderDataExport() {
+        return (
+            heading(
+                '<button type="button" class="sway-workspace-button primary" data-export-json>Export JSON backup</button>' +
+                '<button type="button" class="sway-workspace-button" data-export-csv>Export CSV files</button>'
+            ) +
+            panel(
+                "Workspace backup",
+                "Download a local copy of Swayphics operational records.",
+                '<div class="sway-export-grid">' +
+                    '<div class="sway-export-card">' +
+                        '<strong>JSON workspace backup</strong>' +
+                        '<p>One structured file containing clients, leads, projects, tasks, communications, billing records, enquiries, portal requests and activity.</p>' +
+                        '<button type="button" class="sway-workspace-button primary" data-export-json>Download JSON</button>' +
+                    "</div>" +
+                    '<div class="sway-export-card">' +
+                        '<strong>CSV data export</strong>' +
+                        '<p>Downloads separate CSV files for the main operational datasets so they can be opened in Excel or Google Sheets.</p>' +
+                        '<button type="button" class="sway-workspace-button" data-export-csv>Download CSV files</button>' +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-inline-note" style="margin-top:16px;">' +
+                    "<strong>Backup note:</strong> these exports are generated in your browser. Private invoice bank settings are intentionally excluded from the export. Automated off-site backups still require a server-side storage destination." +
+                "</div>"
+            )
+        );
+    }
+
     const configs = {
         tasks: {
             table: "tasks",
@@ -9368,6 +10513,13 @@ function renderShell() {
                         label: "Project value (ZAR)",
                         type: "number",
                         value: item.value
+                    },
+                    {
+                        key: "estimated_cost",
+                        label: "Estimated internal cost (ZAR)",
+                        type: "number",
+                        value: item.estimated_cost || 0,
+                        help: "Use your estimated internal delivery cost for profitability reporting."
                     },
                     {
                         key: "due_date",
@@ -11684,6 +12836,131 @@ function renderShell() {
                             }
                         );
                     }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-project-timeline]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openProjectTimeline(
+                            button.dataset.projectTimeline
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-create-invoice-from-quote]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        createInvoiceFromQuote(
+                            button.dataset.createInvoiceFromQuote
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-client-portal]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        createClientPortalLink(
+                            button.dataset.clientPortal
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-add-communication-client]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        createOrEdit(
+                            "communications",
+                            null,
+                            {
+                                client_id:
+                                    button.dataset.addCommunicationClient,
+                                lead_id: null,
+                                channel: "WhatsApp",
+                                direction: "outbound",
+                                contacted_at:
+                                    dateTimeInput(new Date())
+                            }
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-portal-request-status]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    async function () {
+                        try {
+                            await api(
+                                "/rest/v1/client_portal_requests?id=eq." +
+                                encodeURIComponent(button.dataset.id),
+                                {
+                                    method: "PATCH",
+                                    headers: headers({
+                                        "Prefer":
+                                            "return=minimal"
+                                    }),
+                                    body:
+                                        JSON.stringify({
+                                            status:
+                                                button.dataset.portalRequestStatus,
+                                            updated_at:
+                                                new Date().toISOString()
+                                        })
+                                }
+                            );
+
+                            await logActivity(
+                                "Updated portal request",
+                                "client_portal_requests",
+                                button.dataset.id
+                            );
+
+                            await refreshData();
+                            renderShell();
+                            renderView();
+                        } catch (error) {
+                            swayAlert(
+                                error.message ||
+                                "Unable to update the portal request."
+                            );
+                        }
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-export-json]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    exportWorkspaceJson
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-export-csv]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    exportWorkspaceCsv
                 );
             });
 
