@@ -40,6 +40,17 @@ revoke all on function public.is_swayphics_owner() from public;
 grant execute on function public.is_swayphics_admin() to authenticated;
 grant execute on function public.is_swayphics_owner() to authenticated;
 
+-- Existing installations: add the placement field used by the public site.
+alter table public.site_announcements
+    add column if not exists placement text not null default 'top-bar';
+
+alter table public.site_announcements
+    drop constraint if exists site_announcements_placement_check;
+
+alter table public.site_announcements
+    add constraint site_announcements_placement_check
+    check (placement in ('top-bar','hero','bottom'));
+
 -- Grant Data API privileges for the authenticated workspace role.
 -- RLS policies below still control which rows this role may access.
 grant usage on schema public to authenticated;
@@ -53,6 +64,7 @@ grant select, insert, update, delete on table public.quotes to authenticated;
 grant select, insert, update, delete on table public.payments to authenticated;
 grant select, insert, update, delete on table public.website_enquiries to authenticated;
 grant select, insert, update, delete on table public.site_announcements to authenticated;
+grant select on table public.site_announcements to anon;
 grant select, insert, update, delete on table public.activity_log to authenticated;
 
 -- The public contact form is handled by the submit-enquiry Edge Function.
@@ -167,6 +179,14 @@ for all
 to authenticated
 using (public.is_swayphics_admin())
 with check (public.is_swayphics_admin());
+
+
+drop policy if exists "Public can view published announcements" on public.site_announcements;
+create policy "Public can view published announcements"
+on public.site_announcements
+for select
+to anon
+using (published = true);
 
 drop policy if exists "Swayphics admins can manage announcements" on public.site_announcements;
 create policy "Swayphics admins can manage announcements"
