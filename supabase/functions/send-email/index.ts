@@ -46,8 +46,8 @@ function brandedEmailHtml(
   // Use the business attached to the resolved recipient as the greeting
   // instead of a potentially stale contact person's name.
   const greetingName =
-    businessName ||
-    "there";
+    String(businessName || "").trim() ||
+    "Business";
 
   return `<!doctype html>
 <html>
