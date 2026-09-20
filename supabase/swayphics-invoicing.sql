@@ -56,11 +56,15 @@ create table if not exists public.invoice_settings (
     account_number text,
     account_type text,
     branch_code text,
+    swift_bic text,
     payment_instructions text,
     vat_registered boolean not null default false,
     vat_number text,
     updated_at timestamptz not null default now()
 );
+
+alter table public.invoice_settings
+    add column if not exists swift_bic text;
 
 create table if not exists public.invoices (
     id uuid primary key default gen_random_uuid(),
