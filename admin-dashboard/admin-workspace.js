@@ -5029,6 +5029,13 @@
                             ) +
                         "</td>" +
                         "<td>" +
+                            esc(
+                                formatDisplayText(
+                                    item.placement || "top-bar"
+                                )
+                            ) +
+                        "</td>" +
+                        "<td>" +
                             chip(
                                 item.published
                                     ? "published"
@@ -5064,7 +5071,7 @@
                 "Website announcements",
                 "Reusable notices for future public-site placements.",
                 state.announcements.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Announcement</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Announcement</th><th>Placement</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No announcements yet.")
@@ -6313,6 +6320,33 @@
                         type: "textarea",
                         full: true,
                         value: item.message
+                    },
+                    {
+                        key: "placement",
+                        label: "Public-site placement",
+                        type: "select",
+                        options:
+                            '<option value="top-bar"' +
+                            (
+                                (item.placement || "top-bar") === "top-bar"
+                                    ? " selected"
+                                    : ""
+                            ) +
+                            ">Top notice</option>" +
+                            '<option value="hero"' +
+                            (
+                                item.placement === "hero"
+                                    ? " selected"
+                                    : ""
+                            ) +
+                            ">Hero notice</option>" +
+                            '<option value="bottom"' +
+                            (
+                                item.placement === "bottom"
+                                    ? " selected"
+                                    : ""
+                            ) +
+                            ">Bottom notice</option>"
                     },
                     {
                         key: "published",
