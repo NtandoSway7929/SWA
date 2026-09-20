@@ -1814,44 +1814,42 @@
             return;
         }
 
-        button.addEventListener(
-            "click",
-            function () {
-                toggleNotificationCenter();
+        button.onclick = function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleNotificationCenter();
+        };
+
+        list.onclick = function (event) {
+            const item =
+                event.target.closest(
+                    "[data-notification-key]"
+                );
+
+            if (!item) {
+                return;
             }
-        );
 
-        list.addEventListener(
-            "click",
-            function (event) {
-                const item =
-                    event.target.closest(
-                        "[data-notification-key]"
-                    );
+            event.preventDefault();
+            event.stopPropagation();
 
-                if (!item) {
-                    return;
-                }
+            const key =
+                item.dataset.notificationKey;
 
-                const key =
-                    item.dataset.notificationKey;
+            const view =
+                item.dataset.notificationView;
 
-                const view =
-                    item.dataset.notificationView;
-
-                markNotificationRead(key);
-                openNotificationTarget(view);
-                closeNotificationCenter();
-            }
-        );
+            markNotificationRead(key);
+            openNotificationTarget(view);
+            closeNotificationCenter();
+        };
 
         if (markAll) {
-            markAll.addEventListener(
-                "click",
-                function () {
-                    markAllNotificationsRead();
-                }
-            );
+            markAll.onclick = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                markAllNotificationsRead();
+            };
         }
 
         document.addEventListener(
