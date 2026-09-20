@@ -2104,8 +2104,29 @@
                 state.realtimeStatus = settings.status;
             }
 
-            renderShell();
-            renderView();
+            const editingModalOpen = Boolean(
+                document.querySelector(
+                    ".sway-modal:not([hidden]), .portfolio-modal:not([hidden])"
+                )
+            );
+
+            if (
+                settings.render !== false &&
+                !editingModalOpen
+            ) {
+                renderShell();
+
+                if (
+                    state.currentView !== "portfolio" &&
+                    state.currentView !== "testimonials"
+                ) {
+                    renderView();
+                }
+
+                setStandaloneManagerVisibility(
+                    state.currentView
+                );
+            }
         } catch (error) {
             if (settings.fallbackToPolling) {
                 state.realtimeStatus = "polling";
@@ -7397,7 +7418,8 @@
 
                         try {
                             await syncWorkspaceData({
-                                fallbackToPolling: true
+                                fallbackToPolling: true,
+                                render: true
                             });
                         } catch (error) {
                             swayAlert(
