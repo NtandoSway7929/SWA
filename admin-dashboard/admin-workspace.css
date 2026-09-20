@@ -4606,6 +4606,176 @@
    DASHBOARD BUSINESS UPGRADES
    ========================================================= */
 
+
+.sway-client-health-chip.healthy {
+    background: rgba(22,163,74,0.08);
+    color: #16803A;
+}
+
+.sway-client-health-chip.needs-attention {
+    background: rgba(217,119,6,0.09);
+    color: #B45309;
+}
+
+.sway-client-health-chip.at-risk {
+    background: rgba(220,38,38,0.075);
+    color: #B42318;
+}
+
+.sway-automated-reminders {
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid rgba(0,32,150,0.09);
+    border-radius: 20px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.94) 0%,
+            rgba(247,250,255,0.86) 100%
+        );
+    box-shadow:
+        0 16px 42px rgba(0,32,150,0.05),
+        inset 0 1px 0 rgba(255,255,255,0.70);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.sway-automated-reminders-head {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.sway-automated-reminders-head h3 {
+    color: var(--sway-dark);
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+}
+
+.sway-automated-reminders-head p {
+    max-width: 760px;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.61rem;
+    line-height: 1.55;
+}
+
+.sway-automated-reminders-stats {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.sway-automated-reminders-stats > div {
+    display: grid;
+    gap: 3px;
+    padding: 12px;
+    border: 1px solid rgba(0,32,150,0.06);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.56);
+}
+
+.sway-automated-reminders-stats span {
+    color: var(--text-muted);
+    font-size: 0.55rem;
+    font-weight: 700;
+}
+
+.sway-automated-reminders-stats strong {
+    color: var(--sway-dark);
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+}
+
+.sway-automated-reminders-list {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 8px;
+}
+
+.sway-automated-reminder-item {
+    display: grid;
+    grid-template-columns: 31px minmax(0,1fr);
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(0,32,150,0.06);
+    border-radius: 13px;
+    background: rgba(255,255,255,0.56);
+}
+
+.sway-automated-reminder-icon {
+    width: 31px;
+    height: 31px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: rgba(1,82,244,0.07);
+    color: var(--sway-blue);
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.sway-automated-reminder-item strong {
+    display: block;
+    color: var(--sway-dark);
+    font-size: 0.63rem;
+    font-weight: 800;
+}
+
+.sway-automated-reminder-item small {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 0.56rem;
+    line-height: 1.5;
+}
+
+.sway-automated-reminders-clear {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 4px;
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(22,163,74,0.045);
+    border: 1px solid rgba(22,163,74,0.07);
+}
+
+.sway-automated-reminders-clear strong {
+    color: #16803A;
+    font-size: 0.64rem;
+}
+
+.sway-automated-reminders-clear span {
+    color: var(--text-muted);
+    font-size: 0.57rem;
+}
+
+@media (max-width: 760px) {
+    .sway-automated-reminders-head {
+        flex-direction: column;
+    }
+
+    .sway-automated-reminders-head .sway-workspace-button {
+        width: 100%;
+    }
+
+    .sway-automated-reminders-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
 .sway-client-health-chip {
     display: inline-flex;
     align-items: center;
