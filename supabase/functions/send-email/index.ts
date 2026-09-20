@@ -44,8 +44,8 @@ function brandedEmailHtml(
   message: string,
 ) {
   const greetingName =
-    businessName ||
     recipientName ||
+    businessName ||
     "there";
 
   return `<!doctype html>
@@ -63,10 +63,6 @@ function brandedEmailHtml(
       </div>
 
       <div style="padding:34px 30px 26px;">
-        <div style="margin-bottom:10px;color:#0152F4;font-size:11px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;">
-          Swayphics
-        </div>
-
         <p style="margin:0 0 20px;font-size:15px;line-height:1.8;color:#56627A;">
           Hi ${escapeHtml(greetingName)},
         </p>
@@ -357,33 +353,6 @@ Deno.serve(async (req) => {
 
       contact = byEmail.data || null;
       contactError = byEmail.error || contactError;
-    }
-
-    // A lead may have been converted into a client, or a test record may
-    // have been selected from the other contact list. When the selected
-    // table cannot resolve the recipient, use the normalized email address
-    // across both supported contact tables.
-    if (!contact && requestedRecipientEmail) {
-      const fallbackTables = ["clients", "leads"];
-
-      for (const fallbackTable of fallbackTables) {
-        const fallback =
-          await supabase
-            .from(fallbackTable)
-            .select(columns)
-            .ilike("email", requestedRecipientEmail)
-            .maybeSingle();
-
-        if (fallback.data) {
-          contact = fallback.data;
-          table = fallbackTable;
-          break;
-        }
-
-        if (fallback.error) {
-          contactError = fallback.error;
-        }
-      }
     }
 
     if (!contact) {
