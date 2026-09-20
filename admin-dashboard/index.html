@@ -2645,6 +2645,143 @@
             }
         }
 
+        /* =====================================================
+           MOBILE HEADER + VIEWPORT OVERFLOW FIX
+           ===================================================== */
+
+        html,
+        body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        .admin-header,
+        .admin-header-inner {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .admin-header-inner::before {
+            border-radius: inherit;
+        }
+
+        .admin-header-right {
+            min-width: 0;
+            flex: 0 0 auto;
+        }
+
+        @media (max-width: 760px) {
+            .admin-header {
+                position: sticky;
+                top: 0;
+                width: 100%;
+                padding-top: 12px;
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            .admin-header-inner {
+                width: calc(100% - 24px);
+                max-width: none;
+                min-height: 54px;
+                padding: 8px 11px;
+                display: grid;
+                grid-template-columns: auto minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 8px;
+                overflow: visible;
+            }
+
+            .admin-brand {
+                min-width: 0;
+            }
+
+            .admin-brand-logo {
+                width: 96px;
+                max-width: 100%;
+            }
+
+            .admin-global-search {
+                min-width: 0;
+                width: 100%;
+                max-width: none;
+                flex: 1 1 auto;
+            }
+
+            .admin-global-search-field {
+                min-width: 0;
+                width: 100%;
+                min-height: 38px;
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            .admin-global-search-input,
+            #admin-global-search-input {
+                min-width: 0;
+            }
+
+            .admin-global-search-field kbd {
+                display: none;
+            }
+
+            .admin-header-right {
+                gap: 7px;
+            }
+
+            .admin-notification-toggle {
+                width: 36px;
+                height: 36px;
+            }
+
+            .logout-button {
+                padding: 8px 10px;
+                font-size: 0.62rem;
+                white-space: nowrap;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .admin-header-inner {
+                width: calc(100% - 18px);
+                padding-left: 9px;
+                padding-right: 9px;
+                gap: 6px;
+            }
+
+            .admin-brand-logo {
+                width: 86px;
+            }
+
+            .admin-global-search-field {
+                min-height: 36px;
+                padding-left: 8px;
+                padding-right: 8px;
+                gap: 6px;
+            }
+
+            .admin-global-search-icon {
+                width: 15px;
+                height: 15px;
+                flex-basis: 15px;
+            }
+
+            #admin-global-search-input {
+                font-size: 0.62rem;
+            }
+
+            .admin-notification-toggle {
+                width: 34px;
+                height: 34px;
+            }
+
+            .logout-button {
+                padding: 7px 8px;
+                font-size: 0.57rem;
+            }
+        }
+
         @media (max-width: 760px) {
             #sway-admin-workspace .sway-workspace-main {
                 gap: 16px;
