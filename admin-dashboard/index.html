@@ -2593,6 +2593,70 @@
 
         <div class="admin-header-right">
 
+            <div class="admin-notifications">
+
+                <button
+                    type="button"
+                    class="admin-notification-toggle"
+                    id="sway-notification-toggle"
+                    aria-label="Open notifications"
+                    aria-expanded="false"
+                    aria-controls="sway-notification-panel"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+                        <path d="M10 21h4"></path>
+                    </svg>
+
+                    <span
+                        class="admin-notification-badge"
+                        id="sway-notification-badge"
+                        hidden
+                    >0</span>
+                </button>
+
+                <div
+                    class="admin-notification-panel"
+                    id="sway-notification-panel"
+                    hidden
+                >
+                    <div class="admin-notification-head">
+                        <div>
+                            <span class="admin-notification-kicker">Workspace</span>
+                            <strong>Notifications</strong>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="admin-notification-mark-all"
+                            id="sway-notification-mark-all"
+                        >
+                            Mark all read
+                        </button>
+                    </div>
+
+                    <div
+                        class="admin-notification-list"
+                        id="sway-notification-list"
+                    ></div>
+
+                    <div
+                        class="admin-notification-empty"
+                        id="sway-notification-empty"
+                        hidden
+                    >
+                        <span aria-hidden="true">✓</span>
+                        <strong>You're all caught up.</strong>
+                        <p>New actions and updates will appear here automatically.</p>
+                    </div>
+                </div>
+
+            </div>
+
+
             <div class="admin-status">
 
                 <span
