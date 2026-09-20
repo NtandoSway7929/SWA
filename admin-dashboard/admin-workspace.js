@@ -32,7 +32,10 @@
         syncInFlight: false,
         syncQueued: false,
         backgroundSyncTimer: null,
-        communications: []
+        communications: [],
+        socialAccounts: [],
+        socialPosts: [],
+        socialMetrics: []
     };
 
     const navGroups = [
@@ -89,6 +92,16 @@
             ]
         },
         {
+            id: "social",
+            label: "Social Media",
+            icon: "share",
+            items: [
+                ["social-overview", "Overview"],
+                ["social-content", "Content"],
+                ["social-analytics", "Performance"]
+            ]
+        },
+        {
             id: "admin",
             label: "Administration",
             icon: "settings",
@@ -115,6 +128,8 @@
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.8h12v16.4l-3-1.7-3 1.7-3-1.7-3 1.7z"></path><path d="M9 8h6"></path><path d="M9 11.5h6"></path><path d="M9 15h3.5"></path></svg>',
             globe:
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M3.7 12h16.6"></path><path d="M12 3.5c2.2 2.3 3.3 5.1 3.3 8.5s-1.1 6.2-3.3 8.5c-2.2-2.3-3.3-5.1-3.3-8.5S9.8 5.8 12 3.5z"></path></svg>',
+            share:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.5" cy="12" r="2.5"></circle><circle cx="17.5" cy="5.5" r="2.5"></circle><circle cx="17.5" cy="18.5" r="2.5"></circle><path d="M8.7 10.8l6.5-3.8"></path><path d="M8.7 13.2l6.5 3.8"></path></svg>',
             settings:
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.8l1.2 1.9 2.3.5 2 .2.7 2.2-.9 2.1 1.1 2 2 .9-.7 2.2-2.1.2-1.7 1.6.1 2.1-2 1.1-1.8-1.1-2.1.1-1.1 2-2.2-.7-.2-2.1-1.7-1.7-2.1-.2-.9-2.1 2-1.1 1-2-.9-2.1.7-2.2 2-.2 2.1.5L12 3.8z"></path><circle cx="12" cy="12" r="2.8"></circle></svg>'
         };
@@ -170,6 +185,15 @@
         }
 
         return data;
+    }
+
+    async function optionalApi(path, fallback) {
+        try {
+            return await api(path);
+        } catch (error) {
+            console.warn("Optional workspace resource unavailable:", path, error);
+            return fallback == null ? [] : fallback;
+        }
     }
 
     function esc(value) {
@@ -586,7 +610,10 @@
             api("/rest/v1/communication_logs?select=*&order=contacted_at.desc")
                 .catch(function () {
                     return [];
-                })
+                }),
+            optionalApi("/rest/v1/social_accounts?select=*&order=platform.asc,created_at.asc", []),
+            optionalApi("/rest/v1/social_posts?select=*&order=created_at.desc", []),
+            optionalApi("/rest/v1/social_metrics?select=*&order=metric_date.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -607,6 +634,9 @@
                 ? results[12][0]
                 : null;
         state.communications = results[13] || [];
+        state.socialAccounts = results[14] || [];
+        state.socialPosts = results[15] || [];
+        state.socialMetrics = results[16] || [];
     }
 
     async function refreshData() {
@@ -630,7 +660,10 @@
             api("/rest/v1/communication_logs?select=*&order=contacted_at.desc")
                 .catch(function () {
                     return [];
-                })
+                }),
+            optionalApi("/rest/v1/social_accounts?select=*&order=platform.asc,created_at.asc", []),
+            optionalApi("/rest/v1/social_posts?select=*&order=created_at.desc", []),
+            optionalApi("/rest/v1/social_metrics?select=*&order=metric_date.desc", [])
         ]);
 
         state.admins = results[0] || [];
@@ -652,6 +685,9 @@
                 ? results[13][0]
                 : null;
         state.communications = results[14] || [];
+        state.socialAccounts = results[15] || [];
+        state.socialPosts = results[16] || [];
+        state.socialMetrics = results[17] || [];
 
         state.currentAdmin =
             state.admins.find(function (item) {
