@@ -8199,9 +8199,7 @@ function simpleBars(items, color) {
                                           esc(item.id) +
                                           '">Archive</button>'
                                 ) +
-                                '<button class="sway-row-action danger" data-delete-client="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
+
                             "</div>" +
                         "</td>" +
                     "</tr>"
@@ -15326,7 +15324,7 @@ function simpleBars(items, color) {
         renderView();
     }
 
-    async function deleteClient(id) {
+    async async function deleteClient(id) {
         const client =
             state.clients.find(function (item) {
                 return item.id === id;
@@ -15334,152 +15332,9 @@ function simpleBars(items, color) {
 
         if (!client) return;
 
-        const projectCount =
-            state.projects.filter(function (item) {
-                return item.client_id === id;
-            }).length;
-
-        const taskCount =
-            state.tasks.filter(function (item) {
-                return item.client_id === id;
-            }).length;
-
-        const paymentCount =
-            state.payments.filter(function (item) {
-                return item.client_id === id;
-            }).length;
-
-        const followupCount =
-            state.followups.filter(function (item) {
-                return item.client_id === id;
-            }).length;
-
-        const invoiceCount =
-            state.invoices.filter(function (item) {
-                return item.client_id === id;
-            }).length;
-
-        const relatedParts = [];
-
-        if (projectCount) {
-            relatedParts.push(
-                projectCount +
-                " project" +
-                (projectCount === 1 ? "" : "s")
-            );
-        }
-
-        if (taskCount) {
-            relatedParts.push(
-                taskCount +
-                " task" +
-                (taskCount === 1 ? "" : "s")
-            );
-        }
-
-        if (paymentCount) {
-            relatedParts.push(
-                paymentCount +
-                " payment" +
-                (paymentCount === 1 ? "" : "s")
-            );
-        }
-
-        if (followupCount) {
-            relatedParts.push(
-                followupCount +
-                " follow-up" +
-                (followupCount === 1 ? "" : "s")
-            );
-        }
-
-        if (invoiceCount) {
-            relatedParts.push(
-                invoiceCount +
-                " invoice" +
-                (invoiceCount === 1 ? "" : "s")
-            );
-        }
-
-        const warning =
-            relatedParts.length
-                ? " This will permanently remove the client and linked " +
-                  relatedParts.join(", ") +
-                  "."
-                : " This will permanently remove the client record.";
-
-        if (
-            !(await swayConfirm(
-                "Delete " +
-                client.business_name +
-                " permanently?" +
-                warning +
-                " This cannot be undone."
-            ))
-        ) {
-            return;
-        }
-
-        try {
-            const clientInvoices =
-                state.invoices.filter(function (invoice) {
-                    return invoice.client_id === id;
-                });
-
-            for (const invoice of clientInvoices) {
-                await api(
-                    "/rest/v1/invoice_items?invoice_id=eq." +
-                    encodeURIComponent(invoice.id),
-                    {
-                        method: "DELETE",
-                        headers: headers({
-                            "Prefer":
-                                "return=minimal"
-                        })
-                    }
-                );
-
-                await api(
-                    "/rest/v1/invoices?id=eq." +
-                    encodeURIComponent(invoice.id),
-                    {
-                        method: "DELETE",
-                        headers: headers({
-                            "Prefer":
-                                "return=minimal"
-                        })
-                    }
-                );
-            }
-
-            await api(
-                "/rest/v1/clients?id=eq." +
-                encodeURIComponent(id),
-                {
-                    method: "DELETE",
-                    headers: headers({
-                        "Prefer":
-                            "return=minimal"
-                    })
-                }
-            );
-        } catch (error) {
-            swayAlert(
-                error.message ||
-                "Unable to delete this client."
-            );
-            return;
-        }
-
-        await logActivity(
-            "Deleted client",
-            "clients",
-            id
+        swayAlert(
+            "Swayphics clients are retained permanently. Archive the client instead of deleting the record."
         );
-
-        await refreshData();
-        renderShell();
-        renderView();
     }
     async function removeRecord(type, id) {
         const config = configs[type];
@@ -16506,19 +16361,6 @@ function simpleBars(items, color) {
                         archiveClient(
                             button.dataset.archiveClient ||
                             button.dataset.restoreClient
-                        );
-                    }
-                );
-            });
-
-        workspace
-            .querySelectorAll("[data-delete-client]")
-            .forEach(function (button) {
-                button.addEventListener(
-                    "click",
-                    function () {
-                        deleteClient(
-                            button.dataset.deleteClient
                         );
                     }
                 );
