@@ -6452,6 +6452,12 @@ function renderShell() {
             });
         });
 
+        modal.querySelectorAll("[data-client-portal]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                createClientPortalLink(button.dataset.clientPortal);
+            });
+        });
+
         modal.querySelectorAll("[data-close-client360]").forEach(function (button) {
             button.addEventListener("click", function () {
                 modal.remove();
