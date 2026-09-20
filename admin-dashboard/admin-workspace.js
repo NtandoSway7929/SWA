@@ -9361,14 +9361,34 @@ function simpleBars(items, color) {
     }
 
     function renderInvoices() {
+        const showArchived =
+            localStorage.getItem(
+                "swayphics_show_archived_invoices"
+            ) === "true";
+
+        const activeInvoices =
+            state.invoices.filter(function (invoice) {
+                return invoice.archived !== true;
+            });
+
+        const archivedInvoices =
+            state.invoices.filter(function (invoice) {
+                return invoice.archived === true;
+            });
+
+        const visibleInvoices =
+            showArchived
+                ? archivedInvoices
+                : activeInvoices;
+
         const totalBilled =
-            state.invoices.reduce(function (sum, invoice) {
+            activeInvoices.reduce(function (sum, invoice) {
                 return sum +
                     Number(invoice.total || 0);
             }, 0);
 
         const totalSent =
-            state.invoices
+            activeInvoices
                 .filter(function (invoice) {
                     return [
                         "sent",
@@ -9383,7 +9403,7 @@ function simpleBars(items, color) {
                 }, 0);
 
         const overdue =
-            state.invoices.filter(function (invoice) {
+            activeInvoices.filter(function (invoice) {
                 return (
                     invoice.status !== "paid" &&
                     invoice.status !== "cancelled" &&
@@ -9393,11 +9413,19 @@ function simpleBars(items, color) {
             });
 
         const rows =
-            state.invoices.map(function (item) {
+            visibleInvoices.map(function (item) {
                 const overdueNow =
+                    !item.archived &&
                     item.status !== "paid" &&
                     item.status !== "cancelled" &&
                     isOverdue(item.due_date);
+
+                const outstanding =
+                    Number(
+                        item.amount_outstanding != null
+                            ? item.amount_outstanding
+                            : item.total || 0
+                    );
 
                 return (
                     "<tr>" +
@@ -9414,11 +9442,7 @@ function simpleBars(items, color) {
                             "</span>" +
                         "</td>" +
                         "<td>" +
-                            esc(
-                                money(
-                                    item.total
-                                )
-                            ) +
+                            esc(money(item.total)) +
                         "</td>" +
                         "<td>" +
                             esc(
@@ -9430,36 +9454,40 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            esc(
-                                money(
-                                    item.amount_outstanding != null
-                                        ? item.amount_outstanding
-                                        : item.total
-                                )
+                            esc(money(outstanding)) +
+                        "</td>" +
+                        "<td>" +
+                            (
+                                item.archived
+                                    ? chip("archived")
+                                    : chip(
+                                        overdueNow
+                                            ? "overdue"
+                                            : item.status
+                                    )
                             ) +
                         "</td>" +
                         "<td>" +
-                            chip(
-                                overdueNow
-                                    ? "overdue"
-                                    : item.status
-                            ) +
+                            esc(date(item.due_date)) +
                         "</td>" +
                         "<td>" +
-                            esc(
-                                date(
-                                    item.due_date
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(
-                                item.email_status
+                            (
+                                item.archived
+                                    ? "—"
+                                    : chip(item.email_status)
                             ) +
                         "</td>" +
                         "<td>" +
                             '<div class="sway-row-actions">' +
                                 (
+                                    item.archived
+                                        ? '<button class="sway-row-action" data-invoice-action="restore" data-id="' +
+                                          esc(item.id) +
+                                          '">Restore</button>'
+                                        : ""
+                                ) +
+                                (
+                                    !item.archived &&
                                     item.status === "draft"
                                         ? '<button class="sway-row-action" data-invoice-action="edit" data-id="' +
                                           esc(item.id) +
@@ -9469,10 +9497,17 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action" data-invoice-action="pdf" data-id="' +
                                     esc(item.id) +
                                 '">PDF</button>' +
-                                '<button class="sway-row-action" data-new-payment-invoice="' +
-                                    esc(item.id) +
-                                '">Payment</button>' +
                                 (
+                                    !item.archived &&
+                                    item.status !== "paid" &&
+                                    item.status !== "cancelled"
+                                        ? '<button class="sway-row-action" data-new-payment-invoice="' +
+                                          esc(item.id) +
+                                        '">Payment</button>'
+                                        : ""
+                                ) +
+                                (
+                                    !item.archived &&
                                     item.status !== "paid" &&
                                     item.status !== "cancelled"
                                         ? '<button class="sway-row-action" data-invoice-action="send" data-id="' +
@@ -9487,7 +9522,15 @@ function simpleBars(items, color) {
                                         : ""
                                 ) +
                                 (
-                                    item.status === "draft"
+                                    !item.archived
+                                        ? '<button class="sway-row-action" data-invoice-action="archive" data-id="' +
+                                          esc(item.id) +
+                                          '">Archive</button>'
+                                        : ""
+                                ) +
+                                (
+                                    item.status === "draft" ||
+                                    item.archived
                                         ? '<button class="sway-row-action danger" data-invoice-action="delete" data-id="' +
                                           esc(item.id) +
                                           '">Delete</button>'
@@ -9502,6 +9545,19 @@ function simpleBars(items, color) {
         return (
             heading(
                 '<button class="sway-workspace-button" data-view-target="services">Manage services</button>' +
+                (
+                    archivedInvoices.length
+                        ? '<button class="sway-workspace-button" data-invoice-filter="archived">' +
+                          (
+                              showArchived
+                                  ? "Show active invoices"
+                                  : "Show archived (" +
+                                    archivedInvoices.length +
+                                    ")"
+                          ) +
+                          "</button>"
+                        : ""
+                ) +
                 '<button class="sway-workspace-button primary" data-add-invoice>+ New invoice</button>'
             ) +
 
@@ -9509,25 +9565,17 @@ function simpleBars(items, color) {
                 '<div class="sway-stat-card">' +
                     '<span class="label">Total billed</span>' +
                     '<div class="value">' +
-                        esc(
-                            money(
-                                totalBilled
-                            )
-                        ) +
+                        esc(money(totalBilled)) +
                     "</div>" +
                     '<div class="hint">' +
-                        state.invoices.length +
-                        " invoices recorded." +
+                        activeInvoices.length +
+                        " active invoices recorded." +
                     "</div>" +
                 "</div>" +
                 '<div class="sway-stat-card">' +
                     '<span class="label">Sent value</span>' +
                     '<div class="value">' +
-                        esc(
-                            money(
-                                totalSent
-                            )
-                        ) +
+                        esc(money(totalSent)) +
                     "</div>" +
                     '<div class="hint">Invoices that reached sent status.</div>' +
                 "</div>" +
@@ -9539,25 +9587,29 @@ function simpleBars(items, color) {
                     '<div class="hint">Past due and not fully paid.</div>' +
                 "</div>" +
                 '<div class="sway-stat-card">' +
-                    '<span class="label">Catalogue services</span>' +
+                    '<span class="label">Invoice archive</span>' +
                     '<div class="value">' +
-                        state.services.filter(function (service) {
-                            return service.active;
-                        }).length +
+                        archivedInvoices.length +
                     "</div>" +
-                    '<div class="hint">Active services available for billing.</div>' +
+                    '<div class="hint">Archived records are kept separately from active billing.</div>' +
                 "</div>" +
             "</div>" +
 
             panel(
-                "Invoices",
-                "Branded invoice records connected to clients and the finance layer.",
-                state.invoices.length
+                showArchived
+                    ? "Archived invoices"
+                    : "Invoices",
+                showArchived
+                    ? "Historical invoices kept out of the active billing workspace."
+                    : "Branded invoice records connected to clients and the finance layer.",
+                visibleInvoices.length
                     ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Invoice</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Due</th><th>Email</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty(
-                        "No invoices yet. Create the first invoice from the button above."
+                        showArchived
+                            ? "No archived invoices."
+                            : "No active invoices yet. Create the first invoice from the button above."
                     )
             )
         );
@@ -14978,12 +15030,110 @@ function simpleBars(items, color) {
                                 renderView();
                             }
 
-                            if (action === "delete") {
+                            if (action === "archive") {
+                                const invoice =
+                                    state.invoices.find(function (item) {
+                                        return item.id === id;
+                                    });
+
+                                if (!invoice || invoice.archived) {
+                                    return;
+                                }
+
                                 if (
                                     !(await swayConfirm(
-                                        "Delete this draft invoice? This cannot be undone."
+                                        "Archive invoice " +
+                                        invoice.invoice_number +
+                                        "? It will leave active billing but remain available in the archive."
                                     ))
                                 ) {
+                                    return;
+                                }
+
+                                await api(
+                                    "/rest/v1/invoices?id=eq." +
+                                    encodeURIComponent(id),
+                                    {
+                                        method: "PATCH",
+                                        headers: headers({
+                                            "Prefer":
+                                                "return=minimal"
+                                        }),
+                                        body:
+                                            JSON.stringify({
+                                                archived: true,
+                                                archived_at:
+                                                    new Date().toISOString()
+                                            })
+                                    }
+                                );
+
+                                await logActivity(
+                                    "Archived invoice",
+                                    "invoices",
+                                    id
+                                );
+
+                                await refreshData();
+                                renderShell();
+                                renderView();
+                            }
+
+                            if (action === "restore") {
+                                await api(
+                                    "/rest/v1/invoices?id=eq." +
+                                    encodeURIComponent(id),
+                                    {
+                                        method: "PATCH",
+                                        headers: headers({
+                                            "Prefer":
+                                                "return=minimal"
+                                        }),
+                                        body:
+                                            JSON.stringify({
+                                                archived: false,
+                                                archived_at: null
+                                            })
+                                    }
+                                );
+
+                                await logActivity(
+                                    "Restored invoice",
+                                    "invoices",
+                                    id
+                                );
+
+                                await refreshData();
+                                renderShell();
+                                renderView();
+                            }
+
+                            if (action === "delete") {
+                                const invoice =
+                                    state.invoices.find(function (item) {
+                                        return item.id === id;
+                                    });
+
+                                if (!invoice) {
+                                    return;
+                                }
+
+                                if (
+                                    invoice.status !== "draft" &&
+                                    !invoice.archived
+                                ) {
+                                    swayAlert(
+                                        "Archive this invoice first. Sent, paid and overdue invoice records should be retained in the archive rather than permanently deleted."
+                                    );
+                                    return;
+                                }
+
+                                const warning =
+                                    invoice.archived
+                                        ? "Permanently delete this archived invoice? This cannot be undone."
+                                        : "Delete this draft invoice? This cannot be undone.";
+
+                                if (!(await swayConfirm(warning))) {
                                     return;
                                 }
 
@@ -15012,7 +15162,9 @@ function simpleBars(items, color) {
                                 );
 
                                 await logActivity(
-                                    "Deleted invoice draft",
+                                    invoice.archived
+                                        ? "Permanently deleted archived invoice"
+                                        : "Deleted invoice draft",
                                     "invoices",
                                     id
                                 );
@@ -15032,6 +15184,30 @@ function simpleBars(items, color) {
                     }
                 );
             });
+
+        workspace
+            .querySelectorAll("[data-invoice-filter]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        const showArchived =
+                            localStorage.getItem(
+                                "swayphics_show_archived_invoices"
+                            ) === "true";
+
+                        localStorage.setItem(
+                            "swayphics_show_archived_invoices",
+                            showArchived
+                                ? "false"
+                                : "true"
+                        );
+
+                        renderView();
+                    }
+                );
+            });
+
 
         workspace
             .querySelectorAll("[data-add-invoice]")
