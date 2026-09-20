@@ -335,6 +335,214 @@
 
 
         /* =====================================================
+           GLOBAL SEARCH
+           ===================================================== */
+
+        .admin-global-search {
+            position: relative;
+            flex: 1 1 360px;
+            min-width: 220px;
+            max-width: 430px;
+            z-index: 110;
+        }
+
+        .admin-global-search-field {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-height: 42px;
+            padding: 0 9px 0 13px;
+            border: 1px solid rgba(0,32,150,0.09);
+            border-radius: 999px;
+            background: rgba(255,255,255,0.58);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.56),
+                0 4px 14px rgba(0,32,150,0.035);
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease,
+                background 0.2s ease;
+        }
+
+        .admin-global-search-field:focus-within {
+            border-color: rgba(1,82,244,0.24);
+            background: rgba(255,255,255,0.78);
+            box-shadow:
+                0 8px 24px rgba(0,32,150,0.07),
+                0 0 0 3px rgba(1,82,244,0.06),
+                inset 0 1px 0 rgba(255,255,255,0.62);
+        }
+
+        .admin-global-search-icon {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 18px;
+            color: #56627A;
+        }
+
+        .admin-global-search-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+        }
+
+        #admin-global-search-input {
+            min-width: 0;
+            width: 100%;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: var(--sway-dark);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.74rem;
+            font-weight: 600;
+        }
+
+        #admin-global-search-input::placeholder {
+            color: #8190A5;
+        }
+
+        .admin-global-search-field kbd {
+            flex-shrink: 0;
+            padding: 4px 7px;
+            border: 1px solid rgba(0,32,150,0.09);
+            border-radius: 7px;
+            background: rgba(255,255,255,0.72);
+            color: #8190A5;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.56rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            white-space: nowrap;
+        }
+
+        .admin-global-search-results {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0;
+            right: 0;
+            max-height: min(520px, calc(100vh - 118px));
+            overflow-y: auto;
+            padding: 7px;
+            border: 1px solid rgba(255,255,255,0.66);
+            border-radius: 19px;
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(255,255,255,0.92) 0%,
+                    rgba(255,255,255,0.84) 58%,
+                    rgba(247,250,255,0.82) 100%
+                );
+            box-shadow:
+                0 24px 70px rgba(0,32,150,0.16),
+                0 5px 18px rgba(0,20,95,0.06),
+                inset 0 1px 0 rgba(255,255,255,0.72);
+            backdrop-filter: blur(24px) saturate(155%);
+            -webkit-backdrop-filter: blur(24px) saturate(155%);
+        }
+
+        .admin-global-search-results[hidden] {
+            display: none !important;
+        }
+
+        .admin-global-search-result {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 30px minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 0;
+            border-radius: 13px;
+            background: transparent;
+            text-align: left;
+            color: var(--sway-dark);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            cursor: pointer;
+            transition:
+                background 0.18s ease,
+                transform 0.18s ease;
+        }
+
+        .admin-global-search-result:hover,
+        .admin-global-search-result:focus-visible {
+            outline: none;
+            background: rgba(1,82,244,0.055);
+            transform: translateY(-1px);
+        }
+
+        .admin-global-search-result-icon {
+            width: 30px;
+            height: 30px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: rgba(1,82,244,0.075);
+            color: var(--sway-blue);
+            font-size: 0.62rem;
+            font-weight: 900;
+        }
+
+        .admin-global-search-result-copy {
+            min-width: 0;
+        }
+
+        .admin-global-search-result-title {
+            display: block;
+            overflow: hidden;
+            color: var(--sway-dark);
+            font-size: 0.72rem;
+            font-weight: 800;
+            line-height: 1.35;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .admin-global-search-result-meta {
+            display: block;
+            margin-top: 2px;
+            overflow: hidden;
+            color: #8190A5;
+            font-size: 0.61rem;
+            font-weight: 600;
+            line-height: 1.35;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .admin-global-search-result-type {
+            color: #8190A5;
+            font-size: 0.57rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .admin-global-search-empty,
+        .admin-global-search-hint {
+            padding: 16px 13px;
+            color: #56627A;
+            font-size: 0.68rem;
+            font-weight: 600;
+            line-height: 1.55;
+            text-align: center;
+        }
+
+        @media (max-width: 920px) {
+            .admin-global-search {
+                max-width: 330px;
+            }
+
+            .admin-global-search-field kbd {
+                display: none;
+            }
+        }
+
+
+        /* =====================================================
            MAIN
            ===================================================== */
 
@@ -2348,6 +2556,39 @@
             >
 
         </a>
+
+
+        <div class="admin-global-search" id="admin-global-search">
+            <div class="admin-global-search-field">
+                <span class="admin-global-search-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="6.5"></circle>
+                        <path d="m16 16 4.2 4.2"></path>
+                    </svg>
+                </span>
+
+                <input
+                    type="search"
+                    id="admin-global-search-input"
+                    placeholder="Search workspace..."
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="Search the Swayphics workspace"
+                    aria-controls="admin-global-search-results"
+                    aria-expanded="false"
+                >
+
+                <kbd>Ctrl K</kbd>
+            </div>
+
+            <div
+                class="admin-global-search-results"
+                id="admin-global-search-results"
+                role="listbox"
+                aria-label="Workspace search results"
+                hidden
+            ></div>
+        </div>
 
 
         <div class="admin-header-right">
