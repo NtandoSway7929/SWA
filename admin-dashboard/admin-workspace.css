@@ -3825,3 +3825,36 @@
     }
 }
 
+
+/* =========================================================
+   COMMUNICATION LOG
+   ========================================================= */
+
+.sway-communication-message {
+    max-width: 360px;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.61rem;
+    font-weight: 600;
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+.sway-client360-communications {
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .sway-communication-message {
+        max-width: 260px;
+    }
+}
+
+@media (max-width: 760px) {
+    .sway-communication-message {
+        max-width: none;
+    }
+}
+
