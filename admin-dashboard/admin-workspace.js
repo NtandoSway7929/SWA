@@ -2178,6 +2178,111 @@
         }
     }
 
+    function applyAdminTheme(theme) {
+        const isDark =
+            theme === "dark";
+
+        document.body.classList.toggle(
+            "sway-dark-mode",
+            isDark
+        );
+
+        const button =
+            document.getElementById(
+                "admin-theme-toggle"
+            );
+
+        if (button) {
+            button.setAttribute(
+                "aria-pressed",
+                String(isDark)
+            );
+
+            button.setAttribute(
+                "aria-label",
+                isDark
+                    ? "Switch to light mode"
+                    : "Switch to dark mode"
+            );
+
+            button.setAttribute(
+                "title",
+                isDark
+                    ? "Switch to light mode"
+                    : "Switch to dark mode"
+            );
+
+            const text =
+                button.querySelector(
+                    ".admin-theme-toggle-text"
+                );
+
+            const icon =
+                button.querySelector(
+                    ".admin-theme-toggle-icon"
+                );
+
+            if (text) {
+                text.textContent =
+                    isDark
+                        ? "Light"
+                        : "Dark";
+            }
+
+            if (icon) {
+                icon.innerHTML =
+                    isDark
+                        ? '<svg class="admin-theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.5 8.5 0 0 1 8.9 3.8a8.1 8.1 0 1 0 11.3 11.3Z"></path></svg>'
+                        : '<svg class="admin-theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2.5v2"></path><path d="M12 19.5v2"></path><path d="m4.58 4.58 1.42 1.42"></path><path d="m18 18 1.42 1.42"></path><path d="M2.5 12h2"></path><path d="M19.5 12h2"></path><path d="m4.58 19.42 1.42-1.42"></path><path d="m18 6 1.42-1.42"></path></svg>';
+            }
+        }
+    }
+
+    function setupAdminThemeToggle() {
+        const stored =
+            localStorage.getItem(
+                "swayphics_admin_theme"
+            );
+
+        const theme =
+            stored === "dark"
+                ? "dark"
+                : "light";
+
+        applyAdminTheme(theme);
+
+        const button =
+            document.getElementById(
+                "admin-theme-toggle"
+            );
+
+        if (!button) {
+            return;
+        }
+
+        button.onclick = function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const isDark =
+                document.body.classList.contains(
+                    "sway-dark-mode"
+                );
+
+            const nextTheme =
+                isDark
+                    ? "light"
+                    : "dark";
+
+            localStorage.setItem(
+                "swayphics_admin_theme",
+                nextTheme
+            );
+
+            applyAdminTheme(nextTheme);
+        };
+    }
+
     function setupNotificationCenter() {
         const button =
             document.getElementById(
@@ -15900,6 +16005,8 @@ function simpleBars(items, color) {
 
     async function boot() {
         state.initialDataLoading = true;
+
+        setupAdminThemeToggle();
 
         renderShell();
         renderView();
