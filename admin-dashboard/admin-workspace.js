@@ -1162,6 +1162,17 @@
         });
 
         document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape") {
+                const client360Modal =
+                    document.getElementById(
+                        "sway-client360-modal"
+                    );
+
+                if (client360Modal) {
+                    client360Modal.remove();
+                }
+            }
+
             const isShortcut =
                 (event.ctrlKey || event.metaKey) &&
                 String(event.key).toLowerCase() === "k";
@@ -3526,6 +3537,286 @@ function renderShell() {
         );
     }
 
+    function client360List(items, emptyMessage, renderer) {
+        if (!items.length) {
+            return '<div class="sway-client360-empty">' +
+                esc(emptyMessage) +
+                "</div>";
+        }
+
+        return '<div class="sway-client360-list">' +
+            items.slice(0, 6).map(renderer).join("") +
+            "</div>";
+    }
+
+    function openClient360(clientId) {
+        const client = state.clients.find(function (item) {
+            return item.id === clientId;
+        });
+
+        if (!client) return;
+
+        const projects = state.projects.filter(function (item) {
+            return item.client_id === clientId;
+        });
+
+        const tasks = state.tasks.filter(function (item) {
+            return item.client_id === clientId &&
+                item.status !== "completed";
+        });
+
+        const followups = state.followups.filter(function (item) {
+            return item.client_id === clientId;
+        });
+
+        const quotes = state.quotes.filter(function (item) {
+            return item.client_id === clientId;
+        });
+
+        const invoices = state.invoices.filter(function (item) {
+            return item.client_id === clientId;
+        });
+
+        const payments = state.payments.filter(function (item) {
+            return item.client_id === clientId;
+        });
+
+        const leads = state.leads.filter(function (item) {
+            return item.converted_client_id === clientId;
+        });
+
+        const activities = state.activities.filter(function (item) {
+            return item.entity_id === clientId;
+        });
+
+        const projectValue = projects.reduce(function (sum, item) {
+            return sum + Number(item.value || 0);
+        }, 0);
+
+        const invoiceOutstanding = invoices.reduce(function (sum, item) {
+            return sum + Number(
+                item.amount_outstanding != null
+                    ? item.amount_outstanding
+                    : item.total || 0
+            );
+        }, 0);
+
+        const paymentTotal = payments.reduce(function (sum, item) {
+            return sum + Number(item.amount || 0);
+        }, 0);
+
+        const modalId = "sway-client360-modal";
+
+        document.getElementById(modalId)?.remove();
+
+        const modal = document.createElement("div");
+        modal.className = "sway-client360-modal";
+        modal.id = modalId;
+
+        modal.innerHTML =
+            '<div class="sway-client360-backdrop" data-close-client360></div>' +
+            '<section class="sway-client360-card" role="dialog" aria-modal="true" aria-labelledby="sway-client360-title">' +
+                '<div class="sway-client360-head">' +
+                    '<div class="sway-client360-head-copy">' +
+                        '<span class="admin-label">Client 360</span>' +
+                        '<h3 id="sway-client360-title">' +
+                            esc(client.business_name || "Client") +
+                        "</h3>" +
+                        (
+                            client.contact_name
+                                ? "<p>" + esc(client.contact_name) + "</p>"
+                                : ""
+                        ) +
+                    "</div>" +
+                    '<div class="sway-client360-head-actions">' +
+                        '<button type="button" class="sway-workspace-button" data-edit="clients" data-id="' +
+                            esc(client.id) +
+                        '">Edit client</button>' +
+                        '<button type="button" class="sway-client360-close" data-close-client360 aria-label="Close client details">×</button>' +
+                    "</div>" +
+                "</div>" +
+
+                '<div class="sway-client360-contact">' +
+                    '<span>' + esc(client.email || "No email") + "</span>" +
+                    '<span>' + esc(client.phone || "No phone") + "</span>" +
+                    '<span>' + esc(adminName(client.assigned_to)) + "</span>" +
+                    chip(client.status) +
+                "</div>" +
+
+                '<div class="sway-client360-stats">' +
+                    '<div><span>Projects</span><strong>' + projects.length + "</strong></div>" +
+                    '<div><span>Open tasks</span><strong>' + tasks.length + "</strong></div>" +
+                    '<div><span>Project value</span><strong>' + esc(money(projectValue)) + "</strong></div>" +
+                    '<div><span>Outstanding</span><strong>' + esc(money(invoiceOutstanding)) + "</strong></div>" +
+                    '<div><span>Recorded payments</span><strong>' + esc(money(paymentTotal)) + "</strong></div>" +
+                "</div>" +
+
+                '<div class="sway-client360-grid">' +
+
+                    '<section class="sway-client360-section">' +
+                        '<div class="sway-client360-section-head"><h4>Projects</h4><span>' + projects.length + "</span></div>" +
+                        client360List(projects, "No projects linked to this client.", function (item) {
+                            return '<button type="button" class="sway-client360-list-item" data-view-target="projects">' +
+                                '<span><strong>' + esc(item.name) + '</strong><small>' +
+                                esc((item.service ? formatDisplayText(item.service) + " · " : "") + formatDisplayText(item.status)) +
+                                "</small></span><b>" + esc(money(item.value)) + "</b></button>";
+                        }) +
+                    "</section>" +
+
+                    '<section class="sway-client360-section">' +
+                        '<div class="sway-client360-section-head"><h4>Tasks</h4><span>' + tasks.length + "</span></div>" +
+                        client360List(tasks, "No open tasks for this client.", function (item) {
+                            return '<button type="button" class="sway-client360-list-item" data-view-target="tasks">' +
+                                '<span><strong>' + esc(item.title) + '</strong><small>' +
+                                esc(
+                                    formatDisplayText(item.status) +
+                                    (item.due_date ? " · " + date(item.due_date) : "")
+                                ) +
+                                "</small></span><b>" + esc(formatDisplayText(item.priority || "normal")) + "</b></button>";
+                        }) +
+                    "</section>" +
+
+                    '<section class="sway-client360-section">' +
+                        '<div class="sway-client360-section-head"><h4>Follow-ups</h4><span>' + followups.length + "</span></div>" +
+                        client360List(followups, "No follow-ups recorded.", function (item) {
+                            return '<button type="button" class="sway-client360-list-item" data-view-target="followups">' +
+                                '<span><strong>' + esc(item.channel || "Follow-up") + '</strong><small>' +
+                                esc(
+                                    formatDisplayText(item.status) +
+                                    (item.scheduled_for ? " · " + date(item.scheduled_for) : "")
+                                ) +
+                                "</small></span><b>" +
+                                esc(item.lead_id ? "Lead" : "Client") +
+                                "</b></button>";
+                        }) +
+                    "</section>" +
+
+                    '<section class="sway-client360-section">' +
+                        '<div class="sway-client360-section-head"><h4>Quotes</h4><span>' + quotes.length + "</span></div>" +
+                        client360List(quotes, "No quotes for this client.", function (item) {
+                            return '<button type="button" class="sway-client360-list-item" data-view-target="quotes">' +
+                                '<span><strong>' + esc(item.quote_number || item.title || "Quote") + '</strong><small>' +
+                                esc(formatDisplayText(item.status)) +
+                                "</small></span><b>" + esc(money(item.amount)) + "</b></button>";
+                        }) +
+                    "</section>" +
+
+                    '<section class="sway-client360-section">' +
+                        '<div class="sway-client360-section-head"><h4>Invoices</h4><span>' + invoices.length + "</span></div>" +
+                        client360List(invoices, "No invoices for this client.", function (item) {
+                            const balance = Number(
+                                item.amount_outstanding != null
+                                    ? item.amount_outstanding
+                                    : item.total || 0
+                            );
+
+                            return '<button type="button" class="sway-client360-list-item" data-view-target="invoices">' +
+                                '<span><strong>' + esc(item.invoice_number) + '</strong><small>' +
+                                esc(formatDisplayText(item.status)) +
+                                "</small></span><b>" + esc(money(balance)) + "</b></button>";
+                        }) +
+                    "</section>" +
+
+                    '<section class="sway-client360-section">' +
+                        '<div class="sway-client360-section-head"><h4>Payments</h4><span>' + payments.length + "</span></div>" +
+                        client360List(payments, "No payments recorded.", function (item) {
+                            return '<button type="button" class="sway-client360-list-item" data-view-target="payments">' +
+                                '<span><strong>' + esc(money(item.amount)) + '</strong><small>' +
+                                esc(
+                                    formatDisplayText(item.status) +
+                                    (item.method ? " · " + item.method : "")
+                                ) +
+                                "</small></span><b>" + esc(date(item.paid_at || item.created_at)) + "</b></button>";
+                        }) +
+                    "</section>" +
+
+                "</div>" +
+
+                '<div class="sway-client360-lower">' +
+                    '<section class="sway-client360-notes">' +
+                        '<div class="sway-client360-section-head"><h4>Client notes</h4></div>' +
+                        '<div class="sway-client360-note-body">' +
+                            esc(client.notes || "No client notes have been added.") +
+                        "</div>" +
+                    "</section>" +
+
+                    '<section class="sway-client360-history">' +
+                        '<div class="sway-client360-section-head"><h4>Relationship history</h4><span>' + activities.length + "</span></div>" +
+                        (
+                            activities.length
+                                ? '<div class="sway-client360-history-list">' +
+                                    activities.slice(0, 8).map(function (item) {
+                                        return '<div class="sway-client360-history-item">' +
+                                            "<strong>" + esc(item.action || "Activity") + "</strong>" +
+                                            "<span>" +
+                                                esc(
+                                                    item.actor_id
+                                                        ? adminName(item.actor_id)
+                                                        : "System"
+                                                ) +
+                                                " · " +
+                                                esc(dateTime(item.created_at)) +
+                                            "</span>" +
+                                        "</div>";
+                                    }).join("") +
+                                  "</div>"
+                                : '<div class="sway-client360-empty">No activity is directly linked to this client yet.</div>'
+                        ) +
+                    "</section>" +
+                "</div>" +
+
+                '<div class="sway-client360-footer">' +
+                    '<button type="button" class="sway-workspace-button" data-new-project-client="' + esc(client.id) + '">+ Project</button>' +
+                    '<button type="button" class="sway-workspace-button" data-new-invoice-client="' + esc(client.id) + '">+ Invoice</button>' +
+                    '<button type="button" class="sway-workspace-button primary" data-close-client360>Done</button>' +
+                "</div>" +
+            "</section>";
+
+        workspace.appendChild(modal);
+
+        modal.querySelectorAll("[data-edit]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const id = button.dataset.id;
+                modal.remove();
+                state.currentView = "clients";
+                renderShell();
+                renderView();
+
+                window.setTimeout(function () {
+                    const editButton = workspace.querySelector(
+                        '[data-edit="clients"][data-id="' + id + '"]'
+                    );
+
+                    if (editButton) {
+                        editButton.click();
+                    }
+                }, 0);
+            });
+        });
+
+        modal.querySelectorAll("[data-new-project-client]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const id = button.dataset.newProjectClient;
+                modal.remove();
+                createOrEdit("projects", null, { client_id: id });
+            });
+        });
+
+        modal.querySelectorAll("[data-new-invoice-client]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const id = button.dataset.newInvoiceClient;
+                modal.remove();
+                openInvoiceBuilder(null, id);
+            });
+        });
+
+        modal.querySelectorAll("[data-close-client360]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                modal.remove();
+            });
+        });
+    }
+
     function renderClients() {
         const rows =
             state.clients.map(function (item) {
@@ -3570,6 +3861,9 @@ function renderShell() {
                         "</td>" +
                         "<td>" +
                             '<div class="sway-row-actions">' +
+                                '<button class="sway-row-action" data-client360="' +
+                                    esc(item.id) +
+                                '">View</button>' +
                                 '<button class="sway-row-action" data-edit="clients" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
@@ -8387,6 +8681,62 @@ function renderShell() {
                     "click",
                     function () {
                         editInvoiceSettings();
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-client360]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openClient360(
+                            button.dataset.client360
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-close-client360]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        const modal =
+                            document.getElementById(
+                                "sway-client360-modal"
+                            );
+
+                        if (modal) {
+                            modal.remove();
+                        }
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("#sway-client360-modal [data-view-target]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        const view =
+                            button.dataset.viewTarget;
+
+                        const modal =
+                            document.getElementById(
+                                "sway-client360-modal"
+                            );
+
+                        if (modal) {
+                            modal.remove();
+                        }
+
+                        state.currentView = view;
+                        renderShell();
+                        renderView();
                     }
                 );
             });
