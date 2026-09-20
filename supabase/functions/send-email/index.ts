@@ -518,16 +518,21 @@ Deno.serve(async (req) => {
       result?.id ||
       null;
 
-    const communicationInsert =
+    const resolvedContactType =
+      table === "clients"
+        ? "client"
+        : "lead";
+
+    let communicationInsert =
       await supabase
         .from("communication_logs")
         .insert({
           client_id:
-            contactType === "client"
+            resolvedContactType === "client"
               ? contact.id
               : null,
           lead_id:
-            contactType === "lead"
+            resolvedContactType === "lead"
               ? contact.id
               : null,
           channel: "Email",
@@ -540,8 +545,44 @@ Deno.serve(async (req) => {
             userData.user.id,
         });
 
+    // Retry once using the normalized contact type. This protects against
+    // stale client/lead selections after a contact has been converted.
     if (communicationInsert.error) {
-      console.warn(
+      const retryPayload =
+        resolvedContactType === "client"
+          ? {
+              client_id: contact.id,
+              lead_id: null,
+              channel: "Email",
+              direction: "outbound",
+              subject,
+              message,
+              contacted_at:
+                new Date().toISOString(),
+              created_by:
+                userData.user.id,
+            }
+          : {
+              client_id: null,
+              lead_id: contact.id,
+              channel: "Email",
+              direction: "outbound",
+              subject,
+              message,
+              contacted_at:
+                new Date().toISOString(),
+              created_by:
+                userData.user.id,
+            };
+
+      communicationInsert =
+        await supabase
+          .from("communication_logs")
+          .insert(retryPayload);
+    }
+
+    if (communicationInsert.error) {
+      console.error(
         "Email sent but communication log insert failed:",
         communicationInsert.error,
       );
@@ -572,6 +613,14 @@ Deno.serve(async (req) => {
           recipientEmail,
         communication_logged:
           !communicationInsert.error,
+        communication_log_error:
+          communicationInsert.error
+            ? String(
+                communicationInsert.error.message ||
+                communicationInsert.error.details ||
+                "Communication log insert failed."
+              )
+            : null,
       },
       {
         status: 200,
