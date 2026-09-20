@@ -5612,3 +5612,173 @@
     }
 }
 
+
+/* =========================================================
+   REFINED DASHBOARD CHARTS
+   ========================================================= */
+
+.sway-chart-stage {
+    min-height: 285px;
+    padding: 8px 6px 0;
+    border: 1px solid rgba(0,32,150,0.055);
+    border-radius: 16px;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(247,250,255,0.66) 0%,
+            rgba(255,255,255,0.48) 100%
+        );
+}
+
+.sway-chart {
+    min-height: 285px;
+}
+
+.sway-chart-grid-line {
+    stroke: rgba(0,32,150,0.09);
+    stroke-dasharray: 3 6;
+}
+
+.sway-chart-baseline {
+    stroke: rgba(0,32,150,0.16);
+    stroke-width: 1.2;
+}
+
+.sway-chart-axis-label {
+    fill: #56627A;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.sway-chart-y-label {
+    fill: #8190A5;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.sway-chart-value-label {
+    fill: #081533;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.sway-chart-point {
+    stroke: #FFFFFF;
+    stroke-width: 2;
+    filter: drop-shadow(0 4px 7px rgba(0,32,150,0.13));
+}
+
+.sway-chart-point-group:focus-visible {
+    outline: none;
+}
+
+.sway-chart-point-group:focus-visible .sway-chart-point {
+    stroke: #0152F4;
+    stroke-width: 3;
+}
+
+.sway-chart-bar {
+    filter: drop-shadow(0 5px 10px rgba(0,32,150,0.09));
+}
+
+.sway-chart-bar-group:focus-visible {
+    outline: none;
+}
+
+.sway-chart-bar-group:focus-visible .sway-chart-bar {
+    stroke: #0152F4;
+    stroke-width: 2;
+}
+
+.sway-chart-summary {
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 10px;
+    margin-top: 11px;
+}
+
+.sway-chart-summary-item {
+    min-height: 75px;
+    padding: 11px 12px;
+    border-radius: 13px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.85) 0%,
+            rgba(247,250,255,0.72) 100%
+        );
+}
+
+.sway-chart-summary-item span {
+    font-size: 0.52rem;
+    letter-spacing: 0.09em;
+}
+
+.sway-chart-summary-item strong {
+    font-size: 0.72rem;
+}
+
+.sway-chart-summary-item small {
+    font-size: 0.51rem;
+    line-height: 1.4;
+}
+
+.sway-chart-summary-item:nth-child(4) strong {
+    color: #0152F4;
+}
+
+.sway-chart-reading {
+    margin-top: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(1,82,244,0.085);
+    border-radius: 14px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(1,82,244,0.045) 0%,
+            rgba(255,255,255,0.72) 100%
+        );
+}
+
+.sway-chart-reading > span {
+    display: block;
+    color: #0152F4;
+    font-size: 0.52rem;
+    font-weight: 900;
+    letter-spacing: 0.09em;
+    text-transform: none;
+}
+
+.sway-chart-reading p {
+    margin-top: 4px;
+    color: #56627A;
+    font-size: 0.60rem;
+    line-height: 1.6;
+}
+
+.sway-revenue-pipeline,
+.sway-cash-flow,
+.sway-insight-panel {
+    margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+    .sway-chart-summary {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .sway-chart-stage,
+    .sway-chart {
+        min-height: 250px;
+    }
+
+    .sway-chart-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-chart-summary-item {
+        min-height: 0;
+    }
+}
+
