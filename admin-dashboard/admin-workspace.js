@@ -5543,7 +5543,7 @@ function renderShell() {
                     '<button type="button" class="sway-workspace-button" data-new-project-client="' + esc(client.id) + '">+ Project</button>' +
                     '<button type="button" class="sway-workspace-button" data-new-invoice-client="' + esc(client.id) + '">+ Invoice</button>' +
                     '<button type="button" class="sway-workspace-button" data-new-communication-client="' + esc(client.id) + '">+ Communication</button>' +
-                    '<button type="button" class="sway-workspace-button primary" data-close-client360>Done</button> +
+                    '<button type="button" class="sway-workspace-button primary" data-close-client360>Done</button>' +
                 "</div>" +
             "</section>";
 
