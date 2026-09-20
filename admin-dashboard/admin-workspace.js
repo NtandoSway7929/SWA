@@ -52,7 +52,8 @@
             icon: "grid",
             items: [
                 ["overview", "Overview"],
-                ["insights", "Insights"]
+                ["insights", "Insights"],
+                ["reminders", "Automated reminders"]
             ]
         },
         {
@@ -888,6 +889,10 @@
             insights: [
                 "Insights",
                 "Live financial, sales and delivery intelligence."
+            ],
+            reminders: [
+                "Automated reminders",
+                "Keep stale leads, quotes and invoices from going quiet."
             ],
             tasks: [
                 "Tasks",
@@ -4696,6 +4701,17 @@ function simpleBars(items, color) {
         try {
             await refreshData();
 
+            let remindersCreated = 0;
+
+            if (state.currentUser && state.currentUser.id) {
+                remindersCreated =
+                    await processAutomatedReminders();
+
+                if (remindersCreated) {
+                    await refreshData();
+                }
+            }
+
             updateNotificationCenter();
 
             state.lastLiveUpdate = Date.now();
@@ -7289,6 +7305,290 @@ function simpleBars(items, color) {
             '">' +
                 esc(health.label) +
             "</span>"
+        );
+    }
+
+
+    function automaticReminderExists(ruleKey, clientId, leadId) {
+        const marker = "[Automatic reminder:" + ruleKey + "]";
+        const cutoff = Date.now() - (14 * 24 * 60 * 60 * 1000);
+
+        return state.followups.some(function (item) {
+            if (item.status === "skipped") {
+                return false;
+            }
+
+            if (clientId && item.client_id !== clientId) {
+                return false;
+            }
+
+            if (leadId && item.lead_id !== leadId) {
+                return false;
+            }
+
+            if (!String(item.note || "").includes(marker)) {
+                return false;
+            }
+
+            return notificationTimeValue(item) >= cutoff;
+        });
+    }
+
+    function automaticReminderCandidates() {
+        const today = dashboardTodayISO();
+        const candidates = [];
+
+        state.leads.forEach(function (lead) {
+            if (
+                !["contacted", "interested", "proposal sent", "negotiating"].includes(
+                    lead.status
+                )
+            ) {
+                return;
+            }
+
+            const daysSince = dashboardDaysSince(
+                lead.updated_at || lead.created_at
+            );
+
+            if (
+                daysSince < 3 ||
+                automaticReminderExists("lead", null, lead.id) ||
+                hasPendingFollowupForContact(null, lead.id)
+            ) {
+                return;
+            }
+
+            candidates.push({
+                ruleKey: "lead",
+                clientId: null,
+                leadId: lead.id,
+                assignedTo: lead.assigned_to || state.currentUser.id,
+                scheduledFor: today,
+                channel: "WhatsApp",
+                contact: leadName(lead.id),
+                reason:
+                    "Lead has been in " +
+                    formatDisplayText(lead.status) +
+                    " for " +
+                    daysSince +
+                    " days.",
+                note:
+                    "[Automatic reminder:lead] Follow up on " +
+                    (lead.business_name || "this lead") +
+                    " and move the conversation forward."
+            });
+        });
+
+        state.quotes.forEach(function (quote) {
+            if (
+                quote.status !== "sent" ||
+                !quote.client_id ||
+                automaticReminderExists("quote", quote.client_id, null) ||
+                hasPendingFollowupForContact(quote.client_id, quote.lead_id)
+            ) {
+                return;
+            }
+
+            const daysSince = dashboardDaysSince(
+                quote.updated_at || quote.created_at
+            );
+
+            if (daysSince < 3) {
+                return;
+            }
+
+            candidates.push({
+                ruleKey: "quote",
+                clientId: quote.client_id,
+                leadId: quote.lead_id || null,
+                assignedTo: quote.assigned_to || state.currentUser.id,
+                scheduledFor: today,
+                channel: "WhatsApp",
+                contact: clientName(quote.client_id),
+                reason:
+                    "Quote has been awaiting a response for " +
+                    daysSince +
+                    " days.",
+                note:
+                    "[Automatic reminder:quote] Follow up on " +
+                    (quote.quote_number || "the quote") +
+                    " and confirm whether the client would like to proceed."
+            });
+        });
+
+        state.invoices.forEach(function (invoice) {
+            if (
+                invoice.status === "paid" ||
+                invoice.status === "cancelled" ||
+                !invoice.client_id
+            ) {
+                return;
+            }
+
+            const outstanding = Number(
+                invoice.amount_outstanding != null
+                    ? invoice.amount_outstanding
+                    : invoice.total || 0
+            );
+
+            if (outstanding <= 0) {
+                return;
+            }
+
+            const daysSinceIssue = dashboardDaysSince(
+                invoice.issue_date || invoice.created_at
+            );
+
+            const due = dashboardDateKey(invoice.due_date);
+            const overdue =
+                invoice.status === "overdue" ||
+                Boolean(due && due < today);
+
+            if (!overdue && daysSinceIssue < 7) {
+                return;
+            }
+
+            if (
+                automaticReminderExists("invoice", invoice.client_id, null) ||
+                hasPendingFollowupForContact(invoice.client_id, null)
+            ) {
+                return;
+            }
+
+            candidates.push({
+                ruleKey: "invoice",
+                clientId: invoice.client_id,
+                leadId: null,
+                assignedTo: invoice.assigned_to || state.currentUser.id,
+                scheduledFor: today,
+                channel: "Email",
+                contact: clientName(invoice.client_id),
+                reason:
+                    overdue
+                        ? "Invoice is overdue."
+                        : "Invoice has been outstanding for " +
+                          daysSinceIssue +
+                          " days.",
+                note:
+                    "[Automatic reminder:invoice] Follow up on " +
+                    (invoice.invoice_number || "the outstanding invoice") +
+                    " for " +
+                    money(outstanding) +
+                    " outstanding."
+            });
+        });
+
+        return candidates.slice(0, 12);
+    }
+
+    async function processAutomatedReminders() {
+        const candidates = automaticReminderCandidates();
+        let created = 0;
+
+        for (const item of candidates) {
+            try {
+                await api(
+                    "/rest/v1/follow_ups",
+                    {
+                        method: "POST",
+                        headers: headers({
+                            "Prefer": "return=minimal"
+                        }),
+                        body: JSON.stringify({
+                            lead_id: item.leadId,
+                            client_id: item.clientId,
+                            assigned_to: item.assignedTo,
+                            scheduled_for: item.scheduledFor,
+                            channel: item.channel,
+                            status: "pending",
+                            note: item.note
+                        })
+                    }
+                );
+
+                created += 1;
+            } catch (error) {
+                console.warn(
+                    "Automatic reminder could not be created.",
+                    error
+                );
+            }
+        }
+
+        if (created) {
+            try {
+                await logActivity(
+                    "Created automatic reminder" +
+                    (created === 1 ? "" : "s"),
+                    "follow_ups",
+                    null
+                );
+            } catch (error) {
+                console.warn(
+                    "Automatic reminder activity could not be logged.",
+                    error
+                );
+            }
+        }
+
+        return created;
+    }
+
+    function renderAutomatedReminders() {
+        const candidates = automaticReminderCandidates();
+        const active = state.followups.filter(function (item) {
+            return (
+                item.status === "pending" &&
+                String(item.note || "").includes(
+                    "[Automatic reminder:"
+                )
+            );
+        });
+
+        return (
+            '<section class="sway-automated-reminders">' +
+                '<div class="sway-automated-reminders-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Automation</span>' +
+                        "<h3>Automated reminders</h3>" +
+                        "<p>Internal follow-up reminders are created automatically when leads, quotes or invoices go quiet.</p>" +
+                    "</div>" +
+                    '<button type="button" class="sway-workspace-button primary" data-run-automated-reminders>Run now</button>' +
+                "</div>" +
+                '<div class="sway-automated-reminders-stats">' +
+                    '<div><span>Ready to create</span><strong>' +
+                        candidates.length +
+                    "</strong></div>" +
+                    '<div><span>Active automatic reminders</span><strong>' +
+                        active.length +
+                    "</strong></div>" +
+                "</div>" +
+                (
+                    candidates.length
+                        ? '<div class="sway-automated-reminders-list">' +
+                            candidates.map(function (item) {
+                                return (
+                                    '<div class="sway-automated-reminder-item">' +
+                                        '<span class="sway-automated-reminder-icon">↗</span>' +
+                                        '<div>' +
+                                            "<strong>" +
+                                                esc(item.contact) +
+                                            "</strong>" +
+                                            "<small>" +
+                                                esc(item.reason) +
+                                            "</small>" +
+                                        "</div>" +
+                                    "</div>"
+                                );
+                            }).join("") +
+                          "</div>"
+                        : '<div class="sway-automated-reminders-clear">' +
+                            "<strong>Automation is up to date.</strong>" +
+                            "<span>No new automatic reminders are currently due.</span>" +
+                          "</div>"
+                ) +
+            "</section>"
         );
     }
 
@@ -13986,6 +14286,12 @@ function simpleBars(items, color) {
                     renderInsights();
             }
 
+            if (state.currentView === "reminders") {
+                main.innerHTML =
+                    heading() +
+                    renderAutomatedReminders();
+            }
+
             if (state.currentView === "tasks") {
                 main.innerHTML =
                     renderTasks();
@@ -14434,6 +14740,53 @@ function simpleBars(items, color) {
             });
 
         workspace
+            .querySelectorAll("[data-run-automated-reminders]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    async function () {
+                        const originalText = button.textContent;
+                        button.disabled = true;
+                        button.textContent = "Running...";
+
+                        try {
+                            const created =
+                                await processAutomatedReminders();
+
+                            if (created) {
+                                await refreshData();
+                            }
+
+                            renderShell();
+                            renderView();
+                            setStandaloneManagerVisibility(
+                                state.currentView
+                            );
+
+                            swayAlert(
+                                created
+                                    ? created +
+                                      (
+                                          created === 1
+                                              ? " automatic reminder created."
+                                              : " automatic reminders created."
+                                      )
+                                    : "No new automatic reminders were due."
+                            );
+                        } catch (error) {
+                            swayAlert(
+                                error.message ||
+                                "Unable to run automatic reminders."
+                            );
+                        } finally {
+                            button.disabled = false;
+                            button.textContent = originalText;
+                        }
+                    }
+                );
+            });
+
+        workspace
             .querySelectorAll("[data-project-timeline]")
             .forEach(function (button) {
                 button.addEventListener(
@@ -14811,7 +15164,14 @@ function simpleBars(items, color) {
             setupGlobalSearch();
 
             refreshData()
-                .then(function () {
+                .then(async function () {
+                    const remindersCreated =
+                        await processAutomatedReminders();
+
+                    if (remindersCreated) {
+                        await refreshData();
+                    }
+
                     renderShell();
                     renderView();
                     setupNotificationCenter();
