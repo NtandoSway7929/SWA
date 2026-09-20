@@ -4661,7 +4661,7 @@
                 },
                 {
                     key: "account_name",
-                    label: "Account name",
+                    label: "Account holder",
                     type: "text",
                     value: settings.account_name
                 },
@@ -4682,6 +4682,12 @@
                     label: "Branch code",
                     type: "text",
                     value: settings.branch_code
+                },
+                {
+                    key: "swift_bic",
+                    label: "SWIFT / BIC",
+                    type: "text",
+                    value: settings.swift_bic
                 },
                 {
                     key: "payment_instructions",
@@ -4779,7 +4785,7 @@
                     '<div><span>Bank</span><strong>' +
                         esc(s.bank_name || "Not configured") +
                     "</strong></div>" +
-                    '<div><span>Account name</span><strong>' +
+                    '<div><span>Account holder</span><strong>' +
                         esc(s.account_name || "Not configured") +
                     "</strong></div>" +
                     '<div><span>Account number</span><strong>' +
@@ -4790,6 +4796,9 @@
                     "</strong></div>" +
                     '<div><span>Branch code</span><strong>' +
                         esc(s.branch_code || "Not configured") +
+                    "</strong></div>" +
+                    '<div><span>SWIFT / BIC</span><strong>' +
+                        esc(s.swift_bic || "Not configured") +
                     "</strong></div>" +
                     '<div class="full"><span>Payment instructions</span><strong>' +
                         esc(s.payment_instructions || "Not configured") +
