@@ -100,16 +100,6 @@
             ]
         },
         {
-            id: "social",
-            label: "Social Media",
-            icon: "share",
-            items: [
-                ["social-overview", "Overview"],
-                ["social-content", "Content"],
-                ["social-analytics", "Performance"]
-            ]
-        },
-        {
             id: "admin",
             label: "Administration",
             icon: "settings",
@@ -878,18 +868,6 @@
                 "/rest/v1/client_portal_tokens?select=id,client_id,active,expires_at,last_used_at,created_at&order=created_at.desc",
                 []
             ),
-            optionalApi(
-                "/rest/v1/social_accounts?select=*&order=platform.asc,created_at.asc",
-                []
-            ),
-            optionalApi(
-                "/rest/v1/social_posts?select=*&order=created_at.desc",
-                []
-            ),
-            optionalApi(
-                "/rest/v1/social_metrics?select=*&order=metric_date.desc",
-                []
-            )
         ]);
 
         state.communications = results[0] || [];
@@ -897,10 +875,6 @@
         state.leadStageHistory = results[2] || [];
         state.portalRequests = results[3] || [];
         state.portalTokens = results[4] || [];
-        state.socialAccounts = results[5] || [];
-        state.socialPosts = results[6] || [];
-        state.socialMetrics = results[7] || [];
-
         saveWorkspaceSnapshot();
     }
 
