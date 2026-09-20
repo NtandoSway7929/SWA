@@ -33,6 +33,7 @@
         syncQueued: false,
         backgroundSyncTimer: null,
         communications: [],
+        documents: [],
         leadStageHistory: [],
         portalRequests: [],
         portalTokens: [],
@@ -60,6 +61,7 @@
                 ["leads", "Leads"],
                 ["clients", "Clients"],
                 ["communications", "Communication log"],
+                ["documents", "Documents"],
                 ["followups", "Follow-ups"]
             ]
         },
@@ -632,6 +634,7 @@
             api("/rest/v1/invoices?select=*&order=created_at.desc"),
             api("/rest/v1/invoice_settings?select=*&id=eq.1"),
             optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
+            optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/lead_stage_history?select=*&order=changed_at.asc", []),
             optionalApi("/rest/v1/client_portal_requests?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/client_portal_tokens?select=id,client_id,active,expires_at,last_used_at,created_at&order=created_at.desc", []),
@@ -658,12 +661,13 @@
                 ? results[12][0]
                 : null;
         state.communications = results[13] || [];
-        state.leadStageHistory = results[14] || [];
-        state.portalRequests = results[15] || [];
-        state.portalTokens = results[16] || [];
-        state.socialAccounts = results[17] || [];
-        state.socialPosts = results[18] || [];
-        state.socialMetrics = results[19] || [];
+        state.documents = results[14] || [];
+        state.leadStageHistory = results[15] || [];
+        state.portalRequests = results[16] || [];
+        state.portalTokens = results[17] || [];
+        state.socialAccounts = results[18] || [];
+        state.socialPosts = results[19] || [];
+        state.socialMetrics = results[20] || [];
     }
 
     async function refreshData() {
@@ -685,6 +689,7 @@
             api("/rest/v1/invoices?select=*&order=created_at.desc"),
             api("/rest/v1/invoice_settings?select=*&id=eq.1"),
             optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
+            optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/lead_stage_history?select=*&order=changed_at.asc", []),
             optionalApi("/rest/v1/client_portal_requests?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/client_portal_tokens?select=id,client_id,active,expires_at,last_used_at,created_at&order=created_at.desc", []),
@@ -712,12 +717,13 @@
                 ? results[13][0]
                 : null;
         state.communications = results[14] || [];
-        state.leadStageHistory = results[15] || [];
-        state.portalRequests = results[16] || [];
-        state.portalTokens = results[17] || [];
-        state.socialAccounts = results[18] || [];
-        state.socialPosts = results[19] || [];
-        state.socialMetrics = results[20] || [];
+        state.documents = results[15] || [];
+        state.leadStageHistory = results[16] || [];
+        state.portalRequests = results[17] || [];
+        state.portalTokens = results[18] || [];
+        state.socialAccounts = results[19] || [];
+        state.socialPosts = results[20] || [];
+        state.socialMetrics = results[21] || [];
 
         state.currentAdmin =
             state.admins.find(function (item) {
@@ -805,6 +811,10 @@
             communications: [
                 "Communication log",
                 "Record and review every important client and lead interaction."
+            ],
+            documents: [
+                "Documents",
+                "Keep private client and project files attached to the work they belong to."
             ],
             portfolio: [
                 "Portfolio",
@@ -1013,6 +1023,7 @@
             ["invoices", "Invoice", state.invoices],
             ["payments", "Payment", state.payments],
             ["communications", "Communication", state.communications],
+            ["documents", "Document", state.documents],
             ["portal-requests", "Portal request", state.portalRequests],
             ["services", "Service", state.services],
             ["announcements", "Announcement", state.announcements],
@@ -1138,6 +1149,8 @@
                                             ? "payments"
                                             : type === "communications"
                                                 ? "communications"
+                                                : type === "documents"
+                                                    ? "documents"
                                                 : type === "portal-requests"
                                                     ? "portal-requests"
                                                 : type === "services"
@@ -12713,6 +12726,11 @@ function renderShell() {
             if (state.currentView === "communications") {
                 main.innerHTML =
                     renderCommunications();
+            }
+
+            if (state.currentView === "documents") {
+                main.innerHTML =
+                    renderDocuments();
             }
 
             if (state.currentView === "social-overview") {
