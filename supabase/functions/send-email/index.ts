@@ -140,11 +140,28 @@ Deno.serve(async (req) => {
           ? "client"
           : null;
 
-    const contactId =
+    const rawContactId =
       String(body.contact_id || "").trim();
 
+    const contactId =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        rawContactId,
+      )
+        ? rawContactId
+        : "";
+
+    const rawRecipient =
+      String(body.recipient_email || "").trim();
+
+    const emailMatch =
+      rawRecipient.match(
+        /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
+      );
+
     const requestedRecipientEmail =
-      String(body.recipient_email || "")
+      String(
+        emailMatch?.[0] || rawRecipient,
+      )
         .trim()
         .toLowerCase();
 
