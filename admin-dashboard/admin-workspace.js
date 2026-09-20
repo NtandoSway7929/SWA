@@ -32,6 +32,9 @@
         syncInFlight: false,
         syncQueued: false,
         backgroundSyncTimer: null,
+        initialDataLoaded: false,
+        initialDataLoading: false,
+        initialDataError: null,
         communications: [],
         documents: [],
         leadStageHistory: [],
@@ -588,91 +591,95 @@
         ) || "there";
     }
 
-    async function loadState() {
-        const currentUserResponse = await api(
-            "/auth/v1/user",
-            {
-                method: "GET"
+    function decodeAccessTokenUser() {
+        const accessToken = token();
+
+        if (!accessToken) {
+            return null;
+        }
+
+        try {
+            const parts = accessToken.split(".");
+
+            if (parts.length < 2) {
+                return null;
             }
-        );
 
-        state.currentUser = currentUserResponse;
+            const payload =
+                parts[1]
+                    .replace(/-/g, "+")
+                    .replace(/_/g, "/");
 
-        const admins = await api(
-            "/rest/v1/admin_users?select=user_id,full_name,email,role,active,created_at&order=created_at.asc"
-        );
+            const padded =
+                payload +
+                "=".repeat(
+                    (4 - payload.length % 4) % 4
+                );
 
-        state.admins = Array.isArray(admins)
-            ? admins
-            : [];
+            const claims =
+                JSON.parse(
+                    atob(padded)
+                );
 
-        state.currentAdmin = state.admins.find(function (item) {
-            return (
-                item.user_id === state.currentUser.id &&
-                item.active === true
+            if (!claims.sub) {
+                return null;
+            }
+
+            return {
+                id: claims.sub,
+                email: claims.email || ""
+            };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async function loadState() {
+        const decodedUser =
+            decodeAccessTokenUser();
+
+        if (decodedUser) {
+            state.currentUser =
+                decodedUser;
+        } else {
+            const currentUserResponse =
+                await api(
+                    "/auth/v1/user",
+                    {
+                        method: "GET"
+                    }
+                );
+
+            state.currentUser =
+                currentUserResponse;
+        }
+
+        const admins =
+            await api(
+                "/rest/v1/admin_users?select=user_id,full_name,email,role,active,created_at&order=created_at.asc"
             );
-        });
+
+        state.admins =
+            Array.isArray(admins)
+                ? admins
+                : [];
+
+        state.currentAdmin =
+            state.admins.find(function (item) {
+                return (
+                    item.user_id === state.currentUser.id &&
+                    item.active === true
+                );
+            });
 
         if (!state.currentAdmin) {
             throw new Error(
                 "Your account is authenticated, but it is not active in the Swayphics admin team."
             );
         }
-
-        const results = await Promise.all([
-            api("/rest/v1/tasks?select=*&order=created_at.desc"),
-            api("/rest/v1/leads?select=*&order=created_at.desc"),
-            api("/rest/v1/follow_ups?select=*&order=scheduled_for.asc"),
-            api("/rest/v1/clients?select=*&order=created_at.desc"),
-            api("/rest/v1/client_projects?select=*&order=created_at.desc"),
-            api("/rest/v1/quotes?select=*&order=created_at.desc"),
-            api("/rest/v1/payments?select=*&order=created_at.desc"),
-            api("/rest/v1/website_enquiries?select=*&order=created_at.desc"),
-            api("/rest/v1/activity_log?select=*&order=created_at.desc&limit=50"),
-            api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
-            api("/rest/v1/services?select=*&order=active.desc,name.asc"),
-            api("/rest/v1/invoices?select=*&order=created_at.desc"),
-            api("/rest/v1/invoice_settings?select=*&id=eq.1"),
-            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
-            optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/lead_stage_history?select=*&order=changed_at.asc", []),
-            optionalApi("/rest/v1/client_portal_requests?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/client_portal_tokens?select=id,client_id,active,expires_at,last_used_at,created_at&order=created_at.desc", []),
-            optionalApi("/rest/v1/social_accounts?select=*&order=platform.asc,created_at.asc", []),
-            optionalApi("/rest/v1/social_posts?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/social_metrics?select=*&order=metric_date.desc", [])
-        ]);
-
-        state.tasks = results[0] || [];
-        state.leads = results[1] || [];
-        state.followups = results[2] || [];
-        state.clients = results[3] || [];
-        state.projects = results[4] || [];
-        state.quotes = results[5] || [];
-        state.payments = results[6] || [];
-        state.enquiries = results[7] || [];
-        state.activities = results[8] || [];
-        state.announcements = results[9] || [];
-        state.services = results[10] || [];
-        state.invoices = results[11] || [];
-        state.invoiceSettings =
-            Array.isArray(results[12]) &&
-            results[12][0]
-                ? results[12][0]
-                : null;
-        state.communications = results[13] || [];
-        state.documents = results[14] || [];
-        state.leadStageHistory = results[15] || [];
-        state.portalRequests = results[16] || [];
-        state.portalTokens = results[17] || [];
-        state.socialAccounts = results[18] || [];
-        state.socialPosts = results[19] || [];
-        state.socialMetrics = results[20] || [];
     }
 
     async function refreshData() {
-        await processStaleLeads();
-
         const results = await Promise.all([
             api("/rest/v1/admin_users?select=user_id,full_name,email,role,active,created_at&order=created_at.asc"),
             api("/rest/v1/tasks?select=*&order=created_at.desc"),
@@ -724,6 +731,10 @@
         state.socialAccounts = results[19] || [];
         state.socialPosts = results[20] || [];
         state.socialMetrics = results[21] || [];
+
+        state.initialDataLoaded = true;
+        state.initialDataLoading = false;
+        state.initialDataError = null;
 
         state.currentAdmin =
             state.admins.find(function (item) {
@@ -13197,6 +13208,21 @@ function renderShell() {
         }
     }
 
+    function renderWorkspaceLoading() {
+        return (
+            '<section class="sway-workspace-loading">' +
+                '<div class="sway-workspace-loading-orb"></div>' +
+                '<div class="sway-workspace-loading-copy">' +
+                    "<strong>Loading your workspace</strong>" +
+                    "<span>Syncing your latest Swayphics data…</span>" +
+                "</div>" +
+                '<div class="sway-workspace-loading-grid">' +
+                    "<span></span><span></span><span></span><span></span>" +
+                "</div>" +
+            "</section>"
+        );
+    }
+
     function renderView() {
         const main =
             document.getElementById(
@@ -13204,6 +13230,12 @@ function renderShell() {
             );
 
         if (!main) return;
+
+        if (!state.initialDataLoaded) {
+            main.innerHTML =
+                renderWorkspaceLoading();
+            return;
+        }
 
         try {
             if (state.currentView === "overview") {
@@ -14023,27 +14055,96 @@ function renderShell() {
     }
 
     async function boot() {
-        workspace.innerHTML =
-            '<div class="sway-loading">Loading the Swayphics workspace...</div>';
+        state.initialDataLoading = true;
+
+        renderShell();
+        renderView();
 
         try {
             await loadState();
 
-            await processStaleLeads();
-
-            await refreshData();
-
-            state.lastLiveUpdate =
-                Date.now();
-
-            setupGlobalSearch();
-
             renderShell();
             renderView();
             setupNotificationCenter();
-            setStandaloneManagerVisibility(state.currentView);
-            setupRealtime();
+            setStandaloneManagerVisibility(
+                state.currentView
+            );
+
+            setupGlobalSearch();
+
+            refreshData()
+                .then(function () {
+                    renderShell();
+                    renderView();
+                    setupNotificationCenter();
+                    setStandaloneManagerVisibility(
+                        state.currentView
+                    );
+
+                    setupRealtime();
+
+                    window.setTimeout(
+                        function () {
+                            processStaleLeads()
+                                .then(function (changed) {
+                                    if (changed) {
+                                        refreshData()
+                                            .then(function () {
+                                                renderShell();
+                                                renderView();
+                                                setupNotificationCenter();
+                                                setStandaloneManagerVisibility(
+                                                    state.currentView
+                                                );
+                                            })
+                                            .catch(function (error) {
+                                                console.warn(
+                                                    "Post-load lead automation refresh failed.",
+                                                    error
+                                                );
+                                            });
+                                    }
+                                })
+                                .catch(function (error) {
+                                    console.warn(
+                                        "Stale lead automation could not run.",
+                                        error
+                                    );
+                                });
+                        },
+                        1500
+                    );
+                })
+                .catch(function (error) {
+                    state.initialDataError =
+                        error.message ||
+                        "Unable to load workspace data.";
+
+                    state.initialDataLoading =
+                        false;
+
+                    const main =
+                        document.getElementById(
+                            "sway-workspace-main"
+                        );
+
+                    if (main) {
+                        main.innerHTML =
+                            '<div class="sway-error">' +
+                                esc(
+                                    state.initialDataError
+                                ) +
+                            "</div>";
+                    }
+
+                    console.error(
+                        "Swayphics workspace data failed to load:",
+                        error
+                    );
+                });
         } catch (error) {
+            state.initialDataLoading = false;
+
             workspace.innerHTML =
                 '<div class="sway-error">' +
                     esc(error.message) +
@@ -14051,7 +14152,7 @@ function renderShell() {
                 "</div>";
 
             console.error(
-                "Swayphics workspace failed to load:",
+                "Swayphics workspace failed to initialise:",
                 error
             );
         }
