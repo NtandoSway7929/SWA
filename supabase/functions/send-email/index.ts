@@ -623,7 +623,9 @@ Deno.serve(async (req) => {
             recipientEmail,
           ).trim(),
         entity_type:
-          table,
+          resolvedContactType === "client"
+            ? "clients"
+            : "leads",
         entity_id:
           contact.id,
       });
