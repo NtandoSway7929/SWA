@@ -2803,6 +2803,473 @@
             }
         }
 
+
+        /* =====================================================
+           READABILITY + THEME CONTROL
+           ===================================================== */
+
+        .admin-theme-toggle {
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 0 11px;
+            border: 1px solid rgba(0,32,150,0.09);
+            border-radius: 999px;
+            background: rgba(255,255,255,0.64);
+            color: #26334D;
+            font: inherit;
+            font-size: 0.66rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.60),
+                0 5px 16px rgba(0,32,150,0.035);
+            transition:
+                color 0.2s ease,
+                background 0.2s ease,
+                border-color 0.2s ease,
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+        .admin-theme-toggle:hover {
+            color: #0152F4;
+            background: rgba(255,255,255,0.86);
+            border-color: rgba(1,82,244,0.18);
+            transform: translateY(-1px);
+            box-shadow:
+                0 9px 22px rgba(0,32,150,0.07),
+                inset 0 1px 0 rgba(255,255,255,0.68);
+        }
+
+        .admin-theme-toggle-icon {
+            width: 17px;
+            height: 17px;
+            display: inline-grid;
+            place-items: center;
+        }
+
+        .admin-theme-toggle-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .admin-theme-toggle-text {
+            line-height: 1;
+        }
+
+        /* Desktop workspace typography: slightly more readable. */
+        #sway-admin-workspace {
+            font-size: 15px;
+        }
+
+        #sway-admin-workspace .sway-workspace-heading h2 {
+            font-size: clamp(1.9rem, 3.2vw, 2.5rem);
+        }
+
+        #sway-admin-workspace .sway-workspace-heading p {
+            font-size: 0.86rem;
+            line-height: 1.65;
+        }
+
+        #sway-admin-workspace .sway-panel-title h3 {
+            font-size: 0.97rem;
+        }
+
+        #sway-admin-workspace .sway-panel-title p {
+            font-size: 0.70rem;
+            line-height: 1.55;
+        }
+
+        #sway-admin-workspace .sway-table th {
+            font-size: 0.61rem;
+        }
+
+        #sway-admin-workspace .sway-table td {
+            font-size: 0.73rem;
+            line-height: 1.5;
+        }
+
+        #sway-admin-workspace .sway-table-empty {
+            font-size: 0.76rem;
+        }
+
+        #sway-admin-workspace .sway-stat-card .label {
+            font-size: 0.66rem;
+        }
+
+        #sway-admin-workspace .sway-stat-card .hint {
+            font-size: 0.68rem;
+            line-height: 1.45;
+        }
+
+        #sway-admin-workspace .sway-workspace-button,
+        #sway-admin-workspace .sway-row-action {
+            font-size: 0.72rem;
+        }
+
+        #sway-admin-workspace .sway-inline-note,
+        #sway-admin-workspace .sway-insight-note {
+            font-size: 0.72rem;
+            line-height: 1.55;
+        }
+
+        #sway-admin-workspace .sway-live-toolbar strong {
+            font-size: 0.72rem;
+        }
+
+        #sway-admin-workspace .sway-live-toolbar span:not(.sway-live-badge) {
+            font-size: 0.61rem;
+        }
+
+        /* Dark mode */
+        body.sway-dark-mode {
+            --sway-dashboard-bg: #07101F;
+            --sway-surface: #0D1728;
+            --sway-shadow: 0 18px 55px rgba(0,0,0,0.28);
+            --sway-dark: #F4F7FF;
+            --text-muted: #A9B7CC;
+
+            background:
+                radial-gradient(
+                    circle at 88% 8%,
+                    rgba(1,82,244,0.16) 0%,
+                    rgba(1,82,244,0) 30%
+                ),
+                radial-gradient(
+                    circle at 8% 86%,
+                    rgba(119,193,252,0.08) 0%,
+                    rgba(119,193,252,0) 28%
+                ),
+                linear-gradient(
+                    135deg,
+                    #07101F 0%,
+                    #0B1424 52%,
+                    #0B1A30 100%
+                );
+            color: #F4F7FF;
+        }
+
+        body.sway-dark-mode::before {
+            opacity: 0.055;
+        }
+
+        body.sway-dark-mode .admin-header-inner {
+            border-color: rgba(255,255,255,0.10);
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(19,31,52,0.88) 0%,
+                    rgba(13,23,40,0.84) 62%,
+                    rgba(21,43,73,0.72) 100%
+                );
+            box-shadow:
+                0 16px 44px rgba(0,0,0,0.24),
+                inset 0 1px 0 rgba(255,255,255,0.07);
+        }
+
+        body.sway-dark-mode .admin-header-inner::before {
+            background:
+                linear-gradient(
+                    110deg,
+                    rgba(255,255,255,0.07) 0%,
+                    rgba(255,255,255,0.02) 35%,
+                    rgba(1,82,244,0.08) 100%
+                );
+        }
+
+        body.sway-dark-mode .admin-global-search-field,
+        body.sway-dark-mode .admin-notification-toggle,
+        body.sway-dark-mode .admin-theme-toggle,
+        body.sway-dark-mode .logout-button {
+            border-color: rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.055);
+            color: #E8EEFA;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.055),
+                0 7px 20px rgba(0,0,0,0.10);
+        }
+
+        body.sway-dark-mode .admin-global-search-field:focus-within,
+        body.sway-dark-mode .admin-notification-toggle:hover,
+        body.sway-dark-mode .admin-theme-toggle:hover,
+        body.sway-dark-mode .logout-button:hover {
+            background: rgba(255,255,255,0.085);
+            border-color: rgba(119,193,252,0.22);
+        }
+
+        body.sway-dark-mode #admin-global-search-input {
+            color: #F4F7FF;
+        }
+
+        body.sway-dark-mode #admin-global-search-input::placeholder {
+            color: #8292AA;
+        }
+
+        body.sway-dark-mode .admin-status {
+            border-color: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.045);
+            color: #B7C3D5;
+        }
+
+        body.sway-dark-mode .admin-global-search-results,
+        body.sway-dark-mode .admin-notification-panel {
+            border-color: rgba(255,255,255,0.10);
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(17,29,49,0.96) 0%,
+                    rgba(10,20,35,0.94) 100%
+                );
+            box-shadow:
+                0 30px 85px rgba(0,0,0,0.35),
+                inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+
+        body.sway-dark-mode .admin-global-search-result-title,
+        body.sway-dark-mode .admin-notification-head strong,
+        body.sway-dark-mode .sway-notification-copy strong {
+            color: #F4F7FF;
+        }
+
+        body.sway-dark-mode .admin-global-search-result-meta,
+        body.sway-dark-mode .sway-notification-copy > span,
+        body.sway-dark-mode .admin-notification-empty p {
+            color: #9EADC1;
+        }
+
+        body.sway-dark-mode .sway-workspace-sidebar {
+            border-color: rgba(255,255,255,0.10);
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(15,28,48,0.94) 0%,
+                    rgba(10,20,35,0.88) 100%
+                );
+            box-shadow:
+                0 22px 58px rgba(0,0,0,0.24),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-button {
+            color: #AAB8CB;
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-button:hover {
+            color: #6DB0FF;
+            background: rgba(1,82,244,0.11);
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-group-toggle {
+            color: #8FA0B7;
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-group-toggle:hover {
+            color: #BFD0E8;
+            background: rgba(255,255,255,0.04);
+        }
+
+        body.sway-dark-mode .sway-workspace-main,
+        body.sway-dark-mode #sway-admin-workspace {
+            color: #F4F7FF;
+        }
+
+        body.sway-dark-mode .sway-stat-card,
+        body.sway-dark-mode .sway-panel,
+        body.sway-dark-mode .sway-inline-note,
+        body.sway-dark-mode .sway-insight-note,
+        body.sway-dark-mode .sway-live-toolbar,
+        body.sway-dark-mode .sway-cash-flow,
+        body.sway-dark-mode .sway-revenue-pipeline,
+        body.sway-dark-mode .sway-attention-panel,
+        body.sway-dark-mode .sway-followup-automation,
+        body.sway-dark-mode .sway-modal-card,
+        body.sway-dark-mode .sway-dialog,
+        body.sway-dark-mode .portfolio-manager,
+        body.sway-dark-mode #testimonials-admin-section {
+            border-color: rgba(255,255,255,0.095);
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(16,29,49,0.92) 0%,
+                    rgba(11,21,37,0.88) 100%
+                );
+            box-shadow:
+                0 20px 58px rgba(0,0,0,0.20),
+                inset 0 1px 0 rgba(255,255,255,0.045);
+        }
+
+        body.sway-dark-mode .sway-stat-card .value,
+        body.sway-dark-mode .sway-panel-title h3,
+        body.sway-dark-mode .sway-workspace-heading h2,
+        body.sway-dark-mode .sway-workspace-heading p,
+        body.sway-dark-mode .sway-table td,
+        body.sway-dark-mode .sway-row-action,
+        body.sway-dark-mode .sway-quick-action {
+            color: #F1F5FC;
+        }
+
+        body.sway-dark-mode .sway-panel-title p,
+        body.sway-dark-mode .sway-table th,
+        body.sway-dark-mode .sway-stat-card .label,
+        body.sway-dark-mode .sway-stat-card .hint,
+        body.sway-dark-mode .sway-table-empty,
+        body.sway-dark-mode .sway-inline-note,
+        body.sway-dark-mode .sway-insight-note {
+            color: #A5B3C7;
+        }
+
+        body.sway-dark-mode .sway-table th,
+        body.sway-dark-mode .sway-table td {
+            border-bottom-color: rgba(255,255,255,0.07);
+        }
+
+        body.sway-dark-mode .sway-row-action,
+        body.sway-dark-mode .sway-quick-action,
+        body.sway-dark-mode .sway-workspace-button {
+            border-color: rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.055);
+        }
+
+        body.sway-dark-mode .sway-workspace-button:hover,
+        body.sway-dark-mode .sway-row-action:hover,
+        body.sway-dark-mode .sway-quick-action:hover {
+            border-color: rgba(119,193,252,0.20);
+            background: rgba(255,255,255,0.08);
+            color: #A9D2FF;
+        }
+
+        body.sway-dark-mode .sway-workspace-button.primary {
+            border-color: transparent;
+            background: linear-gradient(135deg, #0031C5, #0152F4);
+            color: #FFFFFF;
+        }
+
+        body.sway-dark-mode .sway-chip.neutral {
+            background: rgba(255,255,255,0.075);
+            color: #A5B3C7;
+        }
+
+        body.sway-dark-mode .sway-chip.warning {
+            background: rgba(245,158,11,0.13);
+            color: #F7C978;
+        }
+
+        body.sway-dark-mode .sway-chip.success {
+            background: rgba(34,197,94,0.12);
+            color: #7FE0A2;
+        }
+
+        body.sway-dark-mode .sway-chip.danger {
+            background: rgba(248,113,113,0.12);
+            color: #FF9A9A;
+        }
+
+        body.sway-dark-mode .sway-form-field input,
+        body.sway-dark-mode .sway-form-field textarea,
+        body.sway-dark-mode .sway-form-field select,
+        body.sway-dark-mode .sway-invoice-builder input,
+        body.sway-dark-mode .sway-invoice-builder textarea,
+        body.sway-dark-mode .sway-invoice-builder select,
+        body.sway-dark-mode .sway-dialog-field input,
+        body.sway-dark-mode .sway-dialog-field textarea {
+            border-color: rgba(255,255,255,0.12) !important;
+            background: #0B1526 !important;
+            color: #F3F7FE !important;
+        }
+
+        body.sway-dark-mode .sway-form-field label,
+        body.sway-dark-mode .sway-dialog-field label,
+        body.sway-dark-mode .sway-invoice-builder label {
+            color: #C7D3E3 !important;
+        }
+
+        body.sway-dark-mode .sway-modal-backdrop,
+        body.sway-dark-mode .portfolio-modal-backdrop,
+        body.sway-dark-mode .sway-client360-backdrop {
+            background: rgba(0,5,15,0.70);
+        }
+
+        body.sway-dark-mode .sway-workspace-mobile-close,
+        body.sway-dark-mode .sway-workspace-mobile-toggle {
+            background: #101C30;
+            border-color: rgba(255,255,255,0.10);
+            color: #F4F7FF;
+        }
+
+        @media (max-width: 760px) {
+            #sway-admin-workspace {
+                font-size: 14px;
+            }
+
+            #sway-admin-workspace .sway-workspace-heading h2 {
+                font-size: clamp(1.7rem, 7vw, 2.05rem);
+            }
+
+            #sway-admin-workspace .sway-workspace-heading p {
+                font-size: 0.78rem;
+                line-height: 1.58;
+            }
+
+            #sway-admin-workspace .sway-panel-title h3 {
+                font-size: 0.91rem;
+            }
+
+            #sway-admin-workspace .sway-panel-title p {
+                font-size: 0.64rem;
+            }
+
+            #sway-admin-workspace .sway-table th {
+                font-size: 0.56rem;
+            }
+
+            #sway-admin-workspace .sway-table td {
+                font-size: 0.67rem;
+                line-height: 1.45;
+            }
+
+            #sway-admin-workspace .sway-stat-card .label {
+                font-size: 0.61rem;
+            }
+
+            #sway-admin-workspace .sway-stat-card .hint {
+                font-size: 0.62rem;
+            }
+
+            #sway-admin-workspace .sway-workspace-button,
+            #sway-admin-workspace .sway-row-action {
+                font-size: 0.67rem;
+            }
+
+            .admin-theme-toggle {
+                width: 38px;
+                min-height: 38px;
+                padding: 0;
+            }
+
+            .admin-theme-toggle-text {
+                display: none;
+            }
+
+            .admin-theme-toggle-icon {
+                width: 16px;
+                height: 16px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .admin-theme-toggle {
+                transition: none;
+            }
+        }
+
         </style>
 
 </head>
@@ -2865,6 +3332,33 @@
 
 
         <div class="admin-header-right">
+
+            <button
+                type="button"
+                class="admin-theme-toggle"
+                id="admin-theme-toggle"
+                aria-label="Switch to dark mode"
+                aria-pressed="false"
+                title="Switch theme"
+            >
+                <span class="admin-theme-toggle-icon" aria-hidden="true">
+                    <svg
+                        class="admin-theme-icon-sun"
+                        viewBox="0 0 24 24"
+                    >
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <path d="M12 2.5v2"></path>
+                        <path d="M12 19.5v2"></path>
+                        <path d="m4.58 4.58 1.42 1.42"></path>
+                        <path d="m18 18 1.42 1.42"></path>
+                        <path d="M2.5 12h2"></path>
+                        <path d="M19.5 12h2"></path>
+                        <path d="m4.58 19.42 1.42-1.42"></path>
+                        <path d="m18 6 1.42-1.42"></path>
+                    </svg>
+                </span>
+                <span class="admin-theme-toggle-text">Theme</span>
+            </button>
 
             <div class="admin-notifications">
 
