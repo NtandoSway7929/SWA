@@ -65,7 +65,8 @@ grant select, insert, update, delete on table public.payments to authenticated;
 grant select, insert, update, delete on table public.website_enquiries to authenticated;
 grant select, insert, update, delete on table public.site_announcements to authenticated;
 grant select on table public.site_announcements to anon;
-grant select, insert, update, delete on table public.activity_log to authenticated;
+grant select, insert, update, delete on table public.activity_log to authenticated;grant select, insert, update, delete on table public.communication_logs to authenticated;
+
 
 -- The public contact form is handled by the submit-enquiry Edge Function.
 -- It uses the server-side service_role key to insert enquiries without exposing
@@ -191,6 +192,14 @@ using (published = true);
 drop policy if exists "Swayphics admins can manage announcements" on public.site_announcements;
 create policy "Swayphics admins can manage announcements"
 on public.site_announcements
+for all
+to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
+drop policy if exists "Swayphics admins can manage communication logs" on public.communication_logs;
+create policy "Swayphics admins can manage communication logs"
+on public.communication_logs
 for all
 to authenticated
 using (public.is_swayphics_admin())
