@@ -7594,6 +7594,20 @@ function simpleBars(items, color) {
 
         workspace.appendChild(modal);
 
+        modal
+            .querySelectorAll("[data-send-email-type]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openEmailComposer(
+                            button.dataset.sendEmailType,
+                            button.dataset.sendEmailId
+                        );
+                    }
+                );
+            });
+
         modal.querySelectorAll("[data-edit]").forEach(function (button) {
             button.addEventListener("click", function () {
                 const id = button.dataset.id;
@@ -9689,6 +9703,46 @@ function simpleBars(items, color) {
         ).filter(function (item) {
             return String(item.email || "").trim();
         });
+    }
+
+    function emailContactOptions(type, selectedId) {
+        const records =
+            emailContactRecords(type);
+
+        if (!records.length) {
+            return '<option value="">No contacts with email addresses</option>';
+        }
+
+        return (
+            '<option value="">Select ' +
+            (
+                type === "lead"
+                    ? "lead"
+                    : "client"
+            ) +
+            "...</option>" +
+            records.map(function (item) {
+                return (
+                    '<option value="' +
+                    esc(item.id) +
+                    '"' +
+                    (
+                        item.id === selectedId
+                            ? " selected"
+                            : ""
+                    ) +
+                    ">" +
+                    esc(
+                        item.business_name ||
+                        item.contact_name ||
+                        item.email
+                    ) +
+                    " · " +
+                    esc(item.email) +
+                    "</option>"
+                );
+            }).join("")
+        );
     }
 
     async function invokeEmailFunction(
