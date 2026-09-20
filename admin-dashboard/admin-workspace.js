@@ -480,6 +480,26 @@
             : "No lead";
     }
 
+    function leadAssessmentStatus(item) {
+        const value = item || {};
+
+        const completed =
+            [
+                value.business_assessment,
+                value.research_findings,
+                value.swayphics_solution,
+                value.recommended_services
+            ].filter(function (entry) {
+                return String(entry || "").trim().length > 0;
+            }).length;
+
+        return completed >= 3
+            ? "Assessed"
+            : completed > 0
+                ? "In progress"
+                : "Needs research";
+    }
+
     function chip(value) {
         const text = String(value || "—");
         const lower = text.toLowerCase();
@@ -6801,6 +6821,19 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
+                            '<span class="sway-lead-assessment-status ' +
+                                (
+                                    leadAssessmentStatus(item) === "Assessed"
+                                        ? "complete"
+                                        : leadAssessmentStatus(item) === "In progress"
+                                            ? "partial"
+                                            : "empty"
+                                ) +
+                            '">' +
+                                esc(leadAssessmentStatus(item)) +
+                            "</span>" +
+                        "</td>" +
+                        "<td>" +
                             '<div class="sway-row-actions">' +
                                 '<button class="sway-row-action" data-edit="leads" data-id="' +
                                     esc(item.id) +
@@ -6829,7 +6862,7 @@ function simpleBars(items, color) {
                 "Lead pipeline",
                 "Active prospects only. Leads needing extra attention automatically move to Follow-ups after the no-response window.",
                 state.leads.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th>Assessment</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No leads yet.")
@@ -12259,8 +12292,53 @@ function simpleBars(items, color) {
                         value: dateInput(item.next_follow_up)
                     },
                     {
+                        type: "section",
+                        label: "Lead assessment & opportunity",
+                        help: "Use public business information only. Record observable facts, findings, the opportunity for Swayphics, and the services that directly address the problem."
+                    },
+                    {
+                        key: "business_assessment",
+                        label: "Business assessment",
+                        type: "textarea",
+                        full: true,
+                        value: item.business_assessment,
+                        help: "Your overall assessment of the business from publicly available information."
+                    },
+                    {
+                        key: "research_findings",
+                        label: "Research findings",
+                        type: "textarea",
+                        full: true,
+                        value: item.research_findings,
+                        help: "Capture specific gaps, missed opportunities, customer-facing issues or strengths you observed."
+                    },
+                    {
+                        key: "swayphics_solution",
+                        label: "How Swayphics can help",
+                        type: "textarea",
+                        full: true,
+                        value: item.swayphics_solution,
+                        help: "Turn the findings into a concrete Swayphics solution and the business outcome it should create."
+                    },
+                    {
+                        key: "recommended_services",
+                        label: "Recommended Swayphics services",
+                        type: "textarea",
+                        full: true,
+                        value: item.recommended_services,
+                        help: "List the Swayphics services that directly solve the identified problems."
+                    },
+                    {
+                        key: "research_sources",
+                        label: "Public information / sources",
+                        type: "textarea",
+                        full: true,
+                        value: item.research_sources,
+                        help: "Record public URLs or source names used, such as the business website, social profiles or public listings."
+                    },
+                    {
                         key: "notes",
-                        label: "Internal notes",
+                        label: "General internal notes",
                         type: "textarea",
                         full: true,
                         value: item.notes
@@ -13541,7 +13619,22 @@ function simpleBars(items, color) {
                         ? " required"
                         : "";
 
-                if (field.type === "textarea") {
+                if (field.type === "section") {
+                    return (
+                        '<div class="sway-form-section-heading">' +
+                            '<strong>' +
+                                esc(field.label) +
+                            "</strong>" +
+                            (
+                                field.help
+                                    ? "<small>" +
+                                      esc(field.help) +
+                                      "</small>"
+                                    : ""
+                            ) +
+                        "</div>"
+                    );
+                } else if (field.type === "textarea") {
                     control =
                         '<textarea id="sway-field-' +
                         esc(field.key) +
@@ -13641,6 +13734,10 @@ function simpleBars(items, color) {
                 const payload = {};
 
                 fields.forEach(function (field) {
+                    if (field.type === "section") {
+                        return;
+                    }
+
                     const element =
                         form.querySelector(
                             "#sway-field-" +
@@ -13786,6 +13883,14 @@ function simpleBars(items, color) {
 
                     payload.updated_at =
                         new Date().toISOString();
+                }
+
+                if (type === "leads") {
+                    payload.assessment_updated_at =
+                        new Date().toISOString();
+
+                    payload.assessment_updated_by =
+                        state.currentUser.id;
                 }
 
                 if (
