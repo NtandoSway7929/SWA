@@ -44,8 +44,8 @@ function brandedEmailHtml(
   message: string,
 ) {
   const greetingName =
-    recipientName ||
     businessName ||
+    recipientName ||
     "there";
 
   return `<!doctype html>
@@ -79,9 +79,20 @@ function brandedEmailHtml(
         </p>
       </div>
 
-      <div style="padding:18px 30px;background:#F7FAFF;border-top:1px solid #E7ECF4;color:#7A899D;font-size:11px;line-height:1.7;">
+      <div style="padding:18px 30px;background:#F7FAFF;border-top:1px solid #E7ECF4;color:#7A899D;font-size:11px;line-height:1.75;">
         <strong style="color:#081533;">Swayphics</strong><br>
-        info@swayphics.co.za · swayphics.co.za
+        info@swayphics.co.za · <a href="https://swayphics.co.za" style="color:#0152F4;text-decoration:none;">swayphics.co.za</a>
+        <div style="margin-top:9px;">
+          <a href="https://swayphics.co.za/privacy-policy/" style="color:#56627A;text-decoration:underline;">Privacy Policy</a>
+          <span style="padding:0 6px;color:#B4BFCE;">·</span>
+          <a href="https://swayphics.co.za/terms-and-conditions/" style="color:#56627A;text-decoration:underline;">Terms &amp; Conditions</a>
+        </div>
+        <div style="margin-top:9px;color:#8A97A8;">
+          © 2026 Swayphics. All rights reserved.
+        </div>
+        <div style="margin-top:7px;color:#8A97A8;">
+          This email and any attachments are intended only for the addressed recipient. If you received this in error, please notify the sender and delete it.
+        </div>
       </div>
     </div>
   </div>
