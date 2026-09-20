@@ -398,3 +398,101 @@ grant execute on function public.submit_client_portal_request(text,text,text)
     to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+
+-- =========================================================
+-- PRIVATE CLIENT / PROJECT DOCUMENT STORAGE
+-- =========================================================
+
+create table if not exists public.client_documents (
+    id uuid primary key default gen_random_uuid(),
+    client_id uuid not null references public.clients(id) on delete cascade,
+    project_id uuid references public.client_projects(id) on delete cascade,
+    file_name text not null,
+    storage_path text not null unique,
+    mime_type text,
+    size_bytes bigint not null default 0,
+    uploaded_by uuid references public.admin_users(user_id) on delete set null,
+    created_at timestamptz not null default now()
+);
+
+create index if not exists client_documents_client_idx
+    on public.client_documents(client_id, created_at desc);
+
+create index if not exists client_documents_project_idx
+    on public.client_documents(project_id, created_at desc);
+
+alter table public.client_documents enable row level security;
+
+grant select, insert, update, delete
+on table public.client_documents
+to authenticated;
+
+drop policy if exists "Swayphics admins can manage client documents"
+    on public.client_documents;
+
+create policy "Swayphics admins can manage client documents"
+on public.client_documents
+for all
+to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
+-- Private Supabase Storage bucket for internal client/project files.
+insert into storage.buckets (id, name, public)
+values ('swayphics-client-files', 'swayphics-client-files', false)
+on conflict (id) do nothing;
+
+drop policy if exists "Swayphics admins can read client files"
+    on storage.objects;
+
+create policy "Swayphics admins can read client files"
+on storage.objects
+for select
+to authenticated
+using (
+    bucket_id = 'swayphics-client-files'
+    and public.is_swayphics_admin()
+);
+
+drop policy if exists "Swayphics admins can upload client files"
+    on storage.objects;
+
+create policy "Swayphics admins can upload client files"
+on storage.objects
+for insert
+to authenticated
+with check (
+    bucket_id = 'swayphics-client-files'
+    and public.is_swayphics_admin()
+);
+
+drop policy if exists "Swayphics admins can update client files"
+    on storage.objects;
+
+create policy "Swayphics admins can update client files"
+on storage.objects
+for update
+to authenticated
+using (
+    bucket_id = 'swayphics-client-files'
+    and public.is_swayphics_admin()
+)
+with check (
+    bucket_id = 'swayphics-client-files'
+    and public.is_swayphics_admin()
+);
+
+drop policy if exists "Swayphics admins can delete client files"
+    on storage.objects;
+
+create policy "Swayphics admins can delete client files"
+on storage.objects
+for delete
+to authenticated
+using (
+    bucket_id = 'swayphics-client-files'
+    and public.is_swayphics_admin()
+);
+
+notify pgrst, 'reload schema';
