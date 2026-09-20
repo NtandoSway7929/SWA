@@ -798,7 +798,7 @@ async function buildPdf(
           settings.bank_name
         : "",
       settings.account_name
-        ? "Account name: " +
+        ? "Account holder: " +
           settings.account_name
         : "",
       settings.account_number
@@ -812,6 +812,10 @@ async function buildPdf(
       settings.branch_code
         ? "Branch code: " +
           settings.branch_code
+        : "",
+      settings.swift_bic
+        ? "SWIFT / BIC: " +
+          settings.swift_bic
         : "",
       settings.payment_instructions ||
         "",
@@ -953,6 +957,25 @@ function emailHtml(
           <strong style="color:#081533;">Due:</strong> ${escapeHtml(shortDate(invoice.due_date))}
           ${settings.payment_instructions ? `<br><strong style="color:#081533;">Payment:</strong> ${escapeHtml(settings.payment_instructions)}` : ""}
         </div>
+        ${
+          settings.bank_name ||
+          settings.account_name ||
+          settings.account_number ||
+          settings.account_type ||
+          settings.branch_code ||
+          settings.swift_bic
+            ? `
+        <div style="margin-top:18px;padding:16px 18px;border-radius:12px;background:#F7FAFF;border:1px solid #E0E6F0;font-size:12px;line-height:1.75;color:#56627A;">
+          <strong style="display:block;margin-bottom:6px;color:#081533;">Banking details</strong>
+          ${settings.bank_name ? `Bank: ${escapeHtml(settings.bank_name)}<br>` : ""}
+          ${settings.account_name ? `Account holder: ${escapeHtml(settings.account_name)}<br>` : ""}
+          ${settings.account_number ? `Account number: ${escapeHtml(settings.account_number)}<br>` : ""}
+          ${settings.account_type ? `Account type: ${escapeHtml(settings.account_type)}<br>` : ""}
+          ${settings.branch_code ? `Branch code: ${escapeHtml(settings.branch_code)}<br>` : ""}
+          ${settings.swift_bic ? `SWIFT / BIC: ${escapeHtml(settings.swift_bic)}` : ""}
+        </div>`
+            : ""
+        }
       </div>
       <div style="padding:18px 28px;background:#F7FAFF;font-size:11px;color:#56627A;">
         ${escapeHtml(settings.email || "info@swayphics.co.za")} · ${escapeHtml(settings.website || "https://swayphics.co.za")}
