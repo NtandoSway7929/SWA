@@ -5969,6 +5969,14 @@ function renderShell() {
                         "</td>" +
                         "<td>" +
                             esc(
+                                formatDisplayText(
+                                    item.source ||
+                                    "Unspecified"
+                                )
+                            ) +
+                        "</td>" +
+                        "<td>" +
+                            esc(
                                 money(
                                     item.estimated_value
                                 )
@@ -6010,7 +6018,7 @@ function renderShell() {
                 "Lead pipeline",
                 "Active prospects only. Leads needing extra attention automatically move to Follow-ups after the no-response window.",
                 state.leads.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No leads yet.")
