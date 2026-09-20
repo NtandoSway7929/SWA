@@ -3858,3 +3858,539 @@
     }
 }
 
+
+/* =========================================================
+   SOCIAL MEDIA WORKSPACE
+   ========================================================= */
+
+.sway-social-summary {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 24px;
+    margin-top: 4px;
+    padding: 22px;
+    border: 1px solid rgba(255,255,255,0.72);
+    border-radius: 22px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.94) 0%,
+            rgba(247,250,255,0.82) 68%,
+            rgba(119,193,252,0.065) 100%
+        );
+    box-shadow:
+        0 18px 48px rgba(0,32,150,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.72);
+    backdrop-filter: blur(20px) saturate(145%);
+    -webkit-backdrop-filter: blur(20px) saturate(145%);
+}
+
+.sway-social-summary::after {
+    content: "";
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    right: -100px;
+    top: -125px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(1,82,244,0.07), rgba(1,82,244,0));
+    pointer-events: none;
+}
+
+.sway-social-summary > div {
+    position: relative;
+    z-index: 1;
+}
+
+.sway-social-summary .admin-label {
+    margin-bottom: 6px;
+    font-size: 0.55rem;
+}
+
+.sway-social-summary h3 {
+    margin: 0;
+    color: var(--sway-dark);
+    font-size: 1.14rem;
+    letter-spacing: -0.035em;
+}
+
+.sway-social-summary p {
+    max-width: 680px;
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 0.63rem;
+    line-height: 1.65;
+}
+
+.sway-social-summary-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(92px,1fr));
+    gap: 8px;
+    min-width: 320px;
+}
+
+.sway-social-summary-stats > div {
+    padding: 10px 11px;
+    border: 1px solid rgba(0,32,150,0.065);
+    border-radius: 13px;
+    background: rgba(255,255,255,0.60);
+}
+
+.sway-social-summary-stats span,
+.sway-social-summary-stats strong {
+    display: block;
+}
+
+.sway-social-summary-stats span {
+    color: #8190A5;
+    font-size: 0.50rem;
+    font-weight: 700;
+}
+
+.sway-social-summary-stats strong {
+    margin-top: 4px;
+    color: var(--sway-dark);
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.sway-social-account-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.sway-social-account-card {
+    min-width: 0;
+    padding: 17px;
+    border: 1px solid rgba(255,255,255,0.72);
+    border-radius: 19px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.92),
+            rgba(248,251,255,0.80)
+        );
+    box-shadow:
+        0 14px 34px rgba(0,32,150,0.045),
+        inset 0 1px 0 rgba(255,255,255,0.72);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+.sway-social-account-top {
+    display: grid;
+    grid-template-columns: 36px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.sway-social-platform-icon {
+    width: 36px;
+    height: 36px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 11px;
+    background: rgba(1,82,244,0.07);
+    color: var(--sway-blue);
+    font-size: 0.55rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+}
+
+.sway-social-account-heading {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.sway-social-account-heading strong {
+    overflow: hidden;
+    color: var(--sway-dark);
+    font-size: 0.69rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-social-account-heading span {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.55rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-social-account-status {
+    padding: 5px 7px;
+    border-radius: 999px;
+    background: rgba(86,98,122,0.07);
+    color: #56627A;
+    font-size: 0.47rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.sway-social-account-status.connected {
+    background: rgba(22,163,74,0.075);
+    color: #16803A;
+}
+
+.sway-social-account-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 7px;
+    margin-top: 16px;
+}
+
+.sway-social-account-stats > div {
+    min-width: 0;
+    padding: 9px;
+    border: 1px solid rgba(0,32,150,0.05);
+    border-radius: 11px;
+    background: rgba(255,255,255,0.46);
+}
+
+.sway-social-account-stats span,
+.sway-social-account-stats strong {
+    display: block;
+}
+
+.sway-social-account-stats span {
+    color: #8190A5;
+    font-size: 0.47rem;
+    font-weight: 700;
+}
+
+.sway-social-account-stats strong {
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--sway-dark);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-social-account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 13px;
+}
+
+.sway-social-profile-link {
+    text-decoration: none;
+}
+
+.sway-social-integration-note {
+    margin-top: 15px;
+    padding: 14px 16px;
+    border: 1px solid rgba(1,82,244,0.09);
+    border-radius: 15px;
+    background: rgba(1,82,244,0.035);
+}
+
+.sway-social-integration-note strong {
+    color: var(--sway-dark);
+    font-size: 0.65rem;
+    font-weight: 800;
+}
+
+.sway-social-integration-note p {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.57rem;
+    line-height: 1.6;
+}
+
+.sway-social-recent-list {
+    display: grid;
+    gap: 7px;
+}
+
+.sway-social-recent-item {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 32px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(0,32,150,0.055);
+    border-radius: 13px;
+    background: rgba(255,255,255,0.56);
+    text-align: left;
+    cursor: pointer;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease;
+}
+
+.sway-social-recent-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(1,82,244,0.11);
+    background: rgba(255,255,255,0.80);
+}
+
+.sway-social-recent-icon {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: rgba(1,82,244,0.06);
+    color: var(--sway-blue);
+    font-size: 0.52rem;
+    font-weight: 900;
+}
+
+.sway-social-recent-copy {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.sway-social-recent-copy strong {
+    overflow: hidden;
+    color: var(--sway-dark);
+    font-size: 0.63rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-social-recent-copy small {
+    color: #8190A5;
+    font-size: 0.53rem;
+    font-weight: 600;
+}
+
+.sway-social-recent-date {
+    color: var(--text-muted);
+    font-size: 0.52rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.sway-social-content-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 4px;
+    margin-bottom: 15px;
+    padding: 11px 14px;
+    border: 1px solid rgba(255,255,255,0.72);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.62);
+    box-shadow: 0 8px 22px rgba(0,32,150,0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.sway-social-content-toolbar > div {
+    display: grid;
+    gap: 2px;
+}
+
+.sway-social-content-toolbar strong {
+    color: var(--sway-dark);
+    font-size: 0.64rem;
+    font-weight: 800;
+}
+
+.sway-social-content-toolbar span {
+    color: var(--text-muted);
+    font-size: 0.55rem;
+    font-weight: 600;
+}
+
+.sway-social-analytics-empty {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 7px 2px;
+}
+
+.sway-social-analytics-empty > span {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 11px;
+    background: rgba(1,82,244,0.07);
+    color: var(--sway-blue);
+    font-size: 0.57rem;
+    font-weight: 900;
+}
+
+.sway-social-analytics-empty strong,
+.sway-social-analytics-empty p {
+    display: block;
+}
+
+.sway-social-analytics-empty strong {
+    color: var(--sway-dark);
+    font-size: 0.63rem;
+    font-weight: 800;
+}
+
+.sway-social-analytics-empty p {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 0.56rem;
+    line-height: 1.55;
+}
+
+.sway-social-performance-list {
+    display: grid;
+    gap: 7px;
+}
+
+.sway-social-performance-row {
+    display: grid;
+    grid-template-columns: minmax(200px,1.6fr) repeat(3, minmax(78px,0.7fr));
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(0,32,150,0.055);
+    border-radius: 13px;
+    background: rgba(255,255,255,0.56);
+}
+
+.sway-social-performance-row > div {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 30px minmax(0,1fr);
+    column-gap: 8px;
+    align-items: center;
+}
+
+.sway-social-performance-row > div .sway-social-platform-icon {
+    grid-row: 1 / span 2;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+}
+
+.sway-social-performance-row strong {
+    overflow: hidden;
+    color: var(--sway-dark);
+    font-size: 0.61rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-social-performance-row > div small {
+    overflow: hidden;
+    color: #8190A5;
+    font-size: 0.51rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-social-performance-row > span {
+    min-width: 0;
+    color: var(--sway-dark);
+    font-size: 0.64rem;
+    font-weight: 800;
+}
+
+.sway-social-performance-row > span small {
+    display: block;
+    margin-top: 2px;
+    color: #8190A5;
+    font-size: 0.48rem;
+    font-weight: 600;
+}
+
+@media (max-width: 920px) {
+    .sway-social-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-social-summary-stats {
+        min-width: 0;
+    }
+
+    .sway-social-account-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-social-performance-row {
+        grid-template-columns: minmax(0,1.4fr) repeat(3, minmax(65px,0.7fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .sway-social-summary {
+        padding: 18px;
+        border-radius: 18px;
+    }
+
+    .sway-social-summary-stats {
+        grid-template-columns: repeat(3, minmax(0,1fr));
+    }
+
+    .sway-social-account-card {
+        padding: 15px;
+        border-radius: 17px;
+    }
+
+    .sway-social-content-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .sway-social-performance-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .sway-social-performance-row > div {
+        grid-column: 1 / -1;
+    }
+
+    .sway-social-recent-date {
+        display: none;
+    }
+}
+
+@media (max-width: 460px) {
+    .sway-social-summary-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-social-account-top {
+        grid-template-columns: 34px minmax(0,1fr);
+    }
+
+    .sway-social-account-status {
+        grid-column: 2;
+        width: fit-content;
+        margin-top: 2px;
+    }
+
+    .sway-social-account-stats {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .sway-social-recent-item {
+        grid-template-columns: 32px minmax(0,1fr);
+    }
+
+    .sway-social-performance-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+
