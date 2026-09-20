@@ -964,6 +964,7 @@ function emailHtml(
         <div style="font-size:12px;color:#56627A;">Invoice ${escapeHtml(invoice.invoice_number)}</div>
         <h1 style="margin:6px 0 18px;font-size:24px;color:#081533;">Your Swayphics invoice</h1>
         <p style="font-size:14px;line-height:1.7;color:#56627A;">
+          Hi ${escapeHtml(invoice.client?.business_name || invoice.client?.contact_name || "there")},<br><br>
           Please find your invoice attached. Thank you for choosing Swayphics.
         </p>
         <table style="width:100%;border-collapse:collapse;margin-top:24px;">
@@ -1013,8 +1014,13 @@ function emailHtml(
             : ""
         }
       </div>
-      <div style="padding:18px 28px;background:#F7FAFF;font-size:11px;color:#56627A;">
-        ${escapeHtml(settings.email || "info@swayphics.co.za")} · ${escapeHtml(settings.website || "https://swayphics.co.za")}
+      <div style="padding:18px 28px;background:#F7FAFF;font-size:11px;line-height:1.75;color:#56627A;">
+        ${escapeHtml(settings.email || "info@swayphics.co.za")} · <a href="https://swayphics.co.za" style="color:#0152F4;text-decoration:none;">swayphics.co.za</a><br>
+        <a href="https://swayphics.co.za/privacy-policy/" style="color:#56627A;text-decoration:underline;">Privacy Policy</a>
+        <span style="padding:0 6px;color:#B4BFCE;">·</span>
+        <a href="https://swayphics.co.za/terms-and-conditions/" style="color:#56627A;text-decoration:underline;">Terms &amp; Conditions</a><br>
+        <span style="color:#8A97A8;">© ${new Date().getFullYear()} Swayphics. All rights reserved.</span><br>
+        <span style="color:#8A97A8;">This email and any attachments are intended only for the addressed recipient. If received in error, please notify the sender and delete it.</span>
       </div>
     </div>
   </div>
