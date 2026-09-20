@@ -694,15 +694,7 @@
             api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
             api("/rest/v1/services?select=*&order=active.desc,name.asc"),
             api("/rest/v1/invoices?select=*&order=created_at.desc"),
-            api("/rest/v1/invoice_settings?select=*&id=eq.1"),
-            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
-            optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/lead_stage_history?select=*&order=changed_at.asc", []),
-            optionalApi("/rest/v1/client_portal_requests?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/client_portal_tokens?select=id,client_id,active,expires_at,last_used_at,created_at&order=created_at.desc", []),
-            optionalApi("/rest/v1/social_accounts?select=*&order=platform.asc,created_at.asc", []),
-            optionalApi("/rest/v1/social_posts?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/social_metrics?select=*&order=metric_date.desc", [])
+            api("/rest/v1/invoice_settings?select=*&id=eq.1")
         ]);
 
         state.admins = results[0] || [];
@@ -723,14 +715,6 @@
             results[13][0]
                 ? results[13][0]
                 : null;
-        state.communications = results[14] || [];
-        state.documents = results[15] || [];
-        state.leadStageHistory = results[16] || [];
-        state.portalRequests = results[17] || [];
-        state.portalTokens = results[18] || [];
-        state.socialAccounts = results[19] || [];
-        state.socialPosts = results[20] || [];
-        state.socialMetrics = results[21] || [];
 
         state.initialDataLoaded = true;
         state.initialDataLoading = false;
@@ -744,6 +728,53 @@
                 );
             }) || state.currentAdmin;
     }
+
+    async function refreshSecondaryData() {
+        const results = await Promise.all([
+            optionalApi(
+                "/rest/v1/communication_logs?select=*&order=contacted_at.desc",
+                []
+            ),
+            optionalApi(
+                "/rest/v1/client_documents?select=*&order=created_at.desc",
+                []
+            ),
+            optionalApi(
+                "/rest/v1/lead_stage_history?select=*&order=changed_at.asc",
+                []
+            ),
+            optionalApi(
+                "/rest/v1/client_portal_requests?select=*&order=created_at.desc",
+                []
+            ),
+            optionalApi(
+                "/rest/v1/client_portal_tokens?select=id,client_id,active,expires_at,last_used_at,created_at&order=created_at.desc",
+                []
+            ),
+            optionalApi(
+                "/rest/v1/social_accounts?select=*&order=platform.asc,created_at.asc",
+                []
+            ),
+            optionalApi(
+                "/rest/v1/social_posts?select=*&order=created_at.desc",
+                []
+            ),
+            optionalApi(
+                "/rest/v1/social_metrics?select=*&order=metric_date.desc",
+                []
+            )
+        ]);
+
+        state.communications = results[0] || [];
+        state.documents = results[1] || [];
+        state.leadStageHistory = results[2] || [];
+        state.portalRequests = results[3] || [];
+        state.portalTokens = results[4] || [];
+        state.socialAccounts = results[5] || [];
+        state.socialPosts = results[6] || [];
+        state.socialMetrics = results[7] || [];
+    }
+
 
     function viewMeta(view) {
         const meta = {
@@ -14082,6 +14113,30 @@ function renderShell() {
                     );
 
                     setupRealtime();
+
+                    refreshSecondaryData()
+                        .then(function () {
+                            const modalOpen = Boolean(
+                                document.querySelector(
+                                    ".sway-modal:not([hidden]), .portfolio-modal:not([hidden])"
+                                )
+                            );
+
+                            if (!modalOpen) {
+                                renderShell();
+                                renderView();
+                                setupNotificationCenter();
+                                setStandaloneManagerVisibility(
+                                    state.currentView
+                                );
+                            }
+                        })
+                        .catch(function (error) {
+                            console.warn(
+                                "Secondary workspace data could not be loaded.",
+                                error
+                            );
+                        });
 
                     window.setTimeout(
                         function () {
