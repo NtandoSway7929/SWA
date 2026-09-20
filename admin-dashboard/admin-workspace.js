@@ -2763,6 +2763,270 @@ function renderShell() {
     }
 
 
+    function attentionDateLabel(value, today) {
+        if (!value) return "";
+
+        const key = dashboardDateKey(value);
+
+        if (key === today) {
+            return "Due today";
+        }
+
+        if (key && key < today) {
+            return "Overdue";
+        }
+
+        return "Due " + date(value);
+    }
+
+    function renderNeedsAttention() {
+        const today = dashboardTodayISO();
+        const items = [];
+
+        state.tasks.forEach(function (item) {
+            if (
+                item.assigned_to !== state.currentUser.id ||
+                item.status === "completed" ||
+                !item.due_date
+            ) {
+                return;
+            }
+
+            const due = dashboardDateKey(item.due_date);
+
+            if (due && due <= today) {
+                items.push({
+                    priority: due < today ? "danger" : "warning",
+                    icon: "T",
+                    title: item.title || "Untitled task",
+                    detail:
+                        clientName(item.client_id) +
+                        " · " +
+                        attentionDateLabel(item.due_date, today),
+                    view: "tasks",
+                    sort: due < today ? 0 : 1
+                });
+            }
+        });
+
+        state.followups.forEach(function (item) {
+            if (
+                item.assigned_to !== state.currentUser.id ||
+                item.status !== "pending" ||
+                !item.scheduled_for
+            ) {
+                return;
+            }
+
+            const scheduled = dashboardDateKey(item.scheduled_for);
+
+            if (scheduled && scheduled <= today) {
+                items.push({
+                    priority: scheduled < today ? "danger" : "warning",
+                    icon: "F",
+                    title: "Follow-up due",
+                    detail:
+                        (
+                            item.client_id
+                                ? clientName(item.client_id)
+                                : leadName(item.lead_id)
+                        ) +
+                        " · " +
+                        attentionDateLabel(item.scheduled_for, today),
+                    view: "followups",
+                    sort: scheduled < today ? 0 : 1
+                });
+            }
+        });
+
+        state.invoices.forEach(function (invoice) {
+            if (
+                invoice.status === "cancelled" ||
+                invoice.status === "paid"
+            ) {
+                return;
+            }
+
+            const outstanding = Number(
+                invoice.amount_outstanding != null
+                    ? invoice.amount_outstanding
+                    : invoice.total || 0
+            );
+
+            if (outstanding <= 0) {
+                return;
+            }
+
+            const due = dashboardDateKey(invoice.due_date);
+
+            if (
+                invoice.status === "overdue" ||
+                (due && due < today)
+            ) {
+                items.push({
+                    priority: "danger",
+                    icon: "I",
+                    title:
+                        invoice.invoice_number ||
+                        "Outstanding invoice",
+                    detail:
+                        clientName(invoice.client_id) +
+                        " · " +
+                        money(outstanding) +
+                        " outstanding",
+                    view: "invoices",
+                    sort: 0
+                });
+            } else if (due === today) {
+                items.push({
+                    priority: "warning",
+                    icon: "I",
+                    title:
+                        invoice.invoice_number ||
+                        "Invoice due today",
+                    detail:
+                        clientName(invoice.client_id) +
+                        " · " +
+                        money(outstanding) +
+                        " due today",
+                    view: "invoices",
+                    sort: 1
+                });
+            }
+        });
+
+        state.enquiries.forEach(function (item) {
+            if (item.status !== "new") {
+                return;
+            }
+
+            items.push({
+                priority: "info",
+                icon: "?",
+                title:
+                    item.business_name ||
+                    item.name ||
+                    "New website enquiry",
+                detail:
+                    (
+                        item.service
+                            ? formatDisplayText(item.service) + " · "
+                            : ""
+                    ) +
+                    "Received " +
+                    date(item.created_at),
+                view: "enquiries",
+                sort: 2
+            });
+        });
+
+        state.quotes.forEach(function (quote) {
+            if (quote.status !== "sent") {
+                return;
+            }
+
+            const validUntil = dashboardDateKey(quote.valid_until);
+
+            items.push({
+                priority:
+                    validUntil &&
+                    validUntil < today
+                        ? "danger"
+                        : "info",
+                icon: "Q",
+                title:
+                    quote.quote_number ||
+                    quote.title ||
+                    "Quote awaiting response",
+                detail:
+                    clientName(quote.client_id) +
+                    " · " +
+                    money(quote.amount) +
+                    " · Awaiting response",
+                view: "quotes",
+                sort:
+                    validUntil &&
+                    validUntil < today
+                        ? 1
+                        : 2
+            });
+        });
+
+        items.sort(function (a, b) {
+            return a.sort - b.sort;
+        });
+
+        const visibleItems = items.slice(0, 8);
+        const total = items.length;
+
+        if (!total) {
+            return (
+                panel(
+                    "Today",
+                    "Nothing currently requires immediate attention.",
+                    '<div class="sway-attention-clear">' +
+                        '<span class="sway-attention-clear-icon">✓</span>' +
+                        '<div>' +
+                            "<strong>You're all caught up.</strong>" +
+                            "<p>No overdue tasks, due follow-ups, unpaid invoices or new enquiries need action right now.</p>" +
+                        "</div>" +
+                    "</div>"
+                )
+            );
+        }
+
+        return (
+            '<section class="sway-attention-panel">' +
+                '<div class="sway-attention-header">' +
+                    '<div>' +
+                        '<span class="admin-label">Today</span>' +
+                        "<h3>Needs attention</h3>" +
+                        "<p>The next actions that should not be missed.</p>" +
+                    "</div>" +
+                    '<span class="sway-attention-count">' +
+                        total +
+                        (total === 1 ? " item" : " items") +
+                    "</span>" +
+                "</div>" +
+                '<div class="sway-attention-list">' +
+                    visibleItems.map(function (item) {
+                        return (
+                            '<button type="button" class="sway-attention-item ' +
+                                esc(item.priority) +
+                                '" data-view-target="' +
+                                esc(item.view) +
+                            '">' +
+                                '<span class="sway-attention-icon" aria-hidden="true">' +
+                                    esc(item.icon) +
+                                "</span>" +
+                                '<span class="sway-attention-copy">' +
+                                    '<strong>' +
+                                        esc(formatDisplayText(item.title)) +
+                                    "</strong>" +
+                                    "<span>" +
+                                        esc(item.detail) +
+                                    "</span>" +
+                                "</span>" +
+                                '<span class="sway-attention-action">Open</span>' +
+                            "</button>"
+                        );
+                    }).join("") +
+                "</div>" +
+                (
+                    total > visibleItems.length
+                        ? '<div class="sway-attention-more">' +
+                            "Showing " +
+                            visibleItems.length +
+                            " of " +
+                            total +
+                            " items. Use the relevant workspace section to view the rest." +
+                          "</div>"
+                        : ""
+                ) +
+            "</section>"
+        );
+    }
+
     function renderOverview() {
         const today =
             dashboardTodayISO();
@@ -2843,6 +3107,8 @@ function renderShell() {
                 "</strong>" +
                 ". Here is what needs attention." +
             "</div>" +
+
+            renderNeedsAttention() +
 
             '<div class="sway-workspace-grid">' +
 
