@@ -290,15 +290,13 @@ Deno.serve(async (req) => {
         },
       );
 
-    const table =
+    let table =
       contactType === "lead"
         ? "leads"
         : "clients";
 
     const columns =
-      contactType === "lead"
-        ? "id,business_name,contact_name,email"
-        : "id,business_name,contact_name,email";
+      "id,business_name,contact_name,email";
 
     let contact: {
       id: string;
@@ -333,11 +331,38 @@ Deno.serve(async (req) => {
       contactError = byEmail.error || contactError;
     }
 
+    // A lead may have been converted into a client, or a test record may
+    // have been selected from the other contact list. When the selected
+    // table cannot resolve the recipient, use the normalized email address
+    // across both supported contact tables.
+    if (!contact && requestedRecipientEmail) {
+      const fallbackTables = ["clients", "leads"];
+
+      for (const fallbackTable of fallbackTables) {
+        const fallback =
+          await supabase
+            .from(fallbackTable)
+            .select(columns)
+            .ilike("email", requestedRecipientEmail)
+            .maybeSingle();
+
+        if (fallback.data) {
+          contact = fallback.data;
+          table = fallbackTable;
+          break;
+        }
+
+        if (fallback.error) {
+          contactError = fallback.error;
+        }
+      }
+    }
+
     if (!contact) {
       console.error(
         "Recipient lookup failed:",
         {
-          table,
+          selected_table: table,
           contact_id: contactId,
           recipient_email: requestedRecipientEmail,
           error: contactError,
@@ -345,20 +370,33 @@ Deno.serve(async (req) => {
       );
 
       throw new Error(
-        "The selected recipient could not be found. Refresh the dashboard and try selecting the contact again.",
+        "The selected recipient could not be found in the Swayphics contacts. Refresh the dashboard and select the recipient again.",
       );
     }
 
     const recipientEmail =
-      String(contact.email || "").trim();
+      String(contact.email || "").trim().toLowerCase();
+
+    if (!recipientEmail) {
+      return Response.json(
+        {
+          error:
+            "The selected contact does not have an email address.",
+        },
+        {
+          status: 422,
+          headers: corsHeaders,
+        },
+      );
+    }
 
     if (
       requestedRecipientEmail &&
-      recipientEmail.toLowerCase() !==
+      recipientEmail !==
         requestedRecipientEmail
     ) {
       throw new Error(
-        "The selected recipient details changed. Refresh the dashboard and select the recipient again.",
+        "The selected recipient email does not match the saved contact. Refresh the dashboard and select the recipient again.",
       );
     }
 
