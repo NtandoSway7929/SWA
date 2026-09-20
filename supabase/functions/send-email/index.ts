@@ -314,11 +314,6 @@ Deno.serve(async (req) => {
         },
       );
 
-    let table =
-      contactType === "lead"
-        ? "leads"
-        : "clients";
-
     const columns =
       "id,business_name,contact_name,email";
 
@@ -329,37 +324,93 @@ Deno.serve(async (req) => {
       email?: string | null;
     } | null = null;
 
+    let resolvedContactType =
+      contactType;
+
     let contactError: unknown = null;
 
-    if (contactId) {
-      const byId =
-        await supabase
-          .from(table)
-          .select(columns)
-          .eq("id", contactId)
-          .maybeSingle();
+    const lookupTable =
+      async (
+        tableName: "leads" | "clients",
+      ) => {
+        if (contactId) {
+          const byId =
+            await supabase
+              .from(tableName)
+              .select(columns)
+              .eq("id", contactId)
+              .maybeSingle();
 
-      contact = byId.data || null;
-      contactError = byId.error || null;
-    }
+          if (byId.data) {
+            return {
+              contact: byId.data,
+              error: byId.error || null,
+              type:
+                tableName === "clients"
+                  ? "client"
+                  : "lead",
+            };
+          }
 
-    if (!contact && requestedRecipientEmail) {
-      const byEmail =
-        await supabase
-          .from(table)
-          .select(columns)
-          .ilike("email", requestedRecipientEmail)
-          .maybeSingle();
+          contactError =
+            byId.error || contactError;
+        }
 
-      contact = byEmail.data || null;
-      contactError = byEmail.error || contactError;
+        if (requestedRecipientEmail) {
+          const byEmail =
+            await supabase
+              .from(tableName)
+              .select(columns)
+              .ilike("email", requestedRecipientEmail)
+              .maybeSingle();
+
+          if (byEmail.data) {
+            return {
+              contact: byEmail.data,
+              error: byEmail.error || null,
+              type:
+                tableName === "clients"
+                  ? "client"
+                  : "lead",
+            };
+          }
+
+          contactError =
+            byEmail.error || contactError;
+        }
+
+        return null;
+      };
+
+    const primaryTable =
+      contactType === "lead"
+        ? "leads"
+        : "clients";
+
+    const secondaryTable =
+      primaryTable === "leads"
+        ? "clients"
+        : "leads";
+
+    const primaryLookup =
+      await lookupTable(primaryTable);
+
+    const secondaryLookup =
+      primaryLookup ||
+      await lookupTable(secondaryTable);
+
+    if (secondaryLookup) {
+      contact =
+        secondaryLookup.contact;
+      resolvedContactType =
+        secondaryLookup.type;
     }
 
     if (!contact) {
       console.error(
         "Recipient lookup failed:",
         {
-          selected_table: table,
+          requested_contact_type: contactType,
           contact_id: contactId,
           recipient_email: requestedRecipientEmail,
           error: contactError,
@@ -494,11 +545,6 @@ Deno.serve(async (req) => {
     const emailId =
       result?.id ||
       null;
-
-    const resolvedContactType =
-      table === "clients"
-        ? "client"
-        : "lead";
 
     let communicationInsert =
       await supabase
