@@ -1223,6 +1223,656 @@
     }
 
 
+
+    function notificationReadStorageKey() {
+        return (
+            "swayphics_admin_notifications_read_" +
+            String(
+                state.currentUser && state.currentUser.id
+                    ? state.currentUser.id
+                    : "guest"
+            )
+        );
+    }
+
+    function notificationReadKeys() {
+        try {
+            const stored =
+                JSON.parse(
+                    localStorage.getItem(
+                        notificationReadStorageKey()
+                    ) || "[]"
+                );
+
+            return new Set(
+                Array.isArray(stored)
+                    ? stored.map(String)
+                    : []
+            );
+        } catch (error) {
+            return new Set();
+        }
+    }
+
+    function saveNotificationReadKeys(keys) {
+        try {
+            localStorage.setItem(
+                notificationReadStorageKey(),
+                JSON.stringify(
+                    Array.from(keys).slice(-250)
+                )
+            );
+        } catch (error) {
+            // Notifications remain functional even if localStorage is unavailable.
+        }
+    }
+
+    function notificationDateValue(item) {
+        return (
+            item.created_at ||
+            item.updated_at ||
+            item.due_date ||
+            item.scheduled_for ||
+            item.valid_until ||
+            ""
+        );
+    }
+
+    function notificationTimeValue(item) {
+        const raw = notificationDateValue(item);
+        const time = new Date(raw).getTime();
+
+        return Number.isFinite(time)
+            ? time
+            : 0;
+    }
+
+    function workspaceNotifications() {
+        const today = dashboardTodayISO();
+        const notifications = [];
+
+        state.enquiries.forEach(function (item) {
+            if (item.status !== "new") {
+                return;
+            }
+
+            notifications.push({
+                key:
+                    "enquiry:" +
+                    String(item.id) +
+                    ":new",
+                type: "info",
+                icon: "?",
+                title: "New website enquiry",
+                detail:
+                    (
+                        item.business_name ||
+                        item.name ||
+                        "Website visitor"
+                    ) +
+                    (
+                        item.service
+                            ? " · " +
+                              formatDisplayText(item.service)
+                            : ""
+                    ),
+                timestamp:
+                    notificationTimeValue(item),
+                view: "enquiries"
+            });
+        });
+
+        state.tasks.forEach(function (item) {
+            if (
+                item.status === "completed" ||
+                item.assigned_to !== state.currentUser.id ||
+                !item.due_date
+            ) {
+                return;
+            }
+
+            const due = dashboardDateKey(item.due_date);
+
+            if (!due || due > today) {
+                return;
+            }
+
+            const overdue = due < today;
+
+            notifications.push({
+                key:
+                    "task:" +
+                    String(item.id) +
+                    ":" +
+                    due,
+                type: overdue ? "danger" : "warning",
+                icon: "T",
+                title:
+                    overdue
+                        ? "Task overdue"
+                        : "Task due today",
+                detail:
+                    (item.title || "Untitled task") +
+                    (
+                        item.client_id
+                            ? " · " +
+                              clientName(item.client_id)
+                            : ""
+                    ),
+                timestamp:
+                    notificationTimeValue(item.due_date),
+                view: "tasks"
+            });
+        });
+
+        state.followups.forEach(function (item) {
+            if (
+                item.status !== "pending" ||
+                item.assigned_to !== state.currentUser.id ||
+                !item.scheduled_for
+            ) {
+                return;
+            }
+
+            const scheduled =
+                dashboardDateKey(item.scheduled_for);
+
+            if (
+                !scheduled ||
+                scheduled > today
+            ) {
+                return;
+            }
+
+            const overdue = scheduled < today;
+            const contact =
+                item.client_id
+                    ? clientName(item.client_id)
+                    : leadName(item.lead_id);
+
+            notifications.push({
+                key:
+                    "followup:" +
+                    String(item.id) +
+                    ":" +
+                    scheduled,
+                type: overdue ? "danger" : "warning",
+                icon: "F",
+                title:
+                    overdue
+                        ? "Follow-up overdue"
+                        : "Follow-up due today",
+                detail:
+                    contact ||
+                    "Contact needs follow-up",
+                timestamp:
+                    notificationTimeValue(item.scheduled_for),
+                view: "followups"
+            });
+        });
+
+        state.invoices.forEach(function (invoice) {
+            if (
+                invoice.status === "cancelled" ||
+                invoice.status === "paid"
+            ) {
+                return;
+            }
+
+            const outstanding = Number(
+                invoice.amount_outstanding != null
+                    ? invoice.amount_outstanding
+                    : invoice.total || 0
+            );
+
+            if (outstanding <= 0) {
+                return;
+            }
+
+            const due =
+                dashboardDateKey(invoice.due_date);
+
+            if (
+                invoice.status === "overdue" ||
+                (due && due < today)
+            ) {
+                notifications.push({
+                    key:
+                        "invoice:" +
+                        String(invoice.id) +
+                        ":overdue:" +
+                        due +
+                        ":" +
+                        outstanding,
+                    type: "danger",
+                    icon: "I",
+                    title: "Invoice overdue",
+                    detail:
+                        (
+                            invoice.invoice_number ||
+                            "Outstanding invoice"
+                        ) +
+                        " · " +
+                        clientName(invoice.client_id) +
+                        " · " +
+                        money(outstanding),
+                    timestamp:
+                        notificationTimeValue(
+                            invoice.due_date ||
+                            invoice.updated_at
+                        ),
+                    view: "invoices"
+                });
+
+                return;
+            }
+
+            if (due === today) {
+                notifications.push({
+                    key:
+                        "invoice:" +
+                        String(invoice.id) +
+                        ":today:" +
+                        outstanding,
+                    type: "warning",
+                    icon: "I",
+                    title: "Invoice due today",
+                    detail:
+                        (
+                            invoice.invoice_number ||
+                            "Invoice"
+                        ) +
+                        " · " +
+                        clientName(invoice.client_id) +
+                        " · " +
+                        money(outstanding),
+                    timestamp:
+                        notificationTimeValue(
+                            invoice.due_date
+                        ),
+                    view: "invoices"
+                });
+            }
+        });
+
+        state.quotes.forEach(function (quote) {
+            if (quote.status !== "sent") {
+                return;
+            }
+
+            const validUntil =
+                dashboardDateKey(quote.valid_until);
+
+            const expired =
+                validUntil &&
+                validUntil < today;
+
+            notifications.push({
+                key:
+                    "quote:" +
+                    String(quote.id) +
+                    ":" +
+                    (validUntil || "sent"),
+                type: expired ? "warning" : "info",
+                icon: "Q",
+                title:
+                    expired
+                        ? "Quote validity expired"
+                        : "Quote awaiting response",
+                detail:
+                    (
+                        quote.quote_number ||
+                        quote.title ||
+                        "Quote"
+                    ) +
+                    " · " +
+                    clientName(quote.client_id) +
+                    " · " +
+                    money(quote.amount),
+                timestamp:
+                    notificationTimeValue(
+                        quote.updated_at ||
+                        quote.created_at ||
+                        quote.valid_until
+                    ),
+                view: "quotes"
+            });
+        });
+
+        const recentPaymentCutoff =
+            Date.now() -
+            (3 * 24 * 60 * 60 * 1000);
+
+        state.payments.forEach(function (payment) {
+            const timestamp =
+                notificationTimeValue(payment);
+
+            if (
+                !timestamp ||
+                timestamp < recentPaymentCutoff
+            ) {
+                return;
+            }
+
+            notifications.push({
+                key:
+                    "payment:" +
+                    String(payment.id) +
+                    ":" +
+                    String(payment.amount),
+                type: "success",
+                icon: "✓",
+                title: "Payment received",
+                detail:
+                    (
+                        payment.reference ||
+                        payment.payment_reference ||
+                        "Client payment"
+                    ) +
+                    " · " +
+                    money(payment.amount) +
+                    (
+                        payment.client_id
+                            ? " · " +
+                              clientName(payment.client_id)
+                            : ""
+                    ),
+                timestamp: timestamp,
+                view: "payments"
+            });
+        });
+
+        const priority = {
+            danger: 0,
+            warning: 1,
+            info: 2,
+            success: 3
+        };
+
+        notifications.sort(function (a, b) {
+            const priorityDifference =
+                (priority[a.type] || 9) -
+                (priority[b.type] || 9);
+
+            if (priorityDifference !== 0) {
+                return priorityDifference;
+            }
+
+            return b.timestamp - a.timestamp;
+        });
+
+        return notifications.slice(0, 24);
+    }
+
+    function notificationIconClass(type) {
+        return (
+            "sway-notification-item-" +
+            String(type || "info")
+        );
+    }
+
+    function renderNotificationPanel() {
+        const list =
+            document.getElementById(
+                "sway-notification-list"
+            );
+
+        const badge =
+            document.getElementById(
+                "sway-notification-badge"
+            );
+
+        const empty =
+            document.getElementById(
+                "sway-notification-empty"
+            );
+
+        if (!list || !badge || !empty) {
+            return;
+        }
+
+        const notifications =
+            workspaceNotifications();
+
+        const readKeys =
+            notificationReadKeys();
+
+        const unread =
+            notifications.filter(function (item) {
+                return !readKeys.has(item.key);
+            }).length;
+
+        badge.textContent =
+            unread > 99
+                ? "99+"
+                : String(unread);
+
+        badge.hidden = unread === 0;
+
+        if (!notifications.length) {
+            list.hidden = true;
+            empty.hidden = false;
+            list.innerHTML = "";
+            return;
+        }
+
+        empty.hidden = true;
+        list.hidden = false;
+
+        list.innerHTML =
+            notifications.map(function (item) {
+                const isRead =
+                    readKeys.has(item.key);
+
+                return (
+                    '<button type="button" class="sway-notification-item ' +
+                        notificationIconClass(item.type) +
+                        (isRead ? " is-read" : "") +
+                        '" data-notification-key="' +
+                        esc(item.key) +
+                        '" data-notification-view="' +
+                        esc(item.view) +
+                        '">' +
+                        '<span class="sway-notification-icon" aria-hidden="true">' +
+                            esc(item.icon) +
+                        "</span>" +
+                        '<span class="sway-notification-copy">' +
+                            "<strong>" +
+                                esc(item.title) +
+                            "</strong>" +
+                            "<span>" +
+                                esc(item.detail) +
+                            "</span>" +
+                            (
+                                isRead
+                                    ? ""
+                                    : '<i aria-label="Unread"></i>'
+                            ) +
+                        "</span>" +
+                        '<span class="sway-notification-arrow" aria-hidden="true">›</span>' +
+                    "</button>"
+                );
+            }).join("");
+    }
+
+    function updateNotificationCenter() {
+        renderNotificationPanel();
+    }
+
+    function closeNotificationCenter() {
+        const panel =
+            document.getElementById(
+                "sway-notification-panel"
+            );
+
+        const button =
+            document.getElementById(
+                "sway-notification-toggle"
+            );
+
+        if (!panel || !button) {
+            return;
+        }
+
+        panel.hidden = true;
+        button.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+    }
+
+    function toggleNotificationCenter() {
+        const panel =
+            document.getElementById(
+                "sway-notification-panel"
+            );
+
+        const button =
+            document.getElementById(
+                "sway-notification-toggle"
+            );
+
+        if (!panel || !button) {
+            return;
+        }
+
+        const shouldOpen =
+            panel.hidden;
+
+        panel.hidden = !shouldOpen;
+        button.setAttribute(
+            "aria-expanded",
+            String(shouldOpen)
+        );
+
+        if (shouldOpen) {
+            renderNotificationPanel();
+        }
+    }
+
+    function markNotificationRead(key) {
+        const keys =
+            notificationReadKeys();
+
+        keys.add(String(key));
+        saveNotificationReadKeys(keys);
+        renderNotificationPanel();
+    }
+
+    function markAllNotificationsRead() {
+        const keys =
+            notificationReadKeys();
+
+        workspaceNotifications().forEach(function (item) {
+            keys.add(item.key);
+        });
+
+        saveNotificationReadKeys(keys);
+        renderNotificationPanel();
+    }
+
+    function openNotificationTarget(view) {
+        const button =
+            workspace.querySelector(
+                '[data-view="' +
+                String(view) +
+                '"]'
+            );
+
+        if (button) {
+            button.click();
+        }
+    }
+
+    function setupNotificationCenter() {
+        const button =
+            document.getElementById(
+                "sway-notification-toggle"
+            );
+
+        const panel =
+            document.getElementById(
+                "sway-notification-panel"
+            );
+
+        const list =
+            document.getElementById(
+                "sway-notification-list"
+            );
+
+        const markAll =
+            document.getElementById(
+                "sway-notification-mark-all"
+            );
+
+        if (!button || !panel || !list) {
+            return;
+        }
+
+        button.addEventListener(
+            "click",
+            function () {
+                toggleNotificationCenter();
+            }
+        );
+
+        list.addEventListener(
+            "click",
+            function (event) {
+                const item =
+                    event.target.closest(
+                        "[data-notification-key]"
+                    );
+
+                if (!item) {
+                    return;
+                }
+
+                const key =
+                    item.dataset.notificationKey;
+
+                const view =
+                    item.dataset.notificationView;
+
+                markNotificationRead(key);
+                openNotificationTarget(view);
+                closeNotificationCenter();
+            }
+        );
+
+        if (markAll) {
+            markAll.addEventListener(
+                "click",
+                function () {
+                    markAllNotificationsRead();
+                }
+            );
+        }
+
+        document.addEventListener(
+            "click",
+            function (event) {
+                if (
+                    !panel.contains(event.target) &&
+                    !button.contains(event.target)
+                ) {
+                    closeNotificationCenter();
+                }
+            }
+        );
+
+        document.addEventListener(
+            "keydown",
+            function (event) {
+                if (event.key === "Escape") {
+                    closeNotificationCenter();
+                }
+            }
+        );
+
+        updateNotificationCenter();
+    }
+
 function renderShell() {
         let openGroups = {};
 
@@ -3220,6 +3870,8 @@ function renderShell() {
 
         try {
             await refreshData();
+
+            updateNotificationCenter();
 
             state.lastLiveUpdate = Date.now();
 
@@ -9987,6 +10639,7 @@ function renderShell() {
                 Date.now();
 
             setupGlobalSearch();
+            setupNotificationCenter();
 
             renderShell();
             renderView();
