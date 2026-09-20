@@ -2648,35 +2648,149 @@ function renderShell() {
             "m ago";
     }
 
+    function formatChartValue(value, currency) {
+        const numeric = Number(value || 0);
+
+        if (currency) {
+            return money(numeric);
+        }
+
+        return new Intl.NumberFormat(
+            "en-ZA",
+            {
+                maximumFractionDigits: 0
+            }
+        ).format(numeric);
+    }
+
+    function chartSummary(values, labels, currency) {
+        const numbers = values.map(function (value) {
+            return Number(value || 0);
+        });
+
+        const total = numbers.reduce(function (sum, value) {
+            return sum + value;
+        }, 0);
+
+        const peakValue =
+            Math.max.apply(null, numbers.concat([0]));
+
+        const peakIndex =
+            numbers.indexOf(peakValue);
+
+        const latest =
+            numbers.length
+                ? numbers[numbers.length - 1]
+                : 0;
+
+        const previous =
+            numbers.length > 1
+                ? numbers[numbers.length - 2]
+                : null;
+
+        let trendText = "No recent movement";
+
+        if (previous !== null) {
+            if (previous === 0 && latest > 0) {
+                trendText = "New activity";
+            } else if (previous > 0) {
+                const change =
+                    ((latest - previous) / previous) * 100;
+
+                if (Math.abs(change) < 0.5) {
+                    trendText = "Holding steady";
+                } else {
+                    trendText =
+                        (
+                            change > 0
+                                ? "↑ "
+                                : "↓ "
+                        ) +
+                        Math.abs(change).toFixed(0) +
+                        "% vs previous";
+                }
+            }
+        }
+
+        return (
+            '<div class="sway-chart-summary">' +
+                '<div class="sway-chart-summary-item">' +
+                    "<span>Latest</span>" +
+                    "<strong>" +
+                        esc(
+                            formatChartValue(
+                                latest,
+                                currency
+                            )
+                        ) +
+                    "</strong>" +
+                "</div>" +
+                '<div class="sway-chart-summary-item">' +
+                    "<span>Peak</span>" +
+                    "<strong>" +
+                        esc(
+                            formatChartValue(
+                                peakValue,
+                                currency
+                            )
+                        ) +
+                    "</strong>" +
+                    (
+                        peakIndex >= 0 &&
+                        labels[peakIndex]
+                            ? "<small>" +
+                              esc(
+                                  labels[peakIndex]
+                              ) +
+                              "</small>"
+                            : ""
+                    ) +
+                "</div>" +
+                '<div class="sway-chart-summary-item">' +
+                    "<span>Read</span>" +
+                    "<strong>" +
+                        esc(trendText) +
+                    "</strong>" +
+                "</div>" +
+            "</div>"
+        );
+    }
+
     function trendChart(values, labels, color, label, currency) {
-        const width = 680;
-        const height = 250;
-        const left = 44;
-        const right = 18;
-        const top = 20;
-        const bottom = 34;
+        const width = 760;
+        const height = 320;
+        const left = 70;
+        const right = 24;
+        const top = 28;
+        const bottom = 58;
         const plotWidth = width - left - right;
         const plotHeight = height - top - bottom;
+
+        const numbers =
+            values.map(function (value) {
+                return Number(value || 0);
+            });
 
         const maxValue =
             Math.max.apply(
                 null,
-                values
-                    .map(function (value) {
-                        return Number(value || 0);
-                    })
-                    .concat([1])
+                numbers.concat([1])
             ) || 1;
 
+        const paddedMax =
+            maxValue === 1
+                ? 1
+                : maxValue * 1.12;
+
         const points =
-            values.map(function (value, index) {
+            numbers.map(function (value, index) {
                 const x =
-                    values.length === 1
+                    numbers.length === 1
                         ? width / 2
                         : left +
                           (
                               index /
-                              (values.length - 1)
+                              (numbers.length - 1)
                           ) *
                           plotWidth;
 
@@ -2684,8 +2798,8 @@ function renderShell() {
                     top +
                     plotHeight -
                     (
-                        Number(value || 0) /
-                        maxValue
+                        value /
+                        paddedMax
                     ) *
                     plotHeight;
 
@@ -2707,13 +2821,16 @@ function renderShell() {
         let grid = "";
 
         for (let i = 0; i <= 4; i += 1) {
+            const ratio = i / 4;
             const y =
                 top +
                 plotHeight -
-                (
-                    i / 4
-                ) *
+                ratio *
                 plotHeight;
+
+            const axisValue =
+                paddedMax *
+                ratio;
 
             grid +=
                 '<line x1="' +
@@ -2724,19 +2841,81 @@ function renderShell() {
                 (width - right) +
                 '" y2="' +
                 y +
-                '" class="sway-chart-grid-line"></line>';
+                '" class="sway-chart-grid-line"></line>' +
+                '<text x="' +
+                (left - 11) +
+                '" y="' +
+                (y + 4) +
+                '" text-anchor="end" class="sway-chart-y-label">' +
+                    esc(
+                        formatChartValue(
+                            axisValue,
+                            currency
+                        )
+                    ) +
+                "</text>";
         }
 
-        const circles =
-            points.map(function (point) {
+        const peakValue =
+            Math.max.apply(null, numbers.concat([0]));
+
+        const latestIndex =
+            numbers.length - 1;
+
+        const pointMarks =
+            points.map(function (point, index) {
+                const value = numbers[index];
+                const isPeak =
+                    value === peakValue &&
+                    peakValue > 0;
+                const isLatest =
+                    index === latestIndex;
+
                 return (
-                    '<circle cx="' +
-                    point.x +
-                    '" cy="' +
-                    point.y +
-                    '" r="4" fill="' +
-                    color +
-                    '" class="sway-chart-point"></circle>'
+                    '<g class="sway-chart-point-group">' +
+                        '<circle cx="' +
+                            point.x +
+                        '" cy="' +
+                            point.y +
+                        '" r="' +
+                            (isPeak || isLatest ? 5.5 : 4.5) +
+                        '" fill="' +
+                            color +
+                        '" class="sway-chart-point">' +
+                            "<title>" +
+                                esc(
+                                    String(
+                                        labels[index] ||
+                                        "Period"
+                                    ) +
+                                    ": " +
+                                    formatChartValue(
+                                        value,
+                                        currency
+                                    )
+                                ) +
+                            "</title>" +
+                        "</circle>" +
+                        (
+                            isPeak || isLatest
+                                ? '<text x="' +
+                                  point.x +
+                                  '" y="' +
+                                  Math.max(
+                                      15,
+                                      point.y - 11
+                                  ) +
+                                  '" text-anchor="middle" class="sway-chart-value-label">' +
+                                  esc(
+                                      formatChartValue(
+                                          value,
+                                          currency
+                                      )
+                                  ) +
+                                  "</text>"
+                                : ""
+                        ) +
+                    "</g>"
                 );
             }).join("");
 
@@ -2754,7 +2933,7 @@ function renderShell() {
                     '<text x="' +
                     points[index].x +
                     '" y="' +
-                    (height - 10) +
+                    (height - 18) +
                     '" text-anchor="middle" class="sway-chart-axis-label">' +
                     esc(item) +
                     "</text>"
@@ -2763,107 +2942,79 @@ function renderShell() {
 
         return (
             '<div class="sway-chart-wrap">' +
-                '<svg class="sway-chart" viewBox="0 0 ' +
-                    width +
-                    " " +
-                    height +
-                    '" role="img" aria-label="' +
-                    esc(label) +
-                    '">' +
-                    grid +
-                    '<polyline points="' +
-                        pointString +
-                        '" fill="none" stroke="' +
-                        color +
-                        '" class="sway-chart-line"></polyline>' +
-                    circles +
-                    xLabels +
-                "</svg>" +
+                '<div class="sway-chart-stage">' +
+                    '<svg class="sway-chart" viewBox="0 0 ' +
+                        width +
+                        " " +
+                        height +
+                        '" role="img" aria-label="' +
+                        esc(label) +
+                        '">' +
+                        grid +
+                        '<polyline points="' +
+                            pointString +
+                            '" fill="none" stroke="' +
+                            color +
+                            '" class="sway-chart-line"></polyline>' +
+                        pointMarks +
+                        xLabels +
+                    "</svg>" +
+                "</div>" +
+                chartSummary(
+                    numbers,
+                    labels,
+                    currency
+                ) +
             "</div>"
         );
     }
 
     function barChartSimple(values, labels, color, label, currency) {
-        const width = 680;
-        const height = 250;
-        const left = 44;
-        const right = 18;
-        const top = 20;
-        const bottom = 34;
+        const width = 760;
+        const height = 320;
+        const left = 70;
+        const right = 24;
+        const top = 28;
+        const bottom = 58;
         const plotWidth = width - left - right;
         const plotHeight = height - top - bottom;
+
+        const numbers =
+            values.map(function (value) {
+                return Number(value || 0);
+            });
+
         const maxValue =
             Math.max.apply(
                 null,
-                values
-                    .map(function (value) {
-                        return Number(value || 0);
-                    })
-                    .concat([1])
+                numbers.concat([1])
             ) || 1;
+
+        const paddedMax =
+            maxValue === 1
+                ? 1
+                : maxValue * 1.12;
 
         const groupWidth =
             plotWidth /
-            Math.max(1, values.length);
-
-        const bars =
-            values.map(function (value, index) {
-                const numeric =
-                    Number(value || 0);
-
-                const barHeight =
-                    (
-                        numeric /
-                        maxValue
-                    ) *
-                    plotHeight;
-
-                return (
-                    '<rect x="' +
-                    (
-                        left +
-                        index * groupWidth +
-                        groupWidth * 0.19
-                    ) +
-                    '" y="' +
-                    (
-                        top +
-                        plotHeight -
-                        barHeight
-                    ) +
-                    '" width="' +
-                    (
-                        groupWidth * 0.62
-                    ) +
-                    '" height="' +
-                    Math.max(2, barHeight) +
-                    '" rx="5" fill="' +
-                    color +
-                    '" class="sway-chart-bar"></rect>' +
-                    '<text x="' +
-                    (
-                        left +
-                        index * groupWidth +
-                        groupWidth / 2
-                    ) +
-                    '" y="' +
-                    (height - 10) +
-                    '" text-anchor="middle" class="sway-chart-axis-label">' +
-                    esc(labels[index]) +
-                    "</text>"
-                );
-            }).join("");
+            Math.max(
+                1,
+                numbers.length
+            );
 
         let grid = "";
 
         for (let i = 0; i <= 4; i += 1) {
+            const ratio = i / 4;
             const y =
                 top +
                 plotHeight -
-                (
-                    i / 4
-                ) *
+                ratio *
                 plotHeight;
+
+            const axisValue =
+                paddedMax *
+                ratio;
 
             grid +=
                 '<line x1="' +
@@ -2874,26 +3025,137 @@ function renderShell() {
                 (width - right) +
                 '" y2="' +
                 y +
-                '" class="sway-chart-grid-line"></line>';
+                '" class="sway-chart-grid-line"></line>' +
+                '<text x="' +
+                (left - 11) +
+                '" y="' +
+                (y + 4) +
+                '" text-anchor="end" class="sway-chart-y-label">' +
+                    esc(
+                        formatChartValue(
+                            axisValue,
+                            currency
+                        )
+                    ) +
+                "</text>";
         }
+
+        const peakValue =
+            Math.max.apply(null, numbers.concat([0]));
+
+        const bars =
+            numbers.map(function (value, index) {
+                const barHeight =
+                    (
+                        value /
+                        paddedMax
+                    ) *
+                    plotHeight;
+
+                const x =
+                    left +
+                    index * groupWidth +
+                    groupWidth * 0.16;
+
+                const barWidth =
+                    groupWidth * 0.68;
+
+                const y =
+                    top +
+                    plotHeight -
+                    barHeight;
+
+                const isPeak =
+                    value === peakValue &&
+                    peakValue > 0;
+
+                return (
+                    '<g class="sway-chart-bar-group">' +
+                        '<rect x="' +
+                            x +
+                        '" y="' +
+                            y +
+                        '" width="' +
+                            barWidth +
+                        '" height="' +
+                            Math.max(3, barHeight) +
+                        '" rx="7" fill="' +
+                            color +
+                        '" class="sway-chart-bar">' +
+                            "<title>" +
+                                esc(
+                                    String(
+                                        labels[index] ||
+                                        "Period"
+                                    ) +
+                                    ": " +
+                                    formatChartValue(
+                                        value,
+                                        currency
+                                    )
+                                ) +
+                            "</title>" +
+                        "</rect>" +
+                        (
+                            isPeak
+                                ? '<text x="' +
+                                  (x + barWidth / 2) +
+                                  '" y="' +
+                                  Math.max(
+                                      16,
+                                      y - 8
+                                  ) +
+                                  '" text-anchor="middle" class="sway-chart-value-label">' +
+                                  esc(
+                                      formatChartValue(
+                                          value,
+                                          currency
+                                      )
+                                  ) +
+                                  "</text>"
+                                : ""
+                        ) +
+                        '<text x="' +
+                            (x + barWidth / 2) +
+                        '" y="' +
+                            (height - 18) +
+                        '" text-anchor="middle" class="sway-chart-axis-label">' +
+                            (
+                                labels.length > 7 &&
+                                index % 2 !== 0 &&
+                                index !== labels.length - 1
+                                    ? ""
+                                    : esc(labels[index])
+                            ) +
+                        "</text>" +
+                    "</g>"
+                );
+            }).join("");
 
         return (
             '<div class="sway-chart-wrap">' +
-                '<svg class="sway-chart" viewBox="0 0 ' +
-                    width +
-                    " " +
-                    height +
-                    '" role="img" aria-label="' +
-                    esc(label) +
-                    '">' +
-                    grid +
-                    bars +
-                "</svg>" +
+                '<div class="sway-chart-stage">' +
+                    '<svg class="sway-chart" viewBox="0 0 ' +
+                        width +
+                        " " +
+                        height +
+                        '" role="img" aria-label="' +
+                        esc(label) +
+                        '">' +
+                        grid +
+                        bars +
+                    "</svg>" +
+                "</div>" +
+                chartSummary(
+                    numbers,
+                    labels,
+                    currency
+                ) +
             "</div>"
         );
     }
 
-    function simpleBars(items, color) {
+function simpleBars(items, color) {
         const max =
             Math.max.apply(
                 null,
