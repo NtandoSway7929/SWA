@@ -9748,6 +9748,7 @@ function simpleBars(items, color) {
     async function invokeEmailFunction(
         contactType,
         contactId,
+        recipientEmail,
         subject,
         message
     ) {
@@ -9772,6 +9773,8 @@ function simpleBars(items, color) {
                                 contactType,
                             contact_id:
                                 contactId,
+                            recipient_email:
+                                recipientEmail,
                             subject:
                                 subject,
                             message:
@@ -10177,6 +10180,7 @@ function simpleBars(items, color) {
                         await invokeEmailFunction(
                             selectedTypeState,
                             contact.id,
+                            contact.email,
                             subject,
                             message
                         );
