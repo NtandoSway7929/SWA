@@ -39,6 +39,13 @@ create table if not exists public.leads (
     assigned_to uuid references public.admin_users(user_id) on delete set null,
     next_follow_up date,
     notes text,
+    business_assessment text,
+    research_findings text,
+    swayphics_solution text,
+    recommended_services text,
+    research_sources text,
+    assessment_updated_at timestamptz,
+    assessment_updated_by uuid references public.admin_users(user_id) on delete set null,
     converted_client_id uuid references public.clients(id) on delete set null,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
