@@ -8212,7 +8212,7 @@ function simpleBars(items, color) {
             ) +
             panel(
                 "Clients",
-                "Manage active and archived client relationships. Archive to retain history, or delete when the record and its linked work can safely be removed.",
+                "Manage active and archived client relationships. Archive to retain history without removing the client record.",
                 state.clients.length
                     ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Contact</th><th>Owner</th><th>Projects</th><th>Health</th><th>Status</th><th></th></tr></thead><tbody>' +
                       rows +
