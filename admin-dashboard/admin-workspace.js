@@ -9273,8 +9273,9 @@ function renderShell() {
                     }
                 ];
             }
-        }
-            communications: {
+        },
+
+        communications: {
             table: "communication_logs",
             title: "Communication",
             fields: function (item) {
@@ -9404,9 +9405,9 @@ function renderShell() {
                     }
                 ];
             }
-        },
+        }
 
-};
+    };
 
     function showModal(title, fields, onSubmit) {
         const modal =
