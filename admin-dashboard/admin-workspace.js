@@ -329,6 +329,31 @@
         return value ? String(value).slice(0, 10) : "";
     }
 
+    function dateTime(value) {
+        if (!value) return "—";
+
+        const parsed = parseDashboardDate(value);
+
+        if (!parsed) {
+            return String(value);
+        }
+
+        return parsed.toLocaleString(
+            "en-ZA",
+            {
+                timeZone: SOUTH_AFRICA_TIME_ZONE,
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hourCycle: "h23"
+            }
+        );
+    }
+
+
     function adminName(id) {
         const admin = state.admins.find(function (item) {
             return item.user_id === id;
@@ -4946,11 +4971,13 @@
                             chip(item.status) +
                         "</td>" +
                         "<td>" +
-                            esc(
-                                date(
-                                    item.created_at
-                                )
-                            ) +
+                            '<span class="sway-activity-datetime">' +
+                                esc(
+                                    dateTime(
+                                        item.created_at
+                                    )
+                                ) +
+                            "</span>" +
                         "</td>" +
                         "<td>" +
                             '<div class="sway-row-actions">' +
@@ -5087,7 +5114,7 @@
                 "Activity log",
                 "A shared history of changes made inside the workspace.",
                 rows
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Area</th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Date &amp; time</th><th>Who</th><th>Action</th><th>Area</th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No activity recorded.")
