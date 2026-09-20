@@ -5361,6 +5361,58 @@ portfolioForm.addEventListener(
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="admin-workspace.js?v=notifications-20260919"></script>
 
+<script>
+(function () {
+    function bindSwayphicsNotificationButton() {
+        var button =
+            document.getElementById(
+                "sway-notification-toggle"
+            );
+
+        var panel =
+            document.getElementById(
+                "sway-notification-panel"
+            );
+
+        if (!button || !panel || button.dataset.boundFallback === "true") {
+            return;
+        }
+
+        button.dataset.boundFallback = "true";
+
+        button.addEventListener(
+            "click",
+            function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                var open =
+                    panel.hidden;
+
+                panel.hidden = !open;
+
+                button.setAttribute(
+                    "aria-expanded",
+                    open ? "true" : "false"
+                );
+            },
+            true
+        );
+    }
+
+    if (
+        document.readyState === "loading"
+    ) {
+        document.addEventListener(
+            "DOMContentLoaded",
+            bindSwayphicsNotificationButton
+        );
+    } else {
+        bindSwayphicsNotificationButton();
+    }
+})();
+</script>
+
 </body>
 
 </html>
