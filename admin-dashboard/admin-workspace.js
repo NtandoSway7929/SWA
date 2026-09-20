@@ -3017,6 +3017,31 @@ function renderShell() {
         ).format(numeric);
     }
 
+    function formatChartAxisValue(value, currency) {
+        const numeric = Number(value || 0);
+        const absolute = Math.abs(numeric);
+
+        if (currency) {
+            if (absolute >= 1000000) {
+                return "R" + (numeric / 1000000).toFixed(absolute >= 10000000 ? 0 : 1) + "m";
+            }
+
+            if (absolute >= 1000) {
+                return "R" + (numeric / 1000).toFixed(absolute >= 10000 ? 0 : 1) + "k";
+            }
+
+            return money(numeric);
+        }
+
+        if (absolute >= 1000) {
+            return (numeric / 1000).toFixed(absolute >= 10000 ? 0 : 1) + "k";
+        }
+
+        return new Intl.NumberFormat("en-ZA", {
+            maximumFractionDigits: 0
+        }).format(numeric);
+    }
+
     function chartSummary(values, labels, currency) {
         const numbers = values.map(function (value) {
             return Number(value || 0);
@@ -3049,6 +3074,7 @@ function renderShell() {
 
         let trendText = "No recent movement";
         let changePercent = null;
+        let trendDetail = "Waiting for another period to compare.";
 
         if (previous !== null) {
             if (previous === 0 && latest > 0) {
@@ -3075,6 +3101,27 @@ function renderShell() {
         }
 
         let readText = "No activity recorded in this period.";
+
+        if (previous !== null) {
+            if (previous === 0 && latest === 0) {
+                trendDetail = "Both periods recorded no activity.";
+            } else if (previous === 0 && latest > 0) {
+                trendDetail = "The latest period moved up from zero activity.";
+            } else if (previous > 0) {
+                changePercent = ((latest - previous) / previous) * 100;
+
+                if (Math.abs(changePercent) < 0.5) {
+                    trendText = "Holding steady";
+                    trendDetail = "The latest period is broadly in line with the previous period.";
+                } else if (changePercent > 0) {
+                    trendText = "↑ " + Math.abs(changePercent).toFixed(0) + "% vs previous";
+                    trendDetail = "Momentum is higher than the previous period.";
+                } else {
+                    trendText = "↓ " + Math.abs(changePercent).toFixed(0) + "% vs previous";
+                    trendDetail = "Momentum is lower than the previous period.";
+                }
+            }
+        }
 
         if (numbers.length) {
             if (latest === 0 && total === 0) {
@@ -3175,6 +3222,9 @@ function renderShell() {
                     "<strong>" +
                         esc(trendText) +
                     "</strong>" +
+                    "<small>" +
+                        esc(trendDetail) +
+                    "</small>" +
                 "</div>" +
             "</div>" +
             '<div class="sway-chart-reading">' +
@@ -3291,7 +3341,7 @@ function renderShell() {
                 (y + 4) +
                 '" text-anchor="end" class="sway-chart-y-label">' +
                     esc(
-                        formatChartValue(
+                        formatChartAxisValue(
                             axisValue,
                             currency
                         )
@@ -3518,7 +3568,7 @@ function renderShell() {
                 (y + 4) +
                 '" text-anchor="end" class="sway-chart-y-label">' +
                     esc(
-                        formatChartValue(
+                        formatChartAxisValue(
                             axisValue,
                             currency
                         )
