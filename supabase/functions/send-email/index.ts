@@ -53,14 +53,14 @@ function brandedEmailHtml(
 <body style="margin:0;background:#F4F7FC;font-family:Arial,Helvetica,sans-serif;color:#081533;">
   <div style="max-width:700px;margin:0 auto;padding:32px 18px;">
     <div style="background:#FFFFFF;border:1px solid #E0E6F0;border-radius:22px;overflow:hidden;box-shadow:0 12px 35px rgba(0,32,150,.07);">
-      <div style="padding:25px 30px;background:linear-gradient(135deg,#002096 0%,#0031C5 50%,#0152F4 100%);">
+      <div style="padding:25px 30px;background:#FFFFFF;border-bottom:1px solid #E7ECF4;">
         <img
           src="https://swayphics.co.za/swayphics-logo.png"
           alt="Swayphics"
           width="145"
           style="display:block;width:145px;height:auto;"
         />
-        <div style="margin-top:10px;color:rgba(255,255,255,.76);font-size:10px;line-height:1.4;font-weight:700;letter-spacing:.16em;">
+        <div style="margin-top:10px;color:#56627A;font-size:10px;line-height:1.4;font-weight:700;letter-spacing:.16em;">
           EMPOWERING THROUGH DESIGN
         </div>
       </div>
