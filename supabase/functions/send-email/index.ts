@@ -60,9 +60,6 @@ function brandedEmailHtml(
           width="145"
           style="display:block;width:145px;height:auto;"
         />
-        <div style="margin-top:10px;color:#56627A;font-size:10px;line-height:1.4;font-weight:700;letter-spacing:.16em;">
-          EMPOWERING THROUGH DESIGN
-        </div>
       </div>
 
       <div style="padding:34px 30px 26px;">
@@ -83,7 +80,7 @@ function brandedEmailHtml(
       </div>
 
       <div style="padding:18px 30px;background:#F7FAFF;border-top:1px solid #E7ECF4;color:#7A899D;font-size:11px;line-height:1.7;">
-        <strong style="color:#081533;">Swayphics</strong> · Empowering Through Design<br>
+        <strong style="color:#081533;">Swayphics</strong><br>
         info@swayphics.co.za · swayphics.co.za
       </div>
     </div>
