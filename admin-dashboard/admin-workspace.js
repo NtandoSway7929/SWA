@@ -825,7 +825,9 @@
             );
         }
 
-        restoreWorkspaceSnapshot();
+        // Do not render stale session data during startup. The workspace
+        // should load the current Supabase records rather than briefly showing
+        // an older snapshot and then replacing it.
     }
 
     async function refreshData() {
@@ -1022,7 +1024,7 @@
         const view = item[0];
         let count = "";
 
-        if (view === "tasks") {
+        if (view === "tasks" && state.currentUser && state.currentUser.id) {
             count = state.tasks.filter(function (item) {
                 return (
                     item.status !== "completed" &&
