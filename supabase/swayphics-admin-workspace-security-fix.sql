@@ -65,6 +65,8 @@ grant select, insert, update, delete on table public.payments to authenticated;
 grant select, insert, update, delete on table public.website_enquiries to authenticated;
 grant select, insert, update, delete on table public.site_announcements to authenticated;
 grant select on table public.site_announcements to anon;
+grant select, insert, update, delete on table public.social_accounts, public.social_posts, public.social_metrics to authenticated;
+
 grant select, insert, update, delete on table public.activity_log to authenticated;grant select, insert, update, delete on table public.communication_logs to authenticated;
 
 
@@ -202,6 +204,24 @@ create policy "Swayphics admins can manage communication logs"
 on public.communication_logs
 for all
 to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
+drop policy if exists "Swayphics admins can manage social accounts" on public.social_accounts;
+create policy "Swayphics admins can manage social accounts"
+on public.social_accounts for all to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
+drop policy if exists "Swayphics admins can manage social posts" on public.social_posts;
+create policy "Swayphics admins can manage social posts"
+on public.social_posts for all to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
+drop policy if exists "Swayphics admins can manage social metrics" on public.social_metrics;
+create policy "Swayphics admins can manage social metrics"
+on public.social_metrics for all to authenticated
 using (public.is_swayphics_admin())
 with check (public.is_swayphics_admin());
 
