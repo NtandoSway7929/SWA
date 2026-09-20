@@ -43,9 +43,19 @@ function brandedEmailHtml(
   businessName: string,
   message: string,
 ) {
-  const greetingName =
-    String(recipientName || "").trim() ||
+  const normalizedRecipientName =
+    String(recipientName || "").trim();
+
+  const normalizedBusinessName =
     String(businessName || "").trim();
+
+  /*
+   * Prefer the saved contact person. If no contact person was recorded,
+   * use the business name rather than falling back to a generic greeting.
+   */
+  const greetingName =
+    normalizedRecipientName ||
+    normalizedBusinessName;
 
   const greetingMarkup =
     greetingName
