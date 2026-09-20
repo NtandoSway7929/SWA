@@ -9754,6 +9754,18 @@ function simpleBars(items, color) {
         subject,
         message
     ) {
+        const recipientMatch =
+            String(recipientEmail || "").match(
+                /[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i
+            );
+
+        const normalizedRecipientEmail =
+            (
+                recipientMatch
+                    ? recipientMatch[0]
+                    : String(recipientEmail || "").trim()
+            ).toLowerCase();
+
         const response =
             await fetch(
                 SUPABASE_URL +
@@ -9776,7 +9788,7 @@ function simpleBars(items, color) {
                             contact_id:
                                 contactId,
                             recipient_email:
-                                recipientEmail,
+                                normalizedRecipientEmail,
                             subject:
                                 subject,
                             message:
