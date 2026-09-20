@@ -10026,17 +10026,23 @@ function simpleBars(items, color) {
                 );
 
             if (
-                !records.some(function (item) {
+                contactInput.value &&
+                records.some(function (item) {
                     return item.id === contactInput.value;
                 })
             ) {
                 selectedIdState =
-                    records[0]
-                        ? records[0].id
-                        : "";
-            } else {
-                selectedIdState =
                     contactInput.value;
+            } else if (
+                selectedIdState &&
+                records.some(function (item) {
+                    return item.id === selectedIdState;
+                })
+            ) {
+                selectedIdState =
+                    selectedIdState;
+            } else {
+                selectedIdState = "";
             }
 
             contactInput.innerHTML =
