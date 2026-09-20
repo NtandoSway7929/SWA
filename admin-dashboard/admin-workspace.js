@@ -9821,15 +9821,92 @@ function simpleBars(items, color) {
         }
 
         if (!response.ok) {
-            throw new Error(
+            const errorMessage =
                 result &&
                 result.error
-                    ? result.error
-                    : (
-                        "Email sending failed with " +
-                        response.status +
-                        "."
-                    )
+                    ? String(result.error)
+                    : "";
+
+            if (
+                response.status === 500 &&
+                errorMessage.includes(
+                    "The selected recipient could not be found in the Swayphics contacts"
+                ) &&
+                normalizedRecipientEmail
+            ) {
+                const retryResponse =
+                    await fetch(
+                        SUPABASE_URL +
+                        "/functions/v1/send-email",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json",
+                                "apikey":
+                                    SUPABASE_PUBLISHABLE_KEY,
+                                "Authorization":
+                                    "Bearer " +
+                                    token()
+                            },
+                            body:
+                                JSON.stringify({
+                                    contact_type:
+                                        contactType,
+                                    contact_id:
+                                        "",
+                                    recipient_email:
+                                        normalizedRecipientEmail,
+                                    subject:
+                                        subject,
+                                    message:
+                                        message
+                                })
+                        }
+                    );
+
+                const retryText =
+                    await retryResponse.text();
+
+                let retryResult = null;
+
+                try {
+                    retryResult =
+                        retryText
+                            ? JSON.parse(
+                                retryText
+                            )
+                            : null;
+                } catch (error) {
+                    retryResult = {
+                        error:
+                            retryText
+                    };
+                }
+
+                if (retryResponse.ok) {
+                    return retryResult;
+                }
+
+                throw new Error(
+                    retryResult &&
+                    retryResult.error
+                        ? retryResult.error
+                        : (
+                            "Email sending failed with " +
+                            retryResponse.status +
+                            "."
+                        )
+                );
+            }
+
+            throw new Error(
+                errorMessage ||
+                (
+                    "Email sending failed with " +
+                    response.status +
+                    "."
+                )
             );
         }
 
