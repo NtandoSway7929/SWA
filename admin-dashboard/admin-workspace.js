@@ -16215,22 +16215,32 @@ function simpleBars(items, color) {
                                         method: "DELETE",
                                         headers: headers({
                                             "Prefer":
-                                                "return=minimal"
+                                                "return=representation"
                                         })
                                     }
                                 );
 
-                                await api(
-                                    "/rest/v1/invoices?id=eq." +
-                                    encodeURIComponent(id),
-                                    {
-                                        method: "DELETE",
-                                        headers: headers({
-                                            "Prefer":
-                                                "return=minimal"
-                                        })
-                                    }
-                                );
+                                const deletedInvoices =
+                                    await api(
+                                        "/rest/v1/invoices?id=eq." +
+                                        encodeURIComponent(id),
+                                        {
+                                            method: "DELETE",
+                                            headers: headers({
+                                                "Prefer":
+                                                    "return=representation"
+                                            })
+                                        }
+                                    );
+
+                                if (
+                                    !Array.isArray(deletedInvoices) ||
+                                    deletedInvoices.length === 0
+                                ) {
+                                    throw new Error(
+                                        "The invoice was not deleted. Your current Supabase permissions or RLS policy may be blocking invoice deletion."
+                                    );
+                                }
 
                                 await logActivity(
                                     invoice.archived
