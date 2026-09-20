@@ -757,7 +757,424 @@
         }
     }
 
-    function renderShell() {
+    function searchRecordTitle(item, type) {
+        const value = item || {};
+
+        return (
+            value.business_name ||
+            value.name ||
+            value.title ||
+            value.subject ||
+            value.invoice_number ||
+            value.quote_number ||
+            value.reference ||
+            value.email ||
+            value.full_name ||
+            value.description ||
+            "Untitled record"
+        );
+    }
+
+    function searchRecordMeta(item, type) {
+        const value = item || {};
+        const parts = [];
+
+        if (value.status) {
+            parts.push(formatDisplayText(value.status));
+        }
+
+        if (type === "enquiries" && value.email) {
+            parts.push(value.email);
+        }
+
+        if (type === "leads" && value.email) {
+            parts.push(value.email);
+        }
+
+        if (type === "clients" && value.email) {
+            parts.push(value.email);
+        }
+
+        if (type === "projects" && value.client_id) {
+            parts.push(clientName(value.client_id));
+        }
+
+        if (type === "tasks") {
+            if (value.client_id) {
+                parts.push(clientName(value.client_id));
+            } else if (value.project_id) {
+                parts.push(projectName(value.project_id));
+            }
+        }
+
+        if (type === "quotes" && value.client_id) {
+            parts.push(clientName(value.client_id));
+        }
+
+        if (type === "invoices" && value.client_id) {
+            parts.push(clientName(value.client_id));
+        }
+
+        if (type === "payments") {
+            if (value.client_id) {
+                parts.push(clientName(value.client_id));
+            }
+            if (value.invoice_id) {
+                const invoice = state.invoices.find(function (entry) {
+                    return entry.id === value.invoice_id;
+                });
+
+                if (invoice && invoice.invoice_number) {
+                    parts.push(invoice.invoice_number);
+                }
+            }
+        }
+
+        if (type === "followups" && value.client_id) {
+            parts.push(clientName(value.client_id));
+        }
+
+        if (type === "activities" && value.entity_type) {
+            parts.push(formatDisplayText(value.entity_type));
+        }
+
+        return parts.filter(Boolean).slice(0, 2).join(" · ");
+    }
+
+    function searchRecordData() {
+        const sources = [
+            ["enquiries", "Enquiry", state.enquiries],
+            ["leads", "Lead", state.leads],
+            ["clients", "Client", state.clients],
+            ["followups", "Follow-up", state.followups],
+            ["projects", "Project", state.projects],
+            ["tasks", "Task", state.tasks],
+            ["quotes", "Quote", state.quotes],
+            ["invoices", "Invoice", state.invoices],
+            ["payments", "Payment", state.payments],
+            ["services", "Service", state.services],
+            ["announcements", "Announcement", state.announcements],
+            ["activities", "Activity", state.activities],
+            ["admins", "Team member", state.admins]
+        ];
+
+        return sources.reduce(function (all, source) {
+            const type = source[0];
+            const label = source[1];
+            const records = Array.isArray(source[2]) ? source[2] : [];
+
+            records.forEach(function (item) {
+                const title = searchRecordTitle(item, type);
+                const meta = searchRecordMeta(item, type);
+                const searchable =
+                    [
+                        title,
+                        meta,
+                        Object.values(item || {}).join(" ")
+                    ]
+                    .join(" ")
+                    .toLowerCase();
+
+                all.push({
+                    type: type,
+                    label: label,
+                    id: item && item.id ? item.id : "",
+                    title: String(title),
+                    meta: meta,
+                    searchable: searchable
+                });
+            });
+
+            return all;
+        }, []);
+    }
+
+    function searchWorkspace(query) {
+        const normalized = String(query || "")
+            .trim()
+            .toLowerCase();
+
+        if (!normalized) return [];
+
+        const words = normalized
+            .split(/s+/)
+            .filter(Boolean);
+
+        return searchRecordData()
+            .map(function (record) {
+                let score = 0;
+
+                words.forEach(function (word) {
+                    if (record.title.toLowerCase().includes(word)) {
+                        score += 10;
+                    } else if (record.meta.toLowerCase().includes(word)) {
+                        score += 5;
+                    } else if (record.searchable.includes(word)) {
+                        score += 2;
+                    }
+                });
+
+                return Object.assign({ score: score }, record);
+            })
+            .filter(function (record) {
+                return record.score > 0;
+            })
+            .sort(function (a, b) {
+                if (b.score !== a.score) {
+                    return b.score - a.score;
+                }
+
+                return a.title.localeCompare(b.title);
+            })
+            .slice(0, 12);
+    }
+
+    function searchResultIcon(type) {
+        const icons = {
+            enquiries: "?",
+            leads: "L",
+            clients: "C",
+            followups: "F",
+            projects: "P",
+            tasks: "T",
+            quotes: "Q",
+            invoices: "I",
+            payments: "R",
+            services: "S",
+            announcements: "A",
+            activities: "↗",
+            admins: "T"
+        };
+
+        return icons[type] || "•";
+    }
+
+    function searchResultView(type) {
+        return type === "enquiries"
+            ? "enquiries"
+            : type === "leads"
+                ? "leads"
+                : type === "clients"
+                    ? "clients"
+                    : type === "followups"
+                        ? "followups"
+                        : type === "projects"
+                            ? "projects"
+                            : type === "tasks"
+                                ? "tasks"
+                                : type === "quotes"
+                                    ? "quotes"
+                                    : type === "invoices"
+                                        ? "invoices"
+                                        : type === "payments"
+                                            ? "payments"
+                                            : type === "services"
+                                                ? "services"
+                                                : type === "announcements"
+                                                    ? "content"
+                                                    : type === "activities"
+                                                        ? "activity"
+                                                        : type === "admins"
+                                                            ? "team"
+                                                            : "overview";
+    }
+
+    function renderGlobalSearchResults(results, query) {
+        const resultsBox =
+            document.getElementById(
+                "admin-global-search-results"
+            );
+
+        if (!resultsBox) return;
+
+        if (!String(query || "").trim()) {
+            resultsBox.innerHTML =
+                '<div class="admin-global-search-hint">' +
+                    "Search clients, leads, projects, tasks, quotes, invoices and more." +
+                "</div>";
+
+            resultsBox.hidden = false;
+            return;
+        }
+
+        if (!results.length) {
+            resultsBox.innerHTML =
+                '<div class="admin-global-search-empty">' +
+                    "No matching workspace records found." +
+                "</div>";
+
+            resultsBox.hidden = false;
+            return;
+        }
+
+        resultsBox.innerHTML = results.map(function (result, index) {
+            return (
+                '<button type="button" class="admin-global-search-result" role="option" data-search-index="' +
+                    index +
+                '">' +
+                    '<span class="admin-global-search-result-icon" aria-hidden="true">' +
+                        esc(searchResultIcon(result.type)) +
+                    "</span>" +
+                    '<span class="admin-global-search-result-copy">' +
+                        '<span class="admin-global-search-result-title">' +
+                            esc(formatDisplayText(result.title)) +
+                        "</span>" +
+                        '<span class="admin-global-search-result-meta">' +
+                            esc(result.meta || "Workspace record") +
+                        "</span>" +
+                    "</span>" +
+                    '<span class="admin-global-search-result-type">' +
+                        esc(result.label) +
+                    "</span>" +
+                "</button>"
+            );
+        }).join("");
+
+        resultsBox.hidden = false;
+    }
+
+    function closeGlobalSearch() {
+        const input = document.getElementById("admin-global-search-input");
+        const resultsBox = document.getElementById("admin-global-search-results");
+
+        if (resultsBox) {
+            resultsBox.hidden = true;
+        }
+
+        if (input) {
+            input.setAttribute("aria-expanded", "false");
+        }
+    }
+
+    function openGlobalSearch() {
+        const input = document.getElementById("admin-global-search-input");
+        const resultsBox = document.getElementById("admin-global-search-results");
+
+        if (!input) return;
+
+        input.focus();
+        renderGlobalSearchResults(
+            searchWorkspace(input.value),
+            input.value
+        );
+
+        if (resultsBox) {
+            resultsBox.hidden = false;
+        }
+
+        input.setAttribute("aria-expanded", "true");
+    }
+
+    function setupGlobalSearch() {
+        const input =
+            document.getElementById("admin-global-search-input");
+
+        const resultsBox =
+            document.getElementById("admin-global-search-results");
+
+        const wrapper =
+            document.getElementById("admin-global-search");
+
+        if (!input || !resultsBox || !wrapper) return;
+
+        input.addEventListener("input", function () {
+            renderGlobalSearchResults(
+                searchWorkspace(input.value),
+                input.value
+            );
+
+            input.setAttribute("aria-expanded", "true");
+        });
+
+        input.addEventListener("focus", function () {
+            renderGlobalSearchResults(
+                searchWorkspace(input.value),
+                input.value
+            );
+
+            input.setAttribute("aria-expanded", "true");
+        });
+
+        input.addEventListener("keydown", function (event) {
+            if (
+                event.key === "Escape"
+            ) {
+                closeGlobalSearch();
+                input.blur();
+                return;
+            }
+
+            if (event.key === "Enter") {
+                const first =
+                    resultsBox.querySelector(
+                        "[data-search-index='0']"
+                    );
+
+                if (first) {
+                    first.click();
+                    event.preventDefault();
+                }
+            }
+        });
+
+        resultsBox.addEventListener("click", function (event) {
+            const resultButton =
+                event.target.closest(
+                    "[data-search-index]"
+                );
+
+            if (!resultButton) return;
+
+            const results =
+                searchWorkspace(input.value);
+
+            const result =
+                results[
+                    Number(
+                        resultButton.dataset.searchIndex
+                    )
+                ];
+
+            if (!result) return;
+
+            const view =
+                searchResultView(result.type);
+
+            const navButton =
+                workspace.querySelector(
+                    '[data-view="' +
+                    view +
+                    '"]'
+                );
+
+            if (navButton) {
+                navButton.click();
+            }
+
+            closeGlobalSearch();
+            input.value = "";
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!wrapper.contains(event.target)) {
+                closeGlobalSearch();
+            }
+        });
+
+        document.addEventListener("keydown", function (event) {
+            const isShortcut =
+                (event.ctrlKey || event.metaKey) &&
+                String(event.key).toLowerCase() === "k";
+
+            if (isShortcut) {
+                event.preventDefault();
+                openGlobalSearch();
+            }
+        });
+    }
+
+
+function renderShell() {
         let openGroups = {};
 
         try {
@@ -7899,6 +8316,8 @@
 
             state.lastLiveUpdate =
                 Date.now();
+
+            setupGlobalSearch();
 
             renderShell();
             renderView();
