@@ -65,6 +65,7 @@
                 ["leads", "Leads"],
                 ["clients", "Clients"],
                 ["communications", "Communication log"],
+                ["email", "Email"],
                 ["documents", "Documents"],
                 ["followups", "Follow-ups"]
             ]
@@ -984,6 +985,10 @@
                 "Communication log",
                 "Record and review every important client and lead interaction."
             ],
+            email: [
+                "Email",
+                "Send branded Swayphics emails from info@swayphics.co.za and automatically record them."
+            ],
             documents: [
                 "Documents",
                 "Keep private client and project files attached to the work they belong to."
@@ -1195,6 +1200,7 @@
             ["invoices", "Invoice", state.invoices],
             ["payments", "Payment", state.payments],
             ["communications", "Communication", state.communications],
+            ["email", "Email", state.communications],
             ["documents", "Document", state.documents],
             ["portal-requests", "Portal request", state.portalRequests],
             ["services", "Service", state.services],
@@ -1321,7 +1327,9 @@
                                             ? "payments"
                                             : type === "communications"
                                                 ? "communications"
-                                                : type === "documents"
+                                                : type === "email"
+                                                    ? "email"
+                                                    : type === "documents"
                                                     ? "documents"
                                                 : type === "portal-requests"
                                                     ? "portal-requests"
@@ -7098,6 +7106,13 @@ function simpleBars(items, color) {
                                     esc(item.id) +
                                 '">Edit</button>' +
                                 (
+                                    item.email
+                                        ? '<button class="sway-row-action" data-send-email-type="lead" data-send-email-id="' +
+                                          esc(item.id) +
+                                          '">Email</button>'
+                                        : ""
+                                ) +
+                                (
                                     !["won", "lost"].includes(item.status)
                                         ? '<button class="sway-row-action" data-convert-lead="' +
                                           esc(item.id) +
@@ -7306,6 +7321,13 @@ function simpleBars(items, color) {
                         ) +
                     "</div>" +
                     '<div class="sway-client360-head-actions">' +
+                        (
+                            client.email
+                                ? '<button type="button" class="sway-workspace-button" data-send-email-type="client" data-send-email-id="' +
+                                  esc(client.id) +
+                                  '">Send email</button>'
+                                : ""
+                        ) +
                         '<button type="button" class="sway-workspace-button" data-edit="clients" data-id="' +
                             esc(client.id) +
                         '">Edit client</button>' +
@@ -8139,6 +8161,13 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action" data-edit="clients" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
+                                (
+                                    item.email
+                                        ? '<button class="sway-row-action" data-send-email-type="client" data-send-email-id="' +
+                                          esc(item.id) +
+                                          '">Email</button>'
+                                        : ""
+                                ) +
                                 '<button class="sway-row-action" data-new-project-client="' +
                                     esc(item.id) +
                                 '">Project</button>' +
@@ -9619,6 +9648,530 @@ function simpleBars(items, color) {
         return result;
     }
 
+
+    function generateEmailSubject(type, item) {
+        const contact = item || {};
+        const business = String(
+            contact.business_name ||
+            "Business correspondence"
+        ).trim();
+
+        const service =
+            type === "lead"
+                ? String(
+                    contact.service_interest ||
+                    ""
+                ).trim()
+                : "";
+
+        return (
+            "Swayphics | " +
+            business +
+            (
+                service
+                    ? " | " +
+                      formatDisplayText(service)
+                    : ""
+            )
+        ).slice(0, 180);
+    }
+
+    function emailContactRecords(type) {
+        const source =
+            type === "lead"
+                ? state.leads
+                : state.clients;
+
+        return (
+            Array.isArray(source)
+                ? source
+                : []
+        ).filter(function (item) {
+            return String(item.email || "").trim();
+        });
+    }
+
+    async function invokeEmailFunction(
+        contactType,
+        contactId,
+        subject,
+        message
+    ) {
+        const response =
+            await fetch(
+                SUPABASE_URL +
+                "/functions/v1/send-email",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+                        "Authorization":
+                            "Bearer " +
+                            token()
+                    },
+                    body:
+                        JSON.stringify({
+                            contact_type:
+                                contactType,
+                            contact_id:
+                                contactId,
+                            subject:
+                                subject,
+                            message:
+                                message
+                        })
+                }
+            );
+
+        const responseText =
+            await response.text();
+
+        let result = null;
+
+        try {
+            result =
+                responseText
+                    ? JSON.parse(
+                        responseText
+                    )
+                    : null;
+        } catch (error) {
+            result = {
+                error:
+                    responseText
+            };
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                result &&
+                result.error
+                    ? result.error
+                    : (
+                        "Email sending failed with " +
+                        response.status +
+                        "."
+                    )
+            );
+        }
+
+        return result;
+    }
+
+    function renderEmailWorkspace() {
+        const sentEmails =
+            state.communications
+                .filter(function (item) {
+                    return (
+                        item.channel === "Email" &&
+                        item.direction === "outbound"
+                    );
+                })
+                .slice(0, 8);
+
+        const recentRows =
+            sentEmails.map(function (item) {
+                const contact =
+                    item.client_id
+                        ? clientName(item.client_id)
+                        : leadName(item.lead_id);
+
+                return (
+                    "<tr>" +
+                        "<td><strong>" +
+                            esc(contact) +
+                        "</strong>" +
+                        (
+                            item.subject
+                                ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
+                                  esc(item.subject) +
+                                  "</span>"
+                                : ""
+                        ) +
+                        "</td>" +
+                        "<td>" +
+                            '<div class="sway-communication-message">' +
+                                esc(item.message || "—") +
+                            "</div>" +
+                        "</td>" +
+                        "<td>" +
+                            esc(dateTime(item.contacted_at)) +
+                        "</td>" +
+                        "<td>" +
+                            esc(adminName(item.created_by)) +
+                        "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+
+        return (
+            heading(
+                '<button type="button" class="sway-workspace-button primary" data-compose-email>+ Compose email</button>'
+            ) +
+            '<section class="sway-email-summary">' +
+                '<div class="sway-email-summary-copy">' +
+                    '<span class="admin-label">Swayphics mail</span>' +
+                    "<h3>Send from info@swayphics.co.za</h3>" +
+                    "<p>Every message uses the Swayphics branded email wrapper. The greeting and signature are added automatically, while your message remains completely under your control.</p>" +
+                "</div>" +
+                '<div class="sway-email-summary-grid">' +
+                    '<div><span>From</span><strong>info@swayphics.co.za</strong></div>' +
+                    '<div><span>Template</span><strong>Branded</strong></div>' +
+                    '<div><span>Logging</span><strong>Automatic</strong></div>' +
+                "</div>" +
+            "</section>" +
+            panel(
+                "Recent sent emails",
+                "Outbound emails sent by Swayphics admins from the built-in composer.",
+                recentRows
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Message</th><th>Date &amp; time</th><th>Sent by</th></tr></thead><tbody>' +
+                      recentRows +
+                      "</tbody></table></div>"
+                    : empty(
+                        "No sent emails yet. Compose the first one from the button above or directly from a lead or client."
+                    )
+            ) +
+            '<div class="sway-inline-note">' +
+                "<strong>Automatic communication log:</strong> every successful email is added to the relationship history used by Client 360 and the Communication Log." +
+            "</div>"
+        );
+    }
+
+    function openEmailComposer(contactType, contactId) {
+        const modalId =
+            "sway-email-composer";
+
+        document.getElementById(modalId)?.remove();
+
+        let selectedType =
+            contactType === "client" ||
+            contactType === "lead"
+                ? contactType
+                : (
+                    emailContactRecords("lead").length
+                        ? "lead"
+                        : "client"
+                );
+
+        let selectedId =
+            contactId || "";
+
+        if (
+            !emailContactRecords(
+                selectedType
+            ).some(function (item) {
+                return item.id === selectedId;
+            })
+        ) {
+            selectedId = "";
+        }
+
+        const modal =
+            document.createElement("div");
+
+        modal.className =
+            "sway-email-composer";
+
+        modal.id =
+            modalId;
+
+        modal.innerHTML =
+            '<div class="sway-email-composer-backdrop" data-close-email-composer></div>' +
+            '<section class="sway-email-composer-card" role="dialog" aria-modal="true" aria-labelledby="sway-email-composer-title">' +
+                '<div class="sway-email-composer-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Swayphics mail</span>' +
+                        '<h3 id="sway-email-composer-title">Compose email</h3>' +
+                        '<p>From <strong>info@swayphics.co.za</strong>. Your greeting, Swayphics branding and signature are handled automatically.</p>' +
+                    "</div>" +
+                    '<button type="button" class="sway-client360-close" data-close-email-composer aria-label="Close email composer">×</button>' +
+                "</div>" +
+                '<form class="sway-email-composer-form">' +
+                    '<div class="sway-email-composer-recipient-grid">' +
+                        '<div class="sway-email-field">' +
+                            '<label for="sway-email-contact-type">Recipient type</label>' +
+                            '<select id="sway-email-contact-type">' +
+                                '<option value="lead"' +
+                                    (selectedType === "lead" ? " selected" : "") +
+                                '>Lead</option>' +
+                                '<option value="client"' +
+                                    (selectedType === "client" ? " selected" : "") +
+                                '>Client</option>' +
+                            "</select>" +
+                        "</div>" +
+                        '<div class="sway-email-field">' +
+                            '<label for="sway-email-contact-id">Recipient</label>' +
+                            '<select id="sway-email-contact-id">' +
+                                emailContactOptions(
+                                    selectedType,
+                                    selectedId
+                                ) +
+                            "</select>" +
+                        "</div>" +
+                    "</div>" +
+                    '<div class="sway-email-recipient-preview" id="sway-email-recipient-preview">Select a recipient to continue.</div>' +
+                    '<div class="sway-email-field">' +
+                        '<div class="sway-email-label-row">' +
+                            '<label for="sway-email-subject">Subject</label>' +
+                            '<span>Auto-generated</span>' +
+                        "</div>" +
+                        '<input id="sway-email-subject" type="text" maxlength="180" autocomplete="off">' +
+                    "</div>" +
+                    '<div class="sway-email-field">' +
+                        '<label for="sway-email-message">Message</label>' +
+                        '<textarea id="sway-email-message" rows="11" maxlength="10000" placeholder="Type what you want to say. Your greeting and Swayphics signature will be added automatically." required></textarea>' +
+                    "</div>" +
+                    '<div class="sway-email-composer-note">' +
+                        '<strong>Branded template</strong>' +
+                        "<span>Blue Swayphics header · automatic greeting · your message · automatic sign-off · Swayphics contact footer</span>" +
+                    "</div>" +
+                    '<div class="sway-email-composer-actions">' +
+                        '<button type="button" class="sway-workspace-button" data-close-email-composer>Cancel</button>' +
+                        '<button type="submit" class="sway-workspace-button primary" id="sway-email-send-button">Send email</button>' +
+                    "</div>" +
+                "</form>" +
+            "</section>";
+
+        document.body.appendChild(modal);
+
+        const form = modal.querySelector(".sway-email-composer-form");
+        const typeInput = modal.querySelector("#sway-email-contact-type");
+        const contactInput = modal.querySelector("#sway-email-contact-id");
+        const recipientPreview = modal.querySelector("#sway-email-recipient-preview");
+        const subjectInput = modal.querySelector("#sway-email-subject");
+        const messageInput = modal.querySelector("#sway-email-message");
+        const sendButton = modal.querySelector("#sway-email-send-button");
+
+        let selectedTypeState = selectedType;
+        let selectedIdState = selectedId;
+        let lastAutoSubject = "";
+        let subjectWasEdited = false;
+
+        function selectedContact() {
+            return (
+                emailContactRecords(
+                    selectedTypeState
+                ).find(function (item) {
+                    return item.id === selectedIdState;
+                }) || null
+            );
+        }
+
+        function updateRecipient() {
+            selectedTypeState =
+                typeInput.value === "client"
+                    ? "client"
+                    : "lead";
+
+            const records =
+                emailContactRecords(
+                    selectedTypeState
+                );
+
+            if (
+                !records.some(function (item) {
+                    return item.id === contactInput.value;
+                })
+            ) {
+                selectedIdState =
+                    records[0]
+                        ? records[0].id
+                        : "";
+            } else {
+                selectedIdState =
+                    contactInput.value;
+            }
+
+            contactInput.innerHTML =
+                emailContactOptions(
+                    selectedTypeState,
+                    selectedIdState
+                );
+
+            contactInput.value =
+                selectedIdState;
+
+            const contact =
+                selectedContact();
+
+            if (!contact) {
+                recipientPreview.innerHTML =
+                    "No contact with an email address is available for this type.";
+
+                subjectInput.value = "";
+                lastAutoSubject = "";
+                sendButton.disabled = true;
+                return;
+            }
+
+            recipientPreview.innerHTML =
+                '<span>To</span><strong>' +
+                    esc(
+                        contact.contact_name ||
+                        contact.business_name ||
+                        "Recipient"
+                    ) +
+                "</strong><b>" +
+                    esc(contact.email) +
+                "</b>";
+
+            const autoSubject =
+                generateEmailSubject(
+                    selectedTypeState,
+                    contact
+                );
+
+            if (
+                !subjectWasEdited ||
+                subjectInput.value ===
+                    lastAutoSubject
+            ) {
+                subjectInput.value =
+                    autoSubject;
+
+                subjectWasEdited = false;
+            }
+
+            lastAutoSubject =
+                autoSubject;
+
+            sendButton.disabled = false;
+        }
+
+        typeInput.addEventListener(
+            "change",
+            function () {
+                subjectWasEdited = false;
+                updateRecipient();
+            }
+        );
+
+        contactInput.addEventListener(
+            "change",
+            function () {
+                selectedIdState =
+                    contactInput.value;
+
+                if (
+                    subjectInput.value ===
+                    lastAutoSubject
+                ) {
+                    subjectWasEdited = false;
+                }
+
+                updateRecipient();
+            }
+        );
+
+        subjectInput.addEventListener(
+            "input",
+            function () {
+                subjectWasEdited =
+                    subjectInput.value !==
+                    lastAutoSubject;
+            }
+        );
+
+        form.addEventListener(
+            "submit",
+            async function (event) {
+                event.preventDefault();
+
+                const contact =
+                    selectedContact();
+
+                const message =
+                    messageInput.value.trim();
+
+                const subject =
+                    subjectInput.value.trim() ||
+                    generateEmailSubject(
+                        selectedTypeState,
+                        contact
+                    );
+
+                if (!contact) {
+                    swayAlert(
+                        "Select a lead or client with an email address."
+                    );
+                    return;
+                }
+
+                if (!message) {
+                    swayAlert(
+                        "Type the message you want to send."
+                    );
+                    messageInput.focus();
+                    return;
+                }
+
+                sendButton.disabled = true;
+                sendButton.textContent =
+                    "Sending...";
+
+                try {
+                    const result =
+                        await invokeEmailFunction(
+                            selectedTypeState,
+                            contact.id,
+                            subject,
+                            message
+                        );
+
+                    modal.remove();
+
+                    await refreshSecondaryData();
+                    renderView();
+
+                    if (
+                        result &&
+                        result.communication_logged === false
+                    ) {
+                        swayAlert(
+                            "Email sent to " +
+                            contact.email +
+                            ", but the communication log could not be saved."
+                        );
+                    } else {
+                        swayAlert(
+                            "Email sent to " +
+                            contact.email +
+                            "."
+                        );
+                    }
+                } catch (error) {
+                    swayAlert(
+                        error.message ||
+                        "Unable to send the email."
+                    );
+
+                    sendButton.disabled = false;
+                    sendButton.textContent =
+                        "Send email";
+                }
+            }
+        );
+
+        modal
+            .querySelectorAll(
+                "[data-close-email-composer]"
+            )
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        modal.remove();
+                    }
+                );
+            });
+
+        updateRecipient();
+        messageInput.focus();
+    }
+
     function renderInvoices() {
         const showArchived =
             localStorage.getItem(
@@ -10467,6 +11020,7 @@ function simpleBars(items, color) {
 
         return (
             heading(
+                '<button type="button" class="sway-workspace-button" data-compose-email>+ Send email</button>' +
                 '<button class="sway-workspace-button primary" data-add="communications">+ Log communication</button>'
             ) +
             panel(
@@ -15159,6 +15713,11 @@ function simpleBars(items, color) {
             if (state.currentView === "communications") {
                 main.innerHTML =
                     renderCommunications();
+            }
+
+            if (state.currentView === "email") {
+                main.innerHTML =
+                    renderEmailWorkspace();
             }
 
             if (state.currentView === "documents") {
