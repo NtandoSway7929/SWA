@@ -2131,6 +2131,9 @@
     }
 
 function renderShell() {
+        const preserveMobileNavOpen =
+            workspace.classList.contains("nav-open");
+
         let openGroups = {};
 
         try {
@@ -2240,6 +2243,15 @@ function renderShell() {
             workspace.querySelector(
                 ".sway-workspace-sidebar"
             );
+
+        if (
+            preserveMobileNavOpen &&
+            sidebarElement &&
+            window.innerWidth <= 760
+        ) {
+            sidebarElement.classList.add("mobile-open");
+            workspace.classList.add("nav-open");
+        }
 
         const quickCreate =
             workspace.querySelector(
