@@ -697,6 +697,307 @@
     line-height: 1.5;
 }
 
+.sway-client360-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+}
+
+.sway-client360-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8,21,51,0.46);
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+}
+
+.sway-client360-card {
+    position: relative;
+    z-index: 1;
+    width: min(1040px, 100%);
+    max-height: calc(100vh - 44px);
+    overflow-y: auto;
+    padding: 26px;
+    border: 1px solid rgba(255,255,255,0.60);
+    border-radius: 24px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.96) 0%,
+            rgba(247,250,255,0.94) 100%
+        );
+    box-shadow:
+        0 34px 100px rgba(0,32,150,0.22),
+        inset 0 1px 0 rgba(255,255,255,0.72);
+    backdrop-filter: blur(22px) saturate(145%);
+    -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+.sway-client360-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.sway-client360-head-copy h3 {
+    font-size: clamp(1.45rem, 3vw, 2rem);
+    letter-spacing: -0.045em;
+}
+
+.sway-client360-head-copy p {
+    margin-top: 5px;
+    color: var(--text-muted);
+    font-size: 0.70rem;
+    font-weight: 600;
+}
+
+.sway-client360-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sway-client360-close {
+    width: 35px;
+    height: 35px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(0,32,150,0.06);
+    color: var(--sway-dark);
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+.sway-client360-contact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px 14px;
+    margin-top: 14px;
+    color: var(--text-muted);
+    font-size: 0.63rem;
+    font-weight: 700;
+}
+
+.sway-client360-stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0,1fr));
+    gap: 9px;
+    margin-top: 18px;
+}
+
+.sway-client360-stats > div {
+    padding: 13px;
+    border: 1px solid rgba(0,32,150,0.075);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.68);
+}
+
+.sway-client360-stats span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.56rem;
+    font-weight: 800;
+}
+
+.sway-client360-stats strong {
+    display: block;
+    margin-top: 5px;
+    color: var(--sway-dark);
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.sway-client360-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 13px;
+    margin-top: 18px;
+}
+
+.sway-client360-section,
+.sway-client360-notes,
+.sway-client360-history {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid rgba(0,32,150,0.075);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.65);
+}
+
+.sway-client360-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.sway-client360-section-head h4 {
+    color: var(--sway-dark);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.sway-client360-section-head > span {
+    color: #8190A5;
+    font-size: 0.56rem;
+    font-weight: 800;
+}
+
+.sway-client360-list {
+    display: grid;
+    gap: 6px;
+}
+
+.sway-client360-list-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 10px;
+    border: 1px solid rgba(0,32,150,0.055);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.58);
+    color: var(--sway-dark);
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        background 0.18s ease;
+}
+
+.sway-client360-list-item:hover {
+    border-color: rgba(1,82,244,0.16);
+    background: rgba(1,82,244,0.035);
+}
+
+.sway-client360-list-item > span {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.sway-client360-list-item strong {
+    overflow: hidden;
+    font-size: 0.64rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-client360-list-item small {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.54rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sway-client360-list-item b {
+    flex-shrink: 0;
+    color: var(--sway-blue);
+    font-size: 0.56rem;
+    font-weight: 800;
+}
+
+.sway-client360-empty {
+    padding: 9px 2px 2px;
+    color: var(--text-muted);
+    font-size: 0.60rem;
+    line-height: 1.5;
+}
+
+.sway-client360-lower {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 13px;
+    margin-top: 13px;
+}
+
+.sway-client360-note-body {
+    color: var(--text-muted);
+    font-size: 0.62rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.sway-client360-history-list {
+    display: grid;
+    gap: 8px;
+}
+
+.sway-client360-history-item {
+    display: grid;
+    gap: 2px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0,32,150,0.055);
+}
+
+.sway-client360-history-item:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.sway-client360-history-item strong {
+    font-size: 0.62rem;
+    font-weight: 800;
+}
+
+.sway-client360-history-item span {
+    color: var(--text-muted);
+    font-size: 0.54rem;
+    font-weight: 600;
+}
+
+.sway-client360-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+    .sway-client360-modal {
+        padding: 10px;
+    }
+
+    .sway-client360-card {
+        max-height: calc(100vh - 20px);
+        padding: 18px;
+        border-radius: 19px;
+    }
+
+    .sway-client360-head-actions .sway-workspace-button {
+        display: none;
+    }
+
+    .sway-client360-stats {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+    }
+
+    .sway-client360-grid,
+    .sway-client360-lower {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-client360-footer {
+        flex-wrap: wrap;
+    }
+
+    .sway-client360-footer .sway-workspace-button {
+        flex: 1 1 130px;
+    }
+}
+
+
 .sway-overview-split {
     display: grid;
     grid-template-columns: repeat(2, minmax(0,1fr));
