@@ -5374,15 +5374,17 @@ portfolioForm.addEventListener(
                 "sway-notification-panel"
             );
 
-        if (!button || !panel || button.dataset.boundFallback === "true") {
+        if (!button || !panel) {
             return;
         }
-
-        button.dataset.boundFallback = "true";
 
         button.addEventListener(
             "click",
             function (event) {
+                if (typeof button.onclick === "function") {
+                    return;
+                }
+
                 event.preventDefault();
                 event.stopPropagation();
 
