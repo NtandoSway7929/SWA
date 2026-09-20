@@ -8344,10 +8344,8 @@ function simpleBars(items, color) {
     function renderQuotes() {
         const rows =
             state.quotes.map(function (item) {
-                const contact =
-                    item.client_id
-                        ? clientName(item.client_id)
-                        : leadName(item.lead_id);
+                const contactDetails =
+                    communicationContactDetails(item);
 
                 return (
                     "<tr>" +
@@ -9845,10 +9843,8 @@ function simpleBars(items, color) {
 
         const recentRows =
             sentEmails.map(function (item) {
-                const contact =
-                    item.client_id
-                        ? clientName(item.client_id)
-                        : leadName(item.lead_id);
+                const contactDetails =
+                    communicationContactDetails(item);
 
                 return (
                     "<tr>" +
@@ -11049,20 +11045,106 @@ function simpleBars(items, color) {
         );
     }
 
+    function communicationContactDetails(item) {
+        const record = item || {};
+
+        const client =
+            record.client_id
+                ? state.clients.find(function (entry) {
+                    return entry.id === record.client_id;
+                })
+                : null;
+
+        const lead =
+            record.lead_id
+                ? state.leads.find(function (entry) {
+                    return entry.id === record.lead_id;
+                })
+                : null;
+
+        if (client && !lead) {
+            return {
+                primary:
+                    client.contact_name ||
+                    client.business_name ||
+                    client.email ||
+                    "Client",
+                secondary:
+                    client.contact_name &&
+                    client.business_name
+                        ? client.business_name
+                        : client.email || "",
+                ambiguous: false
+            };
+        }
+
+        if (lead && !client) {
+            return {
+                primary:
+                    lead.contact_name ||
+                    lead.business_name ||
+                    lead.email ||
+                    "Lead",
+                secondary:
+                    lead.contact_name &&
+                    lead.business_name
+                        ? lead.business_name
+                        : lead.email || "",
+                ambiguous: false
+            };
+        }
+
+        if (client && lead) {
+            return {
+                primary:
+                    client.contact_name ||
+                    client.business_name ||
+                    "Client",
+                secondary:
+                    (
+                        client.business_name ||
+                        "Client"
+                    ) +
+                    " · also linked to " +
+                    (
+                        lead.business_name ||
+                        "another lead"
+                    ),
+                ambiguous: true
+            };
+        }
+
+        return {
+            primary: "Unlinked contact",
+            secondary: "This communication needs to be linked to a client or lead.",
+            ambiguous: true
+        };
+    }
+
     function renderCommunications() {
         const rows =
             state.communications.map(function (item) {
-                const contact =
-                    item.client_id
-                        ? clientName(item.client_id)
-                        : leadName(item.lead_id);
+                const contactDetails =
+                    communicationContactDetails(item);
 
                 return (
                     "<tr>" +
                         "<td>" +
                             "<strong>" +
-                                esc(contact) +
+                                esc(contactDetails.primary) +
                             "</strong>" +
+                            (
+                                contactDetails.secondary
+                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
+                                      esc(contactDetails.secondary) +
+                                      "</span>"
+                                    : ""
+                            ) +
+                            (
+                                contactDetails.ambiguous
+                                    ? '<br><span style="color:#B42318;font-size:.54rem;font-weight:800;">Needs contact review</span>'
+                                    : ""
+                            ) +
                             (
                                 item.subject
                                     ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
@@ -14406,53 +14488,87 @@ function simpleBars(items, color) {
             table: "communication_logs",
             title: "Communication",
             fields: function (item) {
-                return [
-                    {
-                        key: "client_id",
-                        label: "Client",
-                        type: "select",
-                        options:
-                            '<option value="">Select client...</option>' +
-                            state.clients
-                                .map(function (client) {
-                                    return (
-                                        '<option value="' +
-                                        esc(client.id) +
-                                        '"' +
-                                        (
-                                            client.id === item.client_id
-                                                ? " selected"
-                                                : ""
-                                        ) +
-                                        ">" +
-                                        esc(client.business_name) +
-                                        "</option>"
-                                    );
-                                }).join("")
-                    },
-                    {
-                        key: "lead_id",
-                        label: "Lead",
-                        type: "select",
-                        options:
-                            '<option value="">Select lead...</option>' +
-                            state.leads
-                                .map(function (lead) {
-                                    return (
-                                        '<option value="' +
-                                        esc(lead.id) +
-                                        '"' +
-                                        (
-                                            lead.id === item.lead_id
-                                                ? " selected"
-                                                : ""
-                                        ) +
-                                        ">" +
-                                        esc(lead.business_name) +
-                                        "</option>"
-                                    );
-                                }).join("")
-                    },
+            const selectedContact =
+                item.client_id
+                    ? "client:" + item.client_id
+                    : item.lead_id
+                        ? "lead:" + item.lead_id
+                        : "";
+
+            const contactOptions =
+                '<option value="">Select contact...</option>' +
+                state.clients
+                    .map(function (client) {
+                        const person =
+                            client.contact_name ||
+                            client.business_name ||
+                            client.email ||
+                            "Client";
+
+                        const label =
+                            client.contact_name &&
+                            client.business_name
+                                ? person +
+                                  " · " +
+                                  client.business_name
+                                : person;
+
+                        return (
+                            '<option value="client:' +
+                            esc(client.id) +
+                            '"' +
+                            (
+                                selectedContact ===
+                                "client:" +
+                                client.id
+                                    ? " selected"
+                                    : ""
+                            ) +
+                            ">" +
+                            esc(label) +
+                            "</option>"
+                        );
+                    }).join("") +
+                state.leads
+                    .map(function (lead) {
+                        const person =
+                            lead.contact_name ||
+                            lead.business_name ||
+                            lead.email ||
+                            "Lead";
+
+                        const label =
+                            lead.contact_name &&
+                            lead.business_name
+                                ? person +
+                                  " · " +
+                                  lead.business_name
+                                : person;
+
+                        return (
+                            '<option value="lead:' +
+                            esc(lead.id) +
+                            '"' +
+                            (
+                                selectedContact ===
+                                "lead:" +
+                                lead.id
+                                    ? " selected"
+                                    : ""
+                            ) +
+                            ">" +
+                            esc(label) +
+                            "</option>"
+                        );
+                    }).join("");
+
+            return [
+                {
+                    key: "communication_contact",
+                    label: "Contact",
+                    type: "select",
+                    options: contactOptions
+                },
                     {
                         key: "channel",
                         label: "Channel",
@@ -14830,11 +14946,44 @@ function simpleBars(items, color) {
                     item.status;
 
                 if (type === "communications") {
-                    if (!payload.client_id && !payload.lead_id) {
+                    const contactValue =
+                        String(
+                            payload.communication_contact ||
+                            ""
+                        ).trim();
+
+                    delete payload.communication_contact;
+
+                    if (
+                        !contactValue ||
+                        !(
+                            contactValue.indexOf("client:") === 0 ||
+                            contactValue.indexOf("lead:") === 0
+                        )
+                    ) {
                         throw new Error(
-                            "Link the communication to a client or lead before saving."
+                            "Select the exact client or lead this communication belongs to."
                         );
                     }
+
+                    const contactParts =
+                        contactValue.split(":");
+
+                    const contactType =
+                        contactParts[0];
+
+                    const contactId =
+                        contactParts.slice(1).join(":");
+
+                    payload.client_id =
+                        contactType === "client"
+                            ? contactId
+                            : null;
+
+                    payload.lead_id =
+                        contactType === "lead"
+                            ? contactId
+                            : null;
 
                     payload.created_by =
                         item.created_by ||
