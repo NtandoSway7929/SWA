@@ -2361,6 +2361,349 @@ function renderShell() {
         );
     }
 
+    function cashFlowMonths() {
+        const now = dashboardNow();
+        const months = [];
+
+        for (let offset = -5; offset <= 5; offset += 1) {
+            const point = new Date(
+                now.getFullYear(),
+                now.getMonth() + offset,
+                1
+            );
+
+            months.push({
+                key:
+                    point.getFullYear() +
+                    "-" +
+                    String(point.getMonth() + 1).padStart(2, "0"),
+                label:
+                    point.toLocaleDateString(
+                        "en-ZA",
+                        {
+                            timeZone:
+                                SOUTH_AFRICA_TIME_ZONE,
+                            month: "short",
+                            year: "2-digit"
+                        }
+                    )
+            });
+        }
+
+        return months;
+    }
+
+    function renderCashFlow() {
+        const today = dashboardTodayISO();
+        const todayDate = new Date(
+            today + "T00:00:00+02:00"
+        );
+
+        const cashCollected =
+            state.payments
+                .filter(function (payment) {
+                    return (
+                        payment.status === "paid" &&
+                        dashboardMonthKey(
+                            payment.paid_at ||
+                            payment.created_at
+                        ) === today.slice(0, 7)
+                    );
+                })
+                .reduce(function (sum, payment) {
+                    return sum +
+                        Number(payment.amount || 0);
+                }, 0);
+
+        const outstandingInvoices =
+            state.invoices.filter(function (invoice) {
+                return (
+                    invoice.status !== "paid" &&
+                    invoice.status !== "cancelled" &&
+                    Number(
+                        invoice.amount_outstanding != null
+                            ? invoice.amount_outstanding
+                            : invoice.total || 0
+                    ) > 0
+                );
+            });
+
+        const outstanding =
+            outstandingInvoices.reduce(function (sum, invoice) {
+                return sum +
+                    Number(
+                        invoice.amount_outstanding != null
+                            ? invoice.amount_outstanding
+                            : invoice.total || 0
+                    );
+            }, 0);
+
+        const overdue =
+            outstandingInvoices.filter(function (invoice) {
+                return (
+                    invoice.due_date &&
+                    dashboardDateKey(invoice.due_date) < today
+                );
+            });
+
+        const overdueValue =
+            overdue.reduce(function (sum, invoice) {
+                return sum +
+                    Number(
+                        invoice.amount_outstanding != null
+                            ? invoice.amount_outstanding
+                            : invoice.total || 0
+                    );
+            }, 0);
+
+        const next30 =
+            new Date(todayDate.getTime());
+
+        next30.setDate(
+            next30.getDate() + 30
+        );
+
+        const next30Key =
+            dashboardDateKey(next30.toISOString());
+
+        const dueNext30Invoices =
+            outstandingInvoices.filter(function (invoice) {
+                const due =
+                    dashboardDateKey(invoice.due_date);
+
+                return (
+                    due &&
+                    due >= today &&
+                    due <= next30Key
+                );
+            });
+
+        const dueNext30 =
+            dueNext30Invoices.reduce(function (sum, invoice) {
+                return sum +
+                    Number(
+                        invoice.amount_outstanding != null
+                            ? invoice.amount_outstanding
+                            : invoice.total || 0
+                    );
+            }, 0);
+
+        const months = cashFlowMonths();
+
+        const monthLabels =
+            months.map(function (month) {
+                return month.label;
+            });
+
+        const collectedSeries =
+            months.map(function (month) {
+                return state.payments
+                    .filter(function (payment) {
+                        return (
+                            payment.status === "paid" &&
+                            dashboardMonthKey(
+                                payment.paid_at ||
+                                payment.created_at
+                            ) === month.key
+                        );
+                    })
+                    .reduce(function (sum, payment) {
+                        return sum +
+                            Number(payment.amount || 0);
+                    }, 0);
+            });
+
+        const dueSeries =
+            months.map(function (month) {
+                return outstandingInvoices
+                    .filter(function (invoice) {
+                        return (
+                            dashboardMonthKey(
+                                invoice.due_date
+                            ) === month.key
+                        );
+                    })
+                    .reduce(function (sum, invoice) {
+                        return sum +
+                            Number(
+                                invoice.amount_outstanding != null
+                                    ? invoice.amount_outstanding
+                                    : invoice.total || 0
+                            );
+                    }, 0);
+            });
+
+        const invoiceSeries =
+            months.map(function (month) {
+                return state.invoices
+                    .filter(function (invoice) {
+                        return (
+                            invoice.status !== "cancelled" &&
+                            dashboardMonthKey(
+                                invoice.issue_date ||
+                                invoice.created_at
+                            ) === month.key
+                        );
+                    })
+                    .reduce(function (sum, invoice) {
+                        return sum +
+                            Number(invoice.total || 0);
+                    }, 0);
+            });
+
+        const nextDue =
+            outstandingInvoices
+                .filter(function (invoice) {
+                    return (
+                        invoice.due_date &&
+                        dashboardDateKey(invoice.due_date) >= today
+                    );
+                })
+                .sort(function (a, b) {
+                    return String(a.due_date)
+                        .localeCompare(String(b.due_date));
+                })
+                .slice(0, 5);
+
+        return (
+            '<section class="sway-cash-flow">' +
+                '<div class="sway-cash-flow-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Cash flow</span>' +
+                        "<h3>Money movement</h3>" +
+                        "<p>Actual payments received, outstanding invoice balances and scheduled collections. This is a cash-collection view, not a profit statement.</p>" +
+                    "</div>" +
+                "</div>" +
+
+                '<div class="sway-cash-flow-stats">' +
+                    '<div class="sway-cash-flow-stat">' +
+                        "<span>Collected this month</span>" +
+                        "<strong>" +
+                            esc(money(cashCollected)) +
+                        "</strong>" +
+                        "<small>Paid payments recorded this month.</small>" +
+                    "</div>" +
+                    '<div class="sway-cash-flow-stat">' +
+                        "<span>Due next 30 days</span>" +
+                        "<strong>" +
+                            esc(money(dueNext30)) +
+                        "</strong>" +
+                        "<small>" +
+                            dueNext30Invoices.length +
+                            (
+                                dueNext30Invoices.length === 1
+                                    ? " invoice"
+                                    : " invoices"
+                            ) +
+                            " currently scheduled.</small>" +
+                    "</div>" +
+                    '<div class="sway-cash-flow-stat danger">' +
+                        "<span>Overdue</span>" +
+                        "<strong>" +
+                            esc(money(overdueValue)) +
+                        "</strong>" +
+                        "<small>" +
+                            overdue.length +
+                            (
+                                overdue.length === 1
+                                    ? " overdue invoice"
+                                    : " overdue invoices"
+                            ) +
+                            " requiring collection.</small>" +
+                    "</div>" +
+                    '<div class="sway-cash-flow-stat">' +
+                        "<span>Outstanding</span>" +
+                        "<strong>" +
+                            esc(money(outstanding)) +
+                        "</strong>" +
+                        "<small>Unpaid balance across open invoices.</small>" +
+                    "</div>" +
+                "</div>" +
+
+                '<div class="sway-cash-flow-charts">' +
+                    insightPanel(
+                        "Cash collected",
+                        "Paid payments across the last six months and next six-month window.",
+                        trendChart(
+                            collectedSeries,
+                            monthLabels,
+                            "#002096",
+                            "Cash collected",
+                            true
+                        )
+                    ) +
+                    insightPanel(
+                        "Invoice due schedule",
+                        "Outstanding balances by invoice due month.",
+                        trendChart(
+                            dueSeries,
+                            monthLabels,
+                            "#0152F4",
+                            "Invoice due schedule",
+                            true
+                        )
+                    ) +
+                "</div>" +
+
+                '<div class="sway-cash-flow-lower">' +
+                    '<div class="sway-cash-flow-table">' +
+                        '<div class="sway-cash-flow-table-head">' +
+                            '<div>' +
+                                "<h4>Next collections</h4>" +
+                                "<p>Upcoming invoice balances with known due dates.</p>" +
+                            "</div>" +
+                            '<button type="button" class="sway-row-action" data-view-target="invoices">View invoices</button>' +
+                        "</div>" +
+                        (
+                            nextDue.length
+                                ? '<div class="sway-cash-flow-due-list">' +
+                                    nextDue.map(function (invoice) {
+                                        const balance =
+                                            Number(
+                                                invoice.amount_outstanding != null
+                                                    ? invoice.amount_outstanding
+                                                    : invoice.total || 0
+                                            );
+
+                                        return (
+                                            '<button type="button" class="sway-cash-flow-due-row" data-view-target="invoices">' +
+                                                "<span>" +
+                                                    "<strong>" +
+                                                        esc(invoice.invoice_number) +
+                                                    "</strong>" +
+                                                    "<small>" +
+                                                        esc(clientName(invoice.client_id)) +
+                                                        " · " +
+                                                        esc(date(invoice.due_date)) +
+                                                    "</small>" +
+                                                "</span>" +
+                                                "<b>" +
+                                                    esc(money(balance)) +
+                                                "</b>" +
+                                            "</button>"
+                                        );
+                                    }).join("") +
+                                  "</div>"
+                                : '<div class="sway-client360-empty">No future invoice due dates are currently recorded.</div>'
+                        ) +
+                    "</div>" +
+
+                    insightPanel(
+                        "Invoice value issued",
+                        "Invoice value issued by month.",
+                        trendChart(
+                            invoiceSeries,
+                            monthLabels,
+                            "#2C91FC",
+                            "Invoice value issued",
+                            true
+                        )
+                    ) +
+                "</div>" +
+            "</section>"
+        );
+    }
+
     function renderInsights() {
         const data = insightData();
         const labels =
@@ -2525,6 +2868,8 @@ function renderShell() {
                 "</div>" +
                 liveBadge() +
             "</div>" +
+
+            renderCashFlow() +
 
             '<div class="sway-workspace-grid">' +
                 '<div class="sway-stat-card">' +
