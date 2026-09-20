@@ -80,6 +80,8 @@ create table if not exists public.invoices (
     due_date date,
     status text not null default 'draft'
         check (status in ('draft','sent','partially paid','paid','overdue','cancelled')),
+    archived boolean not null default false,
+    archived_at timestamptz,
     currency text not null default 'ZAR',
     subtotal numeric(12,2) not null default 0,
     discount numeric(12,2) not null default 0,
@@ -105,6 +107,9 @@ create index if not exists invoices_status_idx
 
 create index if not exists invoices_created_idx
     on public.invoices(created_at desc);
+
+create index if not exists invoices_archived_idx
+    on public.invoices(archived, created_at desc);
 
 create table if not exists public.invoice_items (
     id uuid primary key default gen_random_uuid(),
