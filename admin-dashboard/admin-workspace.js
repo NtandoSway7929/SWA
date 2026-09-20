@@ -15334,22 +15334,6 @@ function simpleBars(items, color) {
 
         if (!client) return;
 
-        const invoices =
-            state.invoices.filter(function (invoice) {
-                return invoice.client_id === id;
-            }).length;
-
-        if (invoices) {
-            swayAlert(
-                "This client cannot be deleted while " +
-                invoices +
-                " invoice" +
-                (invoices === 1 ? "" : "s") +
-                " still reference the client. Archive the client instead, or handle those invoices first."
-            );
-            return;
-        }
-
         const projectCount =
             state.projects.filter(function (item) {
                 return item.client_id === id;
@@ -15367,6 +15351,11 @@ function simpleBars(items, color) {
 
         const followupCount =
             state.followups.filter(function (item) {
+                return item.client_id === id;
+            }).length;
+
+        const invoiceCount =
+            state.invoices.filter(function (item) {
                 return item.client_id === id;
             }).length;
 
@@ -15404,25 +15393,65 @@ function simpleBars(items, color) {
             );
         }
 
+        if (invoiceCount) {
+            relatedParts.push(
+                invoiceCount +
+                " invoice" +
+                (invoiceCount === 1 ? "" : "s")
+            );
+        }
+
         const warning =
             relatedParts.length
-                ? " This will also permanently remove linked " +
+                ? " This will permanently remove the client and linked " +
                   relatedParts.join(", ") +
-                  " because of the current database relationships."
-                : "";
+                  "."
+                : " This will permanently remove the client record.";
 
         if (
             !(await swayConfirm(
                 "Delete " +
                 client.business_name +
-                " permanently? This cannot be undone." +
-                warning
+                " permanently?" +
+                warning +
+                " This cannot be undone."
             ))
         ) {
             return;
         }
 
         try {
+            const clientInvoices =
+                state.invoices.filter(function (invoice) {
+                    return invoice.client_id === id;
+                });
+
+            for (const invoice of clientInvoices) {
+                await api(
+                    "/rest/v1/invoice_items?invoice_id=eq." +
+                    encodeURIComponent(invoice.id),
+                    {
+                        method: "DELETE",
+                        headers: headers({
+                            "Prefer":
+                                "return=minimal"
+                        })
+                    }
+                );
+
+                await api(
+                    "/rest/v1/invoices?id=eq." +
+                    encodeURIComponent(invoice.id),
+                    {
+                        method: "DELETE",
+                        headers: headers({
+                            "Prefer":
+                                "return=minimal"
+                        })
+                    }
+                );
+            }
+
             await api(
                 "/rest/v1/clients?id=eq." +
                 encodeURIComponent(id),
@@ -15452,7 +15481,6 @@ function simpleBars(items, color) {
         renderShell();
         renderView();
     }
-
     async function removeRecord(type, id) {
         const config = configs[type];
 
