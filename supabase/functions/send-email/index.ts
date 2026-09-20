@@ -43,11 +43,9 @@ function brandedEmailHtml(
   businessName: string,
   message: string,
 ) {
-  // Use the business attached to the resolved recipient as the greeting
-  // instead of a potentially stale contact person's name.
   const greetingName =
-    String(businessName || "").trim() ||
-    "Business";
+    String(recipientName || "").trim() ||
+    String(businessName || "").trim();
 
   return `<!doctype html>
 <html>
@@ -65,7 +63,11 @@ function brandedEmailHtml(
 
       <div style="padding:34px 30px 26px;">
         <p style="margin:0 0 20px;font-size:15px;line-height:1.8;color:#56627A;">
-          Hi ${escapeHtml(greetingName)},
+          ${
+            greetingName
+              ? "Hi " + escapeHtml(greetingName) + ",",
+              : "Hello,"
+          }
         </p>
 
         ${emailParagraphs(message)}
@@ -514,7 +516,7 @@ Deno.serve(async (req) => {
             subject,
             html:
               brandedEmailHtml(
-                "",
+                String(contact.contact_name || "").trim(),
                 String(contact.business_name || "").trim(),
                 message,
               ),
