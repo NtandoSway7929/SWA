@@ -10363,14 +10363,16 @@ function simpleBars(items, color) {
             return;
         }
 
-        state.emailSyncing =
-            true;
-        state.emailSyncError =
-            "";
+        const preserveScrollY =
+            typeof window !== "undefined"
+                ? window.scrollY
+                : 0;
 
-        if (shouldRender !== false) {
-            renderView();
-        }
+        state.emailSyncing = true;
+        state.emailSyncError = "";
+
+        let syncCompleted = false;
+        let transportError = null;
 
         try {
             const response =
@@ -10425,25 +10427,100 @@ function simpleBars(items, color) {
                 );
             }
 
-            await loadEmailMessages();
+            syncCompleted = true;
+        } catch (error) {
+            transportError = error;
 
+            const message =
+                String(
+                    error &&
+                    error.message
+                        ? error.message
+                        : ""
+                ).toLowerCase();
+
+            /*
+             * The Edge Function can finish saving the email and then lose
+             * the browser connection before the HTTP response reaches us.
+             * Reloading the inbox is authoritative in that situation.
+             */
+            if (
+                message.includes(
+                    "failed to fetch"
+                )
+            ) {
+                try {
+                    await loadEmailMessages();
+
+                    state.emailSyncError = "";
+                    state.emailLastSync =
+                        new Date().toISOString();
+                    syncCompleted = true;
+                } catch (reloadError) {
+                    state.emailSyncError =
+                        error.message ||
+                        "Unable to synchronize the inbox.";
+                }
+            } else {
+                state.emailSyncError =
+                    error.message ||
+                    "Unable to synchronize the inbox.";
+            }
+        }
+
+        if (!syncCompleted) {
+            try {
+                await loadEmailMessages();
+            } catch (reloadError) {
+                /*
+                 * Keep the original synchronization error because the
+                 * fallback inbox refresh also failed.
+                 */
+            }
+        } else {
+            try {
+                await loadEmailMessages();
+            } catch (error) {
+                state.emailSyncError =
+                    error.message ||
+                    "Unable to refresh the inbox.";
+                syncCompleted = false;
+            }
+        }
+
+        if (syncCompleted) {
             state.emailLastSync =
                 new Date().toISOString();
-        } catch (error) {
+        } else if (
+            !state.emailSyncError &&
+            transportError
+        ) {
             state.emailSyncError =
-                error.message ||
+                transportError.message ||
                 "Unable to synchronize the inbox.";
-        } finally {
-            state.emailSyncing =
-                false;
         }
+
+        state.emailSyncing = false;
 
         if (
             shouldRender !== false &&
-            state.currentView ===
-                "email"
+            state.currentView === "email"
         ) {
             renderView();
+
+            if (
+                typeof window !== "undefined" &&
+                typeof window.scrollTo === "function"
+            ) {
+                window.requestAnimationFrame(
+                    function () {
+                        window.scrollTo(
+                            0,
+                            preserveScrollY
+                        );
+                    }
+                );
+            }
         }
     }
 
