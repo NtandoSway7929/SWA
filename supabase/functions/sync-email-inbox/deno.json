@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "imapflow": "npm:imapflow@2.0.5",
+    "postal-mime": "npm:postal-mime@3.0.0"
+  }
+}
