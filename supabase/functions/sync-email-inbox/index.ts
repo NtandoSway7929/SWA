@@ -728,32 +728,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    const unreadResult =
-      await supabase
-        .from("email_messages")
-        .select("id", {
-          count: "exact",
-          head: true
-        })
-        .eq(
-          "direction",
-          "inbound"
-        )
-        .eq(
-          "is_read",
-          false
-        );
-
-    if (unreadResult.error) {
-      throw unreadResult.error;
-    }
-
     return Response.json(
       {
         success: true,
-        synced,
-        unread:
-          unreadResult.count || 0
+        synced
       },
       {
         status: 200,
