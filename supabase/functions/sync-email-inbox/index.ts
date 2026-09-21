@@ -457,12 +457,12 @@ Deno.serve(async (req) => {
         }
       );
 
-    const recentUids =
+    const candidateUids =
       Array.isArray(unseenUids)
-        ? unseenUids.slice(-3)
+        ? unseenUids.slice(-20)
         : [];
 
-    if (!recentUids.length) {
+    if (!candidateUids.length) {
       const unreadOnlyResult =
         await supabase
           .from("email_messages")
@@ -494,7 +494,7 @@ Deno.serve(async (req) => {
         .from("email_messages")
         .select("imap_uid")
         .eq("mailbox", MAILBOX)
-        .in("imap_uid", recentUids);
+        .in("imap_uid", candidateUids);
 
     if (existingResult.error) {
       throw existingResult.error;
@@ -511,9 +511,62 @@ Deno.serve(async (req) => {
           })
       );
 
+    // Fetch only lightweight metadata for candidate messages.
+    const candidateMessages =
+      await client.fetchAll(
+        candidateUids,
+        {
+          envelope: true,
+          internalDate: true,
+          size: true
+        },
+        {
+          uid: true
+        }
+      );
+
+    const newUids =
+      candidateMessages
+        .filter(function (message: any) {
+          const uid = Number(message?.uid);
+          return Number.isFinite(uid) && !existingUids.has(uid);
+        })
+        .map(function (message: any) {
+          return Number(message.uid);
+        })
+        .slice(-3);
+
+    if (!newUids.length) {
+      const unreadNoNewResult =
+        await supabase
+          .from("email_messages")
+          .select("id", {
+            count: "exact",
+            head: true
+          })
+          .eq("direction", "inbound")
+          .eq("is_read", false);
+
+      return Response.json(
+        {
+          success: true,
+          synced: 0,
+          unread:
+            unreadNoNewResult.count ||
+            0
+        },
+        {
+          status: 200,
+          headers:
+            corsHeaders
+        }
+      );
+    }
+
+    // Download raw content only for genuinely new messages.
     const messages =
       await client.fetchAll(
-        recentUids,
+        newUids,
         {
           envelope: true,
           internalDate: true,
