@@ -12,6 +12,9 @@ interface EmailRequest {
   recipient_email?: string;
   subject?: string;
   message?: string;
+  in_reply_to?: string;
+  references?: string;
+  thread_id?: string;
 }
 
 function escapeHtml(value: unknown) {
@@ -21,6 +24,13 @@ function escapeHtml(value: unknown) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function cleanEmailHeader(value: unknown, maxLength = 1800) {
+  return String(value ?? "")
+    .replace(/[\r\n]+/g, " ")
+    .trim()
+    .slice(0, maxLength);
 }
 
 function emailParagraphs(value: string) {
@@ -537,6 +547,25 @@ Deno.serve(async (req) => {
     const replyTo =
       "info@swayphics.co.za";
 
+    const inReplyTo =
+      cleanEmailHeader(body.in_reply_to, 998) || null;
+
+    const referencesHeader =
+      cleanEmailHeader(body.references, 1800) || null;
+
+    const threadId =
+      cleanEmailHeader(body.thread_id, 500) || null;
+
+    const emailHeaders: Record<string, string> = {};
+
+    if (inReplyTo) {
+      emailHeaders["In-Reply-To"] = inReplyTo;
+    }
+
+    if (referencesHeader) {
+      emailHeaders["References"] = referencesHeader;
+    }
+
     const emailResponse =
       await fetch(
         "https://api.resend.com/emails",
@@ -553,6 +582,9 @@ Deno.serve(async (req) => {
             to: [recipientEmail],
             reply_to: replyTo,
             subject,
+            ...(Object.keys(emailHeaders).length
+              ? { headers: emailHeaders }
+              : {}),
             html:
               brandedEmailHtml(
                 recipientName,
@@ -594,6 +626,46 @@ Deno.serve(async (req) => {
     const emailId =
       result?.id ||
       null;
+
+    let resendMessageId =
+      cleanEmailHeader(
+        result?.message_id,
+        998
+      ) || null;
+
+    if (emailId && !resendMessageId) {
+      try {
+        const retrieveResponse =
+          await fetch(
+            "https://api.resend.com/emails/" +
+            encodeURIComponent(emailId),
+            {
+              method: "GET",
+              headers: {
+                Authorization:
+                  "Bearer " +
+                  resendApiKey
+              }
+            }
+          );
+
+        if (retrieveResponse.ok) {
+          const retrievedEmail =
+            await retrieveResponse.json();
+
+          resendMessageId =
+            cleanEmailHeader(
+              retrievedEmail?.message_id,
+              998
+            ) || null;
+        }
+      } catch (retrieveError) {
+        console.warn(
+          "Unable to retrieve Resend Message-ID after sending:",
+          retrieveError
+        );
+      }
+    }
 
     const canLogContact =
       Boolean(
@@ -674,6 +746,75 @@ Deno.serve(async (req) => {
       );
     }
 
+    const emailMessageInsert =
+      await supabase
+        .from("email_messages")
+        .insert({
+          direction:
+            "outbound",
+          mailbox:
+            "info@swayphics.co.za",
+          source_key:
+            "resend:" +
+            (
+              emailId ||
+              crypto.randomUUID()
+            ),
+          imap_uid:
+            null,
+          external_id:
+            emailId,
+          message_id:
+            resendMessageId,
+          in_reply_to:
+            inReplyTo,
+          references_header:
+            referencesHeader,
+          thread_id:
+            threadId ||
+            (
+              "resend:" +
+              (
+                resendMessageId ||
+                emailId ||
+                crypto.randomUUID()
+              )
+            ),
+          from_name:
+            "Swayphics",
+          from_email:
+            "info@swayphics.co.za",
+          to_email:
+            recipientEmail,
+          subject:
+            subject || null,
+          text_body:
+            message,
+          html_body:
+            null,
+          received_at:
+            new Date().toISOString(),
+          is_read:
+            true,
+          client_id:
+            resolvedContactType === "client"
+              ? contact.id
+              : null,
+          lead_id:
+            resolvedContactType === "lead"
+              ? contact.id
+              : null,
+          created_by:
+            userData.user.id
+        });
+
+    if (emailMessageInsert.error) {
+      console.error(
+        "Email sent but email message insert failed:",
+        emailMessageInsert.error,
+      );
+    }
+
     await supabase
       .from("activity_log")
       .insert({
@@ -703,6 +844,10 @@ Deno.serve(async (req) => {
       {
         success: true,
         email_id: emailId,
+        message_id:
+          resendMessageId,
+        email_message_logged:
+          !emailMessageInsert.error,
         recipient:
           recipientEmail,
         communication_logged:
