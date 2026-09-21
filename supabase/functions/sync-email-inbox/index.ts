@@ -60,6 +60,47 @@ function cleanHeaderValue(value: unknown) {
     .trim();
 }
 
+function describeImapError(error: unknown) {
+  const value = error as any;
+  const responseText =
+    value?.responseText ||
+    value?.response?.responseText ||
+    value?.response?.text ||
+    "";
+
+  const responseStatus =
+    value?.responseStatus ||
+    value?.response?.status ||
+    "";
+
+  const serverResponseCode =
+    value?.serverResponseCode ||
+    value?.response?.code ||
+    "";
+
+  if (value?.authenticationFailed) {
+    return "IMAP authentication failed. Check that EMAIL_IMAP_PASSWORD is the current Namecheap Private Email Master or Application password.";
+  }
+
+  if (responseText) {
+    return [
+      "Namecheap IMAP rejected the request",
+      responseStatus ? "(" + responseStatus + ")" : "",
+      serverResponseCode ? "[" + serverResponseCode + "]" : "",
+      ":",
+      responseText
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (value?.message) {
+    return String(value.message);
+  }
+
+  return "Unable to connect to the Namecheap email inbox.";
+}
+
 function safeReceivedAt(
   value: unknown,
   fallback: Date
@@ -698,9 +739,7 @@ Deno.serve(async (req) => {
     return Response.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Unable to synchronize the Swayphics inbox."
+          describeImapError(error)
       },
       {
         status: 500,
