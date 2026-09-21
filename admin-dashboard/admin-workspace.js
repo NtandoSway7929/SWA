@@ -203,6 +203,73 @@
         }, extra || {});
     }
 
+    async function refreshAdminAccessToken() {
+        const refreshToken =
+            localStorage.getItem(
+                "swayphics_admin_refresh_token"
+            );
+
+        if (!refreshToken) {
+            return false;
+        }
+
+        try {
+            const response =
+                await fetch(
+                    SUPABASE_URL +
+                    "/auth/v1/token?grant_type=refresh_token",
+                    {
+                        method: "POST",
+                        headers: {
+                            "apikey":
+                                SUPABASE_PUBLISHABLE_KEY,
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            refresh_token:
+                                refreshToken
+                        })
+                    }
+                );
+
+            if (!response.ok) {
+                return false;
+            }
+
+            const session =
+                await response.json();
+
+            if (
+                !session ||
+                !session.access_token
+            ) {
+                return false;
+            }
+
+            localStorage.setItem(
+                "swayphics_admin_access_token",
+                session.access_token
+            );
+
+            if (session.refresh_token) {
+                localStorage.setItem(
+                    "swayphics_admin_refresh_token",
+                    session.refresh_token
+                );
+            }
+
+            return true;
+        } catch (error) {
+            console.warn(
+                "Unable to refresh the Swayphics admin session.",
+                error
+            );
+
+            return false;
+        }
+    }
+
     async function api(path, options) {
         const response = await fetch(
             SUPABASE_URL + path,
@@ -10371,34 +10438,52 @@ function simpleBars(items, color) {
         state.emailSyncing = true;
         state.emailSyncError = "";
 
-        let syncCompleted = false;
-        let transportError = null;
+        let response = null;
+        let responseText = "";
+        let result = null;
+
+        async function performSyncRequest() {
+            return fetch(
+                SUPABASE_URL +
+                "/functions/v1/sync-email-inbox",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        "apikey":
+                            SUPABASE_PUBLISHABLE_KEY,
+                        "Authorization":
+                            "Bearer " +
+                            token()
+                    },
+                    body:
+                        "{}"
+                }
+            );
+        }
 
         try {
-            const response =
-                await fetch(
-                    SUPABASE_URL +
-                    "/functions/v1/sync-email-inbox",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type":
-                                "application/json",
-                            "apikey":
-                                SUPABASE_PUBLISHABLE_KEY,
-                            "Authorization":
-                                "Bearer " +
-                                token()
-                        },
-                        body:
-                            "{}"
-                    }
-                );
+            response =
+                await performSyncRequest();
 
-            const responseText =
+            responseText =
                 await response.text();
 
-            let result = null;
+            if (
+                response.status === 401
+            ) {
+                const refreshed =
+                    await refreshAdminAccessToken();
+
+                if (refreshed) {
+                    response =
+                        await performSyncRequest();
+
+                    responseText =
+                        await response.text();
+                }
+            }
 
             try {
                 result =
@@ -10427,80 +10512,54 @@ function simpleBars(items, color) {
                 );
             }
 
-            syncCompleted = true;
-        } catch (error) {
-            transportError = error;
+            await loadEmailMessages();
 
+            state.emailLastSync =
+                new Date().toISOString();
+
+        } catch (error) {
             const message =
-                String(
-                    error &&
-                    error.message
-                        ? error.message
-                        : ""
-                ).toLowerCase();
+                error &&
+                error.message
+                    ? String(error.message)
+                    : "";
 
             /*
-             * The Edge Function can finish saving the email and then lose
-             * the browser connection before the HTTP response reaches us.
-             * Reloading the inbox is authoritative in that situation.
+             * A request can occasionally be dropped after the Edge Function
+             * has already committed the email. Reload the inbox before
+             * surfacing an error.
              */
-            if (
-                message.includes(
-                    "failed to fetch"
-                )
-            ) {
-                try {
-                    await loadEmailMessages();
-
-                    state.emailSyncError = "";
-                    state.emailLastSync =
-                        new Date().toISOString();
-                    syncCompleted = true;
-                } catch (reloadError) {
-                    state.emailSyncError =
-                        error.message ||
-                        "Unable to synchronize the inbox.";
-                }
-            } else {
-                state.emailSyncError =
-                    error.message ||
-                    "Unable to synchronize the inbox.";
-            }
-        }
-
-        if (!syncCompleted) {
             try {
                 await loadEmailMessages();
             } catch (reloadError) {
+                // Preserve the original error.
+            }
+
+            if (
+                message
+                    .toLowerCase()
+                    .includes("failed to fetch")
+            ) {
                 /*
-                 * Keep the original synchronization error because the
-                 * fallback inbox refresh also failed.
+                 * If the database already contains the latest messages,
+                 * treat a lost HTTP response as a recoverable transport issue.
                  */
-            }
-        } else {
-            try {
-                await loadEmailMessages();
-            } catch (error) {
+                if (state.emailMessages.length > 0) {
+                    state.emailSyncError = "";
+                    state.emailLastSync =
+                        new Date().toISOString();
+                } else {
+                    state.emailSyncError =
+                        "Inbox synchronization could not reach the server.";
+                }
+            } else {
                 state.emailSyncError =
-                    error.message ||
-                    "Unable to refresh the inbox.";
-                syncCompleted = false;
+                    message ||
+                    "Unable to synchronize the inbox.";
             }
+        } finally {
+            state.emailSyncing = false;
         }
-
-        if (syncCompleted) {
-            state.emailLastSync =
-                new Date().toISOString();
-        } else if (
-            !state.emailSyncError &&
-            transportError
-        ) {
-            state.emailSyncError =
-                transportError.message ||
-                "Unable to synchronize the inbox.";
-        }
-
-        state.emailSyncing = false;
 
         if (
             shouldRender !== false &&
