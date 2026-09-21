@@ -445,24 +445,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Only process a small number of unseen messages per sync.
-    // This keeps the Edge Function safely below Supabase CPU/memory limits.
-    const unseenUids =
-      await client.search(
-        {
-          seen: false
-        },
-        {
-          uid: true
-        }
-      );
+    // Use the highest IMAP UID already stored for this mailbox so repeated
+    // dashboard polling only checks messages that arrived since the last sync.
+    const latestStoredResult =
+      await supabase
+        .from("email_messages")
+        .select("imap_uid")
+        .eq("mailbox", MAILBOX)
+        .not("imap_uid", "is", null)
+        .order("imap_uid", { ascending: false })
+        .limit(1);
 
-    const candidateUids =
-      Array.isArray(unseenUids)
-        ? unseenUids.slice(-20)
-        : [];
+    if (latestStoredResult.error) {
+      throw latestStoredResult.error;
+    }
 
-    if (!candidateUids.length) {
+    const latestStoredUid =
+      Number(latestStoredResult.data?.[0]?.imap_uid || 0);
+
+    const firstNewUid =
+      Math.max(1, latestStoredUid + 1);
+
+    if (firstNewUid > exists) {
       const unreadOnlyResult =
         await supabase
           .from("email_messages")
@@ -489,88 +493,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    const existingResult =
-      await supabase
-        .from("email_messages")
-        .select("imap_uid")
-        .eq("mailbox", MAILBOX)
-        .in("imap_uid", candidateUids);
-
-    if (existingResult.error) {
-      throw existingResult.error;
-    }
-
-    const existingUids =
-      new Set(
-        (existingResult.data || [])
-          .map(function (row: any) {
-            return Number(row.imap_uid);
-          })
-          .filter(function (uid: number) {
-            return Number.isFinite(uid);
-          })
-      );
-
-    // Fetch only lightweight metadata for candidate messages.
-    const candidateMessages =
-      await client.fetchAll(
-        candidateUids,
-        {
-          envelope: true,
-          internalDate: true,
-          size: true
-        },
-        {
-          uid: true
-        }
-      );
+    // Never pull more than three new messages in one invocation.
+    const endUid =
+      Math.min(exists, firstNewUid + 2);
 
     const newUids =
-      candidateMessages
-        .filter(function (message: any) {
-          const uid = Number(message?.uid);
-          return Number.isFinite(uid) && !existingUids.has(uid);
-        })
-        .map(function (message: any) {
-          return Number(message.uid);
-        })
-        .slice(-3);
+      [];
 
-    if (!newUids.length) {
-      const unreadNoNewResult =
-        await supabase
-          .from("email_messages")
-          .select("id", {
-            count: "exact",
-            head: true
-          })
-          .eq("direction", "inbound")
-          .eq("is_read", false);
-
-      return Response.json(
-        {
-          success: true,
-          synced: 0,
-          unread:
-            unreadNoNewResult.count ||
-            0
-        },
-        {
-          status: 200,
-          headers:
-            corsHeaders
-        }
-      );
+    for (let uid = firstNewUid; uid <= endUid; uid += 1) {
+      newUids.push(uid);
     }
 
-    // Download raw content only for genuinely new messages.
     const messages =
       await client.fetchAll(
         newUids,
         {
           envelope: true,
           internalDate: true,
-          size: true,
           source: {
             start: 0,
             maxLength: 262144
@@ -588,7 +527,6 @@ Deno.serve(async (req) => {
 
       if (
         !Number.isFinite(uid) ||
-        existingUids.has(uid) ||
         !message?.source
       ) {
         continue;
