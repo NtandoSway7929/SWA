@@ -36,6 +36,12 @@
         initialDataLoading: false,
         initialDataError: null,
         communications: [],
+        emailMessages: [],
+        emailSyncing: false,
+        emailSyncError: "",
+        emailSelectedThreadId: "",
+        emailViewInitialized: false,
+        emailLastSync: null,
         documents: [],
         leadStageHistory: [],
         portalRequests: [],
@@ -65,7 +71,7 @@
                 ["leads", "Leads"],
                 ["clients", "Clients"],
                 ["communications", "Communication log"],
-                ["email", "Email"],
+                ["email", "Inbox"],
                 ["documents", "Documents"],
                 ["followups", "Follow-ups"]
             ]
@@ -921,6 +927,13 @@
         state.leadStageHistory = results[2] || [];
         state.portalRequests = results[3] || [];
         state.portalTokens = results[4] || [];
+
+        state.emailMessages =
+            await optionalApi(
+                "/rest/v1/email_messages?select=*&order=received_at.desc&limit=150",
+                []
+            );
+
         saveWorkspaceSnapshot();
     }
 
@@ -1008,8 +1021,8 @@
                 "Record and review every important client and lead interaction."
             ],
             email: [
-                "Email",
-                "Send branded Swayphics emails from info@swayphics.co.za and automatically record them."
+                "Inbox",
+                "Read incoming emails sent to info@swayphics.co.za and reply with the existing Swayphics branded sender."
             ],
             documents: [
                 "Documents",
@@ -9777,11 +9790,12 @@ function simpleBars(items, color) {
         contactId,
         recipientEmail,
         subject,
-        message
+        message,
+        threadOptions
     ) {
         const recipientMatch =
             String(recipientEmail || "").match(
-                /[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i
+                /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
             );
 
         const normalizedRecipientEmail =
@@ -9791,55 +9805,81 @@ function simpleBars(items, color) {
                     : String(recipientEmail || "").trim()
             ).toLowerCase();
 
-        const response =
-            await fetch(
-                SUPABASE_URL +
-                "/functions/v1/send-email",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                        "apikey":
-                            SUPABASE_PUBLISHABLE_KEY,
-                        "Authorization":
-                            "Bearer " +
-                            token()
-                    },
-                    body:
-                        JSON.stringify({
-                            contact_type:
-                                contactType,
-                            contact_id:
-                                contactId,
-                            recipient_email:
-                                normalizedRecipientEmail,
-                            subject:
-                                subject,
-                            message:
-                                message
-                        })
-                }
-            );
+        const thread =
+            threadOptions || {};
 
-        const responseText =
-            await response.text();
+        const requestBody = {
+            contact_type:
+                contactType || undefined,
+            contact_id:
+                contactId || undefined,
+            recipient_email:
+                normalizedRecipientEmail,
+            subject:
+                subject,
+            message:
+                message,
+            in_reply_to:
+                thread.in_reply_to ||
+                undefined,
+            references:
+                thread.references ||
+                undefined,
+            thread_id:
+                thread.thread_id ||
+                undefined
+        };
 
-        let result = null;
+        async function sendRequest(body) {
+            const response =
+                await fetch(
+                    SUPABASE_URL +
+                    "/functions/v1/send-email",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                            "apikey":
+                                SUPABASE_PUBLISHABLE_KEY,
+                            "Authorization":
+                                "Bearer " +
+                                token()
+                        },
+                        body:
+                            JSON.stringify(body)
+                    }
+                );
 
-        try {
-            result =
-                responseText
-                    ? JSON.parse(
-                        responseText
-                    )
-                    : null;
-        } catch (error) {
-            result = {
-                error:
+            const responseText =
+                await response.text();
+
+            let result = null;
+
+            try {
+                result =
                     responseText
+                        ? JSON.parse(
+                            responseText
+                        )
+                        : null;
+            } catch (error) {
+                result = {
+                    error:
+                        responseText
+                };
+            }
+
+            return {
+                response,
+                result
             };
         }
+
+        let { response, result } =
+            await sendRequest(
+                requestBody
+            );
 
         if (!response.ok) {
             const errorMessage =
@@ -9855,86 +9895,925 @@ function simpleBars(items, color) {
                 ) &&
                 normalizedRecipientEmail
             ) {
-                const retryResponse =
-                    await fetch(
-                        SUPABASE_URL +
-                        "/functions/v1/send-email",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type":
-                                    "application/json",
-                                "apikey":
-                                    SUPABASE_PUBLISHABLE_KEY,
-                                "Authorization":
-                                    "Bearer " +
-                                    token()
-                            },
-                            body:
-                                JSON.stringify({
-                                    contact_type:
-                                        contactType,
-                                    contact_id:
-                                        "",
-                                    recipient_email:
-                                        normalizedRecipientEmail,
-                                    subject:
-                                        subject,
-                                    message:
-                                        message
-                                })
-                        }
-                    );
+                const retry =
+                    await sendRequest({
+                        ...requestBody,
+                        contact_id:
+                            undefined
+                    });
 
-                const retryText =
-                    await retryResponse.text();
+                response =
+                    retry.response;
+                result =
+                    retry.result;
 
-                let retryResult = null;
-
-                try {
-                    retryResult =
-                        retryText
-                            ? JSON.parse(
-                                retryText
-                            )
-                            : null;
-                } catch (error) {
-                    retryResult = {
-                        error:
-                            retryText
-                    };
+                if (response.ok) {
+                    return result;
                 }
-
-                if (retryResponse.ok) {
-                    return retryResult;
-                }
-
-                throw new Error(
-                    retryResult &&
-                    retryResult.error
-                        ? retryResult.error
-                        : (
-                            "Email sending failed with " +
-                            retryResponse.status +
-                            "."
-                        )
-                );
             }
 
             throw new Error(
-                errorMessage ||
-                (
-                    "Email sending failed with " +
-                    response.status +
-                    "."
-                )
+                result &&
+                result.error
+                    ? result.error
+                    : (
+                        "Email sending failed with " +
+                        response.status +
+                        "."
+                    )
             );
         }
 
         return result;
     }
 
+    function emailMessagesForThread(threadId) {
+        return (
+            Array.isArray(state.emailMessages)
+                ? state.emailMessages
+                : []
+        )
+            .filter(function (item) {
+                return (
+                    item.thread_id ===
+                    threadId
+                );
+            })
+            .sort(function (a, b) {
+                return (
+                    new Date(
+                        a.received_at ||
+                        a.created_at ||
+                        0
+                    ).getTime() -
+                    new Date(
+                        b.received_at ||
+                        b.created_at ||
+                        0
+                    ).getTime()
+                );
+            });
+    }
+
+    function emailThreadGroups() {
+        const grouped = {};
+
+        (
+            Array.isArray(state.emailMessages)
+                ? state.emailMessages
+                : []
+        ).forEach(function (message) {
+            if (!message.thread_id) {
+                return;
+            }
+
+            if (!grouped[message.thread_id]) {
+                grouped[message.thread_id] = [];
+            }
+
+            grouped[message.thread_id].push(
+                message
+            );
+        });
+
+        return Object.keys(grouped)
+            .map(function (threadId) {
+                return {
+                    threadId:
+                        threadId,
+                    messages:
+                        grouped[threadId].sort(
+                            function (a, b) {
+                                return (
+                                    new Date(
+                                        a.received_at ||
+                                        a.created_at ||
+                                        0
+                                    ).getTime() -
+                                    new Date(
+                                        b.received_at ||
+                                        b.created_at ||
+                                        0
+                                    ).getTime()
+                                );
+                            }
+                        )
+                };
+            })
+            .sort(function (a, b) {
+                const aLatest =
+                    a.messages[
+                        a.messages.length - 1
+                    ];
+
+                const bLatest =
+                    b.messages[
+                        b.messages.length - 1
+                    ];
+
+                return (
+                    new Date(
+                        bLatest.received_at ||
+                        bLatest.created_at ||
+                        0
+                    ).getTime() -
+                    new Date(
+                        aLatest.received_at ||
+                        aLatest.created_at ||
+                        0
+                    ).getTime()
+                );
+            });
+    }
+
+    function emailThreadHasInbound(thread) {
+        return thread.messages.some(
+            function (message) {
+                return (
+                    message.direction ===
+                    "inbound"
+                );
+            }
+        );
+    }
+
+    function emailThreadUnread(thread) {
+        return thread.messages.some(
+            function (message) {
+                return (
+                    message.direction ===
+                        "inbound" &&
+                    message.is_read !==
+                        true
+                );
+            }
+        );
+    }
+
+    function emailThreadSubject(thread) {
+        const latestInbound =
+            thread.messages
+                .filter(function (message) {
+                    return (
+                        message.direction ===
+                        "inbound"
+                    );
+                })
+                .slice(-1)[0];
+
+        const latest =
+            thread.messages[
+                thread.messages.length - 1
+            ];
+
+        return (
+            (
+                latestInbound ||
+                latest ||
+                {}
+            ).subject ||
+            "No subject"
+        );
+    }
+
+    function emailThreadSender(thread) {
+        const inbound =
+            thread.messages.find(
+                function (message) {
+                    return (
+                        message.direction ===
+                        "inbound"
+                    );
+                }
+            );
+
+        if (!inbound) {
+            return "Swayphics";
+        }
+
+        return (
+            inbound.from_name ||
+            inbound.from_email ||
+            "Unknown sender"
+        );
+    }
+
+    function stripEmailHtml(value) {
+        return String(value || "")
+            .replace(
+                /<style[\s\S]*?<\/style>/gi,
+                " "
+            )
+            .replace(
+                /<script[\s\S]*?<\/script>/gi,
+                " "
+            )
+            .replace(
+                /<[^>]+>/g,
+                " "
+            )
+            .replace(
+                /&nbsp;/gi,
+                " "
+            )
+            .replace(
+                /&amp;/gi,
+                "&"
+            )
+            .replace(
+                /&lt;/gi,
+                "<"
+            )
+            .replace(
+                /&gt;/gi,
+                ">"
+            )
+            .replace(
+                /\s+/g,
+                " "
+            )
+            .trim();
+    }
+
+    function emailMessageText(message) {
+        const text =
+            String(
+                message &&
+                message.text_body ||
+                ""
+            ).trim();
+
+        if (text) {
+            return text;
+        }
+
+        return stripEmailHtml(
+            message &&
+            message.html_body
+        );
+    }
+
+    function emailMessageHeaderIds(value) {
+        return (
+            String(value || "")
+                .match(
+                    /<[^>]+>/g
+                ) || []
+        );
+    }
+
+    function buildReplyReferences(
+        threadMessages,
+        latestMessage
+    ) {
+        const ids = [];
+
+        threadMessages.forEach(
+            function (message) {
+                emailMessageHeaderIds(
+                    message.references_header
+                ).forEach(
+                    function (id) {
+                        if (
+                            !ids.includes(id)
+                        ) {
+                            ids.push(id);
+                        }
+                    }
+                );
+
+                if (
+                    message.message_id &&
+                    !ids.includes(
+                        message.message_id
+                    )
+                ) {
+                    ids.push(
+                        message.message_id
+                    );
+                }
+            }
+        );
+
+        if (
+            latestMessage &&
+            latestMessage.in_reply_to
+        ) {
+            emailMessageHeaderIds(
+                latestMessage.in_reply_to
+            ).forEach(
+                function (id) {
+                    if (
+                        !ids.includes(id)
+                    ) {
+                        ids.push(id);
+                    }
+                }
+            );
+        }
+
+        return ids
+            .slice(-20)
+            .join(" ")
+            .slice(0, 1800);
+    }
+
+    function matchingContactForEmailMessage(
+        message
+    ) {
+        if (!message) {
+            return null;
+        }
+
+        if (message.client_id) {
+            return {
+                type: "client",
+                id:
+                    message.client_id
+            };
+        }
+
+        if (message.lead_id) {
+            return {
+                type: "lead",
+                id:
+                    message.lead_id
+            };
+        }
+
+        const email =
+            String(
+                message.from_email ||
+                ""
+            ).toLowerCase();
+
+        if (!email) {
+            return null;
+        }
+
+        const client =
+            state.clients.find(
+                function (item) {
+                    return (
+                        String(
+                            item.email ||
+                            ""
+                        ).toLowerCase() ===
+                        email
+                    );
+                }
+            );
+
+        if (client) {
+            return {
+                type: "client",
+                id:
+                    client.id
+            };
+        }
+
+        const lead =
+            state.leads.find(
+                function (item) {
+                    return (
+                        String(
+                            item.email ||
+                            ""
+                        ).toLowerCase() ===
+                        email
+                    );
+                }
+            );
+
+        if (lead) {
+            return {
+                type: "lead",
+                id:
+                    lead.id
+            };
+        }
+
+        return null;
+    }
+
+    async function loadEmailMessages() {
+        state.emailMessages =
+            await optionalApi(
+                "/rest/v1/email_messages?select=*&order=received_at.desc&limit=150",
+                []
+            );
+
+        saveWorkspaceSnapshot();
+    }
+
+    async function syncEmailInbox(
+        shouldRender
+    ) {
+        if (state.emailSyncing) {
+            return;
+        }
+
+        state.emailSyncing =
+            true;
+        state.emailSyncError =
+            "";
+
+        if (shouldRender !== false) {
+            renderView();
+        }
+
+        try {
+            const response =
+                await fetch(
+                    SUPABASE_URL +
+                    "/functions/v1/sync-email-inbox",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                            "apikey":
+                                SUPABASE_PUBLISHABLE_KEY,
+                            "Authorization":
+                                "Bearer " +
+                                token()
+                        },
+                        body:
+                            "{}"
+                    }
+                );
+
+            const responseText =
+                await response.text();
+
+            let result = null;
+
+            try {
+                result =
+                    responseText
+                        ? JSON.parse(
+                            responseText
+                        )
+                        : null;
+            } catch (error) {
+                result = {
+                    error:
+                        responseText
+                };
+            }
+
+            if (!response.ok) {
+                throw new Error(
+                    result &&
+                    result.error
+                        ? result.error
+                        : (
+                            "Inbox synchronization failed with " +
+                            response.status +
+                            "."
+                        )
+                );
+            }
+
+            await loadEmailMessages();
+
+            state.emailLastSync =
+                new Date().toISOString();
+        } catch (error) {
+            state.emailSyncError =
+                error.message ||
+                "Unable to synchronize the inbox.";
+        } finally {
+            state.emailSyncing =
+                false;
+        }
+
+        if (
+            shouldRender !== false &&
+            state.currentView ===
+                "email"
+        ) {
+            renderView();
+        }
+    }
+
+    async function initializeEmailInbox() {
+        if (!state.emailViewInitialized) {
+            state.emailViewInitialized =
+                true;
+        }
+
+        if (
+            state.currentView !==
+            "email"
+        ) {
+            return;
+        }
+
+        if (
+            typeof window !==
+                "undefined" &&
+            !window.__swayphicsEmailInboxPoll
+        ) {
+            window.__swayphicsEmailInboxPoll =
+                window.setInterval(
+                    function () {
+                        if (
+                            state.currentView ===
+                                "email" &&
+                            !state.emailSyncing
+                        ) {
+                            syncEmailInbox(
+                                false
+                            );
+                        }
+                    },
+                    60000
+                );
+        }
+
+        await syncEmailInbox(
+            false
+        );
+
+        if (
+            state.currentView ===
+            "email"
+        ) {
+            renderView();
+        }
+    }
+
+    async function markEmailThreadRead(
+        threadId
+    ) {
+        if (!threadId) {
+            return;
+        }
+
+        const now =
+            new Date().toISOString();
+
+        try {
+            await api(
+                "/rest/v1/email_messages?thread_id=eq." +
+                encodeURIComponent(
+                    threadId
+                ) +
+                "&direction=eq.inbound",
+                {
+                    method: "PATCH",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    }),
+                    body:
+                        JSON.stringify({
+                            is_read:
+                                true,
+                            updated_at:
+                                now
+                        })
+                }
+            );
+
+            state.emailMessages =
+                state.emailMessages.map(
+                    function (message) {
+                        if (
+                            message.thread_id ===
+                                threadId &&
+                            message.direction ===
+                                "inbound"
+                        ) {
+                            return Object.assign(
+                                {},
+                                message,
+                                {
+                                    is_read:
+                                        true,
+                                    updated_at:
+                                        now
+                                }
+                            );
+                        }
+
+                        return message;
+                    }
+                );
+
+            saveWorkspaceSnapshot();
+        } catch (error) {
+            console.warn(
+                "Unable to mark email thread as read.",
+                error
+            );
+        }
+    }
+
     function renderEmailWorkspace() {
+        const threads =
+            emailThreadGroups();
+
+        const unreadCount =
+            threads.filter(
+                emailThreadUnread
+            ).length;
+
+        const selectedThread =
+            state.emailSelectedThreadId
+                ? threads.find(
+                    function (thread) {
+                        return (
+                            thread.threadId ===
+                            state.emailSelectedThreadId
+                        );
+                    }
+                )
+                : null;
+
+        if (
+            state.emailSelectedThreadId &&
+            !selectedThread
+        ) {
+            state.emailSelectedThreadId =
+                "";
+        }
+
+        const syncLabel =
+            state.emailSyncing
+                ? "Syncing..."
+                : "Sync inbox";
+
+        const syncNote =
+            state.emailSyncError
+                ? (
+                    '<div class="sway-email-inbox-error">' +
+                        '<strong>Inbox sync needs attention.</strong>' +
+                        "<span>" +
+                            esc(
+                                state.emailSyncError
+                            ) +
+                        "</span>" +
+                    "</div>"
+                )
+                : (
+                    state.emailLastSync
+                        ? (
+                            '<span class="sway-email-last-sync">Last checked ' +
+                                esc(
+                                    dateTime(
+                                        state.emailLastSync
+                                    )
+                                ) +
+                            "</span>"
+                        )
+                        : ""
+                );
+
+        if (selectedThread) {
+            const messages =
+                selectedThread.messages;
+
+            const latestInbound =
+                messages
+                    .filter(
+                        function (message) {
+                            return (
+                                message.direction ===
+                                "inbound"
+                            );
+                        }
+                    )
+                    .slice(-1)[0];
+
+            const replyContact =
+                matchingContactForEmailMessage(
+                    latestInbound ||
+                    messages[messages.length - 1]
+                );
+
+            const senderEmail =
+                latestInbound &&
+                latestInbound.from_email
+                    ? latestInbound.from_email
+                    : (
+                        messages[
+                            messages.length - 1
+                        ] &&
+                        messages[
+                            messages.length - 1
+                        ].to_email
+                    );
+
+            const senderName =
+                latestInbound
+                    ? (
+                        latestInbound.from_name ||
+                        latestInbound.from_email ||
+                        "Email"
+                    )
+                    : "Swayphics";
+
+            const messageCards =
+                messages
+                    .map(
+                        function (message) {
+                            const inbound =
+                                message.direction ===
+                                "inbound";
+
+                            return (
+                                '<article class="sway-email-thread-message ' +
+                                (
+                                    inbound
+                                        ? "inbound"
+                                        : "outbound"
+                                ) +
+                                '">' +
+                                    '<div class="sway-email-thread-message-meta">' +
+                                        '<strong>' +
+                                            esc(
+                                                inbound
+                                                    ? (
+                                                        message.from_name ||
+                                                        message.from_email ||
+                                                        "Sender"
+                                                    )
+                                                    : "Swayphics"
+                                            ) +
+                                        "</strong>" +
+                                        "<span>" +
+                                            esc(
+                                                dateTime(
+                                                    message.received_at ||
+                                                    message.created_at
+                                                )
+                                            ) +
+                                        "</span>" +
+                                    "</div>" +
+                                    '<div class="sway-email-thread-message-body">' +
+                                        esc(
+                                            emailMessageText(
+                                                message
+                                            )
+                                        ) +
+                                    "</div>" +
+                                "</article>"
+                            );
+                        }
+                    )
+                    .join("");
+
+            const replyLabel =
+                latestInbound
+                    ? (
+                        "Reply to " +
+                        (
+                            latestInbound.from_name ||
+                            latestInbound.from_email ||
+                            "sender"
+                        )
+                    )
+                    : "Reply";
+
+            return (
+                heading(
+                    '<button type="button" class="sway-workspace-button" data-email-back>← Inbox</button>' +
+                    (
+                        latestInbound
+                            ? '<button type="button" class="sway-workspace-button primary" data-email-reply="email-thread" data-email-thread-id="' +
+                              esc(
+                                  selectedThread.threadId
+                              ) +
+                              '">' +
+                              esc(replyLabel) +
+                              "</button>"
+                            : ""
+                    )
+                ) +
+                '<section class="sway-email-thread-head">' +
+                    '<div class="sway-email-thread-kicker">' +
+                        "EMAIL CONVERSATION" +
+                    "</div>" +
+                    "<h2>" +
+                        esc(
+                            emailThreadSubject(
+                                selectedThread
+                            )
+                        ) +
+                    "</h2>" +
+                    '<div class="sway-email-thread-contact">' +
+                        "<strong>" +
+                            esc(senderName) +
+                        "</strong>" +
+                        (
+                            senderEmail
+                                ? "<span>" +
+                                  esc(senderEmail) +
+                                  "</span>"
+                                : ""
+                        ) +
+                        (
+                            replyContact
+                                ? chip(
+                                    replyContact.type ===
+                                        "client"
+                                        ? "Client"
+                                        : "Lead"
+                                  )
+                                : ""
+                        ) +
+                    "</div>" +
+                "</section>" +
+                '<section class="sway-email-thread-body">' +
+                    messageCards +
+                "</section>" +
+                '<div class="sway-inline-note">' +
+                    "<strong>Threaded reply:</strong> replies use the existing Swayphics branded template and the original email's threading headers so the customer sees this as one conversation." +
+                "</div>"
+            );
+        }
+
+        const inboundThreads =
+            threads.filter(
+                emailThreadHasInbound
+            );
+
+        const threadRows =
+            inboundThreads
+                .map(
+                    function (thread) {
+                        const latest =
+                            thread.messages[
+                                thread.messages.length - 1
+                            ];
+
+                        const unread =
+                            emailThreadUnread(
+                                thread
+                            );
+
+                        const sender =
+                            emailThreadSender(
+                                thread
+                            );
+
+                        const preview =
+                            emailMessageText(
+                                latest
+                            ) ||
+                            emailThreadSubject(
+                                thread
+                            );
+
+                        return (
+                            '<button type="button" class="sway-email-inbox-item ' +
+                            (
+                                unread
+                                    ? "unread"
+                                    : ""
+                            ) +
+                            '" data-email-thread="' +
+                            esc(
+                                thread.threadId
+                            ) +
+                            '">' +
+                                '<span class="sway-email-inbox-unread" aria-hidden="true"></span>' +
+                                '<span class="sway-email-inbox-copy">' +
+                                    '<strong>' +
+                                        esc(sender) +
+                                    "</strong>" +
+                                    '<span class="sway-email-inbox-subject">' +
+                                        esc(
+                                            emailThreadSubject(
+                                                thread
+                                            )
+                                        ) +
+                                    "</span>" +
+                                    '<span class="sway-email-inbox-preview">' +
+                                        esc(
+                                            preview.slice(
+                                                0,
+                                                150
+                                            )
+                                        ) +
+                                    "</span>" +
+                                "</span>" +
+                                '<span class="sway-email-inbox-date">' +
+                                    esc(
+                                        dateTime(
+                                            latest.received_at ||
+                                            latest.created_at
+                                        )
+                                    ) +
+                                "</span>" +
+                            "</button>"
+                        );
+                    }
+                )
+                .join("");
+
         const sentEmails =
             state.communications
                 .filter(function (item) {
@@ -9943,47 +10822,54 @@ function simpleBars(items, color) {
                         item.direction === "outbound"
                     );
                 })
-                .slice(0, 8);
+                .slice(0, 6);
 
         const recentRows =
-            sentEmails.map(function (item) {
-                const contactDetails =
-                    communicationContactDetails(item);
+            sentEmails
+                .map(
+                    function (item) {
+                        const contactDetails =
+                            communicationContactDetails(
+                                item
+                            );
 
-                return (
-                    "<tr>" +
-                        "<td><strong>" +
-                            esc(contactDetails.primary) +
-                        "</strong>" +
-                        (
-                            contactDetails.secondary
-                                ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                  esc(contactDetails.secondary) +
-                                  "</span>"
-                                : ""
-                        ) +
-                        (
-                            item.subject
-                                ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                  esc(item.subject) +
-                                  "</span>"
-                                : ""
-                        ) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-communication-message">' +
-                                esc(item.message || "—") +
-                            "</div>" +
-                        "</td>" +
-                        "<td>" +
-                            esc(dateTime(item.contacted_at)) +
-                        "</td>" +
-                        "<td>" +
-                            esc(adminName(item.created_by)) +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+                        return (
+                            "<tr>" +
+                                "<td><strong>" +
+                                    esc(
+                                        contactDetails.primary
+                                    ) +
+                                "</strong>" +
+                                (
+                                    item.subject
+                                        ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
+                                          esc(
+                                              item.subject
+                                          ) +
+                                          "</span>"
+                                        : ""
+                                ) +
+                                "</td>" +
+                                "<td>" +
+                                    '<div class="sway-communication-message">' +
+                                        esc(
+                                            item.message ||
+                                            "—"
+                                        ) +
+                                    "</div>" +
+                                "</td>" +
+                                "<td>" +
+                                    esc(
+                                        dateTime(
+                                            item.contacted_at
+                                        )
+                                    ) +
+                                "</td>" +
+                            "</tr>"
+                        );
+                    }
+                )
+                .join("");
 
         return (
             heading(
@@ -9992,63 +10878,284 @@ function simpleBars(items, color) {
             '<section class="sway-email-summary">' +
                 '<div class="sway-email-summary-copy">' +
                     '<span class="admin-label">Swayphics mail</span>' +
-                    "<h3>Send from info@swayphics.co.za</h3>" +
-                    "<p>Every message uses the Swayphics branded email wrapper. The greeting and signature are added automatically, while your message remains completely under your control.</p>" +
+                    "<h3>Inbox · info@swayphics.co.za</h3>" +
+                    "<p>Incoming messages are synchronized from the Swayphics mailbox. Open a conversation to read it, then reply directly from this dashboard using the same branded Swayphics email sender.</p>" +
+                    '<div class="sway-email-inbox-toolbar">' +
+                        '<span class="sway-email-unread-count">' +
+                            esc(
+                                String(
+                                    unreadCount
+                                ) +
+                                (
+                                    unreadCount === 1
+                                        ? " unread"
+                                        : " unread"
+                                )
+                            ) +
+                        "</span>" +
+                        syncNote +
+                    "</div>" +
                 "</div>" +
                 '<div class="sway-email-summary-grid">' +
-                    '<div><span>From</span><strong>info@swayphics.co.za</strong></div>' +
+                    '<div><span>Mailbox</span><strong>info@swayphics.co.za</strong></div>' +
                     '<div><span>Template</span><strong>Branded</strong></div>' +
-                    '<div><span>Logging</span><strong>Automatic</strong></div>' +
+                    '<div><span>Replying</span><strong>Threaded</strong></div>' +
                 "</div>" +
+            "</section>" +
+            '<section class="sway-email-inbox-panel">' +
+                '<div class="sway-email-inbox-panel-head">' +
+                    "<div>" +
+                        '<span class="admin-label">Inbox</span>' +
+                        "<h3>" +
+                            (
+                                inboundThreads.length
+                                    ? "Recent conversations"
+                                    : "No incoming emails yet"
+                            ) +
+                        "</h3>" +
+                    "</div>" +
+                    '<button type="button" class="sway-workspace-button" data-email-sync ' +
+                        (
+                            state.emailSyncing
+                                ? "disabled"
+                                : ""
+                        ) +
+                    ">" +
+                        esc(syncLabel) +
+                    "</button>" +
+                "</div>" +
+                (
+                    threadRows
+                        ? '<div class="sway-email-inbox-list">' +
+                          threadRows +
+                          "</div>"
+                        : (
+                            '<div class="sway-email-inbox-empty">' +
+                                '<div class="sway-email-inbox-empty-mark">@</div>' +
+                                "<strong>Your inbox is quiet.</strong>" +
+                                "<span>Messages sent to info@swayphics.co.za will appear here after the next synchronization.</span>" +
+                            "</div>"
+                        )
+                ) +
             "</section>" +
             panel(
                 "Recent sent emails",
-                "Outbound emails sent by Swayphics admins from the built-in composer.",
+                "Outbound messages sent through the existing Swayphics branded email function.",
                 recentRows
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Message</th><th>Date &amp; time</th><th>Sent by</th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Recipient</th><th>Message</th><th>Date &amp; time</th></tr></thead><tbody>' +
                       recentRows +
                       "</tbody></table></div>"
                     : empty(
-                        "No sent emails yet. Compose the first one from the button above or directly from a lead or client."
+                        "No sent emails yet."
                     )
-            ) +
-            '<div class="sway-inline-note">' +
-                "<strong>Automatic communication log:</strong> every successful email is added to the relationship history used by Client 360 and the Communication Log." +
-            "</div>"
+            )
         );
     }
 
-    function openEmailComposer(contactType, contactId) {
+    function openEmailComposer(
+        contactType,
+        contactId,
+        threadId
+    ) {
         const modalId =
             "sway-email-composer";
 
-        document.getElementById(modalId)?.remove();
+        document.getElementById(
+            modalId
+        )?.remove();
+
+        const isReply =
+            contactType ===
+            "email-thread";
+
+        let replyThread =
+            null;
+
+        let replyMessages =
+            [];
+
+        let replyInbound =
+            null;
+
+        let replyRecipient =
+            "";
+
+        let replyContact =
+            null;
+
+        if (isReply) {
+            replyThread =
+                emailThreadGroups().find(
+                    function (thread) {
+                        return (
+                            thread.threadId ===
+                            threadId
+                        );
+                    }
+                );
+
+            if (!replyThread) {
+                swayAlert(
+                    "That email conversation could not be found."
+                );
+                return;
+            }
+
+            replyMessages =
+                replyThread.messages;
+
+            replyInbound =
+                replyMessages
+                    .filter(
+                        function (message) {
+                            return (
+                                message.direction ===
+                                "inbound"
+                            );
+                        }
+                    )
+                    .slice(-1)[0];
+
+            replyRecipient =
+                String(
+                    replyInbound?.from_email ||
+                    ""
+                ).trim();
+
+            if (!replyRecipient) {
+                replyRecipient =
+                    String(
+                        replyMessages[
+                            replyMessages.length - 1
+                        ]?.to_email ||
+                        ""
+                    ).trim();
+            }
+
+            replyContact =
+                matchingContactForEmailMessage(
+                    replyInbound
+                );
+        }
 
         let selectedType =
             contactType === "client" ||
             contactType === "lead"
                 ? contactType
                 : (
-                    emailContactRecords("lead").length
-                        ? "lead"
-                        : "client"
+                    replyContact?.type ||
+                    (
+                        emailContactRecords(
+                            "lead"
+                        ).length
+                            ? "lead"
+                            : "client"
+                    )
                 );
 
         let selectedId =
             contactId || "";
 
-        if (
+        if (isReply) {
+            selectedType =
+                replyContact?.type || "";
+            selectedId =
+                replyContact?.id || "";
+        } else if (
             !emailContactRecords(
                 selectedType
-            ).some(function (item) {
-                return item.id === selectedId;
-            })
+            ).some(
+                function (item) {
+                    return (
+                        item.id ===
+                        selectedId
+                    );
+                }
+            )
         ) {
             selectedId = "";
         }
 
+        const selectedRecord =
+            !isReply
+                ? emailContactRecords(
+                    selectedType
+                  ).find(
+                    function (item) {
+                        return (
+                            item.id ===
+                            selectedId
+                        );
+                    }
+                )
+                : null;
+
+        const recipientEmail =
+            isReply
+                ? replyRecipient
+                : (
+                    selectedRecord?.email ||
+                    ""
+                );
+
+        if (
+            isReply &&
+            !recipientEmail
+        ) {
+            swayAlert(
+                "This conversation does not contain a usable sender email address."
+            );
+            return;
+        }
+
+        const baseSubject =
+            isReply
+                ? (
+                    emailThreadSubject(
+                        replyThread
+                    )
+                )
+                : (
+                    selectedRecord
+                        ? generateEmailSubject(
+                            selectedType,
+                            selectedRecord
+                        )
+                        : ""
+                );
+
+        const replySubject =
+            isReply
+                ? (
+                    /^re:/i.test(
+                        baseSubject
+                    )
+                        ? baseSubject
+                        : "Re: " +
+                          baseSubject
+                )
+                : baseSubject;
+
+        const threadOptions =
+            isReply
+                ? {
+                    thread_id:
+                        replyThread.threadId,
+                    in_reply_to:
+                        replyInbound?.message_id ||
+                        null,
+                    references:
+                        buildReplyReferences(
+                            replyMessages,
+                            replyInbound
+                        )
+                }
+                : {};
+
         const modal =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
 
         modal.className =
             "sway-email-composer";
@@ -10062,41 +11169,85 @@ function simpleBars(items, color) {
                 '<div class="sway-email-composer-head">' +
                     '<div>' +
                         '<span class="admin-label">Swayphics mail</span>' +
-                        '<h3 id="sway-email-composer-title">Compose email</h3>' +
-                        '<p>From <strong>info@swayphics.co.za</strong>. Your greeting, Swayphics branding and signature are handled automatically.</p>' +
+                        '<h3 id="sway-email-composer-title">' +
+                            (
+                                isReply
+                                    ? "Reply to email"
+                                    : "Compose email"
+                            ) +
+                        "</h3>" +
+                        '<p>From <strong>info@swayphics.co.za</strong>. ' +
+                            (
+                                isReply
+                                    ? "This reply will stay in the existing email conversation."
+                                    : "Your greeting, Swayphics branding and signature are handled automatically."
+                            ) +
+                        "</p>" +
                     "</div>" +
                     '<button type="button" class="sway-client360-close" data-close-email-composer aria-label="Close email composer">×</button>' +
                 "</div>" +
                 '<form class="sway-email-composer-form">' +
-                    '<div class="sway-email-composer-recipient-grid">' +
-                        '<div class="sway-email-field">' +
-                            '<label for="sway-email-contact-type">Recipient type</label>' +
-                            '<select id="sway-email-contact-type">' +
-                                '<option value="lead"' +
-                                    (selectedType === "lead" ? " selected" : "") +
-                                '>Lead</option>' +
-                                '<option value="client"' +
-                                    (selectedType === "client" ? " selected" : "") +
-                                '>Client</option>' +
-                            "</select>" +
-                        "</div>" +
-                        '<div class="sway-email-field">' +
-                            '<label for="sway-email-contact-id">Recipient</label>' +
-                            '<select id="sway-email-contact-id">' +
-                                emailContactOptions(
-                                    selectedType,
-                                    selectedId
-                                ) +
-                            "</select>" +
-                        "</div>" +
-                    "</div>" +
-                    '<div class="sway-email-recipient-preview" id="sway-email-recipient-preview">Select a recipient to continue.</div>' +
+                    (
+                        isReply
+                            ? (
+                                '<div class="sway-email-recipient-preview">' +
+                                    "<span>To</span>" +
+                                    "<strong>" +
+                                        esc(
+                                            replyInbound?.from_name ||
+                                            replyInbound?.from_email ||
+                                            "Recipient"
+                                        ) +
+                                    "</strong>" +
+                                    "<b>" +
+                                        esc(
+                                            recipientEmail
+                                        ) +
+                                    "</b>" +
+                                "</div>"
+                            )
+                            : (
+                                '<div class="sway-email-composer-recipient-grid">' +
+                                    '<div class="sway-email-field">' +
+                                        '<label for="sway-email-contact-type">Recipient type</label>' +
+                                        '<select id="sway-email-contact-type">' +
+                                            '<option value="lead"' +
+                                                (selectedType === "lead" ? " selected" : "") +
+                                            '>Lead</option>' +
+                                            '<option value="client"' +
+                                                (selectedType === "client" ? " selected" : "") +
+                                            '>Client</option>' +
+                                        "</select>" +
+                                    "</div>" +
+                                    '<div class="sway-email-field">' +
+                                        '<label for="sway-email-contact-id">Recipient</label>' +
+                                        '<select id="sway-email-contact-id">' +
+                                            emailContactOptions(
+                                                selectedType,
+                                                selectedId
+                                            ) +
+                                        "</select>" +
+                                    "</div>" +
+                                "</div>" +
+                                '<div class="sway-email-recipient-preview" id="sway-email-recipient-preview">Select a recipient to continue.</div>'
+                            )
+                    ) +
                     '<div class="sway-email-field">' +
                         '<div class="sway-email-label-row">' +
                             '<label for="sway-email-subject">Subject</label>' +
-                            '<span>Auto-generated</span>' +
+                            '<span>' +
+                                (
+                                    isReply
+                                        ? "Threaded reply"
+                                        : "Auto-generated"
+                                ) +
+                            "</span>" +
                         "</div>" +
-                        '<input id="sway-email-subject" type="text" maxlength="180" autocomplete="off">' +
+                        '<input id="sway-email-subject" type="text" maxlength="180" autocomplete="off" value="' +
+                            esc(
+                                replySubject
+                            ) +
+                        '">' +
                     "</div>" +
                     '<div class="sway-email-field">' +
                         '<label for="sway-email-message">Message</label>' +
@@ -10104,41 +11255,98 @@ function simpleBars(items, color) {
                     "</div>" +
                     '<div class="sway-email-composer-note">' +
                         '<strong>Branded template</strong>' +
-                        "<span>Blue Swayphics header · automatic greeting · your message · automatic sign-off · Swayphics contact footer</span>" +
+                        "<span>" +
+                            (
+                                isReply
+                                    ? "Blue Swayphics header · automatic greeting · your reply · automatic sign-off · original thread headers"
+                                    : "Blue Swayphics header · automatic greeting · your message · automatic sign-off · Swayphics contact footer"
+                            ) +
+                        "</span>" +
                     "</div>" +
                     '<div class="sway-email-composer-actions">' +
                         '<button type="button" class="sway-workspace-button" data-close-email-composer>Cancel</button>' +
-                        '<button type="submit" class="sway-workspace-button primary" id="sway-email-send-button">Send email</button>' +
+                        '<button type="submit" class="sway-workspace-button primary" id="sway-email-send-button">' +
+                            (
+                                isReply
+                                    ? "Send reply"
+                                    : "Send email"
+                            ) +
+                        "</button>" +
                     "</div>" +
                 "</form>" +
             "</section>";
 
-        document.body.appendChild(modal);
+        document.body.appendChild(
+            modal
+        );
 
-        const form = modal.querySelector(".sway-email-composer-form");
-        const typeInput = modal.querySelector("#sway-email-contact-type");
-        const contactInput = modal.querySelector("#sway-email-contact-id");
-        const recipientPreview = modal.querySelector("#sway-email-recipient-preview");
-        const subjectInput = modal.querySelector("#sway-email-subject");
-        const messageInput = modal.querySelector("#sway-email-message");
-        const sendButton = modal.querySelector("#sway-email-send-button");
+        const form =
+            modal.querySelector(
+                ".sway-email-composer-form"
+            );
 
-        let selectedTypeState = selectedType;
-        let selectedIdState = selectedId;
-        let lastAutoSubject = "";
-        let subjectWasEdited = false;
+        const typeInput =
+            modal.querySelector(
+                "#sway-email-contact-type"
+            );
+
+        const contactInput =
+            modal.querySelector(
+                "#sway-email-contact-id"
+            );
+
+        const recipientPreview =
+            modal.querySelector(
+                "#sway-email-recipient-preview"
+            );
+
+        const subjectInput =
+            modal.querySelector(
+                "#sway-email-subject"
+            );
+
+        const messageInput =
+            modal.querySelector(
+                "#sway-email-message"
+            );
+
+        const sendButton =
+            modal.querySelector(
+                "#sway-email-send-button"
+            );
+
+        let selectedTypeState =
+            selectedType;
+
+        let selectedIdState =
+            selectedId;
+
+        let lastAutoSubject =
+            replySubject;
+
+        let subjectWasEdited =
+            false;
 
         function selectedContact() {
             return (
                 emailContactRecords(
                     selectedTypeState
-                ).find(function (item) {
-                    return item.id === selectedIdState;
-                }) || null
+                ).find(
+                    function (item) {
+                        return (
+                            item.id ===
+                            selectedIdState
+                        );
+                    }
+                ) || null
             );
         }
 
         function updateRecipient() {
+            if (isReply) {
+                return;
+            }
+
             selectedTypeState =
                 typeInput.value === "client"
                     ? "client"
@@ -10151,22 +11359,33 @@ function simpleBars(items, color) {
 
             if (
                 contactInput.value &&
-                records.some(function (item) {
-                    return item.id === contactInput.value;
-                })
+                records.some(
+                    function (item) {
+                        return (
+                            item.id ===
+                            contactInput.value
+                        );
+                    }
+                )
             ) {
                 selectedIdState =
                     contactInput.value;
             } else if (
                 selectedIdState &&
-                records.some(function (item) {
-                    return item.id === selectedIdState;
-                })
+                records.some(
+                    function (item) {
+                        return (
+                            item.id ===
+                            selectedIdState
+                        );
+                    }
+                )
             ) {
                 selectedIdState =
                     selectedIdState;
             } else {
-                selectedIdState = "";
+                selectedIdState =
+                    "";
             }
 
             contactInput.innerHTML =
@@ -10185,9 +11404,15 @@ function simpleBars(items, color) {
                 recipientPreview.innerHTML =
                     "No contact with an email address is available for this type.";
 
-                subjectInput.value = "";
-                lastAutoSubject = "";
-                sendButton.disabled = true;
+                subjectInput.value =
+                    "";
+
+                lastAutoSubject =
+                    "";
+
+                sendButton.disabled =
+                    true;
+
                 return;
             }
 
@@ -10199,7 +11424,9 @@ function simpleBars(items, color) {
                         "Recipient"
                     ) +
                 "</strong><b>" +
-                    esc(contact.email) +
+                    esc(
+                        contact.email
+                    ) +
                 "</b>";
 
             const autoSubject =
@@ -10216,39 +11443,45 @@ function simpleBars(items, color) {
                 subjectInput.value =
                     autoSubject;
 
-                subjectWasEdited = false;
+                subjectWasEdited =
+                    false;
             }
 
             lastAutoSubject =
                 autoSubject;
 
-            sendButton.disabled = false;
+            sendButton.disabled =
+                false;
         }
 
-        typeInput.addEventListener(
-            "change",
-            function () {
-                subjectWasEdited = false;
-                updateRecipient();
-            }
-        );
-
-        contactInput.addEventListener(
-            "change",
-            function () {
-                selectedIdState =
-                    contactInput.value;
-
-                if (
-                    subjectInput.value ===
-                    lastAutoSubject
-                ) {
-                    subjectWasEdited = false;
+        if (!isReply) {
+            typeInput.addEventListener(
+                "change",
+                function () {
+                    subjectWasEdited =
+                        false;
+                    updateRecipient();
                 }
+            );
 
-                updateRecipient();
-            }
-        );
+            contactInput.addEventListener(
+                "change",
+                function () {
+                    selectedIdState =
+                        contactInput.value;
+
+                    if (
+                        subjectInput.value ===
+                        lastAutoSubject
+                    ) {
+                        subjectWasEdited =
+                            false;
+                    }
+
+                    updateRecipient();
+                }
+            );
+        }
 
         subjectInput.addEventListener(
             "input",
@@ -10265,21 +11498,49 @@ function simpleBars(items, color) {
                 event.preventDefault();
 
                 const contact =
-                    selectedContact();
+                    isReply
+                        ? (
+                            replyContact
+                                ? (
+                                    emailContactRecords(
+                                        replyContact.type
+                                    ).find(
+                                        function (item) {
+                                            return (
+                                                item.id ===
+                                                replyContact.id
+                                            );
+                                        }
+                                    ) || null
+                                )
+                                : null
+                        )
+                        : selectedContact();
 
                 const message =
                     messageInput.value.trim();
 
                 const subject =
                     subjectInput.value.trim() ||
-                    generateEmailSubject(
-                        selectedTypeState,
-                        contact
+                    (
+                        isReply
+                            ? replySubject
+                            : generateEmailSubject(
+                                selectedTypeState,
+                                contact
+                            )
                     );
 
-                if (!contact) {
+                const targetEmail =
+                    isReply
+                        ? recipientEmail
+                        : contact?.email;
+
+                if (!targetEmail) {
                     swayAlert(
-                        "Select a lead or client with an email address."
+                        isReply
+                            ? "The reply recipient could not be resolved."
+                            : "Select a lead or client with an email address."
                     );
                     return;
                 }
@@ -10292,32 +11553,60 @@ function simpleBars(items, color) {
                     return;
                 }
 
-                sendButton.disabled = true;
+                sendButton.disabled =
+                    true;
+
                 sendButton.textContent =
-                    "Sending...";
+                    isReply
+                        ? "Sending reply..."
+                        : "Sending...";
 
                 try {
                     const result =
                         await invokeEmailFunction(
-                            selectedTypeState,
-                            contact.id,
-                            contact.email,
+                            isReply
+                                ? (
+                                    replyContact?.type ||
+                                    ""
+                                )
+                                : selectedTypeState,
+                            isReply
+                                ? (
+                                    replyContact?.id ||
+                                    ""
+                                )
+                                : contact.id,
+                            targetEmail,
                             subject,
-                            message
+                            message,
+                            threadOptions
                         );
 
                     modal.remove();
 
                     await refreshSecondaryData();
-                    renderView();
+
+                    if (
+                        isReply
+                    ) {
+                        await loadEmailMessages();
+                    }
+
+                    if (
+                        state.currentView ===
+                        "email"
+                    ) {
+                        renderView();
+                    }
 
                     if (
                         result &&
-                        result.communication_logged === false
+                        result.communication_logged ===
+                            false
                     ) {
                         swayAlert(
                             "Email sent to " +
-                            contact.email +
+                            targetEmail +
                             ", but the communication log could not be saved." +
                             (
                                 result.communication_log_error
@@ -10328,20 +11617,32 @@ function simpleBars(items, color) {
                         );
                     } else {
                         swayAlert(
-                            "Email sent to " +
-                            contact.email +
-                            "."
+                            isReply
+                                ? "Reply sent to " +
+                                  targetEmail +
+                                  "."
+                                : "Email sent to " +
+                                  targetEmail +
+                                  "."
                         );
                     }
                 } catch (error) {
                     swayAlert(
                         error.message ||
-                        "Unable to send the email."
+                        (
+                            isReply
+                                ? "Unable to send the reply."
+                                : "Unable to send the email."
+                        )
                     );
 
-                    sendButton.disabled = false;
+                    sendButton.disabled =
+                        false;
+
                     sendButton.textContent =
-                        "Send email";
+                        isReply
+                            ? "Send reply"
+                            : "Send email";
                 }
             }
         );
@@ -10350,16 +11651,21 @@ function simpleBars(items, color) {
             .querySelectorAll(
                 "[data-close-email-composer]"
             )
-            .forEach(function (button) {
-                button.addEventListener(
-                    "click",
-                    function () {
-                        modal.remove();
-                    }
-                );
-            });
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            modal.remove();
+                        }
+                    );
+                }
+            );
 
-        updateRecipient();
+        if (!isReply) {
+            updateRecipient();
+        }
+
         messageInput.focus();
     }
 
@@ -15991,6 +17297,31 @@ function simpleBars(items, color) {
             if (state.currentView === "email") {
                 main.innerHTML =
                     renderEmailWorkspace();
+
+                if (
+                    !state.emailViewInitialized
+                ) {
+                    state.emailViewInitialized =
+                        true;
+
+                    initializeEmailInbox();
+                }
+            } else {
+                state.emailViewInitialized =
+                    false;
+
+                if (
+                    typeof window !==
+                        "undefined" &&
+                    window.__swayphicsEmailInboxPoll
+                ) {
+                    window.clearInterval(
+                        window.__swayphicsEmailInboxPoll
+                    );
+
+                    window.__swayphicsEmailInboxPoll =
+                        null;
+                }
             }
 
             if (state.currentView === "documents") {
@@ -16805,6 +18136,67 @@ function simpleBars(items, color) {
                     "click",
                     function () {
                         openEmailComposer();
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-email-thread]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    async function () {
+                        state.emailSelectedThreadId =
+                            button.dataset.emailThread || "";
+
+                        await markEmailThreadRead(
+                            state.emailSelectedThreadId
+                        );
+
+                        renderView();
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-email-back]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        state.emailSelectedThreadId =
+                            "";
+                        renderView();
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-email-sync]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    async function () {
+                        button.disabled = true;
+
+                        await syncEmailInbox(
+                            true
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-email-reply]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openEmailComposer(
+                            "email-thread",
+                            "",
+                            button.dataset.emailThreadId || ""
+                        );
                     }
                 );
             });
