@@ -445,32 +445,99 @@ Deno.serve(async (req) => {
       );
     }
 
-    const start =
-      Math.max(
-        1,
-        exists - limit + 1
+    // Only process a small number of unseen messages per sync.
+    // This keeps the Edge Function safely below Supabase CPU/memory limits.
+    const unseenUids =
+      await client.search(
+        {
+          seen: false
+        },
+        {
+          uid: true
+        }
       );
 
-    const range =
-      String(start) +
-      ":*";
+    const recentUids =
+      Array.isArray(unseenUids)
+        ? unseenUids.slice(-3)
+        : [];
+
+    if (!recentUids.length) {
+      const unreadOnlyResult =
+        await supabase
+          .from("email_messages")
+          .select("id", {
+            count: "exact",
+            head: true
+          })
+          .eq("direction", "inbound")
+          .eq("is_read", false);
+
+      return Response.json(
+        {
+          success: true,
+          synced: 0,
+          unread:
+            unreadOnlyResult.count ||
+            0
+        },
+        {
+          status: 200,
+          headers:
+            corsHeaders
+        }
+      );
+    }
+
+    const existingResult =
+      await supabase
+        .from("email_messages")
+        .select("imap_uid")
+        .eq("mailbox", MAILBOX)
+        .in("imap_uid", recentUids);
+
+    if (existingResult.error) {
+      throw existingResult.error;
+    }
+
+    const existingUids =
+      new Set(
+        (existingResult.data || [])
+          .map(function (row: any) {
+            return Number(row.imap_uid);
+          })
+          .filter(function (uid: number) {
+            return Number.isFinite(uid);
+          })
+      );
+
+    const messages =
+      await client.fetchAll(
+        recentUids,
+        {
+          envelope: true,
+          internalDate: true,
+          size: true,
+          source: {
+            start: 0,
+            maxLength: 262144
+          }
+        },
+        {
+          uid: true
+        }
+      );
 
     let synced = 0;
 
-    for await (
-      const message of client.fetch(
-        range,
-        {
-          source: true,
-          envelope: true,
-          internalDate: true
-        },
-        {
-          uid: false
-        }
-      )
-    ) {
-      if (!message?.source) {
+    for (const message of messages) {
+      const uid = Number(message?.uid);
+
+      if (
+        !Number.isFinite(uid) ||
+        existingUids.has(uid) ||
+        !message?.source
+      ) {
         continue;
       }
 
@@ -478,74 +545,66 @@ Deno.serve(async (req) => {
         "imap:" +
         folder +
         ":" +
-        String(
-          message.uid
+        String(uid);
+
+      let parsed: any = null;
+
+      try {
+        parsed =
+          await PostalMime.parse(
+            message.source
+          );
+      } catch (parseError) {
+        console.warn(
+          "Email MIME parsing fell back to IMAP envelope:",
+          parseError
         );
-
-      const existingBySource =
-        await supabase
-          .from("email_messages")
-          .select("id")
-          .eq(
-            "source_key",
-            sourceKey
-          )
-          .limit(1);
-
-      if (
-        existingBySource.data?.length
-      ) {
-        continue;
       }
 
-      const parsed =
-        await PostalMime.parse(
-          message.source
-        );
+      const envelope =
+        message.envelope || {};
 
       const from =
         firstAddress(
-          parsed.from ||
-          message.envelope?.from
+          envelope.from ||
+          parsed?.from
         );
 
       const to =
         firstAddress(
-          parsed.to ||
-          message.envelope?.to
+          envelope.to ||
+          parsed?.to
         );
 
       const subject =
         cleanHeaderValue(
-          parsed.subject ||
-          message.envelope?.subject ||
+          envelope.subject ||
+          parsed?.subject ||
           "No subject"
         );
 
       const messageId =
         cleanHeaderValue(
-          parsed.messageId
+          envelope.messageId ||
+          parsed?.messageId
         ) || null;
 
       const inReplyTo =
         cleanHeaderValue(
-          parsed.inReplyTo
+          envelope.inReplyTo ||
+          parsed?.inReplyTo
         ) || null;
 
       const references =
         cleanHeaderValue(
-          parsed.references
+          parsed?.references
         ) || null;
 
       const candidates =
         Array.from(
           new Set([
-            ...messageIds(
-              inReplyTo
-            ),
-            ...messageIds(
-              references
-            ),
+            ...messageIds(inReplyTo),
+            ...messageIds(references),
             ...(messageId
               ? [messageId]
               : [])
@@ -572,19 +631,20 @@ Deno.serve(async (req) => {
 
       const receivedAt =
         safeReceivedAt(
-          parsed.date ||
+          parsed?.date ||
+          envelope.date ||
           message.internalDate,
           fallbackDate
         );
 
       const textBody =
         String(
-          parsed.text ||
+          parsed?.text ||
           ""
         ).trim();
 
       const htmlBody =
-        parsed.html
+        parsed?.html
           ? String(parsed.html)
           : null;
 
@@ -605,9 +665,7 @@ Deno.serve(async (req) => {
             source_key:
               sourceKey,
             imap_uid:
-              Number(
-                message.uid
-              ),
+              uid,
             external_id:
               null,
             message_id:
@@ -628,7 +686,9 @@ Deno.serve(async (req) => {
             subject:
               subject || null,
             text_body:
-              textBody,
+              textBody ||
+              subject ||
+              "(Email received)",
             html_body:
               htmlBody,
             received_at:
@@ -642,9 +702,7 @@ Deno.serve(async (req) => {
             created_by:
               null
           })
-          .select(
-            "id"
-          )
+          .select("id")
           .single();
 
       if (inserted.error) {
@@ -699,6 +757,40 @@ Deno.serve(async (req) => {
       }
     }
 
+    const unreadResult =
+      await supabase
+        .from("email_messages")
+        .select(
+          "id",
+          {
+            count: "exact",
+            head: true
+          }
+        )
+        .eq(
+          "direction",
+          "inbound"
+        )
+        .eq(
+          "is_read",
+          false
+        );
+
+    return Response.json(
+      {
+        success: true,
+        synced,
+        unread:
+          unreadResult.count ||
+          0
+      },
+      {
+        status: 200,
+        headers:
+          corsHeaders
+      }
+    );
+  } catch (error) {
     const unreadResult =
       await supabase
         .from("email_messages")
