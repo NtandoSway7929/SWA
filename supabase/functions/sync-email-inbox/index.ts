@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { ImapFlow } from "imapflow";
-import PostalMime from "postal-mime";
+import { ImapFlow } from "npm:imapflow@2.0.5";
+import PostalMime from "npm:postal-mime@3.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
