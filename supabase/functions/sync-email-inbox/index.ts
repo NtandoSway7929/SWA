@@ -66,11 +66,12 @@ function describeImapError(error: unknown) {
     value?.responseText ||
     value?.response?.responseText ||
     value?.response?.text ||
+    value?.response?.attributes?.find?.((item: any) => item?.type === "TEXT")?.value ||
     "";
 
   const responseStatus =
     value?.responseStatus ||
-    value?.response?.status ||
+    value?.response?.command ||
     "";
 
   const serverResponseCode =
@@ -78,27 +79,23 @@ function describeImapError(error: unknown) {
     value?.response?.code ||
     "";
 
+  const command =
+    value?.executedCommand ||
+    value?.command ||
+    "";
+
   if (value?.authenticationFailed) {
-    return "IMAP authentication failed. Check that EMAIL_IMAP_PASSWORD is the current Namecheap Private Email Master or Application password.";
+    return "IMAP authentication failed. Check EMAIL_IMAP_PASSWORD for the Namecheap mailbox.";
   }
 
-  if (responseText) {
-    return [
-      "Namecheap IMAP rejected the request",
-      responseStatus ? "(" + responseStatus + ")" : "",
-      serverResponseCode ? "[" + serverResponseCode + "]" : "",
-      ":",
-      responseText
-    ]
-      .filter(Boolean)
-      .join(" ");
-  }
+  const parts = [
+    responseText || value?.message || "Unable to synchronize the Swayphics inbox.",
+    responseStatus ? "status=" + String(responseStatus) : "",
+    serverResponseCode ? "code=" + String(serverResponseCode) : "",
+    command ? "command=" + String(command) : ""
+  ].filter(Boolean);
 
-  if (value?.message) {
-    return String(value.message);
-  }
-
-  return "Unable to connect to the Namecheap email inbox.";
+  return parts.join(" | ");
 }
 
 function safeReceivedAt(
@@ -394,7 +391,7 @@ Deno.serve(async (req) => {
             Deno.env.get(
               "EMAIL_IMAP_LIMIT"
             ) ||
-            "100"
+            "25"
           ) || 100,
           1
         ),
@@ -420,7 +417,11 @@ Deno.serve(async (req) => {
 
     mailboxLock =
       await client.getMailboxLock(
-        folder
+        folder,
+        {
+          readOnly: true,
+          description: "Swayphics inbox sync"
+        }
       );
 
     const exists =
@@ -460,11 +461,12 @@ Deno.serve(async (req) => {
       const message of client.fetch(
         range,
         {
-          uid: true,
           source: true,
           envelope: true,
-          internalDate: true,
-          flags: true
+          internalDate: true
+        },
+        {
+          uid: false
         }
       )
     ) {
