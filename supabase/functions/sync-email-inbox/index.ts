@@ -1,6 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ImapFlow } from "npm:imapflow@2.0.5";
-import PostalMime from "npm:postal-mime@3.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,31 +26,14 @@ function firstAddress(value: any) {
     address = address.group[0] || null;
   }
 
-  if (!address) {
-    return {
-      name: "",
-      email: ""
-    };
-  }
-
   return {
-    name:
-      String(address.name || "").trim(),
-    email:
-      String(
-        address.address ||
-        address.email ||
-        ""
-      ).trim().toLowerCase()
+    name: String(address?.name || "").trim(),
+    email: String(
+      address?.address ||
+      address?.email ||
+      ""
+    ).trim().toLowerCase()
   };
-}
-
-function messageIds(value: unknown) {
-  return (
-    String(value || "")
-      .match(/<[^>]+>/g) ||
-    []
-  );
 }
 
 function cleanHeaderValue(value: unknown) {
@@ -60,62 +42,133 @@ function cleanHeaderValue(value: unknown) {
     .trim();
 }
 
+function messageIds(value: unknown) {
+  return String(value || "").match(/<[^>]+>/g) || [];
+}
+
+function decodeMimeText(value: string, encoding: string) {
+  const normalizedEncoding = String(encoding || "").toLowerCase();
+
+  if (normalizedEncoding === "base64") {
+    try {
+      return atob(
+        value
+          .replace(/\s+/g, "")
+          .replace(/-/g, "+")
+          .replace(/_/g, "/")
+      );
+    } catch {
+      return value;
+    }
+  }
+
+  if (
+    normalizedEncoding === "quoted-printable" ||
+    normalizedEncoding === "quopri"
+  ) {
+    return value
+      .replace(/=\r?\n/g, "")
+      .replace(
+        /=([0-9A-Fa-f]{2})/g,
+        function (_match, hex) {
+          return String.fromCharCode(
+            parseInt(hex, 16)
+          );
+        }
+      );
+  }
+
+  return value;
+}
+
+function stripHtml(value: string) {
+  return value
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n\s+/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+async function parseEmailSource(source: Uint8Array) {
+  try {
+    const { default: PostalMime } =
+      await import("npm:postal-mime@3.0.0");
+
+    const parsed = await PostalMime.parse(source);
+
+    return {
+      subject: cleanHeaderValue(parsed.subject),
+      messageId: cleanHeaderValue(parsed.messageId),
+      inReplyTo: cleanHeaderValue(parsed.inReplyTo),
+      references: cleanHeaderValue(parsed.references),
+      date: parsed.date || null,
+      text: String(parsed.text || "").trim(),
+      html: parsed.html
+        ? String(parsed.html)
+        : null
+    };
+  } catch (error) {
+    console.warn(
+      "PostalMime could not parse the incoming email:",
+      error
+    );
+
+    return {
+      subject: "",
+      messageId: "",
+      inReplyTo: "",
+      references: "",
+      date: null,
+      text: "",
+      html: null
+    };
+  }
+}
+
 function describeImapError(error: unknown) {
   const value = error as any;
+
+  if (value?.authenticationFailed) {
+    return "IMAP authentication failed. Check EMAIL_IMAP_PASSWORD for info@swayphics.co.za.";
+  }
+
   const responseText =
     value?.responseText ||
     value?.response?.responseText ||
     value?.response?.text ||
-    value?.response?.attributes?.find?.((item: any) => item?.type === "TEXT")?.value ||
     "";
 
-  const responseStatus =
-    value?.responseStatus ||
-    value?.response?.command ||
-    "";
-
-  const serverResponseCode =
-    value?.serverResponseCode ||
+  const responseCode =
     value?.response?.code ||
+    value?.serverResponseCode ||
     "";
 
-  const command =
-    value?.executedCommand ||
-    value?.command ||
-    "";
-
-  if (value?.authenticationFailed) {
-    return "IMAP authentication failed. Check EMAIL_IMAP_PASSWORD for the Namecheap mailbox.";
+  if (responseText || responseCode) {
+    return [
+      responseText || "IMAP command failed.",
+      responseCode
+        ? "code=" + String(responseCode)
+        : ""
+    ]
+      .filter(Boolean)
+      .join(" | ");
   }
 
-  const parts = [
-    responseText || value?.message || "Unable to synchronize the Swayphics inbox.",
-    responseStatus ? "status=" + String(responseStatus) : "",
-    serverResponseCode ? "code=" + String(serverResponseCode) : "",
-    command ? "command=" + String(command) : ""
-  ].filter(Boolean);
-
-  return parts.join(" | ");
-}
-
-function safeReceivedAt(
-  value: unknown,
-  fallback: Date
-) {
-  const parsed =
-    new Date(
-      String(value || "")
-    );
-
-  if (
-    !Number.isNaN(
-      parsed.getTime()
-    )
-  ) {
-    return parsed.toISOString();
-  }
-
-  return fallback.toISOString();
+  return (
+    value?.message ||
+    "Unable to synchronize the Swayphics email inbox."
+  );
 }
 
 async function findExistingThread(
@@ -126,24 +179,17 @@ async function findExistingThread(
     return null;
   }
 
-  const result =
-    await supabase
-      .from("email_messages")
-      .select("thread_id")
-      .in(
-        "message_id",
-        candidates
-      )
-      .limit(1);
+  const result = await supabase
+    .from("email_messages")
+    .select("thread_id")
+    .in("message_id", candidates)
+    .limit(1);
 
   if (result.error) {
     throw result.error;
   }
 
-  return (
-    result.data?.[0]?.thread_id ||
-    null
-  );
+  return result.data?.[0]?.thread_id || null;
 }
 
 async function findContact(
@@ -157,25 +203,19 @@ async function findContact(
     };
   }
 
-  const normalized =
+  const normalizedEmail =
     email.toLowerCase();
 
   const clientResult =
     await supabase
       .from("clients")
       .select("id")
-      .ilike(
-        "email",
-        normalized
-      )
+      .ilike("email", normalizedEmail)
       .limit(1);
 
-  if (
-    clientResult.data?.[0]?.id
-  ) {
+  if (clientResult.data?.[0]?.id) {
     return {
-      clientId:
-        clientResult.data[0].id,
+      clientId: clientResult.data[0].id,
       leadId: null
     };
   }
@@ -184,19 +224,13 @@ async function findContact(
     await supabase
       .from("leads")
       .select("id")
-      .ilike(
-        "email",
-        normalized
-      )
+      .ilike("email", normalizedEmail)
       .limit(1);
 
-  if (
-    leadResult.data?.[0]?.id
-  ) {
+  if (leadResult.data?.[0]?.id) {
     return {
       clientId: null,
-      leadId:
-        leadResult.data[0].id
+      leadId: leadResult.data[0].id
     };
   }
 
@@ -207,30 +241,20 @@ async function findContact(
 }
 
 Deno.serve(async (req) => {
-  if (
-    req.method === "OPTIONS"
-  ) {
-    return new Response(
-      "ok",
-      {
-        headers:
-          corsHeaders
-      }
-    );
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      headers: corsHeaders
+    });
   }
 
-  if (
-    req.method !== "POST"
-  ) {
+  if (req.method !== "POST") {
     return Response.json(
       {
-        error:
-          "Method not allowed."
+        error: "Method not allowed."
       },
       {
         status: 405,
-        headers:
-          corsHeaders
+        headers: corsHeaders
       }
     );
   }
@@ -240,18 +264,13 @@ Deno.serve(async (req) => {
 
   try {
     const authorization =
-      req.headers.get(
-        "Authorization"
-      ) ||
-      req.headers.get(
-        "authorization"
-      );
+      req.headers.get("Authorization") || "";
 
     const accessToken =
-      authorization?.replace(
+      authorization.replace(
         /^Bearer\s+/i,
         ""
-      );
+      ).trim();
 
     if (!accessToken) {
       return Response.json(
@@ -261,16 +280,13 @@ Deno.serve(async (req) => {
         },
         {
           status: 401,
-          headers:
-            corsHeaders
+          headers: corsHeaders
         }
       );
     }
 
     const supabaseUrl =
-      Deno.env.get(
-        "SUPABASE_URL"
-      );
+      Deno.env.get("SUPABASE_URL");
 
     const serviceRoleKey =
       Deno.env.get(
@@ -278,25 +294,16 @@ Deno.serve(async (req) => {
       );
 
     const publicApiKey =
-      req.headers.get(
-        "apikey"
-      ) ||
-      Deno.env.get(
-        "SUPABASE_ANON_KEY"
-      ) ||
-      Deno.env.get(
-        "SUPABASE_PUBLISHABLE_KEY"
-      );
+      req.headers.get("apikey") ||
+      Deno.env.get("SUPABASE_ANON_KEY") ||
+      Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
 
     const imapPassword =
       Deno.env.get(
         "EMAIL_IMAP_PASSWORD"
       );
 
-    if (
-      !supabaseUrl ||
-      !serviceRoleKey
-    ) {
+    if (!supabaseUrl || !serviceRoleKey) {
       throw new Error(
         "Supabase server configuration is missing."
       );
@@ -316,28 +323,24 @@ Deno.serve(async (req) => {
         },
         {
           status: 503,
-          headers:
-            corsHeaders
+          headers: corsHeaders
         }
       );
     }
 
-    const authSupabase =
-      createClient(
-        supabaseUrl,
-        publicApiKey
+    const authSupabase = createClient(
+      supabaseUrl,
+      publicApiKey
+    );
+
+    const userResult =
+      await authSupabase.auth.getUser(
+        accessToken
       );
 
-    const userData =
-      await authSupabase
-        .auth
-        .getUser(
-          accessToken
-        );
-
     if (
-      userData.error ||
-      !userData.data?.user
+      userResult.error ||
+      !userResult.data?.user
     ) {
       return Response.json(
         {
@@ -346,17 +349,15 @@ Deno.serve(async (req) => {
         },
         {
           status: 401,
-          headers:
-            corsHeaders
+          headers: corsHeaders
         }
       );
     }
 
-    const supabase =
-      createClient(
-        supabaseUrl,
-        serviceRoleKey
-      );
+    const supabase = createClient(
+      supabaseUrl,
+      serviceRoleKey
+    );
 
     const imapHost =
       Deno.env.get(
@@ -384,37 +385,18 @@ Deno.serve(async (req) => {
       ) ||
       "INBOX";
 
-    const limit =
-      Math.min(
-        Math.max(
-          Number(
-            Deno.env.get(
-              "EMAIL_IMAP_LIMIT"
-            ) ||
-            "25"
-          ) || 100,
-          1
-        ),
-        200
-      );
-
-    client =
-      new ImapFlow({
-        host:
-          imapHost,
-        port:
-          imapPort,
-        secure: true,
-        logger: false,
-        disableCompression: true,
-        disableAutoIdle: true,
-        auth: {
-          user:
-            imapUser,
-          pass:
-            imapPassword
-        }
-      });
+    client = new ImapFlow({
+      host: imapHost,
+      port: imapPort,
+      secure: true,
+      logger: false,
+      disableCompression: true,
+      disableAutoIdle: true,
+      auth: {
+        user: imapUser,
+        pass: imapPassword
+      }
+    });
 
     await client.connect();
 
@@ -423,17 +405,20 @@ Deno.serve(async (req) => {
         folder,
         {
           readOnly: true,
-          description: "Swayphics inbox sync"
+          description:
+            "Swayphics inbox sync"
         }
       );
 
-    const exists =
+    const uidNext =
       Number(
-        client.mailbox?.exists ||
-        0
+        client.mailbox?.uidNext || 0
       );
 
-    if (exists === 0) {
+    const newestUid =
+      Math.max(0, uidNext - 1);
+
+    if (!newestUid) {
       return Response.json(
         {
           success: true,
@@ -442,22 +427,314 @@ Deno.serve(async (req) => {
         },
         {
           status: 200,
-          headers:
-            corsHeaders
+          headers: corsHeaders
         }
       );
     }
 
-    // IMAP message count (exists) is not the same thing as the UID sequence.,    // Use uidNext so we only request actual UID ranges.,    const uidNext =,      Number(client.mailbox?.uidNext || 0);,,    const newestUid =,      Math.max(0, uidNext - 1);,,    if (!newestUid) {,      const unreadEmptyResult =,        await supabase,          .from("email_messages"),          .select("id", {,            count: "exact",,            head: true,          }),          .eq("direction", "inbound"),          .eq("is_read", false);,,      return Response.json(,        {,          success: true,,          synced: 0,,          unread:,            unreadEmptyResult.count ||,            0,        },,        {,          status: 200,,          headers:,            corsHeaders,        },      );,    },,    const latestStoredResult =,      await supabase,        .from("email_messages"),        .select("imap_uid"),        .eq("mailbox", MAILBOX),        .not("imap_uid", "is", null),        .order("imap_uid", { ascending: false }),        .limit(1);,,    if (latestStoredResult.error) {,      throw latestStoredResult.error;,    },,    const latestStoredUid =,      Number(latestStoredResult.data?.[0]?.imap_uid || 0);,,    let firstUid;,,    if (latestStoredUid > 0) {,      firstUid = latestStoredUid + 1;,    } else {,      // First run: import only the latest message rather than walking the mailbox.,      firstUid = newestUid;,    },,    if (firstUid > newestUid) {,      const unreadCurrentResult =,        await supabase,          .from("email_messages"),          .select("id", {,            count: "exact",,            head: true,          }),          .eq("direction", "inbound"),          .eq("is_read", false);,,      return Response.json(,        {,          success: true,,          synced: 0,,          unread:,            unreadCurrentResult.count ||,            0,        },,        {,          status: 200,,          headers:,            corsHeaders,        },      );,    },,    // Process exactly one UID per invocation to stay comfortably below the,    // Edge Function CPU/memory budget.,    const targetUid =,      Math.min(firstUid, newestUid);,,    const message =,      await client.fetchOne(,        targetUid,,        {,          envelope: true,,          internalDate: true,,          source: {,            start: 0,,            maxLength: 262144,          },        },,        {,          uid: true,        },      );,,    let synced = 0;,,    if (message && message.source) {,      const uid =,        Number(message.uid);,,      const sourceKey =,        "imap:" +,        folder +,        ":" +,        String(uid);,,      const existingBySource =,        await supabase,          .from("email_messages"),          .select("id"),          .eq("source_key", sourceKey),          .limit(1);,,      if (!existingBySource.error && !existingBySource.data?.length) {,        let parsed: any = null;,,        try {,          parsed =,            await PostalMime.parse(,              message.source,            );,        } catch (parseError) {,          console.warn(,            "Email MIME parsing failed; using IMAP envelope only:",,            parseError,          );,        },,        const envelope =,          message.envelope || {};,,        const from =,          firstAddress(,            envelope.from ||,            parsed?.from,          );,,        const to =,          firstAddress(,            envelope.to ||,            parsed?.to,          );,,        const subject =,          cleanHeaderValue(,            envelope.subject ||,            parsed?.subject ||,            "No subject",          );,,        const messageId =,          cleanHeaderValue(,            envelope.messageId ||,            parsed?.messageId,          ) || null;,,        const inReplyTo =,          cleanHeaderValue(,            envelope.inReplyTo ||,            parsed?.inReplyTo,          ) || null;,,        const references =,          cleanHeaderValue(,            parsed?.references,          ) || null;,,        const candidates =,          Array.from(,            new Set([,              ...messageIds(inReplyTo),,              ...messageIds(references),,              ...(messageId,                ? [messageId],                : []),            ]),          );,,        let threadId =,          await findExistingThread(,            supabase,,            candidates,          );,,        if (!threadId) {,          threadId =,            candidates[0] ||,            messageId ||,            sourceKey;,        },,        const fallbackDate =,          message.internalDate instanceof Date,            ? message.internalDate,            : new Date();,,        const receivedAt =,          safeReceivedAt(,            parsed?.date ||,            envelope.date ||,            message.internalDate,,            fallbackDate,          );,,        const textBody =,          String(,            parsed?.text ||,            "",          ).trim();,,        const htmlBody =,          parsed?.html,            ? String(parsed.html),            : null;,,        const contact =,          await findContact(,            supabase,,            from.email,          );,,        const inserted =,          await supabase,            .from("email_messages"),            .insert({,              direction: "inbound",,              mailbox: MAILBOX,,              source_key: sourceKey,,              imap_uid: uid,,              external_id: null,,              message_id: messageId,,              in_reply_to: inReplyTo,,              references_header: references,,              thread_id: threadId,,              from_name: from.name || null,,              from_email: from.email || null,,              to_email: to.email || MAILBOX,,              subject: subject || null,,              text_body:,                textBody || subject || "(Email received)",,              html_body: htmlBody,,              received_at: receivedAt,,              is_read: false,,              client_id: contact.clientId,,              lead_id: contact.leadId,,              created_by: null,            }),            .select("id"),            .single();,,        if (inserted.error) {,          if (inserted.error.code !== "23505") {,            throw inserted.error;,          },        } else {,          synced = 1;,,          if (contact.clientId || contact.leadId) {,            const logResult =,              await supabase,                .from("communication_logs"),                .insert({,                  client_id: contact.clientId,,                  lead_id: contact.leadId,,                  channel: "Email",,                  direction: "inbound",,                  subject: subject || null,,                  message:,                    textBody || subject || "(Email received)",,                  contacted_at: receivedAt,,                  created_by: null,                });,,            if (logResult.error) {,              console.error(,                "Inbound communication log insert failed:",,                logResult.error,              );,            },          },        },      },    },,    const unreadResult =
+    const latestStoredResult =
       await supabase
         .from("email_messages")
-        .select(
-          "id",
+        .select("imap_uid")
+        .eq("mailbox", MAILBOX)
+        .not("imap_uid", "is", null)
+        .order("imap_uid", {
+          ascending: false
+        })
+        .limit(1);
+
+    if (latestStoredResult.error) {
+      throw latestStoredResult.error;
+    }
+
+    const latestStoredUid =
+      Number(
+        latestStoredResult.data?.[0]
+          ?.imap_uid || 0
+      );
+
+    const startUid =
+      latestStoredUid > 0
+        ? latestStoredUid + 1
+        : newestUid;
+
+    let candidateUids =
+      await client.search(
+        {
+          uid:
+            String(startUid) +
+            ":*"
+        },
+        {
+          uid: true
+        }
+      );
+
+    if (!Array.isArray(candidateUids)) {
+      candidateUids = [];
+    }
+
+    const targetUid =
+      candidateUids[0] || 0;
+
+    let synced = 0;
+
+    if (targetUid) {
+      const message =
+        await client.fetchOne(
+          targetUid,
           {
-            count: "exact",
-            head: true
+            envelope: true,
+            internalDate: true,
+            source: {
+              start: 0,
+              maxLength: 262144
+            }
+          },
+          {
+            uid: true
           }
-        )
+        );
+
+      if (message?.source) {
+        const parsed =
+          await parseEmailSource(
+            message.source
+          );
+
+        const envelope =
+          message.envelope || {};
+
+        const from =
+          firstAddress(
+            envelope.from
+          );
+
+        const to =
+          firstAddress(
+            envelope.to
+          );
+
+        const subject =
+          cleanHeaderValue(
+            envelope.subject ||
+            parsed.subject ||
+            "No subject"
+          );
+
+        const messageId =
+          cleanHeaderValue(
+            envelope.messageId ||
+            parsed.messageId
+          ) || null;
+
+        const inReplyTo =
+          cleanHeaderValue(
+            envelope.inReplyTo ||
+            parsed.inReplyTo
+          ) || null;
+
+        const references =
+          cleanHeaderValue(
+            parsed.references
+          ) || null;
+
+        const candidates =
+          Array.from(
+            new Set([
+              ...messageIds(
+                inReplyTo
+              ),
+              ...messageIds(
+                references
+              ),
+              ...(messageId
+                ? [messageId]
+                : [])
+            ])
+          );
+
+        let threadId =
+          await findExistingThread(
+            supabase,
+            candidates
+          );
+
+        if (!threadId) {
+          threadId =
+            candidates[0] ||
+            messageId ||
+            "imap:" +
+              folder +
+              ":" +
+              String(targetUid);
+        }
+
+        const fromEmail =
+          from.email || "";
+
+        let textBody =
+          parsed.text || "";
+
+        if (
+          !textBody &&
+          parsed.html
+        ) {
+          textBody =
+            stripHtml(
+              parsed.html
+            );
+        }
+
+        if (
+          !textBody &&
+          message.source
+        ) {
+          const sourceText =
+            new TextDecoder()
+              .decode(
+                message.source
+              );
+
+          const bodyStart =
+            sourceText.search(
+              /\r?\n\r?\n/
+            );
+
+          if (bodyStart >= 0) {
+            textBody =
+              decodeMimeText(
+                sourceText.slice(
+                  bodyStart + 2
+                ),
+                ""
+              ).trim();
+          }
+        }
+
+        const fallbackDate =
+          message.internalDate
+            instanceof Date
+            ? message.internalDate
+            : new Date();
+
+        const receivedAt =
+          parsed.date
+            ? new Date(
+                String(parsed.date)
+              ).toISOString()
+            : fallbackDate.toISOString();
+
+        const contact =
+          await findContact(
+            supabase,
+            fromEmail
+          );
+
+        const sourceKey =
+          "imap:" +
+          folder +
+          ":" +
+          String(targetUid);
+
+        const inserted =
+          await supabase
+            .from("email_messages")
+            .insert({
+              direction: "inbound",
+              mailbox: MAILBOX,
+              source_key: sourceKey,
+              imap_uid:
+                Number(targetUid),
+              external_id: null,
+              message_id: messageId,
+              in_reply_to:
+                inReplyTo,
+              references_header:
+                references,
+              thread_id: threadId,
+              from_name:
+                from.name || null,
+              from_email:
+                fromEmail || null,
+              to_email:
+                to.email || MAILBOX,
+              subject:
+                subject || null,
+              text_body:
+                textBody ||
+                subject ||
+                "(Email received)",
+              html_body:
+                parsed.html || null,
+              received_at:
+                receivedAt,
+              is_read: false,
+              client_id:
+                contact.clientId,
+              lead_id:
+                contact.leadId,
+              created_by: null
+            })
+            .select("id")
+            .single();
+
+        if (inserted.error) {
+          if (
+            inserted.error.code !==
+            "23505"
+          ) {
+            throw inserted.error;
+          }
+        } else {
+          synced = 1;
+
+          if (
+            contact.clientId ||
+            contact.leadId
+          ) {
+            const logResult =
+              await supabase
+                .from(
+                  "communication_logs"
+                )
+                .insert({
+                  client_id:
+                    contact.clientId,
+                  lead_id:
+                    contact.leadId,
+                  channel: "Email",
+                  direction:
+                    "inbound",
+                  subject:
+                    subject || null,
+                  message:
+                    textBody ||
+                    subject ||
+                    "(Email received)",
+                  contacted_at:
+                    receivedAt,
+                  created_by: null
+                });
+
+            if (logResult.error) {
+              console.error(
+                "Inbound communication log insert failed:",
+                logResult.error
+              );
+            }
+          }
+        }
+      }
+    }
+
+    const unreadResult =
+      await supabase
+        .from("email_messages")
+        .select("id", {
+          count: "exact",
+          head: true
+        })
         .eq(
           "direction",
           "inbound"
@@ -467,18 +744,20 @@ Deno.serve(async (req) => {
           false
         );
 
+    if (unreadResult.error) {
+      throw unreadResult.error;
+    }
+
     return Response.json(
       {
         success: true,
         synced,
         unread:
-          unreadResult.count ||
-          0
+          unreadResult.count || 0
       },
       {
         status: 200,
-        headers:
-          corsHeaders
+        headers: corsHeaders
       }
     );
   } catch (error) {
@@ -494,8 +773,7 @@ Deno.serve(async (req) => {
       },
       {
         status: 500,
-        headers:
-          corsHeaders
+        headers: corsHeaders
       }
     );
   } finally {
@@ -504,7 +782,7 @@ Deno.serve(async (req) => {
     } catch {}
 
     try {
-      await client?.logout();
+      client?.close();
     } catch {}
   }
 });
