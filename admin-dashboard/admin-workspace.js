@@ -10424,7 +10424,7 @@ function simpleBars(items, color) {
                             !state.emailSyncing
                         ) {
                             syncEmailInbox(
-                                false
+                                true
                             );
                         }
                     },
@@ -10888,8 +10888,8 @@ function simpleBars(items, color) {
                                 ) +
                                 (
                                     unreadCount === 1
-                                        ? " unread"
-                                        : " unread"
+                                        ? " unread conversation"
+                                        : " unread conversations"
                                 )
                             ) +
                         "</span>" +
