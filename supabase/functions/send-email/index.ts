@@ -797,10 +797,12 @@ Deno.serve(async (req) => {
           is_read:
             true,
           client_id:
+            canLogContact &&
             resolvedContactType === "client"
               ? contact.id
               : null,
           lead_id:
+            canLogContact &&
             resolvedContactType === "lead"
               ? contact.id
               : null,
