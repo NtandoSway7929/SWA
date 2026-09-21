@@ -124,6 +124,52 @@
         return all.concat(group.items);
     }, []);
 
+    const WORKSPACE_VIEW_STORAGE_KEY =
+        "swayphics_admin_current_view";
+
+    function getPersistedWorkspaceView() {
+        try {
+            const savedView =
+                localStorage.getItem(
+                    WORKSPACE_VIEW_STORAGE_KEY
+                );
+
+            if (
+                savedView &&
+                nav.some(function (item) {
+                    return item[0] === savedView;
+                })
+            ) {
+                return savedView;
+            }
+        } catch (error) {
+            console.warn(
+                "Unable to restore the previous workspace view.",
+                error
+            );
+        }
+
+        return "overview";
+    }
+
+    function persistWorkspaceView(view) {
+        if (!view) {
+            return;
+        }
+
+        try {
+            localStorage.setItem(
+                WORKSPACE_VIEW_STORAGE_KEY,
+                view
+            );
+        } catch (error) {
+            console.warn(
+                "Unable to save the current workspace view.",
+                error
+            );
+        }
+    }
+
     function navGroupIcon(name) {
         const icons = {
             grid:
@@ -2959,6 +3005,10 @@ function renderShell() {
 
                         state.currentView =
                             view;
+
+                        persistWorkspaceView(
+                            view
+                        );
 
                         if (window.innerWidth <= 760) {
                             setMobileSidebarOpen(false);
@@ -18366,6 +18416,10 @@ function simpleBars(items, color) {
                         state.currentView =
                             button.dataset.viewTarget;
 
+                        persistWorkspaceView(
+                            state.currentView
+                        );
+
                         renderShell();
                         renderView();
                     }
@@ -18374,6 +18428,9 @@ function simpleBars(items, color) {
     }
 
     async function boot() {
+        state.currentView =
+            getPersistedWorkspaceView();
+
         state.initialDataLoading = true;
 
         setupAdminThemeToggle();
