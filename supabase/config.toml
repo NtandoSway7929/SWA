@@ -1,8 +1,7 @@
-# Supabase Edge Function configuration
-# These functions validate the authenticated admin session inside the function.
-# The gateway must therefore pass the bearer token through to that validation.
-
 [functions.send-email]
+verify_jwt = false
+
+[functions.sync-email-inbox]
 verify_jwt = false
 
 [functions.generate-invoice]
