@@ -791,40 +791,6 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    const unreadResult =
-      await supabase
-        .from("email_messages")
-        .select(
-          "id",
-          {
-            count: "exact",
-            head: true
-          }
-        )
-        .eq(
-          "direction",
-          "inbound"
-        )
-        .eq(
-          "is_read",
-          false
-        );
-
-    return Response.json(
-      {
-        success: true,
-        synced,
-        unread:
-          unreadResult.count ||
-          0
-      },
-      {
-        status: 200,
-        headers:
-          corsHeaders
-      }
-    );
-  } catch (error) {
     console.error(
       "Swayphics email inbox sync error:",
       error
