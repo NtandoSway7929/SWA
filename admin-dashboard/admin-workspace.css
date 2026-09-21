@@ -3106,22 +3106,27 @@
 .sway-workspace-mobile-toggle {
     display: none;
     position: fixed;
-    top: 90px;
+    top: 150px;
     left: 14px;
     z-index: 4900;
-    width: 42px;
-    height: 42px;
+    width: 48px;
+    height: 48px;
     padding: 9px;
+    border-radius: 12px;
+    touch-action: manipulation;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
     box-shadow: 0 12px 30px rgba(0,32,150,0.12);
 }
 
 .sway-workspace-mobile-toggle span {
     display: block;
-    width: 19px;
+    width: 20px;
     height: 2px;
     margin: 3px auto;
     border-radius: 999px;
     background: var(--sway-deep);
+    pointer-events: none;
 }
 
 .sway-workspace-mobile-close {
