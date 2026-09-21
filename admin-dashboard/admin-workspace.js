@@ -203,6 +203,68 @@
         }, extra || {});
     }
 
+    function adminTokenExpiresSoon() {
+        const currentToken =
+            token();
+
+        if (!currentToken) {
+            return true;
+        }
+
+        try {
+            const parts =
+                currentToken.split(".");
+
+            if (parts.length !== 3) {
+                return true;
+            }
+
+            const payload =
+                JSON.parse(
+                    decodeURIComponent(
+                        atob(
+                            parts[1]
+                                .replace(/-/g, "+")
+                                .replace(/_/g, "/") +
+                            "=".repeat(
+                                (
+                                    4 -
+                                    parts[1].length % 4
+                                ) % 4
+                            )
+                        )
+                            .split("")
+                            .map(function (character) {
+                                return (
+                                    "%" +
+                                    (
+                                        "00" +
+                                        character
+                                            .charCodeAt(0)
+                                            .toString(16)
+                                    ).slice(-2)
+                                );
+                            })
+                            .join("")
+                    )
+                );
+
+            const expiresAt =
+                Number(payload.exp || 0);
+
+            if (!expiresAt) {
+                return true;
+            }
+
+            return (
+                expiresAt * 1000 -
+                Date.now()
+            ) < 120000;
+        } catch (error) {
+            return true;
+        }
+    }
+
     async function refreshAdminAccessToken() {
         const refreshToken =
             localStorage.getItem(
@@ -224,12 +286,15 @@
                             "apikey":
                                 SUPABASE_PUBLISHABLE_KEY,
                             "Content-Type":
-                                "application/json"
+                                "application/x-www-form-urlencoded"
                         },
-                        body: JSON.stringify({
-                            refresh_token:
-                                refreshToken
-                        })
+                        body:
+                            new URLSearchParams({
+                                grant_type:
+                                    "refresh_token",
+                                refresh_token:
+                                    refreshToken
+                            }).toString()
                     }
                 );
 
@@ -268,6 +333,14 @@
 
             return false;
         }
+    }
+
+    async function ensureFreshAdminAccessToken() {
+        if (!adminTokenExpiresSoon()) {
+            return true;
+        }
+
+        return refreshAdminAccessToken();
     }
 
     async function api(path, options) {
@@ -10437,6 +10510,8 @@ function simpleBars(items, color) {
 
         state.emailSyncing = true;
         state.emailSyncError = "";
+
+        await ensureFreshAdminAccessToken();
 
         let response = null;
         let responseText = "";
