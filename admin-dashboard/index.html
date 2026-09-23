@@ -1105,7 +1105,8 @@
 }
 
 
-.portfolio-admin-image img {
+.portfolio-admin-image img,
+.portfolio-admin-image .portfolio-admin-media {
     width: 100%;
     height: 100%;
 
@@ -7433,6 +7434,12 @@
             "swayphics_admin_refresh_token"
         );
 
+    function isAdminPortfolioVideo(url) {
+        return /\.(mp4|webm|mov|m4v)(?:[?#].*)?$/i.test(
+            String(url || "")
+        );
+    }
+
     async function loadAdminPortfolio() {
 
     const portfolioList =
@@ -7542,13 +7549,27 @@
 
                             ${
                                 project.image_url
-                                    ? `
-                                        <img
-                                            src="${project.image_url}"
-                                            alt="${project.title || "Portfolio project"}"
-                                            loading="lazy"
-                                        >
-                                    `
+                                    ? (
+                                        isAdminPortfolioVideo(project.image_url)
+                                            ? `
+                                                <video
+                                                    src="${project.image_url}"
+                                                    class="portfolio-admin-media"
+                                                    muted
+                                                    playsinline
+                                                    loop
+                                                    preload="metadata"
+                                                    aria-label="${project.title || "Portfolio project"} video preview"
+                                                ></video>
+                                            `
+                                            : `
+                                                <img
+                                                    src="${project.image_url}"
+                                                    alt="${project.title || "Portfolio project"}"
+                                                    loading="lazy"
+                                                >
+                                            `
+                                    )
                                     : ""
                             }
 
@@ -9508,7 +9529,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20260923-workspace-v11"></script>
+<script src="admin-workspace.js?v=dashboard-20260923-workspace-v12"></script>
 
 <script>
 (function () {
