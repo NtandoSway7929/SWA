@@ -15794,15 +15794,21 @@ body {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
 
-    /*
-     * The JavaScript supplies --tz.
-     * Negative depth pushes the cards inward.
-     */
     transform:
         rotateY(
             calc(var(--i) * var(--ba))
         )
-        translateZ(var(--tz));
+        translateZ(
+            calc(
+                -1 *
+                (
+                    0.5 * var(--w) + 0.5em
+                )
+                / tan(
+                    0.5 * var(--ba)
+                )
+            )
+        );
 
     transition:
         filter 0.4s ease,
@@ -18011,13 +18017,6 @@ async function loadSelectedWorkPortfolio() {
          * The media element itself is the transformed card.
          */
         carousel.style.setProperty("--n", String(count));
-
-// Bulletproof inward 3D math calculated in JS instead of CSS
-const cardWidthEm = 17.5; // Must match --w in CSS
-const radius = (cardWidthEm / 2) / Math.tan(Math.PI / count);
-
-// Apply negative depth to push cards inward to the back wall
-carousel.style.setProperty("--tz", `-${radius + 1.5}em`);
 
         carousel.innerHTML =
             portfolioCarouselState.projects
