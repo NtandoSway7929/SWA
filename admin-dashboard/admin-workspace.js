@@ -2959,7 +2959,7 @@ function renderShell() {
 
         workspace.innerHTML =
             '<div class="sway-workspace-shell">' +
-                '<aside class="sway-workspace-sidebar" aria-label="Admin workspace navigation">' +
+                '<aside class="sway-workspace-sidebar" id="sway-workspace-sidebar" aria-label="Admin workspace navigation">' +
                     sidebar +
                 "</aside>" +
                 '<div class="sway-workspace-main" id="sway-workspace-main"></div>' +
@@ -2986,7 +2986,7 @@ function renderShell() {
                         '</div>' +
                     '</div>' +
                 '</div>' +
-                '<button type="button" class="sway-workspace-mobile-toggle" aria-label="Open workspace navigation">' +
+                '<button type="button" class="sway-workspace-mobile-toggle" aria-label="Open workspace navigation" aria-controls="sway-workspace-sidebar">' +
                     '<span></span><span></span><span></span>' +
                 '</button>' +
             "</div>";
