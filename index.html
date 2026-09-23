@@ -16021,7 +16021,7 @@ body {
 }
 
 /* =========================================================
-   SWAYPHICS — 3D CSS SELECTED WORK CAROUSEL
+   SWAYPHICS — GEMINI 3D SELECTED WORK CAROUSEL
    ========================================================= */
 
 .selected-work .scene {
@@ -16118,11 +16118,12 @@ body {
                 )
             )
         );
-}
 
-.selected-work .card:hover {
     cursor:
         pointer;
+
+    display:
+        block;
 }
 
 .selected-work .a3d:hover {
@@ -16130,110 +16131,19 @@ body {
         paused;
 }
 
-/* Portfolio media inside the tutorial-style cards */
-
-.selected-work .card.portfolio-card {
-    position:
-        relative;
-
-    display:
-        block;
-
-    min-width:
-        0;
-
-    margin:
-        0;
-
-    padding:
-        0;
-
-    overflow:
-        hidden;
-
-    border:
-        0;
-
-    background:
-        transparent;
-
-    box-shadow:
-        0 2em 2em -1em
-        rgba(0, 0, 0, 0.30);
-
-    transition:
-        none;
+.selected-work .card:hover {
+    cursor:
+        pointer;
 }
 
-.selected-work .card .portfolio-image-wrap {
-    position:
-        absolute;
+.selected-work .card:focus-visible {
+    outline:
+        3px solid
+        #77C1FC;
 
-    inset:
-        0;
-
-    width:
-        100%;
-
-    height:
-        100%;
-
-    margin:
-        0;
-
-    padding:
-        0;
-
-    border:
-        0;
-
-    border-radius:
-        inherit;
-
-    background:
-        transparent;
-
-    overflow:
-        hidden;
+    outline-offset:
+        4px;
 }
-
-.selected-work .card .portfolio-image-wrap::after {
-    display:
-        none;
-}
-
-.selected-work .card .portfolio-image {
-    display:
-        block;
-
-    width:
-        100%;
-
-    height:
-        100%;
-
-    object-fit:
-        cover;
-
-    object-position:
-        center center;
-
-    border-radius:
-        inherit;
-
-    transform:
-        none;
-
-    transition:
-        none;
-}
-
-.selected-work .card .portfolio-content {
-    display:
-        none;
-}
-
-
 
 @media (prefers-reduced-motion: reduce) {
 
@@ -16244,6 +16154,25 @@ body {
 
 }
 
+@media (max-width: 700px) {
+
+    .selected-work .scene {
+        padding:
+            40px 0;
+
+        perspective:
+            25em;
+    }
+
+    .selected-work .card {
+        --w:
+            12.5em;
+
+        border-radius:
+            1.25em;
+    }
+
+}
 
 /* =========================================================
    MOBILE HORIZONTAL SCROLL LOCK
@@ -18545,9 +18474,10 @@ async function loadSelectedWorkPortfolio() {
                 ? projects
                 : [];
 
-        if (
-            portfolioCarouselState.projects.length === 0
-        ) {
+        const count =
+            portfolioCarouselState.projects.length;
+
+        if (count === 0) {
 
             carousel.innerHTML = `
                 <div
@@ -18581,9 +18511,17 @@ async function loadSelectedWorkPortfolio() {
             return;
         }
 
-        const count =
-            portfolioCarouselState.projects.length;
-
+        /*
+         * Gemini-style structure:
+         *
+         * .scene
+         *   .a3d
+         *      .card
+         *      .card
+         *      ...
+         *
+         * The media element itself is the transformed card.
+         */
         carousel.style.setProperty(
             "--n",
             String(count)
@@ -18600,142 +18538,121 @@ async function loadSelectedWorkPortfolio() {
                                 "Swayphics project"
                             );
 
-                        const imageURL =
+                        const mediaURL =
                             escapePortfolioHTML(
                                 project.image_url
                             );
 
-                        const media =
+                        if (
                             isVideoPortfolioMedia(
                                 project.image_url
                             )
-                                ? `
-                                    <video
-                                        class="portfolio-image portfolio-video"
-                                        muted
-                                        autoplay
-                                        playsinline
-                                        webkit-playsinline
-                                        loop
-                                        preload="metadata"
-                                        aria-hidden="true"
-                                    >
-                                        <source
-                                            src="${imageURL}"
-                                        >
-                                    </video>
-                                `
-                                : `
-                                    <img
-                                        src="${imageURL}"
-                                        alt="${title}"
-                                        class="portfolio-image"
-                                        loading="lazy"
-                                        decoding="async"
-                                    >
-                                `;
+                        ) {
+
+                            return `
+                                <video
+                                    class="card"
+                                    src="${mediaURL}"
+                                    alt="${title}"
+                                    style="--i: ${index};"
+                                    muted
+                                    autoplay
+                                    playsinline
+                                    webkit-playsinline
+                                    loop
+                                    preload="metadata"
+                                    aria-label="${title}"
+                                ></video>
+                            `;
+
+                        }
 
                         return `
-                            <article
-                                class="card portfolio-card"
-                                data-index="${index}"
+                            <img
+                                class="card"
+                                src="${mediaURL}"
+                                alt="${title}"
                                 style="--i: ${index};"
-                                role="group"
-                                aria-label="Portfolio project ${index + 1} of ${count}: ${title}"
+                                loading="lazy"
+                                decoding="async"
                             >
-                                <button
-                                    type="button"
-                                    class="portfolio-image-wrap"
-                                    aria-label="View larger image: ${title}"
-                                >
-                                    ${media}
-                                </button>
-                            </article>
                         `;
+
                     }
                 )
                 .join("");
 
-        const videos =
-            carousel.querySelectorAll(
-                "video.portfolio-video"
-            );
-
-        videos.forEach(
-            (video) => {
-
-                video.muted = true;
-                video.defaultMuted = true;
-                video.volume = 0;
-                video.playsInline = true;
-                video.autoplay = true;
-
-                video.addEventListener(
-                    "loadeddata",
-                    () => {
-                        const playPromise =
-                            video.play();
-
-                        if (
-                            playPromise &&
-                            typeof playPromise.catch === "function"
-                        ) {
-                            playPromise.catch(() => {});
-                        }
-                    },
-                    { once: true }
-                );
-
-                const playPromise =
-                    video.play();
-
-                if (
-                    playPromise &&
-                    typeof playPromise.catch === "function"
-                ) {
-                    playPromise.catch(() => {});
-                }
-
-            }
-        );
-
+        /*
+         * Keep all portfolio cards clickable and connected
+         * to the existing lightbox.
+         */
         carousel
             .querySelectorAll(
-                ".portfolio-card"
+                ".card"
             )
             .forEach(
-                (card) => {
-
-                    const index =
-                        Number(
-                            card.dataset.index
-                        );
+                (card, index) => {
 
                     const project =
                         portfolioCarouselState
                             .projects[index];
 
-                    const button =
-                        card.querySelector(
-                            ".portfolio-image-wrap"
-                        );
-
-                    if (
-                        !project ||
-                        !button
-                    ) {
+                    if (!project) {
                         return;
                     }
 
-                    button.addEventListener(
+                    card.addEventListener(
                         "click",
                         () => {
+
                             openPortfolioLightbox(
                                 project,
                                 card
                             );
+
                         }
                     );
+
+                    if (
+                        card.tagName ===
+                        "VIDEO"
+                    ) {
+
+                        card.muted = true;
+                        card.defaultMuted = true;
+                        card.volume = 0;
+                        card.autoplay = true;
+                        card.playsInline = true;
+
+                        const play =
+                            () => {
+
+                                const promise =
+                                    card.play();
+
+                                if (
+                                    promise &&
+                                    typeof promise.catch ===
+                                        "function"
+                                ) {
+                                    promise.catch(
+                                        () => {}
+                                    );
+                                }
+
+                            };
+
+                        card.addEventListener(
+                            "loadeddata",
+                            play,
+                            {
+                                once: true
+                            }
+                        );
+
+                        play();
+
+                    }
 
                 }
             );
