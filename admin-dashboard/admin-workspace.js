@@ -18949,6 +18949,7 @@ function simpleBars(items, color) {
                         state.currentView === "followups"
                     ) {
                         renderView();
+                        restoreStartupScroll();
                         setupNotificationCenter();
                         setStandaloneManagerVisibility(
                             state.currentView
@@ -18975,6 +18976,7 @@ function simpleBars(items, color) {
                         ].includes(state.currentView)
                     ) {
                         renderView();
+                        restoreStartupScroll();
                         setupNotificationCenter();
                         setStandaloneManagerVisibility(
                             state.currentView
@@ -19011,6 +19013,7 @@ function simpleBars(items, color) {
                                 state.currentView === "reminders"
                             ) {
                                 renderView();
+                                restoreStartupScroll();
                                 setupNotificationCenter();
                                 setStandaloneManagerVisibility(
                                     state.currentView
