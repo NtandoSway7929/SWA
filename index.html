@@ -15650,7 +15650,30 @@ nav.scrolled {
     display: none !important;
 }
 
-  button.portfolio-image-wrap {
+  .portfolio-image-wrap .portfolio-video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    background: #EEF6FF;
+}
+
+.portfolio-lightbox-video {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 78vh;
+    object-fit: contain;
+    border-radius: 18px;
+}
+
+.portfolio-lightbox-video[hidden] {
+    display: none !important;
+}
+
+button.portfolio-image-wrap {
     appearance: none;
     -webkit-appearance: none;
     border: none;
@@ -18061,6 +18084,16 @@ if ("IntersectionObserver" in window) {
                 class="portfolio-lightbox-image"
             >
 
+            <video
+                id="portfolio-lightbox-video"
+                class="portfolio-lightbox-video"
+                muted
+                playsinline
+                loop
+                preload="metadata"
+                hidden
+            ></video>
+
         </div>
 
         <div class="portfolio-lightbox-caption">
@@ -18505,6 +18538,17 @@ function getSafePortfolioURL(value) {
 
 
 /* =========================================================
+   PORTFOLIO MEDIA HELPERS
+   ========================================================= */
+
+function isVideoPortfolioMedia(url) {
+    return /\.(mp4|webm|mov|m4v)(?:[?#].*)?$/i.test(
+        String(url || "")
+    );
+}
+
+
+/* =========================================================
    LOAD PORTFOLIO
    ========================================================= */
 
@@ -18680,14 +18724,33 @@ async function loadPortfolio() {
                                         aria-label="View larger image: ${title}"
                                     >
 
-                                        <img
-                                            src="${imageURL}"
-                                            alt=""
-                                            class="portfolio-image"
-                                            loading="lazy"
-                                            decoding="async"
-                                            onerror="this.style.display='none'; this.parentElement.classList.add('image-error');"
-                                        >
+                                        ${
+                                            isVideoPortfolioMedia(project.image_url)
+                                                ? `
+                                                    <video
+                                                        class="portfolio-image portfolio-video"
+                                                        muted
+                                                        playsinline
+                                                        loop
+                                                        preload="metadata"
+                                                        aria-hidden="true"
+                                                    >
+                                                        <source
+                                                            src="${imageURL}"
+                                                        >
+                                                    </video>
+                                                `
+                                                : `
+                                                    <img
+                                                        src="${imageURL}"
+                                                        alt=""
+                                                        class="portfolio-image"
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        onerror="this.style.display='none'; this.parentElement.classList.add('image-error');"
+                                                    >
+                                                `
+                                        }
 
                                     </button>
 
@@ -19123,6 +19186,15 @@ function initializePortfolioCarousel() {
             portfolioCarouselState.lastInteraction =
                 Date.now();
 
+            portfolioCarouselState.cards.forEach(
+                (card) => {
+                    syncPortfolioVideoPlayback(
+                        card,
+                        card.classList.contains("is-active")
+                    );
+                }
+            );
+
         }
     );
 
@@ -19223,6 +19295,45 @@ portfolioCarouselState.radius *=
 
             }
         );
+}
+
+
+function syncPortfolioVideoPlayback(card, isActive) {
+    const video =
+        card.querySelector(
+            "video.portfolio-video"
+        );
+
+    if (!video) {
+        return;
+    }
+
+    const shouldPlay =
+        isActive &&
+        !portfolioCarouselState.reducedMotion &&
+        document.visibilityState === "visible";
+
+    if (shouldPlay) {
+        if (video.paused) {
+            const playPromise = video.play();
+
+            if (
+                playPromise &&
+                typeof playPromise.catch === "function"
+            ) {
+                playPromise.catch(() => {});
+            }
+        }
+
+        card.dataset.videoPlaying = "true";
+        return;
+    }
+
+    if (!video.paused) {
+        video.pause();
+    }
+
+    card.dataset.videoPlaying = "false";
 }
 
 
@@ -19560,6 +19671,11 @@ portfolioCarouselState.cards.forEach(
             );
 
         }
+
+        syncPortfolioVideoPlayback(
+            card,
+            isActive
+        );
 
     }
 );
@@ -20030,6 +20146,9 @@ const portfolioLightbox =
 const portfolioLightboxImage =
     document.querySelector("#portfolio-lightbox-image");
 
+const portfolioLightboxVideo =
+    document.querySelector("#portfolio-lightbox-video");
+
 const portfolioLightboxTitle =
     document.querySelector("#portfolio-lightbox-title");
 
@@ -20043,14 +20162,55 @@ const portfolioLightboxClose =
 let activeLightboxCard = null;
 
 function openPortfolioLightbox(project, cardElement = null) {
-    if (!portfolioLightbox || !portfolioLightboxImage) {
+    if (
+        !portfolioLightbox ||
+        !portfolioLightboxImage ||
+        !portfolioLightboxVideo
+    ) {
         return;
     }
 
     activeLightboxCard = cardElement;
 
-    portfolioLightboxImage.src = project.image_url || "";
-    portfolioLightboxImage.alt = project.title || "Swayphics project";
+    const mediaURL =
+        getSafePortfolioURL(project.image_url);
+
+    const isVideo =
+        isVideoPortfolioMedia(mediaURL);
+
+    portfolioLightboxImage.hidden =
+        isVideo;
+
+    portfolioLightboxVideo.hidden =
+        !isVideo;
+
+    portfolioLightboxImage.src =
+        isVideo
+            ? ""
+            : mediaURL;
+
+    portfolioLightboxImage.alt =
+        project.title || "Swayphics project";
+
+    portfolioLightboxVideo.pause();
+    portfolioLightboxVideo.removeAttribute("src");
+
+    if (isVideo) {
+        portfolioLightboxVideo.src =
+            mediaURL;
+
+        portfolioLightboxVideo.muted =
+            true;
+
+        portfolioLightboxVideo.playsInline =
+            true;
+
+        portfolioLightboxVideo.loop =
+            true;
+
+        portfolioLightboxVideo.currentTime =
+            0;
+    }
 
     if (portfolioLightboxTitle) {
         portfolioLightboxTitle.textContent = project.title || "";
@@ -20063,6 +20223,18 @@ function openPortfolioLightbox(project, cardElement = null) {
     portfolioLightbox.classList.add("is-open");
     portfolioLightbox.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
+
+    if (isVideo) {
+        const playPromise =
+            portfolioLightboxVideo.play();
+
+        if (
+            playPromise &&
+            typeof playPromise.catch === "function"
+        ) {
+            playPromise.catch(() => {});
+        }
+    }
 
     // Transfer focus safely to the close button
     setTimeout(() => {
@@ -20084,6 +20256,17 @@ function closePortfolioLightbox() {
     setTimeout(() => {
         if (portfolioLightboxImage) {
             portfolioLightboxImage.src = "";
+        }
+
+        if (portfolioLightboxVideo) {
+            portfolioLightboxVideo.pause();
+            portfolioLightboxVideo.removeAttribute("src");
+            portfolioLightboxVideo.load();
+            portfolioLightboxVideo.hidden = true;
+        }
+
+        if (portfolioLightboxImage) {
+            portfolioLightboxImage.hidden = false;
         }
         
         // Return focus to the specific card's interactive image button
