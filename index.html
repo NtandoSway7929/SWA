@@ -16787,6 +16787,55 @@ body {
         margin-bottom: 64px;
     }
 }
+
+
+/* =========================================================
+   CLIENT STORIES — LIGHT BLUE GRADIENT
+   ========================================================= */
+
+.testimonials {
+    background:
+        linear-gradient(
+            135deg,
+            #FFFFFF 0%,
+            #F6FAFF 34%,
+            #EAF4FF 70%,
+            #DDEEFF 100%
+        );
+}
+
+.testimonials::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    background:
+        radial-gradient(
+            55% 45% at 85% 18%,
+            rgba(119, 193, 252, 0.18),
+            rgba(119, 193, 252, 0) 72%
+        );
+}
+
+.testimonials > * {
+    position: relative;
+    z-index: 1;
+}
+
+@media (max-width: 700px) {
+
+    .testimonials {
+        background:
+            linear-gradient(
+                160deg,
+                #FFFFFF 0%,
+                #F3F8FF 42%,
+                #E4F1FF 100%
+            );
+    }
+
+}
 </style>
 
 </head>
