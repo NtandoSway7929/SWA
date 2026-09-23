@@ -18286,12 +18286,9 @@ function closePortfolioLightbox() {
             portfolioLightboxImage.hidden = false;
         }
         
-        // Return focus to the specific card's interactive image button
+        // Return focus directly to the card
         if (activeLightboxCard) {
-            const focusTarget = activeLightboxCard.querySelector('.portfolio-image-wrap');
-            if (focusTarget) {
-                focusTarget.focus();
-            }
+            activeLightboxCard.focus();
             activeLightboxCard = null;
         }
     }, 350);
