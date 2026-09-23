@@ -8,6 +8,17 @@
     const workspace = document.getElementById("sway-admin-workspace");
     if (!workspace) return;
 
+    /*
+     * Portfolio and Testimonials are live DOM managers defined in index.html.
+     * Keep their existing nodes and move them into the workspace main column
+     * when selected, so their functionality and event handlers remain intact.
+     */
+    const standalonePortfolioManager =
+        document.querySelector(".portfolio-manager");
+
+    const standaloneTestimonialsSection =
+        document.getElementById("testimonials-admin-section");
+
     const state = {
         currentView: "overview",
         currentUser: null,
@@ -1486,19 +1497,69 @@
     }
 
     function setStandaloneManagerVisibility(view) {
-        const portfolioManager = document.querySelector(".portfolio-manager");
-        const testimonialsSection = document.getElementById("testimonials-admin-section");
+        const main =
+            document.getElementById(
+                "sway-workspace-main"
+            );
 
-        if (portfolioManager) {
-            const showPortfolio = view === "portfolio";
-            portfolioManager.hidden = !showPortfolio;
-            portfolioManager.setAttribute("aria-hidden", String(!showPortfolio));
+        const portfolioManager =
+            standalonePortfolioManager;
+
+        const testimonialsSection =
+            standaloneTestimonialsSection;
+
+        if (
+            main &&
+            view === "portfolio" &&
+            portfolioManager
+        ) {
+            if (
+                portfolioManager.parentElement !==
+                main
+            ) {
+                main.appendChild(
+                    portfolioManager
+                );
+            }
+
+            portfolioManager.hidden = false;
+            portfolioManager.setAttribute(
+                "aria-hidden",
+                "false"
+            );
+        } else if (portfolioManager) {
+            portfolioManager.hidden = true;
+            portfolioManager.setAttribute(
+                "aria-hidden",
+                "true"
+            );
         }
 
-        if (testimonialsSection) {
-            const showTestimonials = view === "testimonials";
-            testimonialsSection.hidden = !showTestimonials;
-            testimonialsSection.setAttribute("aria-hidden", String(!showTestimonials));
+        if (
+            main &&
+            view === "testimonials" &&
+            testimonialsSection
+        ) {
+            if (
+                testimonialsSection.parentElement !==
+                main
+            ) {
+                main.appendChild(
+                    testimonialsSection
+                );
+            }
+
+            testimonialsSection.hidden = false;
+            testimonialsSection.setAttribute(
+                "aria-hidden",
+                "false"
+            );
+        } else if (testimonialsSection) {
+            testimonialsSection.hidden = true;
+            testimonialsSection.setAttribute(
+                "aria-hidden",
+                "true"
+            );
         }
     }
 
@@ -3418,28 +3479,6 @@ function renderShell() {
                         }
 
                         setStandaloneManagerVisibility(view);
-
-                        if (
-                            view === "portfolio" ||
-                            view === "testimonials"
-                        ) {
-                            const target =
-                                document.querySelector(
-                                    view === "portfolio"
-                                        ? ".portfolio-manager"
-                                        : "#testimonials-admin-section"
-                                );
-
-                            if (target) {
-                                target.scrollIntoView({
-                                    behavior: "smooth",
-                                    block: "start"
-                                });
-                            }
-
-                            renderShell();
-                            return;
-                        }
 
                         renderShell();
                         renderView();
@@ -5700,13 +5739,7 @@ function simpleBars(items, color) {
                     currentScrollY();
 
                 renderShell();
-
-                if (
-                    state.currentView !== "portfolio" &&
-                    state.currentView !== "testimonials"
-                ) {
-                    renderView();
-                }
+                renderView();
 
                 setStandaloneManagerVisibility(
                     state.currentView
@@ -17732,6 +17765,18 @@ function simpleBars(items, color) {
         if (!state.initialDataLoaded) {
             main.innerHTML =
                 renderWorkspaceLoading();
+            return;
+        }
+
+        if (
+            state.currentView === "portfolio" ||
+            state.currentView === "testimonials"
+        ) {
+            setStandaloneManagerVisibility(
+                state.currentView
+            );
+
+            bindViewActions();
             return;
         }
 
