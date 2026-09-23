@@ -18905,6 +18905,7 @@ function simpleBars(items, color) {
 
         renderShell();
         renderView();
+        restoreStartupScroll();
 
         try {
             await Promise.all([
@@ -18914,6 +18915,7 @@ function simpleBars(items, color) {
 
             renderShell();
             renderView();
+            restoreStartupScroll();
             setupNotificationCenter();
             setStandaloneManagerVisibility(
                 state.currentView
