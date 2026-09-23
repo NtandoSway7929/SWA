@@ -7028,18 +7028,17 @@
                 <div class="portfolio-field portfolio-field-full">
 
     <label for="portfolio-image-file">
-        Project image
+        Project media
     </label>
 
     <input
         type="file"
         id="portfolio-image-file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
     >
 
     <small id="portfolio-image-status">
-        Choose an image. It will be uploaded to
-        Supabase Storage when you save the project.
+        Choose an image or a short video. Videos play muted and loop on the public portfolio.
     </small>
 
     <input
@@ -8711,8 +8710,12 @@ async function editPortfolioProject(projectId) {
             "portfolio-image-status"
         ).textContent =
             project.image_url
-                ? "Current project image is being used. Choose a new image only if you want to replace it."
-                : "This project does not currently have an image.";
+                ? (
+                    /.(mp4|webm|mov|m4v)(?:[?#].*)?$/i.test(project.image_url)
+                        ? "Current project video is being used. Choose new media only if you want to replace it."
+                        : "Current project image is being used. Choose new media only if you want to replace it."
+                )
+                : "This project does not currently have media.";
 
 
         document.getElementById(
@@ -9084,11 +9087,19 @@ portfolioForm.addEventListener(
                     "image/jpeg",
                     "image/png",
                     "image/webp",
-                    "image/gif"
+                    "image/gif",
+                    "video/mp4",
+                    "video/webm",
+                    "video/quicktime"
                 ];
 
+                const isVideoUpload =
+                    imageFile.type.startsWith("video/");
+
                 const maxFileSize =
-                    10 * 1024 * 1024;
+                    isVideoUpload
+                        ? 40 * 1024 * 1024
+                        : 10 * 1024 * 1024;
 
 
                 if (
@@ -9098,7 +9109,7 @@ portfolioForm.addEventListener(
                 ) {
 
                     throw new Error(
-                        "Please select a JPG, PNG, WEBP, or GIF image."
+                        "Please select a JPG, PNG, WEBP, GIF image, MP4, WEBM, or MOV video."
                     );
 
                 }
@@ -9117,7 +9128,9 @@ portfolioForm.addEventListener(
 
 
                 imageStatus.textContent =
-                    "Uploading image...";
+                    isVideoUpload
+                        ? "Uploading video..."
+                        : "Uploading image...";
 
 
                 const originalName =
@@ -9194,7 +9207,9 @@ portfolioForm.addEventListener(
 
 
                 imageStatus.textContent =
-                    "New image uploaded successfully.";
+                    isVideoUpload
+                        ? "New video uploaded successfully."
+                        : "New image uploaded successfully.";
 
             }
 
@@ -9491,7 +9506,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20260923-workspace-v10"></script>
+<script src="admin-workspace.js?v=dashboard-20260923-workspace-v11"></script>
 
 <script>
 (function () {
