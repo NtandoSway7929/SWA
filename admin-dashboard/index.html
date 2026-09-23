@@ -4597,12 +4597,17 @@
             --ui-focus: rgba(75,141,255,0.22);
         }
 
-        body.sway-dark-mode,
-        body.sway-dark-mode .admin-main {
+        body.sway-dark-mode {
             background:
-                radial-gradient(circle at 86% 0%, rgba(1,82,244,0.095), transparent 28%),
-                radial-gradient(circle at 0% 100%, rgba(44,145,252,0.05), transparent 22%),
-                var(--ui-bg) !important;
+                linear-gradient(
+                    rgba(7,12,22,0.86),
+                    rgba(7,12,22,0.86)
+                ),
+                url("../background branded wallpaper.webp") center / cover fixed no-repeat !important;
+        }
+
+        body.sway-dark-mode .admin-main {
+            background: transparent !important;
         }
 
         body.sway-dark-mode::before {
