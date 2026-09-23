@@ -1352,6 +1352,50 @@ nav.scrolled .logo img {
 
     pointer-events:
         none;
+
+    z-index:
+        1;
+}
+
+
+/* Contact section background video */
+
+.contact-section-background-video {
+    position:
+        absolute;
+
+    inset:
+        0;
+
+    z-index:
+        0;
+
+    width:
+        100%;
+
+    height:
+        100%;
+
+    object-fit:
+        cover;
+
+    object-position:
+        center;
+
+    pointer-events:
+        none;
+
+    opacity:
+        0.48;
+
+    filter:
+        saturate(0.88)
+        contrast(1.08);
+}
+
+.cta > .contact-section-background-video {
+    z-index:
+        0;
 }
 
 
@@ -2126,54 +2170,17 @@ footer {
         0;
 
     z-index:
-        1;
+        0;
 
     pointer-events:
         none;
 
     background:
-        linear-gradient(
-            135deg,
-            rgba(0, 18, 58, 0.82),
-            rgba(0, 32, 150, 0.58) 48%,
-            rgba(1, 82, 244, 0.40)
-        );
-}
-
-.contact-form-background-video {
-    position:
-        absolute;
-
-    inset:
-        0;
-
-    z-index:
-        0;
-
-    width:
-        100%;
-
-    height:
-        100%;
-
-    object-fit:
-        cover;
-
-    object-position:
-        center;
-
-    pointer-events:
-        none;
-
-    opacity:
-        0.72;
-
-    filter:
-        saturate(0.88)
-        contrast(1.06);
+        rgba(0, 18, 58, 0.32);
 }
 
 .project-form > .form-group,
+.project-form > .form-privacy-notice,
 .project-form > .form-privacy-notice,
 .project-form > .form-consent,
 .project-form > .btn {
@@ -17631,6 +17638,17 @@ body {
 <!-- CTA -->
 <section class="cta" id="contact">
 
+    <video
+        id="contact-section-background-video"
+        class="contact-section-background-video"
+        muted
+        autoplay
+        playsinline
+        loop
+        preload="metadata"
+        aria-hidden="true"
+    ></video>
+
     <div class="section-label">Start a project</div>
 
     <h2>
@@ -17648,17 +17666,6 @@ body {
     class="project-form"
     aria-label="Start a project enquiry"
 >
-
-        <video
-            id="contact-form-background-video"
-            class="contact-form-background-video"
-            muted
-            autoplay
-            playsinline
-            loop
-            preload="metadata"
-            aria-hidden="true"
-        ></video>
 
         <div class="form-group">
             <label for="name">Your name</label>
@@ -18957,31 +18964,31 @@ async function loadPortfolio() {
    CONTACT FORM BACKGROUND VIDEO
    ========================================================= */
 
-const CONTACT_FORM_VIDEO_URL = "";
+const CONTACT_SECTION_VIDEO_URL = "";
 
 function setupContactFormBackgroundVideo() {
 
     const video =
         document.querySelector(
-            "#contact-form-background-video"
+            "#contact-section-background-video"
         );
 
-    const form =
+    const section =
         document.querySelector(
-            ".project-form"
+            "#contact"
         );
 
     if (
         !video ||
-        !form ||
-        !CONTACT_FORM_VIDEO_URL
+        !section ||
+        !CONTACT_SECTION_VIDEO_URL
     ) {
         return;
     }
 
     const videoURL =
         getSafePortfolioURL(
-            CONTACT_FORM_VIDEO_URL
+            CONTACT_SECTION_VIDEO_URL
         );
 
     if (!videoURL) {
@@ -19053,7 +19060,7 @@ function setupContactFormBackgroundVideo() {
                 }
             );
 
-        observer.observe(form);
+        observer.observe(section);
 
     } else {
         playVideo();
