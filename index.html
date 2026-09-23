@@ -16063,10 +16063,40 @@ body {
 
 
 /* =========================================================
-   CYLINDER TRACK
+   CYLINDER STAGE
    ========================================================= */
 
+.portfolio-carousel-viewport::before {
+    content: "";
+    position: absolute;
+
+    left: 50%;
+    bottom: 6%;
+    width: min(780px, 78%);
+    height: 34%;
+
+    transform:
+        translateX(-50%)
+        translateZ(0);
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(44, 145, 252, 0.15) 0%,
+            rgba(119, 193, 252, 0.10) 30%,
+            rgba(119, 193, 252, 0) 72%
+        );
+
+    filter: blur(18px);
+
+    pointer-events: none;
+    z-index: 0;
+}
+
 .portfolio-carousel-track {
+
     position: relative;
 
     width: 400px;
@@ -16833,6 +16863,67 @@ body {
                 #F3F8FF 42%,
                 #E4F1FF 100%
             );
+    }
+
+}
+
+
+/* =========================================================
+   SELECTED WORK — 3D DEPTH FINISH
+   ========================================================= */
+
+.portfolio-carousel-viewport {
+    perspective:
+        1080px;
+    perspective-origin:
+        50% 46%;
+}
+
+.portfolio-carousel-track {
+    z-index: 1;
+}
+
+.portfolio-carousel-track
+.portfolio-card-face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+
+    box-shadow:
+        0 28px 68px rgba(0, 32, 150, 0.12);
+}
+
+.portfolio-carousel-track
+.portfolio-card.is-active
+.portfolio-card-face {
+    box-shadow:
+        0 38px 82px rgba(0, 32, 150, 0.18);
+}
+
+@media (max-width: 900px) {
+
+    .portfolio-carousel-viewport {
+        perspective:
+            900px;
+    }
+
+}
+
+@media (max-width: 700px) {
+
+    .portfolio-carousel-viewport {
+        perspective:
+            760px;
+        perspective-origin:
+            50% 45%;
+    }
+
+    .portfolio-carousel-viewport::before {
+        width:
+            92%;
+        height:
+            30%;
+        bottom:
+            8%;
     }
 
 }
@@ -19727,7 +19818,7 @@ function updatePortfolioCarouselGeometry() {
    the intended Swayphics carousel design.
 */
 portfolioCarouselState.radius *=
-    0.92;
+    0.86;
 
     }
 
