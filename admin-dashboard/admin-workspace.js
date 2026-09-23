@@ -3176,7 +3176,7 @@ function renderShell() {
                     '</div>' +
                 '</div>' +
                 '<button type="button" class="sway-workspace-mobile-toggle" aria-label="Open workspace navigation" aria-controls="sway-workspace-sidebar">' +
-                    '<span></span><span></span><span></span>' +
+                    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M9 5v14"></path><path d="M12.5 9h4"></path><path d="M12.5 12h4"></path><path d="M12.5 15h4"></path></svg>' +
                 '</button>' +
             "</div>";
 
