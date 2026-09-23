@@ -4791,6 +4791,63 @@
         }
 
         /* -----------------------------------------------------
+           HEADER CONTROL POLISH
+           ----------------------------------------------------- */
+
+        .admin-theme-toggle,
+        .admin-notification-toggle {
+            width: 36px !important;
+            height: 36px !important;
+            flex: 0 0 36px !important;
+            display: grid !important;
+            place-items: center !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 11px !important;
+            background: var(--ui-surface-soft) !important;
+            color: var(--ui-text-soft) !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+            transition: transform var(--ui-speed) var(--ui-ease), background var(--ui-speed) ease, border-color var(--ui-speed) ease, color var(--ui-speed) ease !important;
+        }
+
+        .admin-theme-toggle:hover,
+        .admin-notification-toggle:hover,
+        .admin-theme-toggle:focus-visible,
+        .admin-notification-toggle:focus-visible {
+            color: var(--ui-blue) !important;
+            background: rgba(1,82,244,0.045) !important;
+            border-color: rgba(1,82,244,0.20) !important;
+            transform: translateY(-1px);
+        }
+
+        .admin-notification-toggle {
+            position: relative;
+        }
+
+        #sway-notification-badge {
+            min-width: 15px !important;
+            height: 15px !important;
+            padding: 0 4px !important;
+            border: 2px solid var(--ui-surface) !important;
+            border-radius: 999px !important;
+            font-size: 0.47rem !important;
+            font-weight: 900 !important;
+        }
+
+        body.sway-dark-mode .admin-theme-toggle,
+        body.sway-dark-mode .admin-notification-toggle {
+            border-color: var(--ui-border) !important;
+            background: var(--ui-surface-soft) !important;
+            color: #AEB9C9 !important;
+        }
+
+        body.sway-dark-mode .admin-theme-toggle:hover,
+        body.sway-dark-mode .admin-notification-toggle:hover {
+            background: rgba(75,141,255,0.08) !important;
+            border-color: rgba(75,141,255,0.24) !important;
+            color: #6FA5FF !important;
+        }
+
+        /* -----------------------------------------------------
            RESPONSIVE POLISH
            ----------------------------------------------------- */
 
