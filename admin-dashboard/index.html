@@ -5325,8 +5325,10 @@
             }
 
             .sway-workspace-sidebar {
-                height: 100vh !important;
-                max-height: 100vh !important;
+                height: calc(100vh - 96px) !important;
+                max-height: calc(100vh - 96px) !important;
+                height: calc(100dvh - 96px) !important;
+                max-height: calc(100dvh - 96px) !important;
                 min-height: 0 !important;
                 overflow: hidden !important;
                 touch-action: pan-y !important;
