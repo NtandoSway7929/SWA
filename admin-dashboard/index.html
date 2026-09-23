@@ -6056,6 +6056,64 @@
         }
     </style>
 
+        /* Keep the mobile drawer and its trigger above the backdrop. */
+        @media (max-width: 980px) {
+            .sway-workspace-sidebar {
+                z-index: 5001 !important;
+            }
+
+            .sway-workspace-mobile-toggle {
+                z-index: 5002 !important;
+            }
+
+            .sway-workspace-mobile-toggle svg {
+                width: 21px !important;
+                height: 21px !important;
+                fill: none !important;
+                stroke: currentColor !important;
+                stroke-width: 1.75 !important;
+                stroke-linecap: round !important;
+                stroke-linejoin: round !important;
+                pointer-events: none !important;
+            }
+
+            .sway-workspace-mobile-toggle {
+                border-radius: 14px !important;
+                color: #002096 !important;
+                transition:
+                    transform 180ms ease,
+                    background 180ms ease,
+                    border-color 180ms ease,
+                    box-shadow 180ms ease,
+                    color 180ms ease !important;
+            }
+
+            .sway-workspace-mobile-toggle:hover {
+                transform: translateY(-1px);
+                border-color: rgba(1,82,244,0.16) !important;
+            }
+
+            #sway-admin-workspace.nav-open .sway-workspace-mobile-toggle {
+                background: #002096 !important;
+                border-color: rgba(255,255,255,0.10) !important;
+                color: #FFFFFF !important;
+                box-shadow:
+                    0 14px 34px rgba(0,32,150,0.24),
+                    0 2px 8px rgba(0,20,95,0.08) !important;
+            }
+
+            #sway-admin-workspace.nav-open .sway-workspace-mobile-toggle svg {
+                transform: rotate(180deg);
+            }
+        }
+
+        @media (max-width: 980px) and (prefers-reduced-motion: reduce) {
+            .sway-workspace-mobile-toggle,
+            .sway-workspace-mobile-toggle svg {
+                transition: none !important;
+            }
+        }
+
 </head>
 
 
@@ -8912,7 +8970,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20260921-ui-v4"></script>
+<script src="admin-workspace.js?v=dashboard-20260923-sidebar-v5"></script>
 
 <script>
 (function () {
