@@ -6202,6 +6202,158 @@
         }
     </style>
 
+    <style id="sway-managed-view-consistency">
+        /* =====================================================
+           PORTFOLIO + TESTIMONIALS
+           Match the normal workspace view composition.
+           ===================================================== */
+
+        #sway-workspace-main > .portfolio-manager,
+        #sway-workspace-main > #testimonials-admin-section {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .manager-heading,
+        #sway-workspace-main > #testimonials-admin-section .admin-section-header {
+            display: flex !important;
+            align-items: flex-end !important;
+            justify-content: space-between !important;
+            gap: 22px !important;
+            min-width: 0 !important;
+            margin: 0 0 22px !important;
+            padding: 0 !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .manager-heading > div,
+        #sway-workspace-main > #testimonials-admin-section .admin-section-header > div {
+            min-width: 0 !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .manager-heading .admin-label,
+        #sway-workspace-main > #testimonials-admin-section .admin-section-eyebrow {
+            display: none !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .manager-heading h2,
+        #sway-workspace-main > #testimonials-admin-section .admin-section-header h2 {
+            margin: 0 !important;
+            color: #0152F4 !important;
+            font-size: clamp(1.85rem, 3vw, 2.45rem) !important;
+            font-weight: 700 !important;
+            line-height: 1.02 !important;
+            letter-spacing: -0.055em !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .manager-heading p,
+        #sway-workspace-main > #testimonials-admin-section .admin-section-header p {
+            max-width: 700px !important;
+            margin: 8px 0 0 !important;
+            color: var(--ui-text-soft) !important;
+            font-size: 0.76rem !important;
+            line-height: 1.65 !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .add-project-button {
+            min-height: 38px !important;
+            padding: 0 14px !important;
+            border: 0 !important;
+            border-radius: 999px !important;
+            background: #0152F4 !important;
+            box-shadow: 0 8px 20px rgba(1,82,244,0.18) !important;
+            font-size: 0.64rem !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .portfolio-admin-list,
+        #sway-workspace-main > #testimonials-admin-section .testimonials-admin-list {
+            gap: 12px !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .portfolio-admin-item,
+        #sway-workspace-main > #testimonials-admin-section .testimonial-admin-card {
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 16px !important;
+            background: var(--ui-surface) !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .portfolio-admin-loading,
+        #sway-workspace-main > #testimonials-admin-section .testimonials-admin-loading {
+            min-height: 150px !important;
+            border-color: var(--ui-border) !important;
+            border-radius: 16px !important;
+            background: var(--ui-surface-soft) !important;
+            color: var(--ui-text-faint) !important;
+        }
+
+        #sway-workspace-main > #testimonials-admin-section .testimonials-admin-tabs {
+            margin: 0 0 16px !important;
+            border-color: var(--ui-border) !important;
+            border-radius: 12px !important;
+            background: var(--ui-surface-soft) !important;
+        }
+
+        #sway-workspace-main > #testimonials-admin-section .testimonials-admin-tab {
+            min-height: 36px !important;
+            border-radius: 9px !important;
+            color: var(--ui-text-soft) !important;
+            font-size: 0.62rem !important;
+        }
+
+        #sway-workspace-main > #testimonials-admin-section .testimonials-admin-tab.active {
+            background: var(--ui-surface) !important;
+            color: #0152F4 !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+        }
+
+        body.sway-dark-mode #sway-workspace-main > .portfolio-manager .manager-heading h2,
+        body.sway-dark-mode #sway-workspace-main > #testimonials-admin-section .admin-section-header h2 {
+            color: #6FA5FF !important;
+        }
+
+        body.sway-dark-mode #sway-workspace-main > .portfolio-manager .manager-heading p,
+        body.sway-dark-mode #sway-workspace-main > #testimonials-admin-section .admin-section-header p {
+            color: var(--ui-text-soft) !important;
+        }
+
+        body.sway-dark-mode #sway-workspace-main > .portfolio-manager .portfolio-admin-item,
+        body.sway-dark-mode #sway-workspace-main > #testimonials-admin-section .testimonial-admin-card {
+            border-color: var(--ui-border) !important;
+            background: var(--ui-surface) !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+        }
+
+        body.sway-dark-mode #sway-workspace-main > #testimonials-admin-section .testimonials-admin-tabs {
+            background: var(--ui-surface-soft) !important;
+        }
+
+        body.sway-dark-mode #sway-workspace-main > #testimonials-admin-section .testimonials-admin-tab.active {
+            background: var(--ui-surface) !important;
+            color: #6FA5FF !important;
+        }
+
+        @media (max-width: 760px) {
+            #sway-workspace-main > .portfolio-manager .manager-heading,
+            #sway-workspace-main > #testimonials-admin-section .admin-section-header {
+                align-items: flex-start !important;
+                flex-direction: column !important;
+                gap: 14px !important;
+                margin-bottom: 18px !important;
+            }
+
+            #sway-workspace-main > .portfolio-manager .manager-heading h2,
+            #sway-workspace-main > #testimonials-admin-section .admin-section-header h2 {
+                font-size: clamp(1.65rem, 9vw, 2.05rem) !important;
+            }
+
+            #sway-workspace-main > .portfolio-manager .add-project-button {
+                width: auto !important;
+                min-height: 36px !important;
+            }
+        }
+    </style>
+
 </head>
 
 
@@ -9058,7 +9210,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20260923-sidebar-v6"></script>
+<script src="admin-workspace.js?v=dashboard-20260923-workspace-v7"></script>
 
 <script>
 (function () {
