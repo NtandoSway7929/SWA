@@ -18976,7 +18976,7 @@ async function loadPortfolio() {
                                                         autoplay
                                                         playsinline
                                                         loop
-                                                        preload="metadata"
+                                                        preload="auto"
                                                         aria-hidden="true"
                                                     >
                                                         <source
@@ -19704,6 +19704,21 @@ function syncPortfolioVideoPlayback(card, isActive) {
     video.playsInline = true;
     video.autoplay = true;
 
+    video.setAttribute(
+        "muted",
+        ""
+    );
+
+    video.setAttribute(
+        "autoplay",
+        ""
+    );
+
+    video.setAttribute(
+        "playsinline",
+        ""
+    );
+
     const shouldPlay =
         isActive &&
         !portfolioCarouselState.reducedMotion &&
@@ -19715,14 +19730,19 @@ function syncPortfolioVideoPlayback(card, isActive) {
 
             if (
                 !video.isConnected ||
-                !card.classList.contains("is-active") ||
+                !isActive ||
                 portfolioCarouselState.reducedMotion ||
                 document.visibilityState !== "visible"
             ) {
                 return;
             }
 
-            const playPromise = video.play();
+            video.muted = true;
+            video.defaultMuted = true;
+            video.playsInline = true;
+
+            const playPromise =
+                video.play();
 
             if (
                 playPromise &&
@@ -19733,19 +19753,69 @@ function syncPortfolioVideoPlayback(card, isActive) {
 
         };
 
-        if (video.paused) {
-            tryPlay();
-        }
+        tryPlay();
 
         if (!video.dataset.autoplayRetryBound) {
 
-            video.addEventListener(
+            const retryEvents = [
+                "loadedmetadata",
+                "loadeddata",
                 "canplay",
-                tryPlay,
-                { once: true }
+                "canplaythrough"
+            ];
+
+            retryEvents.forEach(
+                (eventName) => {
+                    video.addEventListener(
+                        eventName,
+                        tryPlay
+                    );
+                }
             );
 
-            video.dataset.autoplayRetryBound = "true";
+            video.dataset.autoplayRetryBound =
+                "true";
+        }
+
+        if (!video.dataset.autoplayRetryTimer) {
+
+            let attempts = 0;
+
+            const retryUntilPlaying = () => {
+
+                if (
+                    !video.isConnected ||
+                    !isActive ||
+                    video.readyState < 2 ||
+                    attempts >= 24
+                ) {
+                    video.dataset.autoplayRetryTimer =
+                        "";
+                    return;
+                }
+
+                attempts += 1;
+
+                if (video.paused) {
+                    tryPlay();
+                }
+
+                if (!video.paused) {
+                    video.dataset.autoplayRetryTimer =
+                        "";
+                    return;
+                }
+
+                window.setTimeout(
+                    retryUntilPlaying,
+                    250
+                );
+            };
+
+            video.dataset.autoplayRetryTimer =
+                "pending";
+
+            retryUntilPlaying();
         }
 
         card.dataset.videoPlaying = "true";
@@ -19756,6 +19826,7 @@ function syncPortfolioVideoPlayback(card, isActive) {
         video.pause();
     }
 
+    video.dataset.autoplayRetryTimer = "";
     card.dataset.videoPlaying = "false";
 }
 
