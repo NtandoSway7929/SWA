@@ -18940,9 +18940,7 @@ async function loadPortfolio() {
 
         initializePortfolioCarousel();
 
-        setupContactFormBackgroundVideo(
-            portfolioCarouselState.projects
-        );
+        setupContactFormBackgroundVideo();
 
     } catch (error) {
 
@@ -18959,9 +18957,9 @@ async function loadPortfolio() {
    CONTACT FORM BACKGROUND VIDEO
    ========================================================= */
 
-function setupContactFormBackgroundVideo(
-    projects
-) {
+const CONTACT_FORM_VIDEO_URL = "";
+
+function setupContactFormBackgroundVideo() {
 
     const video =
         document.querySelector(
@@ -18973,26 +18971,17 @@ function setupContactFormBackgroundVideo(
             ".project-form"
         );
 
-    if (!video || !form) {
-        return;
-    }
-
-    const videoProject =
-        (Array.isArray(projects) ? projects : [])
-            .find(
-                (project) =>
-                    isVideoPortfolioMedia(
-                        project?.image_url
-                    )
-            );
-
-    if (!videoProject?.image_url) {
+    if (
+        !video ||
+        !form ||
+        !CONTACT_FORM_VIDEO_URL
+    ) {
         return;
     }
 
     const videoURL =
         getSafePortfolioURL(
-            videoProject.image_url
+            CONTACT_FORM_VIDEO_URL
         );
 
     if (!videoURL) {
