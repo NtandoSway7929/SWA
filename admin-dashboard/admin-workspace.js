@@ -231,13 +231,16 @@
             navigationType = "";
         }
 
-        if (
-            navigationType !== "reload"
-        ) {
-            return;
-        }
-
         try {
+            if (
+                navigationType !== "reload"
+            ) {
+                sessionStorage.removeItem(
+                    REFRESH_SCROLL_STORAGE_KEY
+                );
+                return;
+            }
+
             if (
                 typeof history !== "undefined" &&
                 "scrollRestoration" in history
