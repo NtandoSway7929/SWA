@@ -19059,6 +19059,27 @@ async function loadPortfolio() {
                 .join("");
 
 
+        track
+            .querySelectorAll(
+                "video.portfolio-video"
+            )
+            .forEach(
+                (video) => {
+
+                    video.muted = true;
+                    video.defaultMuted = true;
+                    video.playsInline = true;
+                    video.autoplay = true;
+
+                    video.setAttribute(
+                        "autoplay",
+                        ""
+                    );
+
+                    video.load();
+                }
+            );
+
         initializePortfolioCarousel();
 
         setupContactFormBackgroundVideo();
@@ -19678,15 +19699,29 @@ function syncPortfolioVideoPlayback(card, isActive) {
         return;
     }
 
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+
     const shouldPlay =
         isActive &&
         !portfolioCarouselState.reducedMotion &&
         document.visibilityState === "visible";
 
     if (shouldPlay) {
-        video.autoplay = true;
 
-        if (video.paused) {
+        const tryPlay = () => {
+
+            if (
+                !video.isConnected ||
+                !card.classList.contains("is-active") ||
+                portfolioCarouselState.reducedMotion ||
+                document.visibilityState !== "visible"
+            ) {
+                return;
+            }
+
             const playPromise = video.play();
 
             if (
@@ -19695,6 +19730,22 @@ function syncPortfolioVideoPlayback(card, isActive) {
             ) {
                 playPromise.catch(() => {});
             }
+
+        };
+
+        if (video.paused) {
+            tryPlay();
+        }
+
+        if (!video.dataset.autoplayRetryBound) {
+
+            video.addEventListener(
+                "canplay",
+                tryPlay,
+                { once: true }
+            );
+
+            video.dataset.autoplayRetryBound = "true";
         }
 
         card.dataset.videoPlaying = "true";
