@@ -6187,6 +6187,21 @@
         }
     </style>
 
+    <style id="sway-workspace-heading-cleanup">
+        /* Main workspace pages use one heading only. */
+        #sway-admin-workspace .sway-workspace-heading .admin-label {
+            display: none !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-heading h2 {
+            color: #0152F4 !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-heading h2 {
+            color: #5FA0FF !important;
+        }
+    </style>
+
 </head>
 
 
@@ -9043,7 +9058,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20260923-sidebar-v5"></script>
+<script src="admin-workspace.js?v=dashboard-20260923-sidebar-v6"></script>
 
 <script>
 (function () {
