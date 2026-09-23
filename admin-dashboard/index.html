@@ -9121,7 +9121,9 @@ portfolioForm.addEventListener(
                 ) {
 
                     throw new Error(
-                        "The image must be 10 MB or smaller."
+                        isVideoUpload
+                            ? "The video must be 40 MB or smaller."
+                            : "The image must be 10 MB or smaller."
                     );
 
                 }
