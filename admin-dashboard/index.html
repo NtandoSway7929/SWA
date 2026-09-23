@@ -6116,6 +6116,77 @@
         }
     </style>
 
+    <style id="sway-mobile-header-search-fix">
+        /* =====================================================
+           MOBILE HEADER SEARCH
+           Keep search available without overcrowding the header.
+           ===================================================== */
+        @media (max-width: 760px) {
+            .admin-header-inner {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) auto !important;
+                grid-template-areas:
+                    "brand controls"
+                    "search search" !important;
+                row-gap: 8px !important;
+                min-height: 104px !important;
+                padding: 8px 9px 10px 13px !important;
+                border-radius: 20px !important;
+            }
+
+            .admin-brand {
+                grid-area: brand !important;
+            }
+
+            .admin-global-search {
+                display: block !important;
+                grid-area: search !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                flex: none !important;
+            }
+
+            .admin-global-search-field {
+                width: 100% !important;
+                min-height: 38px !important;
+                border-radius: 12px !important;
+            }
+
+            .admin-header-right {
+                grid-area: controls !important;
+                min-width: 0 !important;
+                justify-content: flex-end !important;
+            }
+
+            .admin-global-search-field kbd {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .admin-header-inner {
+                min-height: 100px !important;
+                row-gap: 7px !important;
+                padding-left: 9px !important;
+            }
+
+            .admin-brand-logo {
+                width: 86px !important;
+            }
+
+            .admin-global-search-field {
+                min-height: 36px !important;
+                padding-left: 9px !important;
+                padding-right: 9px !important;
+            }
+
+            #admin-global-search-input {
+                font-size: 0.62rem !important;
+            }
+        }
+    </style>
+
 </head>
 
 
