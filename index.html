@@ -1364,17 +1364,26 @@ nav.scrolled .logo img {
     position:
         absolute;
 
-    inset:
-        0;
+    top:
+        24%;
+
+    right:
+        4%;
+
+    bottom:
+        4%;
+
+    left:
+        4%;
 
     z-index:
         0;
 
     width:
-        100%;
+        92%;
 
     height:
-        100%;
+        72%;
 
     object-fit:
         cover;
@@ -1386,11 +1395,65 @@ nav.scrolled .logo img {
         none;
 
     opacity:
-        0.48;
+        0.62;
+
+    border-radius:
+        44px;
 
     filter:
-        saturate(0.88)
-        contrast(1.08);
+        saturate(0.86)
+        contrast(1.08)
+        brightness(0.78);
+
+    -webkit-mask-image:
+        radial-gradient(
+            ellipse at center,
+            #000000 0%,
+            rgba(0,0,0,0.96) 48%,
+            rgba(0,0,0,0.55) 73%,
+            transparent 100%
+        );
+
+    mask-image:
+        radial-gradient(
+            ellipse at center,
+            #000000 0%,
+            rgba(0,0,0,0.96) 48%,
+            rgba(0,0,0,0.55) 73%,
+            transparent 100%
+        );
+}
+
+.cta::before {
+    z-index:
+        1;
+}
+
+@media (max-width: 700px) {
+
+    .contact-section-background-video {
+        top:
+            22%;
+
+        right:
+            0;
+
+        bottom:
+            2%;
+
+        left:
+            0;
+
+        width:
+            100%;
+
+        height:
+            76%;
+
+        border-radius:
+            30px;
+    }
+
 }
 
 .cta > .contact-section-background-video {
@@ -2145,7 +2208,7 @@ footer {
         28px;
 
     background:
-        rgba(0, 18, 58, 0.42);
+        rgba(0, 18, 58, 0.48);
 
     box-shadow:
         0 30px 80px rgba(0, 0, 0, 0.24);
