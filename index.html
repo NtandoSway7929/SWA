@@ -18730,6 +18730,7 @@ async function loadPortfolio() {
                                                     <video
                                                         class="portfolio-image portfolio-video"
                                                         muted
+                                                        autoplay
                                                         playsinline
                                                         loop
                                                         preload="metadata"
@@ -19314,6 +19315,8 @@ function syncPortfolioVideoPlayback(card, isActive) {
         document.visibilityState === "visible";
 
     if (shouldPlay) {
+        video.autoplay = true;
+
         if (video.paused) {
             const playPromise = video.play();
 
@@ -19415,6 +19418,11 @@ portfolioCarouselState.cards.forEach(
 
             card.classList.add(
                 "is-active"
+            );
+
+            syncPortfolioVideoPlayback(
+                card,
+                true
             );
 
             return;
