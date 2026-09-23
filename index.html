@@ -18975,12 +18975,14 @@ async function loadPortfolio() {
                                                         muted
                                                         autoplay
                                                         playsinline
+                                                        webkit-playsinline
                                                         loop
                                                         preload="auto"
                                                         aria-hidden="true"
                                                     >
                                                         <source
                                                             src="${imageURL}"
+                                                            type="video/mp4"
                                                         >
                                                     </video>
                                                 `
@@ -19068,11 +19070,22 @@ async function loadPortfolio() {
 
                     video.muted = true;
                     video.defaultMuted = true;
+                    video.volume = 0;
                     video.playsInline = true;
                     video.autoplay = true;
 
                     video.setAttribute(
+                        "muted",
+                        ""
+                    );
+
+                    video.setAttribute(
                         "autoplay",
+                        ""
+                    );
+
+                    video.setAttribute(
+                        "playsinline",
                         ""
                     );
 
@@ -19701,6 +19714,7 @@ function syncPortfolioVideoPlayback(card, isActive) {
 
     video.muted = true;
     video.defaultMuted = true;
+    video.volume = 0;
     video.playsInline = true;
     video.autoplay = true;
 
@@ -19719,115 +19733,118 @@ function syncPortfolioVideoPlayback(card, isActive) {
         ""
     );
 
-    const shouldPlay =
-        isActive &&
-        !portfolioCarouselState.reducedMotion &&
-        document.visibilityState === "visible";
+    if (
+        document.visibilityState !==
+        "visible"
+    ) {
+        if (!video.paused) {
+            video.pause();
+        }
 
-    if (shouldPlay) {
+        card.dataset.videoPlaying =
+            "false";
 
-        const tryPlay = () => {
+        return;
+
+    }
+
+    const tryPlay = () => {
+
+        if (
+            !video.isConnected ||
+            document.visibilityState !== "visible"
+        ) {
+            return;
+        }
+
+        video.muted = true;
+        video.defaultMuted = true;
+        video.volume = 0;
+        video.playsInline = true;
+        video.autoplay = true;
+
+        const playPromise =
+            video.play();
+
+        if (
+            playPromise &&
+            typeof playPromise.catch === "function"
+        ) {
+            playPromise.catch(() => {});
+        }
+
+    };
+
+    if (
+        video.readyState >= 2
+    ) {
+        tryPlay();
+    }
+
+    if (!video.dataset.autoplayRetryBound) {
+
+        [
+            "loadedmetadata",
+            "loadeddata",
+            "canplay",
+            "canplaythrough"
+        ].forEach(
+            (eventName) => {
+                video.addEventListener(
+                    eventName,
+                    tryPlay
+                );
+            }
+        );
+
+        video.dataset.autoplayRetryBound =
+            "true";
+    }
+
+    if (!video.dataset.autoplayRetryTimer) {
+
+        let attempts = 0;
+
+        const retryUntilPlaying = () => {
 
             if (
                 !video.isConnected ||
-                !isActive ||
-                portfolioCarouselState.reducedMotion ||
-                document.visibilityState !== "visible"
+                document.visibilityState !== "visible" ||
+                attempts >= 24
             ) {
+                video.dataset.autoplayRetryTimer =
+                    "";
+
                 return;
             }
 
-            video.muted = true;
-            video.defaultMuted = true;
-            video.playsInline = true;
+            attempts += 1;
 
-            const playPromise =
-                video.play();
-
-            if (
-                playPromise &&
-                typeof playPromise.catch === "function"
-            ) {
-                playPromise.catch(() => {});
+            if (video.paused) {
+                tryPlay();
             }
 
+            if (!video.paused) {
+                video.dataset.autoplayRetryTimer =
+                    "";
+
+                return;
+            }
+
+            window.setTimeout(
+                retryUntilPlaying,
+                250
+            );
         };
 
-        tryPlay();
+        video.dataset.autoplayRetryTimer =
+            "pending";
 
-        if (!video.dataset.autoplayRetryBound) {
-
-            const retryEvents = [
-                "loadedmetadata",
-                "loadeddata",
-                "canplay",
-                "canplaythrough"
-            ];
-
-            retryEvents.forEach(
-                (eventName) => {
-                    video.addEventListener(
-                        eventName,
-                        tryPlay
-                    );
-                }
-            );
-
-            video.dataset.autoplayRetryBound =
-                "true";
-        }
-
-        if (!video.dataset.autoplayRetryTimer) {
-
-            let attempts = 0;
-
-            const retryUntilPlaying = () => {
-
-                if (
-                    !video.isConnected ||
-                    !isActive ||
-                    video.readyState < 2 ||
-                    attempts >= 24
-                ) {
-                    video.dataset.autoplayRetryTimer =
-                        "";
-                    return;
-                }
-
-                attempts += 1;
-
-                if (video.paused) {
-                    tryPlay();
-                }
-
-                if (!video.paused) {
-                    video.dataset.autoplayRetryTimer =
-                        "";
-                    return;
-                }
-
-                window.setTimeout(
-                    retryUntilPlaying,
-                    250
-                );
-            };
-
-            video.dataset.autoplayRetryTimer =
-                "pending";
-
-            retryUntilPlaying();
-        }
-
-        card.dataset.videoPlaying = "true";
-        return;
+        retryUntilPlaying();
     }
 
-    if (!video.paused) {
-        video.pause();
-    }
-
-    video.dataset.autoplayRetryTimer = "";
-    card.dataset.videoPlaying = "false";
+    card.dataset.videoPlaying =
+        "true";
 }
 
 
