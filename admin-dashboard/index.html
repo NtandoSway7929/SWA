@@ -5147,6 +5147,171 @@
                 animation-iteration-count: 1 !important;
             }
         }
+
+        /* -----------------------------------------------------
+           DARK MODE CHART READABILITY
+           ----------------------------------------------------- */
+
+        body.sway-dark-mode .sway-chart-stage {
+            border-color: rgba(255,255,255,0.095) !important;
+            background:
+                linear-gradient(
+                    180deg,
+                    rgba(255,255,255,0.045) 0%,
+                    rgba(255,255,255,0.018) 100%
+                ) !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.045),
+                0 1px 2px rgba(0,0,0,0.12) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-guide {
+            color: #9EADBF !important;
+        }
+
+        body.sway-dark-mode .sway-chart-grid-line {
+            stroke: rgba(255,255,255,0.14) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-baseline {
+            stroke: rgba(255,255,255,0.23) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-current-guide {
+            stroke: rgba(111,165,255,0.42) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-axis-label,
+        body.sway-dark-mode .sway-chart-y-label {
+            fill: #B8C5D6 !important;
+        }
+
+        body.sway-dark-mode .sway-chart-value-label {
+            fill: #FFFFFF !important;
+            stroke: #0B1422 !important;
+            stroke-width: 4px !important;
+            paint-order: stroke !important;
+        }
+
+        body.sway-dark-mode .sway-chart-line {
+            stroke: #73BEFF !important;
+            stroke-width: 3.4 !important;
+        }
+
+        body.sway-dark-mode .sway-chart-point {
+            fill: #73BEFF !important;
+            stroke: #F8FBFF !important;
+            stroke-width: 2.4px !important;
+            filter: drop-shadow(0 3px 7px rgba(115,190,255,0.24)) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-area {
+            fill: #73BEFF !important;
+            fill-opacity: 0.10 !important;
+        }
+
+        body.sway-dark-mode .sway-chart-bar {
+            fill: #5FB1FF !important;
+            filter: drop-shadow(0 4px 9px rgba(95,177,255,0.18)) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-bar-group:hover .sway-chart-bar,
+        body.sway-dark-mode .sway-chart-bar-group:focus-visible .sway-chart-bar {
+            filter: brightness(1.10) drop-shadow(0 5px 11px rgba(95,177,255,0.24)) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-summary-item {
+            border-color: rgba(255,255,255,0.095) !important;
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,0.055) 0%,
+                    rgba(255,255,255,0.025) 100%
+                ) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.035) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-summary-item span {
+            color: #AEBCCD !important;
+        }
+
+        body.sway-dark-mode .sway-chart-summary-item strong {
+            color: #F7FAFE !important;
+        }
+
+        body.sway-dark-mode .sway-chart-summary-item small {
+            color: #92A2B7 !important;
+        }
+
+        body.sway-dark-mode .sway-chart-summary-item:nth-child(4) strong {
+            color: #73BEFF !important;
+        }
+
+        body.sway-dark-mode .sway-chart-reading {
+            border-color: rgba(111,165,255,0.14) !important;
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(75,141,255,0.10) 0%,
+                    rgba(255,255,255,0.025) 100%
+                ) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-reading-title span {
+            color: #AAB8CB !important;
+        }
+
+        body.sway-dark-mode .sway-chart-reading-title strong {
+            color: #79C4FF !important;
+        }
+
+        body.sway-dark-mode .sway-chart-reading > p {
+            color: #AAB8BD !important;
+        }
+
+        body.sway-dark-mode .sway-chart-periods {
+            border-top-color: rgba(255,255,255,0.075) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-period {
+            background: rgba(255,255,255,0.035) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-period-label {
+            color: #91A1B5 !important;
+        }
+
+        body.sway-dark-mode .sway-chart-period-track {
+            background: rgba(255,255,255,0.10) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-period-track span {
+            background: #5FB1FF !important;
+        }
+
+        body.sway-dark-mode .sway-chart-period strong {
+            color: #EAF2FC !important;
+        }
+
+        body.sway-dark-mode .sway-simple-bar-head span {
+            color: #F1F5FB !important;
+        }
+
+        body.sway-dark-mode .sway-simple-bar-head strong {
+            color: #B7C4D4 !important;
+        }
+
+        body.sway-dark-mode .sway-simple-bar-track {
+            background: rgba(255,255,255,0.10) !important;
+        }
+
+        body.sway-dark-mode .sway-simple-bar-track > span {
+            filter: brightness(1.18) saturate(1.08) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-legend-item {
+            color: #AAB9CD !important;
+        }
     </style>
 
 </head>
