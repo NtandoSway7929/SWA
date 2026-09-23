@@ -127,6 +127,192 @@
     const WORKSPACE_VIEW_STORAGE_KEY =
         "swayphics_admin_current_view";
 
+    const REFRESH_SCROLL_STORAGE_KEY =
+        "swayphics_admin_refresh_scroll";
+
+    let startupRestoreScrollY = null;
+    let startupUserScrolled = false;
+    let startupScrollRestoring = false;
+
+    function currentScrollY() {
+        if (
+            typeof window === "undefined"
+        ) {
+            return 0;
+        }
+
+        return Math.max(
+            0,
+            Number(
+                window.scrollY ||
+                window.pageYOffset ||
+                0
+            )
+        );
+    }
+
+    function restoreScrollPosition(y) {
+        if (
+            typeof window === "undefined" ||
+            typeof window.scrollTo !== "function"
+        ) {
+            return;
+        }
+
+        const targetY =
+            Math.max(
+                0,
+                Number(y || 0)
+            );
+
+        startupScrollRestoring = true;
+
+        window.scrollTo(
+            0,
+            targetY
+        );
+
+        window.requestAnimationFrame(
+            function () {
+                startupScrollRestoring = false;
+            }
+        );
+    }
+
+    function restoreStartupScroll() {
+        if (
+            startupRestoreScrollY === null ||
+            startupUserScrolled
+        ) {
+            return;
+        }
+
+        restoreScrollPosition(
+            startupRestoreScrollY
+        );
+    }
+
+    function captureRefreshScrollPosition() {
+        if (
+            typeof sessionStorage === "undefined"
+        ) {
+            return;
+        }
+
+        try {
+            sessionStorage.setItem(
+                REFRESH_SCROLL_STORAGE_KEY,
+                JSON.stringify({
+                    y: currentScrollY(),
+                    view: state.currentView,
+                    savedAt: Date.now()
+                })
+            );
+        } catch (error) {
+            // Scroll restoration is an enhancement only.
+        }
+    }
+
+    function prepareRefreshScrollRestoration() {
+        let navigationType = "";
+
+        try {
+            const entry =
+                typeof performance !== "undefined" &&
+                typeof performance.getEntriesByType === "function"
+                    ? performance.getEntriesByType("navigation")[0]
+                    : null;
+
+            navigationType =
+                entry && entry.type
+                    ? entry.type
+                    : "";
+        } catch (error) {
+            navigationType = "";
+        }
+
+        if (
+            navigationType !== "reload"
+        ) {
+            return;
+        }
+
+        try {
+            if (
+                typeof history !== "undefined" &&
+                "scrollRestoration" in history
+            ) {
+                history.scrollRestoration =
+                    "manual";
+            }
+
+            const raw =
+                sessionStorage.getItem(
+                    REFRESH_SCROLL_STORAGE_KEY
+                );
+
+            if (!raw) {
+                return;
+            }
+
+            const saved =
+                JSON.parse(raw);
+
+            sessionStorage.removeItem(
+                REFRESH_SCROLL_STORAGE_KEY
+            );
+
+            if (
+                !saved ||
+                !Number.isFinite(
+                    Number(saved.y)
+                ) ||
+                Date.now() -
+                    Number(saved.savedAt || 0) >
+                    10 * 60 * 1000
+            ) {
+                return;
+            }
+
+            startupRestoreScrollY =
+                Math.max(
+                    0,
+                    Number(saved.y)
+                );
+        } catch (error) {
+            startupRestoreScrollY = null;
+        }
+    }
+
+    if (
+        typeof window !== "undefined"
+    ) {
+        prepareRefreshScrollRestoration();
+
+        window.addEventListener(
+            "scroll",
+            function () {
+                if (
+                    !startupScrollRestoring &&
+                    startupRestoreScrollY !== null
+                ) {
+                    startupUserScrolled = true;
+                }
+            },
+            {
+                passive: true
+            }
+        );
+
+        window.addEventListener(
+            "pagehide",
+            captureRefreshScrollPosition,
+            {
+                passive: true
+            }
+        );
+    }
+
     function getPersistedWorkspaceView() {
         try {
             const savedView =
