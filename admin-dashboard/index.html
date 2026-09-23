@@ -5314,6 +5314,73 @@
         }
     </style>
 
+    <style id="sway-mobile-sidebar-hardening">
+        /* -----------------------------------------------------
+           MOBILE / TABLET SIDEBAR HARDENING
+           ----------------------------------------------------- */
+
+        @media (max-width: 980px) {
+            body.sway-mobile-nav-open {
+                overflow: hidden !important;
+            }
+
+            .sway-workspace-sidebar {
+                height: 100vh !important;
+                max-height: 100vh !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
+                touch-action: pan-y !important;
+                overscroll-behavior: contain !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .sway-workspace-mobile-toggle {
+                display: grid !important;
+                place-items: center !important;
+                top: 86px !important;
+                left: 12px !important;
+                width: 46px !important;
+                height: 46px !important;
+                padding: 0 !important;
+                z-index: 4900 !important;
+            }
+
+            .sway-workspace-mobile-toggle span {
+                width: 17px !important;
+                height: 2px !important;
+                margin: 2px auto !important;
+                background: var(--ui-text) !important;
+            }
+
+            .sway-workspace-mobile-close {
+                display: inline-grid !important;
+                place-items: center !important;
+            }
+
+            #sway-admin-workspace.nav-open::after {
+                content: "" !important;
+                position: fixed !important;
+                inset: 0 !important;
+                z-index: 4800 !important;
+                background: rgba(4,10,20,0.34) !important;
+                backdrop-filter: blur(2px) !important;
+                -webkit-backdrop-filter: blur(2px) !important;
+                pointer-events: auto !important;
+            }
+        }
+
+        @media (min-width: 981px) {
+            .sway-workspace-mobile-toggle,
+            .sway-workspace-mobile-close {
+                display: none !important;
+            }
+
+            body.sway-mobile-nav-open {
+                overflow: auto !important;
+            }
+        }
+    </style>
+
 </head>
 
 
