@@ -6571,6 +6571,70 @@
         }
     </style>
 
+    <style id="sway-managed-outer-shell-cleanup">
+        /* =====================================================
+           PORTFOLIO + TESTIMONIALS
+           Remove the old outer manager box. The workspace
+           heading sits directly above the content cards.
+           ===================================================== */
+
+        #sway-workspace-main > .portfolio-manager,
+        #sway-workspace-main > #testimonials-admin-section {
+            display: block !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .manager-heading,
+        #sway-workspace-main > #testimonials-admin-section .admin-section-header {
+            margin: 0 0 22px !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: 0 !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .manager-heading h2,
+        #sway-workspace-main > #testimonials-admin-section .admin-section-header h2 {
+            font-size: clamp(1.85rem, 3vw, 2.45rem) !important;
+            line-height: 1.02 !important;
+            letter-spacing: -0.055em !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .manager-heading p,
+        #sway-workspace-main > #testimonials-admin-section .admin-section-header p {
+            margin-top: 8px !important;
+            max-width: 700px !important;
+            font-size: 0.76rem !important;
+            line-height: 1.65 !important;
+        }
+
+        #sway-workspace-main > .portfolio-manager .portfolio-admin-list,
+        #sway-workspace-main > #testimonials-admin-section .testimonials-admin-list {
+            margin-top: 0 !important;
+        }
+
+        body.sway-dark-mode #sway-workspace-main > .portfolio-manager,
+        body.sway-dark-mode #sway-workspace-main > #testimonials-admin-section {
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+        @media (max-width: 760px) {
+            #sway-workspace-main > .portfolio-manager .manager-heading,
+            #sway-workspace-main > #testimonials-admin-section .admin-section-header {
+                margin-bottom: 18px !important;
+            }
+        }
+    </style>
+
 </head>
 
 
@@ -9427,7 +9491,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20260923-workspace-v9"></script>
+<script src="admin-workspace.js?v=dashboard-20260923-workspace-v10"></script>
 
 <script>
 (function () {
