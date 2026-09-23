@@ -2600,7 +2600,11 @@
     }
 
 
+    const MOBILE_SIDEBAR_BREAKPOINT = 980;
+
     function setMobileSidebarOpen(open) {
+        const isOpen = Boolean(open);
+
         const sidebar =
             workspace.querySelector(
                 ".sway-workspace-sidebar"
@@ -2611,24 +2615,47 @@
                 ".sway-workspace-mobile-toggle"
             );
 
-        if (!sidebar || window.innerWidth > 760) {
+        if (!sidebar) {
+            document.body.classList.remove(
+                "sway-mobile-nav-open"
+            );
+            return;
+        }
+
+        if (window.innerWidth > MOBILE_SIDEBAR_BREAKPOINT) {
+            sidebar.classList.remove("mobile-open");
+            workspace.classList.remove("nav-open");
+            document.body.classList.remove("sway-mobile-nav-open");
+
+            if (toggle) {
+                toggle.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+            }
+
             return;
         }
 
         sidebar.classList.toggle(
             "mobile-open",
-            Boolean(open)
+            isOpen
         );
 
         workspace.classList.toggle(
             "nav-open",
-            Boolean(open)
+            isOpen
+        );
+
+        document.body.classList.toggle(
+            "sway-mobile-nav-open",
+            isOpen
         );
 
         if (toggle) {
             toggle.setAttribute(
                 "aria-expanded",
-                String(Boolean(open))
+                String(isOpen)
             );
         }
     }
@@ -2673,6 +2700,53 @@
             };
         }
 
+        workspace.onclick = function (event) {
+            if (!workspace.classList.contains("nav-open")) {
+                return;
+            }
+
+            const target = event.target;
+
+            if (
+                sidebarElement.contains(target) ||
+                (mobileToggle &&
+                    mobileToggle.contains(target))
+            ) {
+                return;
+            }
+
+            setMobileSidebarOpen(false);
+        };
+
+        workspace.onkeydown = function (event) {
+            if (
+                event.key === "Escape" &&
+                workspace.classList.contains("nav-open")
+            ) {
+                event.preventDefault();
+                setMobileSidebarOpen(false);
+            }
+        };
+
+        if (!window.__swayphicsMobileSidebarResizeBound) {
+            window.__swayphicsMobileSidebarResizeBound = true;
+
+            window.addEventListener(
+                "resize",
+                function () {
+                    if (
+                        window.innerWidth >
+                        MOBILE_SIDEBAR_BREAKPOINT
+                    ) {
+                        setMobileSidebarOpen(false);
+                    }
+                },
+                {
+                    passive: true
+                }
+            );
+        }
+
         let startX = 0;
         let startY = 0;
         let trackingSwipe = false;
@@ -2681,7 +2755,8 @@
             "touchstart",
             function (event) {
                 if (
-                    window.innerWidth > 760 ||
+                    window.innerWidth >
+                        MOBILE_SIDEBAR_BREAKPOINT ||
                     !event.touches ||
                     event.touches.length !== 1
                 ) {
@@ -2706,7 +2781,8 @@
             function (event) {
                 if (
                     !trackingSwipe ||
-                    window.innerWidth > 760 ||
+                    window.innerWidth >
+                        MOBILE_SIDEBAR_BREAKPOINT ||
                     !event.changedTouches ||
                     !event.changedTouches.length
                 ) {
@@ -2727,7 +2803,8 @@
 
                 if (
                     Math.abs(deltaX) < 70 ||
-                    Math.abs(deltaX) < Math.abs(deltaY) * 1.35
+                    Math.abs(deltaX) <
+                        Math.abs(deltaY) * 1.35
                 ) {
                     return;
                 }
@@ -2747,7 +2824,8 @@
 
         workspace.ontouchstart = function (event) {
             if (
-                window.innerWidth > 760 ||
+                window.innerWidth >
+                    MOBILE_SIDEBAR_BREAKPOINT ||
                 workspace.classList.contains("nav-open") ||
                 !event.touches ||
                 event.touches.length !== 1
@@ -2772,7 +2850,8 @@
         workspace.ontouchend = function (event) {
             if (
                 !trackingEdgeSwipe ||
-                window.innerWidth > 760 ||
+                window.innerWidth >
+                    MOBILE_SIDEBAR_BREAKPOINT ||
                 !event.changedTouches ||
                 !event.changedTouches.length
             ) {
@@ -2793,7 +2872,8 @@
 
             if (
                 deltaX < 70 ||
-                Math.abs(deltaX) < Math.abs(deltaY) * 1.35
+                Math.abs(deltaX) <
+                    Math.abs(deltaY) * 1.35
             ) {
                 return;
             }
