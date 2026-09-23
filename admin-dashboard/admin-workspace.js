@@ -3224,7 +3224,7 @@ function renderShell() {
                             view
                         );
 
-                        if (window.innerWidth <= 760) {
+                        if (window.innerWidth <= MOBILE_SIDEBAR_BREAKPOINT) {
                             setMobileSidebarOpen(false);
                         }
 
