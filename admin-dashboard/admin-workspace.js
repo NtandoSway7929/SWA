@@ -5696,6 +5696,9 @@ function simpleBars(items, color) {
                 settings.render !== false &&
                 !editingModalOpen
             ) {
+                const preserveScrollY =
+                    currentScrollY();
+
                 renderShell();
 
                 if (
@@ -5707,6 +5710,10 @@ function simpleBars(items, color) {
 
                 setStandaloneManagerVisibility(
                     state.currentView
+                );
+
+                restoreScrollPosition(
+                    preserveScrollY
                 );
             }
         } catch (error) {
@@ -10902,19 +10909,9 @@ function simpleBars(items, color) {
         ) {
             renderView();
 
-            if (
-                typeof window !== "undefined" &&
-                typeof window.scrollTo === "function"
-            ) {
-                window.requestAnimationFrame(
-                    function () {
-                        window.scrollTo(
-                            0,
-                            preserveScrollY
-                        );
-                    }
-                );
-            }
+            restoreScrollPosition(
+                preserveScrollY
+            );
         }
     }
 
