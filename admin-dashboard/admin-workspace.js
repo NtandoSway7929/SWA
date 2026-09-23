@@ -3454,9 +3454,6 @@ function renderShell() {
         return (
             '<div class="sway-workspace-heading">' +
                 '<div class="sway-workspace-heading-copy">' +
-                    '<span class="admin-label">' +
-                        esc(formatDisplayText(meta[0])) +
-                    "</span>" +
                     "<h2>" +
                         esc(meta[0]) +
                     "</h2>" +
