@@ -2088,8 +2088,100 @@ footer {
     margin:
         55px auto 0;
 
+    padding:
+        38px;
+
+    box-sizing:
+        border-box;
+
+    border:
+        1px solid rgba(255,255,255,0.18);
+
+    border-radius:
+        28px;
+
+    background:
+        rgba(0, 18, 58, 0.42);
+
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.24);
+
+    overflow:
+        hidden;
+
     text-align:
         left;
+
+    isolation:
+        isolate;
+}
+
+.project-form::before {
+    content: "";
+
+    position:
+        absolute;
+
+    inset:
+        0;
+
+    z-index:
+        1;
+
+    pointer-events:
+        none;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0, 18, 58, 0.82),
+            rgba(0, 32, 150, 0.58) 48%,
+            rgba(1, 82, 244, 0.40)
+        );
+}
+
+.contact-form-background-video {
+    position:
+        absolute;
+
+    inset:
+        0;
+
+    z-index:
+        0;
+
+    width:
+        100%;
+
+    height:
+        100%;
+
+    object-fit:
+        cover;
+
+    object-position:
+        center;
+
+    pointer-events:
+        none;
+
+    opacity:
+        0.72;
+
+    filter:
+        saturate(0.88)
+        contrast(1.06);
+}
+
+.project-form > .form-group,
+.project-form > .form-privacy-notice,
+.project-form > .form-consent,
+.project-form > .btn {
+    position:
+        relative;
+
+    z-index:
+        2;
 }
 
 
@@ -17554,6 +17646,17 @@ body {
     aria-label="Start a project enquiry"
 >
 
+        <video
+            id="contact-form-background-video"
+            class="contact-form-background-video"
+            muted
+            autoplay
+            playsinline
+            loop
+            preload="metadata"
+            aria-hidden="true"
+        ></video>
+
         <div class="form-group">
             <label for="name">Your name</label>
             <input
@@ -18834,6 +18937,10 @@ async function loadPortfolio() {
 
         initializePortfolioCarousel();
 
+        setupContactFormBackgroundVideo(
+            portfolioCarouselState.projects
+        );
+
     } catch (error) {
 
         console.error(
@@ -18842,6 +18949,139 @@ async function loadPortfolio() {
         );
 
     }
+}
+
+
+/* =========================================================
+   CONTACT FORM BACKGROUND VIDEO
+   ========================================================= */
+
+function setupContactFormBackgroundVideo(
+    projects
+) {
+
+    const video =
+        document.querySelector(
+            "#contact-form-background-video"
+        );
+
+    const form =
+        document.querySelector(
+            ".project-form"
+        );
+
+    if (!video || !form) {
+        return;
+    }
+
+    const videoProject =
+        (Array.isArray(projects) ? projects : [])
+            .find(
+                (project) =>
+                    isVideoPortfolioMedia(
+                        project?.image_url
+                    )
+            );
+
+    if (!videoProject?.image_url) {
+        return;
+    }
+
+    const videoURL =
+        getSafePortfolioURL(
+            videoProject.image_url
+        );
+
+    if (!videoURL) {
+        return;
+    }
+
+    video.src = videoURL;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.loop = true;
+
+    const playVideo =
+        () => {
+
+            if (
+                document.visibilityState !==
+                "visible"
+            ) {
+                return;
+            }
+
+            const playPromise =
+                video.play();
+
+            if (
+                playPromise &&
+                typeof playPromise.catch ===
+                    "function"
+            ) {
+                playPromise.catch(() => {});
+            }
+        };
+
+    const pauseVideo =
+        () => {
+
+            if (!video.paused) {
+                video.pause();
+            }
+
+        };
+
+    if (
+        "IntersectionObserver" in window
+    ) {
+
+        const observer =
+            new IntersectionObserver(
+                (entries) => {
+
+                    const entry =
+                        entries[0];
+
+                    if (
+                        entry &&
+                        entry.isIntersecting
+                    ) {
+                        playVideo();
+
+                    } else {
+                        pauseVideo();
+                    }
+
+                },
+                {
+                    threshold: 0.15
+                }
+            );
+
+        observer.observe(form);
+
+    } else {
+        playVideo();
+    }
+
+    document.addEventListener(
+        "visibilitychange",
+        () => {
+
+            if (
+                document.visibilityState ===
+                "visible"
+            ) {
+                playVideo();
+            } else {
+                pauseVideo();
+            }
+
+        }
+    );
 }
 
 
