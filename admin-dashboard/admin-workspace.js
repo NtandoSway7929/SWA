@@ -3019,19 +3019,13 @@ function renderShell() {
         if (
             preserveMobileNavOpen &&
             sidebarElement &&
-            window.innerWidth <= 760
+            window.innerWidth <= MOBILE_SIDEBAR_BREAKPOINT
         ) {
             sidebarElement.classList.add(
                 "sway-sidebar-restoring"
             );
 
-            sidebarElement.classList.add(
-                "mobile-open"
-            );
-
-            workspace.classList.add(
-                "nav-open"
-            );
+            setMobileSidebarOpen(true);
 
             window.requestAnimationFrame(
                 function () {
