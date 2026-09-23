@@ -3691,6 +3691,1400 @@
 
         </style>
 
+    <!-- SWAYPHICS PREMIUM ADMIN UI -->
+    <style id="sway-premium-ui-overrides">
+        :root {
+            --ui-bg: #F4F7FC;
+            --ui-surface: #FFFFFF;
+            --ui-surface-soft: #F8FAFE;
+            --ui-surface-hover: #F2F6FC;
+            --ui-border: rgba(8,21,51,0.085);
+            --ui-border-strong: rgba(8,21,51,0.13);
+            --ui-shadow-xs: 0 1px 2px rgba(8,21,51,0.035);
+            --ui-shadow-sm: 0 8px 24px rgba(0,32,150,0.055);
+            --ui-shadow-md: 0 18px 48px rgba(0,32,150,0.09);
+            --ui-shadow-lg: 0 30px 90px rgba(0,32,150,0.17);
+            --ui-radius-sm: 10px;
+            --ui-radius-md: 14px;
+            --ui-radius-lg: 18px;
+            --ui-radius-xl: 22px;
+            --ui-radius-pill: 999px;
+            --ui-text: #081533;
+            --ui-text-soft: #526078;
+            --ui-text-faint: #7D899D;
+            --ui-blue: #0152F4;
+            --ui-deep: #002096;
+            --ui-focus: rgba(1,82,244,0.16);
+            --ui-speed: 180ms;
+            --ui-ease: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* -----------------------------------------------------
+           GLOBAL CANVAS
+           ----------------------------------------------------- */
+
+        body {
+            background:
+                radial-gradient(circle at 90% 0%, rgba(1,82,244,0.055), transparent 28%),
+                radial-gradient(circle at 0% 100%, rgba(119,193,252,0.045), transparent 24%),
+                var(--ui-bg) !important;
+            color: var(--ui-text) !important;
+        }
+
+        body::before {
+            opacity: 0.032 !important;
+            right: -90px !important;
+            width: min(520px, 40vw) !important;
+            filter: grayscale(0.05) saturate(0.65) !important;
+        }
+
+        ::selection {
+            background: rgba(1,82,244,0.16);
+            color: var(--ui-text);
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: 0 !important;
+            box-shadow: 0 0 0 3px var(--ui-focus) !important;
+        }
+
+        /* -----------------------------------------------------
+           TOP HEADER
+           ----------------------------------------------------- */
+
+        .admin-header {
+            padding: 14px 0 0 !important;
+            background: transparent !important;
+        }
+
+        .admin-header-inner {
+            width: min(1260px, calc(100% - 40px)) !important;
+            min-height: 64px !important;
+            padding: 9px 12px 9px 18px !important;
+            gap: 14px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: var(--ui-radius-pill) !important;
+            background: rgba(255,255,255,0.94) !important;
+            box-shadow: var(--ui-shadow-sm), var(--ui-shadow-xs) !important;
+            backdrop-filter: blur(18px) saturate(120%) !important;
+            -webkit-backdrop-filter: blur(18px) saturate(120%) !important;
+        }
+
+        .admin-brand {
+            min-width: 170px;
+        }
+
+        .admin-brand-logo {
+            width: 128px !important;
+        }
+
+        .admin-header-right {
+            min-width: 0;
+            gap: 8px !important;
+        }
+
+        .admin-status {
+            min-height: 36px;
+            padding: 0 11px !important;
+            border: 1px solid var(--ui-border) !important;
+            background: var(--ui-surface-soft) !important;
+            color: var(--ui-text-soft) !important;
+            font-size: 0.66rem !important;
+        }
+
+        .logout-button {
+            min-height: 36px;
+            padding: 0 14px !important;
+            border: 1px solid var(--ui-border-strong) !important;
+            border-radius: var(--ui-radius-pill) !important;
+            background: var(--ui-surface) !important;
+            color: var(--ui-text) !important;
+            font-size: 0.68rem !important;
+        }
+
+        .logout-button:hover {
+            border-color: rgba(1,82,244,0.24) !important;
+            background: rgba(1,82,244,0.045) !important;
+            color: var(--ui-blue) !important;
+            transform: translateY(-1px);
+        }
+
+        .admin-global-search {
+            max-width: 500px !important;
+            flex-basis: 420px !important;
+        }
+
+        .admin-global-search-field {
+            min-height: 40px !important;
+            border: 1px solid var(--ui-border) !important;
+            background: var(--ui-surface-soft) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.72) !important;
+        }
+
+        .admin-global-search-field:focus-within {
+            border-color: rgba(1,82,244,0.28) !important;
+            background: var(--ui-surface) !important;
+            box-shadow: 0 0 0 3px rgba(1,82,244,0.055), var(--ui-shadow-xs) !important;
+        }
+
+        #admin-global-search-input {
+            font-size: 0.76rem !important;
+            color: var(--ui-text) !important;
+        }
+
+        .admin-global-search-field kbd {
+            background: var(--ui-surface) !important;
+            border-color: var(--ui-border) !important;
+        }
+
+        .admin-global-search-results,
+        .admin-notification-panel {
+            border: 1px solid var(--ui-border) !important;
+            border-radius: var(--ui-radius-lg) !important;
+            background: rgba(255,255,255,0.98) !important;
+            box-shadow: var(--ui-shadow-lg) !important;
+            backdrop-filter: blur(22px) saturate(120%) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(120%) !important;
+        }
+
+        /* -----------------------------------------------------
+           MAIN LAYOUT
+           ----------------------------------------------------- */
+
+        .admin-main {
+            width: min(1260px, calc(100% - 40px)) !important;
+            padding: 34px 0 90px !important;
+        }
+
+        #sway-admin-workspace {
+            margin-top: 8px !important;
+            margin-bottom: 40px !important;
+        }
+
+        .sway-workspace-shell {
+            grid-template-columns: 248px minmax(0, 1fr) !important;
+            gap: 28px !important;
+            align-items: start !important;
+        }
+
+        .sway-workspace-main {
+            min-width: 0 !important;
+        }
+
+        .sway-workspace-view {
+            gap: 22px !important;
+            min-width: 0;
+        }
+
+        /* -----------------------------------------------------
+           SIDEBAR
+           ----------------------------------------------------- */
+
+        .sway-workspace-sidebar {
+            top: 94px !important;
+            padding: 10px !important;
+            gap: 6px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: var(--ui-radius-xl) !important;
+            background: rgba(255,255,255,0.96) !important;
+            box-shadow: var(--ui-shadow-sm) !important;
+            backdrop-filter: blur(18px) !important;
+            -webkit-backdrop-filter: blur(18px) !important;
+        }
+
+        .sway-workspace-sidebar-head {
+            padding: 10px 10px 12px !important;
+            border-bottom: 1px solid rgba(8,21,51,0.055) !important;
+        }
+
+        .sway-workspace-sidebar-brand {
+            gap: 3px;
+        }
+
+        .sway-workspace-sidebar-kicker {
+            color: var(--ui-blue) !important;
+            font-size: 0.52rem !important;
+            font-weight: 900 !important;
+            letter-spacing: 0.16em !important;
+        }
+
+        .sway-workspace-sidebar-brand strong {
+            color: var(--ui-text) !important;
+            font-size: 0.9rem !important;
+            letter-spacing: -0.025em !important;
+        }
+
+        .sway-workspace-nav-scroll {
+            padding-top: 8px !important;
+            padding-bottom: 4px !important;
+        }
+
+        .sway-workspace-nav-group {
+            padding: 0 2px 6px !important;
+        }
+
+        .sway-workspace-nav-group-toggle {
+            min-height: 36px;
+            padding: 8px 9px !important;
+            border-radius: 10px !important;
+            color: var(--ui-text-soft) !important;
+            font-size: 0.64rem !important;
+            font-weight: 850 !important;
+        }
+
+        .sway-workspace-nav-group-toggle:hover {
+            background: rgba(1,82,244,0.042) !important;
+            color: var(--ui-text) !important;
+        }
+
+        .sway-workspace-nav-group-label {
+            gap: 8px !important;
+        }
+
+        .sway-workspace-nav-group-icon {
+            width: 28px !important;
+            height: 28px !important;
+            display: grid !important;
+            place-items: center !important;
+            border-radius: 9px !important;
+            background: var(--ui-surface-soft) !important;
+            color: var(--ui-text-faint) !important;
+        }
+
+        .sway-workspace-nav-group-toggle:hover .sway-workspace-nav-group-icon {
+            background: rgba(1,82,244,0.07) !important;
+            color: var(--ui-blue) !important;
+        }
+
+        .sway-workspace-nav-group-toggle > i {
+            color: var(--ui-text-faint) !important;
+            font-size: 0.74rem !important;
+        }
+
+        .sway-workspace-nav-button {
+            min-height: 38px;
+            padding: 8px 9px !important;
+            border-radius: 10px !important;
+            color: #5A667B !important;
+            font-size: 0.68rem !important;
+            font-weight: 720 !important;
+        }
+
+        .sway-workspace-nav-button:hover {
+            background: rgba(1,82,244,0.045) !important;
+            color: var(--ui-blue) !important;
+            transform: none !important;
+        }
+
+        .sway-workspace-nav-button.active {
+            background: var(--ui-deep) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 8px 18px rgba(0,32,150,0.18) !important;
+        }
+
+        .sway-workspace-count {
+            min-width: 22px !important;
+            padding: 3px 6px !important;
+            font-size: 0.54rem !important;
+        }
+
+        /* -----------------------------------------------------
+           PAGE HEADINGS / ACTIONS
+           ----------------------------------------------------- */
+
+        .sway-workspace-heading {
+            min-width: 0;
+            align-items: flex-end !important;
+            gap: 22px !important;
+            padding-bottom: 2px !important;
+        }
+
+        .sway-workspace-heading-copy {
+            min-width: 0;
+        }
+
+        .sway-workspace-heading .admin-label {
+            margin-bottom: 7px !important;
+            color: var(--ui-blue) !important;
+            font-size: 0.55rem !important;
+            letter-spacing: 0.13em !important;
+        }
+
+        .sway-workspace-heading h2 {
+            color: var(--ui-text) !important;
+            font-size: clamp(1.85rem, 3vw, 2.45rem) !important;
+            line-height: 1.02 !important;
+            letter-spacing: -0.055em !important;
+        }
+
+        .sway-workspace-heading p {
+            max-width: 700px;
+            margin-top: 8px !important;
+            color: var(--ui-text-soft) !important;
+            font-size: 0.76rem !important;
+            line-height: 1.65 !important;
+        }
+
+        .sway-workspace-heading-actions {
+            align-items: center !important;
+            gap: 8px !important;
+        }
+
+        .sway-workspace-button {
+            min-height: 38px;
+            padding: 0 13px !important;
+            border: 1px solid var(--ui-border-strong) !important;
+            border-radius: var(--ui-radius-pill) !important;
+            background: var(--ui-surface) !important;
+            color: var(--ui-text) !important;
+            font-size: 0.64rem !important;
+            font-weight: 800 !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+        }
+
+        .sway-workspace-button:hover {
+            border-color: rgba(1,82,244,0.24) !important;
+            background: rgba(1,82,244,0.04) !important;
+            color: var(--ui-blue) !important;
+            transform: translateY(-1px);
+        }
+
+        .sway-workspace-button.primary {
+            border-color: transparent !important;
+            background: var(--ui-blue) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 8px 20px rgba(1,82,244,0.18) !important;
+        }
+
+        .sway-workspace-button.primary:hover {
+            background: var(--ui-deep) !important;
+            color: #FFFFFF !important;
+            transform: translateY(-1px);
+        }
+
+        /* -----------------------------------------------------
+           STATS / PANELS / TABLES
+           ----------------------------------------------------- */
+
+        .sway-workspace-grid {
+            gap: 12px !important;
+        }
+
+        .sway-stat-card {
+            position: relative;
+            overflow: hidden;
+            min-height: 132px !important;
+            padding: 19px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: var(--ui-radius-lg) !important;
+            background: var(--ui-surface) !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+            transition: transform var(--ui-speed) var(--ui-ease), box-shadow var(--ui-speed) var(--ui-ease), border-color var(--ui-speed) var(--ui-ease);
+        }
+
+        .sway-stat-card::after {
+            content: "";
+            position: absolute;
+            right: -28px;
+            top: -30px;
+            width: 112px;
+            height: 112px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(1,82,244,0.08), rgba(1,82,244,0) 70%);
+            pointer-events: none;
+        }
+
+        .sway-stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(1,82,244,0.13) !important;
+            box-shadow: var(--ui-shadow-sm) !important;
+        }
+
+        .sway-stat-card .label {
+            position: relative;
+            z-index: 1;
+            color: var(--ui-text-faint) !important;
+            font-size: 0.56rem !important;
+            font-weight: 850 !important;
+            letter-spacing: 0.09em !important;
+        }
+
+        .sway-stat-card .value {
+            position: relative;
+            z-index: 1;
+            margin-top: 9px !important;
+            color: var(--ui-text) !important;
+            font-size: clamp(1.55rem, 2.2vw, 2rem) !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.055em !important;
+        }
+
+        .sway-stat-card .hint {
+            position: relative;
+            z-index: 1;
+            margin-top: 5px !important;
+            color: var(--ui-text-faint) !important;
+            font-size: 0.56rem !important;
+            line-height: 1.45;
+        }
+
+        .sway-panel {
+            padding: 21px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: var(--ui-radius-xl) !important;
+            background: var(--ui-surface) !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+        }
+
+        .sway-panel-title {
+            gap: 16px !important;
+            margin-bottom: 15px !important;
+        }
+
+        .sway-panel-title h3 {
+            color: var(--ui-text) !important;
+            font-size: 0.9rem !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.025em !important;
+        }
+
+        .sway-panel-title p {
+            margin-top: 4px !important;
+            color: var(--ui-text-faint) !important;
+            font-size: 0.61rem !important;
+        }
+
+        .sway-table-wrap {
+            border: 1px solid rgba(8,21,51,0.055);
+            border-radius: 14px;
+            overflow: auto;
+            background: var(--ui-surface);
+        }
+
+        .sway-table {
+            min-width: 680px;
+        }
+
+        .sway-table th,
+        .sway-table td {
+            padding: 12px 12px !important;
+            border-bottom-color: rgba(8,21,51,0.06) !important;
+        }
+
+        .sway-table th {
+            background: var(--ui-surface-soft);
+            color: #748198 !important;
+            font-size: 0.53rem !important;
+            font-weight: 850 !important;
+            letter-spacing: 0.09em !important;
+        }
+
+        .sway-table td {
+            color: var(--ui-text) !important;
+            font-size: 0.67rem !important;
+            line-height: 1.5 !important;
+        }
+
+        .sway-table tbody tr {
+            transition: background var(--ui-speed) ease;
+        }
+
+        .sway-table tbody tr:hover {
+            background: rgba(1,82,244,0.025);
+        }
+
+        .sway-table-empty {
+            padding: 44px 22px !important;
+            color: var(--ui-text-faint) !important;
+            font-size: 0.68rem !important;
+        }
+
+        /* -----------------------------------------------------
+           CHIPS / STATUS / ROW ACTIONS
+           ----------------------------------------------------- */
+
+        .sway-chip {
+            min-height: 22px;
+            padding: 3px 8px !important;
+            border: 1px solid transparent;
+            border-radius: var(--ui-radius-pill) !important;
+            font-size: 0.52rem !important;
+            letter-spacing: 0.01em !important;
+        }
+
+        .sway-row-actions {
+            gap: 5px !important;
+        }
+
+        .sway-row-action {
+            min-height: 31px;
+            padding: 0 9px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 9px !important;
+            background: var(--ui-surface) !important;
+            color: var(--ui-text-soft) !important;
+            font-size: 0.55rem !important;
+            font-weight: 800 !important;
+            transition: all var(--ui-speed) ease;
+        }
+
+        .sway-row-action:hover {
+            border-color: rgba(1,82,244,0.20) !important;
+            background: rgba(1,82,244,0.04) !important;
+            color: var(--ui-blue) !important;
+        }
+
+        .sway-row-action.danger {
+            color: #A12727 !important;
+        }
+
+        /* -----------------------------------------------------
+           COMMON FORMS
+           ----------------------------------------------------- */
+
+        .sway-form-grid {
+            gap: 17px !important;
+        }
+
+        .sway-form-field {
+            gap: 7px !important;
+        }
+
+        .sway-form-field label {
+            color: var(--ui-text) !important;
+            font-size: 0.62rem !important;
+            font-weight: 800 !important;
+        }
+
+        .sway-form-field input,
+        .sway-form-field select,
+        .sway-form-field textarea {
+            min-height: 42px;
+            padding: 0 12px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 11px !important;
+            background: var(--ui-surface-soft) !important;
+            color: var(--ui-text) !important;
+            font-size: 0.70rem !important;
+            font-weight: 650 !important;
+            transition: border-color var(--ui-speed) ease, background var(--ui-speed) ease, box-shadow var(--ui-speed) ease;
+        }
+
+        .sway-form-field textarea {
+            min-height: 120px;
+            padding: 11px 12px !important;
+        }
+
+        .sway-form-field input::placeholder,
+        .sway-form-field textarea::placeholder {
+            color: #97A1B2 !important;
+        }
+
+        .sway-form-field input:focus,
+        .sway-form-field select:focus,
+        .sway-form-field textarea:focus {
+            border-color: rgba(1,82,244,0.30) !important;
+            background: var(--ui-surface) !important;
+            box-shadow: 0 0 0 3px rgba(1,82,244,0.075) !important;
+        }
+
+        .sway-form-field small {
+            color: var(--ui-text-faint) !important;
+            font-size: 0.56rem !important;
+            line-height: 1.5 !important;
+        }
+
+        /* -----------------------------------------------------
+           MODALS / DIALOGS
+           ----------------------------------------------------- */
+
+        .sway-modal {
+            padding: 20px !important;
+        }
+
+        .sway-modal-backdrop,
+        .sway-client360-backdrop,
+        .portfolio-modal-backdrop,
+        .sway-email-composer-backdrop {
+            background: rgba(5,13,30,0.50) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+        }
+
+        .sway-modal-card,
+        .sway-client360-card,
+        .portfolio-modal-card,
+        .sway-email-composer-card {
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 22px !important;
+            background: rgba(255,255,255,0.985) !important;
+            box-shadow: var(--ui-shadow-lg) !important;
+        }
+
+        .sway-modal-card {
+            width: min(760px, 100%) !important;
+            padding: 26px !important;
+        }
+
+        .sway-modal-header {
+            margin-bottom: 22px !important;
+        }
+
+        .sway-modal-header h3 {
+            color: var(--ui-text) !important;
+            font-size: 1.18rem !important;
+            letter-spacing: -0.04em !important;
+        }
+
+        .sway-modal-close,
+        .sway-client360-close {
+            width: 34px !important;
+            height: 34px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 10px !important;
+            background: var(--ui-surface-soft) !important;
+            color: var(--ui-text-soft) !important;
+            transition: all var(--ui-speed) ease;
+        }
+
+        .sway-modal-close:hover,
+        .sway-client360-close:hover {
+            background: rgba(1,82,244,0.06) !important;
+            color: var(--ui-blue) !important;
+            border-color: rgba(1,82,244,0.18) !important;
+        }
+
+        .sway-modal-actions {
+            gap: 8px !important;
+            margin-top: 22px !important;
+            padding-top: 17px !important;
+            border-top: 1px solid rgba(8,21,51,0.06) !important;
+        }
+
+        .sway-dialog {
+            border-radius: 20px !important;
+        }
+
+        .sway-dialog-button {
+            min-height: 38px !important;
+            border-radius: var(--ui-radius-pill) !important;
+            font-size: 0.63rem !important;
+        }
+
+        /* -----------------------------------------------------
+           QUICK CREATE
+           ----------------------------------------------------- */
+
+        .sway-quick-create {
+            right: 28px !important;
+            bottom: 28px !important;
+        }
+
+        .sway-quick-create-toggle {
+            min-width: 100px !important;
+            height: 46px !important;
+            padding: 0 17px !important;
+            border: 1px solid rgba(1,82,244,0.16) !important;
+            border-radius: var(--ui-radius-pill) !important;
+            background: var(--ui-blue) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 14px 32px rgba(1,82,244,0.22) !important;
+            font-size: 0.66rem !important;
+        }
+
+        .sway-quick-create-toggle:hover {
+            transform: translateY(-2px) scale(1.01) !important;
+            background: var(--ui-deep) !important;
+            box-shadow: 0 18px 38px rgba(1,82,244,0.26) !important;
+        }
+
+        .sway-quick-create-menu {
+            width: 310px !important;
+            padding: 11px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 20px !important;
+            background: rgba(255,255,255,0.985) !important;
+            box-shadow: var(--ui-shadow-lg) !important;
+        }
+
+        .sway-quick-create-heading {
+            padding: 5px 6px 10px !important;
+        }
+
+        .sway-quick-create-heading span {
+            font-size: 0.68rem !important;
+        }
+
+        .sway-quick-create-heading small {
+            color: var(--ui-text-faint) !important;
+            font-size: 0.55rem !important;
+        }
+
+        .sway-quick-create-grid {
+            gap: 6px !important;
+        }
+
+        .sway-quick-create-item {
+            min-height: 42px !important;
+            padding: 9px 10px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 10px !important;
+            background: var(--ui-surface-soft) !important;
+            color: var(--ui-text) !important;
+            font-size: 0.61rem !important;
+        }
+
+        .sway-quick-create-item:hover {
+            background: rgba(1,82,244,0.045) !important;
+            border-color: rgba(1,82,244,0.16) !important;
+            transform: translateY(-1px);
+        }
+
+        /* -----------------------------------------------------
+           ATTENTION / LIVE / ANALYTICS SURFACES
+           ----------------------------------------------------- */
+
+        .sway-attention-panel,
+        .sway-email-summary,
+        .sway-email-inbox-panel,
+        .sway-email-thread-head,
+        .sway-followup-automation,
+        .sway-revenue-pipeline,
+        .sway-cash-flow-panel {
+            border: 1px solid var(--ui-border) !important;
+            border-radius: var(--ui-radius-xl) !important;
+            background: var(--ui-surface) !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        .sway-attention-panel {
+            margin: 2px 0 0 !important;
+            padding: 18px !important;
+        }
+
+        .sway-attention-item {
+            border-color: rgba(8,21,51,0.055) !important;
+            border-radius: 12px !important;
+            background: var(--ui-surface-soft) !important;
+        }
+
+        .sway-attention-item:hover {
+            background: rgba(1,82,244,0.035) !important;
+        }
+
+        .sway-attention-copy strong {
+            font-size: 0.66rem !important;
+        }
+
+        .sway-attention-copy span {
+            font-size: 0.58rem !important;
+        }
+
+        .sway-live-toolbar {
+            padding: 13px 16px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 14px !important;
+            background: var(--ui-surface-soft) !important;
+        }
+
+        .sway-chart,
+        .sway-chart-stage {
+            border-radius: 16px !important;
+        }
+
+        /* -----------------------------------------------------
+           PORTFOLIO / TESTIMONIAL MANAGERS
+           ----------------------------------------------------- */
+
+        .manager-heading {
+            align-items: center !important;
+            gap: 18px !important;
+            margin-bottom: 18px !important;
+        }
+
+        .manager-heading h2 {
+            color: var(--ui-text) !important;
+            font-size: clamp(1.65rem, 3vw, 2.1rem) !important;
+        }
+
+        .manager-heading p {
+            color: var(--ui-text-soft) !important;
+            font-size: 0.70rem !important;
+        }
+
+        .add-project-button {
+            min-height: 38px;
+            padding: 0 14px !important;
+            border-radius: var(--ui-radius-pill) !important;
+            background: var(--ui-blue) !important;
+            box-shadow: 0 8px 20px rgba(1,82,244,0.16) !important;
+            font-size: 0.66rem !important;
+        }
+
+        .portfolio-admin-list {
+            gap: 9px !important;
+        }
+
+        .portfolio-admin-item {
+            padding: 12px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: var(--ui-radius-lg) !important;
+            background: var(--ui-surface) !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+        }
+
+        .portfolio-admin-item:hover {
+            border-color: rgba(1,82,244,0.14) !important;
+            box-shadow: var(--ui-shadow-sm) !important;
+        }
+
+        .portfolio-admin-image {
+            border-radius: 11px !important;
+        }
+
+        .portfolio-admin-info h3 {
+            color: var(--ui-text) !important;
+            font-size: 0.86rem !important;
+        }
+
+        .portfolio-admin-actions {
+            gap: 5px !important;
+        }
+
+        .portfolio-admin-action {
+            min-height: 31px;
+            padding: 0 9px !important;
+            border-radius: 9px !important;
+            font-size: 0.57rem !important;
+        }
+
+        /* -----------------------------------------------------
+           DARK MODE
+           ----------------------------------------------------- */
+
+        body.sway-dark-mode {
+            color-scheme: dark;
+            --ui-bg: #070C16;
+            --ui-surface: #101722;
+            --ui-surface-soft: #0C131E;
+            --ui-surface-hover: #141E2B;
+            --ui-border: rgba(255,255,255,0.085);
+            --ui-border-strong: rgba(255,255,255,0.14);
+            --ui-shadow-xs: 0 1px 2px rgba(0,0,0,0.20);
+            --ui-shadow-sm: 0 10px 28px rgba(0,0,0,0.24);
+            --ui-shadow-md: 0 20px 52px rgba(0,0,0,0.30);
+            --ui-shadow-lg: 0 34px 100px rgba(0,0,0,0.48);
+            --ui-text: #F4F7FC;
+            --ui-text-soft: #AEB9C9;
+            --ui-text-faint: #78869A;
+            --ui-blue: #4B8DFF;
+            --ui-deep: #2E6BE9;
+            --ui-focus: rgba(75,141,255,0.22);
+        }
+
+        body.sway-dark-mode,
+        body.sway-dark-mode .admin-main {
+            background:
+                radial-gradient(circle at 86% 0%, rgba(1,82,244,0.095), transparent 28%),
+                radial-gradient(circle at 0% 100%, rgba(44,145,252,0.05), transparent 22%),
+                var(--ui-bg) !important;
+        }
+
+        body.sway-dark-mode::before {
+            opacity: 0.018 !important;
+        }
+
+        body.sway-dark-mode .admin-header-inner,
+        body.sway-dark-mode .sway-workspace-sidebar,
+        body.sway-dark-mode .sway-panel,
+        body.sway-dark-mode .sway-stat-card,
+        body.sway-dark-mode .sway-modal-card,
+        body.sway-dark-mode .sway-client360-card,
+        body.sway-dark-mode .portfolio-modal-card,
+        body.sway-dark-mode .sway-email-composer-card,
+        body.sway-dark-mode .sway-attention-panel,
+        body.sway-dark-mode .sway-email-summary,
+        body.sway-dark-mode .sway-email-inbox-panel,
+        body.sway-dark-mode .sway-email-thread-head,
+        body.sway-dark-mode .sway-followup-automation,
+        body.sway-dark-mode .sway-revenue-pipeline,
+        body.sway-dark-mode .sway-cash-flow-panel {
+            border-color: var(--ui-border) !important;
+            background: var(--ui-surface) !important;
+            box-shadow: var(--ui-shadow-xs) !important;
+            color: var(--ui-text) !important;
+        }
+
+        body.sway-dark-mode .admin-status,
+        body.sway-dark-mode .logout-button,
+        body.sway-dark-mode .admin-global-search-field,
+        body.sway-dark-mode .admin-global-search-field kbd,
+        body.sway-dark-mode .sway-workspace-button,
+        body.sway-dark-mode .sway-row-action,
+        body.sway-dark-mode .sway-quick-create-menu,
+        body.sway-dark-mode .sway-quick-create-item,
+        body.sway-dark-mode .sway-form-field input,
+        body.sway-dark-mode .sway-form-field textarea,
+        body.sway-dark-mode .sway-form-field select,
+        body.sway-dark-mode .portfolio-admin-action {
+            border-color: var(--ui-border) !important;
+            background: var(--ui-surface-soft) !important;
+            color: var(--ui-text) !important;
+        }
+
+        body.sway-dark-mode .admin-global-search-results,
+        body.sway-dark-mode .admin-notification-panel,
+        body.sway-dark-mode .sway-quick-create-menu {
+            background: #0F1723 !important;
+            border-color: var(--ui-border) !important;
+            box-shadow: var(--ui-shadow-lg) !important;
+        }
+
+        body.sway-dark-mode .admin-global-search-field:focus-within {
+            background: var(--ui-surface) !important;
+            border-color: rgba(75,141,255,0.32) !important;
+            box-shadow: 0 0 0 3px rgba(75,141,255,0.10) !important;
+        }
+
+        body.sway-dark-mode #admin-global-search-input,
+        body.sway-dark-mode .sway-form-field input,
+        body.sway-dark-mode .sway-form-field textarea,
+        body.sway-dark-mode .sway-form-field select {
+            color: var(--ui-text) !important;
+        }
+
+        body.sway-dark-mode .sway-workspace-sidebar-head {
+            border-bottom-color: rgba(255,255,255,0.06) !important;
+        }
+
+        body.sway-dark-mode .sway-workspace-sidebar-brand strong,
+        body.sway-dark-mode .sway-workspace-heading h2,
+        body.sway-dark-mode .sway-panel-title h3,
+        body.sway-dark-mode .sway-stat-card .value,
+        body.sway-dark-mode .sway-table td,
+        body.sway-dark-mode .portfolio-admin-info h3,
+        body.sway-dark-mode .manager-heading h2 {
+            color: var(--ui-text) !important;
+        }
+
+        body.sway-dark-mode .sway-workspace-heading p,
+        body.sway-dark-mode .sway-panel-title p,
+        body.sway-dark-mode .sway-stat-card .hint,
+        body.sway-dark-mode .sway-table-empty,
+        body.sway-dark-mode .manager-heading p {
+            color: var(--ui-text-soft) !important;
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-button,
+        body.sway-dark-mode .sway-workspace-nav-group-toggle {
+            color: #AAB5C6 !important;
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-button:hover,
+        body.sway-dark-mode .sway-workspace-nav-group-toggle:hover {
+            background: rgba(75,141,255,0.08) !important;
+            color: #DDE7F5 !important;
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-group-icon {
+            background: #0D1622 !important;
+            color: #8A98AA !important;
+        }
+
+        body.sway-dark-mode .sway-workspace-nav-button.active {
+            background: #2E6BE9 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 10px 24px rgba(46,107,233,0.28) !important;
+        }
+
+        body.sway-dark-mode .sway-table-wrap,
+        body.sway-dark-mode .sway-table th,
+        body.sway-dark-mode .sway-form-field input,
+        body.sway-dark-mode .sway-form-field textarea,
+        body.sway-dark-mode .sway-form-field select {
+            background: var(--ui-surface-soft) !important;
+        }
+
+        body.sway-dark-mode .sway-table th {
+            color: #8896AA !important;
+        }
+
+        body.sway-dark-mode .sway-table th,
+        body.sway-dark-mode .sway-table td {
+            border-bottom-color: rgba(255,255,255,0.06) !important;
+        }
+
+        body.sway-dark-mode .sway-table tbody tr:hover {
+            background: rgba(75,141,255,0.045) !important;
+        }
+
+        body.sway-dark-mode .sway-form-field label,
+        body.sway-dark-mode .sway-workspace-sidebar-kicker,
+        body.sway-dark-mode .sway-workspace-heading .admin-label,
+        body.sway-dark-mode .portfolio-admin-meta {
+            color: #6FA5FF !important;
+        }
+
+        body.sway-dark-mode .sway-modal-actions {
+            border-top-color: rgba(255,255,255,0.06) !important;
+        }
+
+        body.sway-dark-mode .sway-modal-backdrop,
+        body.sway-dark-mode .sway-client360-backdrop,
+        body.sway-dark-mode .portfolio-modal-backdrop,
+        body.sway-dark-mode .sway-email-composer-backdrop {
+            background: rgba(0,3,10,0.72) !important;
+        }
+
+        body.sway-dark-mode .sway-attention-item,
+        body.sway-dark-mode .sway-live-toolbar,
+        body.sway-dark-mode .portfolio-admin-item {
+            background: var(--ui-surface-soft) !important;
+            border-color: var(--ui-border) !important;
+        }
+
+        body.sway-dark-mode .sway-attention-item:hover {
+            background: rgba(75,141,255,0.055) !important;
+        }
+
+        body.sway-dark-mode .sway-email-inbox-item:hover,
+        body.sway-dark-mode .sway-email-inbox-item:focus-visible {
+            background: rgba(75,141,255,0.045) !important;
+        }
+
+        body.sway-dark-mode .sway-quick-create-toggle,
+        body.sway-dark-mode .sway-workspace-button.primary,
+        body.sway-dark-mode .add-project-button {
+            background: #2E6BE9 !important;
+            color: #FFFFFF !important;
+        }
+
+        body.sway-dark-mode .sway-quick-create-toggle:hover,
+        body.sway-dark-mode .sway-workspace-button.primary:hover,
+        body.sway-dark-mode .add-project-button:hover {
+            background: #3E7AF0 !important;
+        }
+
+        body.sway-dark-mode .sway-chart-reading,
+        body.sway-dark-mode .sway-chart-period,
+        body.sway-dark-mode .sway-email-composer-note {
+            background: var(--ui-surface-soft) !important;
+            border-color: var(--ui-border) !important;
+        }
+
+        body.sway-dark-mode .sway-chart-reading > p,
+        body.sway-dark-mode .sway-email-composer-note span {
+            color: #97A4B7 !important;
+        }
+
+        /* -----------------------------------------------------
+           RESPONSIVE POLISH
+           ----------------------------------------------------- */
+
+        @media (max-width: 1100px) {
+            .sway-workspace-shell {
+                grid-template-columns: 220px minmax(0,1fr) !important;
+                gap: 20px !important;
+            }
+
+            .admin-brand {
+                min-width: 140px;
+            }
+
+            .admin-global-search {
+                flex-basis: 340px !important;
+            }
+        }
+
+        @media (max-width: 980px) {
+            .admin-main {
+                width: min(100% - 32px, 1260px) !important;
+            }
+
+            .sway-workspace-shell {
+                grid-template-columns: 1fr !important;
+            }
+
+            .sway-workspace-sidebar {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                bottom: 0 !important;
+                width: min(320px, 88vw) !important;
+                max-height: none !important;
+                z-index: 2400 !important;
+                border-radius: 0 20px 20px 0 !important;
+                padding: 15px 12px !important;
+                background: rgba(255,255,255,0.985) !important;
+                box-shadow: 18px 0 55px rgba(0,20,70,0.16) !important;
+                transform: translateX(-108%) !important;
+                transition: transform 260ms var(--ui-ease) !important;
+            }
+
+            .sway-workspace-sidebar.mobile-open {
+                transform: translateX(0) !important;
+            }
+
+            body.sway-dark-mode .sway-workspace-sidebar {
+                background: #0B121C !important;
+                box-shadow: 18px 0 55px rgba(0,0,0,0.42) !important;
+            }
+
+            .sway-workspace-mobile-toggle {
+                width: 46px !important;
+                height: 46px !important;
+                border-radius: 14px !important;
+                border: 1px solid var(--ui-border) !important;
+                background: var(--ui-surface) !important;
+                box-shadow: var(--ui-shadow-sm) !important;
+            }
+
+            .sway-workspace-mobile-toggle span {
+                width: 17px !important;
+                height: 2px !important;
+                border-radius: 999px !important;
+                background: var(--ui-text) !important;
+            }
+
+            .sway-workspace-main {
+                width: 100% !important;
+            }
+
+            .sway-workspace-heading {
+                align-items: flex-start !important;
+                flex-direction: column !important;
+            }
+
+            .sway-workspace-heading-actions {
+                width: 100%;
+                justify-content: flex-start !important;
+            }
+
+            .admin-header-inner {
+                width: min(100% - 28px, 1260px) !important;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .admin-header {
+                padding-top: 10px !important;
+            }
+
+            .admin-header-inner {
+                width: calc(100% - 24px) !important;
+                min-height: 58px !important;
+                padding: 8px 9px 8px 13px !important;
+            }
+
+            .admin-brand {
+                min-width: 0;
+            }
+
+            .admin-brand-logo {
+                width: 112px !important;
+            }
+
+            .admin-header-right {
+                gap: 5px !important;
+            }
+
+            .admin-global-search {
+                display: none !important;
+            }
+
+            .logout-button {
+                min-height: 34px !important;
+                padding: 0 11px !important;
+                font-size: 0.60rem !important;
+            }
+
+            .admin-main {
+                width: calc(100% - 24px) !important;
+                padding: 24px 0 70px !important;
+            }
+
+            #sway-admin-workspace {
+                margin-top: 4px !important;
+            }
+
+            .sway-workspace-view {
+                gap: 16px !important;
+            }
+
+            .sway-workspace-heading h2 {
+                font-size: clamp(1.65rem, 9vw, 2.05rem) !important;
+            }
+
+            .sway-workspace-heading p {
+                max-width: none !important;
+                font-size: 0.70rem !important;
+            }
+
+            .sway-workspace-heading-actions {
+                gap: 7px !important;
+            }
+
+            .sway-workspace-button {
+                min-height: 36px !important;
+                padding: 0 11px !important;
+                font-size: 0.59rem !important;
+            }
+
+            .sway-workspace-grid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 9px !important;
+            }
+
+            .sway-stat-card {
+                min-height: 118px !important;
+                padding: 15px !important;
+                border-radius: 15px !important;
+            }
+
+            .sway-stat-card .value {
+                font-size: 1.35rem !important;
+            }
+
+            .sway-panel {
+                padding: 16px !important;
+                border-radius: 17px !important;
+            }
+
+            .sway-table-wrap {
+                border-radius: 12px !important;
+            }
+
+            .sway-table {
+                min-width: 600px !important;
+            }
+
+            .sway-table th,
+            .sway-table td {
+                padding: 10px 9px !important;
+            }
+
+            .sway-modal,
+            .sway-client360-modal,
+            .portfolio-modal,
+            .sway-email-composer {
+                padding: 10px !important;
+                align-items: flex-end !important;
+            }
+
+            .sway-modal-card,
+            .sway-client360-card,
+            .portfolio-modal-card,
+            .sway-email-composer-card {
+                width: 100% !important;
+                max-height: calc(100vh - 20px) !important;
+                border-radius: 19px !important;
+            }
+
+            .sway-modal-card {
+                padding: 20px !important;
+            }
+
+            .sway-form-grid {
+                grid-template-columns: 1fr !important;
+                gap: 13px !important;
+            }
+
+            .sway-form-field.full {
+                grid-column: auto !important;
+            }
+
+            .sway-modal-actions {
+                flex-direction: column-reverse !important;
+            }
+
+            .sway-modal-actions .sway-workspace-button {
+                width: 100% !important;
+            }
+
+            .sway-quick-create {
+                right: 14px !important;
+                bottom: 14px !important;
+            }
+
+            .sway-quick-create-toggle {
+                min-width: 86px !important;
+                height: 44px !important;
+            }
+
+            .sway-quick-create-menu {
+                right: 0 !important;
+                width: min(310px, calc(100vw - 28px)) !important;
+            }
+
+            .manager-heading {
+                align-items: flex-start !important;
+                flex-direction: column !important;
+            }
+
+            .add-project-button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .portfolio-admin-item {
+                align-items: flex-start !important;
+                flex-wrap: wrap !important;
+            }
+
+            .portfolio-admin-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sway-workspace-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .sway-stat-card {
+                min-height: 110px !important;
+            }
+
+            .sway-workspace-button {
+                flex: 1 1 auto;
+            }
+
+            .sway-row-actions {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .sway-row-action {
+                width: 100%;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                transition-duration: 0.01ms !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+            }
+        }
+    </style>
+
 </head>
 
 
