@@ -18817,6 +18817,60 @@ function setupContactFormBackgroundVideo() {
 
     applyVideoSource();
 
+    const handleVideoSourceChange =
+        () => {
+
+            const previousTime =
+                video.currentTime || 0;
+
+            const wasPlaying =
+                !video.paused;
+
+            applyVideoSource();
+
+            if (
+                video.src &&
+                previousTime > 0
+            ) {
+                video.currentTime =
+                    previousTime;
+            }
+
+            if (wasPlaying) {
+
+                const playPromise =
+                    video.play();
+
+                if (
+                    playPromise &&
+                    typeof playPromise.catch ===
+                        "function"
+                ) {
+                    playPromise.catch(() => {});
+                }
+            }
+        };
+
+    if (
+        typeof mobileMediaQuery.addEventListener ===
+        "function"
+    ) {
+
+        mobileMediaQuery.addEventListener(
+            "change",
+            handleVideoSourceChange
+        );
+
+    } else if (
+        typeof mobileMediaQuery.addListener ===
+        "function"
+    ) {
+
+        mobileMediaQuery.addListener(
+            handleVideoSourceChange
+        );
+    }
+
     const playVideo =
         () => {
 
