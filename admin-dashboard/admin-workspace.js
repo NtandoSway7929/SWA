@@ -14571,7 +14571,7 @@ function simpleBars(items, color) {
                                               (
                                                 item.note
                                                     ? " · " +
-                                                      item.note
+                                                      esc(item.note)
                                                     : ""
                                               )
                                             : safeText(item.note)
