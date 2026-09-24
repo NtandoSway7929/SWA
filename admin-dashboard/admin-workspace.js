@@ -7633,6 +7633,9 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action" data-export-lead-assessment="' +
                                     esc(item.id) +
                                 '">Assessment report</button>' +
+                                '<button class="sway-row-action" data-export-lead-json="' +
+                                    esc(item.id) +
+                                '">JSON</button>' +
                                 (
                                     item.email
                                         ? '<button class="sway-row-action" data-send-email-type="lead" data-send-email-id="' +
@@ -14797,8 +14800,7 @@ function simpleBars(items, color) {
         const reportWindow =
             window.open(
                 "",
-                "_blank",
-                "noopener,noreferrer"
+                "_blank"
             );
 
         if (!reportWindow) {
@@ -14856,6 +14858,93 @@ function simpleBars(items, color) {
 
         swayAlert(
             "Assessment report opened for " +
+            (lead.business_name || "this lead") +
+            "."
+        );
+    }
+
+    function exportLeadAssessmentJson(leadId) {
+        const lead = state.leads.find(function (item) {
+            return item.id === leadId;
+        });
+
+        if (!lead) {
+            swayAlert("Unable to find this lead for JSON export.");
+            return;
+        }
+
+        const related = function (items) {
+            return (Array.isArray(items) ? items : []).filter(function (item) {
+                return item.lead_id === lead.id;
+            });
+        };
+
+        const assessmentValues = [
+            lead.business_assessment,
+            lead.research_findings,
+            lead.swayphics_solution,
+            lead.recommended_services,
+            lead.research_sources
+        ];
+
+        const completedFields = assessmentValues.filter(function (value) {
+            return String(value || "").trim().length > 0;
+        }).length;
+
+        const convertedClient =
+            lead.converted_client_id &&
+            Array.isArray(state.clients)
+                ? state.clients.find(function (client) {
+                    return client.id === lead.converted_client_id;
+                })
+                : null;
+
+        const payload = {
+            export_type: "swayphics_lead_assessment",
+            exported_at: new Date().toISOString(),
+            lead: lead,
+            assessment_summary: {
+                status: leadAssessmentStatus(lead),
+                completeness_percent: Math.round(
+                    completedFields /
+                    assessmentValues.length *
+                    100
+                ),
+                completed_fields: completedFields,
+                total_fields: assessmentValues.length,
+                assessment_updated_at: lead.assessment_updated_at || null,
+                assessment_updated_by: lead.assessment_updated_by || null
+            },
+            related: {
+                follow_ups: related(state.followups),
+                communications: related(state.communications),
+                quotes: related(state.quotes),
+                tasks: related(state.tasks),
+                stage_history: related(state.leadStageHistory),
+                converted_client: convertedClient
+            }
+        };
+
+        const safeBusinessName =
+            String(lead.business_name || "lead")
+                .trim()
+                .replace(/[^a-zA-Z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .slice(0, 80) ||
+            "lead";
+
+        downloadTextFile(
+            "swayphics-" +
+            safeBusinessName.toLowerCase() +
+            "-assessment-" +
+            dashboardTodayISO() +
+            ".json",
+            JSON.stringify(payload, null, 2),
+            "application/json;charset=utf-8"
+        );
+
+        swayAlert(
+            "Structured assessment data exported for " +
             (lead.business_name || "this lead") +
             "."
         );
@@ -19363,6 +19452,19 @@ function simpleBars(items, color) {
                     function () {
                         exportLeadAssessment(
                             button.dataset.exportLeadAssessment
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-export-lead-json]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        exportLeadAssessmentJson(
+                            button.dataset.exportLeadJson
                         );
                     }
                 );
