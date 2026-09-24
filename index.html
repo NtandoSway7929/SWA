@@ -15814,11 +15814,9 @@ body {
     transform-style:
         preserve-3d;
 
-    animation:
-        ry 32s linear infinite;
-}
+    will-change:
+        transform;
 
-.selected-work .a3d:hover {
     cursor:
         grab;
 }
@@ -15826,13 +15824,6 @@ body {
 .selected-work .a3d:active {
     cursor:
         grabbing;
-}
-
-@keyframes ry {
-    to {
-        transform:
-            rotateY(1turn);
-    }
 }
 
 
@@ -16242,8 +16233,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
 
     .selected-work .a3d {
-        animation-duration:
-            120s;
+        cursor:
+            default;
     }
 }
 
@@ -18381,6 +18372,8 @@ async function loadSelectedWorkPortfolio() {
 
         bindSelectedWorkCards();
 
+        startSelectedWork3DRotation();
+
         setupContactFormBackgroundVideo();
 
     } catch (error) {
@@ -18568,6 +18561,87 @@ function bindSelectedWorkCards() {
 
             }
         );
+}
+
+
+
+/* =========================================================
+   SELECTED WORK 3D ROTATION ENGINE
+   ========================================================= */
+
+function startSelectedWork3DRotation() {
+
+    const carousel =
+        document.querySelector(
+            "#selected-work-carousel"
+        );
+
+    if (!carousel) {
+        return;
+    }
+
+    if (carousel.dataset.rotationStarted === "true") {
+        return;
+    }
+
+    carousel.dataset.rotationStarted =
+        "true";
+
+    const reduceMotion =
+        window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        );
+
+    let angle =
+        0;
+
+    let lastTime =
+        performance.now();
+
+    const normalDuration =
+        32000;
+
+    const reducedDuration =
+        120000;
+
+    function rotate(now) {
+
+        const elapsed =
+            now - lastTime;
+
+        lastTime =
+            now;
+
+        const duration =
+            reduceMotion.matches
+                ? reducedDuration
+                : normalDuration;
+
+        angle =
+            (
+                angle +
+                elapsed * 360 / duration
+            ) % 360;
+
+        carousel.style.transform =
+            `rotateY(${angle}deg)`;
+
+        window.requestAnimationFrame(
+            rotate
+        );
+    }
+
+    window.requestAnimationFrame(
+        rotate
+    );
+
+    reduceMotion.addEventListener(
+        "change",
+        () => {
+            lastTime =
+                performance.now();
+        }
+    );
 }
 
 
