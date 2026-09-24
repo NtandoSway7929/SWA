@@ -7630,6 +7630,9 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action" data-edit="leads" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
+                                '<button class="sway-row-action" data-export-lead-assessment="' +
+                                    esc(item.id) +
+                                '">Export assessment</button>' +
                                 (
                                     item.email
                                         ? '<button class="sway-row-action" data-send-email-type="lead" data-send-email-id="' +
@@ -14332,6 +14335,107 @@ function simpleBars(items, color) {
         }, 1000);
     }
 
+    function exportLeadAssessment(leadId) {
+        const lead =
+            state.leads.find(function (item) {
+                return item.id === leadId;
+            });
+
+        if (!lead) {
+            swayAlert(
+                "Unable to find this lead for export."
+            );
+            return;
+        }
+
+        const valueOrFallback = function (value) {
+            const text =
+                String(value == null ? "" : value)
+                    .trim();
+
+            return text || "Not provided";
+        };
+
+        const assessmentStatus =
+            leadAssessmentStatus(lead);
+
+        const lines = [
+            "SWAYPHICS LEAD ASSESSMENT",
+            "==========================",
+            "",
+            "LEAD DETAILS",
+            "-----------",
+            "Business: " + valueOrFallback(lead.business_name),
+            "Contact: " + valueOrFallback(lead.contact_name),
+            "Email: " + valueOrFallback(lead.email),
+            "Phone: " + valueOrFallback(lead.phone),
+            "Service interest: " + valueOrFallback(lead.service_interest),
+            "Status: " + valueOrFallback(lead.status),
+            "Source: " + valueOrFallback(formatDisplayText(lead.source)),
+            "Estimated value: " + money(lead.estimated_value),
+            "Next follow-up: " + valueOrFallback(date(lead.next_follow_up)),
+            "",
+            "ASSESSMENT STATUS",
+            "-----------------",
+            "Status: " + assessmentStatus,
+            "Last updated: " + valueOrFallback(dateTime(lead.assessment_updated_at)),
+            "Updated by: " + valueOrFallback(adminName(lead.assessment_updated_by)),
+            "",
+            "BUSINESS ASSESSMENT",
+            "-------------------",
+            valueOrFallback(lead.business_assessment),
+            "",
+            "RESEARCH FINDINGS",
+            "-----------------",
+            valueOrFallback(lead.research_findings),
+            "",
+            "HOW SWAYPHICS CAN HELP",
+            "----------------------",
+            valueOrFallback(lead.swayphics_solution),
+            "",
+            "RECOMMENDED SWAYPHICS SERVICES",
+            "-------------------------------",
+            valueOrFallback(lead.recommended_services),
+            "",
+            "PUBLIC INFORMATION / SOURCES",
+            "-----------------------------",
+            valueOrFallback(lead.research_sources),
+            "",
+            "GENERAL INTERNAL NOTES",
+            "----------------------",
+            valueOrFallback(lead.notes),
+            "",
+            "Exported: " + new Date().toISOString()
+        ];
+
+        const safeBusinessName =
+            String(
+                lead.business_name ||
+                "lead"
+            )
+                .trim()
+                .replace(/[^a-zA-Z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .slice(0, 80) ||
+            "lead";
+
+        downloadTextFile(
+            "swayphics-" +
+            safeBusinessName.toLowerCase() +
+            "-assessment-" +
+            dashboardTodayISO() +
+            ".txt",
+            lines.join("\r\n"),
+            "text/plain;charset=utf-8"
+        );
+
+        swayAlert(
+            "Assessment exported for " +
+            (lead.business_name || "this lead") +
+            "."
+        );
+    }
+
     function exportWorkspaceJson() {
         const payload = {
             exported_at: new Date().toISOString(),
@@ -18821,6 +18925,19 @@ function simpleBars(items, color) {
                     function () {
                         completeFollowup(
                             button.dataset.completeFollowup
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-export-lead-assessment]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        exportLeadAssessment(
+                            button.dataset.exportLeadAssessment
                         );
                     }
                 );
