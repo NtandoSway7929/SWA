@@ -15927,6 +15927,47 @@ body {
 }
 
 
+.selected-work-hint {
+    margin:
+        18px auto 0;
+
+    max-width:
+        520px;
+
+    color:
+        var(--text-muted);
+
+    font-size:
+        0.78rem;
+
+    font-weight:
+        600;
+
+    line-height:
+        1.6;
+
+    letter-spacing:
+        0.01em;
+
+    text-align:
+        center;
+
+    opacity:
+        0.72;
+}
+
+@media (max-width: 700px) {
+
+    .selected-work-hint {
+        margin-top:
+            14px;
+
+        font-size:
+            0.74rem;
+    }
+}
+
+
 /* =========================================================
    1-3 PROJECT FALLBACK
    ========================================================= */
@@ -17085,6 +17126,10 @@ body {
             <!-- Portfolio projects are injected dynamically -->
         </div>
     </div>
+
+    <p class="selected-work-hint">
+        Tap any project to explore it in full and view more information.
+    </p>
 </section>
 <!-- ABOUT -->
 <section class="about" id="about">
