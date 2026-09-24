@@ -7632,7 +7632,7 @@ function simpleBars(items, color) {
                                 '">Edit</button>' +
                                 '<button class="sway-row-action" data-export-lead-assessment="' +
                                     esc(item.id) +
-                                '">Export assessment</button>' +
+                                '">Assessment report</button>' +
                                 (
                                     item.email
                                         ? '<button class="sway-row-action" data-send-email-type="lead" data-send-email-id="' +
@@ -14336,101 +14336,526 @@ function simpleBars(items, color) {
     }
 
     function exportLeadAssessment(leadId) {
-        const lead =
-            state.leads.find(function (item) {
-                return item.id === leadId;
-            });
+        const lead = state.leads.find(function (item) {
+            return item.id === leadId;
+        });
 
         if (!lead) {
+            swayAlert("Unable to find this lead for export.");
+            return;
+        }
+
+        const related = function (items) {
+            return (Array.isArray(items) ? items : []).filter(function (item) {
+                return item.lead_id === lead.id;
+            });
+        };
+
+        const followups = related(state.followups).sort(function (a, b) {
+            return (parseDashboardDate(a.scheduled_for)?.getTime() || 0) -
+                (parseDashboardDate(b.scheduled_for)?.getTime() || 0);
+        });
+
+        const communications = related(state.communications).sort(function (a, b) {
+            return (parseDashboardDate(b.contacted_at || b.created_at)?.getTime() || 0) -
+                (parseDashboardDate(a.contacted_at || a.created_at)?.getTime() || 0);
+        });
+
+        const quotes = related(state.quotes).sort(function (a, b) {
+            return (parseDashboardDate(b.created_at)?.getTime() || 0) -
+                (parseDashboardDate(a.created_at)?.getTime() || 0);
+        });
+
+        const tasks = related(state.tasks).sort(function (a, b) {
+            return (parseDashboardDate(b.created_at)?.getTime() || 0) -
+                (parseDashboardDate(a.created_at)?.getTime() || 0);
+        });
+
+        const history = related(state.leadStageHistory).sort(function (a, b) {
+            return (parseDashboardDate(a.changed_at || a.created_at)?.getTime() || 0) -
+                (parseDashboardDate(b.changed_at || b.created_at)?.getTime() || 0);
+        });
+
+        const convertedClient =
+            lead.converted_client_id && Array.isArray(state.clients)
+                ? state.clients.find(function (client) {
+                    return client.id === lead.converted_client_id;
+                })
+                : null;
+
+        const fields = [
+            ["Business assessment", lead.business_assessment],
+            ["Research findings", lead.research_findings],
+            ["How Swayphics can help", lead.swayphics_solution],
+            ["Recommended Swayphics services", lead.recommended_services],
+            ["Public information / sources", lead.research_sources]
+        ];
+
+        const completed = fields.filter(function (field) {
+            return String(field[1] || "").trim().length > 0;
+        }).length;
+
+        const completeness = Math.round(
+            completed / fields.length * 100
+        );
+
+        const fallback = function (value) {
+            const text = String(value == null ? "" : value).trim();
+            return text || "Not provided";
+        };
+
+        const safeText = function (value) {
+            const raw = String(value == null ? "" : value).trim();
+
+            return raw
+                ? esc(raw).replace(/\r?\n/g, "<br>")
+                : '<span class="empty">Not provided</span>';
+        };
+
+        const statusChip = function (value) {
+            const label = formatDisplayText(value || "Unspecified");
+            const lower = String(value || "").toLowerCase();
+
+            let tone = "neutral";
+
+            if (["won","paid","completed","approved","active","assessed"].includes(lower)) {
+                tone = "success";
+            } else if (["lost","rejected","cancelled","urgent","high","overdue"].includes(lower)) {
+                tone = "danger";
+            } else if (["new","contacted","interested","proposal sent","negotiating","pending","in progress","follow-up"].includes(lower)) {
+                tone = "warning";
+            }
+
+            return '<span class="chip ' + tone + '">' + esc(label) + "</span>";
+        };
+
+        const checklist = fields.map(function (field) {
+            const done = String(field[1] || "").trim().length > 0;
+
+            return (
+                '<div class="check">' +
+                    '<span class="' + (done ? "done" : "") + '">' +
+                        (done ? "✓" : "•") +
+                    "</span>" +
+                    "<strong>" + esc(field[0]) + "</strong>" +
+                    "<small>" + (done ? "Complete" : "Missing") + "</small>" +
+                "</div>"
+            );
+        }).join("");
+
+        const rows = function (items, builder, emptyMessage) {
+            return items.length
+                ? '<div class="table-wrap"><table class="table"><tbody>' +
+                  builder(items) +
+                  "</tbody></table></div>"
+                : '<div class="panel copy">' +
+                  emptyMessage +
+                  "</div>";
+        };
+
+        const quoteRows = function (items) {
+            return items.map(function (item) {
+                return (
+                    "<tr>" +
+                        "<td>" +
+                            esc(item.quote_number || item.title || "Quote") +
+                        "</td>" +
+                        "<td>" + statusChip(item.status) + "</td>" +
+                        "<td>" + esc(money(item.amount)) + "</td>" +
+                        "<td>" + esc(date(item.valid_until)) + "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+        };
+
+        const followupRows = function (items) {
+            return items.map(function (item) {
+                return (
+                    "<tr>" +
+                        "<td>" + esc(date(item.scheduled_for)) + "</td>" +
+                        "<td>" + statusChip(item.channel) + "</td>" +
+                        "<td>" + statusChip(item.status) + "</td>" +
+                        "<td>" + safeText(item.note) + "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+        };
+
+        const taskRows = function (items) {
+            return items.map(function (item) {
+                return (
+                    "<tr>" +
+                        "<td>" + esc(item.title || "Task") + "</td>" +
+                        "<td>" + statusChip(item.priority) + "</td>" +
+                        "<td>" + statusChip(item.status) + "</td>" +
+                        "<td>" + esc(date(item.due_date)) + "</td>" +
+                    "</tr>"
+                );
+            }).join("");
+        };
+
+        const communicationsHtml =
+            communications.slice(0, 20).map(function (item) {
+                return (
+                    '<article class="communication">' +
+                        '<div class="communication-meta">' +
+                            "<strong>" +
+                                esc(
+                                    formatDisplayText(
+                                        item.channel ||
+                                        "Communication"
+                                    )
+                                ) +
+                            "</strong>" +
+                            "<span>" +
+                                esc(
+                                    item.direction === "inbound"
+                                        ? "Inbound"
+                                        : "Outbound"
+                                ) +
+                            "</span>" +
+                            "<time>" +
+                                esc(
+                                    dateTime(
+                                        item.contacted_at ||
+                                        item.created_at
+                                    )
+                                ) +
+                            "</time>" +
+                        "</div>" +
+                        (
+                            item.subject
+                                ? "<h4>" + esc(item.subject) + "</h4>"
+                                : ""
+                        ) +
+                        "<p>" + safeText(item.message) + "</p>" +
+                    "</article>"
+                );
+            }).join("");
+
+        const timelineHtml =
+            history.map(function (item) {
+                const status =
+                    item.to_status ||
+                    item.status ||
+                    item.stage ||
+                    "Stage update";
+
+                return (
+                    '<div class="timeline-item">' +
+                        '<span class="dot"></span>' +
+                        "<div>" +
+                            "<strong>" +
+                                esc(formatDisplayText(status)) +
+                            "</strong>" +
+                            "<small>" +
+                                esc(
+                                    dateTime(
+                                        item.changed_at ||
+                                        item.created_at
+                                    )
+                                ) +
+                            "</small>" +
+                            (
+                                item.from_status || item.note
+                                    ? "<p>" +
+                                      (
+                                        item.from_status
+                                            ? "From " +
+                                              formatDisplayText(
+                                                  item.from_status
+                                              ) +
+                                              (
+                                                item.note
+                                                    ? " · " +
+                                                      item.note
+                                                    : ""
+                                              )
+                                            : safeText(item.note)
+                                      ) +
+                                      "</p>"
+                                    : ""
+                            ) +
+                        "</div>" +
+                    "</div>"
+                );
+            }).join("");
+
+        const section = function (title, intro, body) {
+            return (
+                '<section class="section">' +
+                    "<h2>" + title + "</h2>" +
+                    '<p class="intro">' + intro + "</p>" +
+                    body +
+                "</section>"
+            );
+        };
+
+        const safeBusinessName =
+            String(lead.business_name || "lead")
+                .trim()
+                .replace(/[^a-zA-Z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .slice(0, 80) || "lead";
+
+        const reportHtml =
+            '<!doctype html><html lang="en"><head>' +
+                '<meta charset="utf-8">' +
+                '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+                "<title>" +
+                    esc(lead.business_name || "Swayphics Lead Assessment") +
+                    " | Swayphics" +
+                "</title>" +
+                "<style>" +
+                    "*{box-sizing:border-box}html{background:#eef3fb}body{margin:0;background:#eef3fb;color:#19263f;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;line-height:1.6}.shell{width:min(980px,calc(100% - 24px));margin:24px auto}.card{overflow:hidden;border:1px solid rgba(0,32,150,.1);border-radius:24px;background:#fff;box-shadow:0 20px 60px rgba(0,32,150,.1)}.cover{padding:30px 32px;background:linear-gradient(145deg,#fff,#f7faff);border-bottom:1px solid rgba(0,32,150,.07)}.brand{color:#0152F4;font-size:12px;font-weight:900;letter-spacing:.18em}.kicker{margin-top:18px;color:#8190A5;font-size:9px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.cover h1{margin:6px 0 0;color:#002096;font-size:32px;letter-spacing:-.045em;line-height:1.1}.cover p{margin:8px 0 0;color:#61708b}.actions{display:flex;gap:8px;margin-top:18px}.action{min-height:38px;padding:0 14px;border:1px solid rgba(0,32,150,.12);border-radius:11px;background:#fff;color:#002096;font:inherit;font-size:10px;font-weight:850;cursor:pointer}.action.primary{background:#0152F4;border-color:#0152F4;color:#fff}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:20px}.metric{padding:12px 13px;border:1px solid rgba(0,32,150,.07);border-radius:14px;background:#fff}.metric span,.detail span{display:block;color:#8190A5;font-size:8px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.metric strong,.detail strong{display:block;margin-top:4px;color:#1c2a45;font-size:10.5px;overflow-wrap:anywhere}.metric small{display:block;margin-top:2px;color:#8190A5;font-size:8px}.body{padding:28px 32px}.section{margin-top:25px;page-break-inside:avoid}.section:first-child{margin-top:0}.section h2{margin:0;color:#002096;font-size:17px}.intro{margin:4px 0 11px;color:#8190A5;font-size:9.5px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.detail,.panel{padding:12px 13px;border:1px solid rgba(0,32,150,.07);border-radius:14px;background:#fbfcff}.copy{color:#53627b;font-size:10.5px;line-height:1.75;overflow-wrap:anywhere}.empty{color:#a1adbf;font-style:italic}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:7px;padding:9px 10px;border:1px solid rgba(0,32,150,.07);border-radius:12px;background:#fff}.check>span{width:19px;height:19px;display:grid;place-items:center;border-radius:50%;background:#edf1f7;color:#8b98ab;font-size:10px;font-weight:900}.check>span.done{background:rgba(1,82,244,.09);color:#0152F4}.check strong{font-size:9px;color:#33415a}.check small{font-size:8px;color:#8190A5;text-transform:uppercase}.table-wrap{overflow:auto;border:1px solid rgba(0,32,150,.07);border-radius:14px}.table{width:100%;min-width:540px;border-collapse:collapse}.table th{padding:9px 10px;background:#f7faff;color:#8190A5;font-size:8px;text-align:left;text-transform:uppercase}.table td{padding:9px 10px;border-top:1px solid rgba(0,32,150,.055);color:#53627b;font-size:9.5px;vertical-align:top}.chip{display:inline-flex;align-items:center;min-height:19px;padding:0 6px;border-radius:999px;background:#eef2f7;color:#607087;font-size:7px;font-weight:900;text-transform:uppercase}.chip.success{background:rgba(18,135,78,.09);color:#16734b}.chip.warning{background:rgba(197,125,0,.1);color:#936100}.chip.danger{background:rgba(184,46,46,.09);color:#a63030}.communication{padding:12px 13px;border:1px solid rgba(0,32,150,.07);border-radius:14px;background:#fff;page-break-inside:avoid}.communication+.communication{margin-top:8px}.communication-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.communication-meta strong{font-size:9.5px;color:#1c2a45}.communication-meta span{font-size:8px;color:#8190A5;text-transform:uppercase}.communication-meta time{margin-left:auto;font-size:8px;color:#8190A5}.communication h4{margin:5px 0 0;color:#33415a;font-size:9.5px}.communication p{margin:5px 0 0;color:#53627b;font-size:9.5px;line-height:1.7}.timeline{position:relative;padding-left:9px}.timeline:before{content:'';position:absolute;left:14px;top:8px;bottom:8px;width:1px;background:rgba(1,82,244,.12)}.timeline-item{position:relative;display:grid;grid-template-columns:12px 1fr;gap:8px;padding-bottom:13px}.timeline-item .dot{position:relative;z-index:1;width:9px;height:9px;margin-top:4px;border-radius:50%;background:#0152F4;border:2px solid #fff}.timeline-item strong{display:block;font-size:9.5px;color:#263650}.timeline-item small{display:block;font-size:8px;color:#8190A5}.timeline-item p{margin:3px 0 0;font-size:8.5px;color:#53627b}.footer{padding:14px 32px;border-top:1px solid rgba(0,32,150,.07);background:#fbfcff;color:#9aa7bc;font-size:8px}.footer strong{color:#607087}@media(max-width:700px){.shell{width:calc(100% - 12px);margin:6px auto}.cover,.body{padding:20px}.cover h1{font-size:27px}.metrics,.grid,.checks{grid-template-columns:1fr 1fr}}@media(max-width:480px){.metrics,.grid,.checks{grid-template-columns:1fr}.actions .action{flex:1}}@media print{html,body{background:#fff}.shell{width:100%;margin:0}.card{border:0;border-radius:0;box-shadow:none}.actions{display:none}.cover,.body{padding-left:0;padding-right:0}.footer{padding-left:0;padding-right:0}.table-wrap{overflow:visible}.table{min-width:0}}" +
+                "</style>" +
+            "</head><body>" +
+                '<main class="shell"><article class="card">' +
+                    '<header class="cover">' +
+                        '<div class="brand">SWAYPHICS</div>' +
+                        '<div class="kicker">Lead assessment report</div>' +
+                        "<h1>" +
+                            esc(lead.business_name || "Unnamed business") +
+                        "</h1>" +
+                        "<p>Internal assessment and relationship record generated from the Swayphics admin workspace.</p>" +
+                        '<div class="actions">' +
+                            '<button type="button" class="action primary" id="print-report">Print / Save as PDF</button>' +
+                            '<button type="button" class="action" id="close-report">Close</button>' +
+                        "</div>" +
+                        '<div class="metrics">' +
+                            '<div class="metric"><span>Lead status</span><strong>' +
+                                statusChip(lead.status) +
+                            "</strong><small>Current pipeline position</small></div>" +
+                            '<div class="metric"><span>Assessment</span><strong>' +
+                                statusChip(leadAssessmentStatus(lead)) +
+                            "</strong><small>" + completeness + "% complete</small></div>" +
+                            '<div class="metric"><span>Estimated value</span><strong>' +
+                                esc(money(lead.estimated_value)) +
+                            "</strong><small>Value recorded on lead</small></div>" +
+                            '<div class="metric"><span>Next follow-up</span><strong>' +
+                                esc(date(lead.next_follow_up)) +
+                            "</strong><small>" +
+                                (
+                                    lead.assigned_to
+                                        ? "Assigned to " + esc(adminName(lead.assigned_to))
+                                        : "Unassigned"
+                                ) +
+                            "</small></div>" +
+                        "</div>" +
+                    "</header>" +
+                    '<div class="body">' +
+
+                        section(
+                            "Lead overview",
+                            "Core relationship, ownership and pipeline information.",
+                            '<div class="grid">' +
+                                '<div class="detail"><span>Contact</span><strong>' + esc(fallback(lead.contact_name)) + "</strong></div>" +
+                                '<div class="detail"><span>Email</span><strong>' + esc(fallback(lead.email)) + "</strong></div>" +
+                                '<div class="detail"><span>Phone</span><strong>' + esc(fallback(lead.phone)) + "</strong></div>" +
+                                '<div class="detail"><span>Service interest</span><strong>' + esc(fallback(lead.service_interest)) + "</strong></div>" +
+                                '<div class="detail"><span>Source</span><strong>' + esc(fallback(formatDisplayText(lead.source))) + "</strong></div>" +
+                                '<div class="detail"><span>Assigned to</span><strong>' + esc(lead.assigned_to ? adminName(lead.assigned_to) : "Unassigned") + "</strong></div>" +
+                                '<div class="detail"><span>Created</span><strong>' + esc(fallback(dateTime(lead.created_at))) + "</strong></div>" +
+                                '<div class="detail"><span>Last record update</span><strong>' + esc(fallback(dateTime(lead.updated_at))) + "</strong></div>" +
+                                '<div class="detail"><span>Assessment updated</span><strong>' + esc(fallback(dateTime(lead.assessment_updated_at))) + "</strong></div>" +
+                                '<div class="detail"><span>Assessment updated by</span><strong>' + esc(lead.assessment_updated_by ? adminName(lead.assessment_updated_by) : "Not recorded") + "</strong></div>" +
+                                '<div class="detail"><span>Converted client</span><strong>' + esc(convertedClient ? fallback(convertedClient.business_name) : "Not converted") + "</strong></div>" +
+                                '<div class="detail"><span>Related records</span><strong>' + esc(String(followups.length + communications.length + quotes.length + tasks.length + history.length)) + "</strong></div>" +
+                            "</div>"
+                        ) +
+
+                        section(
+                            "Assessment completeness",
+                            "Completion of the five assessment components. This is not a quality score.",
+                            '<div class="panel"><div class="checks">' +
+                                checklist +
+                            "</div></div>"
+                        ) +
+
+                        section(
+                            "Business assessment",
+                            "Overall assessment recorded for this business.",
+                            '<div class="panel"><div class="copy">' +
+                                safeText(lead.business_assessment) +
+                            "</div></div>"
+                        ) +
+
+                        section(
+                            "Research findings",
+                            "Observed strengths, gaps, customer-facing issues and opportunities recorded during research.",
+                            '<div class="panel"><div class="copy">' +
+                                safeText(lead.research_findings) +
+                            "</div></div>"
+                        ) +
+
+                        section(
+                            "How Swayphics can help",
+                            "Proposed solution and intended business outcome recorded for the lead.",
+                            '<div class="panel"><div class="copy">' +
+                                safeText(lead.swayphics_solution) +
+                            "</div></div>"
+                        ) +
+
+                        section(
+                            "Recommended Swayphics services",
+                            "Services recorded as directly relevant to the identified needs.",
+                            '<div class="panel"><div class="copy">' +
+                                safeText(lead.recommended_services) +
+                            "</div></div>"
+                        ) +
+
+                        section(
+                            "Public information and sources",
+                            "Public source names and URLs recorded during research.",
+                            '<div class="panel"><div class="copy">' +
+                                safeText(lead.research_sources) +
+                            "</div></div>"
+                        ) +
+
+                        section(
+                            "Commercial context",
+                            "Commercial records currently connected to this lead.",
+                            '<div class="grid">' +
+                                '<div class="detail"><span>Estimated value</span><strong>' + esc(money(lead.estimated_value)) + "</strong></div>" +
+                                '<div class="detail"><span>Quotes</span><strong>' + esc(String(quotes.length)) + "</strong></div>" +
+                                '<div class="detail"><span>Follow-ups</span><strong>' + esc(String(followups.length)) + "</strong></div>" +
+                                '<div class="detail"><span>Tasks</span><strong>' + esc(String(tasks.length)) + "</strong></div>" +
+                            "</div>" +
+                            (
+                                quotes.length
+                                    ? '<div style="margin-top:10px" class="table-wrap"><table class="table"><thead><tr><th>Quote</th><th>Status</th><th>Amount</th><th>Valid until</th></tr></thead>' +
+                                      "<tbody>" + quoteRows(quotes) + "</tbody></table></div>"
+                                    : ""
+                            )
+                        ) +
+
+                        section(
+                            "Follow-up activity",
+                            "Scheduled follow-ups associated with the lead.",
+                            rows(
+                                followups,
+                                followupRows,
+                                "No follow-ups are currently associated with this lead."
+                            ).replace(
+                                "<table class=\"table\"><tbody>",
+                                "<table class=\"table\"><thead><tr><th>Scheduled</th><th>Channel</th><th>Status</th><th>Note</th></tr></thead><tbody>"
+                            )
+                        ) +
+
+                        section(
+                            "Tasks linked to the lead",
+                            "Internal or delivery tasks connected to the prospect.",
+                            rows(
+                                tasks,
+                                taskRows,
+                                "No tasks are currently associated with this lead."
+                            ).replace(
+                                "<table class=\"table\"><tbody>",
+                                "<table class=\"table\"><thead><tr><th>Task</th><th>Priority</th><th>Status</th><th>Due</th></tr></thead><tbody>"
+                            )
+                        ) +
+
+                        section(
+                            "Communication history",
+                            String(communications.length) +
+                            " communication record" +
+                            (communications.length === 1 ? "" : "s") +
+                            " found. Showing the 20 most recent.",
+                            communicationsHtml
+                                ? '<div>' + communicationsHtml + "</div>"
+                                : '<div class="panel copy">No communication history is currently associated with this lead.</div>'
+                        ) +
+
+                        section(
+                            "Lead timeline",
+                            "Recorded pipeline stage changes for this lead.",
+                            timelineHtml
+                                ? '<div class="panel"><div class="timeline">' + timelineHtml + "</div></div>"
+                                : '<div class="panel copy">No stage history is currently recorded for this lead.</div>'
+                        ) +
+
+                        section(
+                            "General internal notes",
+                            "Internal notes stored directly on the lead record.",
+                            '<div class="panel"><div class="copy">' +
+                                safeText(lead.notes) +
+                            "</div></div>"
+                        ) +
+
+                    "</div>" +
+                    '<footer class="footer"><strong>CONFIDENTIAL · INTERNAL SWAYPHICS USE</strong><br>Generated ' +
+                        esc(dateTime(new Date().toISOString())) +
+                        ". Assessment completeness reflects populated fields only and does not judge assessment quality." +
+                    "</footer>" +
+                "</article></main>" +
+                "<script>" +
+                    "document.getElementById('print-report').addEventListener('click',function(){window.print();});" +
+                    "document.getElementById('close-report').addEventListener('click',function(){window.close();});" +
+                "</script>" +
+            "</body></html>";
+
+        const reportWindow =
+            window.open(
+                "",
+                "_blank",
+                "noopener,noreferrer"
+            );
+
+        if (!reportWindow) {
+            downloadTextFile(
+                "swayphics-" +
+                safeBusinessName.toLowerCase() +
+                "-assessment-" +
+                dashboardTodayISO() +
+                ".html",
+                reportHtml,
+                "text/html;charset=utf-8"
+            );
+
             swayAlert(
-                "Unable to find this lead for export."
+                "The report window was blocked, so the report was downloaded as HTML."
             );
             return;
         }
 
-        const valueOrFallback = function (value) {
-            const text =
-                String(value == null ? "" : value)
-                    .trim();
+        try {
+            reportWindow.document.open();
+            reportWindow.document.write(reportHtml);
+            reportWindow.document.close();
+            reportWindow.focus();
 
-            return text || "Not provided";
-        };
+            window.setTimeout(function () {
+                try {
+                    reportWindow.print();
+                } catch (error) {
+                    // The report remains open with a manual print button.
+                }
+            }, 300);
+        } catch (error) {
+            try {
+                reportWindow.close();
+            } catch (closeError) {
+                // Ignore close failures.
+            }
 
-        const assessmentStatus =
-            leadAssessmentStatus(lead);
+            downloadTextFile(
+                "swayphics-" +
+                safeBusinessName.toLowerCase() +
+                "-assessment-" +
+                dashboardTodayISO() +
+                ".html",
+                reportHtml,
+                "text/html;charset=utf-8"
+            );
 
-        const lines = [
-            "SWAYPHICS LEAD ASSESSMENT",
-            "==========================",
-            "",
-            "LEAD DETAILS",
-            "-----------",
-            "Business: " + valueOrFallback(lead.business_name),
-            "Contact: " + valueOrFallback(lead.contact_name),
-            "Email: " + valueOrFallback(lead.email),
-            "Phone: " + valueOrFallback(lead.phone),
-            "Service interest: " + valueOrFallback(lead.service_interest),
-            "Status: " + valueOrFallback(lead.status),
-            "Source: " + valueOrFallback(formatDisplayText(lead.source)),
-            "Estimated value: " + money(lead.estimated_value),
-            "Next follow-up: " + valueOrFallback(date(lead.next_follow_up)),
-            "",
-            "ASSESSMENT STATUS",
-            "-----------------",
-            "Status: " + assessmentStatus,
-            "Last updated: " + valueOrFallback(dateTime(lead.assessment_updated_at)),
-            "Updated by: " + valueOrFallback(adminName(lead.assessment_updated_by)),
-            "",
-            "BUSINESS ASSESSMENT",
-            "-------------------",
-            valueOrFallback(lead.business_assessment),
-            "",
-            "RESEARCH FINDINGS",
-            "-----------------",
-            valueOrFallback(lead.research_findings),
-            "",
-            "HOW SWAYPHICS CAN HELP",
-            "----------------------",
-            valueOrFallback(lead.swayphics_solution),
-            "",
-            "RECOMMENDED SWAYPHICS SERVICES",
-            "-------------------------------",
-            valueOrFallback(lead.recommended_services),
-            "",
-            "PUBLIC INFORMATION / SOURCES",
-            "-----------------------------",
-            valueOrFallback(lead.research_sources),
-            "",
-            "GENERAL INTERNAL NOTES",
-            "----------------------",
-            valueOrFallback(lead.notes),
-            "",
-            "Exported: " + new Date().toISOString()
-        ];
-
-        const safeBusinessName =
-            String(
-                lead.business_name ||
-                "lead"
-            )
-                .trim()
-                .replace(/[^a-zA-Z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "")
-                .slice(0, 80) ||
-            "lead";
-
-        downloadTextFile(
-            "swayphics-" +
-            safeBusinessName.toLowerCase() +
-            "-assessment-" +
-            dashboardTodayISO() +
-            ".txt",
-            lines.join("\r\n"),
-            "text/plain;charset=utf-8"
-        );
+            swayAlert(
+                "The report could not be opened, so it was downloaded as HTML."
+            );
+            return;
+        }
 
         swayAlert(
-            "Assessment exported for " +
+            "Assessment report opened for " +
             (lead.business_name || "this lead") +
             "."
         );
