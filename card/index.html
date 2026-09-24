@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="description"
+        content="Swayphics digital business card — creative and digital solutions for businesses ready to look the part."
+    >
+    <meta name="theme-color" content="#002096">
+
+    <meta property="og:title" content="Swayphics | Digital Business Card">
+    <meta
+        property="og:description"
+        content="Creative & digital solutions for businesses ready to look the part."
+    >
+    <meta property="og:type" content="profile">
+    <meta property="og:url" content="https://swayphics.co.za/card/">
+    <meta
+        property="og:image"
+        content="https://swayphics.co.za/swayphics-logo.png"
+    >
+
+    <title>Swayphics | Digital Business Card</title>
+    <link rel="canonical" href="https://swayphics.co.za/card/">
+    <link rel="icon" type="image/webp" href="/FIST.webp?v=20260923">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+        :root {
+            --blue-deep: #002096;
+            --blue-brand: #0031C5;
+            --blue-accent: #0152F4;
+            --blue-light: #2C91FC;
+            --blue-highlight: #77C1FC;
+            --ink: #13203A;
+            --muted: #5F6B83;
+            --line: rgba(19, 32, 58, 0.10);
+            --white: #FFFFFF;
+            --soft: #F5F8FF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            min-height: 100svh;
+            font-family: "Plus Jakarta Sans", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 85% 7%, rgba(119, 193, 252, 0.38), transparent 28%),
+                radial-gradient(circle at 9% 88%, rgba(1, 82, 244, 0.16), transparent 30%),
+                linear-gradient(160deg, #FFFFFF 0%, #F7FAFF 52%, #EEF5FF 100%);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(
+                    115deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.72) 38%,
+                    transparent 66%
+                );
+            opacity: 0.65;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button,
+        a {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            width: min(100%, 720px);
+            margin: 0 auto;
+            padding: 22px 18px 34px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+        }
+
+        .brand-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.68);
+            box-shadow: 0 8px 26px rgba(0, 32, 150, 0.08);
+            backdrop-filter: blur(16px);
+        }
+
+        .brand-chip img {
+            width: 86px;
+            height: auto;
+            display: block;
+        }
+
+        .share-button {
+            width: 40px;
+            height: 40px;
+            display: inline-grid;
+            place-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.88);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.72);
+            color: var(--blue-deep);
+            cursor: pointer;
+            box-shadow: 0 8px 26px rgba(0, 32, 150, 0.08);
+            backdrop-filter: blur(16px);
+            transition: transform 0.25s ease, background 0.25s ease;
+        }
+
+        .share-button:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.92);
+        }
+
+        .share-button svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .hero-card {
+            position: relative;
+            overflow: hidden;
+            padding: 34px 24px 28px;
+            border-radius: 30px;
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255, 255, 255, 0.93) 0%,
+                    rgba(255, 255, 255, 0.80) 56%,
+                    rgba(231, 241, 255, 0.92) 100%
+                );
+            border: 1px solid rgba(255, 255, 255, 0.94);
+            box-shadow:
+                0 22px 55px rgba(0, 32, 150, 0.11),
+                0 4px 16px rgba(15, 43, 99, 0.07);
+            backdrop-filter: blur(22px);
+        }
+
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            top: -120px;
+            right: -72px;
+            border-radius: 50%;
+            background:
+                radial-gradient(
+                    circle,
+                    rgba(1, 82, 244, 0.18) 0%,
+                    rgba(44, 145, 252, 0.08) 45%,
+                    rgba(44, 145, 252, 0) 72%
+                );
+            pointer-events: none;
+        }
+
+        .hero-inner {
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-wrap {
+            width: 102px;
+            height: 102px;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 22px;
+            border-radius: 28px;
+            background: #FFFFFF;
+            box-shadow:
+                0 14px 35px rgba(0, 32, 150, 0.10),
+                inset 0 0 0 1px rgba(0, 32, 150, 0.05);
+        }
+
+        .logo-wrap img {
+            width: 76px;
+            height: auto;
+            display: block;
+        }
+
+        .eyebrow {
+            margin-bottom: 10px;
+            text-align: center;
+            color: var(--blue-accent);
+            font-size: 0.68rem;
+            line-height: 1.2;
+            font-weight: 800;
+            letter-spacing: 0.20em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: clamp(2.3rem, 9vw, 4.5rem);
+            line-height: 0.98;
+            letter-spacing: -0.06em;
+            font-weight: 700;
+            color: var(--blue-deep);
+        }
+
+        .positioning {
+            max-width: 510px;
+            margin: 16px auto 0;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.98rem;
+            line-height: 1.7;
+        }
+
+        .tagline {
+            margin-top: 8px;
+            text-align: center;
+            color: var(--blue-brand);
+            font-size: 0.67rem;
+            font-weight: 800;
+            letter-spacing: 0.17em;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 26px;
+        }
+
+        .action {
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 18px;
+            border-radius: 17px;
+            border: 1px solid var(--line);
+            font-size: 0.88rem;
+            font-weight: 700;
+            transition:
+                transform 0.25s ease,
+                box-shadow 0.25s ease,
+                background 0.25s ease,
+                border-color 0.25s ease;
+        }
+
+        .action:hover {
+            transform: translateY(-2px);
+        }
+
+        .action-primary {
+            background: var(--blue-deep);
+            color: var(--white);
+            border-color: var(--blue-deep);
+            box-shadow: 0 14px 28px rgba(0, 32, 150, 0.18);
+        }
+
+        .action-primary:hover {
+            box-shadow: 0 18px 34px rgba(0, 32, 150, 0.23);
+        }
+
+        .action-secondary {
+            background: rgba(255, 255, 255, 0.78);
+            color: var(--blue-deep);
+        }
+
+        .action-secondary:hover {
+            background: #FFFFFF;
+            border-color: rgba(1, 82, 244, 0.18);
+        }
+
+        .action svg {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.7;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .section {
+            margin-top: 14px;
+            padding: 22px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.92);
+            box-shadow:
+                0 14px 32px rgba(0, 32, 150, 0.06),
+                inset 0 0 0 1px rgba(19, 32, 58, 0.035);
+            backdrop-filter: blur(18px);
+        }
+
+        .section-label {
+            margin-bottom: 14px;
+            color: var(--blue-accent);
+            font-size: 0.66rem;
+            line-height: 1.2;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        .services {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .service {
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            padding: 14px 15px;
+            border-radius: 15px;
+            background: var(--soft);
+            border: 1px solid rgba(0, 32, 150, 0.06);
+            color: var(--ink);
+            font-size: 0.82rem;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .socials {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 9px;
+        }
+
+        .social {
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 11px 8px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.74);
+            color: var(--ink);
+            font-size: 0.72rem;
+            font-weight: 700;
+            transition: transform 0.25s ease, background 0.25s ease;
+        }
+
+        .social:hover {
+            transform: translateY(-2px);
+            background: #FFFFFF;
+        }
+
+        .footer {
+            margin-top: 20px;
+            padding: 8px 8px 0;
+            text-align: center;
+        }
+
+        .footer-link {
+            color: var(--blue-deep);
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .footer-copy {
+            margin-top: 5px;
+            color: #7D889C;
+            font-size: 0.67rem;
+            line-height: 1.5;
+        }
+
+        .notice {
+            position: fixed;
+            left: 50%;
+            bottom: 18px;
+            z-index: 10;
+            width: max-content;
+            max-width: calc(100vw - 28px);
+            padding: 11px 15px;
+            border-radius: 999px;
+            background: rgba(0, 32, 150, 0.94);
+            color: #FFFFFF;
+            font-size: 0.74rem;
+            font-weight: 700;
+            box-shadow: 0 14px 36px rgba(0, 32, 150, 0.24);
+            transform: translate(-50%, 120%);
+            opacity: 0;
+            transition: transform 0.35s ease, opacity 0.35s ease;
+            pointer-events: none;
+        }
+
+        .notice.show {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+
+        @media (min-width: 560px) {
+            .page {
+                padding: 34px 24px 44px;
+            }
+
+            .hero-card {
+                padding: 42px 38px 34px;
+            }
+
+            .actions {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .action-primary {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (min-width: 760px) {
+            .page {
+                padding-top: 46px;
+            }
+
+            .hero-card {
+                border-radius: 34px;
+            }
+        }
+
+        @media (max-width: 390px) {
+            .brand-chip img {
+                width: 78px;
+            }
+
+            .hero-card {
+                padding-inline: 19px;
+            }
+
+            .services {
+                grid-template-columns: 1fr;
+            }
+
+            .socials {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html {
+                scroll-behavior: auto;
+            }
+
+            *,
+            *::before,
+            *::after {
+                transition-duration: 0.01ms !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <header class="topbar">
+            <a class="brand-chip" href="/" aria-label="Swayphics home">
+                <img src="/swayphics-logo.png" alt="Swayphics">
+            </a>
+
+            <button
+                class="share-button"
+                type="button"
+                id="share-card"
+                aria-label="Share Swayphics digital business card"
+                title="Share card"
+            >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="18" cy="5" r="2.3"></circle>
+                    <circle cx="6" cy="12" r="2.3"></circle>
+                    <circle cx="18" cy="19" r="2.3"></circle>
+                    <path d="m8.1 10.9 7.8-4.1M8.1 13.1l7.8 4.1"></path>
+                </svg>
+            </button>
+        </header>
+
+        <section class="hero-card">
+            <div class="hero-inner">
+                <div class="logo-wrap">
+                    <img src="/swayphics-logo.png" alt="Swayphics logo">
+                </div>
+
+                <p class="eyebrow">Creative &amp; Digital Solutions</p>
+                <h1>Swayphics</h1>
+
+                <p class="positioning">
+                    Creative &amp; digital solutions for businesses ready to look the part.
+                </p>
+
+                <p class="tagline">Empowering Through Design</p>
+
+                <div class="actions">
+                    <a class="action action-primary" href="/card/swayphics.vcf" download="Swayphics.vcf">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 3v12"></path>
+                            <path d="m7 10 5 5 5-5"></path>
+                            <path d="M4 20h16"></path>
+                        </svg>
+                        Save Contact
+                    </a>
+
+                    <a
+                        class="action action-secondary"
+                        href="https://wa.me/message/TNUQDUUWXFEIE1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20.2 11.5a8.2 8.2 0 0 1-11.9 7.2L4 20l1.3-4.1a8.2 8.2 0 1 1 14.9-4.4Z"></path>
+                            <path d="M8.7 8.6c.2-.4.4-.4.7-.4h.5c.2 0 .3.1.4.4l.6 1.3c.1.2.1.3-.1.5l-.4.5c-.1.1-.1.3 0 .5.4.7.9 1.2 1.6 1.6.2.1.3.1.5 0l.5-.4c.2-.1.3-.1.5 0l1.2.6c.2.1.3.2.2.5-.2.6-.6 1-1.2 1.2-.5.1-1.1-.1-1.9-.4-1-.4-1.8-1-2.5-1.8-.6-.7-1-1.4-1.2-2.1-.2-.7-.1-1.3.1-2Z"></path>
+                        </svg>
+                        WhatsApp
+                    </a>
+
+                    <a
+                        class="action action-secondary"
+                        href="mailto:info@swayphics.co.za"
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="3.5" y="5.2" width="17" height="13.6" rx="2.2"></rect>
+                            <path d="m4.4 7 7.6 5.8L19.6 7"></path>
+                        </svg>
+                        Email
+                    </a>
+
+                    <a class="action action-secondary" href="/">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="8.5"></circle>
+                            <path d="M3.8 12h16.4M12 3.5c2.2 2.4 3.3 5.2 3.3 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.3-5.2-3.3-8.5S9.8 5.9 12 3.5Z"></path>
+                        </svg>
+                        Visit Website
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" aria-labelledby="services-heading">
+            <p class="section-label" id="services-heading">What we do</p>
+
+            <div class="services">
+                <div class="service">Branding &amp; Identity</div>
+                <div class="service">Websites &amp; Digital Experiences</div>
+                <div class="service">Business Design Solutions</div>
+                <div class="service">Digital Setup &amp; Systems</div>
+            </div>
+        </section>
+
+        <section class="section" aria-labelledby="connect-heading">
+            <p class="section-label" id="connect-heading">Connect</p>
+
+            <div class="socials">
+                <a
+                    class="social"
+                    href="https://instagram.com/swayphics"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    Instagram
+                </a>
+
+                <a
+                    class="social"
+                    href="https://www.tiktok.com/@swayphics"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    TikTok
+                </a>
+
+                <a
+                    class="social"
+                    href="https://www.facebook.com/share/1EiFqLLcj8/?mibextid=wwXIfr"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    Facebook
+                </a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <a class="footer-link" href="/">swayphics.co.za</a>
+            <p class="footer-copy">Empowering through design.</p>
+        </footer>
+    </main>
+
+    <div class="notice" id="notice" role="status" aria-live="polite"></div>
+
+    <script>
+        const shareButton = document.querySelector("#share-card");
+        const notice = document.querySelector("#notice");
+
+        function showNotice(message) {
+            notice.textContent = message;
+            notice.classList.add("show");
+
+            window.clearTimeout(window.__swayphicsNoticeTimer);
+            window.__swayphicsNoticeTimer = window.setTimeout(() => {
+                notice.classList.remove("show");
+            }, 2800);
+        }
+
+        shareButton?.addEventListener("click", async () => {
+            const shareData = {
+                title: "Swayphics | Digital Business Card",
+                text: "Connect with Swayphics.",
+                url: window.location.href
+            };
+
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                    return;
+                }
+
+                await navigator.clipboard.writeText(window.location.href);
+                showNotice("Card link copied.");
+            } catch (error) {
+                if (error?.name !== "AbortError") {
+                    showNotice("Copy this page link to share the card.");
+                }
+            }
+        });
+    </script>
+</body>
+</html>
