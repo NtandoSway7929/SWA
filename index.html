@@ -18695,7 +18695,11 @@ function startSelectedWork3DRotation() {
    CONTACT FORM BACKGROUND VIDEO
    ========================================================= */
 
-const CONTACT_SECTION_VIDEO_URL = "contact-section-video.mp4";
+const CONTACT_SECTION_VIDEO_URL =
+    "contact-section-video.mp4";
+
+const CONTACT_SECTION_VIDEO_MOBILE_URL =
+    "contact-section-video-mobile.mp4";
 
 function setupContactFormBackgroundVideo() {
 
@@ -18711,27 +18715,107 @@ function setupContactFormBackgroundVideo() {
 
     if (
         !video ||
-        !section ||
-        !CONTACT_SECTION_VIDEO_URL
+        !section
     ) {
         return;
     }
 
-    const videoURL =
+    const desktopURL =
         getSafePortfolioURL(
             CONTACT_SECTION_VIDEO_URL
         );
 
-    if (!videoURL) {
+    const mobileURL =
+        getSafePortfolioURL(
+            CONTACT_SECTION_VIDEO_MOBILE_URL
+        );
+
+    if (!desktopURL) {
         return;
     }
 
-    video.src = videoURL;
-    video.muted = true;
-    video.defaultMuted = true;
-    video.playsInline = true;
-    video.autoplay = true;
-    video.loop = true;
+    const mobileMediaQuery =
+        window.matchMedia(
+            "(max-width: 700px)"
+        );
+
+    let usingMobileVideo =
+        false;
+
+    function getPreferredVideoURL() {
+
+        const shouldUseMobile =
+            mobileMediaQuery.matches &&
+            Boolean(mobileURL);
+
+        usingMobileVideo =
+            shouldUseMobile;
+
+        return shouldUseMobile
+            ? mobileURL
+            : desktopURL;
+    }
+
+    function applyVideoSource() {
+
+        const preferredURL =
+            getPreferredVideoURL();
+
+        if (
+            !preferredURL ||
+            video.src === preferredURL
+        ) {
+            return;
+        }
+
+        video.src =
+            preferredURL;
+
+        video.load();
+    }
+
+    video.muted =
+        true;
+
+    video.defaultMuted =
+        true;
+
+    video.playsInline =
+        true;
+
+    video.autoplay =
+        true;
+
+    video.loop =
+        true;
+
+    video.onerror =
+        () => {
+
+            /*
+             * The mobile asset is optional until it is
+             * present in the repository. If it cannot load,
+             * immediately fall back to the proven desktop
+             * video instead of leaving the CTA blank.
+             */
+            if (
+                usingMobileVideo &&
+                video.src !== desktopURL
+            ) {
+
+                usingMobileVideo =
+                    false;
+
+                video.src =
+                    desktopURL;
+
+                video.load();
+
+                return;
+            }
+        };
+
+    applyVideoSource();
 
     const playVideo =
         () => {
