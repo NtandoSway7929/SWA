@@ -686,3 +686,351 @@ end
 $$;
 
 notify pgrst, 'reload schema';
+
+-- Clients: assignment and creation.
+create or replace function public.notify_client_events()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if tg_op = 'INSERT' then
+        if new.assigned_to is not null then
+            perform public.create_admin_notification(
+                new.assigned_to, auth.uid(), 'info', 'client.created',
+                'New client assigned to you',
+                coalesce(new.business_name, 'New client'),
+                'client', new.id, 'clients',
+                'client-created:' || new.id::text || ':' || new.assigned_to::text
+            );
+        else
+            perform public.notify_admins(
+                auth.uid(), 'info', 'client.created',
+                'New client added',
+                coalesce(new.business_name, 'New client'),
+                'client', new.id, 'clients',
+                'client-created:' || new.id::text,
+                true
+            );
+        end if;
+    elsif tg_op = 'UPDATE'
+       and new.assigned_to is distinct from old.assigned_to
+       and new.assigned_to is not null then
+        perform public.create_admin_notification(
+            new.assigned_to, auth.uid(), 'info', 'client.assigned',
+            'Client assigned to you',
+            coalesce(new.business_name, 'Client'),
+            'client', new.id, 'clients',
+            'client-assigned:' || new.id::text || ':' || new.assigned_to::text
+        );
+    end if;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists admin_notify_clients on public.clients;
+create trigger admin_notify_clients
+after insert or update of assigned_to
+on public.clients
+for each row execute function public.notify_client_events();
+
+-- Follow-ups: new assignment and reassignment.
+create or replace function public.notify_followup_events()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if tg_op = 'INSERT'
+       and new.assigned_to is not null then
+        perform public.create_admin_notification(
+            new.assigned_to, auth.uid(), 'info', 'followup.created',
+            'New follow-up assigned to you',
+            coalesce(new.channel, 'Follow-up') ||
+            case when new.scheduled_for is not null
+                then ' · ' || to_char(new.scheduled_for, 'DD Mon')
+                else '' end,
+            'follow_up', new.id, 'followups',
+            'followup-created:' || new.id::text || ':' || new.assigned_to::text
+        );
+    elsif tg_op = 'UPDATE'
+       and new.assigned_to is distinct from old.assigned_to
+       and new.assigned_to is not null then
+        perform public.create_admin_notification(
+            new.assigned_to, auth.uid(), 'info', 'followup.assigned',
+            'Follow-up assigned to you',
+            coalesce(new.channel, 'Follow-up') ||
+            case when new.scheduled_for is not null
+                then ' · ' || to_char(new.scheduled_for, 'DD Mon')
+                else '' end,
+            'follow_up', new.id, 'followups',
+            'followup-assigned:' || new.id::text || ':' || new.assigned_to::text
+        );
+    end if;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists admin_notify_followups on public.follow_ups;
+create trigger admin_notify_followups
+after insert or update of assigned_to
+on public.follow_ups
+for each row execute function public.notify_followup_events();
+
+-- Invoices: important status transitions.
+create or replace function public.notify_invoice_events()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_assigned uuid;
+begin
+    if new.status is distinct from coalesce(old.status, '') then
+        select assigned_to into v_assigned
+        from public.clients
+        where id = new.client_id;
+
+        if new.status in ('paid','overdue') then
+            if v_assigned is not null then
+                perform public.create_admin_notification(
+                    v_assigned, auth.uid(),
+                    case when new.status = 'paid' then 'success' else 'danger' end,
+                    'invoice.' || new.status,
+                    case when new.status = 'paid'
+                        then 'Invoice paid'
+                        else 'Invoice overdue' end,
+                    coalesce(new.invoice_number, 'Invoice'),
+                    'invoice', new.id, 'invoices',
+                    'invoice-status:' || new.id::text || ':' || new.status
+                );
+            else
+                perform public.notify_admins(
+                    auth.uid(),
+                    case when new.status = 'paid' then 'success' else 'danger' end,
+                    'invoice.' || new.status,
+                    case when new.status = 'paid'
+                        then 'Invoice paid'
+                        else 'Invoice overdue' end,
+                    coalesce(new.invoice_number, 'Invoice'),
+                    'invoice', new.id, 'invoices',
+                    'invoice-status:' || new.id::text || ':' || new.status,
+                    true
+                );
+            end if;
+        end if;
+    end if;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists admin_notify_invoices on public.invoices;
+create trigger admin_notify_invoices
+after update of status
+on public.invoices
+for each row execute function public.notify_invoice_events();
+
+-- Documents: notify the client manager when a new client/project document is uploaded.
+create or replace function public.notify_client_document()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_assigned uuid;
+begin
+    select assigned_to into v_assigned
+    from public.clients
+    where id = new.client_id;
+
+    if v_assigned is not null then
+        perform public.create_admin_notification(
+            v_assigned,
+            coalesce(new.uploaded_by, auth.uid()),
+            'info',
+            'document.uploaded',
+            'New client document',
+            coalesce(new.file_name, 'A document') || ' was uploaded.',
+            'document', new.id, 'documents',
+            'document-uploaded:' || new.id::text || ':' || v_assigned::text
+        );
+    else
+        perform public.notify_admins(
+            coalesce(new.uploaded_by, auth.uid()),
+            'info',
+            'document.uploaded',
+            'New client document',
+            coalesce(new.file_name, 'A document') || ' was uploaded.',
+            'document', new.id, 'documents',
+            'document-uploaded:' || new.id::text,
+            true
+        );
+    end if;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists admin_notify_client_documents on public.client_documents;
+create trigger admin_notify_client_documents
+after insert on public.client_documents
+for each row execute function public.notify_client_document();
+
+-- Social publishing: surface failures immediately and successful publishing to the creator/owners.
+create or replace function public.notify_social_post_events()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if new.status is distinct from coalesce(old.status, '')
+       and new.status in ('published','failed') then
+        if new.created_by is not null then
+            perform public.create_admin_notification(
+                new.created_by, auth.uid(),
+                case when new.status = 'published' then 'success' else 'danger' end,
+                'social.' || new.status,
+                case when new.status = 'published'
+                    then 'Social post published'
+                    else 'Social post failed' end,
+                coalesce(new.title, new.caption, 'Social post'),
+                'social_post', new.id, 'content',
+                'social-post:' || new.id::text || ':' || new.status
+            );
+        else
+            perform public.notify_admins(
+                auth.uid(),
+                case when new.status = 'published' then 'success' else 'danger' end,
+                'social.' || new.status,
+                case when new.status = 'published'
+                    then 'Social post published'
+                    else 'Social post failed' end,
+                coalesce(new.title, new.caption, 'Social post'),
+                'social_post', new.id, 'content',
+                'social-post:' || new.id::text || ':' || new.status,
+                false
+            );
+        end if;
+    end if;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists admin_notify_social_posts on public.social_posts;
+create trigger admin_notify_social_posts
+after update of status
+on public.social_posts
+for each row execute function public.notify_social_post_events();
+
+-- Lead assessments: alert the assigned member when someone else updates research/assessment data.
+create or replace function public.notify_lead_assessment()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if new.assessment_updated_at is distinct from old.assessment_updated_at
+       and new.assessment_updated_by is not null
+       and new.assigned_to is not null then
+        perform public.create_admin_notification(
+            new.assigned_to,
+            new.assessment_updated_by,
+            'info',
+            'lead.assessment_updated',
+            'Lead assessment updated',
+            coalesce(new.business_name, 'Lead') || ' has new assessment information.',
+            'lead', new.id, 'leads',
+            'lead-assessment:' || new.id::text || ':' ||
+            coalesce(new.assessment_updated_at::text, now()::text)
+        );
+    end if;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists admin_notify_lead_assessment on public.leads;
+create trigger admin_notify_lead_assessment
+after update of assessment_updated_at, assessment_updated_by
+on public.leads
+for each row execute function public.notify_lead_assessment();
+
+-- Quote status "sent" is also useful because it starts the client-response clock.
+drop trigger if exists admin_notify_quotes on public.quotes;
+create trigger admin_notify_quotes
+after insert or update of status
+on public.quotes
+for each row execute function public.notify_quote_events();
+
+-- Quote notification function: add sent status handling to the existing trigger.
+create or replace function public.notify_quote_events()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_assigned uuid;
+    v_title text;
+begin
+    if tg_op = 'INSERT' or new.status is distinct from coalesce(old.status, '') then
+        select assigned_to into v_assigned
+        from public.clients
+        where id = new.client_id;
+
+        v_title := case
+            when new.status = 'sent' then 'Quote sent'
+            when new.status = 'accepted' then 'Quote accepted'
+            when new.status = 'rejected' then 'Quote rejected'
+            else null
+        end;
+
+        if v_title is not null then
+            if v_assigned is not null then
+                perform public.create_admin_notification(
+                    v_assigned, auth.uid(),
+                    case
+                        when new.status = 'accepted' then 'success'
+                        when new.status = 'rejected' then 'warning'
+                        else 'info'
+                    end,
+                    'quote.' || new.status,
+                    v_title,
+                    coalesce(new.quote_number, new.title, 'Quote'),
+                    'quote', new.id, 'quotes',
+                    'quote-status:' || new.id::text || ':' || new.status
+                );
+            else
+                perform public.notify_admins(
+                    auth.uid(),
+                    case
+                        when new.status = 'accepted' then 'success'
+                        when new.status = 'rejected' then 'warning'
+                        else 'info'
+                    end,
+                    'quote.' || new.status,
+                    v_title,
+                    coalesce(new.quote_number, new.title, 'Quote'),
+                    'quote', new.id, 'quotes',
+                    'quote-status:' || new.id::text || ':' || new.status,
+                    true
+                );
+            end if;
+        end if;
+    end if;
+
+    return new;
+end;
+$$;
+
+notify pgrst, 'reload schema';
