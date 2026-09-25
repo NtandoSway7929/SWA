@@ -10287,7 +10287,8 @@ function simpleBars(items, color) {
         recipientEmail,
         subject,
         message,
-        threadOptions
+        threadOptions,
+        proposalType
     ) {
         const recipientMatch =
             String(recipientEmail || "").match(
@@ -10315,6 +10316,8 @@ function simpleBars(items, color) {
                 subject,
             message:
                 message,
+            proposal_type:
+                proposalType || undefined,
             in_reply_to:
                 thread.in_reply_to ||
                 undefined,
@@ -11789,6 +11792,21 @@ function simpleBars(items, color) {
                                 '<div class="sway-email-recipient-preview" id="sway-email-recipient-preview">Select a recipient to continue.</div>'
                             )
                     ) +
+                    (
+                        isReply
+                            ? ""
+                            : '<div class="sway-email-field">' +
+                                '<div class="sway-email-label-row">' +
+                                    '<label for="sway-email-proposal-type">Proposal type</label>' +
+                                    '<span>Optional visual</span>' +
+                                "</div>" +
+                                '<select id="sway-email-proposal-type">' +
+                                    '<option value="not-website-related">Not Website-Related</option>' +
+                                    '<option value="improv-website">Improv. Website</option>' +
+                                    '<option value="no-website">No Website</option>' +
+                                "</select>" +
+                            "</div>"
+                    ) +
                     '<div class="sway-email-field">' +
                         '<div class="sway-email-label-row">' +
                             '<label for="sway-email-subject">Subject</label>' +
@@ -11867,6 +11885,11 @@ function simpleBars(items, color) {
                 "#sway-email-message"
             );
 
+        const proposalTypeInput =
+            modal.querySelector(
+                "#sway-email-proposal-type"
+            );
+
         const sendButton =
             modal.querySelector(
                 "#sway-email-send-button"
@@ -11877,6 +11900,10 @@ function simpleBars(items, color) {
 
         let selectedIdState =
             selectedId;
+
+        let proposalTypeState =
+            proposalTypeInput?.value ||
+            "not-website-related";
 
         let lastAutoSubject =
             replySubject;
@@ -12049,6 +12076,17 @@ function simpleBars(items, color) {
             }
         );
 
+        if (proposalTypeInput) {
+            proposalTypeInput.addEventListener(
+                "change",
+                function () {
+                    proposalTypeState =
+                        proposalTypeInput.value ||
+                        "not-website-related";
+                }
+            );
+        }
+
         form.addEventListener(
             "submit",
             async function (event) {
@@ -12136,7 +12174,10 @@ function simpleBars(items, color) {
                             targetEmail,
                             subject,
                             message,
-                            threadOptions
+                            threadOptions,
+                            isReply
+                                ? "not-website-related"
+                                : proposalTypeState
                         );
 
                     modal.remove();
