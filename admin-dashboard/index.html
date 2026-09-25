@@ -6130,6 +6130,45 @@
         }
     </style>
 
+    <style id="sway-insight-chart-typography">
+        /* Sharper chart typography for the Insights workspace. */
+        .sway-chart-y-label,
+        .sway-chart-axis-label {
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.01em !important;
+        }
+
+        .sway-chart-value-label {
+            font-size: 15px !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.005em !important;
+            paint-order: stroke !important;
+            stroke: rgba(255,255,255,0.92) !important;
+            stroke-width: 3.5px !important;
+            stroke-linejoin: round !important;
+        }
+
+        .sway-chart-point-group:focus-visible .sway-chart-value-label,
+        .sway-chart-point-group:hover .sway-chart-value-label,
+        .sway-chart-bar-group:focus-visible .sway-chart-value-label,
+        .sway-chart-bar-group:hover .sway-chart-value-label {
+            font-weight: 900 !important;
+        }
+
+        body.sway-dark-mode .sway-chart-value-label {
+            stroke: #0B1422 !important;
+        }
+
+        @media (max-width: 760px) {
+            .sway-chart-y-label,
+            .sway-chart-axis-label,
+            .sway-chart-value-label {
+                font-size: 14px !important;
+            }
+        }
+    </style>
+
     <style id="sway-mobile-header-search-fix">
         /* =====================================================
            MOBILE HEADER SEARCH
