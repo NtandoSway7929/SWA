@@ -59,7 +59,9 @@
         portalTokens: [],
         socialAccounts: [],
         socialPosts: [],
-        socialMetrics: []
+        socialMetrics: [],
+        adminNotifications: [],
+        notificationsAvailable: false
     };
 
     const navGroups = [
@@ -1269,6 +1271,15 @@
         state.announcements = results[9] || [];
         state.invoices = results[10] || [];
 
+        state.adminNotifications =
+            await optionalApi(
+                "/rest/v1/admin_notifications?select=*&order=created_at.desc&limit=100",
+                []
+            );
+
+        state.notificationsAvailable =
+            Array.isArray(state.adminNotifications);
+
         state.initialDataLoaded = true;
         state.initialDataLoading = false;
         state.initialDataError = null;
@@ -1319,6 +1330,33 @@
                 "/rest/v1/email_messages?select=*&order=received_at.desc&limit=150",
                 []
             );
+
+        try {
+            await api(
+                "/rest/v1/rpc/generate_admin_due_notifications",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Prefer": "return=minimal"
+                    }),
+                    body: "{}"
+                }
+            );
+        } catch (error) {
+            console.warn(
+                "Persistent due-notification generation is unavailable.",
+                error
+            );
+        }
+
+        state.adminNotifications =
+            await optionalApi(
+                "/rest/v1/admin_notifications?select=*&order=created_at.desc&limit=100",
+                []
+            );
+
+        state.notificationsAvailable =
+            Array.isArray(state.adminNotifications);
 
         saveWorkspaceSnapshot();
     }
@@ -2102,14 +2140,12 @@
                 )
             );
         } catch (error) {
-            // Notifications remain functional even if localStorage is unavailable.
+            // Fallback only. Persistent notifications use Supabase.
         }
     }
 
     function notificationDateValue(item) {
-        if (!item) {
-            return "";
-        }
+        if (!item) return "";
 
         return (
             item.created_at ||
@@ -2135,37 +2171,22 @@
             : 0;
     }
 
-    function workspaceNotifications() {
+    function fallbackWorkspaceNotifications() {
         const today = dashboardTodayISO();
         const notifications = [];
 
         state.enquiries.forEach(function (item) {
-            if (item.status !== "new") {
-                return;
-            }
+            if (item.status !== "new") return;
 
             notifications.push({
-                key:
-                    "enquiry:" +
-                    String(item.id) +
-                    ":new",
+                key: "enquiry:" + String(item.id) + ":new",
                 type: "info",
                 icon: "?",
                 title: "New website enquiry",
                 detail:
-                    (
-                        item.business_name ||
-                        item.name ||
-                        "Website visitor"
-                    ) +
-                    (
-                        item.service
-                            ? " · " +
-                              formatDisplayText(item.service)
-                            : ""
-                    ),
-                timestamp:
-                    notificationTimeValue(item),
+                    (item.business_name || item.name || "Website visitor") +
+                    (item.service ? " · " + formatDisplayText(item.service) : ""),
+                timestamp: notificationTimeValue(item),
                 view: "enquiries"
             });
         });
@@ -2175,40 +2196,20 @@
                 item.status === "completed" ||
                 item.assigned_to !== state.currentUser.id ||
                 !item.due_date
-            ) {
-                return;
-            }
+            ) return;
 
             const due = dashboardDateKey(item.due_date);
-
-            if (!due || due > today) {
-                return;
-            }
-
-            const overdue = due < today;
+            if (!due || due > today) return;
 
             notifications.push({
-                key:
-                    "task:" +
-                    String(item.id) +
-                    ":" +
-                    due,
-                type: overdue ? "danger" : "warning",
+                key: "task:" + String(item.id) + ":" + due,
+                type: due < today ? "danger" : "warning",
                 icon: "T",
-                title:
-                    overdue
-                        ? "Task overdue"
-                        : "Task due today",
+                title: due < today ? "Task overdue" : "Task due today",
                 detail:
                     (item.title || "Untitled task") +
-                    (
-                        item.client_id
-                            ? " · " +
-                              clientName(item.client_id)
-                            : ""
-                    ),
-                timestamp:
-                    notificationTimeValue(item.due_date),
+                    (item.client_id ? " · " + clientName(item.client_id) : ""),
+                timestamp: notificationTimeValue(item.due_date),
                 view: "tasks"
             });
         });
@@ -2218,43 +2219,25 @@
                 item.status !== "pending" ||
                 item.assigned_to !== state.currentUser.id ||
                 !item.scheduled_for
-            ) {
-                return;
-            }
+            ) return;
 
-            const scheduled =
-                dashboardDateKey(item.scheduled_for);
+            const scheduled = dashboardDateKey(item.scheduled_for);
+            if (!scheduled || scheduled > today) return;
 
-            if (
-                !scheduled ||
-                scheduled > today
-            ) {
-                return;
-            }
-
-            const overdue = scheduled < today;
             const contact =
                 item.client_id
                     ? clientName(item.client_id)
                     : leadName(item.lead_id);
 
             notifications.push({
-                key:
-                    "followup:" +
-                    String(item.id) +
-                    ":" +
-                    scheduled,
-                type: overdue ? "danger" : "warning",
+                key: "followup:" + String(item.id) + ":" + scheduled,
+                type: scheduled < today ? "danger" : "warning",
                 icon: "F",
-                title:
-                    overdue
-                        ? "Follow-up overdue"
-                        : "Follow-up due today",
-                detail:
-                    contact ||
-                    "Contact needs follow-up",
-                timestamp:
-                    notificationTimeValue(item.scheduled_for),
+                title: scheduled < today
+                    ? "Follow-up overdue"
+                    : "Follow-up due today",
+                detail: contact || "Contact needs follow-up",
+                timestamp: notificationTimeValue(item.scheduled_for),
                 view: "followups"
             });
         });
@@ -2264,9 +2247,7 @@
                 invoice.archived === true ||
                 invoice.status === "cancelled" ||
                 invoice.status === "paid"
-            ) {
-                return;
-            }
+            ) return;
 
             const outstanding = Number(
                 invoice.amount_outstanding != null
@@ -2274,207 +2255,74 @@
                     : invoice.total || 0
             );
 
-            if (outstanding <= 0) {
-                return;
-            }
+            if (outstanding <= 0) return;
 
-            const due =
-                dashboardDateKey(invoice.due_date);
+            const due = dashboardDateKey(invoice.due_date);
 
-            if (
-                invoice.status === "overdue" ||
-                (due && due < today)
-            ) {
+            if (invoice.status === "overdue" || (due && due < today)) {
                 notifications.push({
-                    key:
-                        "invoice:" +
-                        String(invoice.id) +
-                        ":overdue:" +
-                        due +
-                        ":" +
-                        outstanding,
+                    key: "invoice:" + String(invoice.id) + ":overdue:" + due,
                     type: "danger",
                     icon: "I",
                     title: "Invoice overdue",
                     detail:
-                        (
-                            invoice.invoice_number ||
-                            "Outstanding invoice"
-                        ) +
-                        " · " +
-                        clientName(invoice.client_id) +
-                        " · " +
-                        money(outstanding),
-                    timestamp:
-                        notificationTimeValue(
-                            invoice.due_date ||
-                            invoice.updated_at
-                        ),
+                        (invoice.invoice_number || "Outstanding invoice") +
+                        " · " + clientName(invoice.client_id) +
+                        " · " + money(outstanding),
+                    timestamp: notificationTimeValue(invoice.due_date || invoice.updated_at),
                     view: "invoices"
                 });
-
-                return;
-            }
-
-            if (due === today) {
+            } else if (due === today) {
                 notifications.push({
-                    key:
-                        "invoice:" +
-                        String(invoice.id) +
-                        ":today:" +
-                        outstanding,
+                    key: "invoice:" + String(invoice.id) + ":today",
                     type: "warning",
                     icon: "I",
                     title: "Invoice due today",
                     detail:
-                        (
-                            invoice.invoice_number ||
-                            "Invoice"
-                        ) +
-                        " · " +
-                        clientName(invoice.client_id) +
-                        " · " +
-                        money(outstanding),
-                    timestamp:
-                        notificationTimeValue(
-                            invoice.due_date
-                        ),
+                        (invoice.invoice_number || "Invoice") +
+                        " · " + clientName(invoice.client_id) +
+                        " · " + money(outstanding),
+                    timestamp: notificationTimeValue(invoice.due_date),
                     view: "invoices"
                 });
             }
         });
 
-        state.portalRequests.forEach(function (item) {
-            if (item.status !== "new") {
-                return;
-            }
+        return notifications;
+    }
 
-            notifications.push({
-                key:
-                    "portal-request:" +
-                    String(item.id) +
-                    ":" +
-                    String(item.status),
-                type: "info",
-                icon: "R",
-                title: "New client portal request",
-                detail:
-                    clientName(item.client_id) +
-                    " · " +
-                    (item.subject || "Client request"),
-                timestamp:
-                    notificationTimeValue(item.created_at),
-                view: "portal-requests"
-            });
-        });
+    function workspaceNotifications() {
+        if (
+            state.notificationsAvailable &&
+            Array.isArray(state.adminNotifications)
+        ) {
+            return state.adminNotifications.map(function (item) {
+                return {
+                    key: String(item.id),
+                    type: item.type || "info",
+                    icon:
+                        item.type === "success"
+                            ? "✓"
+                            : item.type === "danger"
+                                ? "!"
+                                : item.type === "warning"
+                                    ? "!"
+                                    : "•",
+                    title: item.title || "Notification",
+                    detail: item.message || "",
+                    timestamp: notificationTimeValue(item),
+                    view: item.view || "overview",
+                    entityType: item.entity_type || "",
+                    entityId: item.entity_id || ""
+                };
+            }).slice(0, 50);
+        }
 
-        state.quotes.forEach(function (quote) {
-            if (quote.status !== "sent") {
-                return;
-            }
-
-            const validUntil =
-                dashboardDateKey(quote.valid_until);
-
-            const expired =
-                validUntil &&
-                validUntil < today;
-
-            notifications.push({
-                key:
-                    "quote:" +
-                    String(quote.id) +
-                    ":" +
-                    (validUntil || "sent"),
-                type: expired ? "warning" : "info",
-                icon: "Q",
-                title:
-                    expired
-                        ? "Quote validity expired"
-                        : "Quote awaiting response",
-                detail:
-                    (
-                        quote.quote_number ||
-                        quote.title ||
-                        "Quote"
-                    ) +
-                    " · " +
-                    clientName(quote.client_id) +
-                    " · " +
-                    money(quote.amount),
-                timestamp:
-                    notificationTimeValue(
-                        quote.updated_at ||
-                        quote.created_at ||
-                        quote.valid_until
-                    ),
-                view: "quotes"
-            });
-        });
-
-        const recentPaymentCutoff =
-            Date.now() -
-            (3 * 24 * 60 * 60 * 1000);
-
-        state.payments.forEach(function (payment) {
-            const timestamp =
-                notificationTimeValue(payment);
-
-            if (
-                !timestamp ||
-                timestamp < recentPaymentCutoff
-            ) {
-                return;
-            }
-
-            notifications.push({
-                key:
-                    "payment:" +
-                    String(payment.id) +
-                    ":" +
-                    String(payment.amount),
-                type: "success",
-                icon: "✓",
-                title: "Payment received",
-                detail:
-                    (
-                        payment.reference ||
-                        payment.payment_reference ||
-                        "Client payment"
-                    ) +
-                    " · " +
-                    money(payment.amount) +
-                    (
-                        payment.client_id
-                            ? " · " +
-                              clientName(payment.client_id)
-                            : ""
-                    ),
-                timestamp: timestamp,
-                view: "payments"
-            });
-        });
-
-        const priority = {
-            danger: 0,
-            warning: 1,
-            info: 2,
-            success: 3
-        };
-
-        notifications.sort(function (a, b) {
-            const priorityDifference =
-                (priority[a.type] || 9) -
-                (priority[b.type] || 9);
-
-            if (priorityDifference !== 0) {
-                return priorityDifference;
-            }
-
-            return b.timestamp - a.timestamp;
-        });
-
-        return notifications.slice(0, 24);
+        return fallbackWorkspaceNotifications()
+            .sort(function (a, b) {
+                return b.timestamp - a.timestamp;
+            })
+            .slice(0, 24);
     }
 
     function notificationIconClass(type) {
@@ -2512,6 +2360,20 @@
 
         const unread =
             notifications.filter(function (item) {
+                if (
+                    state.notificationsAvailable &&
+                    state.adminNotifications.some(function (notification) {
+                        return String(notification.id) === String(item.key);
+                    })
+                ) {
+                    const stored =
+                        state.adminNotifications.find(function (notification) {
+                            return String(notification.id) === String(item.key);
+                        });
+
+                    return !stored.is_read;
+                }
+
                 return !readKeys.has(item.key);
             }).length;
 
@@ -2534,8 +2396,17 @@
 
         list.innerHTML =
             notifications.map(function (item) {
+                const storedNotification =
+                    state.notificationsAvailable
+                        ? state.adminNotifications.find(function (notification) {
+                            return String(notification.id) === String(item.key);
+                        })
+                        : null;
+
                 const isRead =
-                    readKeys.has(item.key);
+                    storedNotification
+                        ? storedNotification.is_read === true
+                        : readKeys.has(item.key);
 
                 return (
                     '<button type="button" class="sway-notification-item ' +
@@ -2623,18 +2494,82 @@
         }
     }
 
-    function markNotificationRead(key) {
-        const keys =
-            notificationReadKeys();
+    async function markNotificationRead(key) {
+        const stringKey = String(key);
 
-        keys.add(String(key));
+        if (state.notificationsAvailable) {
+            try {
+                await api(
+                    "/rest/v1/admin_notifications?id=eq." +
+                    encodeURIComponent(stringKey),
+                    {
+                        method: "PATCH",
+                        headers: headers({
+                            "Prefer": "return=minimal"
+                        }),
+                        body: JSON.stringify({
+                            is_read: true,
+                            read_at: new Date().toISOString()
+                        })
+                    }
+                );
+
+                state.adminNotifications =
+                    state.adminNotifications.map(function (item) {
+                        return String(item.id) === stringKey
+                            ? Object.assign({}, item, {
+                                is_read: true,
+                                read_at: new Date().toISOString()
+                            })
+                            : item;
+                    });
+
+                renderNotificationPanel();
+                return;
+            } catch (error) {
+                console.warn("Unable to mark persistent notification as read.", error);
+            }
+        }
+
+        const keys = notificationReadKeys();
+        keys.add(stringKey);
         saveNotificationReadKeys(keys);
         renderNotificationPanel();
     }
 
-    function markAllNotificationsRead() {
-        const keys =
-            notificationReadKeys();
+    async function markAllNotificationsRead() {
+        if (state.notificationsAvailable) {
+            try {
+                await api(
+                    "/rest/v1/admin_notifications?is_read=eq.false",
+                    {
+                        method: "PATCH",
+                        headers: headers({
+                            "Prefer": "return=minimal"
+                        }),
+                        body: JSON.stringify({
+                            is_read: true,
+                            read_at: new Date().toISOString()
+                        })
+                    }
+                );
+
+                state.adminNotifications =
+                    state.adminNotifications.map(function (item) {
+                        return Object.assign({}, item, {
+                            is_read: true,
+                            read_at: new Date().toISOString()
+                        });
+                    });
+
+                renderNotificationPanel();
+                return;
+            } catch (error) {
+                console.warn("Unable to mark all persistent notifications as read.", error);
+            }
+        }
+
+        const keys = notificationReadKeys();
 
         workspaceNotifications().forEach(function (item) {
             keys.add(item.key);
@@ -5869,7 +5804,8 @@ function simpleBars(items, color) {
                 "testimonials",
                 "social_accounts",
                 "social_posts",
-                "social_metrics"
+                "social_metrics",
+                "admin_notifications"
             ];
 
             let refreshTimer = null;
