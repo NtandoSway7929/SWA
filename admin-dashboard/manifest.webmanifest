@@ -1,0 +1,10 @@
+{
+  "name": "Swayphics Admin",
+  "short_name": "Swayphics",
+  "start_url": "/admin-dashboard/",
+  "scope": "/admin-dashboard/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#002096",
+  "description": "Swayphics private administration dashboard."
+}
