@@ -6126,6 +6126,78 @@
         }
     </style>
 
+    <style id="sway-mobile-popup-overflow-fix">
+        /* Keep every dashboard popup usable within the mobile viewport. */
+        @media (max-width: 760px) {
+            .sway-modal,
+            .sway-client360-modal,
+            .portfolio-modal,
+            .sway-email-composer,
+            .sway-dialog-backdrop,
+            .sway-client360-backdrop,
+            .portfolio-modal-backdrop,
+            .sway-email-composer-backdrop {
+                height: 100dvh !important;
+                min-height: 100dvh !important;
+                max-height: 100dvh !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                box-sizing: border-box !important;
+            }
+
+            .sway-modal-card,
+            .sway-client360-card,
+            .portfolio-modal-card,
+            .sway-email-composer-card,
+            .sway-dialog {
+                max-height: calc(100dvh - 20px) !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                box-sizing: border-box !important;
+            }
+
+            .sway-quick-create-menu {
+                max-height: calc(100dvh - 92px) !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                box-sizing: border-box !important;
+            }
+
+            .sway-modal-card,
+            .sway-client360-card,
+            .portfolio-modal-card,
+            .sway-email-composer-card {
+                scrollbar-width: thin;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .sway-modal,
+            .sway-client360-modal,
+            .portfolio-modal,
+            .sway-email-composer {
+                padding: 8px !important;
+            }
+
+            .sway-modal-card,
+            .sway-client360-card,
+            .portfolio-modal-card,
+            .sway-email-composer-card {
+                max-height: calc(100dvh - 16px) !important;
+            }
+
+            .sway-quick-create-menu {
+                max-height: calc(100dvh - 78px) !important;
+            }
+        }
+    </style>
+
     <style id="sway-mobile-drawer-header-clearance">
         /* Keep the drawer and its opener completely below the full mobile header. */
         @media (max-width: 760px) {
