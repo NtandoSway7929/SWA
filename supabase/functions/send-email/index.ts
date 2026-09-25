@@ -124,6 +124,9 @@ function brandedEmailHtml(
         <strong style="color:#081533;">Swayphics</strong><br>
         info@swayphics.co.za · <a href="https://swayphics.co.za" style="color:#0152F4;text-decoration:none;">swayphics.co.za</a>
         <div style="margin-top:9px;">
+          Prefer WhatsApp? <a href="https://wa.me/27692087424?text=Hi%20Swayphics%2C%20I%27d%20like%20to%20chat%20about%20your%20proposal." style="color:#0152F4;text-decoration:none;font-weight:600;">Text Swayphics on WhatsApp</a>
+        </div>
+        <div style="margin-top:9px;">
           <a href="https://swayphics.co.za/privacy-policy/" style="color:#56627A;text-decoration:underline;">Privacy Policy</a>
           <span style="padding:0 6px;color:#B4BFCE;">·</span>
           <a href="https://swayphics.co.za/terms-and-conditions/" style="color:#56627A;text-decoration:underline;">Terms &amp; Conditions</a>
