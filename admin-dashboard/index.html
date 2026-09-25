@@ -6117,6 +6117,19 @@
         }
     </style>
 
+    <style id="sway-mobile-drawer-header-clearance">
+        /* Keep the open mobile drawer below the full two-row header. */
+        @media (max-width: 760px) {
+            .sway-workspace-sidebar {
+                top: 126px !important;
+                height: calc(100vh - 138px) !important;
+                height: calc(100dvh - 138px) !important;
+                max-height: calc(100vh - 138px) !important;
+                max-height: calc(100dvh - 138px) !important;
+            }
+        }
+    </style>
+
     <style id="sway-mobile-header-search-fix">
         /* =====================================================
            MOBILE HEADER SEARCH
