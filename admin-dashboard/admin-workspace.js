@@ -592,6 +592,30 @@
         }
     }
 
+    async function loadAdminNotifications() {
+        try {
+            const notifications =
+                await api(
+                    "/rest/v1/admin_notifications?select=*&order=created_at.desc&limit=100"
+                );
+
+            state.adminNotifications =
+                Array.isArray(notifications)
+                    ? notifications
+                    : [];
+
+            state.notificationsAvailable = true;
+        } catch (error) {
+            state.adminNotifications = [];
+            state.notificationsAvailable = false;
+            console.warn(
+                "Persistent admin notifications are unavailable; using dashboard fallback notifications.",
+                error
+            );
+        }
+    }
+
+
     function esc(value) {
         return String(value == null ? "" : value)
             .replace(/&/g, "&amp;")
@@ -1271,14 +1295,7 @@
         state.announcements = results[9] || [];
         state.invoices = results[10] || [];
 
-        state.adminNotifications =
-            await optionalApi(
-                "/rest/v1/admin_notifications?select=*&order=created_at.desc&limit=100",
-                []
-            );
-
-        state.notificationsAvailable =
-            Array.isArray(state.adminNotifications);
+        await loadAdminNotifications();
 
         state.initialDataLoaded = true;
         state.initialDataLoading = false;
@@ -1349,14 +1366,7 @@
             );
         }
 
-        state.adminNotifications =
-            await optionalApi(
-                "/rest/v1/admin_notifications?select=*&order=created_at.desc&limit=100",
-                []
-            );
-
-        state.notificationsAvailable =
-            Array.isArray(state.adminNotifications);
+        await loadAdminNotifications();
 
         saveWorkspaceSnapshot();
     }
