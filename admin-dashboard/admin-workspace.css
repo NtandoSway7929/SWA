@@ -6879,3 +6879,25 @@
         min-width: 0;
     }
 }
+
+/* Keep the notification centre visually centred on mobile screens. */
+@media (max-width: 760px) {
+    .admin-notification-panel {
+        position: fixed !important;
+        top: 112px !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: min(390px, calc(100vw - 28px)) !important;
+        max-width: calc(100vw - 28px) !important;
+        box-sizing: border-box !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .admin-notification-panel {
+        top: 108px !important;
+        width: calc(100vw - 18px) !important;
+        max-width: calc(100vw - 18px) !important;
+    }
+}
