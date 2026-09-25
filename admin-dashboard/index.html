@@ -9894,10 +9894,29 @@ portfolioForm.addEventListener(
             throw new Error("This browser does not support service workers.");
         }
 
-        return navigator.serviceWorker.register(
+        await navigator.serviceWorker.register(
             "sway-push-worker.js",
-            { scope: "./" }
+            {
+                scope: "./",
+                updateViaCache: "none"
+            }
         );
+
+        /*
+         * A successful register() call does not necessarily mean the
+         * service worker is already active. PushManager.subscribe() requires
+         * an active service worker registration, so explicitly wait for it.
+         */
+        const registration =
+            await navigator.serviceWorker.ready;
+
+        if (!registration.active) {
+            throw new Error(
+                "The Swayphics push service worker is not active yet. Please reload the page and try again."
+            );
+        }
+
+        return registration;
     }
 
     function bytesToBase64(bytes) {
