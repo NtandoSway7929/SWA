@@ -6130,6 +6130,80 @@
         }
     </style>
 
+    <style id="sway-insight-chart-visuals">
+        /* Make Insights feel like a live analytics product, not a static report. */
+        .sway-chart-stage {
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            background:
+                radial-gradient(circle at 84% 16%, rgba(1,82,244,0.09), transparent 34%),
+                linear-gradient(145deg, rgba(1,82,244,0.025), rgba(255,255,255,0.78));
+        }
+
+        .sway-chart-stage::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.28) 48%, transparent 58%);
+            transform: translateX(-120%);
+            animation: swayChartSheen 7s ease-in-out infinite;
+        }
+
+        .sway-chart-area {
+            opacity: 1;
+            transition: opacity 220ms ease;
+        }
+
+        .sway-chart-line {
+            filter: drop-shadow(0 4px 7px rgba(1,82,244,0.18));
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .sway-chart-point {
+            filter: drop-shadow(0 3px 6px rgba(1,82,244,0.22));
+            transition: r 180ms ease, filter 180ms ease;
+        }
+
+        .sway-chart-point-group:hover .sway-chart-point,
+        .sway-chart-point-group:focus-visible .sway-chart-point {
+            filter: drop-shadow(0 0 10px rgba(1,82,244,0.45));
+        }
+
+        .sway-chart-bar {
+            rx: 9px;
+            filter: drop-shadow(0 4px 7px rgba(1,82,244,0.13));
+            transition: opacity 180ms ease, transform 180ms ease;
+            transform-box: fill-box;
+            transform-origin: center bottom;
+        }
+
+        .sway-chart-bar-group:hover .sway-chart-bar,
+        .sway-chart-bar-group:focus-visible .sway-chart-bar {
+            opacity: 0.86;
+            transform: scaleY(1.035);
+        }
+
+        @keyframes swayChartSheen {
+            0%, 55% { transform: translateX(-120%); }
+            75%, 100% { transform: translateX(120%); }
+        }
+
+        body.sway-dark-mode .sway-chart-stage {
+            background:
+                radial-gradient(circle at 84% 16%, rgba(21,104,255,0.14), transparent 34%),
+                linear-gradient(145deg, rgba(10,24,44,0.92), rgba(11,20,34,0.96));
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sway-chart-stage::after {
+                animation: none !important;
+            }
+        }
+    </style>
+
     <style id="sway-insight-chart-typography">
         /* Sharper chart typography for the Insights workspace. */
         .sway-chart-y-label,
