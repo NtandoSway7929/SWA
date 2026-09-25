@@ -1,0 +1,1 @@
+window.SWAYPHICS_PUSH_PUBLIC_KEY = "BCWolnDzt19PU4mIpz_A-_egqc5ksNljuswqgKgr5IewaP84_bASwNp3f-Lvn8klL2WDTD4SWf25eswixga_RCQ";
