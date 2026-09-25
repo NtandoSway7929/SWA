@@ -4170,6 +4170,13 @@ function renderShell() {
                         '" role="img" aria-label="' +
                         esc(label) +
                         '">' +
+                        '<defs>' +
+                            '<linearGradient id="sway-insight-area-gradient" x1="0" y1="0" x2="0" y2="1">' +
+                                '<stop offset="0%" stop-color="#0152F4" stop-opacity="0.24"></stop>' +
+                                '<stop offset="65%" stop-color="#2C91FC" stop-opacity="0.08"></stop>' +
+                                '<stop offset="100%" stop-color="#77C1FC" stop-opacity="0"></stop>' +
+                            '</linearGradient>' +
+                        '</defs>' +
                         grid +
                         (
                             points.length > 1
@@ -4183,9 +4190,7 @@ function renderShell() {
                                   points[points.length - 1].x +
                                   "," +
                                   (top + plotHeight) +
-                                  '" fill="' +
-                                  color +
-                                  '" fill-opacity="0.045" class="sway-chart-area"></polygon>'
+                                  '" fill="url(#sway-insight-area-gradient)" class="sway-chart-area"></polygon>'
                                 : ""
                         ) +
                         '<line x1="' +
@@ -4201,7 +4206,7 @@ function renderShell() {
                             pointString +
                             '" fill="none" stroke="' +
                             color +
-                            '" class="sway-chart-line"></polyline>' +
+                            '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="sway-chart-line"></polyline>' +
                         pointMarks +
                         xLabels +
                     "</svg>" +
