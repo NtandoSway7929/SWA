@@ -6127,7 +6127,7 @@
     </style>
 
     <style id="sway-mobile-drawer-header-clearance">
-        /* Keep the open mobile drawer below the full two-row header. */
+        /* Keep the drawer and its opener completely below the full mobile header. */
         @media (max-width: 760px) {
             .sway-workspace-sidebar {
                 top: 126px !important;
@@ -6135,6 +6135,11 @@
                 height: calc(100dvh - 138px) !important;
                 max-height: calc(100vh - 138px) !important;
                 max-height: calc(100dvh - 138px) !important;
+            }
+
+            .sway-workspace-mobile-toggle {
+                top: 122px !important;
+                z-index: 6005 !important;
             }
         }
     </style>
