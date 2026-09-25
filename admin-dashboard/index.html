@@ -21,7 +21,7 @@
 
     <link rel="stylesheet" href="admin-workspace.css?v=dashboard-20260925-notifications-v4">
 
-    <link rel="icon" type="image/webp" href="../FIST.webp">
+    <link rel="manifest" href="manifest.webmanifest">\n    <meta name="theme-color" content="#002096">\n    <meta name="mobile-web-app-capable" content="yes">\n    <meta name="apple-mobile-web-app-capable" content="yes">\n    <meta name="apple-mobile-web-app-status-bar-style" content="default">\n    <script src="push-config.js"></script>\n\n    <link rel="icon" type="image/webp" href="../FIST.webp">
 
     <title>
         Swayphics Admin Dashboard
@@ -6848,6 +6848,66 @@
         }
     </style>
 
+
+    <style id="sway-admin-push-ui">
+        .sway-push-control {
+            margin: 0 16px 14px;
+            padding: 12px 13px;
+            border: 1px solid rgba(1,82,244,0.10);
+            border-radius: 14px;
+            background: rgba(1,82,244,0.035);
+        }
+        .sway-push-control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .sway-push-control-copy { min-width: 0; }
+        .sway-push-control-copy strong {
+            display: block;
+            color: var(--sway-dark);
+            font-size: 0.68rem;
+            font-weight: 800;
+        }
+        .sway-push-control-copy span {
+            display: block;
+            margin-top: 3px;
+            color: var(--text-muted);
+            font-size: 0.58rem;
+            line-height: 1.45;
+        }
+        .sway-push-enable {
+            flex: 0 0 auto;
+            padding: 8px 10px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--sway-blue);
+            color: #FFFFFF;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.58rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .sway-push-enable[disabled] {
+            opacity: 0.58;
+            cursor: default;
+        }
+        body.sway-dark-mode .sway-push-control {
+            border-color: rgba(119,193,252,0.12);
+            background: rgba(119,193,252,0.045);
+        }
+        body.sway-dark-mode .sway-push-control-copy strong { color: #F4F7FF; }
+        body.sway-dark-mode .sway-push-control-copy span { color: #9EADC1; }
+        @media (max-width: 420px) {
+            .sway-push-control-row {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .sway-push-enable { width: 100%; }
+        }
+    </style>
+
 </head>
 
 
@@ -6966,6 +7026,16 @@
                     id="sway-notification-panel"
                     hidden
                 >
+                    <div class="sway-push-control" id="sway-push-control">
+                        <div class="sway-push-control-row">
+                            <div class="sway-push-control-copy">
+                                <strong>Phone notifications</strong>
+                                <span id="sway-push-status">Get important Swayphics alerts outside the dashboard.</span>
+                            </div>
+                            <button type="button" class="sway-push-enable" id="sway-push-enable">Enable</button>
+                        </div>
+                    </div>
+
                     <div class="admin-notification-head">
                         <div>
                             <span class="admin-notification-kicker">Workspace</span>
@@ -9793,6 +9863,265 @@ portfolioForm.addEventListener(
         );
     } else {
         bindSwayphicsNotificationButton();
+    }
+})();
+</script>
+
+
+<script>
+(function () {
+    const PUSH_PUBLIC_KEY =
+        window.SWAYPHICS_PUSH_PUBLIC_KEY || "";
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = "=".repeat((4 - base64String.length % 4) % 4);
+        const base64 =
+            (base64String + padding)
+                .replace(/-/g, "+")
+                .replace(/_/g, "/");
+
+        const rawData = window.atob(base64);
+        return Uint8Array.from(
+            Array.prototype.map.call(
+                rawData,
+                character => character.charCodeAt(0)
+            )
+        );
+    }
+
+    async function registerPushWorker() {
+        if (!("serviceWorker" in navigator)) {
+            throw new Error("This browser does not support service workers.");
+        }
+
+        return navigator.serviceWorker.register(
+            "sway-push-worker.js",
+            { scope: "./" }
+        );
+    }
+
+    function bytesToBase64(bytes) {
+        let binary = "";
+        const chunkSize = 0x8000;
+
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+            binary += String.fromCharCode(
+                ...bytes.subarray(i, i + chunkSize)
+            );
+        }
+
+        return window.btoa(binary);
+    }
+
+    async function savePushSubscription(subscription, userId) {
+        const token = localStorage.getItem(
+            "swayphics_admin_access_token"
+        );
+
+        const p256dhKey = subscription.getKey("p256dh");
+        const authKey = subscription.getKey("auth");
+
+        if (!p256dhKey || !authKey) {
+            throw new Error("The browser did not provide the required push keys.");
+        }
+
+        const response = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/admin_push_subscriptions?on_conflict=user_id,endpoint",
+            {
+                method: "POST",
+                headers: {
+                    apikey: SUPABASE_PUBLISHABLE_KEY,
+                    Authorization: "Bearer " + token,
+                    "Content-Type": "application/json",
+                    Prefer: "resolution=merge-duplicates,return=minimal"
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    endpoint: subscription.endpoint,
+                    p256dh: bytesToBase64(new Uint8Array(p256dhKey)),
+                    auth: bytesToBase64(new Uint8Array(authKey)),
+                    user_agent: navigator.userAgent
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                "Unable to save push subscription (" +
+                response.status +
+                ")."
+            );
+        }
+    }
+
+    function setPushStatus(message, enabled) {
+        const status = document.getElementById("sway-push-status");
+        const button = document.getElementById("sway-push-enable");
+
+        if (status) status.textContent = message;
+
+        if (button && enabled) {
+            button.textContent = "Enabled";
+            button.disabled = true;
+        }
+    }
+
+    async function getCurrentUser() {
+        const token = localStorage.getItem(
+            "swayphics_admin_access_token"
+        );
+
+        const response = await fetch(
+            SUPABASE_URL + "/auth/v1/user",
+            {
+                headers: {
+                    apikey: SUPABASE_PUBLISHABLE_KEY,
+                    Authorization: "Bearer " + token
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Unable to identify the current admin account.");
+        }
+
+        const user = await response.json();
+
+        if (!user?.id) {
+            throw new Error("Unable to identify the current admin account.");
+        }
+
+        return user;
+    }
+
+    async function enableSwayphicsPush() {
+        const button = document.getElementById("sway-push-enable");
+
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Enabling...";
+        }
+
+        try {
+            if (!PUSH_PUBLIC_KEY) {
+                throw new Error("Push notifications are not configured yet.");
+            }
+
+            if (!("Notification" in window)) {
+                throw new Error("This browser does not support notifications.");
+            }
+
+            const permission =
+                await Notification.requestPermission();
+
+            if (permission !== "granted") {
+                throw new Error("Notification permission was not granted.");
+            }
+
+            const registration =
+                await registerPushWorker();
+
+            const existingSubscription =
+                await registration.pushManager.getSubscription();
+
+            const subscription =
+                existingSubscription ||
+                await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey:
+                        urlBase64ToUint8Array(PUSH_PUBLIC_KEY)
+                });
+
+            const user = await getCurrentUser();
+
+            await savePushSubscription(
+                subscription,
+                user.id
+            );
+
+            setPushStatus(
+                "Enabled. Important alerts can now reach this device.",
+                true
+            );
+        } catch (error) {
+            console.error("Swayphics push setup failed:", error);
+
+            setPushStatus(
+                error?.message ||
+                    "Unable to enable phone notifications.",
+                false
+            );
+
+            if (button) {
+                button.disabled = false;
+                button.textContent = "Try again";
+            }
+        }
+    }
+
+    async function initialiseSwayphicsPush() {
+        const button = document.getElementById("sway-push-enable");
+
+        if (!button) return;
+
+        button.addEventListener(
+            "click",
+            enableSwayphicsPush
+        );
+
+        if (
+            !("serviceWorker" in navigator) ||
+            !("PushManager" in window)
+        ) {
+            button.disabled = true;
+            button.textContent = "Unavailable";
+
+            setPushStatus(
+                "Push notifications are not supported by this browser.",
+                false
+            );
+
+            return;
+        }
+
+        if (Notification.permission === "granted") {
+            try {
+                const registration =
+                    await registerPushWorker();
+
+                const subscription =
+                    await registration.pushManager.getSubscription();
+
+                if (subscription) {
+                    const user = await getCurrentUser();
+
+                    await savePushSubscription(
+                        subscription,
+                        user.id
+                    );
+
+                    setPushStatus(
+                        "Enabled. Important alerts can now reach this device.",
+                        true
+                    );
+                }
+            } catch (error) {
+                console.warn(
+                    "Unable to restore push subscription:",
+                    error
+                );
+            }
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener(
+            "DOMContentLoaded",
+            initialiseSwayphicsPush
+        );
+    } else {
+        initialiseSwayphicsPush();
     }
 })();
 </script>
