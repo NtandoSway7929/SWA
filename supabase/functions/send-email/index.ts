@@ -12,6 +12,7 @@ interface EmailRequest {
   recipient_email?: string;
   subject?: string;
   message?: string;
+  proposal_type?: "improv-website" | "no-website" | "not-website-related";
   in_reply_to?: string;
   references?: string;
   thread_id?: string;
@@ -58,7 +59,18 @@ function brandedEmailHtml(
   recipientName: string,
   businessName: string,
   message: string,
+  proposalType: "improv-website" | "no-website" | "not-website-related",
 ) {
+  const proposalImage =
+    proposalType === "improv-website"
+      ? '<img src="cid:swayphics-improvement-website" alt="Swayphics website improvement proposal" width="100%" style="display:block;width:100%;height:auto;border:0;border-radius:14px;" />'
+      : proposalType === "no-website"
+        ? '<img src="cid:swayphics-no-website" alt="Swayphics website proposal" width="100%" style="display:block;width:100%;height:auto;border:0;border-radius:14px;" />'
+        : "";
+
+  const proposalVisualMarkup = proposalImage
+    ? '<div style="margin:26px 0 28px;">' + proposalImage + "</div>"
+    : "";
   const normalizedRecipientName =
     cleanRecipientName(recipientName);
 
@@ -99,6 +111,8 @@ function brandedEmailHtml(
         </p>
 
         ${emailParagraphs(message)}
+
+        ${proposalVisualMarkup}
 
         <p style="margin:24px 0 0;font-size:15px;line-height:1.8;color:#56627A;">
           Kind Regards,<br>
@@ -202,6 +216,13 @@ Deno.serve(async (req) => {
 
     const message =
       String(body.message || "").trim();
+
+    const proposalType =
+      body.proposal_type === "improv-website"
+        ? "improv-website"
+        : body.proposal_type === "no-website"
+          ? "no-website"
+          : "not-website-related";
 
     if (
       !contactType ||
@@ -558,6 +579,23 @@ Deno.serve(async (req) => {
 
     const emailHeaders: Record<string, string> = {};
 
+    const proposalAttachments =
+      proposalType === "improv-website"
+        ? [{
+            path: "https://raw.githubusercontent.com/NtandoSway7929/SWA/main/Improvement%20Website%20Proposal.webp",
+            filename: "Improvement Website Proposal.webp",
+            content_id: "swayphics-improvement-website",
+            content_type: "image/webp",
+          }]
+        : proposalType === "no-website"
+          ? [{
+              path: "https://raw.githubusercontent.com/NtandoSway7929/SWA/main/No%20Website%20Proposal.webp",
+              filename: "No Website Proposal.webp",
+              content_id: "swayphics-no-website",
+              content_type: "image/webp",
+            }]
+          : [];
+
     if (inReplyTo) {
       emailHeaders["In-Reply-To"] = inReplyTo;
     }
@@ -590,7 +628,11 @@ Deno.serve(async (req) => {
                 recipientName,
                 recipientBusinessName,
                 message,
+                proposalType,
               ),
+            ...(proposalAttachments.length
+              ? { attachments: proposalAttachments }
+              : {}),
           }),
         },
       );
