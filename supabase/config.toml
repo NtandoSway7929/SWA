@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.request-client-review]
 verify_jwt = false
+
+[functions.send-admin-push]
+verify_jwt = false
