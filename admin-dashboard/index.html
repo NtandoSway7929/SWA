@@ -10079,6 +10079,20 @@ portfolioForm.addEventListener(
         }
     }
 
+    function isIosOrIpadOs() {
+        return (
+            /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+        );
+    }
+
+    function isInstalledWebApp() {
+        return (
+            window.matchMedia("(display-mode: standalone)").matches ||
+            window.navigator.standalone === true
+        );
+    }
+
     async function initialiseSwayphicsPush() {
         const button = document.getElementById("sway-push-enable");
 
@@ -10086,18 +10100,65 @@ portfolioForm.addEventListener(
 
         button.addEventListener(
             "click",
-            enableSwayphicsPush
+            async () => {
+                /*
+                 * iOS/iPadOS supports Web Push for Home Screen web apps,
+                 * not a normal Safari tab.
+                 */
+                if (isIosOrIpadOs() && !isInstalledWebApp()) {
+                    setPushStatus(
+                        "On iPhone/iPad, first add Swayphics to your Home Screen and open it from there. Then tap Enable again.",
+                        false
+                    );
+
+                    button.disabled = false;
+                    button.textContent = "Enable";
+                    return;
+                }
+
+                await enableSwayphicsPush();
+            }
         );
 
+        const hasServiceWorker =
+            "serviceWorker" in navigator;
+
+        const hasPushManager =
+            "PushManager" in window;
+
+        const hasNotifications =
+            "Notification" in window;
+
+        /*
+         * Do not label iPhone/iPad Safari as unsupported when the user is
+         * still viewing the ordinary browser tab. Safari supports Web Push
+         * once the site is installed as a Home Screen web app.
+         */
         if (
-            !("serviceWorker" in navigator) ||
-            !("PushManager" in window)
+            isIosOrIpadOs() &&
+            !isInstalledWebApp()
+        ) {
+            button.disabled = false;
+            button.textContent = "Enable";
+
+            setPushStatus(
+                "Safari on iPhone/iPad requires Swayphics to be added to your Home Screen before notifications can be enabled.",
+                false
+            );
+
+            return;
+        }
+
+        if (
+            !hasServiceWorker ||
+            !hasPushManager ||
+            !hasNotifications
         ) {
             button.disabled = true;
             button.textContent = "Unavailable";
 
             setPushStatus(
-                "Push notifications are not supported by this browser.",
+                "This browser does not expose the required Web Push features.",
                 false
             );
 
