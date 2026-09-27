@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Privacy Policy | Swayphics</title>
+
+    <meta
+        name="description"
+        content="Swayphics Privacy Policy. Learn how Swayphics collects, uses, protects and manages personal information."
+    >
+
+    <meta
+        name="robots"
+        content="index, follow"
+    >
+
+    <link rel="icon" type="image/webp" sizes="48x48" href="/FIST.webp?v=20260926">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --navy: #002096;
+            --blue: #0152F4;
+            --bright: #2C91FC;
+            --light-blue: #77C1FC;
+            --white: #FFFFFF;
+            --ink: #07132D;
+            --muted: #64708A;
+            --line: rgba(7, 19, 45, 0.10);
+            --surface: #F6F8FC;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+
+            background:
+                var(--white);
+
+            color:
+                var(--ink);
+
+            line-height:
+                1.7;
+        }
+
+        a {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        a:hover {
+            text-decoration:
+                underline;
+        }
+
+        .legal-nav {
+            position:
+                sticky;
+
+            top:
+                0;
+
+            z-index:
+                100;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                space-between;
+
+            padding:
+                18px clamp(22px, 5vw, 72px);
+
+            background:
+                rgba(255,255,255,0.88);
+
+            backdrop-filter:
+                blur(18px);
+
+            -webkit-backdrop-filter:
+                blur(18px);
+
+            border-bottom:
+                1px solid var(--line);
+        }
+
+       .brand {
+    display: inline-flex;
+    align-items: center;
+}
+
+.brand img {
+    display: block;
+    width: 145px;
+    height: auto;
+    max-height: 42px;
+    object-fit: contain;
+}
+        .back-link {
+            display:
+                inline-flex;
+
+            align-items:
+                center;
+
+            gap:
+                8px;
+
+            color:
+                var(--ink);
+
+            font-size:
+                0.78rem;
+
+            font-weight:
+                700;
+        }
+
+        .back-link:hover {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        .legal-hero {
+            position:
+                relative;
+
+            overflow:
+                hidden;
+
+            padding:
+                clamp(80px, 12vw, 150px)
+                clamp(22px, 7vw, 110px)
+                clamp(70px, 9vw, 110px);
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #F7F9FF 0%,
+                    #FFFFFF 55%,
+                    #EEF5FF 100%
+                );
+        }
+
+        .legal-hero::before {
+            content: "";
+
+            position:
+                absolute;
+
+            width:
+                420px;
+
+            height:
+                420px;
+
+            right:
+                -160px;
+
+            top:
+                -180px;
+
+            border-radius:
+                50%;
+
+            background:
+                radial-gradient(
+                    circle,
+                    rgba(1,82,244,0.14),
+                    transparent 68%
+                );
+
+            pointer-events:
+                none;
+        }
+
+        .legal-eyebrow {
+            position:
+                relative;
+
+            color:
+                var(--blue);
+
+            font-size:
+                0.72rem;
+
+            font-weight:
+                850;
+
+            letter-spacing:
+                2.5px;
+
+            text-transform:
+                uppercase;
+
+            margin-bottom:
+                18px;
+        }
+
+        .legal-hero h1 {
+            position:
+                relative;
+
+            max-width:
+                900px;
+
+            font-size:
+                clamp(3rem, 8vw, 7rem);
+
+            line-height:
+                0.95;
+
+            letter-spacing:
+                -0.055em;
+
+            font-weight:
+                900;
+        }
+
+        .legal-hero p {
+            position:
+                relative;
+
+            max-width:
+                680px;
+
+            margin-top:
+                28px;
+
+            color:
+                var(--muted);
+
+            font-size:
+                clamp(1rem, 1.5vw, 1.12rem);
+        }
+
+        .legal-meta {
+            position:
+                relative;
+
+            margin-top:
+                28px;
+
+            color:
+                #7C879B;
+
+            font-size:
+                0.78rem;
+
+            font-weight:
+                650;
+        }
+
+        .legal-layout {
+            display:
+                grid;
+
+            grid-template-columns:
+                minmax(180px, 240px)
+                minmax(0, 760px);
+
+            gap:
+                clamp(40px, 8vw, 110px);
+
+            max-width:
+                1180px;
+
+            margin:
+                0 auto;
+
+            padding:
+                80px 24px 120px;
+        }
+
+        .legal-index {
+            position:
+                sticky;
+
+            top:
+                100px;
+
+            align-self:
+                start;
+        }
+
+        .legal-index-title {
+            color:
+                var(--ink);
+
+            font-size:
+                0.68rem;
+
+            font-weight:
+                850;
+
+            letter-spacing:
+                1.8px;
+
+            text-transform:
+                uppercase;
+
+            margin-bottom:
+                15px;
+        }
+
+        .legal-index a {
+            display:
+                block;
+
+            padding:
+                5px 0;
+
+            color:
+                var(--muted);
+
+            font-size:
+                0.76rem;
+
+            line-height:
+                1.4;
+        }
+
+        .legal-index a:hover {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        .legal-content section {
+            margin-bottom:
+                58px;
+
+            scroll-margin-top:
+                110px;
+        }
+
+        .legal-content h2 {
+            margin-bottom:
+                16px;
+
+            font-size:
+                clamp(1.35rem, 2.5vw, 1.8rem);
+
+            line-height:
+                1.2;
+
+            letter-spacing:
+                -0.025em;
+        }
+
+        .legal-content p {
+            margin-bottom:
+                15px;
+
+            color:
+                #4F5B72;
+
+            font-size:
+                0.96rem;
+        }
+
+        .legal-content ul {
+            margin:
+                14px 0 20px 22px;
+        }
+
+        .legal-content li {
+            margin-bottom:
+                8px;
+
+            color:
+                #4F5B72;
+
+            font-size:
+                0.96rem;
+        }
+
+        .legal-note {
+            margin:
+                25px 0;
+
+            padding:
+                22px 24px;
+
+            border:
+                1px solid rgba(1,82,244,0.14);
+
+            border-left:
+                3px solid var(--blue);
+
+            border-radius:
+                16px;
+
+            background:
+                rgba(1,82,244,0.035);
+        }
+
+        .legal-note p {
+            margin:
+                0;
+
+            color:
+                #46536B;
+        }
+
+        .legal-contact {
+            padding:
+                28px;
+
+            border-radius:
+                22px;
+
+            background:
+                var(--ink);
+
+            color:
+                var(--white);
+
+            box-shadow:
+                0 20px 60px
+                rgba(7,19,45,0.12);
+        }
+
+        .legal-contact h2 {
+            color:
+                var(--white);
+        }
+
+        .legal-contact p {
+            color:
+                rgba(255,255,255,0.68);
+        }
+
+        .legal-contact a {
+            color:
+                var(--light-blue);
+
+            font-weight:
+                700;
+        }
+
+        .legal-footer {
+            padding:
+                30px 24px;
+
+            text-align:
+                center;
+
+            border-top:
+                1px solid var(--line);
+
+            color:
+                #7C879B;
+
+            font-size:
+                0.76rem;
+        }
+
+        .legal-footer strong {
+            color:
+                var(--ink);
+        }
+
+        @media (max-width: 760px) {
+
+            .brand img {
+    width: 125px;
+    max-height: 36px;
+}
+
+            .legal-nav {
+                padding:
+                    16px 20px;
+            }
+
+            .legal-hero {
+                padding:
+                    75px 22px 65px;
+            }
+
+            .legal-hero h1 {
+                font-size:
+                    clamp(3rem, 15vw, 5rem);
+            }
+
+            .legal-layout {
+                display:
+                    block;
+
+                padding:
+                    55px 22px 85px;
+            }
+
+            .legal-index {
+                position:
+                    static;
+
+                margin-bottom:
+                    55px;
+
+                padding-bottom:
+                    25px;
+
+                border-bottom:
+                    1px solid var(--line);
+            }
+
+            .legal-index a {
+                display:
+                    inline-block;
+
+                margin-right:
+                    15px;
+            }
+
+            .legal-content section {
+                margin-bottom:
+                    48px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="legal-nav">
+        <a 
+            class="brand" 
+            href="../index.html"
+            aria-label="Swayphics home">
+    <img src="../swayphics-logo.png" alt="Swayphics">
+</a>
+
+        <a
+            class="back-link"
+           href="../">Back to Website
+        </a>
+    </nav>
+
+
+    <header class="legal-hero">
+
+        <div class="legal-eyebrow">
+            SWAYPHICS · LEGAL
+        </div>
+
+        <h1>
+            Privacy<br>
+            Policy.
+        </h1>
+
+        <p>
+            We respect the information you entrust to Swayphics.
+            This policy explains what personal information we collect,
+            why we collect it, how we use it and the choices available
+            to you.
+        </p>
+
+        <div class="legal-meta">
+            Last updated: 27 September 2026
+        </div>
+
+    </header>
+
+
+    
+
+<main class="legal-layout">
+    <aside class="legal-index">
+        <div class="legal-index-title">On this page</div>
+        <a href="#purpose">01 · Purpose</a>
+        <a href="#contact">02 · Information Officer contact</a>
+        <a href="#records">03 · Records held</a>
+        <a href="#categories">04 · Personal information</a>
+        <a href="#providers">05 · Third parties & cross-border processing</a>
+        <a href="#automatic">06 · Automatically available records</a>
+        <a href="#request">07 · How to request access</a>
+        <a href="#grounds">08 · Grounds for refusal</a>
+        <a href="#fees">09 · Fees</a>
+        <a href="#remedies">10 · Remedies & complaints</a>
+        <a href="#security">11 · Security</a>
+        <a href="#availability">12 · Manual availability</a>
+        <a href="#changes">13 · Updates</a>
+    </aside>
+
+    <article class="legal-content">
+        <section id="purpose">
+            <h2>01 · Purpose</h2>
+            <p>This PAIA Manual is made available to help people understand what information and records may be held by Swayphics and how access requests can be made under the Promotion of Access to Information Act 2 of 2000 (PAIA), as amended.</p>
+            <p>Swayphics is referred to by its trading name in this manual. Full legal-identity details will be published separately when the business identity information is finalised.</p>
+            <p>This manual should be read together with the Swayphics Privacy Policy and Terms & Conditions.</p>
+        </section>
+
+        <section id="contact">
+            <h2>02 · Information Officer contact</h2>
+            <p><strong>Information Officer:</strong> Head of Swayphics</p>
+            <p><strong>Email:</strong> <a href="mailto:info@swayphics.co.za">info@swayphics.co.za</a></p>
+            <p>Requests, notices and questions concerning access to information may be sent to the contact above. Additional identifying details of the Information Officer will be published when the legal identity information is finalised.</p>
+        </section>
+
+        <section id="records">
+            <h2>03 · Records held</h2>
+            <p>Depending on the nature of Swayphics’ operations and the relevant client relationship, records may include:</p>
+            <ul>
+                <li>Quotations, proposals, project briefs and accepted project agreements.</li>
+                <li>Invoices, payment records and other business transaction records.</li>
+                <li>Client and prospective-client correspondence, including project enquiries.</li>
+                <li>Design and project-delivery records, including approved deliverables and relevant communications.</li>
+                <li>Website, domain, hosting and technical administration records.</li>
+                <li>Marketing and communications records, including opt-out or suppression records where applicable.</li>
+                <li>Testimonial records and consent or approval information where a testimonial is published.</li>
+                <li>Supplier, contractor or service-provider records, where applicable.</li>
+            </ul>
+            <p>Not every category is necessarily held at all times. Access is subject to PAIA, POPIA, confidentiality duties, third-party rights and other applicable law.</p>
+        </section>
+
+        <section id="categories">
+            <h2>04 · Personal information</h2>
+            <p>Personal information may relate to clients, prospective clients, website visitors, suppliers, contractors, authorised representatives and other people who communicate with Swayphics.</p>
+            <p>Categories may include names, contact details, project information, communication records, billing information, identification information where lawfully required for a service, testimonial information and technical or website-usage information.</p>
+            <p>Swayphics aims to process only information that is reasonably necessary for the relevant purpose. The Swayphics Privacy Policy explains the personal-information processing practices in more detail.</p>
+        </section>
+
+        <section id="providers">
+            <h2>05 · Third parties & cross-border processing</h2>
+            <p>Records or personal information may be processed using third-party service providers where reasonably necessary for website operation, hosting, databases, email, analytics, payments, domains or other business services.</p>
+            <p>The Swayphics website currently uses Supabase for certain database and backend functions. Depending on the service and configuration, third-party providers may process or store information outside South Africa. Where applicable, Swayphics will take reasonable steps to meet the requirements of POPIA concerning operators and cross-border transfers.</p>
+        </section>
+
+        <section id="automatic">
+            <h2>06 · Automatically available records</h2>
+            <p>The following information is generally available without a PAIA request, subject to the content being current:</p>
+            <ul>
+                <li>Public website content and service descriptions.</li>
+                <li>Published Privacy Policy, Terms & Conditions and this PAIA Manual.</li>
+                <li>Public portfolio and approved public testimonials.</li>
+                <li>Public social-media profiles linked from the website.</li>
+            </ul>
+        </section>
+
+        <section id="request">
+            <h2>07 · How to request access</h2>
+            <p>A person seeking access to a record should make the request in the manner prescribed by PAIA and provide enough detail to identify the requested record and enable Swayphics to process the request.</p>
+            <p>Requests should be sent to <a href="mailto:info@swayphics.co.za">info@swayphics.co.za</a>. Where a prescribed PAIA form or supporting information is applicable, Swayphics will deal with the request according to the relevant legislation and procedures.</p>
+            <p>Where a request is for the requester’s own personal information, the request may also be considered under the access rights provided by POPIA.</p>
+            <p>Swayphics may verify the identity and authority of a requester where reasonably necessary, particularly where the requested record contains personal or confidential information.</p>
+        </section>
+
+        <section id="grounds">
+            <h2>08 · Grounds for refusal</h2>
+            <p>Access is not automatic. A request may be refused, deferred or limited where PAIA or another applicable law permits or requires this, including where disclosure would involve the personal information or confidentiality of another person, privileged information, commercially sensitive information, or another protected interest.</p>
+            <p>Where permitted by law, Swayphics will consider whether partial access can be provided instead of refusing an entire record.</p>
+        </section>
+
+        <section id="fees">
+            <h2>09 · Fees</h2>
+            <p>Any applicable PAIA request, access, search, reproduction or related fees will be dealt with in accordance with the applicable legislation and prescribed fee framework. Swayphics will communicate applicable fees and payment requirements where required before incurring chargeable steps.</p>
+        </section>
+
+        <section id="remedies">
+            <h2>10 · Remedies & complaints</h2>
+            <p>Where a requester is dissatisfied with the handling of an access request, the requester may use any internal remedy available under applicable law or approach the Information Regulator or another competent authority/court as provided by law.</p>
+            <p>Information Regulator: <a href="mailto:enquiries@inforegulator.org.za">enquiries@inforegulator.org.za</a> · Tel: 010 023 5200</p>
+            <p>Official PAIA guidance, forms and eServices are available from the Information Regulator.</p>
+        </section>
+
+        <section id="security">
+            <h2>11 · Security</h2>
+            <p>Swayphics applies reasonable technical and organisational measures to protect records and personal information against unauthorised access, loss, misuse, alteration or disclosure. Security measures are reviewed as the website, services and technology change.</p>
+        </section>
+
+        <section id="availability">
+            <h2>12 · Manual availability</h2>
+            <p>This manual is made available electronically through the Swayphics website. A copy may also be requested by contacting Swayphics at <a href="mailto:info@swayphics.co.za">info@swayphics.co.za</a>.</p>
+        </section>
+
+        <section id="changes">
+            <h2>13 · Updates</h2>
+            <p>This manual may be updated when Swayphics’ information holdings, services, contact arrangements or legal obligations change. The latest version will be published on this page.</p>
+            <p><strong>Last updated: 27 September 2026</strong></p>
+        </section>
+    </article>
+</main>
+
+
+    <footer class="legal-footer">
+
+        <strong>SWAYPHICS</strong>
+        · Empowering through design.
+
+        <br>
+
+        © 2026 Swayphics. All rights reserved.
+
+    </footer>
+
+</body>
+</html>
