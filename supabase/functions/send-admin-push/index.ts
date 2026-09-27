@@ -50,14 +50,20 @@ Deno.serve(async request => {
         console.error("Unable to parse SUPABASE_SECRET_KEYS:", error);
     }
 
+    const bearerCredential =
+        authorization.startsWith("Bearer ")
+            ? authorization.slice("Bearer ".length)
+            : "";
+
     const legacyServiceRoleAuthorized =
-        authorization === "Bearer " + serviceRoleKey;
+        bearerCredential === serviceRoleKey;
 
     const serviceRoleApiKeyAuthorized =
         apiKey === serviceRoleKey;
 
     const secretKeyAuthorized =
-        secretKeyValues.includes(apiKey);
+        secretKeyValues.includes(apiKey) ||
+        secretKeyValues.includes(bearerCredential);
 
     if (
         !legacyServiceRoleAuthorized &&
