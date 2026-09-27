@@ -19576,6 +19576,147 @@ function simpleBars(items, color) {
             });
     }
 
+    function getRequestedNotificationTarget() {
+        try {
+            const params =
+                new URLSearchParams(window.location.search);
+
+            const view =
+                params.get("view");
+
+            const entityType =
+                params.get("entity");
+
+            const entityId =
+                params.get("id");
+
+            if (!view) {
+                return null;
+            }
+
+            return {
+                view,
+                entityType: entityType || "",
+                entityId: entityId || ""
+            };
+        } catch (error) {
+            console.warn(
+                "Unable to read notification target.",
+                error
+            );
+
+            return null;
+        }
+    }
+
+    async function openRequestedNotificationTarget(target) {
+        if (!target || !state.initialDataLoaded) {
+            return;
+        }
+
+        const view =
+            target.view;
+
+        const entityType =
+            String(target.entityType || "").toLowerCase();
+
+        const entityId =
+            String(target.entityId || "");
+
+        state.currentView =
+            view;
+
+        persistWorkspaceView(view);
+
+        renderShell();
+        renderView();
+
+        if (!entityId) {
+            return;
+        }
+
+        if (entityType === "email") {
+            await loadEmailMessages();
+
+            const message =
+                state.emailMessages.find(function (item) {
+                    return String(item.id) === entityId;
+                });
+
+            if (message && message.thread_id) {
+                state.emailSelectedThreadId =
+                    message.thread_id;
+
+                renderView();
+
+                const thread =
+                    workspace.querySelector(
+                        '[data-email-thread="' +
+                        String(message.thread_id) +
+                        '"]'
+                    );
+
+                if (thread) {
+                    thread.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center"
+                    });
+                }
+            }
+
+            return;
+        }
+
+        const selectors = {
+            lead:
+                '[data-edit="leads"][data-id="' + entityId + '"]',
+            task:
+                '[data-edit="tasks"][data-id="' + entityId + '"]',
+            follow_up:
+                '[data-edit="followups"][data-id="' + entityId + '"]',
+            quote:
+                '[data-edit="quotes"][data-id="' + entityId + '"]',
+            payment:
+                '[data-edit="payments"][data-id="' + entityId + '"]',
+            client:
+                '[data-client360="' + entityId + '"]',
+            project:
+                '[data-project-timeline="' + entityId + '"]',
+            invoice:
+                '[data-invoice-action="edit"][data-id="' + entityId + '"]'
+        };
+
+        const selector =
+            selectors[entityType];
+
+        if (selector) {
+            const button =
+                workspace.querySelector(selector);
+
+            if (button) {
+                button.click();
+                return;
+            }
+        }
+
+        /*
+         * Some notification types have a useful workspace destination but
+         * no single-record modal yet. In those cases, leave the user on the
+         * correct section rather than opening an unrelated action.
+         */
+        const main =
+            document.getElementById(
+                "sway-workspace-main"
+            );
+
+        if (main) {
+            main.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
+    }
+
     function getRequestedWorkspaceView() {
         try {
             const params =
@@ -19603,7 +19744,14 @@ function simpleBars(items, color) {
     }
 
     async function boot() {
+        const requestedNotificationTarget =
+            getRequestedNotificationTarget();
+
         state.currentView =
+            (
+                requestedNotificationTarget &&
+                requestedNotificationTarget.view
+            ) ||
             getRequestedWorkspaceView() ||
             getPersistedWorkspaceView();
 
@@ -19630,6 +19778,17 @@ function simpleBars(items, color) {
             );
             setupGlobalSearch();
             setupRealtime();
+
+            if (requestedNotificationTarget) {
+                window.setTimeout(
+                    function () {
+                        openRequestedNotificationTarget(
+                            requestedNotificationTarget
+                        );
+                    },
+                    0
+                );
+            }
 
             /*
              * Startup-critical data is now rendered before any automation
