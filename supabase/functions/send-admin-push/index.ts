@@ -53,10 +53,17 @@ Deno.serve(async request => {
     const legacyServiceRoleAuthorized =
         authorization === "Bearer " + serviceRoleKey;
 
+    const serviceRoleApiKeyAuthorized =
+        apiKey === serviceRoleKey;
+
     const secretKeyAuthorized =
         secretKeyValues.includes(apiKey);
 
-    if (!legacyServiceRoleAuthorized && !secretKeyAuthorized) {
+    if (
+        !legacyServiceRoleAuthorized &&
+        !serviceRoleApiKeyAuthorized &&
+        !secretKeyAuthorized
+    ) {
         return new Response(
             JSON.stringify({ error: "Unauthorized." }),
             { status: 401, headers: jsonHeaders }
