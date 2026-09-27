@@ -16318,7 +16318,8 @@ body {
 
 /* =========================================================
    SWAYPHICS — SOFT SECTION EDGE FADES
-   Visually blend each section into the section before it.
+   Smoothly morph the ending tone of the previous section into the
+   natural starting tone of the current section.
    ========================================================= */
 
 section {
@@ -16340,7 +16341,7 @@ section {
         100%;
 
     height:
-        72px;
+        120px;
 
     z-index:
         8;
@@ -16351,55 +16352,68 @@ section {
     background:
         linear-gradient(
             180deg,
-            var(--edge-color-start) 0%,
-            color-mix(in srgb, var(--edge-color-start) 0%, transparent 100%) 100%
+            var(--edge-from) 0%,
+            color-mix(
+                in srgb,
+                var(--edge-from) 55%,
+                transparent
+            ) 28%,
+            transparent 100%
         );
 }
 
-/* Previous section ending tones */
+/* Each value is the actual visual ending tone of the section above. */
 
 .section-edge-fade--services {
-    --edge-color-start:
-        rgba(255,255,255,0.96);
+    --edge-from:
+        #EEF6FF;
 }
 
 .section-edge-fade--why {
-    --edge-color-start:
-        rgba(238,246,255,0.96);
+    --edge-from:
+        #EEF5FF;
 }
 
 .section-edge-fade--testimonials {
-    --edge-color-start:
-        rgba(238,246,255,0.96);
+    --edge-from:
+        #F7FAFF;
 }
 
 .section-edge-fade--selected {
-    --edge-color-start:
-        rgba(221,238,255,0.96);
+    --edge-from:
+        #DDEEFF;
 }
 
 .section-edge-fade--about {
-    --edge-color-start:
-        rgba(238,246,255,0.96);
+    --edge-from:
+        #EEF6FF;
 }
 
-/* Keep the existing About → CTA transition as the stronger blue morph. */
+/* About → CTA gets a deeper blue morph because the next section is blue. */
+
 .about-to-cta-transition {
     z-index:
         12;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(238,246,255,0.96) 0%,
+            rgba(210,228,255,0.78) 18%,
+            rgba(119,161,229,0.58) 38%,
+            rgba(0,49,197,0.68) 62%,
+            rgba(0,32,150,0.46) 82%,
+            rgba(0,32,150,0) 100%
+        );
 }
 
 @media (max-width: 700px) {
 
     .section-edge-fade {
-        top:
-            0;
-
         height:
-            54px;
+            88px;
     }
 }
-
 </style>
 
 </head>
