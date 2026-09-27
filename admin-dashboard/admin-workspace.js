@@ -18352,13 +18352,14 @@ function simpleBars(items, color) {
     function renderWorkspaceLoading() {
         return (
             '<section class="sway-workspace-loading">' +
-                '<div class="sway-workspace-loading-orb"></div>' +
+                '<div class="sway-favicon-loader" aria-hidden="true">' +
+                    '<img src="../FIST.webp" alt="" width="34" height="34">' +
+                    '<span class="sway-favicon-loader-mark"></span>' +
+                    '<span class="sway-favicon-loader-dot"></span>' +
+                "</div>" +
                 '<div class="sway-workspace-loading-copy">' +
                     "<strong>Loading your workspace</strong>" +
                     "<span>Syncing your latest Swayphics data…</span>" +
-                "</div>" +
-                '<div class="sway-workspace-loading-grid">' +
-                    "<span></span><span></span><span></span><span></span>" +
                 "</div>" +
             "</section>"
         );
