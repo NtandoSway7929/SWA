@@ -3712,8 +3712,8 @@
     width: min(390px, calc(100vw - 28px));
     max-height: min(620px, calc(100vh - 98px));
     overflow: hidden;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     border: 1px solid rgba(255,255,255,0.72);
     border-radius: 21px;
     background:
@@ -3735,7 +3735,15 @@
     display: none !important;
 }
 
+.admin-notification-panel .sway-push-control {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
 .admin-notification-head {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -3789,6 +3797,7 @@
 }
 
 .admin-notification-list {
+    flex: 1 1 auto;
     min-height: 0;
     padding: 7px;
     overflow-y: auto;
