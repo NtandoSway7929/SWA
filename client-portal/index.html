@@ -87,7 +87,20 @@ body{
 }
 .portal-button:disabled{opacity:.6;cursor:wait}
 .message{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(1,82,244,.06);color:var(--muted);font-size:.6rem;line-height:1.5}
-.loading,.error{min-height:60vh;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:.75rem}
+.loading,.error{min-height:60vh;display:grid;place-items:center;align-content:center;gap:13px;text-align:center;color:var(--muted);font-size:.75rem}
+.loading-copy{display:grid;gap:4px}
+.loading-copy strong{color:var(--dark);font-size:.78rem;font-weight:800}
+.loading-copy span{color:var(--muted);font-size:.62rem;font-weight:600}
+.sway-favicon-loader{--sway-loader-size:54px;position:relative;width:var(--sway-loader-size);height:var(--sway-loader-size);flex:0 0 var(--sway-loader-size);display:block;isolation:isolate}
+.sway-favicon-loader::before{content:"";position:absolute;inset:3px;border:1.5px solid rgba(1,82,244,.10);border-top-color:rgba(1,82,244,.78);border-right-color:rgba(119,193,252,.34);border-radius:50%;animation:sway-favicon-trace 1.35s cubic-bezier(.65,0,.35,1) infinite}
+.sway-favicon-loader img,.sway-favicon-loader-mark{position:absolute;inset:10px;width:calc(var(--sway-loader-size) - 20px);height:calc(var(--sway-loader-size) - 20px);display:block;object-fit:contain}
+.sway-favicon-loader img{opacity:.10}
+.sway-favicon-loader-mark{background:conic-gradient(from -40deg,transparent 0deg 34deg,#0152F4 52deg 116deg,rgba(119,193,252,.82) 132deg 156deg,transparent 174deg 360deg);-webkit-mask:url("../FIST.webp") center/contain no-repeat;mask:url("../FIST.webp") center/contain no-repeat;animation:sway-favicon-draw 1.25s linear infinite}
+.sway-favicon-loader-dot{position:absolute;top:0;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#0152F4;box-shadow:0 0 0 4px rgba(1,82,244,.07),0 3px 10px rgba(1,82,244,.18);transform-origin:3px calc(var(--sway-loader-size) / 2);animation:sway-favicon-dot 1.25s linear infinite}
+@keyframes sway-favicon-draw{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes sway-favicon-trace{0%,100%{transform:rotate(-18deg);opacity:.68}50%{transform:rotate(162deg);opacity:1}}
+@keyframes sway-favicon-dot{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.sway-favicon-loader::before,.sway-favicon-loader-mark,.sway-favicon-loader-dot{animation:none}}
 .error strong{display:block;color:var(--dark);font-size:1rem;margin-bottom:7px}
 @media(max-width:760px){
     .portal-wrap{width:min(100% - 28px,1080px);padding-top:14px}
@@ -100,7 +113,17 @@ body{
 </style>
 </head>
 <body>
-<div id="app" class="loading">Loading your Swayphics portal...</div>
+<div id="app" class="loading">
+    <div class="sway-favicon-loader" aria-hidden="true">
+        <img src="../FIST.webp" alt="" width="34" height="34">
+        <span class="sway-favicon-loader-mark"></span>
+        <span class="sway-favicon-loader-dot"></span>
+    </div>
+    <div class="loading-copy">
+        <strong>Loading your Swayphics portal</strong>
+        <span>Connecting to your private workspace</span>
+    </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
