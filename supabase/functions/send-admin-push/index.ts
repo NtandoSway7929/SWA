@@ -7,7 +7,24 @@ const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
 const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
 const vapidSubject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:info@swayphics.co.za";
 
-if (!supabaseUrl || !serviceRoleKey || !vapidPublicKey || !vapidPrivateKey) {
+let secretKeys: Record<string, string> = {};
+
+try {
+    secretKeys =
+        supabaseSecretKeysRaw
+            ? JSON.parse(supabaseSecretKeysRaw)
+            : {};
+} catch (error) {
+    console.error("Unable to parse SUPABASE_SECRET_KEYS:", error);
+}
+
+const backendApiKey =
+    Object.values(secretKeys).find(
+        value => typeof value === "string" && value.startsWith("sb_secret_")
+    ) ||
+    serviceRoleKey;
+
+if (!supabaseUrl || !backendApiKey || !vapidPublicKey || !vapidPrivateKey) {
     throw new Error("Required push notification secrets are not configured.");
 }
 
@@ -35,20 +52,9 @@ Deno.serve(async request => {
     const apiKey =
         request.headers.get("apikey") || "";
 
-    let secretKeyValues = [];
-
-    try {
-        const parsedSecretKeys =
-            supabaseSecretKeysRaw
-                ? JSON.parse(supabaseSecretKeysRaw)
-                : {};
-
-        secretKeyValues =
-            Object.values(parsedSecretKeys)
-                .filter(value => typeof value === "string");
-    } catch (error) {
-        console.error("Unable to parse SUPABASE_SECRET_KEYS:", error);
-    }
+    const secretKeyValues =
+        Object.values(secretKeys)
+            .filter(value => typeof value === "string");
 
     const bearerCredential =
         authorization.startsWith("Bearer ")
@@ -101,8 +107,7 @@ Deno.serve(async request => {
                     "&select=id,recipient_id,title,message,type,view,entity_type,entity_id",
                 {
                     headers: {
-                        apikey: serviceRoleKey,
-                        Authorization: "Bearer " + serviceRoleKey
+                        apikey: backendApiKey
                     }
                 }
             );
@@ -136,8 +141,7 @@ Deno.serve(async request => {
                     "&select=id,endpoint,p256dh,auth",
                 {
                     headers: {
-                        apikey: serviceRoleKey,
-                        Authorization: "Bearer " + serviceRoleKey
+                        apikey: backendApiKey
                     }
                 }
             );
