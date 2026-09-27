@@ -159,12 +159,35 @@ Deno.serve(async request => {
         const baseUrl =
             "https://swayphics.co.za/admin-dashboard/";
 
+        const targetParams = new URLSearchParams();
+
+        if (notification.view) {
+            targetParams.set(
+                "view",
+                notification.view
+            );
+        }
+
+        if (notification.entity_type) {
+            targetParams.set(
+                "entity",
+                notification.entity_type
+            );
+        }
+
+        if (notification.entity_id) {
+            targetParams.set(
+                "id",
+                notification.entity_id
+            );
+        }
+
+        const targetQuery =
+            targetParams.toString();
+
         const targetUrl =
-            notification.view
-                ? baseUrl +
-                  "?view=" +
-                  encodeURIComponent(notification.view)
-                : baseUrl;
+            baseUrl +
+            (targetQuery ? "?" + targetQuery : "");
 
         const payload = JSON.stringify({
             title: notification.title || "Swayphics Admin",
