@@ -210,7 +210,11 @@ Deno.serve(async request => {
                             auth: subscription.auth
                         }
                     },
-                    payload
+                    payload,
+                    {
+                        TTL: 300,
+                        urgency: "high"
+                    }
                 );
 
                 sent += 1;
