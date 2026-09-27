@@ -9987,9 +9987,13 @@ portfolioForm.addEventListener(
 
         if (status) status.textContent = message;
 
-        if (button && enabled) {
-            button.textContent = "Enabled";
-            button.disabled = true;
+        if (button) {
+            if (enabled) {
+                button.hidden = true;
+                button.disabled = true;
+            } else {
+                button.hidden = false;
+            }
         }
     }
 
