@@ -16315,6 +16315,91 @@ body {
     }
 }
 
+
+/* =========================================================
+   SWAYPHICS — SOFT SECTION EDGE FADES
+   Visually blend each section into the section before it.
+   ========================================================= */
+
+section {
+    position:
+        relative;
+}
+
+.section-edge-fade {
+    position:
+        absolute;
+
+    top:
+        -72px;
+
+    left:
+        0;
+
+    width:
+        100%;
+
+    height:
+        72px;
+
+    z-index:
+        8;
+
+    pointer-events:
+        none;
+
+    background:
+        linear-gradient(
+            180deg,
+            var(--edge-color-start) 0%,
+            color-mix(in srgb, var(--edge-color-start) 0%, transparent 100%) 100%
+        );
+}
+
+/* Previous section ending tones */
+
+.section-edge-fade--services {
+    --edge-color-start:
+        rgba(255,255,255,0.96);
+}
+
+.section-edge-fade--why {
+    --edge-color-start:
+        rgba(238,246,255,0.96);
+}
+
+.section-edge-fade--testimonials {
+    --edge-color-start:
+        rgba(238,246,255,0.96);
+}
+
+.section-edge-fade--selected {
+    --edge-color-start:
+        rgba(221,238,255,0.96);
+}
+
+.section-edge-fade--about {
+    --edge-color-start:
+        rgba(238,246,255,0.96);
+}
+
+/* Keep the existing About → CTA transition as the stronger blue morph. */
+.about-to-cta-transition {
+    z-index:
+        12;
+}
+
+@media (max-width: 700px) {
+
+    .section-edge-fade {
+        top:
+            -54px;
+
+        height:
+            54px;
+    }
+}
+
 </style>
 
 </head>
@@ -16502,6 +16587,8 @@ body {
                 
         <!-- SERVICES -->
 <section class="services" id="services">
+
+    <div class="section-edge-fade section-edge-fade--services" aria-hidden="true"></div>
 
     <div class="services-intro">
 
@@ -16970,6 +17057,8 @@ body {
        <!-- WHY SWAYPHICS -->
 <section class="why-swayphics" id="why-swayphics">
 
+    <div class="section-edge-fade section-edge-fade--why" aria-hidden="true"></div>
+
     <div class="why-background" aria-hidden="true">
         <img
             src="why-swayphics.webp"
@@ -17088,6 +17177,8 @@ body {
         <!-- TESTIMONIALS -->
 <section class="testimonials" id="testimonials">
 
+    <div class="section-edge-fade section-edge-fade--testimonials" aria-hidden="true"></div>
+
     <div class="section-label">Client stories</div>
 
     <div class="testimonials-header">
@@ -17141,6 +17232,8 @@ body {
 
         <!-- SELECTED WORK — GEMINI-STYLE 3D PORTFOLIO -->
 <section class="selected-work" id="selected-work">
+
+    <div class="section-edge-fade section-edge-fade--selected" aria-hidden="true"></div>
     <div class="section-label">Selected work</div>
 
     <div class="selected-work-header">
@@ -17169,6 +17262,8 @@ body {
 </section>
 <!-- ABOUT -->
 <section class="about" id="about">
+
+    <div class="section-edge-fade section-edge-fade--about" aria-hidden="true"></div>
 
     <div class="about-video" aria-hidden="true">
     <video
