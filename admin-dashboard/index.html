@@ -1057,7 +1057,17 @@
 
 
 .portfolio-admin-loading {
-    padding: 35px;
+    min-height: 150px;
+
+    padding: 24px;
+
+    display: grid;
+
+    place-items: center;
+
+    align-content: center;
+
+    gap: 10px;
 
     border:
         1px solid var(--border);
@@ -1072,6 +1082,20 @@
     font-size: 0.8rem;
 
     text-align: center;
+}
+
+.portfolio-admin-loading strong,
+.testimonials-admin-loading strong {
+    color: var(--sway-dark);
+
+    font-size: 0.68rem;
+
+    font-weight: 800;
+}
+
+.portfolio-admin-loading .sway-favicon-loader,
+.testimonials-admin-loading .sway-favicon-loader {
+    --sway-loader-size: 48px;
 }
 
 
