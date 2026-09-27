@@ -5154,6 +5154,59 @@
 
 
 /* =========================================================
+   BUTTON LOADING STATES
+   ========================================================= */
+
+.sway-loading-button {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+
+.sway-loading-button::before {
+    content: "";
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+    background:
+        conic-gradient(
+            from -40deg,
+            transparent 0deg 38deg,
+            #0152F4 54deg 122deg,
+            rgba(119,193,252,0.82) 138deg 158deg,
+            transparent 176deg 360deg
+        );
+    -webkit-mask:
+        url("../FIST.webp")
+        center /
+        contain
+        no-repeat;
+    mask:
+        url("../FIST.webp")
+        center /
+        contain
+        no-repeat;
+    animation: sway-button-favicon-draw 1.05s linear infinite;
+}
+
+@keyframes sway-button-favicon-draw {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sway-loading-button::before {
+        animation: none;
+    }
+}
+
+/* =========================================================
    SWAYPHICS DRAWING FAVICON LOADER
    ========================================================= */
 
