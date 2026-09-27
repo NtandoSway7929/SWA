@@ -2,6 +2,7 @@ import webpush from "npm:web-push@3.6.7";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabaseSecretKeysRaw = Deno.env.get("SUPABASE_SECRET_KEYS") ?? "";
 const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
 const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
 const vapidSubject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:info@swayphics.co.za";
@@ -31,10 +32,31 @@ Deno.serve(async request => {
     const authorization =
         request.headers.get("authorization") || "";
 
-    const expected =
-        "Bearer " + serviceRoleKey;
+    const apiKey =
+        request.headers.get("apikey") || "";
 
-    if (authorization !== expected) {
+    let secretKeyValues = [];
+
+    try {
+        const parsedSecretKeys =
+            supabaseSecretKeysRaw
+                ? JSON.parse(supabaseSecretKeysRaw)
+                : {};
+
+        secretKeyValues =
+            Object.values(parsedSecretKeys)
+                .filter(value => typeof value === "string");
+    } catch (error) {
+        console.error("Unable to parse SUPABASE_SECRET_KEYS:", error);
+    }
+
+    const legacyServiceRoleAuthorized =
+        authorization === "Bearer " + serviceRoleKey;
+
+    const secretKeyAuthorized =
+        secretKeyValues.includes(apiKey);
+
+    if (!legacyServiceRoleAuthorized && !secretKeyAuthorized) {
         return new Response(
             JSON.stringify({ error: "Unauthorized." }),
             { status: 401, headers: jsonHeaders }
