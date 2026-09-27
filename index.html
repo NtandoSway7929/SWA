@@ -19860,5 +19860,78 @@ if (formStatus) {
        
 </script>
 
+<style id="sway-public-loading-ui">
+.sway-loading-button{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.sway-loading-button::before{content:"";width:16px;height:16px;flex:0 0 16px;background:conic-gradient(from -40deg,transparent 0deg 38deg,#0152F4 54deg 122deg,rgba(119,193,252,.82) 138deg 158deg,transparent 176deg 360deg);-webkit-mask:url("FIST.webp") center/contain no-repeat;mask:url("FIST.webp") center/contain no-repeat;animation:sway-button-favicon-draw-public 1.05s linear infinite}
+@keyframes sway-button-favicon-draw-public{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.sway-loading-button::before{animation:none}}
+</style>
+<script id="sway-public-loading-observer">
+(function () {
+    if (!("MutationObserver" in window)) return;
+
+    const busyPattern =
+        /^(loading|syncing|uploading|saving|sending|processing|refreshing|deleting|generating|enabling|submitting|creating)(?:\s|\.\.\.|…|$)/i;
+
+    function updateButton(button) {
+        if (!(button instanceof HTMLButtonElement)) return;
+
+        const text =
+            String(button.textContent || "").trim();
+
+        const isBusy =
+            busyPattern.test(text) &&
+            /(?:\.\.\.|…)$/.test(text);
+
+        button.classList.toggle(
+            "sway-loading-button",
+            isBusy
+        );
+    }
+
+    document
+        .querySelectorAll("button")
+        .forEach(updateButton);
+
+    const observer =
+        new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                const button =
+                    mutation.target instanceof Element
+                        ? mutation.target.closest("button")
+                        : mutation.target.parentElement?.closest("button");
+
+                if (button) {
+                    updateButton(button);
+                }
+
+                mutation.addedNodes.forEach(function (node) {
+                    if (
+                        node.nodeType !== Node.ELEMENT_NODE
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        node.matches &&
+                        node.matches("button")
+                    ) {
+                        updateButton(node);
+                    }
+
+                    node
+                        .querySelectorAll?.("button")
+                        .forEach(updateButton);
+                });
+            });
+        });
+
+    observer.observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true
+    });
+})();
+</script>
 </body>
 </html>
