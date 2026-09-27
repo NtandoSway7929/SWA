@@ -18349,6 +18349,106 @@ function simpleBars(items, color) {
         }
     }
 
+    function initialiseSwayButtonLoadingObserver() {
+        if (
+            typeof MutationObserver === "undefined" ||
+            document.body.dataset.swayLoadingObserver === "true"
+        ) {
+            return;
+        }
+
+        document.body.dataset.swayLoadingObserver = "true";
+
+        const busyPattern =
+            /^(loading|syncing|uploading|saving|sending|processing|refreshing|deleting|generating|enabling|submitting|creating)(?:\s|\.\.\.|…|$)/i;
+
+        function updateButton(button) {
+            if (!(button instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            const text =
+                String(button.textContent || "")
+                    .trim();
+
+            const isBusy =
+                busyPattern.test(text) &&
+                /(?:\.\.\.|…)$/.test(text);
+
+            button.classList.toggle(
+                "sway-loading-button",
+                isBusy
+            );
+        }
+
+        document
+            .querySelectorAll("button")
+            .forEach(updateButton);
+
+        const observer =
+            new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
+                    if (
+                        mutation.type === "characterData"
+                    ) {
+                        const button =
+                            mutation.target.parentElement?.closest(
+                                "button"
+                            );
+
+                        if (button) {
+                            updateButton(button);
+                        }
+
+                        return;
+                    }
+
+                    mutation.addedNodes.forEach(function (node) {
+                        if (
+                            node.nodeType !==
+                            Node.ELEMENT_NODE
+                        ) {
+                            return;
+                        }
+
+                        if (
+                            node.matches &&
+                            node.matches("button")
+                        ) {
+                            updateButton(node);
+                        }
+
+                        node
+                            .querySelectorAll?.("button")
+                            .forEach(updateButton);
+                    });
+
+                    if (
+                        mutation.target instanceof
+                        Element
+                    ) {
+                        const button =
+                            mutation.target.closest(
+                                "button"
+                            );
+
+                        if (button) {
+                            updateButton(button);
+                        }
+                    }
+                });
+            });
+
+        observer.observe(
+            document.body,
+            {
+                subtree: true,
+                childList: true,
+                characterData: true
+            }
+        );
+    }
+
     function renderWorkspaceLoading() {
         return (
             '<section class="sway-workspace-loading">' +
@@ -19745,6 +19845,8 @@ function simpleBars(items, color) {
     }
 
     async function boot() {
+        initialiseSwayButtonLoadingObserver();
+
         const requestedNotificationTarget =
             getRequestedNotificationTarget();
 
