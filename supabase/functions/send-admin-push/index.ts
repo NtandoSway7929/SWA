@@ -159,12 +159,19 @@ Deno.serve(async request => {
         const baseUrl =
             "https://swayphics.co.za/admin-dashboard/";
 
+        const targetUrl =
+            notification.view
+                ? baseUrl +
+                  "?view=" +
+                  encodeURIComponent(notification.view)
+                : baseUrl;
+
         const payload = JSON.stringify({
             title: notification.title || "Swayphics Admin",
             body: notification.message || "You have a new notification.",
             tag: notification.id,
             renotify: true,
-            url: baseUrl
+            url: targetUrl
         });
 
         let sent = 0;
