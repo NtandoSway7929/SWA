@@ -19576,8 +19576,35 @@ function simpleBars(items, color) {
             });
     }
 
+    function getRequestedWorkspaceView() {
+        try {
+            const params =
+                new URLSearchParams(window.location.search);
+
+            const requestedView =
+                params.get("view");
+
+            if (
+                requestedView &&
+                nav.some(function (item) {
+                    return item[0] === requestedView;
+                })
+            ) {
+                return requestedView;
+            }
+        } catch (error) {
+            console.warn(
+                "Unable to read requested workspace view.",
+                error
+            );
+        }
+
+        return null;
+    }
+
     async function boot() {
         state.currentView =
+            getRequestedWorkspaceView() ||
             getPersistedWorkspaceView();
 
         state.initialDataLoading = true;
