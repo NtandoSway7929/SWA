@@ -10947,7 +10947,7 @@ function simpleBars(items, color) {
                             );
                         }
                     },
-                    60000
+                    15000
                 );
         }
 
