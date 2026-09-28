@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Cookie Policy | Swayphics</title>
+
+    <meta
+        name="description"
+        content="Swayphics Cookie Policy. Learn how Swayphics uses cookies and similar technologies on this website."
+    >
+
+    <meta
+        name="robots"
+        content="index, follow"
+    >
+
+    <link rel="icon" type="image/webp" sizes="48x48" href="/FIST.webp?v=20260926">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --navy: #002096;
+            --blue: #0152F4;
+            --bright: #2C91FC;
+            --light-blue: #77C1FC;
+            --white: #FFFFFF;
+            --ink: #07132D;
+            --muted: #64708A;
+            --line: rgba(7, 19, 45, 0.10);
+            --surface: #F6F8FC;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+
+            background:
+                var(--white);
+
+            color:
+                var(--ink);
+
+            line-height:
+                1.7;
+        }
+
+        a {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        a:hover {
+            text-decoration:
+                underline;
+        }
+
+        .legal-nav {
+            position:
+                sticky;
+
+            top:
+                0;
+
+            z-index:
+                100;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                space-between;
+
+            padding:
+                18px clamp(22px, 5vw, 72px);
+
+            background:
+                rgba(255,255,255,0.88);
+
+            backdrop-filter:
+                blur(18px);
+
+            -webkit-backdrop-filter:
+                blur(18px);
+
+            border-bottom:
+                1px solid var(--line);
+        }
+
+       .brand {
+    display: inline-flex;
+    align-items: center;
+}
+
+.brand img {
+    display: block;
+    width: 145px;
+    height: auto;
+    max-height: 42px;
+    object-fit: contain;
+}
+        .back-link {
+            display:
+                inline-flex;
+
+            align-items:
+                center;
+
+            gap:
+                8px;
+
+            color:
+                var(--ink);
+
+            font-size:
+                0.78rem;
+
+            font-weight:
+                700;
+        }
+
+        .back-link:hover {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        .legal-hero {
+            position:
+                relative;
+
+            overflow:
+                hidden;
+
+            padding:
+                clamp(80px, 12vw, 150px)
+                clamp(22px, 7vw, 110px)
+                clamp(70px, 9vw, 110px);
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #F7F9FF 0%,
+                    #FFFFFF 55%,
+                    #EEF5FF 100%
+                );
+        }
+
+        .legal-hero::before {
+            content: "";
+
+            position:
+                absolute;
+
+            width:
+                420px;
+
+            height:
+                420px;
+
+            right:
+                -160px;
+
+            top:
+                -180px;
+
+            border-radius:
+                50%;
+
+            background:
+                radial-gradient(
+                    circle,
+                    rgba(1,82,244,0.14),
+                    transparent 68%
+                );
+
+            pointer-events:
+                none;
+        }
+
+        .legal-eyebrow {
+            position:
+                relative;
+
+            color:
+                var(--blue);
+
+            font-size:
+                0.72rem;
+
+            font-weight:
+                850;
+
+            letter-spacing:
+                2.5px;
+
+            text-transform:
+                uppercase;
+
+            margin-bottom:
+                18px;
+        }
+
+        .legal-hero h1 {
+            position:
+                relative;
+
+            max-width:
+                900px;
+
+            font-size:
+                clamp(3rem, 8vw, 7rem);
+
+            line-height:
+                0.95;
+
+            letter-spacing:
+                -0.055em;
+
+            font-weight:
+                900;
+        }
+
+        .legal-hero p {
+            position:
+                relative;
+
+            max-width:
+                680px;
+
+            margin-top:
+                28px;
+
+            color:
+                var(--muted);
+
+            font-size:
+                clamp(1rem, 1.5vw, 1.12rem);
+        }
+
+        .legal-meta {
+            position:
+                relative;
+
+            margin-top:
+                28px;
+
+            color:
+                #7C879B;
+
+            font-size:
+                0.78rem;
+
+            font-weight:
+                650;
+        }
+
+        .legal-layout {
+            display:
+                grid;
+
+            grid-template-columns:
+                minmax(180px, 240px)
+                minmax(0, 760px);
+
+            gap:
+                clamp(40px, 8vw, 110px);
+
+            max-width:
+                1180px;
+
+            margin:
+                0 auto;
+
+            padding:
+                80px 24px 120px;
+        }
+
+        .legal-index {
+            position:
+                sticky;
+
+            top:
+                100px;
+
+            align-self:
+                start;
+        }
+
+        .legal-index-title {
+            color:
+                var(--ink);
+
+            font-size:
+                0.68rem;
+
+            font-weight:
+                850;
+
+            letter-spacing:
+                1.8px;
+
+            text-transform:
+                uppercase;
+
+            margin-bottom:
+                15px;
+        }
+
+        .legal-index a {
+            display:
+                block;
+
+            padding:
+                5px 0;
+
+            color:
+                var(--muted);
+
+            font-size:
+                0.76rem;
+
+            line-height:
+                1.4;
+        }
+
+        .legal-index a:hover {
+            color:
+                var(--blue);
+
+            text-decoration:
+                none;
+        }
+
+        .legal-content section {
+            margin-bottom:
+                58px;
+
+            scroll-margin-top:
+                110px;
+        }
+
+        .legal-content h2 {
+            margin-bottom:
+                16px;
+
+            font-size:
+                clamp(1.35rem, 2.5vw, 1.8rem);
+
+            line-height:
+                1.2;
+
+            letter-spacing:
+                -0.025em;
+        }
+
+        .legal-content p {
+            margin-bottom:
+                15px;
+
+            color:
+                #4F5B72;
+
+            font-size:
+                0.96rem;
+        }
+
+        .legal-content ul {
+            margin:
+                14px 0 20px 22px;
+        }
+
+        .legal-content li {
+            margin-bottom:
+                8px;
+
+            color:
+                #4F5B72;
+
+            font-size:
+                0.96rem;
+        }
+
+        .legal-note {
+            margin:
+                25px 0;
+
+            padding:
+                22px 24px;
+
+            border:
+                1px solid rgba(1,82,244,0.14);
+
+            border-left:
+                3px solid var(--blue);
+
+            border-radius:
+                16px;
+
+            background:
+                rgba(1,82,244,0.035);
+        }
+
+        .legal-note p {
+            margin:
+                0;
+
+            color:
+                #46536B;
+        }
+
+        .legal-contact {
+            padding:
+                28px;
+
+            border-radius:
+                22px;
+
+            background:
+                var(--ink);
+
+            color:
+                var(--white);
+
+            box-shadow:
+                0 20px 60px
+                rgba(7,19,45,0.12);
+        }
+
+        .legal-contact h2 {
+            color:
+                var(--white);
+        }
+
+        .legal-contact p {
+            color:
+                rgba(255,255,255,0.68);
+        }
+
+        .legal-contact a {
+            color:
+                var(--light-blue);
+
+            font-weight:
+                700;
+        }
+
+        .legal-footer {
+            padding:
+                30px 24px;
+
+            text-align:
+                center;
+
+            border-top:
+                1px solid var(--line);
+
+            color:
+                #7C879B;
+
+            font-size:
+                0.76rem;
+        }
+
+        .legal-footer strong {
+            color:
+                var(--ink);
+        }
+
+        @media (max-width: 760px) {
+
+            .brand img {
+    width: 125px;
+    max-height: 36px;
+}
+
+            .legal-nav {
+                padding:
+                    16px 20px;
+            }
+
+            .legal-hero {
+                padding:
+                    75px 22px 65px;
+            }
+
+            .legal-hero h1 {
+                font-size:
+                    clamp(3rem, 15vw, 5rem);
+            }
+
+            .legal-layout {
+                display:
+                    block;
+
+                padding:
+                    55px 22px 85px;
+            }
+
+            .legal-index {
+                position:
+                    static;
+
+                margin-bottom:
+                    55px;
+
+                padding-bottom:
+                    25px;
+
+                border-bottom:
+                    1px solid var(--line);
+            }
+
+            .legal-index a {
+                display:
+                    inline-block;
+
+                margin-right:
+                    15px;
+            }
+
+            .legal-content section {
+                margin-bottom:
+                    48px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="legal-nav">
+        <a 
+            class="brand" 
+            href="../index.html"
+            aria-label="Swayphics home">
+    <img src="../swayphics-logo.png" alt="Swayphics">
+</a>
+
+        <a
+            class="back-link"
+           href="../">Back to Website
+        </a>
+    </nav>
+
+
+    <header class="legal-hero">
+
+        <div class="legal-eyebrow">
+            SWAYPHICS · LEGAL
+        </div>
+
+        <h1>
+            Cookie<br>
+            Policy.
+        </h1>
+
+        <p>
+            This Cookie Policy explains how Swayphics uses cookies and similar browser storage technologies on this website, why they are used and the choices available to visitors.
+        </p>
+
+        <div class="legal-meta">
+            Last updated: 28 September 2026
+        </div>
+
+    </header>
+
+
+    
+<main class="legal-layout">
+    <aside class="legal-index">
+        <div class="legal-index-title">On this page</div>
+        <a href="#what-are-cookies">01 · What are cookies?</a>
+        <a href="#how-we-use">02 · How we use them</a>
+        <a href="#necessary">03 · Necessary storage</a>
+        <a href="#analytics">04 · Analytics</a>
+        <a href="#information">05 · Information collected</a>
+        <a href="#consent">06 · Consent choices</a>
+        <a href="#manage">07 · Managing cookies</a>
+        <a href="#third-party">08 · Third-party services</a>
+        <a href="#changes">09 · Changes</a>
+        <a href="#contact">10 · Contact</a>
+    </aside>
+
+    <article class="legal-content">
+
+        <section id="what-are-cookies">
+            <h2>01 · What are cookies?</h2>
+            <p>Cookies are small text files that websites can store on a visitor's device. Websites can also use related technologies, such as browser local storage, to remember preferences or manage website functionality.</p>
+            <p>This policy uses the term “cookies” broadly to include cookies and similar browser storage technologies used by the Swayphics website.</p>
+        </section>
+
+        <section id="how-we-use">
+            <h2>02 · How we use them</h2>
+            <p>The current public Swayphics website uses browser storage for cookie-consent preferences and may use Google Analytics when a visitor accepts analytics cookies through the consent banner.</p>
+            <p>We use these technologies to operate the consent experience and, where permission has been given, understand website usage so that we can monitor and improve the website.</p>
+        </section>
+
+        <section id="necessary">
+            <h2>03 · Necessary storage</h2>
+            <p>The consent banner stores the visitor's choice using browser local storage under the key <code>swayphics_cookie_consent</code>. This is local storage rather than a traditional HTTP cookie.</p>
+            <p>The stored value records whether analytics consent was accepted or rejected so that the website can remember the choice on later visits. It is used for consent management and is not used by Swayphics as an advertising identifier.</p>
+            <p>The local-storage preference remains in the browser until it is changed or removed, including through the browser's site-data controls.</p>
+        </section>
+
+        <section id="analytics">
+            <h2>04 · Analytics</h2>
+            <p>When a visitor selects “Accept Analytics”, the website loads Google Analytics 4 using measurement ID <code>G-YNVEVHGFTZ</code>. The website does not load that Analytics script when the visitor selects “Reject Analytics” or before a consent choice has been made.</p>
+            <p>Google Analytics may use first-party cookies including <code>_ga</code> and <code>_ga_&lt;container-id&gt;</code> to distinguish users and persist session state. Google documents default lifetimes of two years for these cookies, although browser restrictions can shorten the effective lifetime.</p>
+            <p>Google provides further information about its Analytics cookies and data collection in its own documentation.</p>
+
+            <div class="legal-note">
+                <p><strong>Important:</strong> Selecting “Reject Analytics” stops the Swayphics website from loading Google Analytics through the consent script. The current implementation does not automatically delete Analytics cookies that may already exist from an earlier acceptance. Existing cookies can therefore remain in the browser until they expire or are cleared through browser controls.</p>
+            </div>
+        </section>
+
+        <section id="information">
+            <h2>05 · Information collected</h2>
+            <p>Google states that its default Google Analytics implementation can collect information such as user counts, session statistics, approximate geolocation, and browser and device information. Analytics also records website interaction data according to the configuration of the Analytics property.</p>
+            <p>Information processed through Analytics is subject to Google's own terms and privacy documentation as well as the Swayphics Privacy Policy.</p>
+        </section>
+
+        <section id="consent">
+            <h2>06 · Consent choices</h2>
+            <p>The Swayphics cookie banner gives visitors a choice to accept or reject analytics cookies. Analytics is loaded only after an “Accept Analytics” selection has been recorded.</p>
+            <p>Where consent is required by applicable law, Swayphics will use the consent mechanism described on this website to obtain that choice before enabling optional analytics storage.</p>
+            <p>A visitor can also control or remove cookies and local storage through the browser used to access the website. Removing site data may cause the consent banner to appear again.</p>
+        </section>
+
+        <section id="manage">
+            <h2>07 · Managing cookies</h2>
+            <p>Most browsers allow visitors to view, block, delete or restrict cookies and other site data through browser settings. The exact controls differ between browsers and devices.</p>
+            <p>Blocking or deleting site data may affect how the website remembers preferences or may require a new consent choice. Visitors can also clear the Swayphics consent value by removing the site's stored data in their browser.</p>
+        </section>
+
+        <section id="third-party">
+            <h2>08 · Third-party services</h2>
+            <p>The optional analytics functionality on the current public website is provided by Google Analytics. Google may process information in accordance with its own policies and technical documentation.</p>
+            <p>Third-party services and the technologies used by them can change. If Swayphics introduces additional analytics, advertising, embedded content or other technologies that use cookies or similar storage, this policy will be updated to describe the material changes where appropriate.</p>
+        </section>
+
+        <section id="changes">
+            <h2>09 · Changes</h2>
+            <p>Swayphics may update this Cookie Policy when website functionality, third-party services or applicable requirements change. The latest version will be published on this page with an updated effective date.</p>
+        </section>
+
+        <section id="contact">
+            <div class="legal-contact">
+                <h2>10 · Contact</h2>
+                <p>For questions about this Cookie Policy or the use of cookies and similar technologies on the Swayphics website, contact <a href="mailto:info@swayphics.co.za">info@swayphics.co.za</a>.</p>
+            </div>
+        </section>
+
+    </article>
+</main>
+
+
+    <footer class="legal-footer">
+
+        <strong>SWAYPHICS</strong>
+        · Empowering through design.
+
+        <br>
+
+        © 2026 Swayphics. All rights reserved.
+
+    </footer>
+
+</body>
+</html>
