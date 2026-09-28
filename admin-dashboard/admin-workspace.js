@@ -7708,33 +7708,6 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            (
-                                leadContactStatus(item).contacted
-                                    ? '<button type="button" class="sway-row-action" data-toggle-lead-contacted="' +
-                                      esc(item.id) +
-                                      '"' +
-                                      (
-                                          leadContactStatus(item).source === "communication"
-                                              ? ' disabled title="Detected from the communication log"'
-                                              : ' title="Remove the manual contacted flag"'
-                                      ) +
-                                      '>' +
-                                      esc(
-                                          leadContactStatus(item).label +
-                                          " · " +
-                                          (
-                                              leadContactStatus(item).source === "communication"
-                                                  ? "Log"
-                                                  : "Manual"
-                                          )
-                                      ) +
-                                      "</button>"
-                                    : '<button type="button" class="sway-row-action" data-toggle-lead-contacted="' +
-                                      esc(item.id) +
-                                      '">Mark contacted</button>'
-                            ) +
-                        "</td>" +
-                        "<td>" +
                             '<div class="sway-row-actions sway-lead-row-actions">' +
                                 '<details class="sway-lead-actions-menu">' +
                                     '<summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
@@ -7778,7 +7751,7 @@ function simpleBars(items, color) {
                 "Lead pipeline",
                 "Active prospects only. Leads needing extra attention automatically move to Follow-ups after the no-response window.",
                 state.leads.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th>Contacted</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No leads yet.")
