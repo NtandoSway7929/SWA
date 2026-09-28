@@ -52,7 +52,11 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
 
             background:
-                var(--white);
+                linear-gradient(
+                    rgba(244,247,252,0.90),
+                    rgba(244,247,252,0.90)
+                ),
+                url("../background branded wallpaper.webp") center / cover fixed no-repeat !important;
 
             color:
                 var(--ink);
@@ -161,13 +165,7 @@
                 clamp(22px, 7vw, 110px)
                 clamp(70px, 9vw, 110px);
 
-            background:
-                linear-gradient(
-                    135deg,
-                    #F7F9FF 0%,
-                    #FFFFFF 55%,
-                    #EEF5FF 100%
-                );
+            background: transparent;
         }
 
         .legal-hero::before {
