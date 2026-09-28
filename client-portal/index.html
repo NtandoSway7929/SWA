@@ -67,6 +67,26 @@ button,input,textarea{font:inherit}button{border:0}
 </div>
 <script>
 (function(){
+const app=document.getElementById("app");
+function showBootError(message){
+    if(!app||!app.classList.contains("loading"))return;
+    app.className="error portal-shell";
+    app.innerHTML='<div><strong>The portal could not start</strong><p style="max-width:540px;color:var(--muted);font-size:.62rem;line-height:1.65;">'+String(message||"The portal script did not initialise correctly.").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</p><button type="button" class="portal-button" onclick="window.location.reload()" style="margin-top:14px;">Try again</button></div>';
+}
+window.addEventListener("error",function(event){
+    showBootError(event&&event.message?"Portal script error: "+event.message:"A portal script error occurred.");
+});
+window.addEventListener("unhandledrejection",function(event){
+    const reason=event&&event.reason;
+    showBootError("Portal startup failed: "+(reason&&reason.message?reason.message:String(reason||"Unknown error.")));
+});
+window.setTimeout(function(){
+    showBootError("The portal page finished loading, but its application did not start. Refresh the page. If this repeats, the browser is using an older cached portal build or the portal JavaScript is being blocked.");
+},20000);
+})();
+</script>
+<script>
+(function(){
 const SUPABASE_URL="https://sqifhribgsqfaxgtobsa.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
 const app=document.getElementById("app");
