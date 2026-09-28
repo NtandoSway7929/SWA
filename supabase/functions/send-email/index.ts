@@ -61,27 +61,9 @@ function brandedEmailHtml(
   message: string,
   proposalType: "improv-website" | "no-website" | "not-website-related",
 ) {
-  const proposalImage =
-    proposalType === "improv-website"
-      ? '<img src="cid:swayphics-improvement-website" alt="Swayphics website improvement proposal" width="100%" style="display:block;width:100%;height:auto;border:0;border-radius:14px;" />'
-      : proposalType === "no-website"
-        ? '<img src="cid:swayphics-no-website" alt="Swayphics website proposal" width="100%" style="display:block;width:100%;height:auto;border:0;border-radius:14px;" />'
-        : "";
+  const normalizedRecipientName = cleanRecipientName(recipientName);
+  const normalizedBusinessName = cleanRecipientName(businessName);
 
-  const proposalVisualMarkup = proposalImage
-    ? '<div style="margin:26px 0 28px;">' + proposalImage + "</div>"
-    : "";
-  const normalizedRecipientName =
-    cleanRecipientName(recipientName);
-
-  const normalizedBusinessName =
-    cleanRecipientName(businessName);
-
-  /*
-   * A saved contact person must always take precedence over the business
-   * name. The generic "Hello," greeting is only used when neither value
-   * exists.
-   */
   const greetingName =
     normalizedRecipientName.length > 0
       ? normalizedRecipientName
@@ -91,59 +73,184 @@ function brandedEmailHtml(
     greetingName.length > 0
       ? "Hi " + escapeHtml(greetingName) + ","
       : "Hello,";
-  return `<!doctype html>
-<html>
-<body style="margin:0;background:#F4F7FC;font-family:Arial,Helvetica,sans-serif;color:#081533;">
-  <div style="max-width:700px;margin:0 auto;padding:32px 18px;">
-    <div style="background:#FFFFFF;border:1px solid #E0E6F0;border-radius:22px;overflow:hidden;box-shadow:0 12px 35px rgba(0,32,150,.07);">
-      <div style="padding:25px 30px;background:#FFFFFF;border-bottom:1px solid #E7ECF4;">
-        <img
-          src="https://swayphics.co.za/swayphics-logo.png"
-          alt="Swayphics"
-          width="145"
-          style="display:block;width:145px;height:auto;"
-        />
-      </div>
 
-      <div style="padding:34px 30px 26px;">
-        <p style="margin:0 0 20px;font-size:15px;line-height:1.8;color:#56627A;">
-          ${greetingMarkup}
-        </p>
+  const isProposal =
+    proposalType !== "not-website-related";
 
-        ${emailParagraphs(message)}
+  const eyebrow =
+    proposalType === "improv-website"
+      ? "WEBSITE IMPROVEMENT"
+      : proposalType === "no-website"
+        ? "WEBSITE PROPOSAL"
+        : "SWAYPHICS";
 
-        ${proposalVisualMarkup}
+  const title =
+    proposalType === "improv-website"
+      ? "There may be more potential in your website."
+      : proposalType === "no-website"
+        ? "Your next customer should be able to find you online."
+        : "Creative support for your business.";
 
-        <p style="margin:24px 0 0;font-size:15px;line-height:1.8;color:#56627A;">
-          Kind Regards,<br>
-          <strong style="color:#081533;">Swayphics</strong>
-        </p>
-      </div>
+  const introMarkup =
+    '<div style="margin:0 0 24px;">' +
+      '<p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:1.4;letter-spacing:0.16em;font-weight:700;color:#0152F4;text-transform:uppercase;">' +
+        escapeHtml(eyebrow) +
+      "</p>" +
+      '<h1 class="sway-email-title" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:27px;line-height:1.16;letter-spacing:-0.035em;font-weight:700;color:#081533;">' +
+        escapeHtml(title) +
+      "</h1>" +
+      (
+        normalizedBusinessName.length > 0
+          ? '<p style="margin:11px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#7A899D;">Prepared with ' +
+              escapeHtml(normalizedBusinessName) +
+              " in mind.</p>"
+          : ""
+      ) +
+    "</div>";
 
-      <div style="padding:18px 30px;background:#F7FAFF;border-top:1px solid #E7ECF4;color:#7A899D;font-size:11px;line-height:1.75;">
-        <strong style="color:#081533;">Swayphics</strong><br>
-        info@swayphics.co.za · <a href="https://swayphics.co.za" style="color:#0152F4;text-decoration:none;">swayphics.co.za</a>
-        <div style="margin-top:9px;">
-          Prefer WhatsApp? <a href="https://wa.me/27692087424?text=Hi%20Swayphics%2C%20I%27d%20like%20to%20chat%20about%20your%20proposal." style="color:#0152F4;text-decoration:none;font-weight:600;">Text Swayphics on WhatsApp</a>
-        </div>
-        <div style="margin-top:9px;">
-          <a href="https://swayphics.co.za/privacy-policy/" style="color:#56627A;text-decoration:underline;">Privacy Policy</a>
-          <span style="padding:0 6px;color:#B4BFCE;">·</span>
-          <a href="https://swayphics.co.za/terms-and-conditions/" style="color:#56627A;text-decoration:underline;">Terms &amp; Conditions</a>
-        </div>
-        <div style="margin-top:9px;color:#8A97A8;">
-          © 2026 Swayphics. All rights reserved.
-        </div>
-        <div style="margin-top:7px;color:#8A97A8;">
-          This email and any attachments are intended only for the addressed recipient. If you received this in error, please notify the sender and delete it.
-        </div>
-      </div>
-    </div>
+  const proposalImage =
+    proposalType === "improv-website"
+      ? '<img src="cid:swayphics-improvement-website" alt="Swayphics website improvement proposal" width="100%" style="display:block;width:100%;height:auto;border:0;border-radius:12px;" />'
+      : proposalType === "no-website"
+        ? '<img src="cid:swayphics-no-website" alt="Swayphics website proposal" width="100%" style="display:block;width:100%;height:auto;border:0;border-radius:12px;" />'
+        : "";
+
+  const proposalVisualMarkup =
+    proposalImage
+      ? '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 28px;"><tr><td style="padding:8px;background:#F4F7FC;border:1px solid #E1E7F0;border-radius:16px;">' +
+          proposalImage +
+        "</td></tr></table>"
+      : "";
+
+  const ctaText =
+    proposalType === "improv-website" ||
+    proposalType === "no-website"
+      ? "LET'S TALK ABOUT IT"
+      : "EXPLORE SWAYPHICS";
+
+  const ctaUrl =
+    proposalType === "improv-website" ||
+    proposalType === "no-website"
+      ? "https://wa.me/27692087424?text=Hi%20Swayphics%2C%20I%27d%20like%20to%20chat%20about%20the%20proposal."
+      : "https://swayphics.co.za";
+
+  const ctaMarkup =
+    '<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:2px 0 28px;"><tr><td bgcolor="#0152F4" style="border-radius:10px;">' +
+      '<a href="' +
+        ctaUrl +
+        '" style="display:inline-block;padding:13px 20px;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1;font-weight:700;letter-spacing:0.06em;color:#FFFFFF;text-decoration:none;border-radius:10px;">' +
+        ctaText +
+      "</a></td></tr></table>";
+
+  const messageMarkup =
+    '<div style="font-family:Arial,Helvetica,sans-serif;">' +
+      emailParagraphs(message) +
+    "</div>";
+
+  const signatureMarkup =
+    '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:28px;"><tr><td style="border-top:1px solid #E7ECF4;padding-top:20px;">' +
+      '<p style="margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#56627A;">Kind Regards,</p>' +
+      '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;font-weight:700;color:#081533;">Lesego Gumede</p>' +
+      '<p style="margin:2px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.5;font-weight:700;letter-spacing:0.08em;color:#0152F4;">SWAYPHICS</p>' +
+      '<p style="margin:3px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:1.5;color:#7A899D;">EMPOWERING THROUGH DESIGN</p>' +
+    "</td></tr></table>";
+
+  return \`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Swayphics</title>
+  <style>
+    @media screen and (max-width: 620px) {
+      .sway-email-shell { width: 100% !important; }
+      .sway-email-gutter { padding-left: 16px !important; padding-right: 16px !important; }
+      .sway-email-content { padding: 28px 20px 24px !important; }
+      .sway-email-footer { padding: 18px 20px !important; }
+      .sway-email-title { font-size: 23px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#F4F7FC;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+    \${escapeHtml(title)}
   </div>
-</body>
-</html>`;
-}
 
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#F4F7FC">
+    <tr>
+      <td class="sway-email-gutter" style="padding:30px 18px;">
+        <table role="presentation" class="sway-email-shell" width="680" cellspacing="0" cellpadding="0" border="0" align="center" style="width:100%;max-width:680px;background:#FFFFFF;border:1px solid #E0E6F0;border-radius:20px;overflow:hidden;">
+          <tr><td style="height:5px;background:#0152F4;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:22px 28px 19px;background:#FFFFFF;border-bottom:1px solid #E7ECF4;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td align="left" valign="middle">
+                    <img src="https://swayphics.co.za/swayphics-logo.png" alt="Swayphics" width="132" style="display:block;width:132px;height:auto;border:0;">
+                  </td>
+                  <td align="right" valign="middle" style="font-family:Arial,Helvetica,sans-serif;font-size:9px;line-height:1.4;font-weight:700;letter-spacing:0.13em;color:#7A899D;">
+                    CREATIVE &amp; DESIGN LAB
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="sway-email-content" style="padding:34px 34px 28px;background:#FFFFFF;">
+              \${isProposal ? introMarkup : ""}
+              <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.8;color:#56627A;">
+                \${greetingMarkup}
+              </p>
+              \${messageMarkup}
+              \${proposalVisualMarkup}
+              \${ctaMarkup}
+              \${signatureMarkup}
+            </td>
+          </tr>
+
+          <tr>
+            <td class="sway-email-footer" style="padding:18px 28px 20px;background:#F7FAFF;border-top:1px solid #E7ECF4;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="font-family:Arial,Helvetica,sans-serif;">
+                    <p style="margin:0;font-size:11px;line-height:1.6;font-weight:700;color:#081533;">SWAYPHICS</p>
+                    <p style="margin:1px 0 0;font-size:10px;line-height:1.6;color:#7A899D;">Creative &amp; Design Lab · Empowering through design.</p>
+                  </td>
+                  <td align="right" valign="top" style="font-family:Arial,Helvetica,sans-serif;">
+                    <a href="https://swayphics.co.za" style="font-size:10px;line-height:1.6;color:#0152F4;text-decoration:none;font-weight:700;">SWAYPHICS.CO.ZA</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:11px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:1.7;color:#7A899D;">
+                <a href="mailto:info@swayphics.co.za" style="color:#56627A;text-decoration:none;">info@swayphics.co.za</a>
+                <span style="color:#B4BFCE;padding:0 5px;">·</span>
+                <a href="https://wa.me/27692087424?text=Hi%20Swayphics%2C%20I%27d%20like%20to%20chat." style="color:#0152F4;text-decoration:none;font-weight:600;">WhatsApp Swayphics</a>
+              </p>
+
+              <p style="margin:10px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:9px;line-height:1.7;color:#8A97A8;">
+                <a href="https://swayphics.co.za/privacy-policy/" style="color:#56627A;text-decoration:underline;">Privacy Policy</a>
+                <span style="padding:0 5px;color:#B4BFCE;">·</span>
+                <a href="https://swayphics.co.za/terms-and-conditions/" style="color:#56627A;text-decoration:underline;">Terms &amp; Conditions</a>
+                <br>
+                © 2026 Swayphics. All rights reserved.
+              </p>
+
+              <p style="margin:9px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:9px;line-height:1.6;color:#9AA5B5;">
+                This email and any attachments are intended only for the addressed recipient. If received in error, please notify the sender and delete it.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>\`;
+}
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
