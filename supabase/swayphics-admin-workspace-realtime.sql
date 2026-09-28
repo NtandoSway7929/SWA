@@ -19,7 +19,9 @@ begin
         'payments',
         'website_enquiries',
         'site_announcements',
-        'activity_log'
+        'activity_log',
+        'communication_logs',
+        'email_messages'
     ]
     loop
         if not exists (
@@ -56,6 +58,8 @@ where pubname = 'supabase_realtime'
       'payments',
       'website_enquiries',
       'site_announcements',
-      'activity_log'
+      'activity_log',
+      'communication_logs',
+      'email_messages'
   )
 order by tablename;
