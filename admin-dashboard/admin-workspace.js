@@ -1280,7 +1280,9 @@
             api("/rest/v1/website_enquiries?select=*&order=created_at.desc"),
             api("/rest/v1/activity_log?select=*&order=created_at.desc&limit=20"),
             api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
-            api("/rest/v1/invoices?select=*&order=created_at.desc")
+            api("/rest/v1/invoices?select=*&order=created_at.desc"),
+            api("/rest/v1/services?select=*&order=name.asc"),
+            api("/rest/v1/invoice_settings?select=*&id=eq.1")
         ]);
 
         state.tasks = results[0] || [];
@@ -1294,6 +1296,8 @@
         state.activities = results[8] || [];
         state.announcements = results[9] || [];
         state.invoices = results[10] || [];
+        state.services = results[11] || [];
+        state.invoiceSettings = (results[12] && results[12][0]) || state.invoiceSettings || null;
 
         await loadAdminNotifications();
 
