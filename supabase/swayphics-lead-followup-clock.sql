@@ -289,7 +289,7 @@ to authenticated;
 
 -- Backfill existing leads from their most recent outbound communication or
 -- existing manual contact timestamp so the new clock applies immediately.
-do $
+do $$
 declare
     v_lead record;
 begin
@@ -309,7 +309,7 @@ begin
         );
     end loop;
 end;
-$;
+$$;
 
 notify pgrst, 'reload schema';
 
