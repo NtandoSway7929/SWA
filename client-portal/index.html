@@ -8,338 +8,124 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="icon" type="image/webp" href="../FIST.webp">
-<title>Swayphics Client Portal</title>
+<title>Swayphics | Client Portal</title>
 <style>
-:root {
-    --deep:#002096;
-    --blue:#0152F4;
-    --light:#77C1FC;
-    --dark:#081533;
-    --muted:#56627A;
-    --bg:#F6F9FF;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{
-    min-height:100vh;
-    font-family:'Plus Jakarta Sans',sans-serif;
-    color:var(--dark);
-    background:
-        radial-gradient(circle at 88% 8%,rgba(1,82,244,.10),transparent 30%),
-        radial-gradient(circle at 8% 88%,rgba(119,193,252,.08),transparent 28%),
-        linear-gradient(135deg,#F7F9FF 0%,#FFFFFF 55%,#EEF5FF 100%);
-    -webkit-font-smoothing:antialiased;
-}
-.portal-wrap{width:min(1080px,92%);margin:0 auto;padding:30px 0 70px}
-.portal-nav{
-    display:flex;align-items:center;justify-content:space-between;
-    gap:20px;padding:11px 16px;
-    border:1px solid rgba(255,255,255,.68);
-    border-radius:999px;
-    background:rgba(255,255,255,.72);
-    box-shadow:0 14px 38px rgba(0,32,150,.08);
-    backdrop-filter:blur(22px);
-}
-.portal-logo{width:130px}
-.portal-badge{
-    padding:7px 10px;border-radius:999px;
-    background:rgba(1,82,244,.07);color:var(--blue);
-    font-size:.58rem;font-weight:800
-}
-.portal-hero{padding:62px 4px 30px}
-.portal-kicker{color:var(--blue);font-size:.58rem;font-weight:900;letter-spacing:.18em}
-.portal-hero h1{margin-top:10px;font-size:clamp(2.2rem,5vw,4rem);line-height:.98;letter-spacing:-.055em}
-.portal-hero p{max-width:650px;margin-top:16px;color:var(--muted);font-size:.85rem;line-height:1.7}
-.portal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-.portal-card{
-    border:1px solid rgba(255,255,255,.72);
-    border-radius:22px;padding:20px;
-    background:linear-gradient(145deg,rgba(255,255,255,.93),rgba(247,250,255,.86));
-    box-shadow:0 18px 50px rgba(0,32,150,.06);
-    backdrop-filter:blur(18px);
-}
-.portal-card.full{grid-column:1/-1}
-.portal-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
-.portal-card-head h2{font-size:1rem;letter-spacing:-.03em}
-.portal-card-head span{color:var(--muted);font-size:.56rem}
-.portal-list{display:grid;gap:9px}
-.portal-item{
-    padding:12px;border:1px solid rgba(0,32,150,.07);border-radius:14px;background:rgba(255,255,255,.62)
-}
-.portal-item-top{display:flex;justify-content:space-between;gap:12px}
-.portal-item strong{font-size:.67rem}
-.portal-item small{display:block;margin-top:4px;color:var(--muted);font-size:.56rem;line-height:1.5}
-.portal-item b{font-size:.62rem}
-.status{display:inline-flex;padding:5px 8px;border-radius:999px;background:rgba(1,82,244,.07);color:var(--blue);font-size:.5rem;font-weight:800}
-.empty{padding:16px;color:var(--muted);font-size:.66rem}
-.request-form{display:grid;gap:10px}
-.field{display:grid;gap:6px}
-.field label{font-size:.6rem;font-weight:800}
-.field input,.field textarea{
-    width:100%;border:1px solid rgba(0,32,150,.12);border-radius:12px;padding:11px 12px;
-    font:inherit;font-size:.68rem;color:var(--dark);background:#fff;outline:none
-}
-.field textarea{min-height:115px;resize:vertical}
-.field input:focus,.field textarea:focus{border-color:rgba(1,82,244,.35);box-shadow:0 0 0 4px rgba(1,82,244,.07)}
-.portal-button{
-    border:0;border-radius:999px;padding:11px 16px;
-    background:linear-gradient(135deg,var(--deep),var(--blue));
-    color:#fff;font:inherit;font-size:.62rem;font-weight:800;cursor:pointer
-}
-.portal-button:disabled{opacity:.6;cursor:wait}
-.message{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(1,82,244,.06);color:var(--muted);font-size:.6rem;line-height:1.5}
-.loading,.error{min-height:60vh;display:grid;place-items:center;align-content:center;gap:13px;text-align:center;color:var(--muted);font-size:.75rem}
-.loading-copy{display:grid;gap:4px}
-.loading-copy strong{color:var(--dark);font-size:.78rem;font-weight:800}
-.loading-copy span{color:var(--muted);font-size:.62rem;font-weight:600}
-.sway-favicon-loader{--sway-loader-size:54px;position:relative;width:var(--sway-loader-size);height:var(--sway-loader-size);flex:0 0 var(--sway-loader-size);display:block;isolation:isolate}
-.sway-favicon-loader::before{content:"";position:absolute;inset:3px;border:1.5px solid rgba(1,82,244,.10);border-top-color:rgba(1,82,244,.78);border-right-color:rgba(119,193,252,.34);border-radius:50%;animation:sway-favicon-trace 1.35s cubic-bezier(.65,0,.35,1) infinite}
-.sway-favicon-loader img,.sway-favicon-loader-mark{position:absolute;inset:10px;width:calc(var(--sway-loader-size) - 20px);height:calc(var(--sway-loader-size) - 20px);display:block;object-fit:contain}
-.sway-favicon-loader img{opacity:.10}
-.sway-favicon-loader-mark{background:conic-gradient(from -40deg,transparent 0deg 34deg,#0152F4 52deg 116deg,rgba(119,193,252,.82) 132deg 156deg,transparent 174deg 360deg);-webkit-mask:url("../FIST.webp") center/contain no-repeat;mask:url("../FIST.webp") center/contain no-repeat;animation:sway-favicon-draw 1.25s linear infinite}
-.sway-favicon-loader-dot{position:absolute;top:0;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#0152F4;box-shadow:0 0 0 4px rgba(1,82,244,.07),0 3px 10px rgba(1,82,244,.18);transform-origin:3px calc(var(--sway-loader-size) / 2);animation:sway-favicon-dot 1.25s linear infinite}
-@keyframes sway-favicon-draw{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes sway-favicon-trace{0%,100%{transform:rotate(-18deg);opacity:.68}50%{transform:rotate(162deg);opacity:1}}
-@keyframes sway-favicon-dot{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-.sway-loading-button{display:inline-flex;align-items:center;justify-content:center;gap:7px}
-.sway-loading-button::before{content:"";width:15px;height:15px;flex:0 0 15px;background:conic-gradient(from -40deg,transparent 0deg 38deg,#0152F4 54deg 122deg,rgba(119,193,252,.82) 138deg 158deg,transparent 176deg 360deg);-webkit-mask:url("../FIST.webp") center/contain no-repeat;mask:url("../FIST.webp") center/contain no-repeat;animation:sway-button-favicon-draw 1.05s linear infinite}
-@keyframes sway-button-favicon-draw{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){.sway-favicon-loader::before,.sway-favicon-loader-mark,.sway-favicon-loader-dot{animation:none}}
-.error strong{display:block;color:var(--dark);font-size:1rem;margin-bottom:7px}
-@media(max-width:760px){
-    .portal-wrap{width:min(100% - 28px,1080px);padding-top:14px}
-    .portal-nav{padding:9px 12px}
-    .portal-logo{width:112px}
-    .portal-hero{padding:44px 2px 24px}
-    .portal-grid{grid-template-columns:1fr}
-    .portal-card.full{grid-column:auto}
-}
+:root{--deep:#002096;--blue:#0152F4;--light:#77C1FC;--dark:#081533;--muted:#56627A;--soft:#8190A5;--line:rgba(0,32,150,.085);--glass:rgba(255,255,255,.84)}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{min-height:100vh;font-family:'Plus Jakarta Sans',sans-serif;color:var(--dark);background:linear-gradient(135deg,rgba(247,250,255,.88),rgba(255,255,255,.72) 48%,rgba(238,246,255,.86)),url("../background%20branded%20wallpaper.webp") center/cover fixed no-repeat;-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit}button{border:0}
+.portal-shell{width:min(1160px,92%);margin:0 auto;padding:22px 0 70px}
+.portal-nav{position:sticky;top:14px;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:11px 14px 11px 17px;border:1px solid rgba(255,255,255,.72);border-radius:999px;background:rgba(255,255,255,.70);box-shadow:0 14px 38px rgba(0,32,150,.10),inset 0 1px 0 rgba(255,255,255,.82);backdrop-filter:blur(22px) saturate(145%);-webkit-backdrop-filter:blur(22px) saturate(145%)}
+.portal-logo{display:block;width:128px;height:auto}.portal-nav-right{display:flex;align-items:center;gap:9px}
+.portal-badge,.portal-secure{display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:0 11px;border-radius:999px;font-size:.55rem;font-weight:800;white-space:nowrap}
+.portal-badge{background:rgba(1,82,244,.065);color:var(--blue)}
+.portal-secure{border:1px solid rgba(1,82,244,.08);background:rgba(255,255,255,.64);color:#56627A}
+.portal-secure::before{content:"";width:6px;height:6px;border-radius:50%;background:#22A06B;box-shadow:0 0 0 4px rgba(34,160,107,.08)}
+.portal-hero{padding:72px 2px 30px}.portal-kicker{display:inline-block;color:var(--blue);font-size:.57rem;font-weight:900;letter-spacing:.18em}
+.portal-hero h1{max-width:900px;margin-top:12px;font-size:clamp(2.5rem,6vw,5.6rem);line-height:.95;letter-spacing:-.065em;font-weight:800}
+.portal-hero p{max-width:720px;margin-top:17px;color:var(--muted);font-size:.83rem;line-height:1.75}
+.portal-hero-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:24px}
+.portal-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:0 16px;border-radius:999px;cursor:pointer;background:linear-gradient(135deg,var(--deep),var(--blue));color:#fff;font-size:.61rem;font-weight:800;box-shadow:0 10px 24px rgba(1,82,244,.16);transition:transform .2s ease,box-shadow .2s ease,opacity .2s ease}
+.portal-button:hover{transform:translateY(-1px);box-shadow:0 13px 28px rgba(1,82,244,.20)}
+.portal-button.secondary{background:rgba(255,255,255,.70);color:var(--dark);border:1px solid rgba(0,32,150,.08);box-shadow:none}
+.portal-button:disabled{opacity:.6;cursor:wait;transform:none}
+.portal-section{margin-top:28px}.portal-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:13px}.portal-section-head h2{font-size:1.06rem;letter-spacing:-.035em}.portal-section-head p{color:var(--soft);font-size:.57rem;font-weight:650}
+.portal-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.stat-card{position:relative;overflow:hidden;padding:17px;border:1px solid rgba(255,255,255,.72);border-radius:19px;background:var(--glass);box-shadow:0 14px 40px rgba(0,32,150,.055),inset 0 1px 0 rgba(255,255,255,.80);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
+.stat-card::after{content:"";position:absolute;width:140px;height:140px;right:-75px;top:-75px;border-radius:50%;background:radial-gradient(circle,rgba(1,82,244,.10),rgba(1,82,244,0) 72%);pointer-events:none}
+.stat-card span{display:block;color:var(--soft);font-size:.52rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.stat-card strong{display:block;margin-top:8px;color:var(--dark);font-size:1.22rem;font-weight:850;letter-spacing:-.04em}.stat-card small{display:block;margin-top:4px;color:var(--muted);font-size:.52rem;line-height:1.45}
+.portal-card{border:1px solid rgba(255,255,255,.72);border-radius:22px;padding:20px;background:linear-gradient(145deg,rgba(255,255,255,.91),rgba(247,250,255,.79));box-shadow:0 18px 50px rgba(0,32,150,.06),inset 0 1px 0 rgba(255,255,255,.76);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
+.portal-grid{display:grid;grid-template-columns:1.22fr .78fr;gap:16px}.portal-card.wide{grid-column:1/-1}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}.card-head h3{font-size:.91rem;letter-spacing:-.025em}.card-head p{margin-top:4px;color:var(--soft);font-size:.54rem;line-height:1.5}.card-count{color:var(--soft);font-size:.54rem;font-weight:800}
+.project-list,.financial-list{display:grid;gap:10px}
+.project-item,.financial-item{padding:14px;border:1px solid rgba(0,32,150,.065);border-radius:15px;background:rgba(255,255,255,.56)}
+.project-top,.financial-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.project-name,.financial-name{color:var(--dark);font-size:.66rem;font-weight:850}.project-meta,.financial-meta{margin-top:5px;color:var(--muted);font-size:.54rem;line-height:1.55}
+.chip{display:inline-flex;align-items:center;min-height:23px;padding:0 8px;border-radius:999px;background:rgba(1,82,244,.065);color:var(--blue);font-size:.48rem;font-weight:850;white-space:nowrap}.chip.success{background:rgba(34,160,107,.08);color:#18784F}.chip.warning{background:rgba(231,155,26,.10);color:#906000}.chip.danger{background:rgba(190,44,44,.08);color:#9A2525}
+.progress{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:12px}.progress span{height:4px;border-radius:999px;background:rgba(0,32,150,.08)}.progress span.active{background:linear-gradient(90deg,var(--deep),var(--blue))}
+.project-item-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px}.project-item-footer small{color:var(--soft);font-size:.5rem}.text-button{background:none;color:var(--blue);font-size:.52rem;font-weight:850;cursor:pointer;padding:0}.text-button:hover{text-decoration:underline}
+.financial-item b{color:var(--dark);font-size:.67rem}.empty{padding:18px 8px;color:var(--muted);font-size:.58rem;line-height:1.55}
+.request-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(310px,.7fr);gap:24px;align-items:start}.request-copy .kicker{color:var(--blue);font-size:.52rem;font-weight:900;letter-spacing:.11em}.request-copy h3{margin-top:7px;font-size:1.48rem;letter-spacing:-.045em;line-height:1.05}.request-copy p{max-width:570px;margin-top:9px;color:var(--muted);font-size:.61rem;line-height:1.7}.contact-points{display:grid;gap:7px;margin-top:16px}.contact-point{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.56rem}.contact-point strong{color:var(--dark);font-weight:800}
+.request-form{display:grid;gap:10px}.field{display:grid;gap:6px}.field label{font-size:.57rem;font-weight:800}.field input,.field textarea{width:100%;border:1px solid rgba(0,32,150,.11);border-radius:12px;padding:11px 12px;color:var(--dark);background:rgba(255,255,255,.80);outline:none;font-size:.64rem}.field textarea{min-height:120px;resize:vertical;line-height:1.6}.field input:focus,.field textarea:focus{border-color:rgba(1,82,244,.34);box-shadow:0 0 0 4px rgba(1,82,244,.06);background:#fff}
+.message{padding:9px 11px;border-radius:11px;background:rgba(1,82,244,.055);color:var(--muted);font-size:.55rem;line-height:1.5}
+.portal-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:28px;padding:15px 3px;color:var(--soft);font-size:.52rem;line-height:1.5}.portal-footer strong{color:#56627A}
+.loading,.error{min-height:100vh;display:grid;place-items:center;align-content:center;gap:13px;padding:24px;text-align:center}.loading-copy{display:grid;gap:4px}.loading-copy strong{color:var(--dark);font-size:.78rem;font-weight:800}.loading-copy span{color:var(--muted);font-size:.62rem;font-weight:600}.error strong{display:block;color:var(--dark);font-size:1rem;margin-bottom:7px}
+.sway-favicon-loader{--sway-loader-size:54px;position:relative;width:var(--sway-loader-size);height:var(--sway-loader-size);display:block;isolation:isolate}.sway-favicon-loader::before{content:"";position:absolute;inset:3px;border:1.5px solid rgba(1,82,244,.10);border-top-color:rgba(1,82,244,.78);border-right-color:rgba(119,193,252,.34);border-radius:50%;animation:sway-favicon-trace 1.35s cubic-bezier(.65,0,.35,1) infinite}.sway-favicon-loader img,.sway-favicon-loader-mark{position:absolute;inset:10px;width:34px;height:34px;display:block;object-fit:contain}.sway-favicon-loader img{opacity:.10}.sway-favicon-loader-mark{background:conic-gradient(from -40deg,transparent 0 34deg,#0152F4 52deg 116deg,rgba(119,193,252,.82) 132deg 156deg,transparent 174deg 360deg);-webkit-mask:url("../FIST.webp") center/contain no-repeat;mask:url("../FIST.webp") center/contain no-repeat;animation:sway-favicon-draw 1.25s linear infinite}.sway-favicon-loader-dot{position:absolute;top:0;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#0152F4;box-shadow:0 0 0 4px rgba(1,82,244,.07),0 3px 10px rgba(1,82,244,.18);transform-origin:3px calc(var(--sway-loader-size) / 2);animation:sway-favicon-dot 1.25s linear infinite}
+@keyframes sway-favicon-draw{from{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes sway-favicon-trace{0%,100%{transform:rotate(-18deg);opacity:.68}50%{transform:rotate(162deg);opacity:1}}@keyframes sway-favicon-dot{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.sway-loading-button{display:inline-flex;align-items:center;justify-content:center;gap:7px}.sway-loading-button::before{content:"";width:14px;height:14px;flex:0 0 14px;background:conic-gradient(from -40deg,transparent 0 38deg,#0152F4 54deg 122deg,rgba(119,193,252,.82) 138deg 158deg,transparent 176deg 360deg);-webkit-mask:url("../FIST.webp") center/contain no-repeat;mask:url("../FIST.webp") center/contain no-repeat;animation:sway-button-favicon-draw 1.05s linear infinite}@keyframes sway-button-favicon-draw{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.portal-modal{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:18px}.modal-backdrop{position:absolute;inset:0;background:rgba(8,21,51,.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}.modal-card{position:relative;z-index:1;width:min(720px,100%);max-height:calc(100vh - 36px);overflow:auto;border:1px solid rgba(255,255,255,.74);border-radius:24px;padding:21px;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(247,250,255,.95));box-shadow:0 30px 90px rgba(0,32,150,.20)}.modal-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.modal-head h3{font-size:1.15rem;letter-spacing:-.04em}.modal-head p{margin-top:5px;color:var(--muted);font-size:.57rem}.modal-close{width:34px;height:34px;border-radius:50%;background:rgba(0,32,150,.05);color:var(--dark);font-size:1rem;cursor:pointer}.modal-close:hover{background:rgba(1,82,244,.08);color:var(--blue)}
+.timeline{display:grid;gap:9px;margin-top:18px}.timeline-step{display:grid;grid-template-columns:29px 1fr;gap:10px;align-items:center}.timeline-node{width:29px;height:29px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(0,32,150,.08);background:#fff;color:var(--soft);font-size:.5rem;font-weight:900}.timeline-step.complete .timeline-node{background:rgba(1,82,244,.08);color:var(--blue);border-color:rgba(1,82,244,.10)}.timeline-step.current strong{color:var(--blue)}.timeline-step strong{font-size:.61rem;font-weight:850}.timeline-step small{display:block;margin-top:2px;color:var(--soft);font-size:.49rem}.project-detail{display:grid;gap:14px;margin-top:18px}.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.detail-box{padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.65)}.detail-box span{display:block;color:var(--soft);font-size:.48rem;font-weight:800;text-transform:uppercase}.detail-box strong{display:block;margin-top:3px;font-size:.59rem}.detail-description{padding:12px;border-radius:13px;background:rgba(1,82,244,.035);color:var(--muted);font-size:.57rem;line-height:1.65}
+@media(max-width:920px){.portal-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.portal-grid{grid-template-columns:1fr}.request-card{grid-template-columns:1fr}}
+@media(max-width:680px){.portal-shell{width:min(100% - 24px,1160px);padding-top:12px}.portal-nav{top:8px;padding:9px 10px 9px 12px}.portal-logo{width:108px}.portal-secure{display:none}.portal-hero{padding:48px 2px 24px}.portal-hero h1{font-size:clamp(2.45rem,14vw,4rem)}.portal-hero-actions{flex-direction:column}.portal-hero-actions .portal-button{width:100%}.portal-card{padding:16px;border-radius:19px}.portal-section{margin-top:22px}.portal-stats{grid-template-columns:1fr 1fr;gap:8px}.stat-card{padding:14px}.stat-card strong{font-size:1.05rem}.portal-footer{align-items:flex-start;flex-direction:column}.detail-grid{grid-template-columns:1fr 1fr}.modal-card{padding:17px;border-radius:20px}}
+@media(max-width:430px){.portal-badge{font-size:.49rem;padding:0 8px}.portal-stats{grid-template-columns:1fr}.project-top,.financial-top{flex-direction:column;gap:7px}}
+@media(prefers-reduced-motion:reduce){.sway-favicon-loader::before,.sway-favicon-loader-mark,.sway-favicon-loader-dot{animation:none}.portal-button{transition:none}}
 </style>
 </head>
 <body>
 <div id="app" class="loading">
-    <div class="sway-favicon-loader" aria-hidden="true">
-        <img src="../FIST.webp" alt="" width="34" height="34">
-        <span class="sway-favicon-loader-mark"></span>
-        <span class="sway-favicon-loader-dot"></span>
-    </div>
-    <div class="loading-copy">
-        <strong>Loading your Swayphics portal</strong>
-        <span>Connecting to your private workspace</span>
-    </div>
+<div class="sway-favicon-loader" aria-hidden="true"><img src="../FIST.webp" alt="" width="34" height="34"><span class="sway-favicon-loader-mark"></span><span class="sway-favicon-loader-dot"></span></div>
+<div class="loading-copy"><strong>Loading your Swayphics portal</strong><span>Connecting to your private workspace</span></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-    const SUPABASE_URL="https://sqifhribgsqfaxgtobsa.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY="sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
-    const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
-    const app=document.getElementById("app");
-    const params=new URLSearchParams(window.location.search);
-    const token=params.get("token")||"";
-
-    function esc(value){
-        return String(value==null?"":value)
-            .replace(/&/g,"&amp;").replace(/</g,"&lt;")
-            .replace(/>/g,"&gt;").replace(/"/g,"&quot;")
-            .replace(/'/g,"&#039;");
-    }
-
-    function money(value){
-        return new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0})
-            .format(Number(value||0));
-    }
-
-    function date(value){
-        if(!value)return "—";
-        const d=new Date(value);
-        if(Number.isNaN(d.getTime()))return String(value);
-        return d.toLocaleDateString("en-ZA",{day:"2-digit",month:"short",year:"numeric",timeZone:"Africa/Johannesburg"});
-    }
-
-    function status(value){
-        return '<span class="status">'+esc(String(value||"").replace(/\b\w/g,function(m){return m.toUpperCase()}))+"</span>";
-    }
-
-    function list(items, renderer, emptyText){
-        return items&&items.length
-            ? '<div class="portal-list">'+items.map(renderer).join("")+"</div>"
-            : '<div class="empty">'+esc(emptyText)+"</div>";
-    }
-
-    function render(data){
-        const c=data.client||{};
-        app.className="portal-wrap";
-        app.innerHTML=
-            '<nav class="portal-nav">'+
-                '<img src="../swayphics-logo.png" class="portal-logo" alt="Swayphics">'+
-                '<span class="portal-badge">Private client portal</span>'+
-            "</nav>"+
-            '<section class="portal-hero">'+
-                '<span class="portal-kicker">SWAYPHICS CLIENT PORTAL</span>'+
-                "<h1>Welcome, "+esc(c.contact_name||c.business_name||"Client")+"."+"</h1>"+
-                "<p>View your current Swayphics projects, quotes, invoices and payments in one private workspace. You can also send a request directly to the Swayphics team.</p>"+
-            "</section>"+
-            '<div class="portal-grid">'+
-                '<section class="portal-card">'+
-                    '<div class="portal-card-head"><h2>Projects</h2><span>'+((data.projects||[]).length)+"</span></div>"+
-                    list(data.projects,function(item){
-                        return '<article class="portal-item"><div class="portal-item-top"><strong>'+esc(item.name)+'</strong>'+status(item.status)+'</div>'+
-                            '<small>'+esc(item.service||"Swayphics project")+
-                            (item.due_date?" · Due "+esc(date(item.due_date)):"")+"</small></article>";
-                    },"No projects are currently listed.")+
-                "</section>"+
-                '<section class="portal-card">'+
-                    '<div class="portal-card-head"><h2>Quotes</h2><span>'+((data.quotes||[]).length)+"</span></div>"+
-                    list(data.quotes,function(item){
-                        return '<article class="portal-item"><div class="portal-item-top"><strong>'+esc(item.quote_number||item.title||"Quote")+'</strong><b>'+money(item.amount)+'</b></div>'+
-                            '<small>'+esc(item.title||"")+" · "+esc(date(item.valid_until))+" · "+esc(item.status||"")+"</small></article>";
-                    },"No quotes are currently listed.")+
-                "</section>"+
-                '<section class="portal-card full">'+
-                    '<div class="portal-card-head"><h2>Invoices</h2><span>'+((data.invoices||[]).length)+"</span></div>"+
-                    list(data.invoices,function(item){
-                        return '<article class="portal-item"><div class="portal-item-top"><strong>'+esc(item.invoice_number)+'</strong><b>'+money(item.total)+'</b></div>'+
-                            '<small>Issued '+esc(date(item.issue_date))+
-                            (item.due_date?" · Due "+esc(date(item.due_date)):"")+
-                            " · "+esc(item.status||"")+
-                            (Number(item.amount_outstanding||0)>0?" · Outstanding "+money(item.amount_outstanding):"")+
-                            "</small></article>";
-                    },"No invoices are currently listed.")+
-                "</section>"+
-                '<section class="portal-card">'+
-                    '<div class="portal-card-head"><h2>Payments</h2><span>'+((data.payments||[]).length)+"</span></div>"+
-                    list(data.payments,function(item){
-                        return '<article class="portal-item"><div class="portal-item-top"><strong>'+money(item.amount)+'</strong>'+status("Paid")+'</div>'+
-                            '<small>'+esc(date(item.paid_at))+(item.reference?" · "+esc(item.reference):"")+
-                            (item.method?" · "+esc(item.method):"")+"</small></article>";
-                    },"No recorded payments yet.")+
-                "</section>"+
-                '<section class="portal-card">'+
-                    '<div class="portal-card-head"><h2>Send a request</h2><span>Direct to Swayphics</span></div>'+
-                    '<form class="request-form" id="request-form">'+
-                        '<div class="field"><label for="request-subject">Subject</label><input id="request-subject" required maxlength="180" placeholder="What do you need help with?"></div>'+
-                        '<div class="field"><label for="request-message">Message</label><textarea id="request-message" required maxlength="5000" placeholder="Tell us what you need."></textarea></div>'+
-                        '<button class="portal-button" type="submit">Send request</button>'+
-                        '<div id="request-message-status" class="message" hidden></div>'+
-                    "</form>"+
-                "</section>"+
-            "</div>";
-
-        document.getElementById("request-form").addEventListener("submit",async function(event){
-            event.preventDefault();
-            const button=event.target.querySelector("button");
-            const statusBox=document.getElementById("request-message-status");
-            button.disabled=true;
-            statusBox.hidden=false;
-            statusBox.textContent="Sending request...";
-            try{
-                const result=await client.rpc("submit_client_portal_request",{
-                    p_token:token,
-                    p_subject:document.getElementById("request-subject").value,
-                    p_message:document.getElementById("request-message").value
-                });
-                const payload=result.data;
-                if(result.error)throw result.error;
-                if(!payload||!payload.ok)throw new Error(payload&&payload.error||"Unable to send request.");
-                statusBox.textContent="Your request has been sent to Swayphics.";
-                event.target.reset();
-            }catch(error){
-                statusBox.textContent=error.message||"Unable to send request.";
-            }finally{
-                button.disabled=false;
-            }
-        });
-    }
-
-    async function load(){
-        if(!token){
-            app.className="error portal-wrap";
-            app.innerHTML="<div><strong>Portal link required</strong>This page needs a valid private Swayphics portal link.</div>";
-            return;
-        }
-
-        try{
-            const result=await client.rpc("get_client_portal",{p_token:token});
-            if(result.error)throw result.error;
-            if(!result.data||!result.data.ok){
-                throw new Error(result.data&&result.data.error||"This portal link is invalid or expired.");
-            }
-            render(result.data);
-        }catch(error){
-            app.className="error portal-wrap";
-            app.innerHTML="<div><strong>Unable to open portal</strong>"+esc(error.message||"This portal link is invalid or expired.")+"</div>";
-        }
-    }
-
-    load();
+const SUPABASE_URL="https://sqifhribgsqfaxgtobsa.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
+const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const app=document.getElementById("app");
+const params=new URLSearchParams(window.location.search);
+const token=params.get("token")||"";
+function esc(value){return String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
+function money(value){return new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(Number(value||0))}
+function date(value){if(!value)return "—";const d=new Date(value);if(Number.isNaN(d.getTime()))return String(value);return d.toLocaleDateString("en-ZA",{day:"2-digit",month:"short",year:"numeric",timeZone:"Africa/Johannesburg"})}
+function nice(value){return String(value||"").replace(/\b\w/g,function(m){return m.toUpperCase()})}
+function chip(value){const v=String(value||"").toLowerCase();const cls=v==="paid"||v==="completed"?"success":(v==="overdue"||v==="rejected"||v==="cancelled"?"danger":(v==="pending"||v==="review"||v==="in progress"?"warning":""));return '<span class="chip '+cls+'">'+esc(nice(value||"Not set"))+"</span>"}
+function projectStage(value){const stages=["planning","in progress","review","completed"];const index=stages.indexOf(String(value||"").toLowerCase());return index<0?0:index}
+function projectProgress(value){const current=projectStage(value);return '<div class="progress">'+[0,1,2,3].map(function(i){return '<span class="'+(i<=current?"active":"")+'"></span>'}).join("")+"</div>"}
+function activeProjects(data){return (data.projects||[]).filter(function(p){return !["completed","cancelled"].includes(String(p.status||"").toLowerCase())})}
+function renderProject(item){return '<article class="project-item"><div class="project-top"><div><div class="project-name">'+esc(item.name||"Untitled project")+'</div><div class="project-meta">'+esc(item.service||"Swayphics project")+(item.due_date?" · Due "+esc(date(item.due_date)):"")+"</div></div>"+chip(item.status)+"</div>"+projectProgress(item.status)+'<div class="project-item-footer"><small>'+esc(item.description||"Your Swayphics project is being managed here.")+'</small><button type="button" class="text-button" data-project-id="'+esc(item.id)+'">View details</button></div></article>'}
+function renderInvoice(item){const outstanding=Number(item.amount_outstanding||0);return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.invoice_number||"Invoice")+'<div class="financial-meta">Issued '+esc(date(item.issue_date))+(item.due_date?" · Due "+esc(date(item.due_date)):"")+(outstanding>0?" · Outstanding "+money(outstanding):"")+"</div></div><div><b>"+esc(money(item.total))+"</b><div style="margin-top:5px;text-align:right;">"+chip(item.status)+"</div></div></div></article>"}
+function renderQuote(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.quote_number||item.title||"Quote")+'<div class="financial-meta">'+esc(item.title||"Swayphics quotation")+(item.valid_until?" · Valid until "+esc(date(item.valid_until)):"")+"</div></div><div><b>"+esc(money(item.amount))+"</b><div style="margin-top:5px;text-align:right;">"+chip(item.status)+"</div></div></div></article>"}
+function renderPayment(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.reference||"Payment")+'<div class="financial-meta">'+esc(date(item.paid_at))+(item.method?" · "+esc(item.method):"")+"</div></div><div><b>"+esc(money(item.amount))+"</b><div style="margin-top:5px;text-align:right;">"+chip("paid")+"</div></div></div></article>"}
+function render(data){
+const c=data.client||{},projects=data.projects||[],active=activeProjects(data),invoices=data.invoices||[],quotes=data.quotes||[],payments=data.payments||[];
+const outstanding=invoices.reduce(function(sum,item){return sum+Math.max(0,Number(item.amount_outstanding||0))},0);
+const quoteValue=quotes.reduce(function(sum,item){return sum+Number(item.amount||0)},0);
+const paid=payments.reduce(function(sum,item){return sum+Number(item.amount||0)},0);
+app.className="portal-shell";
+app.innerHTML=
+'<nav class="portal-nav"><img src="../swayphics-logo.png" class="portal-logo" alt="Swayphics"><div class="portal-nav-right"><span class="portal-secure">Secure access</span><span class="portal-badge">Private client portal</span></div></nav>'+
+'<section class="portal-hero"><span class="portal-kicker">SWAYPHICS CLIENT PORTAL</span><h1>Welcome, '+esc(c.contact_name||c.business_name||"Client")+'.</h1><p>One place for project progress, quotations, invoices and payments. Need something from the Swayphics team? Send it directly from this workspace.</p><div class="portal-hero-actions"><button type="button" class="portal-button" data-scroll-request>Make a request</button><a class="portal-button secondary" href="mailto:info@swayphics.co.za?subject='+encodeURIComponent("Client request — "+(c.business_name||"Swayphics client"))+'">Email Swayphics</a></div></section>'+
+'<section class="portal-section"><div class="portal-section-head"><div><h2>At a glance</h2><p>Your current Swayphics workspace</p></div></div><div class="portal-stats"><article class="stat-card"><span>Active projects</span><strong>'+active.length+'</strong><small>'+(projects.length?projects.length+" total project"+(projects.length===1?"":"s"):"No projects yet")+'</small></article><article class="stat-card"><span>Outstanding</span><strong>'+esc(money(outstanding))+'</strong><small>Across open invoices</small></article><article class="stat-card"><span>Quoted value</span><strong>'+esc(money(quoteValue))+'</strong><small>Current quotations</small></article><article class="stat-card"><span>Recorded payments</span><strong>'+esc(money(paid))+'</strong><small>Payments recorded by Swayphics</small></article></div></section>'+
+'<section class="portal-section portal-grid"><section class="portal-card"><div class="card-head"><div><h3>Project progress</h3><p>See where each piece of work currently sits.</p></div><span class="card-count">'+projects.length+'</span></div>'+(projects.length?'<div class="project-list">'+projects.map(renderProject).join("")+'</div>':'<div class="empty">No projects are currently listed for this workspace.</div>')+'</section>'+
+'<section class="portal-card"><div class="card-head"><div><h3>Invoices</h3><p>Amounts and payment status.</p></div><span class="card-count">'+invoices.length+'</span></div>'+(invoices.length?'<div class="financial-list">'+invoices.slice(0,5).map(renderInvoice).join("")+'</div>':'<div class="empty">No invoices are currently listed.</div>')+'</section>'+
+'<section class="portal-card"><div class="card-head"><div><h3>Quotes</h3><p>Current quotations from Swayphics.</p></div><span class="card-count">'+quotes.length+'</span></div>'+(quotes.length?'<div class="financial-list">'+quotes.slice(0,5).map(renderQuote).join("")+'</div>':'<div class="empty">No quotations are currently listed.</div>')+'</section>'+
+'<section class="portal-card"><div class="card-head"><div><h3>Payments</h3><p>Recorded payments on this client account.</p></div><span class="card-count">'+payments.length+'</span></div>'+(payments.length?'<div class="financial-list">'+payments.slice(0,5).map(renderPayment).join("")+'</div>':'<div class="empty">No recorded payments yet.</div>')+'</section></section>'+
+'<section class="portal-section" id="request-section"><section class="portal-card request-card"><div class="request-copy"><span class="kicker">DIRECT TO SWAYPHICS</span><h3>Need an update, change or something new?</h3><p>Send a request from the portal and it will be attached to this client account in the Swayphics workspace.</p><div class="contact-points">'+(c.email?'<div class="contact-point"><span>Account</span><strong>'+esc(c.email)+'</strong></div>':"")+(c.phone?'<div class="contact-point"><span>Phone</span><strong>'+esc(c.phone)+'</strong></div>':"")+'</div></div><form class="request-form" id="request-form"><div class="field"><label for="request-subject">Subject</label><input id="request-subject" required maxlength="180" placeholder="What do you need help with?"></div><div class="field"><label for="request-message">Message</label><textarea id="request-message" required maxlength="5000" placeholder="Tell the Swayphics team what you need."></textarea></div><button class="portal-button" type="submit">Send request</button><div id="request-message-status" class="message" hidden></div></form></section></section>'+
+'<footer class="portal-footer"><span><strong>Swayphics</strong> · Creative & Design Lab</span><span>Private portal access · Keep this link confidential</span></footer>';
+document.querySelectorAll("[data-project-id]").forEach(function(button){button.addEventListener("click",function(){const project=projects.find(function(item){return item.id===button.dataset.projectId});if(project)openProjectModal(project)})});
+document.querySelectorAll("[data-scroll-request]").forEach(function(button){button.addEventListener("click",function(){document.getElementById("request-section").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(function(){document.getElementById("request-subject")?.focus()},450)})});
+document.getElementById("request-form").addEventListener("submit",async function(event){
+event.preventDefault();const form=event.target,button=form.querySelector("button"),statusBox=document.getElementById("request-message-status");
+button.disabled=true;button.textContent="Sending...";statusBox.hidden=false;statusBox.textContent="Sending request...";
+try{const result=await client.rpc("submit_client_portal_request",{p_token:token,p_subject:document.getElementById("request-subject").value,p_message:document.getElementById("request-message").value});const payload=result.data;if(result.error)throw result.error;if(!payload||!payload.ok)throw new Error(payload&&payload.error||"Unable to send request.");statusBox.textContent="Your request has been sent to Swayphics.";form.reset()}catch(error){statusBox.textContent=error.message||"Unable to send request."}finally{button.disabled=false;button.textContent="Send request"}});
+}
+function openProjectModal(project){
+document.getElementById("portal-project-modal")?.remove();
+const stages=["planning","in progress","review","completed"],current=projectStage(project.status),modal=document.createElement("div");
+modal.className="portal-modal";modal.id="portal-project-modal";
+modal.innerHTML='<div class="modal-backdrop" data-close></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-project-title"><div class="modal-head"><div><span class="portal-kicker">PROJECT</span><h3 id="portal-project-title">'+esc(project.name||"Project")+'</h3><p>'+esc(project.service||"Swayphics project")+'</p></div><button type="button" class="modal-close" data-close aria-label="Close">×</button></div><div class="project-detail"><div class="detail-grid"><div class="detail-box"><span>Status</span><strong>'+esc(nice(project.status||"Not set"))+'</strong></div><div class="detail-box"><span>Due</span><strong>'+esc(date(project.due_date))+'</strong></div><div class="detail-box"><span>Project value</span><strong>'+esc(money(project.value))+'</strong></div></div>'+(project.description?'<div class="detail-description">'+esc(project.description)+'</div>':"")+'<div class="timeline">'+stages.map(function(stage,i){const done=i<=current, currentLabel=i===current&&stage!=="completed"?"Current stage":(done?"Completed":"Upcoming");return '<div class="timeline-step '+(done?"complete":"")+' '+(i===current?"current":"")+'"><span class="timeline-node">'+(done?"✓":String(i+1))+'</span><div><strong>'+esc(nice(stage))+'</strong><small>'+esc(currentLabel)+'</small></div></div>'}).join("")+'</div><div style="display:flex;justify-content:flex-end;margin-top:3px"><button type="button" class="portal-button secondary" data-close>Close</button></div></div></section>';
+document.body.appendChild(modal);modal.querySelectorAll("[data-close]").forEach(function(el){el.addEventListener("click",function(){modal.remove()})});
+}
+async function load(){
+if(!token){app.className="error portal-shell";app.innerHTML='<div><strong>Portal link required</strong>This page needs a valid private Swayphics portal link.</div>';return}
+try{const result=await client.rpc("get_client_portal",{p_token:token});if(result.error)throw result.error;if(!result.data||!result.data.ok)throw new Error(result.data&&result.data.error||"This portal link is invalid or expired.");render(result.data)}
+catch(error){app.className="error portal-shell";app.innerHTML='<div><strong>Unable to open portal</strong>'+esc(error.message||"This portal link is invalid or has expired.")+'</div>'}
+}
+load();
 })();
 </script>
 <script>
-(function () {
-    if (!("MutationObserver" in window)) return;
-
-    const busyPattern =
-        /^(loading|syncing|uploading|saving|sending|processing|refreshing|deleting|generating|enabling|submitting|creating)(?:\s|\.\.\.|…|$)/i;
-
-    function updateButton(button) {
-        if (!(button instanceof HTMLButtonElement)) return;
-
-        const text =
-            String(button.textContent || "").trim();
-
-        const isBusy =
-            busyPattern.test(text) &&
-            /(?:\.\.\.|…)$/.test(text);
-
-        button.classList.toggle(
-            "sway-loading-button",
-            isBusy
-        );
-    }
-
-    document
-        .querySelectorAll("button")
-        .forEach(updateButton);
-
-    const observer =
-        new MutationObserver(function (mutations) {
-            mutations.forEach(function (mutation) {
-                const button =
-                    mutation.target instanceof Element
-                        ? mutation.target.closest("button")
-                        : mutation.target.parentElement?.closest("button");
-
-                if (button) {
-                    updateButton(button);
-                }
-
-                mutation.addedNodes.forEach(function (node) {
-                    if (
-                        node.nodeType !== Node.ELEMENT_NODE
-                    ) {
-                        return;
-                    }
-
-                    if (
-                        node.matches &&
-                        node.matches("button")
-                    ) {
-                        updateButton(node);
-                    }
-
-                    node
-                        .querySelectorAll?.("button")
-                        .forEach(updateButton);
-                });
-            });
-        });
-
-    observer.observe(document.body, {
-        subtree: true,
-        childList: true,
-        characterData: true
-    });
-})();
+(function(){if(!("MutationObserver" in window))return;const busyPattern=/^(loading|syncing|uploading|saving|sending|processing|refreshing|deleting|generating|enabling|submitting|creating)(?:\s|\.\.\.|…|$)/i;function updateButton(button){if(!(button instanceof HTMLButtonElement))return;const text=String(button.textContent||"").trim();const isBusy=busyPattern.test(text)&&/(?:\.\.\.|…)$/.test(text);button.classList.toggle("sway-loading-button",isBusy)}document.querySelectorAll("button").forEach(updateButton);new MutationObserver(function(mutations){mutations.forEach(function(mutation){const button=mutation.target instanceof Element?mutation.target.closest("button"):mutation.target.parentElement?.closest("button");if(button)updateButton(button)})}).observe(document.body,{subtree:true,childList:true,characterData:true})})();
 </script>
 </body>
 </html>
