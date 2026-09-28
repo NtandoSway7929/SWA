@@ -367,7 +367,7 @@ Deno.serve(async (req) => {
       Deno.env.get(
         "EMAIL_IMAP_HOST"
       ) ||
-      "mail.privateemail.com";
+      "imap.hmailplus.com";
 
     const imapPort =
       Number(
@@ -771,7 +771,7 @@ Deno.serve(async (req) => {
     return Response.json(
       {
         success: true,
-        provider: "Namecheap Private Email",
+        provider: "HOSTAFRICA HMailPlus",
         mailbox: MAILBOX,
         checked: candidateUids.length,
         newest_uid: newestUid,
