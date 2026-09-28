@@ -11,9 +11,9 @@ const corsHeaders = {
 
 const MAILBOX = "info@swayphics.co.za";
 
-const INITIAL_SYNC_LIMIT = 100;
-const MAX_MESSAGES_PER_SYNC = 50;
-const MAX_SOURCE_LENGTH = 524288;
+const INITIAL_SYNC_LIMIT = 20;
+const MAX_MESSAGES_PER_SYNC = 10;
+const MAX_SOURCE_LENGTH = 131072;
 
 function firstAddress(value: any) {
   let address = value;
