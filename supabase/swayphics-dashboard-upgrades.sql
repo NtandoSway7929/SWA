@@ -204,7 +204,7 @@ begin
     into v_token
     from public.client_portal_tokens
     where token_hash = encode(
-        digest(trim(p_token), 'sha256'),
+        extensions.digest(trim(p_token), 'sha256'),
         'hex'
     )
       and active = true
@@ -383,7 +383,7 @@ begin
     into v_token
     from public.client_portal_tokens
     where token_hash = encode(
-        digest(trim(p_token), 'sha256'),
+        extensions.digest(trim(p_token), 'sha256'),
         'hex'
     )
       and active = true
