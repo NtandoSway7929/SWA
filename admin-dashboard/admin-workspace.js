@@ -10837,8 +10837,16 @@ function simpleBars(items, color) {
             if (!response.ok) {
                 throw new Error(
                     result &&
-                    result.error
-                        ? result.error
+                    (
+                        result.error ||
+                        result.message ||
+                        result.code
+                    )
+                        ? (
+                            result.error ||
+                            result.message ||
+                            result.code
+                        )
                         : (
                             "Inbox synchronization failed with " +
                             response.status +
