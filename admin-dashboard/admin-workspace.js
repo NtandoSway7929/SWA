@@ -7595,52 +7595,40 @@ function simpleBars(items, color) {
         const nextValue =
             lead.contacted_manually !== true;
 
-        const now =
-            new Date().toISOString();
-
         try {
-            const payload =
-                nextValue
-                    ? {
-                        contacted_manually: true,
-                        contacted_manually_at: now,
-                        contacted_manually_by:
-                            state.currentUser?.id || null,
-                        updated_at: now
+            const result =
+                await api(
+                    "/rest/v1/rpc/set_swayphics_lead_manual_contact",
+                    {
+                        method: "POST",
+                        headers: headers({
+                            "Prefer":
+                                "return=representation"
+                        }),
+                        body:
+                            JSON.stringify({
+                                p_lead_id:
+                                    leadId,
+                                p_contacted:
+                                    nextValue
+                            })
                     }
-                    : {
-                        contacted_manually: false,
-                        contacted_manually_at: null,
-                        contacted_manually_by: null,
-                        updated_at: now
-                    };
+                );
 
-            await api(
-                "/rest/v1/leads?id=eq." +
-                encodeURIComponent(leadId),
-                {
-                    method: "PATCH",
-                    headers: headers({
-                        "Prefer":
-                            "return=minimal"
-                    }),
-                    body:
-                        JSON.stringify(payload)
-                }
-            );
+            const updatedLead =
+                Array.isArray(result)
+                    ? result[0]
+                    : result;
 
-            lead.contacted_manually =
-                nextValue;
-            lead.contacted_manually_at =
-                nextValue
-                    ? now
-                    : null;
-            lead.contacted_manually_by =
-                nextValue
-                    ? state.currentUser?.id || null
-                    : null;
-            lead.updated_at =
-                now;
+            if (updatedLead) {
+                Object.assign(
+                    lead,
+                    updatedLead
+                );
+            } else {
+                lead.contacted_manually =
+                    nextValue;
+            }
 
             await logActivity(
                 nextValue
@@ -7650,7 +7638,9 @@ function simpleBars(items, color) {
                 leadId
             );
 
-            saveWorkspaceSnapshot();
+            await refreshData();
+            await refreshSecondaryData();
+
             renderView();
         } catch (error) {
             swayAlert(
@@ -7659,6 +7649,7 @@ function simpleBars(items, color) {
             );
         }
     }
+
 
     function renderLeads() {
         const visibleLeads =
