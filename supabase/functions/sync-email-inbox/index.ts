@@ -11,6 +11,10 @@ const corsHeaders = {
 
 const MAILBOX = "info@swayphics.co.za";
 
+const INITIAL_SYNC_LIMIT = 100;
+const MAX_MESSAGES_PER_SYNC = 50;
+const MAX_SOURCE_LENGTH = 524288;
+
 function firstAddress(value: any) {
   let address = value;
 
@@ -456,14 +460,18 @@ Deno.serve(async (req) => {
     const startUid =
       latestStoredUid > 0
         ? latestStoredUid + 1
-        : newestUid;
+        : Math.max(
+            1,
+            newestUid - INITIAL_SYNC_LIMIT + 1
+          );
 
     let candidateUids =
       await client.search(
         {
           uid:
             String(startUid) +
-            ":*"
+            ":" +
+            String(newestUid)
         },
         {
           uid: true
@@ -474,29 +482,40 @@ Deno.serve(async (req) => {
       candidateUids = [];
     }
 
-    const targetUid =
-      candidateUids[0] || 0;
+    candidateUids = candidateUids
+      .map((uid) => Number(uid))
+      .filter(
+        (uid) =>
+          Number.isFinite(uid) &&
+          uid > 0
+      )
+      .sort((a, b) => a - b)
+      .slice(0, MAX_MESSAGES_PER_SYNC);
 
     let synced = 0;
 
-    if (targetUid) {
-      const message =
-        await client.fetchOne(
-          targetUid,
-          {
-            envelope: true,
-            internalDate: true,
-            source: {
-              start: 0,
-              maxLength: 262144
+    for (const targetUid of candidateUids) {
+      try {
+        const message =
+          await client.fetchOne(
+            targetUid,
+            {
+              envelope: true,
+              internalDate: true,
+              flags: true,
+              source: {
+                start: 0,
+                maxLength: MAX_SOURCE_LENGTH
+              }
+            },
+            {
+              uid: true
             }
-          },
-          {
-            uid: true
-          }
-        );
+          );
 
-      if (message?.source) {
+        if (!message?.source) {
+          continue;
+        }
         const parsed =
           await parseEmailSource(
             message.source
@@ -625,6 +644,20 @@ Deno.serve(async (req) => {
               ).toISOString()
             : fallbackDate.toISOString();
 
+        const messageFlags =
+          message?.flags &&
+          typeof message.flags[Symbol.iterator] ===
+            "function"
+            ? Array.from(message.flags)
+            : [];
+
+        const isRead =
+          messageFlags.some(
+            (flag) =>
+              String(flag).toLowerCase() ===
+              "\\seen"
+          );
+
         const contact =
           await findContact(
             supabase,
@@ -669,7 +702,7 @@ Deno.serve(async (req) => {
                 parsed.html || null,
               received_at:
                 receivedAt,
-              is_read: false,
+              is_read: isRead,
               client_id:
                 contact.clientId,
               lead_id:
@@ -725,12 +758,24 @@ Deno.serve(async (req) => {
             }
           }
         }
+      } catch (messageError) {
+        console.error(
+          "Unable to synchronize IMAP message " +
+            String(targetUid) +
+            ":",
+          messageError
+        );
       }
     }
 
     return Response.json(
       {
         success: true,
+        provider: "Namecheap Private Email",
+        mailbox: MAILBOX,
+        checked: candidateUids.length,
+        newest_uid: newestUid,
+        latest_stored_uid: latestStoredUid,
         synced
       },
       {
