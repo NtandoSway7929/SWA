@@ -1,7 +1,7 @@
 -- SWAYPHICS EMAIL INBOX FIX
 -- Run once in the Supabase SQL Editor for existing installations.
 --
--- The mailbox remains hosted by Namecheap Private Email.
+-- The mailbox is hosted by HOSTAFRICA HMailPlus.
 -- Incoming mail is read over IMAP and stored in public.email_messages.
 
 create unique index if not exists email_messages_mailbox_imap_uid_unique_idx
