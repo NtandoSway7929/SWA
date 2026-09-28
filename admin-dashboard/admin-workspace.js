@@ -1344,7 +1344,7 @@
 
         state.emailMessages =
             await optionalApi(
-                "/rest/v1/email_messages?select=*&order=received_at.desc&limit=150",
+                "/rest/v1/email_messages?select=*&mailbox=eq.info@swayphics.co.za&order=received_at.desc&limit=150",
                 []
             );
 
@@ -10749,7 +10749,7 @@ function simpleBars(items, color) {
     async function loadEmailMessages() {
         state.emailMessages =
             await optionalApi(
-                "/rest/v1/email_messages?select=*&order=received_at.desc&limit=150",
+                "/rest/v1/email_messages?select=*&mailbox=eq.info@swayphics.co.za&order=received_at.desc&limit=150",
                 []
             );
 
