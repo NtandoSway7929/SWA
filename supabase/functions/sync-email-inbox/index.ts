@@ -687,7 +687,7 @@ Deno.serve(async (req) => {
             throw inserted.error;
           }
         } else {
-          synced = 1;
+          synced += 1;
 
           if (
             contact.clientId ||
