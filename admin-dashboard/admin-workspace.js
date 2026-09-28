@@ -10144,7 +10144,24 @@ function simpleBars(items, color) {
     }
 
 
-    function generateEmailSubject(type, item) {
+    function generateBrandedEmailHeading(proposalType) {
+        return proposalType === "improv-website"
+            ? "There may be more potential in your website."
+            : proposalType === "no-website"
+                ? "Your next customer should be able to find you online."
+                : "Creative support for your business.";
+    }
+
+    function generateEmailSubject(type, item, proposalType) {
+        if (
+            proposalType &&
+            proposalType !== "not-website-related"
+        ) {
+            return generateBrandedEmailHeading(
+                proposalType
+            ).slice(0, 180);
+        }
+
         const contact = item || {};
         const business = String(
             contact.business_name ||
@@ -11638,7 +11655,8 @@ function simpleBars(items, color) {
                     selectedRecord
                         ? generateEmailSubject(
                             selectedType,
-                            selectedRecord
+                            selectedRecord,
+                            "not-website-related"
                         )
                         : ""
                 );
@@ -11773,13 +11791,19 @@ function simpleBars(items, color) {
                                 (
                                     isReply
                                         ? "Threaded reply"
-                                        : "Auto-generated"
+                                        : "Matches the bold heading"
                                 ) +
                             "</span>" +
                         "</div>" +
                         '<input id="sway-email-subject" type="text" maxlength="180" autocomplete="off" value="' +
                             esc(
-                                replySubject
+                                isReply
+                                    ? replySubject
+                                    : generateEmailSubject(
+                                        selectedType,
+                                        selectedRecord,
+                                        proposalTypeState
+                                    )
                             ) +
                         '">' +
                     "</div>" +
@@ -11865,7 +11889,17 @@ function simpleBars(items, color) {
             "not-website-related";
 
         let lastAutoSubject =
-            replySubject;
+            isReply
+                ? replySubject
+                : (
+                    selectedRecord
+                        ? generateEmailSubject(
+                            selectedType,
+                            selectedRecord,
+                            proposalTypeState
+                        )
+                        : ""
+                );
 
         let subjectWasEdited =
             false;
@@ -11975,7 +12009,9 @@ function simpleBars(items, color) {
             const autoSubject =
                 generateEmailSubject(
                     selectedTypeState,
-                    contact
+                    contact,
+                    proposalTypeInput?.value ||
+                        proposalTypeState
                 );
 
             if (
@@ -12042,6 +12078,24 @@ function simpleBars(items, color) {
                     proposalTypeState =
                         proposalTypeInput.value ||
                         "not-website-related";
+
+                    if (!subjectWasEdited) {
+                        const contact =
+                            selectedContact();
+
+                        const autoSubject =
+                            generateEmailSubject(
+                                selectedTypeState,
+                                contact,
+                                proposalTypeState
+                            );
+
+                        subjectInput.value =
+                            autoSubject;
+
+                        lastAutoSubject =
+                            autoSubject;
+                    }
                 }
             );
         }
