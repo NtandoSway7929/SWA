@@ -1487,7 +1487,8 @@
             api("/rest/v1/site_announcements?select=*&order=created_at.desc"),
             api("/rest/v1/invoices?select=*&order=created_at.desc"),
             api("/rest/v1/services?select=*&order=name.asc"),
-            api("/rest/v1/invoice_settings?select=*&id=eq.1")
+            api("/rest/v1/invoice_settings?select=*&id=eq.1"),
+            api("/rest/v1/client_portal_requests?select=*&order=created_at.desc")
         ]);
 
         state.tasks = results[0] || [];
@@ -1503,6 +1504,7 @@
         state.invoices = results[10] || [];
         state.services = results[11] || [];
         state.invoiceSettings = (results[12] && results[12][0]) || state.invoiceSettings || null;
+        state.portalRequests = results[13] || [];
 
         await loadAdminNotifications();
 
@@ -1533,10 +1535,6 @@
             ),
             optionalApi(
                 "/rest/v1/lead_stage_history?select=*&order=changed_at.asc",
-                []
-            ),
-            optionalApi(
-                "/rest/v1/client_portal_requests?select=*&order=created_at.desc",
                 []
             ),
             optionalApi(
@@ -6024,7 +6022,8 @@ function simpleBars(items, color) {
                 "social_accounts",
                 "social_posts",
                 "social_metrics",
-                "admin_notifications"
+                "admin_notifications",
+                "client_portal_requests"
             ];
 
             let refreshTimer = null;
