@@ -5062,6 +5062,87 @@
     white-space: pre-wrap;
 }
 
+.sway-portal-request-open {
+    width: 100%;
+    display: grid;
+    gap: 3px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--sway-dark);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.sway-portal-request-open-title {
+    display: block;
+    color: var(--sway-dark);
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.sway-portal-request-open-hint {
+    display: block;
+    color: var(--sway-blue);
+    font-size: 0.51rem;
+    font-weight: 750;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.sway-portal-request-open:hover .sway-portal-request-open-hint,
+.sway-portal-request-open:focus-visible .sway-portal-request-open-hint {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.sway-portal-request-open:focus-visible {
+    outline: 2px solid rgba(1,82,244,0.28);
+    outline-offset: 4px;
+    border-radius: 6px;
+}
+
+.sway-portal-request-modal-card {
+    width: min(680px, 100%);
+}
+
+.sway-portal-request-full {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+    padding: 16px;
+    border: 1px solid rgba(0,32,150,0.08);
+    border-radius: 15px;
+    background: rgba(247,250,255,0.82);
+}
+
+.sway-portal-request-full-label {
+    color: var(--sway-blue);
+    font-size: 0.56rem;
+    font-weight: 850;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.sway-portal-request-full-message {
+    color: var(--sway-dark);
+    font-size: 0.72rem;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.sway-portal-request-modal-card .sway-modal-actions {
+    align-items: center;
+}
+
+.sway-portal-request-modal-card .sway-modal-actions > span:first-child {
+    margin-right: auto;
+}
+
 .sway-export-grid {
     display: grid;
     grid-template-columns: repeat(2,minmax(0,1fr));
