@@ -11390,7 +11390,7 @@ function simpleBars(items, color) {
                 '<div class="sway-email-summary-copy">' +
                     '<span class="admin-label">Swayphics mail</span>' +
                     "<h3>Inbox · info@swayphics.co.za</h3>" +
-                    "<p>Incoming messages are synchronized from the Swayphics mailbox. Open a conversation to read it, then reply directly from this dashboard using the same branded Swayphics email sender.</p>" +
+                    "<p>Incoming messages are synchronized from <strong>Namecheap Private Email</strong> via IMAP. Open a conversation to read it, then reply directly from this dashboard using the existing branded Swayphics email sender.</p>" +
                     '<div class="sway-email-inbox-toolbar">' +
                         '<span class="sway-email-unread-count">' +
                             esc(
@@ -11409,7 +11409,7 @@ function simpleBars(items, color) {
                 "</div>" +
                 '<div class="sway-email-summary-grid">' +
                     '<div><span>Mailbox</span><strong>info@swayphics.co.za</strong></div>' +
-                    '<div><span>Template</span><strong>Branded</strong></div>' +
+                    '<div><span>Source</span><strong>Namecheap IMAP</strong></div>' +
                     '<div><span>Replying</span><strong>Threaded</strong></div>' +
                 "</div>" +
             "</section>" +
