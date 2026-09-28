@@ -89,10 +89,9 @@ notify pgrst, 'reload schema';
 
 -- After running the migration, configure this Supabase Edge Function secret:
 --
--- EMAIL_IMAP_PASSWORD = the password/application password for
---                       info@swayphics.co.za
+-- EMAIL_IMAP_PASSWORD = the mailbox password for info@swayphics.co.za
 --
--- The sync function uses these defaults unless overridden:
--- EMAIL_IMAP_HOST = mail.privateemail.com
+-- HOSTAFRICA HMailPlus defaults:
+-- EMAIL_IMAP_HOST = imap.hmailplus.com
 -- EMAIL_IMAP_PORT = 993
 -- EMAIL_IMAP_USER = info@swayphics.co.za
