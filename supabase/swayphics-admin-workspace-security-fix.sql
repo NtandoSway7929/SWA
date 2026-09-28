@@ -67,7 +67,9 @@ grant select, insert, update, delete on table public.site_announcements to authe
 grant select on table public.site_announcements to anon;
 grant select, insert, update, delete on table public.social_accounts, public.social_posts, public.social_metrics to authenticated;
 
-grant select, insert, update, delete on table public.activity_log to authenticated;grant select, insert, update, delete on table public.communication_logs to authenticated;
+grant select, insert, update, delete on table public.activity_log to authenticated;
+grant select, insert, update, delete on table public.communication_logs to authenticated;
+grant select, insert, update, delete on table public.client_portal_requests to authenticated;
 
 
 -- The public contact form is handled by the submit-enquiry Edge Function.
