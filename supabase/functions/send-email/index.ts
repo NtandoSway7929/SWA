@@ -155,7 +155,7 @@ function brandedEmailHtml(
       '<p style="margin:3px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:1.5;color:#7A899D;">EMPOWERING THROUGH DESIGN</p>' +
     "</td></tr></table>";
 
-  return \`<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -174,7 +174,7 @@ function brandedEmailHtml(
 </head>
 <body style="margin:0;padding:0;background:#F4F7FC;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-    \${escapeHtml(title)}
+    ${escapeHtml(title)}
   </div>
 
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#F4F7FC">
@@ -200,14 +200,14 @@ function brandedEmailHtml(
 
           <tr>
             <td class="sway-email-content" style="padding:34px 34px 28px;background:#FFFFFF;">
-              \${isProposal ? introMarkup : ""}
+              ${isProposal ? introMarkup : ""}
               <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.8;color:#56627A;">
-                \${greetingMarkup}
+                ${greetingMarkup}
               </p>
-              \${messageMarkup}
-              \${proposalVisualMarkup}
-              \${ctaMarkup}
-              \${signatureMarkup}
+              ${messageMarkup}
+              ${proposalVisualMarkup}
+              ${ctaMarkup}
+              ${signatureMarkup}
             </td>
           </tr>
 
@@ -249,7 +249,7 @@ function brandedEmailHtml(
     </tr>
   </table>
 </body>
-</html>\`;
+</html>`;
 }
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
