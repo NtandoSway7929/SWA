@@ -15922,6 +15922,109 @@ function simpleBars(items, color) {
         );
     }
 
+    function openPortalRequest(requestId) {
+        const request =
+            state.portalRequests.find(function (item) {
+                return item.id === requestId;
+            });
+
+        if (!request) return;
+
+        const modalId =
+            "sway-portal-request-modal";
+
+        document.getElementById(modalId)?.remove();
+
+        const modal =
+            document.createElement("div");
+
+        modal.className =
+            "sway-modal";
+
+        modal.id =
+            modalId;
+
+        modal.innerHTML =
+            '<div class="sway-modal-backdrop" data-close-portal-request></div>' +
+            '<div class="sway-modal-card sway-portal-request-modal-card" role="dialog" aria-modal="true" aria-labelledby="sway-portal-request-title">' +
+                '<div class="sway-modal-header">' +
+                    '<div>' +
+                        '<span class="admin-label">Client portal request</span>' +
+                        '<h3 id="sway-portal-request-title">' +
+                            esc(request.subject || "Client request") +
+                        "</h3>" +
+                        '<p>' +
+                            esc(clientName(request.client_id)) +
+                            " · " +
+                            esc(dateTime(request.created_at)) +
+                        "</p>" +
+                    "</div>" +
+                    '<button type="button" class="sway-modal-close" data-close-portal-request aria-label="Close request">×</button>' +
+                "</div>" +
+                '<div class="sway-portal-request-full">' +
+                    '<span class="sway-portal-request-full-label">Full message</span>' +
+                    '<div class="sway-portal-request-full-message">' +
+                        esc(request.message || "No message provided.") +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-modal-actions">' +
+                    '<span>' +
+                        chip(request.status) +
+                    "</span>" +
+                    (
+                        request.status !== "in progress"
+                            ? '<button type="button" class="sway-workspace-button" data-portal-request-status="in progress" data-id="' +
+                              esc(request.id) +
+                              '">Start</button>'
+                            : ""
+                    ) +
+                    (
+                        request.status !== "completed"
+                            ? '<button type="button" class="sway-workspace-button primary" data-portal-request-status="completed" data-id="' +
+                              esc(request.id) +
+                              '">Complete</button>'
+                            : ""
+                    ) +
+                "</div>" +
+            "</div>";
+
+        document.body.appendChild(modal);
+
+        modal.querySelectorAll("[data-close-portal-request]").forEach(
+            function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        modal.remove();
+                    }
+                );
+            }
+        );
+
+        modal.querySelectorAll("[data-portal-request-status]").forEach(
+            function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        const statusButton =
+                            document.querySelector(
+                                '[data-portal-request-status="' +
+                                button.dataset.portalRequestStatus +
+                                '"][data-id="' +
+                                button.dataset.id +
+                                '"]'
+                            );
+
+                        if (statusButton) {
+                            statusButton.click();
+                            modal.remove();
+                        }
+                    }
+                );
+            }
+        );
+    }
+
     function renderPortalRequests() {
         const rows =
             state.portalRequests.map(function (item) {
@@ -15931,7 +16034,16 @@ function simpleBars(items, color) {
                             esc(clientName(item.client_id)) +
                         "</strong></td>" +
                         "<td>" +
-                            esc(item.subject) +
+                            '<button type="button" class="sway-portal-request-open" data-portal-request-view="' +
+                                esc(item.id) +
+                            '" aria-label="Open request from ' +
+                                esc(clientName(item.client_id)) +
+                            '">' +
+                                '<span class="sway-portal-request-open-title">' +
+                                    esc(item.subject || "Client request") +
+                                "</span>" +
+                                '<span class="sway-portal-request-open-hint">Tap to read full request</span>' +
+                            "</button>" +
                         "</td>" +
                         "<td>" +
                             '<div class="sway-portal-request-message">' +
@@ -19640,6 +19752,19 @@ function simpleBars(items, color) {
                                 contacted_at:
                                     dateTimeInput(new Date())
                             }
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-portal-request-view]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openPortalRequest(
+                            button.dataset.portalRequestView
                         );
                     }
                 );
