@@ -45,9 +45,8 @@ declare
     v_latest_contact timestamptz;
     v_days integer;
 begin
-    if not public.is_swayphics_admin() then
-        raise exception 'Active Swayphics admin access required.';
-    end if;
+    -- This function is also called by a database trigger from communication_logs.
+    -- Authorization is enforced by the public RPC wrapper, not by the trigger path.
 
     select *
     into v_lead
@@ -286,4 +285,31 @@ from public;
 grant execute on function public.set_swayphics_lead_manual_contact(uuid, boolean)
 to authenticated;
 
+
+
+-- Backfill existing leads from their most recent outbound communication or
+-- existing manual contact timestamp so the new clock applies immediately.
+do $
+declare
+    v_lead record;
+begin
+    for v_lead in
+        select id
+        from public.leads
+        where exists (
+            select 1
+            from public.communication_logs c
+            where c.lead_id = public.leads.id
+              and lower(coalesce(c.direction, '')) = 'outbound'
+        )
+        or contacted_manually_at is not null
+    loop
+        perform public.recalculate_swayphics_lead_contact_clock(
+            v_lead.id
+        );
+    end loop;
+end;
+$;
+
 notify pgrst, 'reload schema';
+
