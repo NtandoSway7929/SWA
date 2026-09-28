@@ -7757,30 +7757,35 @@ function simpleBars(items, color) {
                             "</span>" +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
-                                '<button class="sway-row-action" data-edit="leads" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
-                                '<button class="sway-row-action" data-export-lead-assessment="' +
-                                    esc(item.id) +
-                                '">Assessment report</button>' +
-                                (
-                                    item.email
-                                        ? '<button class="sway-row-action" data-send-email-type="lead" data-send-email-id="' +
-                                          esc(item.id) +
-                                          '">Email</button>'
-                                        : ""
-                                ) +
-                                (
-                                    !["won", "lost"].includes(item.status)
-                                        ? '<button class="sway-row-action" data-convert-lead="' +
-                                          esc(item.id) +
-                                          '">Convert to client</button>'
-                                        : ""
-                                ) +
-                                '<button class="sway-row-action danger" data-delete="leads" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
+                            '<div class="sway-row-actions sway-lead-row-actions">' +
+                                '<details class="sway-lead-actions-menu">' +
+                                    '<summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
+                                    '<div class="sway-lead-actions-dropdown">' +
+                                        '<button type="button" class="sway-row-action" data-edit="leads" data-id="' +
+                                            esc(item.id) +
+                                        '">Edit</button>' +
+                                        '<button type="button" class="sway-row-action" data-export-lead-assessment="' +
+                                            esc(item.id) +
+                                        '">Assessment report</button>' +
+                                        (
+                                            item.email
+                                                ? '<button type="button" class="sway-row-action" data-send-email-type="lead" data-send-email-id="' +
+                                                  esc(item.id) +
+                                                  '">Email</button>'
+                                                : ""
+                                        ) +
+                                        (
+                                            !["won", "lost"].includes(item.status)
+                                                ? '<button type="button" class="sway-row-action" data-convert-lead="' +
+                                                  esc(item.id) +
+                                                  '">Convert to client</button>'
+                                                : ""
+                                        ) +
+                                        '<button type="button" class="sway-row-action danger" data-delete="leads" data-id="' +
+                                            esc(item.id) +
+                                        '">Delete</button>' +
+                                    "</div>" +
+                                "</details>" +
                             "</div>" +
                         "</td>" +
                     "</tr>"
