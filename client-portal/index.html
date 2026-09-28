@@ -117,9 +117,30 @@ modal.innerHTML='<div class="modal-backdrop" data-close></div><section class="mo
 document.body.appendChild(modal);modal.querySelectorAll("[data-close]").forEach(function(el){el.addEventListener("click",function(){modal.remove()})});
 }
 async function load(){
-if(!token){app.className="error portal-shell";app.innerHTML='<div><strong>Portal link required</strong>This page needs a valid private Swayphics portal link.</div>';return}
-try{const result=await client.rpc("get_client_portal",{p_token:token});if(result.error)throw result.error;if(!result.data||!result.data.ok)throw new Error(result.data&&result.data.error||"This portal link is invalid or expired.");render(result.data)}
-catch(error){app.className="error portal-shell";app.innerHTML='<div><strong>Unable to open portal</strong>'+esc(error.message||"This portal link is invalid or has expired.")+'</div>'}
+if(!token){renderPortalError("Portal link required","This page needs a valid private Swayphics portal link.");return}
+const timeoutMs=12000;
+let timer=null;
+try{
+    const request=client.rpc("get_client_portal",{p_token:token});
+    const timeout=new Promise(function(_,reject){
+        timer=window.setTimeout(function(){
+            reject(new Error("The portal connection timed out. Please try again. If the problem persists, the Swayphics portal service needs attention."));
+        },timeoutMs);
+    });
+    const result=await Promise.race([request,timeout]);
+    if(result.error)throw result.error;
+    if(!result.data||!result.data.ok)throw new Error(result.data&&result.data.error||"This portal link is invalid or expired.");
+    render(result.data);
+}catch(error){
+    renderPortalError("Unable to open portal",error.message||"This portal link is invalid or has expired.");
+}finally{
+    if(timer)window.clearTimeout(timer);
+}
+}
+function renderPortalError(title,message){
+    app.className="error portal-shell";
+    app.innerHTML='<div><strong>'+esc(title)+'</strong><p style="max-width:520px;color:var(--muted);font-size:.62rem;line-height:1.65;">'+esc(message)+'</p><button type="button" class="portal-button" id="portal-retry" style="margin-top:14px;">Try again</button><div style="margin-top:9px;color:var(--soft);font-size:.50rem;">Portal access is protected by a private token.</div></div>';
+    document.getElementById("portal-retry")?.addEventListener("click",function(){window.location.reload()});
 }
 load();
 })();
