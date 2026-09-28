@@ -12,7 +12,7 @@ const corsHeaders = {
 const MAILBOX = "info@swayphics.co.za";
 
 const INITIAL_SYNC_LIMIT = 10;
-const MAX_MESSAGES_PER_SYNC = 2;
+const MAX_MESSAGES_PER_SYNC = 1;
 const MAX_SOURCE_LENGTH = 32768;
 
 function firstAddress(value: any) {
@@ -640,7 +640,6 @@ Deno.serve(async (req) => {
         const subject =
           cleanHeaderValue(
             envelope.subject ||
-            parsed.subject ||
             "No subject"
           );
 
