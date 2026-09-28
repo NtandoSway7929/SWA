@@ -7735,19 +7735,6 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            '<span class="sway-lead-assessment-status ' +
-                                (
-                                    leadAssessmentStatus(item) === "Assessed"
-                                        ? "complete"
-                                        : leadAssessmentStatus(item) === "In progress"
-                                            ? "partial"
-                                            : "empty"
-                                ) +
-                            '">' +
-                                esc(leadAssessmentStatus(item)) +
-                            "</span>" +
-                        "</td>" +
-                        "<td>" +
                             '<div class="sway-row-actions sway-lead-row-actions">' +
                                 '<details class="sway-lead-actions-menu">' +
                                     '<summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
@@ -7791,7 +7778,7 @@ function simpleBars(items, color) {
                 "Lead pipeline",
                 "Active prospects only. Leads needing extra attention automatically move to Follow-ups after the no-response window.",
                 state.leads.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th>Contacted</th><th>Assessment</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th>Contacted</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No leads yet.")
