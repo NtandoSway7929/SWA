@@ -7507,6 +7507,159 @@ function simpleBars(items, color) {
         );
     }
 
+    function leadHasCommunicationContact(leadId) {
+        return state.communications.some(function (item) {
+            return (
+                item.lead_id === leadId &&
+                String(item.direction || "").toLowerCase() ===
+                    "outbound"
+            );
+        });
+    }
+
+    function leadContactStatus(lead) {
+        const item = lead || {};
+        const communicationContacted =
+            leadHasCommunicationContact(item.id);
+
+        if (communicationContacted) {
+            const latestContact =
+                state.communications
+                    .filter(function (entry) {
+                        return (
+                            entry.lead_id === item.id &&
+                            String(entry.direction || "").toLowerCase() ===
+                                "outbound"
+                        );
+                    })
+                    .slice()
+                    .sort(function (a, b) {
+                        return (
+                            new Date(b.contacted_at || b.created_at || 0) -
+                            new Date(a.contacted_at || a.created_at || 0)
+                        );
+                    })[0];
+
+            return {
+                contacted: true,
+                source: "communication",
+                label: "Contacted",
+                detail:
+                    latestContact &&
+                    latestContact.channel
+                        ? "Log · " + latestContact.channel
+                        : "Communication log"
+            };
+        }
+
+        if (item.contacted_manually === true) {
+            return {
+                contacted: true,
+                source: "manual",
+                label: "Contacted",
+                detail: "Marked manually"
+            };
+        }
+
+        return {
+            contacted: false,
+            source: "none",
+            label: "Not contacted",
+            detail: "No outbound contact recorded"
+        };
+    }
+
+    async function toggleLeadContacted(leadId) {
+        const lead =
+            state.leads.find(function (item) {
+                return item.id === leadId;
+            });
+
+        if (!lead) {
+            return;
+        }
+
+        const contactStatus =
+            leadContactStatus(lead);
+
+        if (
+            contactStatus.source === "communication" &&
+            contactStatus.contacted
+        ) {
+            swayAlert(
+                "This lead is already marked as contacted by the communication log. Add or edit the communication entry if the history is incorrect."
+            );
+            return;
+        }
+
+        const nextValue =
+            lead.contacted_manually !== true;
+
+        const now =
+            new Date().toISOString();
+
+        try {
+            const payload =
+                nextValue
+                    ? {
+                        contacted_manually: true,
+                        contacted_manually_at: now,
+                        contacted_manually_by:
+                            state.currentUser?.id || null,
+                        updated_at: now
+                    }
+                    : {
+                        contacted_manually: false,
+                        contacted_manually_at: null,
+                        contacted_manually_by: null,
+                        updated_at: now
+                    };
+
+            await api(
+                "/rest/v1/leads?id=eq." +
+                encodeURIComponent(leadId),
+                {
+                    method: "PATCH",
+                    headers: headers({
+                        "Prefer":
+                            "return=minimal"
+                    }),
+                    body:
+                        JSON.stringify(payload)
+                }
+            );
+
+            lead.contacted_manually =
+                nextValue;
+            lead.contacted_manually_at =
+                nextValue
+                    ? now
+                    : null;
+            lead.contacted_manually_by =
+                nextValue
+                    ? state.currentUser?.id || null
+                    : null;
+            lead.updated_at =
+                now;
+
+            await logActivity(
+                nextValue
+                    ? "Marked lead as contacted manually"
+                    : "Removed manual contacted flag from lead",
+                "leads",
+                leadId
+            );
+
+            saveWorkspaceSnapshot();
+            renderView();
+        } catch (error) {
+            swayAlert(
+                error.message ||
+                "Unable to update the lead contact status."
+            );
+        }
+    }
+
     function renderLeads() {
         const visibleLeads =
             state.leads.filter(function (item) {
@@ -7564,6 +7717,33 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
+                            (
+                                leadContactStatus(item).contacted
+                                    ? '<button type="button" class="sway-row-action" data-toggle-lead-contacted="' +
+                                      esc(item.id) +
+                                      '"' +
+                                      (
+                                          leadContactStatus(item).source === "communication"
+                                              ? ' disabled title="Detected from the communication log"'
+                                              : ' title="Remove the manual contacted flag"'
+                                      ) +
+                                      '>' +
+                                      esc(
+                                          leadContactStatus(item).label +
+                                          " · " +
+                                          (
+                                              leadContactStatus(item).source === "communication"
+                                                  ? "Log"
+                                                  : "Manual"
+                                          )
+                                      ) +
+                                      "</button>"
+                                    : '<button type="button" class="sway-row-action" data-toggle-lead-contacted="' +
+                                      esc(item.id) +
+                                      '">Mark contacted</button>'
+                            ) +
+                        "</td>" +
+                        "<td>" +
                             '<span class="sway-lead-assessment-status ' +
                                 (
                                     leadAssessmentStatus(item) === "Assessed"
@@ -7584,9 +7764,6 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action" data-export-lead-assessment="' +
                                     esc(item.id) +
                                 '">Assessment report</button>' +
-                                '<button class="sway-row-action" data-export-lead-json="' +
-                                    esc(item.id) +
-                                '">JSON</button>' +
                                 (
                                     item.email
                                         ? '<button class="sway-row-action" data-send-email-type="lead" data-send-email-id="' +
@@ -7618,7 +7795,7 @@ function simpleBars(items, color) {
                 "Lead pipeline",
                 "Active prospects only. Leads needing extra attention automatically move to Follow-ups after the no-response window.",
                 state.leads.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th>Assessment</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th>Contacted</th><th>Assessment</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No leads yet.")
@@ -19600,6 +19777,19 @@ function simpleBars(items, color) {
             });
 
         workspace
+            .querySelectorAll("[data-toggle-lead-contacted]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        toggleLeadContacted(
+                            button.dataset.toggleLeadContacted
+                        );
+                    }
+                );
+            });
+
+        workspace
             .querySelectorAll("[data-export-lead-assessment]")
             .forEach(function (button) {
                 button.addEventListener(
@@ -19607,19 +19797,6 @@ function simpleBars(items, color) {
                     function () {
                         exportLeadAssessment(
                             button.dataset.exportLeadAssessment
-                        );
-                    }
-                );
-            });
-
-        workspace
-            .querySelectorAll("[data-export-lead-json]")
-            .forEach(function (button) {
-                button.addEventListener(
-                    "click",
-                    function () {
-                        exportLeadAssessmentJson(
-                            button.dataset.exportLeadJson
                         );
                     }
                 );
