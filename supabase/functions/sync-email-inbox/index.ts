@@ -13,7 +13,7 @@ const MAILBOX = "info@swayphics.co.za";
 
 const INITIAL_SYNC_LIMIT = 10;
 const MAX_MESSAGES_PER_SYNC = 2;
-const MAX_SOURCE_LENGTH = 65536;
+const MAX_SOURCE_LENGTH = 32768;
 
 function firstAddress(value: any) {
   let address = value;
@@ -104,36 +104,139 @@ function stripHtml(value: string) {
     .trim();
 }
 
-async function parseEmailSource(source: Uint8Array) {
-  try {
-    const { default: PostalMime } =
-      await import("npm:postal-mime@3.0.0");
+function findMimePart(node: any, types: string[]) {
+  if (!node) return null;
 
-    const parsed = await PostalMime.parse(source);
+  const nodeType =
+    String(node.type || "").toLowerCase();
+
+  if (types.includes(nodeType)) {
+    return node;
+  }
+
+  if (Array.isArray(node.childNodes)) {
+    for (const child of node.childNodes) {
+      const match = findMimePart(child, types);
+      if (match) return match;
+    }
+  }
+
+  return null;
+}
+
+function decodeMimeBody(value: string, encoding: string) {
+  const normalizedEncoding =
+    String(encoding || "").toLowerCase();
+
+  if (normalizedEncoding === "base64") {
+    try {
+      const binary = atob(
+        value
+          .replace(/\s+/g, "")
+          .replace(/-/g, "+")
+          .replace(/_/g, "/")
+      );
+
+      const bytes = new Uint8Array(binary.length);
+
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+
+      return new TextDecoder().decode(bytes);
+    } catch {
+      return value;
+    }
+  }
+
+  if (
+    normalizedEncoding === "quoted-printable" ||
+    normalizedEncoding === "quopri"
+  ) {
+    return value
+      .replace(/=\r?\n/g, "")
+      .replace(
+        /=([0-9A-Fa-f]{2})/g,
+        function (_match, hex) {
+          return String.fromCharCode(parseInt(hex, 16));
+        }
+      );
+  }
+
+  return value;
+}
+
+async function fetchMessageBody(
+  client: any,
+  uid: number,
+  bodyStructure: any
+) {
+  const plainPart =
+    findMimePart(bodyStructure, ["text/plain"]);
+
+  const htmlPart =
+    findMimePart(bodyStructure, ["text/html"]);
+
+  const part = plainPart || htmlPart;
+
+  if (!part?.part) {
+    return { text: "", html: null };
+  }
+
+  try {
+    const downloaded =
+      await client.download(
+        uid,
+        String(part.part),
+        {
+          uid: true,
+          maxBytes: 32768
+        }
+      );
+
+    const chunks = [];
+
+    for await (const chunk of downloaded.content) {
+      chunks.push(chunk);
+    }
+
+    let totalLength = 0;
+    for (const chunk of chunks) {
+      totalLength += chunk.length;
+    }
+
+    const bytes = new Uint8Array(totalLength);
+    let offset = 0;
+
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    const raw = new TextDecoder().decode(bytes);
+    const decoded = decodeMimeBody(
+      raw,
+      String(part.encoding || "")
+    );
+
+    if (plainPart) {
+      return {
+        text: decoded.trim(),
+        html: null
+      };
+    }
 
     return {
-      subject: cleanHeaderValue(parsed.subject),
-      messageId: cleanHeaderValue(parsed.messageId),
-      inReplyTo: cleanHeaderValue(parsed.inReplyTo),
-      references: cleanHeaderValue(parsed.references),
-      date: parsed.date || null,
-      text: String(parsed.text || "").trim(),
-      html: parsed.html
-        ? String(parsed.html)
-        : null
+      text: stripHtml(decoded),
+      html: decoded
     };
   } catch (error) {
     console.warn(
-      "PostalMime could not parse the incoming email:",
+      "Unable to fetch inbound email body:",
       error
     );
 
     return {
-      subject: "",
-      messageId: "",
-      inReplyTo: "",
-      references: "",
-      date: null,
       text: "",
       html: null
     };
@@ -503,22 +606,22 @@ Deno.serve(async (req) => {
               envelope: true,
               internalDate: true,
               flags: true,
-              source: {
-                start: 0,
-                maxLength: MAX_SOURCE_LENGTH
-              }
+              bodyStructure: true
             },
             {
               uid: true
             }
           );
 
-        if (!message?.source) {
+        if (!message) {
           continue;
         }
-        const parsed =
-          await parseEmailSource(
-            message.source
+
+        const body =
+          await fetchMessageBody(
+            client,
+            targetUid,
+            message.bodyStructure
           );
 
         const envelope =
@@ -543,19 +646,17 @@ Deno.serve(async (req) => {
 
         const messageId =
           cleanHeaderValue(
-            envelope.messageId ||
-            parsed.messageId
+            envelope.messageId
           ) || null;
 
         const inReplyTo =
           cleanHeaderValue(
-            envelope.inReplyTo ||
-            parsed.inReplyTo
+            envelope.inReplyTo
           ) || null;
 
         const references =
           cleanHeaderValue(
-            parsed.references
+            envelope.references
           ) || null;
 
         const candidates =
@@ -592,44 +693,10 @@ Deno.serve(async (req) => {
         const fromEmail =
           from.email || "";
 
-        let textBody =
-          parsed.text || "";
-
-        if (
-          !textBody &&
-          parsed.html
-        ) {
-          textBody =
-            stripHtml(
-              parsed.html
-            );
-        }
-
-        if (
-          !textBody &&
-          message.source
-        ) {
-          const sourceText =
-            new TextDecoder()
-              .decode(
-                message.source
-              );
-
-          const bodyStart =
-            sourceText.search(
-              /\r?\n\r?\n/
-            );
-
-          if (bodyStart >= 0) {
-            textBody =
-              decodeMimeText(
-                sourceText.slice(
-                  bodyStart + 2
-                ),
-                ""
-              ).trim();
-          }
-        }
+        const textBody =
+          body.text ||
+          subject ||
+          "(Email received)";
 
         const fallbackDate =
           message.internalDate
@@ -638,11 +705,7 @@ Deno.serve(async (req) => {
             : new Date();
 
         const receivedAt =
-          parsed.date
-            ? new Date(
-                String(parsed.date)
-              ).toISOString()
-            : fallbackDate.toISOString();
+          fallbackDate.toISOString();
 
         const messageFlags =
           message?.flags &&
@@ -699,7 +762,7 @@ Deno.serve(async (req) => {
                 subject ||
                 "(Email received)",
               html_body:
-                parsed.html || null,
+                body.html || null,
               received_at:
                 receivedAt,
               is_read: isRead,
