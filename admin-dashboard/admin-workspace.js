@@ -1268,6 +1268,211 @@
         // an older snapshot and then replacing it.
     }
 
+    async function ensureDefaultServiceCatalogue() {
+        if (
+            !state.currentAdmin ||
+            state.currentAdmin.role !== "owner"
+        ) {
+            return false;
+        }
+
+        const defaults = [
+            {
+                name: "Logo",
+                description: "Custom logo design.",
+                category: "Branding",
+                pricing_type: "fixed",
+                default_price: 250,
+                minimum_price: 250,
+                maximum_price: 250,
+                price_label: "R250",
+                recurring_interval: "none"
+            },
+            {
+                name: "Flyer / Poster",
+                description: "Marketing flyer or poster design.",
+                category: "Design",
+                pricing_type: "range",
+                default_price: 200,
+                minimum_price: 150,
+                maximum_price: 250,
+                price_label: "R150–R250",
+                recurring_interval: "none"
+            },
+            {
+                name: "Letterhead",
+                description: "Professional business letterhead.",
+                category: "Business stationery",
+                pricing_type: "fixed",
+                default_price: 150,
+                minimum_price: 150,
+                maximum_price: 150,
+                price_label: "R150",
+                recurring_interval: "none"
+            },
+            {
+                name: "Company Registration",
+                description: "Company registration service including CIPC-related costs.",
+                category: "Business setup",
+                pricing_type: "fixed",
+                default_price: 500,
+                minimum_price: 500,
+                maximum_price: 500,
+                price_label: "R500",
+                recurring_interval: "none"
+            },
+            {
+                name: "Business Identity Kit",
+                description: "Custom business identity package.",
+                category: "Branding",
+                pricing_type: "custom",
+                default_price: null,
+                minimum_price: null,
+                maximum_price: null,
+                price_label: "Custom quote",
+                recurring_interval: "none"
+            },
+            {
+                name: "Packaging",
+                description: "Packaging design.",
+                category: "Design",
+                pricing_type: "fixed",
+                default_price: 150,
+                minimum_price: 150,
+                maximum_price: 150,
+                price_label: "R150",
+                recurring_interval: "none"
+            },
+            {
+                name: "Apparel",
+                description: "Apparel design.",
+                category: "Design",
+                pricing_type: "range",
+                default_price: 75,
+                minimum_price: 50,
+                maximum_price: 100,
+                price_label: "R50–R100",
+                recurring_interval: "none"
+            },
+            {
+                name: "Business Card",
+                description: "Professional business card design.",
+                category: "Business stationery",
+                pricing_type: "fixed",
+                default_price: 100,
+                minimum_price: 100,
+                maximum_price: 100,
+                price_label: "R100",
+                recurring_interval: "none"
+            },
+            {
+                name: "Social Media Management",
+                description: "Social media management.",
+                category: "Marketing",
+                pricing_type: "fixed",
+                default_price: 500,
+                minimum_price: 500,
+                maximum_price: 500,
+                price_label: "R500 / month",
+                recurring_interval: "monthly"
+            },
+            {
+                name: "Google Business Profile Setup",
+                description: "Google Business Profile setup.",
+                category: "Digital presence",
+                pricing_type: "range",
+                default_price: 700,
+                minimum_price: 500,
+                maximum_price: 900,
+                price_label: "R500–R900",
+                recurring_interval: "none"
+            },
+            {
+                name: "Professional Email Setup",
+                description: "Professional business email setup.",
+                category: "Digital presence",
+                pricing_type: "range",
+                default_price: 450,
+                minimum_price: 300,
+                maximum_price: 600,
+                price_label: "R300–R600",
+                recurring_interval: "none"
+            },
+            {
+                name: "Appointment / Booking Setup",
+                description: "Online appointment or booking setup.",
+                category: "Web & systems",
+                pricing_type: "range",
+                default_price: 900,
+                minimum_price: 600,
+                maximum_price: 1200,
+                price_label: "R600–R1200",
+                recurring_interval: "none"
+            },
+            {
+                name: "Website Design",
+                description: "Website design and development.",
+                category: "Web & systems",
+                pricing_type: "from",
+                default_price: 1500,
+                minimum_price: 1500,
+                maximum_price: null,
+                price_label: "From R1,500",
+                recurring_interval: "none"
+            }
+        ];
+
+        try {
+            const existing = await api(
+                "/rest/v1/services?select=id,name&order=name.asc"
+            );
+
+            const existingNames = new Set(
+                (Array.isArray(existing) ? existing : []).map(function (item) {
+                    return String(item.name || "").trim().toLowerCase();
+                })
+            );
+
+            const missing = defaults.filter(function (item) {
+                return !existingNames.has(
+                    String(item.name).trim().toLowerCase()
+                );
+            });
+
+            if (!missing.length) {
+                return false;
+            }
+
+            await api(
+                "/rest/v1/services",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Prefer": "return=minimal"
+                    }),
+                    body: JSON.stringify(
+                        missing.map(function (item) {
+                            return Object.assign(
+                                {
+                                    active: true
+                                },
+                                item
+                            );
+                        })
+                    )
+                }
+            );
+
+            return true;
+        } catch (error) {
+            console.warn(
+                "Unable to initialise the Swayphics service catalogue.",
+                error
+            );
+            return false;
+        }
+    }
+
     async function refreshData() {
         const results = await Promise.all([
             api("/rest/v1/tasks?select=*&order=created_at.desc"),
@@ -20070,6 +20275,12 @@ function simpleBars(items, color) {
                 loadState(),
                 refreshData()
             ]);
+
+            if (
+                await ensureDefaultServiceCatalogue()
+            ) {
+                await refreshData();
+            }
 
             renderShell();
             renderView();
