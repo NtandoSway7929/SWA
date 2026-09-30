@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://swayphics.co.za/</loc>
-  </url>
+  <url><loc>https://swayphics.co.za/</loc></url>
+  <url><loc>https://swayphics.co.za/card/</loc></url>
+  <url><loc>https://swayphics.co.za/testimonial/</loc></url>
+  <url><loc>https://swayphics.co.za/privacy-policy/</loc></url>
+  <url><loc>https://swayphics.co.za/cookie-policy/</loc></url>
+  <url><loc>https://swayphics.co.za/terms-and-conditions/</loc></url>
+  <url><loc>https://swayphics.co.za/paia-manual/</loc></url>
 </urlset>
