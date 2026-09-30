@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
 
+Disallow: /admin/
+Disallow: /admin-dashboard/
+Disallow: /client-portal/
+
 Sitemap: https://swayphics.co.za/sitemap.xml
