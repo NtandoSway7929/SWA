@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<head>
 <script type="application/ld+json">
 {
     "@context": "https://schema.org",
@@ -15,7 +16,6 @@
     ]
 }
 </script>    
-<head>
     <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -16661,7 +16661,7 @@ section {
 
             </div>
 
-            <a href="#contact" class="package-button">
+            <a href="#contact" class="package-button" data-package="Starter Package">
                 Choose Starter →
             </a>
 
@@ -16706,7 +16706,7 @@ section {
 
             </div>
 
-            <a href="#contact" class="package-button">
+            <a href="#contact" class="package-button" data-package="Launch Package">
                 Launch My Business →
             </a>
 
@@ -16749,7 +16749,7 @@ section {
 
             </div>
 
-            <a href="#contact" class="package-button">
+            <a href="#contact" class="package-button" data-package="Growth Package">
                 Choose Growth →
             </a>
 
@@ -19557,6 +19557,19 @@ if (projectForm) {
                Successful submission
                --------------------------------------------- */
 
+            if (
+                typeof window.swayphicsTrack ===
+                "function"
+            ) {
+                window.swayphicsTrack(
+                    "generate_lead",
+                    {
+                        service:
+                            service.value
+                    }
+                );
+            }
+
             projectForm.reset();
 
 submitButton.textContent =
@@ -20086,5 +20099,108 @@ if (formStatus) {
     });
 })();
 </script>
+
+<script>
+(function () {
+    "use strict";
+
+    function track(eventName, parameters) {
+        if (
+            typeof window.gtag === "function" &&
+            window.swayphicsAnalyticsLoaded
+        ) {
+            window.gtag(
+                "event",
+                eventName,
+                parameters || {}
+            );
+        }
+    }
+
+    window.swayphicsTrack = track;
+
+    const packageButtons =
+        document.querySelectorAll(
+            "[data-package]"
+        );
+
+    const serviceSelect =
+        document.getElementById("service");
+
+    packageButtons.forEach(function (button) {
+        button.addEventListener(
+            "click",
+            function () {
+                const packageName =
+                    button.getAttribute("data-package");
+
+                if (serviceSelect && packageName) {
+                    serviceSelect.value = packageName;
+                    serviceSelect.dispatchEvent(
+                        new Event("change", { bubbles: true })
+                    );
+                }
+
+                track(
+                    "select_package",
+                    {
+                        package_name: packageName || ""
+                    }
+                );
+            }
+        );
+    });
+
+    const enquiryForm =
+        document.querySelector(".project-form");
+
+    if (enquiryForm) {
+        let formStarted = false;
+
+        enquiryForm.addEventListener(
+            "focusin",
+            function () {
+                if (formStarted) return;
+
+                formStarted = true;
+
+                track(
+                    "begin_enquiry",
+                    {}
+                );
+            }
+        );
+    }
+
+    document.querySelectorAll(
+        'a[href^="https://wa.me/"]'
+    ).forEach(function (link) {
+        link.addEventListener(
+            "click",
+            function () {
+                track(
+                    "contact_whatsapp",
+                    {}
+                );
+            }
+        );
+    });
+
+    document.querySelectorAll(
+        'a[href^="mailto:"]'
+    ).forEach(function (link) {
+        link.addEventListener(
+            "click",
+            function () {
+                track(
+                    "contact_email",
+                    {}
+                );
+            }
+        );
+    });
+})();
+</script>
+
 </body>
 </html>
