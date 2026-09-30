@@ -467,7 +467,17 @@
         }
     }
 
-    async function refreshAdminAccessToken() {
+    async function refreshAdminAccessToken(forceRefresh) {
+        /* Share the page-level session keeper when the dashboard provides it. */
+        if (
+            typeof window !== "undefined" &&
+            typeof window.swayphicsRefreshAdminSession === "function"
+        ) {
+            return window.swayphicsRefreshAdminSession(
+                forceRefresh === true
+            );
+        }
+
         const refreshToken =
             localStorage.getItem(
                 "swayphics_admin_refresh_token"
@@ -546,16 +556,52 @@
     }
 
     async function api(path, options) {
-        const response = await fetch(
-            SUPABASE_URL + path,
+        /* Keep the access JWT fresh before normal dashboard traffic. */
+        await ensureFreshAdminAccessToken();
+
+        const requestOptions =
             Object.assign(
                 {
-                    method: "GET",
-                    headers: headers()
+                    method: "GET"
                 },
                 options || {}
-            )
-        );
+            );
+
+        requestOptions.headers =
+            Object.assign(
+                headers(),
+                options && options.headers
+                    ? options.headers
+                    : {}
+            );
+
+        let response =
+            await fetch(
+                SUPABASE_URL + path,
+                requestOptions
+            );
+
+        /* Retry once with a freshly issued JWT if Supabase rejects the token. */
+        if (response.status === 401) {
+            const refreshed =
+                await refreshAdminAccessToken(true);
+
+            if (refreshed) {
+                requestOptions.headers =
+                    Object.assign(
+                        headers(),
+                        options && options.headers
+                            ? options.headers
+                            : {}
+                    );
+
+                response =
+                    await fetch(
+                        SUPABASE_URL + path,
+                        requestOptions
+                    );
+            }
+        }
 
         const responseText = await response.text();
         let data = null;
