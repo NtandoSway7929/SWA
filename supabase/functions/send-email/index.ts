@@ -614,9 +614,6 @@ Deno.serve(async (req) => {
       {
         contact_type: resolvedContactType,
         contact_id: contact.id || null,
-        contact_name: recipientName,
-        business_name: recipientBusinessName,
-        recipient_email: contact.email || requestedRecipientEmail,
       },
     );
 
