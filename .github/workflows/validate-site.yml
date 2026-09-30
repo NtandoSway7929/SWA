@@ -36,7 +36,6 @@ jobs:
               pathlib.Path("client-portal/index.html"),
               pathlib.Path("card/index.html"),
               pathlib.Path("testimonial/index.html"),
-              pathlib.Path("testimonial/index.html"),
               pathlib.Path("404.html"),
           ]
 
@@ -54,6 +53,9 @@ jobs:
                   body = match.group(2)
 
                   if re.search(r"\bsrc\s*=", attrs, re.I):
+                      continue
+
+                  if "application/ld+json" in attrs.lower():
                       continue
 
                   if not body.strip():
