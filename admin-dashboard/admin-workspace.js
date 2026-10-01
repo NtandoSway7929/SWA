@@ -957,6 +957,84 @@
         );
     }
 
+    function formatAIMessageTime(value) {
+        const parsed = parseDashboardDate(value);
+
+        if (!parsed) return "";
+
+        return parsed.toLocaleString(
+            "en-ZA",
+            {
+                timeZone: SOUTH_AFRICA_TIME_ZONE,
+                day: "2-digit",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23"
+            }
+        ).replace(",", " ·");
+    }
+
+    function copyAIMessage(button) {
+        if (!button) return;
+
+        const message = String(button.getAttribute("data-ai-copy") || "").trim();
+        if (!message) return;
+
+        const originalText = button.textContent;
+
+        function showCopied() {
+            button.textContent = "Copied";
+            button.disabled = true;
+
+            window.setTimeout(function () {
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 1400);
+        }
+
+        function fallbackCopy() {
+            const textarea = document.createElement("textarea");
+            textarea.value = message;
+            textarea.setAttribute("readonly", "");
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.appendChild(textarea);
+            textarea.select();
+
+            let copied = false;
+            try {
+                copied = document.execCommand("copy");
+            } catch (error) {
+                copied = false;
+            }
+
+            textarea.remove();
+            return copied;
+        }
+
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            navigator.clipboard.writeText(message)
+                .then(showCopied)
+                .catch(function () {
+                    if (fallbackCopy()) {
+                        showCopied();
+                        return;
+                    }
+
+                    swayAlert("InnerMe could not copy that response.");
+                });
+            return;
+        }
+
+        if (fallbackCopy()) {
+            showCopied();
+            return;
+        }
+
+        swayAlert("InnerMe could not copy that response.");
+    }
+
     function dateInput(value) {
         return value ? String(value).slice(0, 10) : "";
     }
@@ -19272,6 +19350,17 @@ function simpleBars(items, color) {
                         ? " sway-ai-loading"
                         : "";
 
+                const timestamp = formatAIMessageTime(item.createdAt);
+                const timestampHtml = timestamp
+                    ? '<span class="sway-ai-message-time">' + esc(timestamp) + '</span>'
+                    : "";
+                const copyHtml =
+                    item.role === "assistant" &&
+                    !item.loading &&
+                    String(item.content || "").trim()
+                        ? '<button type="button" class="sway-ai-copy" data-ai-copy="' + esc(String(item.content || "")) + '">Copy</button>'
+                        : "";
+
                 return (
                     '<div class="sway-ai-message ' +
                     roleClass +
@@ -19287,6 +19376,7 @@ function simpleBars(items, color) {
                                     : esc(item.content || "")
                             ) +
                         '</div>' +
+                        (timestampHtml || copyHtml ? '<div class="sway-ai-message-meta">' + timestampHtml + copyHtml + '</div>' : "") +
                     '</div>'
                 );
             }).join("")
@@ -19330,7 +19420,7 @@ function simpleBars(items, color) {
                     '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask InnerMe..." autocomplete="off"></textarea>' +
                     '<button type="submit" id="sway-ai-send">Ask InnerMe</button>' +
                 '</form>' +
-                '<small class="sway-ai-note">InnerMe is read-only in V1. It can analyse your workspace, but it cannot send emails, delete records or change data.</small>' +
+                '<small class="sway-ai-note">InnerMe is read-only in V1. It can analyse your workspace, but it cannot send emails, delete records or change data. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>'
         );
     }
@@ -19371,15 +19461,19 @@ function simpleBars(items, color) {
                 };
             });
 
+        const messageCreatedAt = new Date().toISOString();
+
         const userEntry = {
             role: "user",
-            content: clean
+            content: clean,
+            createdAt: messageCreatedAt
         };
 
         const assistantEntry = {
             role: "assistant",
             content: "Thinking…",
-            loading: true
+            loading: true,
+            createdAt: messageCreatedAt
         };
 
         state.aiConversation.push(
@@ -19394,8 +19488,13 @@ function simpleBars(items, color) {
         userBubble.className = "sway-ai-message sway-ai-user";
         userBubble.innerHTML =
             '<span class="sway-ai-message-label">You</span>' +
-            '<div>' +
+            '<div class="sway-ai-message-content">' +
                 esc(clean) +
+            '</div>' +
+            '<div class="sway-ai-message-meta">' +
+                '<span class="sway-ai-message-time">' +
+                    esc(formatAIMessageTime(messageCreatedAt)) +
+                '</span>' +
             '</div>';
 
         const loading = document.createElement("div");
@@ -19456,6 +19555,14 @@ function simpleBars(items, color) {
                 '<span class="sway-ai-message-label">InnerMe</span>' +
                 '<div class="sway-ai-message-content">' +
                     formatAIAnswer(answer) +
+                '</div>' +
+                '<div class="sway-ai-message-meta">' +
+                    '<span class="sway-ai-message-time">' +
+                        esc(formatAIMessageTime(assistantEntry.createdAt)) +
+                    '</span>' +
+                    '<button type="button" class="sway-ai-copy" data-ai-copy="' +
+                        esc(answer) +
+                    '">Copy</button>' +
                 '</div>';
         } catch (error) {
             const errorMessage =
@@ -19471,6 +19578,11 @@ function simpleBars(items, color) {
                 '<span class="sway-ai-message-label">InnerMe</span>' +
                 '<div class="sway-ai-message-content">' +
                     esc(errorMessage) +
+                '</div>' +
+                '<div class="sway-ai-message-meta">' +
+                    '<span class="sway-ai-message-time">' +
+                        esc(formatAIMessageTime(assistantEntry.createdAt)) +
+                    '</span>' +
                 '</div>';
         } finally {
             input.disabled = false;
@@ -20744,6 +20856,16 @@ function simpleBars(items, color) {
             .forEach(function (button) {
                 button.addEventListener("click", function () {
                     askSwayphicsAI(button.dataset.aiPrompt || "");
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-ai-copy]")
+            .forEach(function (button) {
+                button.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    copyAIMessage(button);
                 });
             });
 
