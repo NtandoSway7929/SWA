@@ -64,6 +64,7 @@
         notificationsAvailable: false,
         aiConversation: [],
         aiFocusedRecord: null,
+        leadProposals: [],
         aiChatSessions: [],
         aiActiveChatId: ""
     };
@@ -2931,7 +2932,8 @@
             api("/rest/v1/invoices?select=*&order=created_at.desc"),
             api("/rest/v1/services?select=*&order=name.asc"),
             api("/rest/v1/invoice_settings?select=*&id=eq.1"),
-            api("/rest/v1/client_portal_requests?select=*&order=created_at.desc")
+            api("/rest/v1/client_portal_requests?select=*&order=created_at.desc"),
+            optionalApi("/rest/v1/lead_proposals?select=*&order=created_at.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -2948,6 +2950,7 @@
         state.services = results[11] || [];
         state.invoiceSettings = (results[12] && results[12][0]) || state.invoiceSettings || null;
         state.portalRequests = results[13] || [];
+        state.leadProposals = results[14] || [];
 
         await loadAdminNotifications();
 
@@ -9382,6 +9385,9 @@ function simpleBars(items, color) {
                                         '<button type="button" class="sway-row-action" data-export-lead-assessment="' +
                                             esc(item.id) +
                                         '">Assessment report</button>' +
+                                        '<button type="button" class="sway-row-action" data-draft-lead-proposal="' +
+                                            esc(item.id) +
+                                        '">Draft proposal</button>' +
                                         (
                                             item.email
                                                 ? '<button type="button" class="sway-row-action" data-send-email-type="lead" data-send-email-id="' +
@@ -16714,6 +16720,295 @@ function simpleBars(items, color) {
         );
     }
 
+    async function draftLeadProposal(leadId) {
+        const lead = state.leads.find(function (item) {
+            return item.id === leadId;
+        });
+
+        if (!lead) {
+            swayAlert("Unable to find this lead.");
+            return;
+        }
+
+        const assessment = {
+            business_assessment: lead.business_assessment || "",
+            research_findings: lead.research_findings || "",
+            swayphics_solution: lead.swayphics_solution || "",
+            recommended_services: lead.recommended_services || "",
+            research_sources: lead.research_sources || "",
+            service_interest: lead.service_interest || "",
+            estimated_value: lead.estimated_value || 0
+        };
+
+        const populated = [
+            assessment.business_assessment,
+            assessment.research_findings,
+            assessment.swayphics_solution,
+            assessment.recommended_services
+        ].filter(function (value) {
+            return String(value || "").trim();
+        }).length;
+
+        if (populated < 2) {
+            swayAlert(
+                "This lead's assessment is not complete enough for InnerMe to draft a reliable proposal. Complete the assessment first."
+            );
+            return;
+        }
+
+        const button = document.querySelector(
+            '[data-draft-lead-proposal="' + CSS.escape(leadId) + '"]'
+        );
+
+        if (button) {
+            button.disabled = true;
+            button.dataset.originalText = button.textContent;
+            button.textContent = "Drafting…";
+        }
+
+        try {
+            const result = await api(
+                "/functions/v1/swayphics-ai",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        action: "draft_proposal",
+                        lead_id: lead.id,
+                        lead: {
+                            business_name: lead.business_name || "",
+                            contact_name: lead.contact_name || "",
+                            email: lead.email || "",
+                            service_interest: lead.service_interest || "",
+                            estimated_value: lead.estimated_value || 0
+                        },
+                        assessment: assessment
+                    })
+                }
+            );
+
+            if (!result || !result.proposal) {
+                throw new Error(
+                    "InnerMe did not return a proposal draft."
+                );
+            }
+
+            const proposal = result.proposal;
+
+            const saved = await api(
+                "/rest/v1/lead_proposals",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json",
+                        "Prefer": "return=representation"
+                    }),
+                    body: JSON.stringify({
+                        lead_id: lead.id,
+                        title:
+                            proposal.title ||
+                            ("Swayphics Proposal | " + (lead.business_name || "Lead")),
+                        subject:
+                            proposal.subject ||
+                            ("Swayphics | Proposal for " + (lead.business_name || "Your business")),
+                        content: proposal.content || "",
+                        status: "draft",
+                        assessment_snapshot: assessment,
+                        created_by:
+                            state.currentUser &&
+                            state.currentUser.id
+                                ? state.currentUser.id
+                                : null
+                    })
+                }
+            );
+
+            const savedProposal =
+                Array.isArray(saved)
+                    ? saved[0]
+                    : saved;
+
+            if (!savedProposal || !savedProposal.id) {
+                throw new Error("The proposal draft could not be saved.");
+            }
+
+            state.leadProposals.unshift(savedProposal);
+            renderView();
+            openLeadProposalReview(savedProposal.id);
+        } catch (error) {
+            swayAlert(
+                error.message ||
+                "InnerMe could not draft the proposal."
+            );
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent =
+                    button.dataset.originalText ||
+                    "Draft proposal";
+            }
+        }
+    }
+
+    function openLeadProposalReview(proposalId) {
+        const proposal =
+            state.leadProposals.find(function (item) {
+                return item.id === proposalId;
+            });
+
+        if (!proposal) {
+            swayAlert("Proposal draft not found.");
+            return;
+        }
+
+        const lead =
+            state.leads.find(function (item) {
+                return item.id === proposal.lead_id;
+            });
+
+        const modal = document.createElement("div");
+        modal.className = "sway-modal sway-proposal-review-modal";
+
+        modal.innerHTML =
+            '<div class="sway-modal-backdrop"></div>' +
+            '<div class="sway-modal-card sway-proposal-review-card" role="dialog" aria-modal="true">' +
+                '<div class="sway-modal-header">' +
+                    '<div>' +
+                        '<span class="admin-label">INNERME · PROPOSAL DRAFT</span>' +
+                        '<h3>Review before approval</h3>' +
+                        '<p class="sway-proposal-review-lead">' +
+                            esc(lead ? lead.business_name : "Lead") +
+                        '</p>' +
+                    '</div>' +
+                    '<button class="sway-modal-close" type="button" aria-label="Close">×</button>' +
+                '</div>' +
+                '<div class="sway-proposal-review-context">' +
+                    '<strong>Assessment used</strong>' +
+                    '<span>InnerMe drafted this from the lead assessment. Nothing has been sent.</span>' +
+                '</div>' +
+                '<div class="sway-proposal-review-fields">' +
+                    '<label>Proposal title<input id="sway-proposal-title" type="text" value="' +
+                        esc(proposal.title || "") +
+                    '"></label>' +
+                    '<label>Email subject<input id="sway-proposal-subject" type="text" value="' +
+                        esc(proposal.subject || "") +
+                    '"></label>' +
+                    '<label>Proposal content<textarea id="sway-proposal-content" rows="18">' +
+                        esc(proposal.content || "") +
+                    '</textarea></label>' +
+                '</div>' +
+                '<div class="sway-proposal-review-actions">' +
+                    '<button type="button" class="sway-workspace-button" data-proposal-reject="' +
+                        esc(proposal.id) +
+                    '">Keep as draft</button>' +
+                    '<button type="button" class="sway-workspace-button primary" data-proposal-approve="' +
+                        esc(proposal.id) +
+                    '">Approve proposal</button>' +
+                '</div>' +
+                '<p class="sway-proposal-review-note">Approval only approves the draft. It does not send an email to the lead.</p>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+
+        const close = function () {
+            modal.remove();
+        };
+
+        modal.querySelector(".sway-modal-close")?.addEventListener("click", close);
+        modal.querySelector(".sway-modal-backdrop")?.addEventListener("click", close);
+
+        modal.querySelector("[data-proposal-reject]")?.addEventListener(
+            "click",
+            function () {
+                close();
+            }
+        );
+
+        modal.querySelector("[data-proposal-approve]")?.addEventListener(
+            "click",
+            async function () {
+                const title = String(
+                    modal.querySelector("#sway-proposal-title")?.value || ""
+                ).trim();
+                const subject = String(
+                    modal.querySelector("#sway-proposal-subject")?.value || ""
+                ).trim();
+                const content = String(
+                    modal.querySelector("#sway-proposal-content")?.value || ""
+                ).trim();
+
+                if (!content) {
+                    swayAlert("The proposal cannot be approved while it is empty.");
+                    return;
+                }
+
+                const approveButton =
+                    modal.querySelector("[data-proposal-approve]");
+
+                approveButton.disabled = true;
+                approveButton.textContent = "Approving…";
+
+                try {
+                    const updated = await api(
+                        "/rest/v1/lead_proposals?id=eq." +
+                        encodeURIComponent(proposal.id),
+                        {
+                            method: "PATCH",
+                            headers: headers({
+                                "Content-Type": "application/json",
+                                "Prefer": "return=representation"
+                            }),
+                            body: JSON.stringify({
+                                title: title || "Swayphics Proposal",
+                                subject:
+                                    subject ||
+                                    "Swayphics | Proposal",
+                                content,
+                                status: "approved",
+                                approved_by:
+                                    state.currentUser &&
+                                    state.currentUser.id
+                                        ? state.currentUser.id
+                                        : null,
+                                approved_at:
+                                    new Date().toISOString()
+                            })
+                        }
+                    );
+
+                    const updatedProposal =
+                        Array.isArray(updated)
+                            ? updated[0]
+                            : updated;
+
+                    const index =
+                        state.leadProposals.findIndex(function (item) {
+                            return item.id === proposal.id;
+                        });
+
+                    if (index >= 0 && updatedProposal) {
+                        state.leadProposals[index] = updatedProposal;
+                    }
+
+                    close();
+                    swayAlert(
+                        "Proposal approved for review. It has not been sent."
+                    );
+                    renderView();
+                } catch (error) {
+                    approveButton.disabled = false;
+                    approveButton.textContent = "Approve proposal";
+                    swayAlert(
+                        error.message ||
+                        "The proposal could not be approved."
+                    );
+                }
+            }
+        );
+    }
+
     function exportLeadAssessmentJson(leadId) {
         const lead = state.leads.find(function (item) {
             return item.id === leadId;
@@ -22711,6 +23006,19 @@ function simpleBars(items, color) {
                     function () {
                         exportLeadAssessment(
                             button.dataset.exportLeadAssessment
+                        );
+                    }
+                );
+            });
+
+        workspace
+            .querySelectorAll("[data-draft-lead-proposal]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        draftLeadProposal(
+                            button.dataset.draftLeadProposal
                         );
                     }
                 );
