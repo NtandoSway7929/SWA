@@ -7780,7 +7780,7 @@ function simpleBars(items, color) {
                     '<div>' +
                         '<span class="admin-label">Today</span>' +
                         "<h3>Needs attention</h3>" +
-                        "<p>The next actions that should not be missed.</p>" +
+                        "<p>The next moves worth your attention.</p>" +
                     "</div>" +
                     '<span class="sway-attention-count">' +
                         total +
@@ -8907,7 +8907,7 @@ function simpleBars(items, color) {
                 "<strong>" +
                 esc(currentUserName()) +
                 "</strong>" +
-                ". Here is what needs attention." +
+                ". Here is the useful bit: what is worth your attention right now." +
             "</div>" +
 
             renderNeedsAttention() +
@@ -8923,7 +8923,7 @@ function simpleBars(items, color) {
                     "</div>" +
                     '<div class="hint">' +
                         tasksToday +
-                        " due today." +
+                        " due today. Keep the queue honest." +
                     "</div>" +
                 "</div>" +
 
@@ -8932,7 +8932,7 @@ function simpleBars(items, color) {
                     '<div class="value">' +
                         followupsToday +
                     "</div>" +
-                    '<div class="hint">Keep active opportunities moving.</div>' +
+                    '<div class="hint">Keep active opportunities moving. Future-you will appreciate it.</div>' +
                 "</div>" +
 
                 '<div class="sway-stat-card">' +
@@ -8944,7 +8944,7 @@ function simpleBars(items, color) {
                         state.leads.filter(function (item) {
                             return !["won", "lost"].includes(item.status);
                         }).length +
-                        " active leads." +
+                        " active leads. Plenty to work with." +
                     "</div>" +
                 "</div>" +
 
@@ -8957,7 +8957,7 @@ function simpleBars(items, color) {
                         state.payments.filter(function (item) {
                             return item.status !== "paid";
                         }).length +
-                        " payment items." +
+                        " payment items. Keep these on the radar." +
                     "</div>" +
                 "</div>" +
 
@@ -9016,7 +9016,7 @@ function simpleBars(items, color) {
                             "</table>" +
                         "</div>"
                     )
-                    : empty("Nothing is currently assigned to you.")
+                    : empty("Nothing is sitting in your queue right now. A rare quiet moment.")
             ) +
 
             '<div class="sway-overview-split">' +
@@ -9053,7 +9053,7 @@ function simpleBars(items, color) {
                                 "</div>"
                             );
                         }).join("")
-                        : empty("No activity recorded yet.")
+                        : empty("No activity recorded yet. The log is unusually quiet.")
                 ) +
 
                 panel(
@@ -20805,8 +20805,8 @@ function simpleBars(items, color) {
                     '<div class="sway-ai-proactive-clear">' +
                         '<span class="sway-ai-proactive-clear-icon">✓</span>' +
                         '<div>' +
-                            '<strong>Nothing urgent is showing right now.</strong>' +
-                            '<span>Ask InnerMe about any part of the Swayphics workspace.</span>' +
+                            '<strong>Nothing urgent is showing right now. A rare quiet moment.</strong>' +
+                            '<span>Ask InnerMe to dig into any part of the Swayphics workspace.</span>' +
                         '</div>' +
                     '</div>' +
                 '</div>'
@@ -20818,7 +20818,7 @@ function simpleBars(items, color) {
                 '<div class="sway-ai-proactive-head">' +
                     '<div>' +
                         '<span class="sway-ai-proactive-eyebrow">INNERME BRIEFING</span>' +
-                        '<strong>Here is what needs your attention.</strong>' +
+                        '<strong>Here is the useful bit: what needs your attention.</strong>' +
                     '</div>' +
                     '<span class="sway-ai-proactive-live">LIVE</span>' +
                 '</div>' +
@@ -20904,8 +20904,8 @@ function simpleBars(items, color) {
             }).join("")
             : (
                 '<div class="sway-ai-welcome">' +
-                    '<strong>What can InnerMe help you with?</strong>' +
-                    '<span>Ask about leads, clients, follow-ups, tasks, projects, invoices, payments, portal requests or recent activity.</span>' +
+                    '<strong>What needs a closer look?</strong>' +
+                    '<span>Ask about leads, clients, follow-ups, tasks, projects, invoices, payments, portal requests or recent activity. InnerMe will keep the answer useful and to the point.</span>' +
                 '</div>'
             );
 
@@ -20919,7 +20919,7 @@ function simpleBars(items, color) {
                             '<span>an ai agent by</span>' +
                             '<img src="../swayphics-logo.png" alt="Swayphics">' +
                         '</div>' +
-                        '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data.</p>' +
+                        '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data. No fluff, just the useful stuff.</p>' +
                     '</div>' +
                     '<div class="sway-ai-header-actions">' +
                         '<button type="button" class="sway-ai-history-toggle" id="sway-ai-history-toggle" aria-expanded="false">' +
