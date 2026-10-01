@@ -71,7 +71,7 @@
             icon: "grid",
             items: [
                 ["overview", "Overview"],
-                ["swayphics-ai", "✦ Swayphics AI"],
+                ["swayphics-ai", "InnerMe"],
                 ["insights", "Insights"],
                 ["reminders", "Automated reminders"]
             ]
@@ -19020,9 +19020,9 @@ function simpleBars(items, color) {
             '<section class="sway-ai-panel">' +
                 '<div class="sway-ai-header">' +
                     '<div>' +
-                        '<span class="sway-ai-eyebrow">SWAYPHICS INTELLIGENCE</span>' +
-                        '<h2>✦ Swayphics AI</h2>' +
-                        '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data.</p>' +
+                        '<span class="sway-ai-eyebrow">INNERME</span>' +
+                        '<h2>InnerMe</h2>' +
+                        '<div class="sway-ai-byline" aria-label="an ai agent by Swayphics"><span>an ai agent by</span><img src="../swayphics-logo.png" alt="Swayphics"></div><p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data.</p>' +
                     '</div>' +
                     '<span class="sway-ai-status">Read-only V1</span>' +
                 '</div>' +
@@ -19034,15 +19034,15 @@ function simpleBars(items, color) {
                 '</div>' +
                 '<div class="sway-ai-conversation" id="sway-ai-conversation">' +
                     '<div class="sway-ai-welcome">' +
-                        '<strong>What can I help you with?</strong>' +
+                        '<strong>What can InnerMe help you with?</strong>' +
                         '<span>Ask about leads, clients, follow-ups, tasks, projects, invoices, payments, portal requests or recent activity.</span>' +
                     '</div>' +
                 '</div>' +
                 '<form class="sway-ai-form" id="sway-ai-form">' +
-                    '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask Swayphics AI..." autocomplete="off"></textarea>' +
-                    '<button type="submit" id="sway-ai-send">Ask AI</button>' +
+                    '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask InnerMe..." autocomplete="off"></textarea>' +
+                    '<button type="submit" id="sway-ai-send">Ask InnerMe</button>' +
                 '</form>' +
-                '<small class="sway-ai-note">V1 is read-only. It can analyse your workspace, but it cannot send emails, delete records or change data.</small>' +
+                '<small class="sway-ai-note">InnerMe is read-only in V1. It can analyse your workspace, but it cannot send emails, delete records or change data.</small>' +
             '</section>'
         );
     }
@@ -19094,7 +19094,7 @@ function simpleBars(items, color) {
             loading.classList.remove("sway-ai-loading");
             loading.textContent =
                 error.message ||
-                "Swayphics AI could not complete the request.";
+                "InnerMe could not complete the request.";
         } finally {
             input.disabled = false;
             send.disabled = false;
