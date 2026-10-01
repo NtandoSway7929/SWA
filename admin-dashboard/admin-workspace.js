@@ -673,6 +673,54 @@
             .replace(/'/g, "&#039;");
     }
 
+    function formatAIAnswer(value) {
+        let text = String(
+            value == null
+                ? ""
+                : value
+        )
+            .replace(/\\n/g, "\n")
+            .replace(/\\r\\n/g, "\n")
+            .replace(/\\@/g, "@")
+            .replace(/\r\n?/g, "\n")
+            .trim();
+
+        /*
+         * Gemini sometimes collapses its own line breaks into spaces.
+         * Reconstruct the small set of InnerMe operational headings and
+         * bullet markers so the chat remains readable regardless of model
+         * formatting variance.
+         */
+        text = text
+            .replace(
+                /\s+(?=(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)\b)/g,
+                "\n\n"
+            )
+            .replace(
+                /\s+(?=•\s)/g,
+                "\n"
+            )
+            .replace(
+                /(^|\n)\s*\*\s+/g,
+                "$1• "
+            )
+            .replace(
+                /\n\s*•\s*/g,
+                "\n• "
+            )
+            .replace(
+                /^(\S[^\n]*?)\s+•\s+/,
+                "$1\n\n• "
+            )
+            .replace(
+                /\n{3,}/g,
+                "\n\n"
+            )
+            .trim();
+
+        return esc(text);
+    }
+
 
     function formatDisplayText(value) {
         return String(value == null ? "" : value)
@@ -19047,7 +19095,9 @@ function simpleBars(items, color) {
                             esc(label) +
                         '</span>' +
                         '<div>' +
-                            esc(item.content || "") +
+                            item.role === "assistant"
+                                ? formatAIAnswer(item.content || "")
+                                : esc(item.content || "") +
                         '</div>' +
                     '</div>'
                 );
@@ -19206,7 +19256,7 @@ function simpleBars(items, color) {
             loading.innerHTML =
                 '<span class="sway-ai-message-label">InnerMe</span>' +
                 '<div>' +
-                    esc(answer) +
+                    formatAIAnswer(answer) +
                 '</div>';
         } catch (error) {
             const errorMessage =
