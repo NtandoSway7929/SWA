@@ -19547,6 +19547,7 @@ function simpleBars(items, color) {
                     : "I could not produce an answer.";
 
             assistantEntry.content = answer;
+            assistantEntry.createdAt = new Date().toISOString();
             assistantEntry.loading = false;
             saveAIConversation();
 
@@ -19584,6 +19585,7 @@ function simpleBars(items, color) {
                 "InnerMe could not complete the request.";
 
             assistantEntry.content = errorMessage;
+            assistantEntry.createdAt = new Date().toISOString();
             assistantEntry.loading = false;
             saveAIConversation();
 
@@ -20928,6 +20930,22 @@ function simpleBars(items, color) {
                     }
                 }
             );
+        }
+
+        const aiInput =
+            workspace.querySelector("#sway-ai-input");
+
+        if (aiInput) {
+            aiInput.addEventListener("keydown", function (event) {
+                if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.isComposing
+                ) {
+                    event.preventDefault();
+                    askSwayphicsAI(aiInput.value);
+                }
+            });
         }
 
         const aiForm =
