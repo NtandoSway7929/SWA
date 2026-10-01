@@ -219,9 +219,29 @@ Answer the admin's question directly. Prefer short headings and bullets when use
 
   if (!openAiResponse.ok) {
     const errorText = await openAiResponse.text();
-    console.error("OpenAI InnerMe error:", errorText.slice(0, 2000));
+
+    console.error(
+      "OpenAI InnerMe error:",
+      errorText.slice(0, 2000),
+    );
+
+    let providerError: any = null;
+
+    try {
+      providerError = JSON.parse(errorText)?.error || null;
+    } catch {
+      providerError = null;
+    }
+
     return json({
       error: "The AI provider could not complete the request.",
+      provider_status: openAiResponse.status,
+      provider_code: providerError?.code || null,
+      provider_type: providerError?.type || null,
+      provider_message:
+        typeof providerError?.message === "string"
+          ? providerError.message.slice(0, 500)
+          : null,
     }, 502);
   }
 
