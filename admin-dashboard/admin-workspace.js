@@ -19811,6 +19811,59 @@ function simpleBars(items, color) {
 
         detectAIFocusFromMessage(clean);
 
+        const liveFocusBar =
+            document.querySelector(".sway-ai-focus-bar");
+
+        if (
+            state.aiFocusedRecord &&
+            !liveFocusBar
+        ) {
+            const panel = document.querySelector(".sway-ai-panel");
+
+            if (panel) {
+                const suggestions = panel.querySelector(
+                    ".sway-ai-suggestions"
+                );
+
+                if (suggestions) {
+                    const focusBar =
+                        document.createElement("div");
+
+                    focusBar.className =
+                        "sway-ai-focus-bar";
+
+                    focusBar.innerHTML =
+                        '<span class="sway-ai-focus-label">Focused record</span>' +
+                        '<span class="sway-ai-focus-value">' +
+                            esc(
+                                (
+                                    state.aiFocusedRecord.label
+                                        ? state.aiFocusedRecord.label + ": "
+                                        : ""
+                                ) +
+                                (
+                                    state.aiFocusedRecord.name ||
+                                    state.aiFocusedRecord.id
+                                )
+                            ) +
+                        '</span>' +
+                        '<button type="button" class="sway-ai-focus-clear" id="sway-ai-focus-clear">Clear</button>';
+
+                    panel.insertBefore(
+                        focusBar,
+                        suggestions
+                    );
+
+                    focusBar
+                        .querySelector("#sway-ai-focus-clear")
+                        ?.addEventListener("click", function () {
+                            clearAIFocusedRecord();
+                            renderView();
+                        });
+                }
+            }
+        }
+
         const messageCreatedAt = new Date().toISOString();
 
         const userEntry = {
@@ -19885,7 +19938,25 @@ function simpleBars(items, color) {
                         "Content-Type": "application/json"
                     }),
                     body: JSON.stringify({
-                        message: clean,
+                        message:
+                            (
+                                state.aiFocusedRecord
+                                    ? (
+                                        "CURRENT INNERME FOCUS: " +
+                                        (
+                                            state.aiFocusedRecord.label
+                                                ? state.aiFocusedRecord.label + " - "
+                                                : ""
+                                        ) +
+                                        (
+                                            state.aiFocusedRecord.name ||
+                                            state.aiFocusedRecord.id
+                                        ) +
+                                        "\n\n"
+                                    )
+                                    : ""
+                            ) +
+                            clean,
                         history: conversationHistory,
                         focused_record: state.aiFocusedRecord
                             ? {
