@@ -57,6 +57,7 @@
         leadStageHistory: [],
         portalRequests: [],
         clientOnboarding: [],
+        clientOnboardingAssets: [],
         portalTokens: [],
         socialAccounts: [],
         socialPosts: [],
@@ -2996,6 +2997,10 @@
                 "/rest/v1/client_onboarding?select=*&order=updated_at.desc",
                 []
             ),
+            optionalApi(
+                "/rest/v1/client_onboarding_assets?select=*&order=created_at.asc",
+                []
+            ),
         ]);
 
         state.communications = results[0] || [];
@@ -3004,6 +3009,7 @@
         state.portalRequests = results[3] || [];
         state.portalTokens = results[4] || [];
         state.clientOnboarding = results[5] || [];
+        state.clientOnboardingAssets = results[6] || [];
 
         state.emailMessages =
             await optionalApi(
@@ -10005,6 +10011,14 @@ function simpleBars(items, color) {
     }
 
 
+    function formatAssetSize(bytes){
+        const n = Number(bytes || 0);
+        if (!n) return "0 B";
+        if (n < 1024) return n + " B";
+        if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+        return (n / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
     function openClientOnboarding(clientId) {
         const client = state.clients.find(function (item) { return item.id === clientId; });
         if (!client) return;
@@ -10031,12 +10045,46 @@ function simpleBars(items, color) {
                     section("03 · Daddy’s Deals vouchers", field("Vouchers accepted", row.daddy_deals_vouchers) + field("Terms", row.daddy_deals_terms) + field("Redemption process", row.voucher_redemption_process)) +
                     section("04 · Booking setup", field("Current booking system", row.booking_system) + field("Booking WhatsApp", row.booking_whatsapp) + field("Booking process", row.booking_process) + field("Booking rules", row.booking_rules)) +
                     section("05 · About business & brand", field("About the business", row.about_business) + field("Branding notes", row.branding_notes) + field("Photos / logos / assets", row.asset_notes)) +
+                    section("06 · Uploaded assets", (function(){
+                        const assets = state.clientOnboardingAssets.filter(function(asset){ return asset.client_id === clientId; });
+                        if (!assets.length) return '<div class="sway-client360-empty">No files have been uploaded yet.</div>';
+                        return '<div class="sway-onboarding-assets">' + assets.map(function(asset){
+                            return '<div class="sway-onboarding-asset"><div class="sway-onboarding-asset-copy"><strong>' + esc(asset.original_name || "Uploaded file") + '</strong><span>' + esc(formatAssetSize(asset.size_bytes)) + ' · ' + esc(asset.mime_type || "File") + '</span></div><button type="button" class="sway-workspace-button" data-open-onboarding-asset="' + esc(asset.file_path) + '">Open</button></div>';
+                        }).join("") + '</div>';
+                    })()) +
                     '<div class="sway-admin-onboarding-meta"><span>Updated ' + esc(dateTime(row.updated_at)) + '</span>' + (row.submitted_at ? '<span>Submitted ' + esc(dateTime(row.submitted_at)) + '</span>' : '') + '</div>'
                     : '<div class="sway-client360-empty">This client has not started the onboarding form yet.</div>') +
                 '<div class="sway-client360-footer"><button type="button" class="sway-workspace-button primary" data-close-onboarding>Done</button></div>' +
             '</section>';
         workspace.appendChild(modal);
         modal.querySelectorAll("[data-close-onboarding]").forEach(function(button){ button.addEventListener("click", function(){ modal.remove(); }); });
+        modal.querySelectorAll("[data-open-onboarding-asset]").forEach(function(button){
+            button.addEventListener("click", async function(){
+                const original = button.textContent;
+                button.disabled = true;
+                button.textContent = "Opening…";
+                try {
+                    const result = await api("/storage/v1/object/sign/swayphics-client-files", {
+                        method: "POST",
+                        body: JSON.stringify({
+                            paths: [button.dataset.openOnboardingAsset],
+                            expiresIn: 3600
+                        })
+                    });
+                    const signed = result && result.data && result.data[0] ? result.data[0].signedURL : (result && result[0] ? result[0].signedURL : "");
+                    if (!signed) throw new Error("A secure file link could not be created.");
+                    window.open(SUPABASE_URL + "/storage/v1" + signed, "_blank", "noopener,noreferrer");
+                } catch (error) {
+                    console.error("Unable to open onboarding asset.", error);
+                    alert("We could not open this file. Please try again.");
+                } finally {
+                    button.disabled = false;
+                    button.textContent = original;
+                }
+            });
+        });
+
+        
     }
 
     function clientHealth(clientId) {
