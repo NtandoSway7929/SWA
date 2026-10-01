@@ -514,7 +514,12 @@ Swayphics currently operates through leads, clients, enquiries, communications, 
 - Use the previous conversation to resolve follow-up references such as "that lead", "her", "that invoice", or "what about Maisha" when the reference is established by the supplied history.
 - Do not treat conversation history as a substitute for current workspace data. Re-check the current workspace data on every turn.
 
-Answer the admin's question directly. Use plain-text headings and simple bullet points. Do not use Markdown heading markers, bold markers, code fences, or escaped Markdown characters.`;
+Answer the admin's question directly.
+- Format the answer for a compact chat interface: put every section heading on its own line, leave one blank line between sections, and put every list item on its own line.
+- Use the bullet character "• " for list items. Do not use asterisks for bullets.
+- Do not join a heading and its content on the same line.
+- Do not join multiple list items on one line.
+- Do not use Markdown heading markers, bold markers, code fences, or escaped Markdown characters.`;
 
   async function requestGemini(model: string) {
     return await fetch(
@@ -657,6 +662,11 @@ Answer the admin's question directly. Use plain-text headings and simple bullet 
 
   const cleanAnswer = String(answer)
     .replace(/\\([#*_[\]()>+.!-])/g, "$1")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/\s{2,}(?=(?:Overdue Follow-ups|Overdue|Due Today|Due Tomorrow|Status and Value|Contact Information|Follow-Up Status|Communication History|Proposed Scope and Recommendations|Current Status|Next Steps)\b)/g, "\n")
+    .replace(/(^|\n)\s*\*\s+/g, "$1• ")
     .trim();
 
   return json({
