@@ -8560,7 +8560,7 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 '<button type="button" class="sway-row-action" data-edit="socialPosts" data-id="' +
                                     esc(post.id) +
                                 '">Edit</button>' +
@@ -8574,7 +8574,7 @@ function simpleBars(items, color) {
                                 '<button type="button" class="sway-row-action danger" data-delete="socialPosts" data-id="' +
                                     esc(post.id) +
                                 '">Delete</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -9019,11 +9019,11 @@ function simpleBars(items, color) {
                                                     chip(item.status) +
                                                 "</td>" +
                                                 "<td>" +
-                                                    '<div class="sway-row-actions">' +
+                                                    '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                                         '<button class="sway-row-action" data-edit="tasks" data-id="' +
                                                             esc(item.id) +
                                                         '">Edit</button>' +
-                                                    "</div>" +
+                                                    "</div></details></div>" +
                                                 "</td>" +
                                             "</tr>"
                                         );
@@ -9148,7 +9148,7 @@ function simpleBars(items, color) {
                             chip(item.status) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 '<button class="sway-row-action" data-client-portal="' +
                                     esc(item.id) +
                                 '">Portal</button>' +
@@ -9165,7 +9165,7 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action danger" data-delete="tasks" data-id="' +
                                     esc(item.id) +
                                 '">Delete</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -9486,7 +9486,7 @@ function simpleBars(items, color) {
                             chip(item.status) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 (
                                     item.status === "pending"
                                         ? '<button class="sway-row-action" data-complete-followup="' +
@@ -9500,7 +9500,7 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action danger" data-delete="followups" data-id="' +
                                     esc(item.id) +
                                 '">Delete</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -10570,7 +10570,7 @@ function simpleBars(items, color) {
                             chip(item.status) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 '<button class="sway-row-action" data-client-portal="' +
                                     esc(item.id) +
                                 '">Portal</button>' +
@@ -10606,7 +10606,7 @@ function simpleBars(items, color) {
                                     esc(item.id) +
                                 '">Delete</button>' +
 
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -10712,7 +10712,7 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 '<button class="sway-row-action" data-project-timeline="' +
                                     esc(item.id) +
                                 '">Timeline</button>' +
@@ -10723,7 +10723,7 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action danger" data-delete="projects" data-id="' +
                                     esc(item.id) +
                                 '">Delete</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -10789,7 +10789,7 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 (
                                     item.status === "accepted" && !item.invoice_id
                                         ? '<button class="sway-row-action" data-create-invoice-from-quote="' +
@@ -10805,7 +10805,7 @@ function simpleBars(items, color) {
                                 '<button class="sway-row-action danger" data-delete="quotes" data-id="' +
                                     esc(item.id) +
                                 '">Delete</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -14319,7 +14319,7 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 (
                                     item.archived
                                         ? '<button class="sway-row-action" data-invoice-action="restore" data-id="' +
@@ -14377,7 +14377,7 @@ function simpleBars(items, color) {
                                           '">Delete</button>'
                                         : ""
                                 ) +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -14494,7 +14494,7 @@ function simpleBars(items, color) {
                             chip(item.active ? "active" : "inactive") +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 (
                                     state.currentAdmin.role === "owner"
                                         ? '<button class="sway-row-action" data-edit="services" data-id="' +
@@ -14505,7 +14505,7 @@ function simpleBars(items, color) {
                                           '">Delete</button>'
                                         : ""
                                 ) +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -14820,14 +14820,14 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 '<button class="sway-row-action" data-edit="payments" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
                                 '<button class="sway-row-action danger" data-delete="payments" data-id="' +
                                     esc(item.id) +
                                 '">Delete</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -14894,14 +14894,14 @@ function simpleBars(items, color) {
                             "</span>" +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 '<button class="sway-row-action" data-enquiry-status="' +
                                     esc(item.id) +
                                     '" data-status-next="contacted">Contacted → Lead</button>' +
                                 '<button class="sway-row-action danger" data-enquiry-status="' +
                                     esc(item.id) +
                                     '" data-status-next="closed">Close</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -14964,14 +14964,14 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 '<button class="sway-row-action" data-edit="announcements" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
                                 '<button class="sway-row-action danger" data-delete="announcements" data-id="' +
                                     esc(item.id) +
                                 '">Delete</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -15120,14 +15120,14 @@ function simpleBars(items, color) {
                             esc(adminName(item.created_by)) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 '<button class="sway-row-action" data-edit="communications" data-id="' +
                                     esc(item.id) +
                                 '">Edit</button>' +
                                 '<button class="sway-row-action danger" data-delete="communications" data-id="' +
                                     esc(item.id) +
                                 '">Delete</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -15244,7 +15244,7 @@ function simpleBars(items, color) {
                             (
                                 state.currentAdmin.role === "owner" &&
                                 !isCurrent
-                                    ? '<div class="sway-row-actions">' +
+                                    ? '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                       '<button class="sway-row-action" data-toggle-admin="' +
                                           esc(item.user_id) +
                                       '">' +
@@ -15257,7 +15257,7 @@ function simpleBars(items, color) {
                                       '<button class="sway-row-action" data-edit="team" data-id="' +
                                           esc(item.user_id) +
                                       '">Edit</button>' +
-                                      "</div>"
+                                      "</div></details></div>"
                                     : "—"
                             ) +
                         "</td>" +
@@ -17762,14 +17762,14 @@ function simpleBars(items, color) {
                             esc(dateTime(item.created_at)) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 '<button type="button" class="sway-row-action" data-download-document="' +
                                     esc(item.id) +
                                 '">Download</button>' +
                                 '<button type="button" class="sway-row-action danger" data-delete-document="' +
                                     esc(item.id) +
                                 '">Delete</button>' +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
@@ -17926,7 +17926,7 @@ function simpleBars(items, color) {
                             chip(item.status) +
                         "</td>" +
                         "<td>" +
-                            '<div class="sway-row-actions">' +
+                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                                 (
                                     item.status !== "in progress"
                                         ? '<button class="sway-row-action" data-portal-request-status="in progress" data-id="' +
@@ -17941,7 +17941,7 @@ function simpleBars(items, color) {
                                           '">Complete</button>'
                                         : ""
                                 ) +
-                            "</div>" +
+                            "</div></details></div>" +
                         "</td>" +
                     "</tr>"
                 );
