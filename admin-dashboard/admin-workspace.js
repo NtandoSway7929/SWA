@@ -20144,6 +20144,201 @@ function simpleBars(items, color) {
         );
     }
 
+
+    function renderAIProactiveBrief() {
+        const today = dashboardTodayISO();
+        const items = [];
+
+        const dueTasks = state.tasks.filter(function (item) {
+            if (
+                item.status === "completed" ||
+                !item.due_date ||
+                (
+                    state.currentUser &&
+                    state.currentUser.id &&
+                    item.assigned_to !== state.currentUser.id
+                )
+            ) {
+                return false;
+            }
+
+            const due = dashboardDateKey(item.due_date);
+            return Boolean(due && due <= today);
+        });
+
+        const dueFollowups = state.followups.filter(function (item) {
+            if (
+                item.status !== "pending" ||
+                !item.scheduled_for ||
+                (
+                    state.currentUser &&
+                    state.currentUser.id &&
+                    item.assigned_to !== state.currentUser.id
+                )
+            ) {
+                return false;
+            }
+
+            const scheduled = dashboardDateKey(item.scheduled_for);
+            return Boolean(scheduled && scheduled <= today);
+        });
+
+        const overdueInvoices = state.invoices.filter(function (invoice) {
+            if (
+                invoice.status === "cancelled" ||
+                invoice.status === "paid"
+            ) {
+                return false;
+            }
+
+            const outstanding = Number(
+                invoice.amount_outstanding != null
+                    ? invoice.amount_outstanding
+                    : invoice.total || 0
+            );
+
+            if (outstanding <= 0) {
+                return false;
+            }
+
+            const due = dashboardDateKey(invoice.due_date);
+
+            return Boolean(
+                invoice.status === "overdue" ||
+                (due && due < today)
+            );
+        });
+
+        const dueTodayInvoices = state.invoices.filter(function (invoice) {
+            if (
+                invoice.status === "cancelled" ||
+                invoice.status === "paid"
+            ) {
+                return false;
+            }
+
+            const outstanding = Number(
+                invoice.amount_outstanding != null
+                    ? invoice.amount_outstanding
+                    : invoice.total || 0
+            );
+
+            if (outstanding <= 0) {
+                return false;
+            }
+
+            return dashboardDateKey(invoice.due_date) === today;
+        });
+
+        const newEnquiries = state.enquiries.filter(function (item) {
+            return item.status === "new";
+        });
+
+        if (overdueInvoices.length) {
+            items.push({
+                priority: "danger",
+                count: overdueInvoices.length,
+                title: "Overdue invoices",
+                detail: "Outstanding money needs attention.",
+                prompt: "Show me overdue invoices and outstanding payments."
+            });
+        }
+
+        if (dueFollowups.length) {
+            items.push({
+                priority: "warning",
+                count: dueFollowups.length,
+                title: "Follow-ups due",
+                detail: "Leads or clients are waiting for a follow-up.",
+                prompt: "Which leads or clients need follow-up today?"
+            });
+        }
+
+        if (dueTasks.length) {
+            items.push({
+                priority: "warning",
+                count: dueTasks.length,
+                title: "Tasks due",
+                detail: "Tasks assigned to you are due or overdue.",
+                prompt: "Which of my tasks are due or overdue?"
+            });
+        }
+
+        if (newEnquiries.length) {
+            items.push({
+                priority: "info",
+                count: newEnquiries.length,
+                title: "New enquiries",
+                detail: "Potential opportunities have arrived.",
+                prompt: "Show me the newest website enquiries."
+            });
+        }
+
+        if (dueTodayInvoices.length && !overdueInvoices.length) {
+            items.push({
+                priority: "warning",
+                count: dueTodayInvoices.length,
+                title: "Invoices due today",
+                detail: "Payment is due today.",
+                prompt: "Which invoices are due today?"
+            });
+        }
+
+        if (!items.length) {
+            return (
+                '<div class="sway-ai-proactive-brief">' +
+                    '<div class="sway-ai-proactive-head">' +
+                        '<span class="sway-ai-proactive-eyebrow">INNERME BRIEFING</span>' +
+                        '<span class="sway-ai-proactive-live">LIVE</span>' +
+                    '</div>' +
+                    '<div class="sway-ai-proactive-clear">' +
+                        '<span class="sway-ai-proactive-clear-icon">✓</span>' +
+                        '<div>' +
+                            '<strong>Nothing urgent is showing right now.</strong>' +
+                            '<span>Ask InnerMe about any part of the Swayphics workspace.</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>'
+            );
+        }
+
+        return (
+            '<div class="sway-ai-proactive-brief">' +
+                '<div class="sway-ai-proactive-head">' +
+                    '<div>' +
+                        '<span class="sway-ai-proactive-eyebrow">INNERME BRIEFING</span>' +
+                        '<strong>Here is what needs your attention.</strong>' +
+                    '</div>' +
+                    '<span class="sway-ai-proactive-live">LIVE</span>' +
+                '</div>' +
+                '<div class="sway-ai-proactive-grid">' +
+                    items.slice(0, 4).map(function (item) {
+                        return (
+                            '<button type="button" class="sway-ai-proactive-item ' +
+                                esc(item.priority) +
+                                '" data-ai-prompt="' +
+                                esc(item.prompt) +
+                            '">' +
+                                '<span class="sway-ai-proactive-count">' +
+                                    esc(item.count) +
+                                '</span>' +
+                                '<span class="sway-ai-proactive-copy">' +
+                                    '<strong>' +
+                                        esc(item.title) +
+                                    '</strong>' +
+                                    '<span>' +
+                                        esc(item.detail) +
+                                    '</span>' +
+                                '</span>' +
+                                '<span class="sway-ai-proactive-arrow" aria-hidden="true">→</span>' +
+                            '</button>'
+                        );
+                    }).join("") +
+                '</div>' +
+            '</div>'
+        );
+    }
+
     function renderSwayphicsAI() {
         const history = Array.isArray(state.aiConversation)
             ? state.aiConversation.slice(-40)
@@ -20260,7 +20455,13 @@ function simpleBars(items, color) {
                         '</div>'
                         : ""
                 ) +
+                (
+                    history.length === 0 && !state.aiFocusedRecord
+                        ? renderAIProactiveBrief()
+                        : ""
+                ) +
                 '<div class="sway-ai-suggestions">' +
+
                     '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
                     '<button type="button" data-ai-prompt="Which leads need follow-up?">Which leads need follow-up?</button>' +
                     '<button type="button" data-ai-prompt="Give me a concise summary of the current business pipeline.">Summarise my pipeline</button>' +
@@ -20286,6 +20487,13 @@ function simpleBars(items, color) {
 
         const clean = String(message || "").trim();
         if (!clean) return;
+
+        const proactiveBrief =
+            document.querySelector(".sway-ai-proactive-brief");
+
+        if (proactiveBrief) {
+            proactiveBrief.remove();
+        }
 
         if (!Array.isArray(state.aiConversation)) {
             state.aiConversation = [];
