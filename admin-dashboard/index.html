@@ -2521,6 +2521,108 @@
             font-weight:800;
             letter-spacing:.03em;
         }
+        .sway-ai-growth-desk {
+            margin:14px 0 4px;
+            padding:14px;
+            border:1px solid #e3e9f3;
+            border-radius:16px;
+            background:linear-gradient(145deg,#f9fbff,#ffffff);
+        }
+        .sway-ai-growth-head {
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:12px;
+        }
+        .sway-ai-growth-head strong {
+            display:block;
+            margin-top:3px;
+            color:#253650;
+            font-size:13px;
+        }
+        .sway-ai-growth-note {
+            flex:0 0 auto;
+            color:#8190a5;
+            font-size:8px;
+            font-weight:750;
+        }
+        .sway-ai-growth-grid {
+            display:grid;
+            grid-template-columns:repeat(4,minmax(0,1fr));
+            gap:8px;
+            margin-top:11px;
+        }
+        .sway-ai-growth-card {
+            min-width:0;
+            min-height:112px;
+            padding:11px;
+            border:1px solid #e1e7f0;
+            border-radius:12px;
+            background:#fff;
+            color:#26344b;
+            font:inherit;
+            text-align:left;
+            cursor:pointer;
+            transition:border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
+        }
+        .sway-ai-growth-card:hover {
+            border-color:#b9caf0;
+            background:#fbfdff;
+            transform:translateY(-1px);
+            box-shadow:0 9px 20px rgba(8,21,51,.06);
+        }
+        .sway-ai-growth-label {
+            display:block;
+            color:#0152F4;
+            font-size:8px;
+            font-weight:850;
+            letter-spacing:.12em;
+            text-transform:uppercase;
+        }
+        .sway-ai-growth-value {
+            display:block;
+            margin-top:7px;
+            color:#081533;
+            font-size:20px;
+            font-weight:850;
+            line-height:1;
+            letter-spacing:-.03em;
+        }
+        .sway-ai-growth-detail {
+            display:block;
+            margin-top:6px;
+            color:#748197;
+            font-size:9px;
+            line-height:1.45;
+        }
+        .sway-ai-growth-action {
+            display:block;
+            margin-top:10px;
+            color:#5f7088;
+            font-size:8px;
+            font-weight:800;
+        }
+        .sway-ai-growth-card.marketing .sway-ai-growth-label { color:#41658e; }
+        .sway-ai-growth-card.writing .sway-ai-growth-label { color:#6b5a92; }
+        .sway-ai-growth-card.revenue .sway-ai-growth-label { color:#2f6e50; }
+        body.sway-dark-mode .sway-ai-growth-desk {
+            border-color:#2a3a58;
+            background:#121d30;
+        }
+        body.sway-dark-mode .sway-ai-growth-head strong { color:#e5ebf5; }
+        body.sway-dark-mode .sway-ai-growth-note { color:#9eabc0; }
+        body.sway-dark-mode .sway-ai-growth-card {
+            border-color:#2a3a58;
+            background:#162238;
+            color:#e5ebf5;
+        }
+        body.sway-dark-mode .sway-ai-growth-card:hover {
+            background:#1a2942;
+            border-color:#476aab;
+        }
+        body.sway-dark-mode .sway-ai-growth-value { color:#fff; }
+        body.sway-dark-mode .sway-ai-growth-detail { color:#9eabc0; }
+        body.sway-dark-mode .sway-ai-growth-action { color:#b8c3d4; }
         body.sway-dark-mode .sway-ai-capability {
             border-color:#2a3a58;
             background:#121d30;
@@ -2846,6 +2948,20 @@
             .sway-ai-proactive-grid {
                 gap:7px;
                 margin-top:10px;
+            }
+            
+            .sway-ai-growth-grid {
+                grid-template-columns:repeat(2,minmax(0,1fr));
+                gap:7px;
+            }
+
+            .sway-ai-growth-card {
+                min-height:104px;
+                padding:10px;
+            }
+
+            .sway-ai-growth-value {
+                font-size:18px;
             }
 
             .sway-ai-proactive-item {
