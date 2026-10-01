@@ -2192,7 +2192,7 @@
             history.hidden = true;
         }
 
-        renderView();
+        renderView(true);
     }
 
     function startNewAIChat() {
@@ -2207,7 +2207,7 @@
         saveAIFocusedRecord();
         saveAIChatSessions();
 
-        renderView();
+        renderView(true);
 
         const freshInput =
             document.getElementById(
@@ -21014,7 +21014,7 @@ function simpleBars(items, color) {
         );
     }
 
-    function renderView() {
+    function renderView(forceInnerMeRender) {
         const main =
             document.getElementById(
                 "sway-workspace-main"
@@ -21035,7 +21035,8 @@ function simpleBars(items, color) {
          */
         if (
             state.currentView === "swayphics-ai" &&
-            main.querySelector(".sway-ai-panel")
+            main.querySelector(".sway-ai-panel") &&
+            forceInnerMeRender !== true
         ) {
             bindViewActions();
             return;
