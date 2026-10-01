@@ -22946,42 +22946,51 @@ function simpleBars(items, color) {
                 );
             });
 
-        workspace
-            .querySelectorAll("[data-send-email-type]")
-            .forEach(function (button) {
-                button.addEventListener(
-                    "click",
-                    function (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
+        if (workspace.dataset.swayEmailActionDelegation !== "true") {
+            workspace.dataset.swayEmailActionDelegation = "true";
 
-                        const type =
-                            button.dataset.sendEmailType || "";
+            workspace.addEventListener(
+                "click",
+                function (event) {
+                    const target =
+                        event.target instanceof Element
+                            ? event.target.closest("[data-send-email-type]")
+                            : null;
 
-                        const id =
-                            button.dataset.sendEmailId || "";
-
-                        if (!type || !id) {
-                            swayAlert(
-                                "This contact could not be resolved for email."
-                            );
-                            return;
-                        }
-
-                        const details =
-                            button.closest("details");
-
-                        if (details) {
-                            details.open = false;
-                        }
-
-                        openEmailComposer(
-                            type,
-                            id
-                        );
+                    if (!target || !workspace.contains(target)) {
+                        return;
                     }
-                );
-            });
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const type =
+                        target.dataset.sendEmailType || "";
+
+                    const id =
+                        target.dataset.sendEmailId || "";
+
+                    if (!type || !id) {
+                        swayAlert(
+                            "This contact could not be resolved for email."
+                        );
+                        return;
+                    }
+
+                    const details =
+                        target.closest("details");
+
+                    if (details) {
+                        details.open = false;
+                    }
+
+                    openEmailComposer(
+                        type,
+                        id
+                    );
+                }
+            );
+        }
 
         workspace
             .querySelectorAll("[data-compose-email]")
