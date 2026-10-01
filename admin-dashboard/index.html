@@ -2377,15 +2377,11 @@
             width:100%;
             display:flex;
             align-items:center;
-            gap:10px;
-            padding:10px 11px;
+            gap:7px;
+            padding:3px;
             border:1px solid transparent;
             border-radius:11px;
             background:transparent;
-            color:#26344b;
-            font:inherit;
-            text-align:left;
-            cursor:pointer;
             transition:border-color .18s ease, background .18s ease, transform .18s ease;
         }
         .sway-ai-history-item:hover {
@@ -2397,13 +2393,26 @@
             border-color:rgba(1,82,244,.16);
             background:rgba(1,82,244,.055);
         }
-        .sway-ai-history-item:focus-visible {
+        .sway-ai-history-open {
+            min-width:0;
+            flex:1 1 auto;
+            display:block;
+            padding:7px 8px;
+            border:0;
+            border-radius:8px;
+            background:transparent;
+            color:#26344b;
+            font:inherit;
+            text-align:left;
+            cursor:pointer;
+        }
+        .sway-ai-history-open:focus-visible {
             outline:3px solid rgba(1,82,244,.12);
             outline-offset:1px;
         }
         .sway-ai-history-item-copy {
             min-width:0;
-            flex:1 1 auto;
+            display:block;
         }
         .sway-ai-history-item-title {
             display:block;
@@ -2422,11 +2431,27 @@
             font-size:8px;
             font-weight:650;
         }
-        .sway-ai-history-item-arrow {
+        .sway-ai-history-delete {
             flex:0 0 auto;
+            width:27px;
+            height:27px;
+            display:grid;
+            place-items:center;
+            border:0;
+            border-radius:8px;
+            background:transparent;
             color:#91a0b3;
-            font-size:17px;
-            line-height:1;
+            font:700 15px/1 inherit;
+            cursor:pointer;
+            transition:background .18s ease, color .18s ease;
+        }
+        .sway-ai-history-delete:hover {
+            background:#edf2f9;
+            color:#c24141;
+        }
+        .sway-ai-history-delete:focus-visible {
+            outline:3px solid rgba(1,82,244,.12);
+            outline-offset:1px;
         }
         .sway-ai-history-empty {
             padding:10px 4px 5px;
@@ -2460,6 +2485,13 @@
         }
         body.sway-dark-mode .sway-ai-history-item-title {
             color:#d7e0ee;
+        }
+        body.sway-dark-mode .sway-ai-history-delete {
+            color:#8190a5;
+        }
+        body.sway-dark-mode .sway-ai-history-delete:hover {
+            background:#20304a;
+            color:#ff8c8c;
         }
 
         .sway-ai-eyebrow { display:block; margin-bottom:8px; font-size:10px; font-weight:800; letter-spacing:.16em; color:#0152F4; }
@@ -10352,7 +10384,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20261001-innerme-v29-new-chat-rerender"></script>
+<script src="admin-workspace.js?v=dashboard-20261001-innerme-v30-chat-history"></script>
 
 <script>
 (function () {
