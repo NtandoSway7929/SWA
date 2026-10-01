@@ -22951,10 +22951,33 @@ function simpleBars(items, color) {
             .forEach(function (button) {
                 button.addEventListener(
                     "click",
-                    function () {
+                    function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const type =
+                            button.dataset.sendEmailType || "";
+
+                        const id =
+                            button.dataset.sendEmailId || "";
+
+                        if (!type || !id) {
+                            swayAlert(
+                                "This contact could not be resolved for email."
+                            );
+                            return;
+                        }
+
+                        const details =
+                            button.closest("details");
+
+                        if (details) {
+                            details.open = false;
+                        }
+
                         openEmailComposer(
-                            button.dataset.sendEmailType,
-                            button.dataset.sendEmailId
+                            type,
+                            id
                         );
                     }
                 );
