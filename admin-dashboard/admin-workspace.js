@@ -713,7 +713,23 @@
 
         return matches.filter(function (item) {
             const key = item.view + ":" + item.id;
-            if (seen.has(key)) return false;
+
+            if (seen.has(key)) {
+                return false;
+            }
+
+            /*
+             * InnerMe answers naturally mention Swayphics as the sender or
+             * business context. Do not turn the Swayphics company record
+             * itself into a misleading "related record" button.
+             */
+            if (
+                String(item.name || "").trim().toLowerCase() ===
+                "swayphics"
+            ) {
+                return false;
+            }
+
             seen.add(key);
             return true;
         }).slice(0, 6);
