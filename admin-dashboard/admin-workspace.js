@@ -760,11 +760,51 @@
             );
         }).join("");
 
+        const actionButtons = matches.map(function (item) {
+            const supportsFollowUp =
+                ["leads", "clients", "enquiries"].includes(item.view);
+
+            const supportsEmail =
+                ["leads", "clients", "enquiries"].includes(item.view);
+
+            return (
+                '<div class="sway-ai-action-row">' +
+                    '<button type="button" class="sway-ai-action sway-ai-action-primary" data-ai-action="open" data-ai-action-view="' +
+                        esc(item.view) +
+                        '" data-ai-action-id="' +
+                        esc(item.id) +
+                    '">Open</button>' +
+                    (
+                        supportsFollowUp
+                            ? '<button type="button" class="sway-ai-action" data-ai-action="followup" data-ai-action-view="' +
+                                esc(item.view) +
+                                '" data-ai-action-id="' +
+                                esc(item.id) +
+                              '">Follow-up</button>'
+                            : ""
+                    ) +
+                    (
+                        supportsEmail
+                            ? '<button type="button" class="sway-ai-action" data-ai-action="email" data-ai-action-view="' +
+                                esc(item.view) +
+                                '" data-ai-action-id="' +
+                                esc(item.id) +
+                              '">Email</button>'
+                            : ""
+                    ) +
+                "</div>"
+            );
+        }).join("");
+
         return (
             '<div class="sway-ai-records">' +
                 '<span class="sway-ai-records-label">Related workspace records</span>' +
                 '<div class="sway-ai-records-list">' +
                     buttons +
+                "</div>" +
+                '<div class="sway-ai-actions">' +
+                    '<span class="sway-ai-actions-label">Quick actions</span>' +
+                    actionButtons +
                 "</div>" +
             "</div>"
         );
@@ -22408,6 +22448,46 @@ function simpleBars(items, color) {
                     event.preventDefault();
                     event.stopPropagation();
                     copyAIMessage(button);
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-ai-action]")
+            .forEach(function (button) {
+                button.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const action =
+                        button.dataset.aiAction || "";
+                    const view =
+                        button.dataset.aiActionView || "";
+                    const id =
+                        button.dataset.aiActionId || "";
+
+                    if (!action || !view || !id) {
+                        return;
+                    }
+
+                    if (action === "open") {
+                        openAIRecord(button);
+                        return;
+                    }
+
+                    if (action === "followup") {
+                        state.currentView = "followups";
+                        persistWorkspaceView("followups");
+                        renderShell();
+                        renderView();
+                        return;
+                    }
+
+                    if (action === "email") {
+                        state.currentView = "email";
+                        persistWorkspaceView("email");
+                        renderShell();
+                        renderView();
+                    }
                 });
             });
 
