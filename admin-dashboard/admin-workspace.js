@@ -62,7 +62,8 @@
         socialMetrics: [],
         adminNotifications: [],
         notificationsAvailable: false,
-        aiConversation: []
+        aiConversation: [],
+        aiFocusedRecord: null
     };
 
     const navGroups = [
@@ -765,6 +766,22 @@
         if (!view || !id || !nav.some(function (item) {
             return item[0] === view;
         })) return;
+
+        const match = getAIRecordMatches(
+            rawTarget
+        ).find(function (item) {
+            return (
+                item.view === view &&
+                item.id === id
+            );
+        });
+
+        setAIFocusedRecord(
+            view,
+            id,
+            match ? match.label : "",
+            match ? match.name : ""
+        );
 
         state.currentView = view;
         persistWorkspaceView(view);
@@ -1493,6 +1510,133 @@
                     : "guest"
             )
         );
+    }
+
+    function aiFocusCacheKey() {
+        return (
+            "swayphics_admin_innerme_focus_" +
+            String(
+                state.currentUser && state.currentUser.id
+                    ? state.currentUser.id
+                    : "guest"
+            )
+        );
+    }
+
+    function saveAIFocusedRecord() {
+        try {
+            const focus = state.aiFocusedRecord;
+
+            if (!focus || !focus.type || !focus.id) {
+                sessionStorage.removeItem(aiFocusCacheKey());
+                return;
+            }
+
+            sessionStorage.setItem(
+                aiFocusCacheKey(),
+                JSON.stringify({
+                    version: 1,
+                    type: String(focus.type),
+                    id: String(focus.id),
+                    label: String(focus.label || ""),
+                    name: String(focus.name || "")
+                })
+            );
+        } catch (error) {
+            // Focus persistence is an enhancement only.
+        }
+    }
+
+    function restoreAIFocusedRecord() {
+        try {
+            const raw = sessionStorage.getItem(aiFocusCacheKey());
+
+            if (!raw) {
+                state.aiFocusedRecord = null;
+                return;
+            }
+
+            const snapshot = JSON.parse(raw);
+
+            if (
+                !snapshot ||
+                snapshot.version !== 1 ||
+                !snapshot.type ||
+                !snapshot.id
+            ) {
+                state.aiFocusedRecord = null;
+                return;
+            }
+
+            state.aiFocusedRecord = {
+                type: String(snapshot.type),
+                id: String(snapshot.id),
+                label: String(snapshot.label || ""),
+                name: String(snapshot.name || "")
+            };
+        } catch (error) {
+            state.aiFocusedRecord = null;
+        }
+    }
+
+    function setAIFocusedRecord(type, id, label, name) {
+        if (!type || !id) {
+            state.aiFocusedRecord = null;
+            saveAIFocusedRecord();
+            return;
+        }
+
+        state.aiFocusedRecord = {
+            type: String(type),
+            id: String(id),
+            label: String(label || ""),
+            name: String(name || "")
+        };
+
+        saveAIFocusedRecord();
+    }
+
+    function clearAIFocusedRecord() {
+        state.aiFocusedRecord = null;
+        saveAIFocusedRecord();
+    }
+
+    function detectAIFocusFromMessage(message) {
+        const matches = getAIRecordMatches(message);
+
+        if (!matches.length) {
+            return;
+        }
+
+        const source = String(message || "").toLowerCase();
+
+        const exactMatches = matches.filter(function (item) {
+            return source.indexOf(item.name.toLowerCase()) !== -1;
+        });
+
+        if (exactMatches.length === 1) {
+            const match = exactMatches[0];
+            setAIFocusedRecord(
+                match.view,
+                match.id,
+                match.label,
+                match.name
+            );
+            return;
+        }
+
+        if (
+            exactMatches.length > 1 &&
+            exactMatches[0].name.length > exactMatches[1].name.length
+        ) {
+            const match = exactMatches[0];
+            setAIFocusedRecord(
+                match.view,
+                match.id,
+                match.label,
+                match.name
+            );
+        }
     }
 
     function saveAIConversation() {
@@ -19540,6 +19684,27 @@ function simpleBars(items, color) {
                         '<span class="sway-ai-status">Read-only V1</span>' +
                     '</div>' +
                 '</div>' +
+                (
+                    state.aiFocusedRecord
+                        ? '<div class="sway-ai-focus-bar">' +
+                            '<span class="sway-ai-focus-label">Focused record</span>' +
+                            '<span class="sway-ai-focus-value">' +
+                                esc(
+                                    (
+                                        state.aiFocusedRecord.label
+                                            ? state.aiFocusedRecord.label + ": "
+                                            : ""
+                                    ) +
+                                    (
+                                        state.aiFocusedRecord.name ||
+                                        state.aiFocusedRecord.id
+                                    )
+                                ) +
+                            '</span>' +
+                            '<button type="button" class="sway-ai-focus-clear" id="sway-ai-focus-clear">Clear</button>' +
+                        '</div>'
+                        : ""
+                ) +
                 '<div class="sway-ai-suggestions">' +
                     '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
                     '<button type="button" data-ai-prompt="Which leads need follow-up?">Which leads need follow-up?</button>' +
@@ -19593,6 +19758,8 @@ function simpleBars(items, color) {
                     content: String(item.content || "").trim()
                 };
             });
+
+        detectAIFocusFromMessage(clean);
 
         const messageCreatedAt = new Date().toISOString();
 
@@ -19669,7 +19836,13 @@ function simpleBars(items, color) {
                     }),
                     body: JSON.stringify({
                         message: clean,
-                        history: conversationHistory
+                        history: conversationHistory,
+                        focused_record: state.aiFocusedRecord
+                            ? {
+                                type: state.aiFocusedRecord.type,
+                                id: state.aiFocusedRecord.id
+                            }
+                            : null
                     })
                 }
             );
@@ -21028,6 +21201,16 @@ function simpleBars(items, color) {
                 });
             });
 
+        const aiFocusClear =
+            workspace.querySelector("#sway-ai-focus-clear");
+
+        if (aiFocusClear) {
+            aiFocusClear.addEventListener("click", function () {
+                clearAIFocusedRecord();
+                renderView();
+            });
+        }
+
         const newChatButton =
             workspace.querySelector("#sway-ai-new-chat");
 
@@ -21054,6 +21237,7 @@ function simpleBars(items, color) {
                     }
 
                     state.aiConversation = [];
+                    clearAIFocusedRecord();
 
                     try {
                         sessionStorage.removeItem(
@@ -21300,6 +21484,7 @@ function simpleBars(items, color) {
             ]);
 
             restoreAIConversation();
+        restoreAIFocusedRecord();
 
             if (
                 await ensureDefaultServiceCatalogue()
