@@ -53,61 +53,6 @@ Deno.serve(async (req) => {
     );
   }
 
-  const authHeader = req.headers.get("Authorization") || "";
-  const accessToken = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7).trim()
-    : "";
-
-  if (!accessToken) {
-    return json({ error: "Authentication is required." }, 401, origin);
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const publicApiKey =
-    req.headers.get("apikey") ||
-    Deno.env.get("SUPABASE_ANON_KEY") ||
-    Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
-  const geminiKey = Deno.env.get("GEMINI_API_KEY");
-
-  if (!supabaseUrl || !publicApiKey) {
-    return json({ error: "Supabase server configuration is incomplete." }, 500, origin);
-  }
-
-  if (!geminiKey) {
-    return json({
-      error:
-        "InnerMe is installed, but GEMINI_API_KEY has not been configured in Supabase Edge Function secrets yet.",
-    }, 503, origin);
-  }
-
-  const authSupabase = createClient(supabaseUrl, publicApiKey, {
-    global: {
-      headers: {
-        Authorization: "Bearer " + accessToken,
-      },
-    },
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
-    },
-  });
-
-  const { data: userData, error: userError } =
-    await authSupabase.auth.getUser(accessToken);
-
-  if (userError || !userData.user) {
-    return json({ error: "Your session is no longer valid." }, 401, origin);
-  }
-
-  const { data: isAdmin, error: adminError } =
-    await authSupabase.rpc("is_swayphics_admin");
-
-  if (adminError || isAdmin !== true) {
-    return json({ error: "You are not an active Swayphics admin." }, 403, origin);
-  }
-
-
   let body: {
     action?: string;
     message?: string;
@@ -137,6 +82,13 @@ Deno.serve(async (req) => {
       estimated_value?: number | string;
     };
   } = {};
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "Invalid JSON request." }, 400, origin);
+  }
+
+  const geminiKey = Deno.env.get("GEMINI_API_KEY");
   /*
    * PUBLIC INNERME
    * This branch intentionally executes before admin authentication.
@@ -459,6 +411,59 @@ Deno.serve(async (req) => {
       origin,
     );
   }
+
+  const authHeader = req.headers.get("Authorization") || "";
+  const accessToken = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+
+  if (!accessToken) {
+    return json({ error: "Authentication is required." }, 401, origin);
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const publicApiKey =
+    req.headers.get("apikey") ||
+    Deno.env.get("SUPABASE_ANON_KEY") ||
+    Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  if (!supabaseUrl || !publicApiKey) {
+    return json({ error: "Supabase server configuration is incomplete." }, 500, origin);
+  }
+
+  if (!geminiKey) {
+    return json({
+      error:
+        "InnerMe is installed, but GEMINI_API_KEY has not been configured in Supabase Edge Function secrets yet.",
+    }, 503, origin);
+  }
+
+  const authSupabase = createClient(supabaseUrl, publicApiKey, {
+    global: {
+      headers: {
+        Authorization: "Bearer " + accessToken,
+      },
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  });
+
+  const { data: userData, error: userError } =
+    await authSupabase.auth.getUser(accessToken);
+
+  if (userError || !userData.user) {
+    return json({ error: "Your session is no longer valid." }, 401, origin);
+  }
+
+  const { data: isAdmin, error: adminError } =
+    await authSupabase.rpc("is_swayphics_admin");
+
+  if (adminError || isAdmin !== true) {
+    return json({ error: "You are not an active Swayphics admin." }, 403, origin);
+  }
+
 
   if (body.action === "draft_proposal") {
     const lead = body.lead || {};
