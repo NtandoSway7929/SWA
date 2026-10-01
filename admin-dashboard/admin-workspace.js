@@ -71,6 +71,7 @@
             icon: "grid",
             items: [
                 ["overview", "Overview"],
+                ["swayphics-ai", "✦ Swayphics AI"],
                 ["insights", "Insights"],
                 ["reminders", "Automated reminders"]
             ]
@@ -1581,6 +1582,10 @@
             ),
             optionalApi(
                 "/rest/v1/lead_stage_history?select=*&order=changed_at.asc",
+                []
+            ),
+            optionalApi(
+                "/rest/v1/client_portal_requests?select=*&order=created_at.desc",
                 []
             ),
             optionalApi(
@@ -19010,6 +19015,94 @@ function simpleBars(items, color) {
         );
     }
 
+    function renderSwayphicsAI() {
+        return (
+            '<section class="sway-ai-panel">' +
+                '<div class="sway-ai-header">' +
+                    '<div>' +
+                        '<span class="sway-ai-eyebrow">SWAYPHICS INTELLIGENCE</span>' +
+                        '<h2>✦ Swayphics AI</h2>' +
+                        '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data.</p>' +
+                    '</div>' +
+                    '<span class="sway-ai-status">Read-only V1</span>' +
+                '</div>' +
+                '<div class="sway-ai-suggestions">' +
+                    '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
+                    '<button type="button" data-ai-prompt="Which leads need follow-up?">Which leads need follow-up?</button>' +
+                    '<button type="button" data-ai-prompt="Give me a concise summary of the current business pipeline.">Summarise my pipeline</button>' +
+                    '<button type="button" data-ai-prompt="Show me overdue invoices and outstanding payments.">Overdue money</button>' +
+                '</div>' +
+                '<div class="sway-ai-conversation" id="sway-ai-conversation">' +
+                    '<div class="sway-ai-welcome">' +
+                        '<strong>What can I help you with?</strong>' +
+                        '<span>Ask about leads, clients, follow-ups, tasks, projects, invoices, payments, portal requests or recent activity.</span>' +
+                    '</div>' +
+                '</div>' +
+                '<form class="sway-ai-form" id="sway-ai-form">' +
+                    '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask Swayphics AI..." autocomplete="off"></textarea>' +
+                    '<button type="submit" id="sway-ai-send">Ask AI</button>' +
+                '</form>' +
+                '<small class="sway-ai-note">V1 is read-only. It can analyse your workspace, but it cannot send emails, delete records or change data.</small>' +
+            '</section>'
+        );
+    }
+
+    async function askSwayphicsAI(message) {
+        const conversation = document.getElementById("sway-ai-conversation");
+        const input = document.getElementById("sway-ai-input");
+        const send = document.getElementById("sway-ai-send");
+        if (!conversation || !input || !send) return;
+
+        const clean = String(message || "").trim();
+        if (!clean) return;
+
+        const userBubble = document.createElement("div");
+        userBubble.className = "sway-ai-message sway-ai-user";
+        userBubble.textContent = clean;
+        conversation.appendChild(userBubble);
+
+        const loading = document.createElement("div");
+        loading.className = "sway-ai-message sway-ai-assistant sway-ai-loading";
+        loading.textContent = "Thinking…";
+        conversation.appendChild(loading);
+        conversation.scrollTop = conversation.scrollHeight;
+
+        input.value = "";
+        input.disabled = true;
+        send.disabled = true;
+
+        try {
+            const result = await api(
+                "/functions/v1/swayphics-ai",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        message: clean
+                    })
+                }
+            );
+
+            loading.classList.remove("sway-ai-loading");
+            loading.textContent =
+                result && result.answer
+                    ? result.answer
+                    : "I could not produce an answer.";
+        } catch (error) {
+            loading.classList.remove("sway-ai-loading");
+            loading.textContent =
+                error.message ||
+                "Swayphics AI could not complete the request.";
+        } finally {
+            input.disabled = false;
+            send.disabled = false;
+            input.focus();
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+    }
+
     function renderWorkspaceLoading() {
         return (
             '<section class="sway-workspace-loading">' +
@@ -19056,6 +19149,11 @@ function simpleBars(items, color) {
             if (state.currentView === "overview") {
                 main.innerHTML =
                     renderOverview();
+            }
+
+            if (state.currentView === "swayphics-ai") {
+                main.innerHTML =
+                    renderSwayphicsAI();
             }
 
             if (state.currentView === "insights") {
@@ -20249,6 +20347,26 @@ function simpleBars(items, color) {
                     }
                 );
             });
+
+        workspace
+            .querySelectorAll("[data-ai-prompt]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    askSwayphicsAI(button.dataset.aiPrompt || "");
+                });
+            });
+
+        const aiForm =
+            workspace.querySelector("#sway-ai-form");
+
+        if (aiForm) {
+            aiForm.addEventListener("submit", function (event) {
+                event.preventDefault();
+                const input =
+                    workspace.querySelector("#sway-ai-input");
+                askSwayphicsAI(input ? input.value : "");
+            });
+        }
     }
 
     function getRequestedNotificationTarget() {
