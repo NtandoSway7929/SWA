@@ -2293,9 +2293,9 @@
         .sway-ai-welcome, .sway-ai-message { white-space:pre-wrap; line-height:1.65; }
         .sway-ai-welcome { margin:auto; max-width:540px; text-align:center; color:#66748a; }
         .sway-ai-welcome strong { display:block; margin-bottom:6px; color:#081533; font-size:18px; }
-        .sway-ai-message { display:block; box-sizing:border-box; width:fit-content; max-width:82%; min-width:0; padding:12px 15px; border-radius:15px; overflow:hidden; }
+        .sway-ai-message { display:block; box-sizing:border-box; flex:0 0 auto; width:fit-content; max-width:82%; min-width:0; padding:12px 15px; border-radius:15px; overflow:visible; }
         .sway-ai-message-label { display:block; margin-bottom:5px; font-size:10px; font-weight:800; letter-spacing:.06em; opacity:.68; }
-        .sway-ai-message-content { display:block; width:100%; min-width:0; box-sizing:border-box; overflow-wrap:anywhere; word-break:normal; line-height:1.65; }
+        .sway-ai-message-content { display:block; width:100%; min-width:0; box-sizing:border-box; overflow-wrap:anywhere; word-break:normal; line-height:1.65; min-height:0; }
         .sway-ai-user { align-self:flex-end; background:#0152F4; color:#fff; }
         .sway-ai-assistant { align-self:flex-start; display:block; background:#fff; border:1px solid #e1e7f0; color:#26344b; }
         .sway-ai-answer { display:block; width:100%; }
@@ -2346,7 +2346,7 @@
             .sway-ai-header { flex-direction:column; }
             .sway-ai-form { flex-direction:column; }
             .sway-ai-form button { min-height:48px; }
-            .sway-ai-message { width:fit-content; max-width:94%; }
+            .sway-ai-message { flex:0 0 auto; width:fit-content; max-width:94%; }
         }
 
         .sway-workspace-nav-scroll {
