@@ -9401,13 +9401,7 @@ function simpleBars(items, color) {
                                         '<button type="button" class="sway-row-action" data-draft-lead-proposal="' +
                                             esc(item.id) +
                                         '">Draft proposal</button>' +
-                                        (
-                                            item.email
-                                                ? '<button type="button" class="sway-row-action" data-send-email-type="lead" data-send-email-id="' +
-                                                  esc(item.id) +
-                                                  '">Email</button>'
-                                                : ""
-                                        ) +
+                                        "" +
                                         (
                                             !["won", "lost"].includes(item.status)
                                                 ? '<button type="button" class="sway-row-action" data-convert-lead="' +
