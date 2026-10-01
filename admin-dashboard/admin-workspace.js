@@ -20297,6 +20297,9 @@ function simpleBars(items, color) {
     }
 
     function renderAIChangeWatch() {
+        const seenAt =
+            getAIChangeWatchTime();
+
         const items =
             getAIChangeWatchItems();
 
@@ -20326,7 +20329,13 @@ function simpleBars(items, color) {
                 '<div class="sway-ai-change-head">' +
                     '<div>' +
                         '<span class="sway-ai-proactive-eyebrow">CHANGE WATCH</span>' +
-                        '<strong>Since your last InnerMe visit</strong>' +
+                        '<strong>' +
+                            esc(
+                                seenAt
+                                    ? "Since your last InnerMe visit"
+                                    : "Recent workspace activity"
+                            ) +
+                        '</strong>' +
                     '</div>' +
                     '<span class="sway-ai-change-count">' +
                         items.length +
