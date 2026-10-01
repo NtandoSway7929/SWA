@@ -503,15 +503,15 @@
                             "apikey":
                                 SUPABASE_PUBLISHABLE_KEY,
                             "Content-Type":
-                                "application/x-www-form-urlencoded"
+                                "application/json"
                         },
                         body:
-                            new URLSearchParams({
+                            JSON.stringify({
                                 grant_type:
                                     "refresh_token",
                                 refresh_token:
                                     refreshToken
-                            }).toString()
+                            })
                     }
                 );
 
