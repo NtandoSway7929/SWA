@@ -1841,7 +1841,11 @@
                     focus:
                         normalizeAIChatFocus(
                             chat && chat.focus
-                        )
+                        ),
+                    scrollTop:
+                        Number.isFinite(Number(chat && chat.scrollTop))
+                            ? Math.max(0, Number(chat.scrollTop))
+                            : 0
                 };
             })
             .filter(function (chat) {
@@ -1891,6 +1895,43 @@
         }
     }
 
+    function getAIConversationScrollTop() {
+        const conversation =
+            document.getElementById(
+                "sway-ai-conversation"
+            );
+
+        if (!conversation) {
+            return 0;
+        }
+
+        return Math.max(
+            0,
+            Number(conversation.scrollTop || 0)
+        );
+    }
+
+    function restoreAIConversationScrollTop(scrollTop) {
+        const target =
+            Math.max(
+                0,
+                Number(scrollTop || 0)
+            );
+
+        window.requestAnimationFrame(function () {
+            const conversation =
+                document.getElementById(
+                    "sway-ai-conversation"
+                );
+
+            if (!conversation) {
+                return;
+            }
+
+            conversation.scrollTop = target;
+        });
+    }
+
     function archiveCurrentAIChat() {
         const messages =
             normalizeAIChatMessages(
@@ -1932,7 +1973,9 @@
             focus:
                 normalizeAIChatFocus(
                     state.aiFocusedRecord
-                )
+                ),
+            scrollTop:
+                getAIConversationScrollTop()
         };
 
         state.aiChatSessions =
@@ -2193,6 +2236,79 @@
         }
 
         renderView(true);
+        restoreAIConversationScrollTop(
+            Number(chat.scrollTop || 0)
+        );
+    }
+
+    function deleteAIChat(chatId) {
+        const targetId =
+            String(chatId || "");
+
+        if (!targetId) {
+            return;
+        }
+
+        const chat =
+            (state.aiChatSessions || []).find(function (item) {
+                return String(item.id) === targetId;
+            });
+
+        if (!chat) {
+            return;
+        }
+
+        const isActive =
+            String(state.aiActiveChatId) === targetId;
+
+        if (isActive) {
+            state.aiConversation =
+                normalizeAIChatMessages(
+                    chat.messages
+                );
+        }
+
+        const remaining =
+            (state.aiChatSessions || []).filter(function (item) {
+                return String(item.id) !== targetId;
+            });
+
+        state.aiChatSessions =
+            remaining;
+
+        if (isActive) {
+            const nextChat =
+                remaining[0] || null;
+
+            if (nextChat) {
+                state.aiActiveChatId =
+                    String(nextChat.id);
+                state.aiConversation =
+                    normalizeAIChatMessages(
+                        nextChat.messages
+                    );
+                state.aiFocusedRecord =
+                    normalizeAIChatFocus(
+                        nextChat.focus
+                    );
+            } else {
+                state.aiActiveChatId =
+                    createAIChatId();
+                state.aiConversation = [];
+                state.aiFocusedRecord = null;
+            }
+
+            saveAIFocusedRecord();
+        }
+
+        saveAIChatSessions();
+        renderView(true);
+
+        if (isActive && remaining.length) {
+            restoreAIConversationScrollTop(
+                Number(remaining[0].scrollTop || 0)
+            );
+        }
     }
 
     function startNewAIChat() {
@@ -2244,21 +2360,27 @@
                 );
 
             return (
-                '<button type="button" class="sway-ai-history-item' +
+                '<div class="sway-ai-history-item' +
                     (active ? ' is-active' : '') +
-                    '" data-ai-chat-id="' +
-                    esc(chat.id) +
                     '">' +
-                    '<span class="sway-ai-history-item-copy">' +
-                        '<span class="sway-ai-history-item-title">' +
-                            esc(chat.title) +
+                    '<button type="button" class="sway-ai-history-open" data-ai-chat-id="' +
+                        esc(chat.id) +
+                        '">' +
+                        '<span class="sway-ai-history-item-copy">' +
+                            '<span class="sway-ai-history-item-title">' +
+                                esc(chat.title) +
+                            '</span>' +
+                            '<span class="sway-ai-history-item-meta">' +
+                                esc(updated || "Earlier") +
+                            '</span>' +
                         '</span>' +
-                        '<span class="sway-ai-history-item-meta">' +
-                            esc(updated || "Earlier") +
-                        '</span>' +
-                    '</span>' +
-                    '<span class="sway-ai-history-item-arrow" aria-hidden="true">›</span>' +
-                '</button>'
+                    '</button>' +
+                    '<button type="button" class="sway-ai-history-delete" data-ai-delete-chat="' +
+                        esc(chat.id) +
+                        '" aria-label="Delete ' +
+                        esc(chat.title) +
+                        '">×</button>' +
+                '</div>'
             );
         }).join("");
     }
@@ -22357,6 +22479,40 @@ function simpleBars(items, color) {
                     selectAIChat(
                         button.dataset.aiChatId || ""
                     );
+                };
+            });
+
+        workspace
+            .querySelectorAll("[data-ai-delete-chat]")
+            .forEach(function (button) {
+                button.onclick = async function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const chatId =
+                        button.dataset.aiDeleteChat || "";
+
+                    const chat =
+                        (state.aiChatSessions || []).find(function (item) {
+                            return String(item.id) === String(chatId);
+                        });
+
+                    if (!chat) {
+                        return;
+                    }
+
+                    const confirmed =
+                        await swayConfirm(
+                            'Delete "' +
+                            String(chat.title || "this chat") +
+                            '" from InnerMe chat history?'
+                        );
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    deleteAIChat(chatId);
                 };
             });
 
