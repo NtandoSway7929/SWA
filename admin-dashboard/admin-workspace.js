@@ -56,6 +56,7 @@
         documents: [],
         leadStageHistory: [],
         portalRequests: [],
+        clientOnboarding: [],
         portalTokens: [],
         socialAccounts: [],
         socialPosts: [],
@@ -2991,6 +2992,10 @@
                 "/rest/v1/client_portal_tokens?select=id,client_id,active,expires_at,last_used_at,created_at&order=created_at.desc",
                 []
             ),
+            optionalApi(
+                "/rest/v1/client_onboarding?select=*&order=updated_at.desc",
+                []
+            ),
         ]);
 
         state.communications = results[0] || [];
@@ -2998,6 +3003,7 @@
         state.leadStageHistory = results[2] || [];
         state.portalRequests = results[3] || [];
         state.portalTokens = results[4] || [];
+        state.clientOnboarding = results[5] || [];
 
         state.emailMessages =
             await optionalApi(
@@ -9566,6 +9572,10 @@ function simpleBars(items, color) {
             return item.client_id === clientId;
         });
 
+        const onboarding = state.clientOnboarding.find(function (item) {
+            return item.client_id === clientId;
+        }) || null;
+
         const projectValue = projects.reduce(function (sum, item) {
             return sum + Number(item.value || 0);
         }, 0);
@@ -9628,6 +9638,11 @@ function simpleBars(items, color) {
                     '<button type="button" class="sway-row-action" data-client-portal="' +
                         esc(client.id) +
                     '">Portal link</button>' +
+                    '<button type="button" class="sway-row-action" data-client-onboarding="' +
+                        esc(client.id) +
+                    '">' +
+                        (onboarding ? (onboarding.status === "submitted" ? "View onboarding · Submitted" : "View onboarding · Draft") : "View onboarding") +
+                    '</button>' +
                 "</div>" +
 
                 '<div class="sway-client360-stats">' +
@@ -9637,6 +9652,22 @@ function simpleBars(items, color) {
                     '<div><span>Outstanding</span><strong>' + esc(money(invoiceOutstanding)) + "</strong></div>" +
                     '<div><span>Recorded payments</span><strong>' + esc(money(paymentTotal)) + "</strong></div>" +
                 "</div>" +
+
+                '<div class="sway-client360-communications">' +
+                    '<section class="sway-client360-section sway-client360-onboarding-summary">' +
+                        '<div class="sway-client360-section-head"><h4>Client onboarding</h4><span>' +
+                            esc(onboarding ? formatDisplayText(onboarding.status) : "Not started") +
+                        '</span></div>' +
+                        '<div class="sway-client360-onboarding-preview">' +
+                            '<div><span>Business</span><strong>' + esc((onboarding && onboarding.business_name) || client.business_name || "Not provided") + '</strong></div>' +
+                            '<div><span>Services</span><strong>' + esc(String(onboarding && Array.isArray(onboarding.services) ? onboarding.services.length : 0)) + '</strong></div>' +
+                            '<div><span>Last updated</span><strong>' + esc(onboarding ? dateTime(onboarding.updated_at) : "Not yet") + '</strong></div>' +
+                        '</div>' +
+                        '<button type="button" class="sway-workspace-button primary" data-client-onboarding="' + esc(client.id) + '">' +
+                            (onboarding ? "Open onboarding" : "Open onboarding") +
+                        '</button>' +
+                    '</section>' +
+                '</div>' +
 
                 '<div class="sway-client360-grid">' +
 
@@ -9940,6 +9971,12 @@ function simpleBars(items, color) {
             });
         });
 
+        modal.querySelectorAll("[data-client-onboarding]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                openClientOnboarding(button.dataset.clientOnboarding);
+            });
+        });
+
         modal.querySelectorAll("[data-client-portal]").forEach(function (button) {
             button.addEventListener("click", function () {
                 createClientPortalLink(button.dataset.clientPortal);
@@ -9967,6 +10004,40 @@ function simpleBars(items, color) {
         });
     }
 
+
+    function openClientOnboarding(clientId) {
+        const client = state.clients.find(function (item) { return item.id === clientId; });
+        if (!client) return;
+        const row = state.clientOnboarding.find(function (item) { return item.client_id === clientId; }) || null;
+        const modalId = "sway-client-onboarding-modal";
+        document.getElementById(modalId)?.remove();
+        const modal = document.createElement("div");
+        modal.className = "sway-client360-modal";
+        modal.id = modalId;
+        const services = row && Array.isArray(row.services) ? row.services : [];
+        const field = function(label, value) {
+            return '<div class="sway-onboarding-field"><span>' + esc(label) + '</span><div>' + esc(value || "Not provided") + '</div></div>';
+        };
+        const section = function(title, body) {
+            return '<section class="sway-client360-section sway-admin-onboarding-section"><div class="sway-client360-section-head"><h4>' + esc(title) + '</h4></div>' + body + '</section>';
+        };
+        modal.innerHTML =
+            '<div class="sway-client360-backdrop" data-close-onboarding></div>' +
+            '<section class="sway-client360-card sway-admin-onboarding-modal" role="dialog" aria-modal="true">' +
+                '<div class="sway-client360-head"><div class="sway-client360-head-copy"><span class="admin-label">Client onboarding</span><h3>' + esc(client.business_name || "Client") + '</h3><p>' + esc(row ? formatDisplayText(row.status) : "Not started") + '</p></div><button type="button" class="sway-client360-close" data-close-onboarding aria-label="Close">×</button></div>' +
+                (row ?
+                    section("01 · Business details", '<div class="sway-onboarding-fields">' + field("Business name", row.business_name) + field("Main contact", row.contact_name) + field("Email", row.email) + field("Phone / WhatsApp", row.phone) + field("Address", row.address) + field("Operating hours", row.operating_hours) + field("Social media", row.social_links) + '</div>') +
+                    section("02 · Services & pricing", services.length ? '<div class="sway-onboarding-services">' + services.map(function(s){ return '<div class="sway-onboarding-service"><strong>' + esc(s.name || "Service") + '</strong><span>' + esc(s.price || "Price not provided") + '</span><p>' + esc(s.includes || "No inclusions provided") + '</p></div>'; }).join("") + '</div>' : '<div class="sway-client360-empty">No services provided.</div>') +
+                    section("03 · Daddy’s Deals vouchers", field("Vouchers accepted", row.daddy_deals_vouchers) + field("Terms", row.daddy_deals_terms) + field("Redemption process", row.voucher_redemption_process)) +
+                    section("04 · Booking setup", field("Current booking system", row.booking_system) + field("Booking WhatsApp", row.booking_whatsapp) + field("Booking process", row.booking_process) + field("Booking rules", row.booking_rules)) +
+                    section("05 · About business & brand", field("About the business", row.about_business) + field("Branding notes", row.branding_notes) + field("Photos / logos / assets", row.asset_notes)) +
+                    '<div class="sway-admin-onboarding-meta"><span>Updated ' + esc(dateTime(row.updated_at)) + '</span>' + (row.submitted_at ? '<span>Submitted ' + esc(dateTime(row.submitted_at)) + '</span>' : '') + '</div>'
+                    : '<div class="sway-client360-empty">This client has not started the onboarding form yet.</div>') +
+                '<div class="sway-client360-footer"><button type="button" class="sway-workspace-button primary" data-close-onboarding>Done</button></div>' +
+            '</section>';
+        workspace.appendChild(modal);
+        modal.querySelectorAll("[data-close-onboarding]").forEach(function(button){ button.addEventListener("click", function(){ modal.remove(); }); });
+    }
 
     function clientHealth(clientId) {
         const today = dashboardTodayISO();
