@@ -251,7 +251,8 @@ Deno.serve(async (req) => {
       "- Keep ready_for_enquiry false while the visitor is still exploring, comparing, asking general questions, or only asking about prices.",
       "- When ready_for_enquiry is true, the answer should naturally say that the next step is the Swayphics enquiry form. Do not invent a booking process or promise an immediate response time.",
       "- Exact recommended_service options: Starter Package, Launch Package, Growth Package, Logo Design, Business Identity Kit, Business Card Design, Business Letterhead Design, Packaging Design, Apparel Design, Website Design, Google Business Profile, Professional Email Setup, Company Registration, Booking System, AI Customer Reply Setup, Review Collection System, Website Maintenance, Something else.",
-      "- Keep answer focused. Usually 2-5 sentences. Ask no more than one direct question at a time unless a compact list is clearly more useful.    ].join("\n");
+      "- Keep answer focused. Usually 2-5 sentences. Ask no more than one direct question at a time unless a compact list is clearly more useful.",
+    ].join("\n");
 
     async function requestPublicInnerMe(model: string) {
       return await fetch(
