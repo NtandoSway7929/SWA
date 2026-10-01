@@ -7352,3 +7352,10 @@
         grid-template-columns: 1fr;
     }
 }
+
+.sway-onboarding-assets{display:grid;gap:8px}
+.sway-onboarding-asset{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid rgba(0,32,150,.07);border-radius:12px;background:rgba(255,255,255,.72)}
+.sway-onboarding-asset-copy{min-width:0;display:grid;gap:3px}
+.sway-onboarding-asset-copy strong{font-size:.78rem;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sway-onboarding-asset-copy span{font-size:.68rem;color:#7a8496}
+@media (max-width:640px){.sway-onboarding-asset{align-items:flex-start}.sway-onboarding-asset .sway-workspace-button{flex:0 0 auto}}
