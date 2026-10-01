@@ -2095,10 +2095,27 @@
                     ""
                 );
 
-            const activeChat =
+            let activeChat =
                 chats.find(function (chat) {
                     return String(chat.id) === activeId;
                 }) ||
+                null;
+
+            /*
+             * A freshly started blank chat is intentionally not stored in the
+             * visible history list. Restore that active chat by ID so a page
+             * refresh does not unexpectedly reopen the previous conversation.
+             */
+            if (!activeChat && activeId) {
+                state.aiActiveChatId =
+                    activeId;
+                state.aiConversation = [];
+                state.aiFocusedRecord = null;
+                return false;
+            }
+
+            activeChat =
+                activeChat ||
                 chats[0] ||
                 null;
 
