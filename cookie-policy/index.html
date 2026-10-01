@@ -583,7 +583,7 @@
         </p>
 
         <div class="legal-meta">
-            Last updated: 28 September 2026
+            Last updated: 1 October 2026
         </div>
 
     </header>
@@ -597,12 +597,13 @@
         <a href="#how-we-use">02 · How we use them</a>
         <a href="#necessary">03 · Necessary storage</a>
         <a href="#analytics">04 · Analytics</a>
-        <a href="#information">05 · Information collected</a>
-        <a href="#consent">06 · Consent choices</a>
-        <a href="#manage">07 · Managing cookies</a>
-        <a href="#third-party">08 · Third-party services</a>
-        <a href="#changes">09 · Changes</a>
-        <a href="#contact">10 · Contact</a>
+        <a href="#innerme">05 · InnerMe & browser storage</a>
+        <a href="#information">06 · Information collected</a>
+        <a href="#consent">07 · Consent choices</a>
+        <a href="#manage">08 · Managing cookies</a>
+        <a href="#third-party">09 · Third-party services</a>
+        <a href="#changes">10 · Changes</a>
+        <a href="#contact">11 · Contact</a>
     </aside>
 
     <article class="legal-content">
@@ -637,39 +638,47 @@
             </div>
         </section>
 
+        <section id="innerme">
+            <h2>05 · InnerMe & browser storage</h2>
+            <p>The public InnerMe feature uses browser local storage for a technical session identifier under the key <code>swayphics_innerme_session</code>. This identifier is used to help Swayphics apply rate limits and prevent abuse of the public AI service.</p>
+            <p>The session identifier is not a traditional HTTP cookie and is not used by Swayphics as an advertising identifier. The raw identifier is not stored in the rate-limiting database; the server hashes it before storing rate-limit information. The browser may keep the local-storage value until it is removed or site data is cleared.</p>
+            <p>The active InnerMe conversation itself is kept in the page session rather than written into this browser-storage key. If you choose to hand the conversation to Swayphics and submit the enquiry form, the information you submit is then handled as enquiry information under the Swayphics Privacy Policy.</p>
+            <p>InnerMe may also generate analytics events when optional analytics has been accepted. Those events can record non-content metadata such as conversation starts, message counts, recommendations, enquiry-readiness signals, handoffs, resets and errors. The current implementation does not place the chat text into these analytics event parameters.</p>
+        </section>
+
         <section id="information">
-            <h2>05 · Information collected</h2>
+            <h2>06 · Information collected</h2>
             <p>Google states that its default Google Analytics implementation can collect information such as user counts, session statistics, approximate geolocation, and browser and device information. Analytics also records website interaction data according to the configuration of the Analytics property.</p>
             <p>Information processed through Analytics is subject to Google's own terms and privacy documentation as well as the Swayphics Privacy Policy.</p>
         </section>
 
         <section id="consent">
-            <h2>06 · Consent choices</h2>
+            <h2>07 · Consent choices</h2>
             <p>The Swayphics cookie banner gives visitors a choice to accept or reject analytics cookies. Analytics is loaded only after an “Accept Analytics” selection has been recorded.</p>
             <p>Where consent is required by applicable law, Swayphics will use the consent mechanism described on this website to obtain that choice before enabling optional analytics storage.</p>
             <p>A visitor can also control or remove cookies and local storage through the browser used to access the website. Removing site data may cause the consent banner to appear again.</p>
         </section>
 
         <section id="manage">
-            <h2>07 · Managing cookies</h2>
+            <h2>08 · Managing cookies</h2>
             <p>Most browsers allow visitors to view, block, delete or restrict cookies and other site data through browser settings. The exact controls differ between browsers and devices.</p>
             <p>Blocking or deleting site data may affect how the website remembers preferences or may require a new consent choice. Visitors can also clear the Swayphics consent value by removing the site's stored data in their browser.</p>
         </section>
 
         <section id="third-party">
-            <h2>08 · Third-party services</h2>
-            <p>The optional analytics functionality on the current public website is provided by Google Analytics. Google may process information in accordance with its own policies and technical documentation.</p>
+            <h2>09 · Third-party services</h2>
+            <p>The optional analytics functionality on the current public website is provided by Google Analytics. The public InnerMe feature separately uses Google Gemini API for AI response generation. Google may process information in accordance with its own policies, terms and technical documentation for the relevant service.</p>
             <p>Third-party services and the technologies used by them can change. If Swayphics introduces additional analytics, advertising, embedded content or other technologies that use cookies or similar storage, this policy will be updated to describe the material changes where appropriate.</p>
         </section>
 
         <section id="changes">
-            <h2>09 · Changes</h2>
+            <h2>10 · Changes</h2>
             <p>Swayphics may update this Cookie Policy when website functionality, third-party services or applicable requirements change. The latest version will be published on this page with an updated effective date.</p>
         </section>
 
         <section id="contact">
             <div class="legal-contact">
-                <h2>10 · Contact</h2>
+                <h2>11 · Contact</h2>
                 <p>For questions about this Cookie Policy or the use of cookies and similar technologies on the Swayphics website, contact <a href="mailto:info@swayphics.co.za">info@swayphics.co.za</a>.</p>
             </div>
         </section>
