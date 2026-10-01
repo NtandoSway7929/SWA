@@ -2936,7 +2936,9 @@
             api("/rest/v1/services?select=*&order=name.asc"),
             api("/rest/v1/invoice_settings?select=*&id=eq.1"),
             api("/rest/v1/client_portal_requests?select=*&order=created_at.desc"),
-            optionalApi("/rest/v1/lead_proposals?select=*&order=created_at.desc", [])
+            optionalApi("/rest/v1/lead_proposals?select=*&order=created_at.desc", []),
+            optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
+            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -2954,6 +2956,8 @@
         state.invoiceSettings = (results[12] && results[12][0]) || state.invoiceSettings || null;
         state.portalRequests = results[13] || [];
         state.leadProposals = results[14] || [];
+        state.documents = results[15] || [];
+        state.communications = results[16] || [];
 
         await loadAdminNotifications();
 
