@@ -1,23 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders as supabaseCorsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const ALLOWED_ORIGINS = new Set([
-  "https://swayphics.co.za",
-  "https://www.swayphics.co.za",
-]);
-
-function corsHeaders(origin = "") {
-  const headers: Record<string, string> = {
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
-
-  if (ALLOWED_ORIGINS.has(origin)) {
-    headers["Access-Control-Allow-Origin"] = origin;
-  }
-
-  return headers;
+function corsHeaders(_origin = "") {
+  return supabaseCorsHeaders;
 }
 
 const PRIMARY_MODEL = "gemini-3.8-flash";
@@ -49,21 +34,16 @@ Deno.serve(async (req) => {
   const origin =
     req.headers.get("origin") || "";
 
+  try {
+
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: corsHeaders(origin),
     });
   }
-
-  if (
-    origin &&
-    !ALLOWED_ORIGINS.has(origin)
-  ) {
-    return json(
-      { error: "Request origin is not allowed." },
-      403,
-    );
+  if (req.method === "GET") {
+    return json({ ok: true, service: "swayphics-ai" }, 200, origin);
   }
 
   if (req.method !== "POST") {
@@ -1494,4 +1474,18 @@ Answer the admin's question directly.
       },
     },
   );
+  } catch (error) {
+    console.error(
+      "InnerMe unhandled Edge Function error:",
+      error instanceof Error ? error.message : String(error),
+    );
+
+    return json(
+      {
+        error: "InnerMe could not complete the request on the server.",
+      },
+      500,
+      origin,
+    );
+  }
 });
