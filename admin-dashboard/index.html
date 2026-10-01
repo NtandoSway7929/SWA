@@ -2270,6 +2270,50 @@
             font-size: 0.88rem;
         }
 
+        .sway-ai-panel {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 28px;
+            border: 1px solid rgba(1,82,244,.12);
+            border-radius: 24px;
+            background: linear-gradient(145deg,#ffffff,#f7f9fd);
+            box-shadow: 0 18px 50px rgba(8,21,51,.07);
+        }
+        .sway-ai-header { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; }
+        .sway-ai-eyebrow { display:block; margin-bottom:8px; font-size:10px; font-weight:800; letter-spacing:.16em; color:#0152F4; }
+        .sway-ai-header h2 { margin:0; font-size:30px; letter-spacing:-.03em; color:#081533; }
+        .sway-ai-header p { max-width:650px; margin:9px 0 0; color:#66748a; line-height:1.65; }
+        .sway-ai-status { white-space:nowrap; padding:8px 11px; border-radius:999px; background:#edf3ff; color:#0152F4; font-size:11px; font-weight:700; }
+        .sway-ai-suggestions { display:flex; flex-wrap:wrap; gap:9px; margin:24px 0; }
+        .sway-ai-suggestions button { border:1px solid #dfe6f1; background:#fff; color:#24324a; border-radius:12px; padding:10px 13px; cursor:pointer; font:inherit; font-size:13px; }
+        .sway-ai-suggestions button:hover { border-color:#0152F4; color:#0152F4; }
+        .sway-ai-conversation { min-height:280px; max-height:520px; overflow:auto; display:flex; flex-direction:column; gap:12px; padding:18px; border:1px solid #e5eaf2; border-radius:18px; background:#f8faff; }
+        .sway-ai-welcome, .sway-ai-message { white-space:pre-wrap; line-height:1.65; }
+        .sway-ai-welcome { margin:auto; max-width:540px; text-align:center; color:#66748a; }
+        .sway-ai-welcome strong { display:block; margin-bottom:6px; color:#081533; font-size:18px; }
+        .sway-ai-message { max-width:82%; padding:12px 15px; border-radius:15px; }
+        .sway-ai-user { align-self:flex-end; background:#0152F4; color:#fff; }
+        .sway-ai-assistant { align-self:flex-start; background:#fff; border:1px solid #e1e7f0; color:#26344b; }
+        .sway-ai-loading { opacity:.65; }
+        .sway-ai-form { display:flex; gap:10px; margin-top:14px; }
+        .sway-ai-form textarea { flex:1; resize:vertical; min-height:54px; border:1px solid #dfe6f1; border-radius:14px; padding:13px 14px; font:inherit; outline:none; }
+        .sway-ai-form textarea:focus { border-color:#0152F4; box-shadow:0 0 0 3px rgba(1,82,244,.08); }
+        .sway-ai-form button { align-self:stretch; min-width:100px; border:0; border-radius:14px; padding:0 18px; background:#0152F4; color:#fff; font-weight:700; cursor:pointer; }
+        .sway-ai-form button:disabled { opacity:.55; cursor:wait; }
+        .sway-ai-note { display:block; margin-top:11px; color:#8995a8; line-height:1.5; }
+        body.sway-dark-mode .sway-ai-panel { background:#0d1525; border-color:#263552; }
+        body.sway-dark-mode .sway-ai-header h2 { color:#fff; }
+        body.sway-dark-mode .sway-ai-header p, body.sway-dark-mode .sway-ai-note { color:#a9b5c8; }
+        body.sway-dark-mode .sway-ai-conversation { background:#101a2c; border-color:#263552; }
+        body.sway-dark-mode .sway-ai-assistant, body.sway-dark-mode .sway-ai-suggestions button { background:#162238; border-color:#2a3a58; color:#e5ebf5; }
+        @media (max-width:700px) {
+            .sway-ai-panel { padding:18px; border-radius:18px; }
+            .sway-ai-header { flex-direction:column; }
+            .sway-ai-form { flex-direction:column; }
+            .sway-ai-form button { min-height:48px; }
+            .sway-ai-message { max-width:92%; }
+        }
+
         .sway-workspace-nav-scroll {
             padding-top: 10px;
         }
