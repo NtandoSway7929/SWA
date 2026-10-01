@@ -21006,6 +21006,8 @@ if (formStatus) {
 
     var history = [];
     var isThinking = false;
+    var innermeMessageCount = 0;
+    var innermeConversationStarted = false;
 
     var publicSessionKey =
         "swayphics_innerme_session";
@@ -21341,15 +21343,29 @@ if (formStatus) {
             "innerme_handoff",
             {
                 recommended_service:
-                    selectedService
+                    selectedService,
+                messages:
+                    innermeMessageCount
             }
         );
     }
 
     function resetConversation() {
+        if (innermeConversationStarted) {
+            track(
+                "innerme_reset",
+                {
+                    messages:
+                        innermeMessageCount
+                }
+            );
+        }
+
         history = [];
         lastUserMessages = [];
         latestRecommendedService = "";
+        innermeMessageCount = 0;
+        innermeConversationStarted = false;
 
         messagesEl.innerHTML = "";
 
@@ -21417,9 +21433,23 @@ if (formStatus) {
                 "none";
         }
 
+        innermeMessageCount += 1;
+
+        if (!innermeConversationStarted) {
+            innermeConversationStarted = true;
+
+            track(
+                "innerme_start",
+                {}
+            );
+        }
+
         track(
             "innerme_message",
-            {}
+            {
+                message_number:
+                    innermeMessageCount
+            }
         );
 
         inputEl.value = "";
@@ -21487,6 +21517,18 @@ if (formStatus) {
                 recommended
             );
 
+            track(
+                "innerme_response",
+                {
+                    message_number:
+                        innermeMessageCount,
+                    recommended_service:
+                        recommended || "",
+                    ready_for_enquiry:
+                        payload?.ready_for_enquiry === true
+                }
+            );
+
             history.push({
                 role:
                     "assistant",
@@ -21509,6 +21551,16 @@ if (formStatus) {
                 handoffEl?.classList.add(
                     "is-visible"
                 );
+
+                track(
+                    "innerme_ready",
+                    {
+                        message_number:
+                            innermeMessageCount,
+                        recommended_service:
+                            recommended || ""
+                    }
+                );
             }
 
         } catch (error) {
@@ -21520,6 +21572,14 @@ if (formStatus) {
                 "assistant",
                 error?.message ||
                 "I couldn't reach InnerMe right now. Please try again in a moment."
+            );
+
+            track(
+                "innerme_error",
+                {
+                    message_number:
+                        innermeMessageCount
+                }
             );
         } finally {
             setBusy(false);
