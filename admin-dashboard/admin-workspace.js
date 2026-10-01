@@ -21389,32 +21389,24 @@ function simpleBars(items, color) {
 
                     /*
                      * InnerMe deliberately preserves its live panel during
-                     * background workspace syncs. New chat must therefore
-                     * reset the conversation DOM directly instead of calling
-                     * renderView(), which intentionally keeps the existing
-                     * panel mounted.
+                     * background workspace syncs. New Chat is an explicit
+                     * conversation reset, so replace the whole InnerMe panel
+                     * from the now-empty state instead of trying to mutate
+                     * only the message container.
                      */
-                    const liveConversation =
-                        workspace.querySelector(
-                            "#sway-ai-conversation"
+                    const aiMain =
+                        document.getElementById(
+                            "sway-workspace-main"
                         );
 
-                    if (liveConversation) {
-                        liveConversation.innerHTML =
-                            '<div class="sway-ai-welcome">' +
-                                '<strong>What can InnerMe help you with?</strong>' +
-                                '<span>Ask about leads, clients, follow-ups, tasks, projects, invoices, payments, portal requests or recent activity.</span>' +
-                            '</div>';
-                        liveConversation.scrollTop = 0;
-                    }
+                    if (
+                        aiMain &&
+                        state.currentView === "swayphics-ai"
+                    ) {
+                        aiMain.innerHTML =
+                            renderSwayphicsAI();
 
-                    const liveFocusBar =
-                        workspace.querySelector(
-                            ".sway-ai-focus-bar"
-                        );
-
-                    if (liveFocusBar) {
-                        liveFocusBar.remove();
+                        bindViewActions();
                     }
 
                     const freshInput =
