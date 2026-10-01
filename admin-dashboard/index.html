@@ -2644,14 +2644,404 @@
         body.sway-dark-mode .sway-ai-conversation { background:#101a2c; border-color:#263552; }
         body.sway-dark-mode .sway-ai-assistant, body.sway-dark-mode .sway-ai-suggestions button { background:#162238; border-color:#2a3a58; color:#e5ebf5; }
         @media (max-width:700px) {
-            .sway-ai-panel { padding:18px; border-radius:18px; }
-            .sway-ai-header { flex-direction:column; }
-            .sway-ai-header-actions { width:100%; justify-content:flex-start; flex-wrap:wrap; }
-            .sway-ai-status { margin-left:auto; }
+            .sway-ai-panel {
+                width:100%;
+                box-sizing:border-box;
+                padding:14px;
+                border-radius:22px;
+                background:linear-gradient(145deg,#ffffff,#f7f9fd);
+                box-shadow:0 14px 40px rgba(8,21,51,.08);
+            }
 
-            .sway-ai-form { flex-direction:column; }
-            .sway-ai-form button { min-height:48px; }
-            .sway-ai-message { flex:0 0 auto; width:fit-content; max-width:94%; }
+            .sway-ai-header {
+                display:block;
+                padding:4px 2px 0;
+            }
+
+            .sway-ai-eyebrow {
+                margin-bottom:6px;
+                font-size:9px;
+                letter-spacing:.18em;
+            }
+
+            .sway-ai-header h2 {
+                font-size:27px;
+                line-height:1.05;
+                letter-spacing:-.045em;
+            }
+
+            .sway-ai-byline {
+                margin-top:6px;
+                font-size:9px;
+            }
+
+            .sway-ai-byline img {
+                height:14px;
+            }
+
+            .sway-ai-header p {
+                margin-top:10px;
+                max-width:none;
+                font-size:12px;
+                line-height:1.55;
+            }
+
+            .sway-ai-header-actions {
+                width:100%;
+                display:grid;
+                grid-template-columns:1fr 1fr;
+                gap:8px;
+                margin-top:16px;
+            }
+
+            .sway-ai-history-toggle,
+            .sway-ai-new-chat {
+                width:100%;
+                min-height:44px;
+                justify-content:center;
+                padding:9px 12px;
+                border-radius:12px;
+                font-size:11px;
+                font-weight:800;
+                box-shadow:0 4px 12px rgba(8,21,51,.04);
+            }
+
+            .sway-ai-history-toggle span:first-child,
+            .sway-ai-new-chat span:first-child {
+                font-size:17px;
+            }
+
+            .sway-ai-status {
+                grid-column:1 / -1;
+                justify-self:start;
+                margin:1px 0 0;
+                padding:6px 9px;
+                font-size:9px;
+            }
+
+            .sway-ai-history-panel {
+                margin:12px 0 0;
+                padding:10px;
+                border-radius:16px;
+                box-shadow:0 18px 40px rgba(8,21,51,.10);
+            }
+
+            .sway-ai-history-head {
+                margin-bottom:8px;
+                padding:2px 2px 0;
+            }
+
+            .sway-ai-history-eyebrow {
+                font-size:8px;
+            }
+
+            .sway-ai-history-head strong {
+                font-size:12px;
+            }
+
+            .sway-ai-history-list {
+                gap:6px;
+                max-height:310px;
+            }
+
+            .sway-ai-history-item {
+                min-height:48px;
+                border-radius:12px;
+            }
+
+            .sway-ai-history-open {
+                min-height:46px;
+                padding:8px 9px;
+            }
+
+            .sway-ai-history-item-title {
+                font-size:11px;
+                line-height:1.35;
+            }
+
+            .sway-ai-history-item-meta {
+                margin-top:3px;
+                font-size:9px;
+            }
+
+            .sway-ai-history-delete {
+                width:40px;
+                height:40px;
+                margin-right:2px;
+                font-size:17px;
+                border-radius:10px;
+            }
+
+            .sway-ai-focus-bar {
+                margin:12px 0 10px;
+                padding:10px 11px;
+                border-radius:12px;
+            }
+
+            .sway-ai-focus-label {
+                font-size:8px;
+            }
+
+            .sway-ai-focus-value {
+                font-size:10px;
+            }
+
+            .sway-ai-proactive-brief,
+            .sway-ai-change-watch {
+                margin-top:14px;
+                border-radius:16px;
+            }
+
+            .sway-ai-proactive-brief {
+                padding:13px;
+            }
+
+            .sway-ai-proactive-head {
+                gap:9px;
+            }
+
+            .sway-ai-proactive-head strong {
+                font-size:12px;
+            }
+
+            .sway-ai-proactive-grid {
+                gap:7px;
+                margin-top:10px;
+            }
+
+            .sway-ai-proactive-item {
+                min-height:54px;
+                padding:10px;
+                border-radius:12px;
+            }
+
+            .sway-ai-proactive-copy strong {
+                font-size:10px;
+            }
+
+            .sway-ai-proactive-copy span {
+                font-size:9px;
+            }
+
+            .sway-ai-suggestions {
+                gap:7px;
+                margin:16px 0;
+            }
+
+            .sway-ai-suggestions button {
+                flex:1 1 calc(50% - 7px);
+                min-height:42px;
+                padding:9px 10px;
+                border-radius:12px;
+                font-size:11px;
+                font-weight:700;
+                line-height:1.3;
+            }
+
+            .sway-ai-conversation {
+                min-height:340px;
+                max-height:58vh;
+                gap:13px;
+                padding:14px 10px;
+                border-radius:18px;
+                background:linear-gradient(180deg,#f7f9fd,#f3f6fb);
+            }
+
+            .sway-ai-welcome {
+                max-width:290px;
+                padding:20px 8px;
+                font-size:12px;
+                line-height:1.65;
+            }
+
+            .sway-ai-welcome strong {
+                margin-bottom:7px;
+                font-size:17px;
+            }
+
+            .sway-ai-message {
+                flex:0 0 auto;
+                width:fit-content;
+                max-width:91%;
+                padding:11px 13px;
+                border-radius:16px;
+                line-height:1.65;
+                font-size:13px;
+                box-shadow:0 3px 10px rgba(8,21,51,.04);
+            }
+
+            .sway-ai-user {
+                border-bottom-right-radius:6px;
+            }
+
+            .sway-ai-assistant {
+                border-bottom-left-radius:6px;
+            }
+
+            .sway-ai-message-label {
+                margin-bottom:5px;
+                font-size:9px;
+                letter-spacing:.05em;
+            }
+
+            .sway-ai-message-content {
+                line-height:1.68;
+            }
+
+            .sway-ai-answer-title {
+                margin-bottom:11px;
+                font-size:15px;
+                line-height:1.35;
+            }
+
+            .sway-ai-answer-heading {
+                margin:16px 0 6px;
+                font-size:10px;
+            }
+
+            .sway-ai-answer-paragraph,
+            .sway-ai-answer-item-text {
+                font-size:13px;
+                line-height:1.68;
+            }
+
+            .sway-ai-answer-item {
+                gap:8px;
+                margin:6px 0;
+            }
+
+            .sway-ai-records {
+                margin-top:13px;
+                padding-top:11px;
+            }
+
+            .sway-ai-records-list {
+                display:grid;
+                gap:7px;
+            }
+
+            .sway-ai-record-link {
+                width:100%;
+                box-sizing:border-box;
+                min-height:42px;
+                padding:9px 10px;
+                border-radius:11px;
+            }
+
+            .sway-ai-record-link-type {
+                font-size:8px;
+            }
+
+            .sway-ai-record-link-name {
+                font-size:10px;
+            }
+
+            .sway-ai-form {
+                display:flex;
+                flex-direction:row;
+                align-items:flex-end;
+                gap:8px;
+                margin-top:10px;
+                padding:8px;
+                border:1px solid #e1e7f0;
+                border-radius:16px;
+                background:#fff;
+                box-shadow:0 8px 22px rgba(8,21,51,.06);
+            }
+
+            .sway-ai-form textarea {
+                min-width:0;
+                min-height:46px;
+                max-height:130px;
+                resize:none;
+                padding:11px 10px;
+                border:0;
+                border-radius:11px;
+                background:#f7f9fd;
+                font-size:13px;
+                line-height:1.45;
+                box-shadow:none;
+            }
+
+            .sway-ai-form textarea:focus {
+                border:0;
+                box-shadow:inset 0 0 0 2px rgba(1,82,244,.12);
+            }
+
+            .sway-ai-form button {
+                flex:0 0 48px;
+                width:48px;
+                min-width:48px;
+                min-height:46px;
+                padding:0;
+                display:grid;
+                place-items:center;
+                border-radius:12px;
+                font-size:0;
+                box-shadow:0 7px 16px rgba(1,82,244,.18);
+            }
+
+            .sway-ai-form button::before {
+                content:"↑";
+                font-size:21px;
+                line-height:1;
+                font-weight:700;
+            }
+
+            .sway-ai-note {
+                margin:8px 4px 0;
+                font-size:9px;
+                line-height:1.45;
+            }
+
+            body.sway-dark-mode .sway-ai-panel {
+                background:linear-gradient(145deg,#0f192b,#0b1423);
+                box-shadow:0 14px 40px rgba(0,0,0,.24);
+            }
+
+            body.sway-dark-mode .sway-ai-conversation {
+                background:linear-gradient(180deg,#0f192b,#0c1627);
+            }
+
+            body.sway-dark-mode .sway-ai-form {
+                border-color:#2a3a58;
+                background:#111d31;
+            }
+
+            body.sway-dark-mode .sway-ai-form textarea {
+                background:#162238;
+                color:#e5ebf5;
+            }
+        }
+
+        @media (max-width:390px) {
+            .sway-ai-panel {
+                padding:11px;
+                border-radius:20px;
+            }
+
+            .sway-ai-header-actions {
+                gap:7px;
+            }
+
+            .sway-ai-history-toggle,
+            .sway-ai-new-chat {
+                min-height:42px;
+                font-size:10px;
+            }
+
+            .sway-ai-conversation {
+                padding:12px 8px;
+            }
+
+            .sway-ai-message {
+                max-width:94%;
+                font-size:12.5px;
+            }
+
+            .sway-ai-suggestions button {
+                flex-basis:100%;
+            }
         }
 
         .sway-workspace-nav-scroll {
@@ -10387,7 +10777,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20261001-innerme-v30-chat-history"></script>
+<script src="admin-workspace.js?v=dashboard-20261001-innerme-v31-mobile-premium"></script>
 
 <script>
 (function () {
