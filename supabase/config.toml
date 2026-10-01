@@ -15,3 +15,6 @@ verify_jwt = false
 
 [functions.submit-enquiry]
 verify_jwt = false
+
+[functions.swayphics-ai]
+verify_jwt = true
