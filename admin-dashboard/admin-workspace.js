@@ -21352,9 +21352,12 @@ function simpleBars(items, color) {
             workspace.querySelector("#sway-ai-new-chat");
 
         if (newChatButton) {
-            newChatButton.addEventListener(
-                "click",
-                async function () {
+            /*
+             * bindViewActions() can run repeatedly during realtime syncs while
+             * the InnerMe panel stays mounted. Assigning onclick replaces any
+             * previous handler, preventing stacked New Chat actions.
+             */
+            newChatButton.onclick = async function () {
                     if (
                         Array.isArray(state.aiConversation) &&
                         state.aiConversation.some(function (item) {
@@ -21420,8 +21423,7 @@ function simpleBars(items, color) {
                     if (freshInput) {
                         freshInput.focus();
                     }
-                }
-            );
+            };
         }
 
         const aiInput =
