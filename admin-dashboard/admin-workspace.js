@@ -22946,33 +22946,35 @@ function simpleBars(items, color) {
                 );
             });
 
-        if (workspace.dataset.swayEmailActionDelegation !== "true") {
-            workspace.dataset.swayEmailActionDelegation = "true";
+        if (
+            typeof window !== "undefined" &&
+            !window.__swayphicsLeadEmailCaptureBound
+        ) {
+            window.__swayphicsLeadEmailCaptureBound = true;
 
-            workspace.addEventListener(
+            document.addEventListener(
                 "click",
                 function (event) {
                     const target =
                         event.target instanceof Element
-                            ? event.target.closest("[data-send-email-type]")
+                            ? event.target.closest(
+                                ".sway-lead-actions-menu [data-send-email-type='lead']"
+                            )
                             : null;
 
-                    if (!target || !workspace.contains(target)) {
+                    if (!target) {
                         return;
                     }
 
                     event.preventDefault();
-                    event.stopPropagation();
-
-                    const type =
-                        target.dataset.sendEmailType || "";
+                    event.stopImmediatePropagation();
 
                     const id =
                         target.dataset.sendEmailId || "";
 
-                    if (!type || !id) {
+                    if (!id) {
                         swayAlert(
-                            "This contact could not be resolved for email."
+                            "This lead could not be resolved for email."
                         );
                         return;
                     }
@@ -22985,10 +22987,11 @@ function simpleBars(items, color) {
                     }
 
                     openEmailComposer(
-                        type,
+                        "lead",
                         id
                     );
-                }
+                },
+                true
             );
         }
 
