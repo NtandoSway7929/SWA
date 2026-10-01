@@ -925,6 +925,9 @@ Deno.serve(async (req) => {
     };
   }
 
+  const focusedRecord =
+    buildFocusedRecord(body.focused_record);
+
   const connectedContext =
     buildConnectedContext(focusedRecord);
 
