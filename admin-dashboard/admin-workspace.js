@@ -8120,7 +8120,7 @@ function simpleBars(items, color) {
         const rows =
             state.tasks.map(function (item) {
                 return (
-                    "<tr data-ai-record="tasks:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="tasks:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(item.title) +
@@ -8356,7 +8356,7 @@ function simpleBars(items, color) {
         const rows =
             visibleLeads.map(function (item) {
                 return (
-                    "<tr data-ai-record="leads:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="leads:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -8464,7 +8464,7 @@ function simpleBars(items, color) {
                         : clientName(item.client_id);
 
                 return (
-                    "<tr data-ai-record="followups:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="followups:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(subject) +
@@ -9439,7 +9439,7 @@ function simpleBars(items, color) {
                     }).length;
 
                 return (
-                    "<tr data-ai-record="clients:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="clients:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(item.business_name) +
@@ -9552,7 +9552,7 @@ function simpleBars(items, color) {
                         : "";
 
                 return (
-                    "<tr data-ai-record="projects:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="projects:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(item.name) +
@@ -9658,7 +9658,7 @@ function simpleBars(items, color) {
                     communicationContactDetails(item);
 
                 return (
-                    "<tr data-ai-record="quotes:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="quotes:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -13177,7 +13177,7 @@ function simpleBars(items, color) {
                     );
 
                 return (
-                    "<tr data-ai-record="invoices:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="invoices:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(item.invoice_number) +
@@ -13674,7 +13674,7 @@ function simpleBars(items, color) {
                     });
 
                 return (
-                    "<tr data-ai-record="payments:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="payments:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -13766,7 +13766,7 @@ function simpleBars(items, color) {
         const rows =
             activeEnquiries.map(function (item) {
                 return (
-                    "<tr data-ai-record="enquiries:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="enquiries:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -16517,7 +16517,7 @@ function simpleBars(items, color) {
         const rows =
             state.portalRequests.map(function (item) {
                 return (
-                    "<tr data-ai-record="portal-requests:' + esc(item.id) + '">' +
+                    '<tr data-ai-record="portal-requests:' + esc(item.id) + '">' +
                         "<td><strong>" +
                             esc(clientName(item.client_id)) +
                         "</strong></td>" +
