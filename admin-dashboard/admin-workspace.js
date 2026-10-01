@@ -7739,7 +7739,32 @@ function simpleBars(items, color) {
             });
         });
 
-        state.quotes.forEach(function (quote) {
+        /* Unread client communication is actionable from the overview. */
+        state.emailMessages.forEach(function (message) {
+            if (message.direction !== "inbound" || message.is_read === true) return;
+            items.push({
+                priority: "info",
+                icon: "@",
+                title: message.subject || "Unread email",
+                detail: (message.from_name || message.from_email || "Unknown sender") + " · Unread",
+                view: "email",
+                sort: 2
+            });
+        });
+
+        state.portalRequests.forEach(function (request) {
+            if (request.status === "completed") return;
+            items.push({
+                priority: request.status === "new" ? "warning" : "info",
+                icon: "R",
+                title: request.subject || "Client request",
+                detail: clientName(request.client_id) + " · " + (request.status || "new"),
+                view: "portal-requests",
+                sort: request.status === "new" ? 1 : 2
+            });
+        });
+
+                state.quotes.forEach(function (quote) {
             if (quote.status !== "sent") {
                 return;
             }
