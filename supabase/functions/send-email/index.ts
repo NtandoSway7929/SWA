@@ -64,16 +64,6 @@ function brandedEmailHtml(
   const normalizedRecipientName = cleanRecipientName(recipientName);
   const normalizedBusinessName = cleanRecipientName(businessName);
 
-  const greetingName =
-    normalizedRecipientName.length > 0
-      ? normalizedRecipientName
-      : normalizedBusinessName;
-
-  const greetingMarkup =
-    greetingName.length > 0
-      ? "Hi " + escapeHtml(greetingName) + ","
-      : "Hello,";
-
   const isProposal =
     proposalType !== "not-website-related";
 
@@ -201,9 +191,6 @@ function brandedEmailHtml(
           <tr>
             <td class="sway-email-content" style="padding:34px 34px 28px;background:#FFFFFF;">
               ${isProposal ? introMarkup : ""}
-              <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.8;color:#56627A;">
-                ${greetingMarkup}
-              </p>
               ${messageMarkup}
               ${proposalVisualMarkup}
               ${ctaMarkup}
