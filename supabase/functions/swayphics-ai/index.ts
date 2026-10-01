@@ -2,7 +2,19 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders as supabaseCorsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 function corsHeaders(_origin = "") {
-  return supabaseCorsHeaders;
+  return {
+    ...supabaseCorsHeaders,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-innerme-session",
+  };
+}
+
+async function sha256(value: string) {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 const PRIMARY_MODEL = "gemini-3.8-flash";
@@ -106,6 +118,109 @@ Deno.serve(async (req) => {
         { error: "Public InnerMe is available through the Swayphics website only." },
         403,
         origin,
+      );
+    }
+
+    const publicSession =
+      String(req.headers.get("x-innerme-session") || "").trim();
+
+    if (
+      publicSession.length < 16 ||
+      publicSession.length > 200
+    ) {
+      return json(
+        { error: "Please refresh the page and try again." },
+        400,
+        origin,
+      );
+    }
+
+    const rateLimitUrl =
+      Deno.env.get("SUPABASE_URL");
+    const rateLimitKey =
+      Deno.env.get("SUPABASE_SECRET_KEY") ||
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!rateLimitUrl || !rateLimitKey) {
+      return json(
+        { error: "InnerMe is temporarily unavailable." },
+        503,
+        origin,
+      );
+    }
+
+    const rateLimitClient = createClient(
+      rateLimitUrl,
+      rateLimitKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          detectSessionInUrl: false,
+        },
+      },
+    );
+
+    const sessionHash =
+      await sha256("session:" + publicSession);
+
+    /*
+     * Network identifiers are hashed before storage. The raw identifier
+     * never enters the database. Prefer infrastructure-provided headers
+     * over browser-controlled ones when available.
+     */
+    const forwardedFor =
+      req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-forwarded-for") ||
+      "";
+
+    const networkIdentifier =
+      forwardedFor.split(",")[0].trim();
+
+    const ipHash = networkIdentifier
+      ? await sha256("ip:" + networkIdentifier)
+      : null;
+
+    const { data: rateLimit, error: rateLimitError } =
+      await rateLimitClient.rpc(
+        "consume_public_innerme_rate_limit",
+        {
+          p_session_hash: sessionHash,
+          p_ip_hash: ipHash,
+        },
+      );
+
+    if (
+      rateLimitError ||
+      !Array.isArray(rateLimit) ||
+      !rateLimit[0]
+    ) {
+      return json(
+        { error: "InnerMe is temporarily unavailable." },
+        503,
+        origin,
+      );
+    }
+
+    if (rateLimit[0].allowed !== true) {
+      const retryAfter =
+        Number(rateLimit[0].retry_after_seconds || 60);
+
+      return new Response(
+        JSON.stringify({
+          error:
+            "You've reached the InnerMe message limit for now. Please try again later.",
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders(origin),
+            "Content-Type": "application/json",
+            "Retry-After": String(
+              Math.max(1, Math.min(retryAfter, 86400)),
+            ),
+          },
+        },
       );
     }
 
