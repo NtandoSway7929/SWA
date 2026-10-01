@@ -20969,6 +20969,157 @@ function simpleBars(items, color) {
         );
     }
 
+    function renderAIRevenueEngine() {
+        const today = dashboardTodayISO();
+
+        const overdueInvoices = state.invoices.filter(function (invoice) {
+            if (
+                invoice.status === "cancelled" ||
+                invoice.status === "paid"
+            ) {
+                return false;
+            }
+
+            const outstanding = Number(
+                invoice.amount_outstanding != null
+                    ? invoice.amount_outstanding
+                    : invoice.total || 0
+            );
+
+            if (outstanding <= 0) {
+                return false;
+            }
+
+            const due = dashboardDateKey(invoice.due_date);
+
+            return Boolean(
+                invoice.status === "overdue" ||
+                (due && due < today)
+            );
+        });
+
+        const openLeads = state.leads.filter(function (lead) {
+            return !["won", "lost"].includes(
+                String(lead.status || "")
+            );
+        });
+
+        const sentQuotes = state.quotes.filter(function (quote) {
+            return String(quote.status || "") === "sent";
+        });
+
+        const newEnquiries = state.enquiries.filter(function (enquiry) {
+            return String(enquiry.status || "") === "new";
+        });
+
+        const overdueValue = overdueInvoices.reduce(function (sum, invoice) {
+            const value = Number(
+                invoice.amount_outstanding != null
+                    ? invoice.amount_outstanding
+                    : invoice.total || 0
+            );
+            return sum + (Number.isFinite(value) ? value : 0);
+        }, 0);
+
+        const openPipelineValue = openLeads.reduce(function (sum, lead) {
+            const value = Number(lead.estimated_value || 0);
+            return sum + (Number.isFinite(value) ? value : 0);
+        }, 0);
+
+        const sentQuoteValue = sentQuotes.reduce(function (sum, quote) {
+            const value = Number(quote.amount || 0);
+            return sum + (Number.isFinite(value) ? value : 0);
+        }, 0);
+
+        const opportunities = [
+            {
+                tone: "collect",
+                label: "Collect",
+                value: overdueInvoices.length
+                    ? money(overdueValue)
+                    : "Clear",
+                detail: overdueInvoices.length
+                    ? (overdueInvoices.length === 1
+                        ? "overdue invoice needs attention"
+                        : "overdue invoices need attention")
+                    : "no overdue invoices showing",
+                prompt:
+                    "Work the Collect lane. Review overdue invoices and payments, identify the clearest collection opportunities from the live workspace, and give me the exact next actions and a professional client message where appropriate."
+            },
+            {
+                tone: "convert",
+                label: "Convert",
+                value: openLeads.length,
+                detail:
+                    openLeads.length === 1
+                        ? "open lead to move forward"
+                        : "open leads to move forward",
+                prompt:
+                    "Work the Convert lane. Analyse the open pipeline, identify the strongest evidence-backed sales opportunities, explain why each matters, and give me the exact next move for the most actionable one."
+            },
+            {
+                tone: "capture",
+                label: "Capture",
+                value: newEnquiries.length,
+                detail:
+                    newEnquiries.length === 1
+                        ? "new enquiry waiting"
+                        : "new enquiries waiting",
+                prompt:
+                    "Work the Capture lane. Review the newest enquiries and show me how to turn the current demand into qualified sales opportunities. Draft the first response or follow-up where useful."
+            },
+            {
+                tone: "reactivate",
+                label: "Reactivate",
+                value: sentQuotes.length
+                    ? money(sentQuoteValue)
+                    : "Quiet",
+                detail: sentQuotes.length
+                    ? (sentQuotes.length === 1
+                        ? "quoted value awaiting a response"
+                        : "quoted value awaiting responses")
+                    : "no sent quotes awaiting response",
+                prompt:
+                    "Work the Reactivate lane. Review sent quotes and other stalled commercial opportunities, identify where a timely follow-up could recover revenue, and draft the most useful message."
+            }
+        ];
+
+        return (
+            '<div class="sway-ai-revenue-engine">' +
+                '<div class="sway-ai-revenue-head">' +
+                    '<div>' +
+                        '<span class="sway-ai-proactive-eyebrow">REVENUE ENGINE</span>' +
+                        '<strong>Turn what is already here into movement.</strong>' +
+                    '</div>' +
+                    '<span class="sway-ai-revenue-note">Live signals</span>' +
+                '</div>' +
+                '<div class="sway-ai-revenue-grid">' +
+                    opportunities.map(function (item) {
+                        return (
+                            '<button type="button" class="sway-ai-revenue-card ' +
+                                esc(item.tone) +
+                                '" data-ai-prompt="' +
+                                esc(item.prompt) +
+                            '">' +
+                                '<span class="sway-ai-revenue-label">' +
+                                    esc(item.label) +
+                                '</span>' +
+                                '<span class="sway-ai-revenue-value">' +
+                                    esc(item.value) +
+                                '</span>' +
+                                '<span class="sway-ai-revenue-detail">' +
+                                    esc(item.detail) +
+                                '</span>' +
+                                '<span class="sway-ai-revenue-action">Work it →</span>' +
+                            '</button>'
+                        );
+                    }).join("") +
+                '</div>' +
+                '<span class="sway-ai-revenue-footnote">Revenue is not the same as profit. InnerMe will only calculate profit or margin when the required cost data exists.</span>' +
+            '</div>'
+        );
+    }
+
     function renderSwayphicsAI() {
         const history = Array.isArray(state.aiConversation)
             ? state.aiConversation.slice(-40)
@@ -21098,7 +21249,8 @@ function simpleBars(items, color) {
                         ? (
                             renderAIProactiveBrief() +
                             renderAIChangeWatch() +
-                            renderAIGrowthDesk()
+                            renderAIGrowthDesk() +
+                            renderAIRevenueEngine()
                         )
                         : ""
                 ) +
