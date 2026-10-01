@@ -6376,9 +6376,18 @@ function simpleBars(items, color) {
                 )
             );
 
+            const preserveInnerMeLiveDom =
+                state.currentView === "swayphics-ai" &&
+                Boolean(
+                    workspace.querySelector(
+                        ".sway-ai-panel"
+                    )
+                );
+
             if (
                 settings.render !== false &&
-                !editingModalOpen
+                !editingModalOpen &&
+                !preserveInnerMeLiveDom
             ) {
                 const preserveScrollY =
                     currentScrollY();
