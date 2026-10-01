@@ -47,14 +47,13 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const publicApiKey =
     req.headers.get("apikey") ||
     Deno.env.get("SUPABASE_ANON_KEY") ||
     Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
 
-  if (!supabaseUrl || !serviceRoleKey || !publicApiKey) {
+  if (!supabaseUrl || !publicApiKey) {
     return json({ error: "Supabase server configuration is incomplete." }, 500);
   }
 
@@ -109,12 +108,12 @@ Deno.serve(async (req) => {
     return json({ error: "Message is too long." }, 400);
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  /*
+   * Use the same authenticated admin client that the dashboard uses.
+   * This keeps InnerMe subject to the existing Swayphics admin RLS policies
+   * instead of depending on a separate service-role secret.
+   */
+  const workspaceSupabase = authSupabase;
 
   const [
     tasks,
@@ -129,26 +128,28 @@ Deno.serve(async (req) => {
     portalRequests,
     communications,
     activities,
+    emailMessages,
   ] = await Promise.all([
-    supabase.from("tasks").select("*").order("created_at", { ascending: false }).limit(60),
-    supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(60),
-    supabase.from("follow_ups").select("*").order("scheduled_for", { ascending: true }).limit(100),
-    supabase.from("clients").select("*").order("created_at", { ascending: false }).limit(60),
-    supabase.from("client_projects").select("*").order("created_at", { ascending: false }).limit(60),
-    supabase.from("quotes").select("*").order("created_at", { ascending: false }).limit(60),
-    supabase.from("payments").select("*").order("created_at", { ascending: false }).limit(60),
-    supabase.from("website_enquiries").select("*").order("created_at", { ascending: false }).limit(60),
-    supabase.from("invoices").select("*").order("created_at", { ascending: false }).limit(100),
-    supabase.from("client_portal_requests").select("*").order("created_at", { ascending: false }).limit(60),
-    supabase.from("communication_logs").select("*").order("contacted_at", { ascending: false }).limit(100),
-    supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("tasks").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("leads").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("follow_ups").select("*").order("scheduled_for", { ascending: true }).limit(100),
+    workspaceSupabase.from("clients").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("client_projects").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("quotes").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("payments").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("website_enquiries").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("invoices").select("*").order("created_at", { ascending: false }).limit(100),
+    workspaceSupabase.from("client_portal_requests").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("communication_logs").select("*").order("contacted_at", { ascending: false }).limit(100),
+    workspaceSupabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(60),
+    workspaceSupabase.from("email_messages").select("id,direction,mailbox,thread_id,from_name,from_email,to_email,subject,text_body,received_at,is_read,client_id,lead_id,created_at,updated_at").eq("mailbox", "info@swayphics.co.za").order("received_at", { ascending: false }).limit(100),
   ]);
 
   const errors = [
     tasks.error, leads.error, followups.error, clients.error,
     projects.error, quotes.error, payments.error, enquiries.error,
     invoices.error, portalRequests.error, communications.error,
-    activities.error,
+    activities.error, emailMessages.error,
   ].filter(Boolean);
 
   if (errors.length) {
@@ -170,6 +171,7 @@ Deno.serve(async (req) => {
     portal_requests: compactRows(portalRequests.data || []),
     communications: compactRows(communications.data || [], 100),
     activities: compactRows(activities.data || []),
+    email_messages: compactRows(emailMessages.data || [], 100),
   };
 
   const safeContext = JSON.parse(
@@ -196,7 +198,7 @@ Rules:
 - Do not expose secrets, API keys, authentication tokens, or internal security details.
 - If asked to perform an unsupported action, explain that V1 is read-only.
 
-Swayphics currently operates through leads, clients, enquiries, communications, follow-ups, tasks, projects, quotes, invoices, payments, portal requests and activity records.
+Swayphics currently operates through leads, clients, enquiries, communications, email, follow-ups, tasks, projects, quotes, invoices, payments, portal requests and activity records.
 
 Answer the admin's question directly. Prefer short headings and bullets when useful.`;
 
