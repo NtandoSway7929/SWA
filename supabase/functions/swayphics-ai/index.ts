@@ -205,16 +205,16 @@ Deno.serve(async (req) => {
    */
   const today = new Date().toISOString().slice(0, 10);
 
-  const activeLeadStatuses = [
-    "new",
-    "contacted",
-    "interested",
-    "proposal sent",
-    "negotiating",
-  ];
+  const terminalLeadStatuses = ["won", "lost"];
 
-  const activeLeads = (leads.data || []).filter(function (lead: any) {
-    return activeLeadStatuses.includes(String(lead?.status || ""));
+  const pipelineLeads = (leads.data || []).filter(function (lead: any) {
+    return !terminalLeadStatuses.includes(
+      String(lead?.status || ""),
+    );
+  });
+
+  const activeLeads = pipelineLeads.filter(function (lead: any) {
+    return String(lead?.status || "") !== "follow-up";
   });
 
   const activeLeadValue = activeLeads.reduce(function (
@@ -246,7 +246,7 @@ Deno.serve(async (req) => {
     );
   });
 
-  const leadFollowups = activeLeads.filter(function (lead: any) {
+  const leadFollowups = pipelineLeads.filter(function (lead: any) {
     const due = String(lead?.next_follow_up || "");
     return Boolean(due) && due <= today;
   });
@@ -350,14 +350,27 @@ Deno.serve(async (req) => {
     generated_date_utc: today,
     lead_counts: {
       total: (leads.data || []).length,
-      active: activeLeads.length,
+      open_pipeline: pipelineLeads.length,
+      active_excluding_follow_up: activeLeads.length,
+      follow_up_status: (leads.data || []).filter(function (lead: any) {
+        return String(lead?.status || "") === "follow-up";
+      }).length,
+      converted_to_client: (leads.data || []).filter(function (lead: any) {
+        return Boolean(lead?.converted_client_id);
+      }).length,
       won: wonLeads.length,
       lost: (leads.data || []).filter(function (lead: any) {
         return String(lead?.status || "") === "lost";
       }).length,
     },
     lead_value_zar: {
-      active_opportunity: Math.round(activeLeadValue * 100) / 100,
+      open_pipeline: Math.round(
+        pipelineLeads.reduce(function (sum: number, lead: any) {
+          const value = Number(lead?.estimated_value || 0);
+          return sum + (Number.isFinite(value) ? value : 0);
+        }, 0) * 100
+      ) / 100,
+      active_excluding_follow_up: Math.round(activeLeadValue * 100) / 100,
       won_value: Math.round(wonLeadValue * 100) / 100,
     },
     followup_counts: {
