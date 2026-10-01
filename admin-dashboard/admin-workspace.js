@@ -19309,7 +19309,13 @@ function simpleBars(items, color) {
                         '</div>' +
                         '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data.</p>' +
                     '</div>' +
-                    '<span class="sway-ai-status">Read-only V1</span>' +
+                    '<div class="sway-ai-header-actions">' +
+                        '<button type="button" class="sway-ai-new-chat" id="sway-ai-new-chat">' +
+                            '<span aria-hidden="true">＋</span>' +
+                            '<span>New chat</span>' +
+                        '</button>' +
+                        '<span class="sway-ai-status">Read-only V1</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="sway-ai-suggestions">' +
                     '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
@@ -20740,6 +20746,53 @@ function simpleBars(items, color) {
                     askSwayphicsAI(button.dataset.aiPrompt || "");
                 });
             });
+
+        const newChatButton =
+            workspace.querySelector("#sway-ai-new-chat");
+
+        if (newChatButton) {
+            newChatButton.addEventListener(
+                "click",
+                async function () {
+                    if (
+                        Array.isArray(state.aiConversation) &&
+                        state.aiConversation.some(function (item) {
+                            return (
+                                item &&
+                                String(item.content || "").trim()
+                            );
+                        })
+                    ) {
+                        const confirmed = await swayConfirm(
+                            "Start a new InnerMe chat? The current conversation will be cleared."
+                        );
+
+                        if (!confirmed) {
+                            return;
+                        }
+                    }
+
+                    state.aiConversation = [];
+
+                    try {
+                        sessionStorage.removeItem(
+                            aiConversationCacheKey()
+                        );
+                    } catch (error) {
+                        // Storage cleanup is an enhancement only.
+                    }
+
+                    renderView();
+
+                    const freshInput =
+                        workspace.querySelector("#sway-ai-input");
+
+                    if (freshInput) {
+                        freshInput.focus();
+                    }
+                }
+            );
+        }
 
         const aiForm =
             workspace.querySelector("#sway-ai-form");
