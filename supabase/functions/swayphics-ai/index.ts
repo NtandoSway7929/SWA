@@ -7,7 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const MODEL = "gemini-3.8-flash";
+const PRIMARY_MODEL = "gemini-3.8-flash";
+const FALLBACK_MODEL = "gemini-3.5-flash-lite";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -199,44 +200,68 @@ Swayphics currently operates through leads, clients, enquiries, communications, 
 
 Answer the admin's question directly. Prefer short headings and bullets when useful.`;
 
-  const geminiResponse = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-      encodeURIComponent(MODEL) +
-      ":generateContent",
-    {
-      method: "POST",
-      headers: {
-        "x-goog-api-key": geminiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [
-            {
-              text: systemPrompt,
-            },
-          ],
+  async function requestGemini(model: string) {
+    return await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+        encodeURIComponent(model) +
+        ":generateContent",
+      {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": geminiKey,
+          "Content-Type": "application/json",
         },
-        contents: [
-          {
-            role: "user",
+        body: JSON.stringify({
+          systemInstruction: {
             parts: [
               {
-                text:
-                  "ADMIN QUESTION:\n" +
-                  message +
-                  "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
-                  JSON.stringify(safeContext),
+                text: systemPrompt,
               },
             ],
           },
-        ],
-        generationConfig: {
-          maxOutputTokens: 1400,
-        },
-      }),
-    },
-  );
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text:
+                    "ADMIN QUESTION:\n" +
+                    message +
+                    "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
+                    JSON.stringify(safeContext),
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: 1400,
+          },
+        }),
+      },
+    );
+  }
+
+  let activeModel = PRIMARY_MODEL;
+  let geminiResponse = await requestGemini(PRIMARY_MODEL);
+
+  /*
+   * Gemini can temporarily return 503 when a model is under heavy demand.
+   * Use the lighter free-tier model as an automatic fallback so InnerMe
+   * remains usable without requiring a paid API account.
+   */
+  if (
+    (geminiResponse.status === 503 ||
+      geminiResponse.status === 429) &&
+    PRIMARY_MODEL !== FALLBACK_MODEL
+  ) {
+    console.warn(
+      "Gemini InnerMe primary model unavailable; trying fallback model.",
+      geminiResponse.status,
+    );
+
+    activeModel = FALLBACK_MODEL;
+    geminiResponse = await requestGemini(FALLBACK_MODEL);
+  }
 
   if (!geminiResponse.ok) {
     const errorText = await geminiResponse.text();
@@ -259,6 +284,7 @@ Answer the admin's question directly. Prefer short headings and bullets when use
       provider_status: geminiResponse.status,
       provider_code: providerError?.status || null,
       provider_type: "gemini",
+      provider_model: activeModel,
       provider_message:
         typeof providerError?.message === "string"
           ? providerError.message.slice(0, 500)
@@ -292,6 +318,7 @@ Answer the admin's question directly. Prefer short headings and bullets when use
       provider_status: 200,
       provider_code: blockReason,
       provider_type: "gemini",
+      provider_model: activeModel,
       provider_message: blockReason
         ? "Gemini did not return usable text."
         : null,
@@ -301,7 +328,7 @@ Answer the admin's question directly. Prefer short headings and bullets when use
 
   return json({
     answer: String(answer).trim(),
-    model: MODEL,
+    model: activeModel,
     read_only: true,
   });
 });
