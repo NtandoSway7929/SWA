@@ -97,6 +97,10 @@ Deno.serve(async (req) => {
       role?: string;
       content?: string;
     }>;
+    focused_record?: {
+      type?: string;
+      id?: string;
+    } | null;
   } = {};
 
   try {
@@ -238,6 +242,228 @@ Deno.serve(async (req) => {
       return value;
     }),
   );
+
+  function buildFocusedRecord(focusedRecord: any) {
+    if (!focusedRecord || !focusedRecord.type || !focusedRecord.id) {
+      return null;
+    }
+
+    const type = String(focusedRecord.type);
+    const id = String(focusedRecord.id);
+
+    const leadsRows = leads.data || [];
+    const clientsRows = clients.data || [];
+    const projectsRows = projects.data || [];
+    const tasksRows = tasks.data || [];
+    const quotesRows = quotes.data || [];
+    const invoicesRows = invoices.data || [];
+    const paymentsRows = payments.data || [];
+    const followupRows = followups.data || [];
+    const communicationRows = communications.data || [];
+    const portalRows = portalRequests.data || [];
+    const enquiryRows = enquiries.data || [];
+    const emailRows = emailMessages.data || [];
+
+    function byId(rows: any[]) {
+      return rows.find(function (row: any) {
+        return String(row?.id || "") === id;
+      }) || null;
+    }
+
+    let record: any = null;
+    let label = "";
+    const related: Record<string, unknown[]> = {};
+
+    if (type === "lead") {
+      record = byId(leadsRows);
+      label = "Lead";
+
+      if (record) {
+        related.clients = record.converted_client_id
+          ? clientsRows.filter(function (item: any) {
+              return String(item?.id || "") === String(record.converted_client_id);
+            }).slice(0, 3)
+          : [];
+
+        related.followups = followupRows.filter(function (item: any) {
+          return String(item?.lead_id || "") === id;
+        }).slice(0, 20);
+
+        related.communications = communicationRows.filter(function (item: any) {
+          return String(item?.lead_id || "") === id;
+        }).slice(0, 30);
+
+        related.quotes = quotesRows.filter(function (item: any) {
+          return String(item?.lead_id || "") === id;
+        }).slice(0, 20);
+
+        related.emails = emailRows.filter(function (item: any) {
+          return String(item?.lead_id || "") === id;
+        }).slice(0, 30);
+      }
+    }
+
+    if (type === "client") {
+      record = byId(clientsRows);
+      label = "Client";
+
+      if (record) {
+        related.projects = projectsRows.filter(function (item: any) {
+          return String(item?.client_id || "") === id;
+        }).slice(0, 30);
+
+        related.tasks = tasksRows.filter(function (item: any) {
+          return String(item?.client_id || "") === id;
+        }).slice(0, 30);
+
+        related.followups = followupRows.filter(function (item: any) {
+          return String(item?.client_id || "") === id;
+        }).slice(0, 20);
+
+        related.quotes = quotesRows.filter(function (item: any) {
+          return String(item?.client_id || "") === id;
+        }).slice(0, 20);
+
+        related.invoices = invoicesRows.filter(function (item: any) {
+          return String(item?.client_id || "") === id;
+        }).slice(0, 30);
+
+        related.payments = paymentsRows.filter(function (item: any) {
+          return String(item?.client_id || "") === id;
+        }).slice(0, 30);
+
+        related.communications = communicationRows.filter(function (item: any) {
+          return String(item?.client_id || "") === id;
+        }).slice(0, 30);
+
+        related.portal_requests = portalRows.filter(function (item: any) {
+          return String(item?.client_id || "") === id;
+        }).slice(0, 20);
+
+        related.emails = emailRows.filter(function (item: any) {
+          return String(item?.client_id || "") === id;
+        }).slice(0, 30);
+      }
+    }
+
+    if (type === "project") {
+      record = byId(projectsRows);
+      label = "Project";
+
+      if (record) {
+        related.client = clientsRows.filter(function (item: any) {
+          return String(item?.id || "") === String(record.client_id || "");
+        }).slice(0, 1);
+
+        related.tasks = tasksRows.filter(function (item: any) {
+          return String(item?.project_id || "") === id;
+        }).slice(0, 30);
+
+        related.invoices = invoicesRows.filter(function (item: any) {
+          return String(item?.project_id || "") === id;
+        }).slice(0, 20);
+
+        related.payments = paymentsRows.filter(function (item: any) {
+          return String(item?.project_id || "") === id;
+        }).slice(0, 20);
+      }
+    }
+
+    if (type === "task") {
+      record = byId(tasksRows);
+      label = "Task";
+
+      if (record) {
+        related.client = clientsRows.filter(function (item: any) {
+          return String(item?.id || "") === String(record.client_id || "");
+        }).slice(0, 1);
+
+        related.project = projectsRows.filter(function (item: any) {
+          return String(item?.id || "") === String(record.project_id || "");
+        }).slice(0, 1);
+      }
+    }
+
+    if (type === "quote") {
+      record = byId(quotesRows);
+      label = "Quote";
+
+      if (record) {
+        related.client = clientsRows.filter(function (item: any) {
+          return String(item?.id || "") === String(record.client_id || "");
+        }).slice(0, 1);
+
+        related.lead = leadsRows.filter(function (item: any) {
+          return String(item?.id || "") === String(record.lead_id || "");
+        }).slice(0, 1);
+
+        related.invoices = invoicesRows.filter(function (item: any) {
+          return String(item?.quote_id || "") === id;
+        }).slice(0, 10);
+      }
+    }
+
+    if (type === "invoice") {
+      record = byId(invoicesRows);
+      label = "Invoice";
+
+      if (record) {
+        related.client = clientsRows.filter(function (item: any) {
+          return String(item?.id || "") === String(record.client_id || "");
+        }).slice(0, 1);
+
+        related.project = projectsRows.filter(function (item: any) {
+          return String(item?.id || "") === String(record.project_id || "");
+        }).slice(0, 1);
+
+        related.payments = paymentsRows.filter(function (item: any) {
+          return String(item?.invoice_id || "") === id;
+        }).slice(0, 30);
+
+        related.emails = emailRows.filter(function (item: any) {
+          return String(item?.client_id || "") === String(record.client_id || "") &&
+            (
+              String(item?.subject || "").toLowerCase().includes(String(record?.invoice_number || "").toLowerCase()) ||
+              String(record?.invoice_number || "") === ""
+            );
+        }).slice(0, 20);
+      }
+    }
+
+    if (type === "enquiry") {
+      record = byId(enquiryRows);
+      label = "Enquiry";
+    }
+
+    if (type === "portal-request") {
+      record = byId(portalRows);
+      label = "Portal request";
+
+      if (record) {
+        related.client = clientsRows.filter(function (item: any) {
+          return String(item?.id || "") === String(record.client_id || "");
+        }).slice(0, 1);
+      }
+    }
+
+    if (!record) {
+      return null;
+    }
+
+    return {
+      type,
+      id,
+      label,
+      record,
+      related,
+    };
+  }
+
+  const focusedRecord = buildFocusedRecord(body.focused_record || null);
+
+  if (focusedRecord) {
+    safeContext.focused_record = focusedRecord;
+  }
 
   /*
    * Calculate operational figures on the server before sending data to Gemini.
@@ -541,6 +767,10 @@ Rules:
 - If the data does not establish something, say that clearly.
 - If query_failures contains a dataset name, treat that dataset as unavailable and never describe it as empty.
 - The operational_summary object is the authoritative source for counts and monetary totals.
+- When focused_record is supplied, treat it as the primary subject of the current conversation. It is a server-verified live record selected by the dashboard, with related records grouped underneath it.
+- Use focused_record and its related records to answer follow-up questions about the selected lead, client, project, task, quote, invoice, enquiry or portal request.
+- Do not infer relationships that are not present in focused_record or the current workspace data.
+- If focused_record is null, identify a record from the current question only when the supplied workspace data clearly establishes the match.
 - For "pipeline" or "open pipeline", use lead_counts.open_pipeline and lead_value_zar.open_pipeline. This includes every lead whose status is not "won" or "lost", including any legacy "follow-up" status.
 - Do not substitute active_excluding_follow_up for the open pipeline total.
 - Do not recalculate or alter monetary totals supplied in operational_summary.
@@ -569,6 +799,7 @@ Rules:
 Swayphics currently operates through leads, clients, enquiries, communications, email, follow-ups, tasks, projects, quotes, invoices, payments, portal requests and activity records.
 
 - Conversation history is context only. The current workspace data and operational_summary are authoritative if conversation history conflicts with current records.
+- If a focused record is present, previous conversational references such as "it", "they", "that client", or "that invoice" should resolve to that focused record unless the admin clearly switches subjects.
 - Use the previous conversation to resolve follow-up references such as "that lead", "her", "that invoice", or "what about Maisha" when the reference is established by the supplied history.
 - Do not treat conversation history as a substitute for current workspace data. Re-check the current workspace data on every turn.
 
