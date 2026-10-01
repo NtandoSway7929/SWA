@@ -7369,3 +7369,326 @@
 .sway-onboarding-asset-copy strong{font-size:.78rem;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sway-onboarding-asset-copy span{font-size:.68rem;color:#7a8496}
 @media (max-width:640px){.sway-onboarding-asset{align-items:flex-start}.sway-onboarding-asset .sway-workspace-button{flex:0 0 auto}}
+
+
+/* =========================================================
+   MOBILE AUDIT HARDENING — 2026-10-01
+   ========================================================= */
+html {
+    overflow-x: hidden;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+#sway-admin-workspace,
+.sway-workspace-shell,
+.sway-workspace-main {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.sway-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+.sway-table {
+    min-width: 620px;
+}
+
+.sway-workspace-button,
+.sway-row-action,
+.sway-workspace-nav-button,
+.sway-workspace-nav-group-toggle,
+.sway-quick-action,
+.sway-quick-create-item,
+.sway-modal-close,
+.sway-client360-close,
+.sway-workspace-mobile-toggle,
+.sway-workspace-mobile-close {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sway-modal,
+.sway-client360-modal,
+.sway-project-timeline-modal,
+.sway-client-portal-link-modal,
+.sway-email-composer {
+    padding:
+        max(10px, env(safe-area-inset-top))
+        max(10px, env(safe-area-inset-right))
+        max(10px, env(safe-area-inset-bottom))
+        max(10px, env(safe-area-inset-left));
+}
+
+.sway-modal-card,
+.sway-client360-card,
+.sway-project-timeline-card,
+.sway-client-portal-link-card,
+.sway-email-composer-card {
+    max-height: calc(100dvh - 20px);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* The JS intentionally treats <=980px as mobile navigation.
+   The CSS previously switched at 760px, creating a broken
+   761–980px tablet state. Keep both layers on the same breakpoint. */
+@media (max-width: 980px) {
+    .sway-workspace-shell {
+        display: block;
+    }
+
+    .sway-workspace-main {
+        width: 100%;
+    }
+
+    .sway-workspace-sidebar {
+        position: fixed;
+        top: max(76px, calc(env(safe-area-inset-top) + 64px));
+        left: 12px;
+        z-index: 5000;
+        width: min(310px, calc(100vw - 24px));
+        height: calc(100dvh - max(88px, calc(env(safe-area-inset-top) + 76px)));
+        min-height: 0;
+        max-height: none;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 0;
+        padding: 0;
+        overflow: hidden;
+        border-radius: 22px;
+        transform: translateX(calc(-100% - 22px));
+        transition: transform 0.25s ease;
+    }
+
+    .sway-workspace-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    .sway-workspace-mobile-toggle {
+        display: block;
+        position: fixed;
+        top: max(150px, calc(env(safe-area-inset-top) + 138px));
+        left: 14px;
+        z-index: 4900;
+        width: 48px;
+        height: 48px;
+    }
+
+    .sway-workspace-mobile-close {
+        display: inline-grid;
+        place-items: center;
+    }
+
+    .sway-workspace-nav-scroll {
+        height: auto;
+        min-height: 0;
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+
+    #sway-admin-workspace.nav-open::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 4800;
+        background: rgba(8,21,51,0.20);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+    }
+
+    .sway-workspace-heading {
+        padding-left: 58px;
+    }
+
+    .sway-workspace-heading-actions {
+        width: 100%;
+        padding-top: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    #sway-admin-workspace {
+        width: 100%;
+        border-radius: 18px;
+    }
+
+    .sway-workspace-heading {
+        gap: 13px;
+        padding-left: 58px;
+    }
+
+    .sway-workspace-heading h2 {
+        font-size: clamp(1.45rem, 7vw, 1.9rem);
+        line-height: 1.08;
+    }
+
+    .sway-workspace-heading p {
+        font-size: 0.68rem;
+    }
+
+    .sway-workspace-heading-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .sway-workspace-heading-actions > * {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .sway-panel,
+    .sway-stat-card {
+        min-width: 0;
+    }
+
+    .sway-panel {
+        padding: 15px;
+        border-radius: 16px;
+    }
+
+    .sway-panel-title {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .sway-row-actions {
+        width: 100%;
+    }
+
+    .sway-row-action {
+        min-height: 40px;
+        padding: 9px 11px;
+    }
+
+    .sway-quick-create {
+        right: max(12px, env(safe-area-inset-right));
+        bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .sway-quick-create-menu {
+        right: 0;
+        bottom: calc(100% + 8px);
+        width: min(300px, calc(100vw - 24px));
+        max-height: min(70dvh, 520px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sway-modal {
+        align-items: flex-end;
+    }
+
+    .sway-modal-card,
+    .sway-client360-card,
+    .sway-project-timeline-card,
+    .sway-client-portal-link-card,
+    .sway-email-composer-card {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 20px 20px 16px 16px;
+    }
+
+    .sway-modal-card {
+        padding: 16px;
+    }
+
+    .sway-modal-actions,
+    .sway-email-composer-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        margin-left: -16px;
+        margin-right: -16px;
+        padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+        background: rgba(255,255,255,0.96);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+    }
+
+    .sway-form-field input,
+    .sway-form-field select,
+    .sway-form-field textarea,
+    .sway-email-field input,
+    .sway-email-field select,
+    .sway-email-field textarea {
+        font-size: 16px;
+    }
+
+    .sway-email-field textarea {
+        min-height: 190px;
+    }
+
+    .sway-email-composer {
+        align-items: flex-end;
+    }
+
+    .sway-email-composer-actions {
+        flex-direction: column-reverse;
+    }
+
+    .sway-email-composer-actions .sway-workspace-button {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .sway-client360-stats {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+    }
+
+    .sway-client360-head {
+        gap: 10px;
+    }
+
+    .sway-client360-head-actions {
+        flex-shrink: 0;
+    }
+
+    .sway-email-thread-body {
+        gap: 8px;
+    }
+
+    .sway-email-thread-message {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 420px) {
+    .sway-workspace-heading-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-client360-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-workspace-mobile-toggle {
+        left: 10px;
+        width: 44px;
+        height: 44px;
+    }
+
+    .sway-workspace-heading {
+        padding-left: 52px;
+    }
+
+    .sway-panel {
+        padding: 13px;
+    }
+}
+
+/* Respect devices with a home indicator while keeping the FAB reachable. */
+@supports (padding: max(0px)) {
+    .sway-quick-create {
+        margin-bottom: env(safe-area-inset-bottom);
+    }
+}
