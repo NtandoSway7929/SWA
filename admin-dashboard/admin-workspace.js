@@ -36,6 +36,7 @@
         announcements: [],
         services: [],
         invoices: [],
+        showArchivedInvoices: false,
         invoiceSettings: null,
         realtimeStatus: "connecting",
         lastLiveUpdate: null,
@@ -14204,9 +14205,7 @@ function simpleBars(items, color) {
 
     function renderInvoices() {
         const showArchived =
-            localStorage.getItem(
-                "swayphics_show_archived_invoices"
-            ) === "true";
+            state.showArchivedInvoices === true;
 
         const activeInvoices =
             state.invoices.filter(function (invoice) {
@@ -22451,17 +22450,8 @@ function simpleBars(items, color) {
                 button.addEventListener(
                     "click",
                     function () {
-                        const showArchived =
-                            localStorage.getItem(
-                                "swayphics_show_archived_invoices"
-                            ) === "true";
-
-                        localStorage.setItem(
-                            "swayphics_show_archived_invoices",
-                            showArchived
-                                ? "false"
-                                : "true"
-                        );
+                        state.showArchivedInvoices =
+                            !state.showArchivedInvoices;
 
                         renderView();
                     }
