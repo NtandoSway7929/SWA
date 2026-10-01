@@ -762,10 +762,13 @@
 
         const actionButtons = matches.map(function (item) {
             const supportsFollowUp =
-                ["leads", "clients", "enquiries"].includes(item.view);
+                ["leads", "clients"].includes(item.view);
 
             const supportsEmail =
-                ["leads", "clients", "enquiries"].includes(item.view);
+                ["leads", "clients"].includes(item.view);
+
+            const supportsEdit =
+                ["projects", "tasks", "quotes", "invoices", "portal-requests"].includes(item.view);
 
             return (
                 '<div class="sway-ai-action-row">' +
@@ -794,6 +797,15 @@
                                 '" data-ai-action-id="' +
                                 esc(item.id) +
                               '">Email</button>'
+                            : ""
+                    ) +
+                    (
+                        supportsEdit
+                            ? '<button type="button" class="sway-ai-action" data-ai-action="edit" data-ai-action-view="' +
+                                esc(item.view) +
+                                '" data-ai-action-id="' +
+                                esc(item.id) +
+                              '">Edit</button>'
                             : ""
                     ) +
                 "</div>"
@@ -923,6 +935,104 @@
                 targetRow.classList.remove("sway-ai-record-highlight");
             }, 1800);
         }, 80);
+    }
+
+    function handleAIAction(button) {
+        const action =
+            String(button?.dataset?.aiAction || "");
+        const view =
+            String(button?.dataset?.aiActionView || "");
+        const id =
+            String(button?.dataset?.aiActionId || "");
+
+        if (!action || !view || !id) {
+            return;
+        }
+
+        if (action === "open") {
+            openAIRecord(button);
+            return;
+        }
+
+        const recordSets = {
+            leads: state.leads,
+            clients: state.clients,
+            projects: state.projects,
+            tasks: state.tasks,
+            quotes: state.quotes,
+            invoices: state.invoices,
+            enquiries: state.enquiries,
+            "portal-requests": state.portalRequests
+        };
+
+        const record =
+            Array.isArray(recordSets[view])
+                ? recordSets[view].find(function (item) {
+                    return String(item?.id || "") === id;
+                })
+                : null;
+
+        if (!record) {
+            swayAlert("That workspace record is no longer available.");
+            return;
+        }
+
+        if (action === "edit") {
+            if (view === "portal-requests") {
+                openPortalRequest(id);
+                return;
+            }
+
+            const typeMap = {
+                projects: "projects",
+                tasks: "tasks",
+                quotes: "quotes",
+                invoices: "invoices"
+            };
+
+            const type = typeMap[view];
+
+            if (type === "invoices") {
+                openInvoiceBuilder(id);
+                return;
+            }
+
+            if (type) {
+                createOrEdit(type, id);
+            }
+
+            return;
+        }
+
+        if (action === "followup") {
+            createOrEdit(
+                "followups",
+                null,
+                view === "clients"
+                    ? {
+                        client_id: id,
+                        lead_id: null,
+                        scheduled_for: dashboardTodayISO(),
+                        status: "pending"
+                    }
+                    : {
+                        lead_id: id,
+                        client_id: null,
+                        scheduled_for: dashboardTodayISO(),
+                        status: "pending"
+                    }
+            );
+            return;
+        }
+
+        if (action === "email") {
+            openEmailComposer(
+                view === "clients"
+                    ? "client"
+                    : "lead",
+                id
+            );
+        }
     }
 
     function formatAIAnswer(value) {
@@ -21387,6 +21497,19 @@ function simpleBars(items, color) {
     }
 
     function bindViewActions() {
+
+        workspace
+            .querySelectorAll("[data-ai-action]")
+            .forEach(function (button) {
+                button.addEventListener(
+                    "click",
+                    function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        handleAIAction(button);
+                    }
+                );
+            });
 
         workspace
             .querySelectorAll("[data-refresh-workspace]")
