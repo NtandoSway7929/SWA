@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
   }
 
   let body: {
+    action?: string;
     message?: string;
     history?: Array<{
       role?: string;
@@ -117,12 +118,215 @@ Deno.serve(async (req) => {
       type?: string;
       id?: string;
     } | null;
+    lead_id?: string;
+    lead?: {
+      business_name?: string;
+      contact_name?: string;
+      email?: string;
+      service_interest?: string;
+      estimated_value?: number | string;
+    };
+    assessment?: {
+      business_assessment?: string;
+      research_findings?: string;
+      swayphics_solution?: string;
+      recommended_services?: string;
+      research_sources?: string;
+      service_interest?: string;
+      estimated_value?: number | string;
+    };
   } = {};
 
   try {
     body = await req.json();
   } catch {
     return json({ error: "Invalid JSON request." }, 400, origin);
+  }
+
+  if (body.action === "draft_proposal") {
+    const lead = body.lead || {};
+    const assessment = body.assessment || {};
+    const leadId = String(body.lead_id || "").trim();
+
+    if (!leadId || !lead.business_name) {
+      return json(
+        { error: "A lead and business name are required to draft a proposal." },
+        400,
+        origin,
+      );
+    }
+
+    const assessmentText = [
+      ["Business assessment", assessment.business_assessment],
+      ["Research findings", assessment.research_findings],
+      ["How Swayphics can help", assessment.swayphics_solution],
+      ["Recommended services", assessment.recommended_services],
+      ["Public information / sources", assessment.research_sources],
+    ]
+      .map(function ([label, value]) {
+        return label + ":\n" + String(value || "").trim();
+      })
+      .join("\n\n");
+
+    const meaningfulAssessment = [
+      assessment.business_assessment,
+      assessment.research_findings,
+      assessment.swayphics_solution,
+      assessment.recommended_services,
+    ].some(function (value) {
+      return String(value || "").trim().length >= 20;
+    });
+
+    if (!meaningfulAssessment) {
+      return json(
+        { error: "The lead assessment does not contain enough information for a reliable proposal." },
+        422,
+        origin,
+      );
+    }
+
+    const proposalSystem = [
+      "You are InnerMe, Swayphics' internal proposal writer.",
+      "",
+      "Your task is to draft a client-facing proposal for one specific Swayphics lead using the supplied lead assessment.",
+      "",
+      "RULES:",
+      "- Use only facts, needs, findings, recommended services, and solutions contained in the supplied data.",
+      "- Never invent research, testimonials, results, credentials, prices, discounts, guarantees, deadlines, scarcity, or performance claims.",
+      "- Do not claim that a problem definitely causes a financial result unless the assessment supports that claim.",
+      "- Turn the assessment into a persuasive but credible proposal. Connect the identified problem to the proposed Swayphics solution and explain the business value in practical terms.",
+      "- Use the Swayphics voice: premium, polished, serious but empathetic, creative, human, commercially useful, and not corporate or robotic.",
+      "- Speak as \"we\" when speaking for Swayphics.",
+      "- Do not use an em dash.",
+      "- Do not make the proposal sound like an AI report. It should be ready for an owner to review and send to a prospective client.",
+      "- Do not include internal research notes, internal assessment language, confidence scores, or instructions to the Swayphics admin in the client-facing content.",
+      "- Do not invent a price. If the supplied assessment contains no confirmed price, describe the scope and state that final pricing can be confirmed separately.",
+      "- Include a clear next step.",
+      "- Return ONLY valid JSON with exactly these keys: title, subject, content.",
+      "- content must be plain text with readable paragraphs and simple section labels, not Markdown headings or HTML."
+    ].join("\n");
+
+    const proposalPrompt =
+      "LEAD:\n" +
+      JSON.stringify({
+        business_name: lead.business_name,
+        contact_name: lead.contact_name || "",
+        service_interest: lead.service_interest || "",
+        estimated_value: lead.estimated_value || 0,
+      }) +
+      "\n\nASSESSMENT:\n" +
+      assessmentText;
+
+    async function requestProposal(model: string) {
+      return await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":generateContent",
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": geminiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: proposalSystem }],
+            },
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: proposalPrompt }],
+              },
+            ],
+            generationConfig: {
+              maxOutputTokens: 2400,
+              responseMimeType: "application/json",
+            },
+          }),
+        },
+      );
+    }
+
+    let proposalResponse = await requestProposal(PRIMARY_MODEL);
+    let proposalModel = PRIMARY_MODEL;
+
+    if (
+      (proposalResponse.status === 503 ||
+        proposalResponse.status === 429) &&
+      PRIMARY_MODEL !== FALLBACK_MODEL
+    ) {
+      proposalModel = FALLBACK_MODEL;
+      proposalResponse = await requestProposal(FALLBACK_MODEL);
+    }
+
+    if (!proposalResponse.ok) {
+      const errorText = await proposalResponse.text();
+      console.error(
+        "Gemini proposal drafting error:",
+        errorText.slice(0, 2000),
+      );
+
+      return json(
+        {
+          error: "InnerMe could not draft the proposal.",
+          provider_status: proposalResponse.status,
+          provider_model: proposalModel,
+        },
+        502,
+        origin,
+      );
+    }
+
+    const proposalResult = await proposalResponse.json();
+    const rawProposal =
+      proposalResult?.candidates?.[0]?.content?.parts
+        ?.filter((part: any) => typeof part?.text === "string")
+        ?.map((part: any) => part.text)
+        ?.join("") ||
+      "";
+
+    let proposal: any = null;
+
+    try {
+      proposal = JSON.parse(rawProposal);
+    } catch {
+      console.error(
+        "Gemini proposal response was not valid JSON:",
+        rawProposal.slice(0, 3000),
+      );
+    }
+
+    if (
+      !proposal ||
+      typeof proposal.title !== "string" ||
+      typeof proposal.subject !== "string" ||
+      typeof proposal.content !== "string" ||
+      proposal.content.trim().length < 80
+    ) {
+      return json(
+        {
+          error: "InnerMe returned an incomplete proposal draft.",
+          provider_model: proposalModel,
+        },
+        502,
+        origin,
+      );
+    }
+
+    return json(
+      {
+        proposal: {
+          title: proposal.title.trim(),
+          subject: proposal.subject.trim(),
+          content: proposal.content.trim(),
+        },
+        lead_id: leadId,
+        provider_model: proposalModel,
+        approval_required: true,
+      },
+      200,
+      origin,
+    );
   }
 
   const message = String(body.message || "").trim();
