@@ -686,10 +686,9 @@
             .trim();
 
         /*
-         * Gemini sometimes collapses its own line breaks into spaces.
-         * Reconstruct the small set of InnerMe operational headings and
-         * bullet markers so the chat remains readable regardless of model
-         * formatting variance.
+         * Normalise common Gemini output variations first. The visual
+         * hierarchy is then rendered by the dashboard so InnerMe remains
+         * consistent even when the model's raw spacing varies.
          */
         text = text
             .replace(
@@ -709,16 +708,107 @@
                 "\n• "
             )
             .replace(
-                /^(\S[^\n]*?)\s+•\s+/,
-                "$1\n\n• "
-            )
-            .replace(
                 /\n{3,}/g,
                 "\n\n"
             )
             .trim();
 
-        return esc(text);
+        if (!text) {
+            return "";
+        }
+
+        const lines = text.split("\n");
+        const headingPattern =
+            /^(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)$/;
+
+        const html = [];
+        let firstContentSeen = false;
+
+        lines.forEach(function (rawLine, index) {
+            const line = String(rawLine || "").trim();
+
+            if (!line) {
+                html.push('<div class="sway-ai-answer-spacer" aria-hidden="true"></div>');
+                return;
+            }
+
+            if (!firstContentSeen) {
+                firstContentSeen = true;
+                html.push(
+                    '<div class="sway-ai-answer-title">' +
+                        esc(line) +
+                    '</div>'
+                );
+                return;
+            }
+
+            if (headingPattern.test(line)) {
+                html.push(
+                    '<div class="sway-ai-answer-heading">' +
+                        esc(line) +
+                    '</div>'
+                );
+                return;
+            }
+
+            if (/^•\s+/.test(line)) {
+                const bulletText = line.replace(/^•\s+/, "").trim();
+                const colonIndex = bulletText.indexOf(":");
+
+                if (
+                    colonIndex > 0 &&
+                    colonIndex < 80
+                ) {
+                    const label = bulletText
+                        .slice(0, colonIndex)
+                        .trim();
+                    const detail = bulletText
+                        .slice(colonIndex + 1)
+                        .trim();
+
+                    html.push(
+                        '<div class="sway-ai-answer-item">' +
+                            '<span class="sway-ai-answer-bullet" aria-hidden="true">•</span>' +
+                            '<div class="sway-ai-answer-item-text">' +
+                                '<strong>' +
+                                    esc(label) +
+                                '</strong>' +
+                                (
+                                    detail
+                                        ? ': ' + esc(detail)
+                                        : ''
+                                ) +
+                            '</div>' +
+                        '</div>'
+                    );
+
+                    return;
+                }
+
+                html.push(
+                    '<div class="sway-ai-answer-item">' +
+                        '<span class="sway-ai-answer-bullet" aria-hidden="true">•</span>' +
+                        '<div class="sway-ai-answer-item-text">' +
+                            esc(bulletText) +
+                        '</div>' +
+                    '</div>'
+                );
+
+                return;
+            }
+
+            html.push(
+                '<div class="sway-ai-answer-paragraph">' +
+                    esc(line) +
+                '</div>'
+            );
+        });
+
+        return (
+            '<div class="sway-ai-answer">' +
+                html.join("") +
+            '</div>'
+        );
     }
 
 
