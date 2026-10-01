@@ -203,7 +203,9 @@ Deno.serve(async (req) => {
    * These values are authoritative for counts and monetary totals. This avoids
    * asking the model to infer arithmetic from a large raw dataset.
    */
-  const today = new Date().toISOString().slice(0, 10);
+  const businessToday = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Johannesburg",
+  }).format(new Date());
 
   const terminalLeadStatuses = ["won", "lost"];
 
@@ -242,13 +244,13 @@ Deno.serve(async (req) => {
   ) {
     return (
       String(item?.status || "") === "pending" &&
-      String(item?.scheduled_for || "") <= today
+      String(item?.scheduled_for || "") <= businessToday
     );
   });
 
   const leadFollowups = pipelineLeads.filter(function (lead: any) {
     const due = String(lead?.next_follow_up || "");
-    return Boolean(due) && due <= today;
+    return Boolean(due) && due <= businessToday;
   });
 
   const leadById = new Map(
@@ -347,7 +349,8 @@ Deno.serve(async (req) => {
   }).length;
 
   safeContext.operational_summary = {
-    generated_date_utc: today,
+    generated_date_johannesburg: businessToday,
+    timezone: "Africa/Johannesburg",
     lead_counts: {
       total: (leads.data || []).length,
       open_pipeline: pipelineLeads.length,
@@ -456,7 +459,8 @@ Rules:
 - For "which leads need follow-up" or similar questions, list the relevant leads with their due date/channel and distinguish overdue from due today.
 - Do not add a generic "operational suggestions" section unless the admin asks for suggestions or they materially change the answer.
 - Distinguish facts from reasonable calculations or interpretations.
-- When dates matter, use the generated_at timestamp and calculate from it.
+- When dates matter, use generated_date_johannesburg from operational_summary and treat Africa/Johannesburg as the Swayphics business timezone.
+- "Due today" and "overdue" must be based on generated_date_johannesburg, not UTC.
 - Do not let raw rows override a value in operational_summary.
 - You are READ-ONLY in V1. Do not claim to have changed, deleted, sent, created, or updated anything.
 - You may identify actions the admin could take, but phrase them as suggestions.
