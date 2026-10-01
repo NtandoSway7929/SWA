@@ -673,6 +673,129 @@
             .replace(/'/g, "&#039;");
     }
 
+
+    function getAIRecordMatches(value) {
+        const source = String(value == null ? "" : value).toLowerCase();
+        if (!source.trim()) return [];
+
+        const recordSets = [
+            { view: "leads", label: "Lead", items: state.leads, getName: function (item) { return item.business_name || ""; } },
+            { view: "clients", label: "Client", items: state.clients, getName: function (item) { return item.business_name || ""; } },
+            { view: "projects", label: "Project", items: state.projects, getName: function (item) { return item.name || ""; } },
+            { view: "tasks", label: "Task", items: state.tasks, getName: function (item) { return item.title || ""; } },
+            { view: "quotes", label: "Quote", items: state.quotes, getName: function (item) { return item.quote_number || ""; } },
+            { view: "invoices", label: "Invoice", items: state.invoices, getName: function (item) { return item.invoice_number || ""; } },
+            { view: "enquiries", label: "Enquiry", items: state.enquiries, getName: function (item) { return item.business_name || item.name || ""; } },
+            { view: "portal-requests", label: "Portal request", items: state.portalRequests, getName: function (item) { return item.subject || ""; } }
+        ];
+
+        const matches = [];
+
+        recordSets.forEach(function (set) {
+            (Array.isArray(set.items) ? set.items : []).forEach(function (item) {
+                const id = item && item.id;
+                const name = String(set.getName(item) || "").trim();
+
+                if (!id || name.length < 3) return;
+                if (source.indexOf(name.toLowerCase()) === -1) return;
+
+                matches.push({
+                    view: set.view,
+                    label: set.label,
+                    id: String(id),
+                    name: name
+                });
+            });
+        });
+
+        const seen = new Set();
+
+        return matches.filter(function (item) {
+            const key = item.view + ":" + item.id;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        }).slice(0, 6);
+    }
+
+    function renderAIRecordActions(value) {
+        const matches = getAIRecordMatches(value);
+
+        if (!matches.length) return "";
+
+        const buttons = matches.map(function (item) {
+            return (
+                '<button type="button" class="sway-ai-record-link" data-ai-open-record="' +
+                    esc(item.view) +
+                    ":" +
+                    esc(item.id) +
+                '">' +
+                    '<span class="sway-ai-record-link-type">' +
+                        esc(item.label) +
+                    "</span>" +
+                    '<span class="sway-ai-record-link-name">' +
+                        esc(item.name) +
+                    "</span>" +
+                    '<span class="sway-ai-record-link-arrow" aria-hidden="true">→</span>' +
+                "</button>"
+            );
+        }).join("");
+
+        return (
+            '<div class="sway-ai-records">' +
+                '<span class="sway-ai-records-label">Related workspace records</span>' +
+                '<div class="sway-ai-records-list">' +
+                    buttons +
+                "</div>" +
+            "</div>"
+        );
+    }
+
+    function openAIRecord(button) {
+        const rawTarget = String(
+            button && button.dataset && button.dataset.aiOpenRecord || ""
+        );
+        const separator = rawTarget.indexOf(":");
+
+        if (separator <= 0) return;
+
+        const view = rawTarget.slice(0, separator);
+        const id = rawTarget.slice(separator + 1);
+
+        if (!view || !id || !nav.some(function (item) {
+            return item[0] === view;
+        })) return;
+
+        state.currentView = view;
+        persistWorkspaceView(view);
+        renderShell();
+        renderView();
+
+        window.setTimeout(function () {
+            const rows = workspace.querySelectorAll("[data-ai-record]");
+            let targetRow = null;
+
+            rows.forEach(function (row) {
+                if (!targetRow && row.dataset.aiRecord === view + ":" + id) {
+                    targetRow = row;
+                }
+            });
+
+            if (!targetRow) return;
+
+            targetRow.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+
+            targetRow.classList.add("sway-ai-record-highlight");
+
+            window.setTimeout(function () {
+                targetRow.classList.remove("sway-ai-record-highlight");
+            }, 1800);
+        }, 80);
+    }
+
     function formatAIAnswer(value) {
         let text = String(
             value == null
@@ -807,6 +930,7 @@
         return (
             '<div class="sway-ai-answer">' +
                 html.join("") +
+                renderAIRecordActions(text) +
             '</div>'
         );
     }
@@ -7996,7 +8120,7 @@ function simpleBars(items, color) {
         const rows =
             state.tasks.map(function (item) {
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="tasks:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(item.title) +
@@ -8232,7 +8356,7 @@ function simpleBars(items, color) {
         const rows =
             visibleLeads.map(function (item) {
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="leads:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -8340,7 +8464,7 @@ function simpleBars(items, color) {
                         : clientName(item.client_id);
 
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="followups:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(subject) +
@@ -9315,7 +9439,7 @@ function simpleBars(items, color) {
                     }).length;
 
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="clients:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(item.business_name) +
@@ -9428,7 +9552,7 @@ function simpleBars(items, color) {
                         : "";
 
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="projects:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(item.name) +
@@ -9534,7 +9658,7 @@ function simpleBars(items, color) {
                     communicationContactDetails(item);
 
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="quotes:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -13053,7 +13177,7 @@ function simpleBars(items, color) {
                     );
 
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="invoices:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(item.invoice_number) +
@@ -13550,7 +13674,7 @@ function simpleBars(items, color) {
                     });
 
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="payments:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -13642,7 +13766,7 @@ function simpleBars(items, color) {
         const rows =
             activeEnquiries.map(function (item) {
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="enquiries:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -16393,7 +16517,7 @@ function simpleBars(items, color) {
         const rows =
             state.portalRequests.map(function (item) {
                 return (
-                    "<tr>" +
+                    "<tr data-ai-record="portal-requests:' + esc(item.id) + '">' +
                         "<td><strong>" +
                             esc(clientName(item.client_id)) +
                         "</strong></td>" +
@@ -20882,6 +21006,16 @@ function simpleBars(items, color) {
                     event.preventDefault();
                     event.stopPropagation();
                     copyAIMessage(button);
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-ai-open-record]")
+            .forEach(function (button) {
+                button.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openAIRecord(button);
                 });
             });
 
