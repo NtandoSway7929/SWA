@@ -91,7 +91,14 @@ Deno.serve(async (req) => {
     return json({ error: "You are not an active Swayphics admin." }, 403);
   }
 
-  let body: { message?: string } = {};
+  let body: {
+    message?: string;
+    history?: Array<{
+      role?: string;
+      content?: string;
+    }>;
+  } = {};
+
   try {
     body = await req.json();
   } catch {
@@ -107,6 +114,40 @@ Deno.serve(async (req) => {
   if (message.length > 4000) {
     return json({ error: "Message is too long." }, 400);
   }
+
+  /*
+   * Preserve a bounded history window so follow-up questions such as
+   * "What about Maisha?" can refer to the preceding InnerMe exchange.
+   * Workspace data remains authoritative on every turn.
+   */
+  const conversationHistory = Array.isArray(body.history)
+    ? body.history
+        .slice(-12)
+        .map(function (item: any) {
+          const role =
+            item?.role === "assistant"
+              ? "assistant"
+              : item?.role === "user"
+                ? "user"
+                : "";
+
+          const content = cleanForModel(
+            item?.content || "",
+            2000,
+          );
+
+          return role && content
+            ? {
+                role,
+                content,
+              }
+            : null;
+        })
+        .filter(Boolean) as Array<{
+          role: "user" | "assistant";
+          content: string;
+        }>
+    : [];
 
   /*
    * Use the same authenticated admin client that the dashboard uses.
@@ -469,6 +510,10 @@ Rules:
 
 Swayphics currently operates through leads, clients, enquiries, communications, email, follow-ups, tasks, projects, quotes, invoices, payments, portal requests and activity records.
 
+- Conversation history is context only. The current workspace data and operational_summary are authoritative if conversation history conflicts with current records.
+- Use the previous conversation to resolve follow-up references such as "that lead", "her", "that invoice", or "what about Maisha" when the reference is established by the supplied history.
+- Do not treat conversation history as a substitute for current workspace data. Re-check the current workspace data on every turn.
+
 Answer the admin's question directly. Use plain-text headings and simple bullet points. Do not use Markdown heading markers, bold markers, code fences, or escaped Markdown characters.`;
 
   async function requestGemini(model: string) {
@@ -491,6 +536,19 @@ Answer the admin's question directly. Use plain-text headings and simple bullet 
             ],
           },
           contents: [
+            ...conversationHistory.map(function (item) {
+              return {
+                role:
+                  item.role === "assistant"
+                    ? "model"
+                    : "user",
+                parts: [
+                  {
+                    text: item.content,
+                  },
+                ],
+              };
+            }),
             {
               role: "user",
               parts: [
