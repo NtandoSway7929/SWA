@@ -9143,209 +9143,201 @@ nav.scrolled {
 }
 
 /* =========================================================
-   TESTIMONIALS — MATCH SWAYPHICS SECTION ALIGNMENT
+   SWAYPHICS — CLIENT STORIES / EDITORIAL TESTIMONIALS
    ========================================================= */
 
 .testimonials {
     position: relative;
-
-    padding:
-        125px 7% 115px;
-
-    box-sizing:
-        border-box;
+    padding: 135px 7% 120px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 86% 18%, rgba(119,193,252,0.22), transparent 32%),
+        linear-gradient(135deg, #FFFFFF 0%, #F6FAFF 48%, #E5F2FF 100%);
 }
 
+.testimonials::after {
+    content: "";
+    position: absolute;
+    width: 620px;
+    height: 620px;
+    left: -360px;
+    bottom: -420px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(1,82,244,0.08), transparent 68%);
+    pointer-events: none;
+}
 
-/* Header */
+.testimonials > * {
+    position: relative;
+    z-index: 1;
+}
 
 .testimonials-header {
-    display:
-        flex;
-
-    align-items:
-        flex-end;
-
-    justify-content:
-        space-between;
-
-    gap:
-        50px;
-
-    margin-bottom:
-        55px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.55fr);
+    align-items: end;
+    gap: 70px;
+    margin-bottom: 62px;
 }
 
-
-/* Intro */
+.testimonials-header .section-title {
+    margin-bottom: 0;
+}
 
 .testimonials-intro {
-    max-width:
-        390px;
-
-    margin:
-        0 0 6px;
-
-    color:
-        var(--text-muted);
-
-    line-height:
-        1.7;
+    max-width: 430px;
+    margin: 0 0 5px;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.8;
 }
-
-
-/* Cards */
 
 .testimonial-grid {
-    display:
-        grid;
-
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
-
-    gap:
-        22px;
-
-    width:
-        100%;
-}
-
-
-/* =========================================================
-   TABLET
-   ========================================================= */
-
-@media (max-width: 900px) {
-
-    .testimonials-header {
-        align-items:
-            flex-start;
-
-        flex-direction:
-            column;
-
-        gap:
-            20px;
-    }
-
-    .testimonial-grid {
-        grid-template-columns:
-            1fr;
-    }
-
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 18px;
+    width: 100%;
+    align-items: stretch;
 }
 
 .testimonial-card {
     position: relative;
-
-    min-height: 310px;
-    padding: 32px;
-
+    grid-column: span 4;
+    min-height: 390px;
+    padding: 34px 34px 30px;
     display: flex;
     flex-direction: column;
-
-    border:
-        1px solid rgba(0, 32, 150, 0.08);
-
-    border-radius: 28px;
-
-    background:
-        rgba(255, 255, 255, 0.72);
-
-    box-shadow:
-        0 18px 45px rgba(0, 32, 150, 0.07);
-
-    backdrop-filter:
-        blur(18px);
-
-    -webkit-backdrop-filter:
-        blur(18px);
-
+    justify-content: space-between;
+    border: 1px solid rgba(0,32,150,0.10);
+    border-radius: 30px;
+    background: rgba(255,255,255,0.72);
+    box-shadow: 0 24px 60px rgba(0,32,150,0.08);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
     overflow: hidden;
-
+    isolation: isolate;
     transition:
-        transform 0.3s ease,
-        box-shadow 0.3s ease,
-        border-color 0.3s ease;
+        transform 0.35s cubic-bezier(0.22,1,0.36,1),
+        box-shadow 0.35s ease,
+        border-color 0.35s ease;
+}
+
+.testimonial-card:nth-child(1) {
+    grid-column: span 6;
+    min-height: 430px;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,0.94), rgba(238,247,255,0.76));
+}
+
+.testimonial-card:nth-child(2) {
+    grid-column: span 3;
+}
+
+.testimonial-card:nth-child(3) {
+    grid-column: span 3;
 }
 
 .testimonial-card::before {
-    content: "";
-
+    content: "“";
     position: absolute;
+    top: -28px;
+    right: 18px;
+    z-index: -1;
+    color: rgba(1,82,244,0.055);
+    font-family: Georgia, serif;
+    font-size: 12rem;
+    line-height: 1;
+    pointer-events: none;
+}
 
+.testimonial-card::after {
+    content: "";
+    position: absolute;
+    left: 34px;
+    right: 34px;
     top: 0;
-    left: 0;
-
-    width: 100%;
-    height: 1px;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            rgba(1, 82, 244, 0.28),
-            transparent
-        );
+    height: 2px;
+    background: linear-gradient(90deg, #002096, #0152F4, #77C1FC);
+    opacity: 0.75;
 }
 
 .testimonial-card:hover {
-    transform: translateY(-6px);
+    transform: translateY(-8px);
+    border-color: rgba(1,82,244,0.18);
+    box-shadow: 0 32px 75px rgba(0,32,150,0.13);
+}
 
-    border-color:
-        rgba(1, 82, 244, 0.14);
+.testimonial-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 34px;
+}
 
-    box-shadow:
-        0 25px 55px rgba(0, 32, 150, 0.11);
+.testimonial-index {
+    color: rgba(8,21,51,0.42);
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
 }
 
 .testimonial-rating {
-    margin-bottom: 28px;
-
+    display: flex;
+    gap: 3px;
+    margin: 0;
     color: var(--sway-accent);
-
-    font-size: 0.9rem;
-    letter-spacing: 4px;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
 }
 
 .testimonial-card blockquote {
+    max-width: 760px;
     margin: 0;
-
     color: var(--text-dark);
+    font-size: clamp(1.12rem, 1.5vw, 1.48rem);
+    font-weight: 600;
+    line-height: 1.55;
+    letter-spacing: -0.02em;
+}
 
-    font-size: 1.05rem;
-    line-height: 1.75;
-
-    flex: 1;
+.testimonial-card:nth-child(n+2) blockquote {
+    font-size: 1.02rem;
+    line-height: 1.7;
 }
 
 .testimonial-author {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 13px;
+    margin-top: 38px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(0,32,150,0.09);
+}
 
-    margin-top: 32px;
+.testimonial-avatar,
+.testimonial-avatar-image {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border-radius: 50%;
 }
 
 .testimonial-avatar {
-    width: 42px;
-    height: 42px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #002096, #0152F4);
+    color: #FFFFFF;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    flex-shrink: 0;
-
-    border-radius: 50%;
-
-    background:
-        rgba(1, 82, 244, 0.08);
-
-    color: var(--sway-accent);
-
-    font-size: 0.85rem;
-    font-weight: 700;
+.testimonial-avatar-image {
+    display: block;
+    object-fit: cover;
+    border: 1px solid rgba(0,32,150,0.10);
 }
 
 .testimonial-author strong,
@@ -9355,228 +9347,276 @@ nav.scrolled {
 
 .testimonial-author strong {
     color: var(--text-dark);
-
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    font-weight: 800;
 }
 
 .testimonial-author span {
     margin-top: 3px;
-
     color: var(--text-muted);
-
-    font-size: 0.78rem;
+    font-size: 0.72rem;
+    line-height: 1.4;
 }
 
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .testimonials {
-        padding:
-            90px 6% 85px;
-    }
-
-    .testimonials-header {
-        margin-bottom:
-            35px;
-    }
-
-    .testimonial-card {
-        min-height:
-            0;
-
-        padding:
-            26px 24px;
-
-        border-radius:
-            22px;
-    }
-
-    .testimonial-rating {
-        margin-bottom:
-            22px;
-    }
-}
-
-/* =========================================================
-   TESTIMONIALS — EMPTY STATE
-   ========================================================= */
-
-.testimonials-empty {
-    width: 100%;
-    min-height: 210px;
-
+.testimonials-cta {
+    margin-top: 18px;
+    padding: 28px 32px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    border: 1px solid rgba(0,32,150,0.09);
+    border-radius: 24px;
+    background: rgba(255,255,255,0.48);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
 
-    box-sizing: border-box;
+.testimonials-cta-label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--sway-accent);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+}
 
-    padding: 42px 58px;
+.testimonials-cta h3 {
+    margin: 0;
+    color: var(--text-dark);
+    font-size: 1.05rem;
+    line-height: 1.3;
+}
 
-    border:
-        1px solid rgba(0, 32, 150, 0.10);
+.testimonials-cta p {
+    margin: 5px 0 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
 
-    border-radius: 28px;
+.testimonials-cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    padding: 12px 17px;
+    border-radius: 999px;
+    background: #002096;
+    color: #FFFFFF;
+    font-size: 0.76rem;
+    font-weight: 800;
+    transition: transform 0.25s ease, background 0.25s ease;
+}
 
+.testimonials-cta-button:hover {
+    transform: translateY(-2px);
+    background: #0152F4;
+}
+
+.testimonials-empty {
+    grid-column: 1 / -1;
+    position: relative;
+    min-height: 330px;
+    padding: 52px 58px;
+    display: grid;
+    grid-template-columns: minmax(90px, 0.28fr) minmax(0, 1.2fr) auto;
+    align-items: center;
+    gap: 42px;
+    border: 1px solid rgba(0,32,150,0.10);
+    border-radius: 32px;
     background:
-        linear-gradient(
-            135deg,
-            rgba(255,255,255,0.96) 0%,
-            rgba(244,249,255,0.90) 100%
-        );
-
-    box-shadow:
-        0 20px 50px rgba(0,32,150,0.07);
-
-    backdrop-filter:
-        blur(20px);
-
-    -webkit-backdrop-filter:
-        blur(20px);
-
+        radial-gradient(circle at 78% 50%, rgba(119,193,252,0.18), transparent 35%),
+        linear-gradient(135deg, rgba(255,255,255,0.92), rgba(238,247,255,0.78));
+    box-shadow: 0 25px 70px rgba(0,32,150,0.08);
     overflow: hidden;
 }
 
-
-/* Accent */
-
-.testimonials-empty-accent {
-    width: 5px;
-    height: 110px;
-
-    flex-shrink: 0;
-
-    margin-right: 48px;
-
-    border-radius: 999px;
-
-    background:
-        linear-gradient(
-            180deg,
-            #002096,
-            #0152F4,
-            #77C1FC
-        );
+.testimonials-empty::before {
+    content: "“";
+    position: absolute;
+    right: 40px;
+    top: -85px;
+    color: rgba(1,82,244,0.06);
+    font-family: Georgia, serif;
+    font-size: 22rem;
+    line-height: 1;
 }
 
-
-/* Content */
-
-.testimonials-empty-content {
-    flex: 1;
-
-    min-width: 0;
-
-    max-width: none;
+.testimonials-empty-mark {
+    position: relative;
+    width: 92px;
+    height: 92px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(1,82,244,0.15);
+    border-radius: 26px;
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 15px 35px rgba(0,32,150,0.08);
+    color: #0152F4;
+    font-family: Georgia, serif;
+    font-size: 4.5rem;
+    line-height: 1;
 }
 
 .testimonials-empty-label {
     display: block;
-
-    margin-bottom: 10px;
-
+    margin-bottom: 12px;
     color: #0152F4;
-
-    font-size: 0.68rem;
-
+    font-size: 0.64rem;
     font-weight: 800;
-
     letter-spacing: 0.2em;
-
-    text-transform: uppercase;
 }
-
 
 .testimonials-empty h3 {
-    margin: 0 0 12px;
-
+    max-width: 760px;
+    margin: 0 0 13px;
     color: var(--text-dark);
-
-    font-size: clamp(2rem, 3.2vw, 3.2rem);
-
-    line-height: 1;
-
-    letter-spacing: -2px;
+    font-size: clamp(2rem, 4vw, 4.2rem);
+    line-height: 0.98;
+    letter-spacing: -0.055em;
 }
-
 
 .testimonials-empty p {
-    max-width: 1100px;
-
+    max-width: 670px;
     margin: 0;
-
     color: var(--text-muted);
-
-    font-size: 1.02rem;
-
-    line-height: 1.65;
+    font-size: 0.98rem;
+    line-height: 1.75;
 }
 
+.testimonials-empty-action {
+    position: relative;
+    z-index: 1;
+    min-width: 170px;
+    padding: 14px 18px;
+    text-align: center;
+    border-radius: 999px;
+    background: #002096;
+    color: #FFFFFF;
+    font-size: 0.76rem;
+    font-weight: 800;
+    transition: transform 0.25s ease, background 0.25s ease;
+}
 
-/* =========================================================
-   MOBILE
-   ========================================================= */
+.testimonials-empty-action:hover {
+    transform: translateY(-2px);
+    background: #0152F4;
+}
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
+    .testimonials-header {
+        grid-template-columns: 1fr;
+        gap: 22px;
+    }
+
+    .testimonial-card,
+    .testimonial-card:nth-child(1),
+    .testimonial-card:nth-child(2),
+    .testimonial-card:nth-child(3) {
+        grid-column: span 6;
+    }
+
+    .testimonial-card:nth-child(1) {
+        min-height: 390px;
+    }
 
     .testimonials-empty {
-        min-height: auto;
+        grid-template-columns: auto minmax(0, 1fr);
+    }
 
-        display: block;
+    .testimonials-empty-action {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
 
-        padding: 32px 26px;
+@media (max-width: 700px) {
+    .testimonials {
+        padding: 92px 6% 85px;
+    }
 
+    .testimonials-header {
+        margin-bottom: 36px;
+    }
+
+    .testimonials-intro {
+        font-size: 0.94rem;
+    }
+
+    .testimonial-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .testimonial-card,
+    .testimonial-card:nth-child(1),
+    .testimonial-card:nth-child(2),
+    .testimonial-card:nth-child(3) {
+        grid-column: 1;
+        min-height: 0;
+        padding: 27px 24px 24px;
+        border-radius: 24px;
+    }
+
+    .testimonial-card blockquote,
+    .testimonial-card:nth-child(n+2) blockquote {
+        font-size: 1.04rem;
+    }
+
+    .testimonial-author {
+        margin-top: 30px;
+    }
+
+    .testimonials-cta {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 24px;
         border-radius: 22px;
     }
 
-
-    .testimonials-empty-accent {
-        width: 52px;
-        height: 4px;
-
-        margin: 0 0 25px;
-
-        background:
-            linear-gradient(
-                90deg,
-                #002096,
-                #0152F4,
-                #77C1FC
-            );
+    .testimonials-cta-button {
+        width: 100%;
+        justify-content: center;
     }
 
-
-    .testimonials-empty-content {
-        max-width: none;
+    .testimonials-empty {
+        min-height: 0;
+        display: block;
+        padding: 30px 25px;
+        border-radius: 24px;
     }
 
-
-    .testimonials-empty-label {
-        margin-bottom: 11px;
+    .testimonials-empty::before {
+        right: -10px;
+        top: -45px;
+        font-size: 14rem;
     }
 
+    .testimonials-empty-mark {
+        width: 62px;
+        height: 62px;
+        margin-bottom: 28px;
+        border-radius: 19px;
+        font-size: 3.1rem;
+    }
 
     .testimonials-empty h3 {
-        margin-bottom: 14px;
-
-        font-size: clamp(1.9rem, 8vw, 2.6rem);
-
-        letter-spacing: -1.3px;
+        font-size: clamp(2.05rem, 11vw, 3.2rem);
+        letter-spacing: -0.05em;
     }
-
 
     .testimonials-empty p {
-        font-size: 0.98rem;
-
-        line-height: 1.7;
+        font-size: 0.92rem;
     }
 
+    .testimonials-empty-action {
+        display: inline-flex;
+        margin-top: 24px;
+        min-width: 0;
+    }
 }
 
-    /* =========================================================
+/* =========================================================
    PORTFOLIO SWIPE HINT
    ========================================================= */
 
@@ -17775,49 +17815,45 @@ section {
     <div class="testimonials-header">
 
         <h2 class="section-title">
-            Built with purpose.<br>
-            <span>Backed by trust.</span>
+            The work is ours.<br>
+            <span>The experience is theirs.</span>
         </h2>
 
         <p class="testimonials-intro">
-            The best measure of our work is what it helps businesses
-            become. Here are a few of the stories we'll showcase as
-            Swayphics grows.
+            A closer look at the people behind the projects.
+            Not just what we made, but what it was like to build
+            something together.
         </p>
 
     </div>
 
-<div class="testimonial-grid">   
-         </div>
+    <div class="testimonial-grid"></div>
 
     <div class="testimonials-cta">
 
-    <div class="testimonials-cta-content">
+        <div class="testimonials-cta-content">
 
-        <span class="testimonials-cta-label">
-            WORKED WITH SWAYPHICS?
-        </span>
+            <span class="testimonials-cta-label">
+                HAVE A SWAYPHICS STORY?
+            </span>
 
-        <h3>
-            Tell us about your experience.
-        </h3>
+            <h3>
+                Put your experience on the wall.
+            </h3>
 
-        <p>
-            Your story could help another business
-            take the next step.
-        </p>
+            <p>
+                A real story from a real client carries more weight
+                than another polished sales line.
+            </p>
+
+        </div>
+
+        <a href="testimonial/" class="testimonials-cta-button">
+            Share your story
+            <span aria-hidden="true">→</span>
+        </a>
 
     </div>
-
-    <a
-        href="testimonial/"
-        class="testimonials-cta-button"
-    >
-        Share your story
-        <span aria-hidden="true">→</span>
-    </a>
-
-</div>
 
 </section>
 
@@ -18801,6 +18837,20 @@ loadPublicAnnouncements();
    TESTIMONIALS
    ========================================================= */
 
+function escapeTestimonialsHTML(value) {
+
+    return String(value ?? "").replace(
+        /[&<>"']/g,
+        (character) => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[character]
+    );
+}
+
 async function loadTestimonials() {
 
     const testimonialSection =
@@ -18865,30 +18915,37 @@ async function loadTestimonials() {
     testimonialSection.hidden = false;
 
     testimonialGrid.innerHTML = `
-    <div class="testimonials-empty">
+    <article class="testimonials-empty">
 
-        <div class="testimonials-empty-accent"></div>
+        <div class="testimonials-empty-mark" aria-hidden="true">
+            “
+        </div>
 
         <div class="testimonials-empty-content">
 
             <span class="testimonials-empty-label">
-                CLIENT STORIES
+                THE WALL IS JUST GETTING STARTED
             </span>
 
             <h3>
-                Your story could be next.
+                The next story<br>
+                could be yours.
             </h3>
 
             <p>
-                Swayphics exists to turn ideas into brands,
-                experiences and businesses worth remembering.
-                As we work with more businesses, their stories
-                will become part of ours.
+                We would rather show what working with Swayphics feels like
+                through real client experiences than fill this space with
+                generic praise. If we have worked together, tell us what
+                stood out.
             </p>
 
         </div>
 
-    </div>
+        <a class="testimonials-empty-action" href="testimonial/">
+            Share your experience →
+        </a>
+
+    </article>
 `;
 
     return;
@@ -18904,7 +18961,7 @@ async function loadTestimonials() {
 
         testimonialGrid.innerHTML =
             testimonials.map(
-                (testimonial) => {
+                (testimonial, index) => {
 
                     const rating =
                         Math.min(
@@ -18932,34 +18989,89 @@ async function loadTestimonials() {
                         "";
 
 
+                    const name =
+                        String(
+                            testimonial.name ||
+                            "Client"
+                        ).trim();
+
+
+                    const initials =
+                        name
+                            .split(/\s+/)
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map(
+                                (part) =>
+                                    part.charAt(0).toUpperCase()
+                            )
+                            .join("") ||
+                        "C";
+
+
+                    const imageURL =
+                        String(
+                            testimonial.image_url ||
+                            ""
+                        ).trim();
+
+
+                    const identity =
+                        [role, business]
+                            .filter(Boolean)
+                            .join(" · ") ||
+                        "Swayphics client";
+
+
                     return `
                         <article class="testimonial-card">
 
-                            <div
-                                class="testimonial-rating"
-                                aria-label="${rating} star rating"
-                            >
-                                ${stars}
+                            <div class="testimonial-card-top">
+
+                                <span class="testimonial-index">
+                                    CLIENT STORY ${String(index + 1).padStart(2, "0")}
+                                </span>
+
+                                <div
+                                    class="testimonial-rating"
+                                    aria-label="${rating} star rating"
+                                >
+                                    ${stars}
+                                </div>
+
                             </div>
 
                             <blockquote>
-                                “${testimonial.quote}”
+                                “${escapeTestimonialsHTML(testimonial.quote || "")}”
                             </blockquote>
 
                             <div class="testimonial-author">
 
+                                ${
+                                    imageURL
+                                        ? `
+                                            <img
+                                                class="testimonial-avatar-image"
+                                                src="${escapeTestimonialsHTML(imageURL)}"
+                                                alt=""
+                                                loading="lazy"
+                                            >
+                                        `
+                                        : `
+                                            <div class="testimonial-avatar" aria-hidden="true">
+                                                ${escapeTestimonialsHTML(initials)}
+                                            </div>
+                                        `
+                                }
+
                                 <div>
 
                                     <strong>
-                                        ${testimonial.name}
+                                        ${escapeTestimonialsHTML(name)}
                                     </strong>
 
                                     <span>
-                                        ${
-                                            [role, business]
-                                                .filter(Boolean)
-                                                .join(" · ")
-                                        }
+                                        ${escapeTestimonialsHTML(identity)}
                                     </span>
 
                                 </div>
