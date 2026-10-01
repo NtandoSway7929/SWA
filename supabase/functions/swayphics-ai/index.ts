@@ -248,8 +248,32 @@ Deno.serve(async (req) => {
       return null;
     }
 
-    const type = String(focusedRecord.type);
+    const rawType = String(focusedRecord.type);
+    const typeAliases: Record<string, string> = {
+      lead: "lead",
+      leads: "lead",
+      client: "client",
+      clients: "client",
+      project: "project",
+      projects: "project",
+      task: "task",
+      tasks: "task",
+      quote: "quote",
+      quotes: "quote",
+      invoice: "invoice",
+      invoices: "invoice",
+      enquiry: "enquiry",
+      enquiries: "enquiry",
+      "portal-request": "portal-request",
+      "portal-requests": "portal-request",
+    };
+
+    const type = typeAliases[rawType] || "";
     const id = String(focusedRecord.id);
+
+    if (!type || !id) {
+      return null;
+    }
 
     const leadsRows = leads.data || [];
     const clientsRows = clients.data || [];
