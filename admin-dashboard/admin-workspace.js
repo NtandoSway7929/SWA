@@ -21102,7 +21102,7 @@ function simpleBars(items, color) {
                         )
                         : ""
                 ) +
-                '<div class="sway-ai-suggestions">'
+                '<div class="sway-ai-suggestions">' +
 
                     '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
                     '<button type="button" data-ai-prompt="Find the clearest sales opportunities in the current pipeline.">Find sales opportunities</button>' +
