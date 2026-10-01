@@ -61,7 +61,8 @@
         socialPosts: [],
         socialMetrics: [],
         adminNotifications: [],
-        notificationsAvailable: false
+        notificationsAvailable: false,
+        aiConversation: []
     };
 
     const navGroups = [
@@ -19016,13 +19017,59 @@ function simpleBars(items, color) {
     }
 
     function renderSwayphicsAI() {
+        const history = Array.isArray(state.aiConversation)
+            ? state.aiConversation.slice(-40)
+            : [];
+
+        const conversationHtml = history.length
+            ? history.map(function (item) {
+                const roleClass =
+                    item.role === "user"
+                        ? "sway-ai-user"
+                        : "sway-ai-assistant";
+
+                const label =
+                    item.role === "user"
+                        ? "You"
+                        : "InnerMe";
+
+                const loadingClass =
+                    item.loading
+                        ? " sway-ai-loading"
+                        : "";
+
+                return (
+                    '<div class="sway-ai-message ' +
+                    roleClass +
+                    loadingClass +
+                    '">' +
+                        '<span class="sway-ai-message-label">' +
+                            esc(label) +
+                        '</span>' +
+                        '<div>' +
+                            esc(item.content || "") +
+                        '</div>' +
+                    '</div>'
+                );
+            }).join("")
+            : (
+                '<div class="sway-ai-welcome">' +
+                    '<strong>What can InnerMe help you with?</strong>' +
+                    '<span>Ask about leads, clients, follow-ups, tasks, projects, invoices, payments, portal requests or recent activity.</span>' +
+                '</div>'
+            );
+
         return (
             '<section class="sway-ai-panel">' +
                 '<div class="sway-ai-header">' +
                     '<div>' +
                         '<span class="sway-ai-eyebrow">INNERME</span>' +
                         '<h2>InnerMe</h2>' +
-                        '<div class="sway-ai-byline" aria-label="an ai agent by Swayphics"><span>an ai agent by</span><img src="../swayphics-logo.png" alt="Swayphics"></div><p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data.</p>' +
+                        '<div class="sway-ai-byline" aria-label="an ai agent by Swayphics">' +
+                            '<span>an ai agent by</span>' +
+                            '<img src="../swayphics-logo.png" alt="Swayphics">' +
+                        '</div>' +
+                        '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data.</p>' +
                     '</div>' +
                     '<span class="sway-ai-status">Read-only V1</span>' +
                 '</div>' +
@@ -19033,10 +19080,7 @@ function simpleBars(items, color) {
                     '<button type="button" data-ai-prompt="Show me overdue invoices and outstanding payments.">Overdue money</button>' +
                 '</div>' +
                 '<div class="sway-ai-conversation" id="sway-ai-conversation">' +
-                    '<div class="sway-ai-welcome">' +
-                        '<strong>What can InnerMe help you with?</strong>' +
-                        '<span>Ask about leads, clients, follow-ups, tasks, projects, invoices, payments, portal requests or recent activity.</span>' +
-                    '</div>' +
+                    conversationHtml +
                 '</div>' +
                 '<form class="sway-ai-form" id="sway-ai-form">' +
                     '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask InnerMe..." autocomplete="off"></textarea>' +
@@ -19056,16 +19100,57 @@ function simpleBars(items, color) {
         const clean = String(message || "").trim();
         if (!clean) return;
 
+        if (!Array.isArray(state.aiConversation)) {
+            state.aiConversation = [];
+        }
+
+        const userEntry = {
+            role: "user",
+            content: clean
+        };
+
+        const assistantEntry = {
+            role: "assistant",
+            content: "Thinking…",
+            loading: true
+        };
+
+        state.aiConversation.push(
+            userEntry,
+            assistantEntry
+        );
+
+        state.aiConversation =
+            state.aiConversation.slice(-40);
+
         const userBubble = document.createElement("div");
         userBubble.className = "sway-ai-message sway-ai-user";
-        userBubble.textContent = clean;
-        conversation.appendChild(userBubble);
+        userBubble.innerHTML =
+            '<span class="sway-ai-message-label">You</span>' +
+            '<div>' +
+                esc(clean) +
+            '</div>';
 
         const loading = document.createElement("div");
-        loading.className = "sway-ai-message sway-ai-assistant sway-ai-loading";
-        loading.textContent = "Thinking…";
+        loading.className =
+            "sway-ai-message sway-ai-assistant sway-ai-loading";
+        loading.innerHTML =
+            '<span class="sway-ai-message-label">InnerMe</span>' +
+            '<div>Thinking…</div>';
+
+        const welcome =
+            conversation.querySelector(
+                ".sway-ai-welcome"
+            );
+
+        if (welcome) {
+            welcome.remove();
+        }
+
+        conversation.appendChild(userBubble);
         conversation.appendChild(loading);
-        conversation.scrollTop = conversation.scrollHeight;
+        conversation.scrollTop =
+            conversation.scrollHeight;
 
         input.value = "";
         input.disabled = true;
@@ -19085,21 +19170,40 @@ function simpleBars(items, color) {
                 }
             );
 
-            loading.classList.remove("sway-ai-loading");
-            loading.textContent =
+            const answer =
                 result && result.answer
-                    ? result.answer
+                    ? String(result.answer)
                     : "I could not produce an answer.";
-        } catch (error) {
+
+            assistantEntry.content = answer;
+            assistantEntry.loading = false;
+
             loading.classList.remove("sway-ai-loading");
-            loading.textContent =
+            loading.innerHTML =
+                '<span class="sway-ai-message-label">InnerMe</span>' +
+                '<div>' +
+                    esc(answer) +
+                '</div>';
+        } catch (error) {
+            const errorMessage =
                 error.message ||
                 "InnerMe could not complete the request.";
+
+            assistantEntry.content = errorMessage;
+            assistantEntry.loading = false;
+
+            loading.classList.remove("sway-ai-loading");
+            loading.innerHTML =
+                '<span class="sway-ai-message-label">InnerMe</span>' +
+                '<div>' +
+                    esc(errorMessage) +
+                '</div>';
         } finally {
             input.disabled = false;
             send.disabled = false;
             input.focus();
-            conversation.scrollTop = conversation.scrollHeight;
+            conversation.scrollTop =
+                conversation.scrollHeight;
         }
     }
 
