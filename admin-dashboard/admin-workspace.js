@@ -9391,7 +9391,7 @@ function simpleBars(items, color) {
                             '<div class="sway-row-actions sway-lead-row-actions">' +
                                 (
                                     item.email
-                                        ? '<button type="button" class="sway-row-action sway-lead-email-action" data-send-email-type="lead" data-send-email-id="' +
+                                        ? '<button type="button" class="sway-row-action sway-lead-email-action" data-lead-email-id="' +
                                           esc(item.id) +
                                           '">Email</button>'
                                         : ""
@@ -13526,10 +13526,7 @@ function simpleBars(items, color) {
                 selectedType
             ).some(
                 function (item) {
-                    return (
-                        item.id ===
-                        selectedId
-                    );
+                    return String(item.id) === String(selectedId);
                 }
             )
         ) {
@@ -13542,10 +13539,7 @@ function simpleBars(items, color) {
                     selectedType
                   ).find(
                     function (item) {
-                        return (
-                            item.id ===
-                            selectedId
-                        );
+                        return String(item.id) === String(selectedId);
                     }
                 )
                 : null;
@@ -22947,54 +22941,23 @@ function simpleBars(items, color) {
                 );
             });
 
-        if (
-            typeof window !== "undefined" &&
-            !window.__swayphicsLeadEmailCaptureBound
-        ) {
-            window.__swayphicsLeadEmailCaptureBound = true;
-
-            document.addEventListener(
-                "click",
-                function (event) {
-                    const target =
-                        event.target instanceof Element
-                            ? event.target.closest(
-                                ".sway-lead-email-action[data-send-email-type='lead']"
-                            )
-                            : null;
-
-                    if (!target) {
-                        return;
-                    }
-
+        workspace
+            .querySelectorAll("[data-lead-email-id]")
+            .forEach(function (button) {
+                button.onclick = function (event) {
                     event.preventDefault();
-                    event.stopImmediatePropagation();
+                    event.stopPropagation();
 
-                    const id =
-                        target.dataset.sendEmailId || "";
+                    const id = button.dataset.leadEmailId || "";
 
                     if (!id) {
-                        swayAlert(
-                            "This lead could not be resolved for email."
-                        );
+                        swayAlert("This lead could not be resolved for email.");
                         return;
                     }
 
-                    const details =
-                        target.closest("details");
-
-                    if (details) {
-                        details.open = false;
-                    }
-
-                    openEmailComposer(
-                        "lead",
-                        id
-                    );
-                },
-                true
-            );
-        }
+                    openEmailComposer("lead", id);
+                };
+            });
 
         workspace
             .querySelectorAll("[data-compose-email]")
