@@ -10642,7 +10642,16 @@ function simpleBars(items, color) {
                 );
             }).join("");
 
-        return (
+        const clientCounts = state.clients.reduce(function (acc, client) {
+            acc[client.id] = {
+                documents: state.documents.filter(function (d) { return d.client_id === client.id; }).length,
+                requests: state.portalRequests.filter(function (r) { return r.client_id === client.id && r.status !== "completed"; }).length,
+                communications: state.communications.filter(function (log) { return log.client_id === client.id; }).length
+            };
+            return acc;
+        }, {});
+
+                return (
             heading(
                 '<button class="sway-workspace-button primary" data-add="clients">+ New client</button>'
             ) +
