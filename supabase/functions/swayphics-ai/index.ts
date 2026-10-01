@@ -107,6 +107,7 @@ Deno.serve(async (req) => {
     return json({ error: "You are not an active Swayphics admin." }, 403, origin);
   }
 
+
   let body: {
     action?: string;
     message?: string;
@@ -136,11 +137,327 @@ Deno.serve(async (req) => {
       estimated_value?: number | string;
     };
   } = {};
+  /*
+   * PUBLIC INNERME
+   * This branch intentionally executes before admin authentication.
+   * It receives no workspace data and never creates an authenticated
+   * Supabase client, so public conversations cannot read private records.
+   */
+  if (body.action === "public_chat") {
+    const publicAllowedOrigins = new Set([
+      "https://swayphics.co.za",
+      "https://www.swayphics.co.za",
+    ]);
 
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: "Invalid JSON request." }, 400, origin);
+    if (!publicAllowedOrigins.has(origin)) {
+      return json(
+        { error: "Public InnerMe is available through the Swayphics website only." },
+        403,
+        origin,
+      );
+    }
+
+    const publicMessage = String(body.message || "").trim();
+
+    if (!publicMessage) {
+      return json({ error: "A message is required." }, 400, origin);
+    }
+
+    if (publicMessage.length > 1400) {
+      return json(
+        { error: "That message is too long. Please keep it under 1,400 characters." },
+        400,
+        origin,
+      );
+    }
+
+    const publicHistory = Array.isArray(body.history)
+      ? body.history
+          .slice(-10)
+          .map(function (item: any) {
+            const role =
+              item?.role === "assistant"
+                ? "assistant"
+                : item?.role === "user"
+                  ? "user"
+                  : "";
+
+            const content = cleanForModel(
+              item?.content || "",
+              1800,
+            );
+
+            return role && content
+              ? { role, content }
+              : null;
+          })
+          .filter(Boolean) as Array<{
+            role: "user" | "assistant";
+            content: string;
+          }>
+      : [];
+
+    const publicContext = [
+      "Swayphics is a South African creative and design lab helping small businesses and entrepreneurs build distinctive brands, digital identities and practical digital business experiences.",
+      "",
+      "POSITIONING:",
+      "- Premium, polished, serious but empathetic, creative and human.",
+      "- Swayphics focuses on commercially useful design, not decoration for its own sake.",
+      "- The public website positions Swayphics around helping businesses build, launch and grow.",
+      "",
+      "CURRENT PUBLIC PACKAGES:",
+      "- Starter Package: R999. Logo Design, Business Card Design, Business Letterhead Design, Company Registration assistance.",
+      "- Launch Package: R1,999. Everything in Starter plus a modern responsive website, Google Business Profile setup and Professional Email Setup.",
+      "- Growth Package: R3,499. Everything in Launch plus WhatsApp Business Setup, AI Customer Reply Setup, Review Collection System, Digital Business Card / Link-in-Bio and 1 month of Website Maintenance.",
+      "",
+      "CURRENT PUBLIC INDIVIDUAL SERVICES AND DISPLAYED PRICES:",
+      "- Logo Design: R250.",
+      "- Business Identity Kit: Custom quote.",
+      "- Business Card Design: R100.",
+      "- Business Letterhead Design: R150.",
+      "- Packaging Design: R150.",
+      "- Apparel Design: R50-R100.",
+      "- Website Design: From R1500.",
+      "- Google Business Profile: R500-R900.",
+      "- Professional Email Setup: R300-R600.",
+      "- Digital Business Card / Link-in-Bio: R250-R500.",
+      "- Company Registration: R500, with government or third-party fees potentially applying separately.",
+      "- Appointment / Booking System: R600-R1200.",
+      "- AI Customer Reply Setup: R600-R1200.",
+      "- Review Collection System: R300-R700.",
+      "- Website Maintenance: R250-R750/month.",
+      "",
+      "PUBLIC SERVICE FIT:",
+      "- Branding / identity questions can lead toward Logo Design or Business Identity Kit.",
+      "- Businesses that need a professional online presence can lead toward Website Design, Google Business Profile or Professional Email Setup.",
+      "- Booking or scheduling friction can lead toward Appointment / Booking System.",
+      "- Slow customer responses or missed enquiries can lead toward AI Customer Reply Setup.",
+      "- Review and social-proof needs can lead toward Review Collection System.",
+      "- Ongoing website updates can lead toward Website Maintenance.",
+      "- New-business setup needs can lead toward Starter or Launch Package.",
+      "- Broader attraction, response, trust and retention needs can lead toward Growth Package.",
+      "",
+      "PUBLIC ASSISTANT PURPOSE:",
+      "1. Understand what the visitor is trying to achieve.",
+      "2. Diagnose the problem at a practical level using only what the visitor shares.",
+      "3. Explain what Swayphics could help with.",
+      "4. Recommend one or two relevant services or packages when the conversation supports it.",
+      "5. Ask a focused follow-up question when more context is genuinely useful.",
+      "6. When the visitor is ready, encourage them to continue into the Swayphics enquiry form.",
+      "",
+      "BOUNDARIES:",
+      "- You are the public version of InnerMe. You are not the internal admin assistant in this conversation.",
+      "- You have no access to Swayphics leads, assessments, clients, projects, invoices, payments, emails, quotes, tasks or internal notes.",
+      "- Never imply that you checked, assessed, searched or verified a business unless the visitor explicitly supplied that information in this chat.",
+      "- Never reveal, infer or fabricate private Swayphics information.",
+      "- Do not invent testimonials, results, credentials, market statistics, client counts, availability, deadlines, discounts or guarantees.",
+      "- Do not make legal, tax, financial or technical claims beyond the public information supplied here. Encourage human follow-up where needed.",
+      "- Do not claim a service will definitely increase revenue, rankings, conversions or sales.",
+      "- Displayed prices are public starting/listed prices. Do not create discounts or custom prices.",
+      "- If asked something outside Swayphics or clearly requiring human judgement, say what you can establish and suggest speaking with Swayphics.",
+      "- Do not ask for passwords, payment card details, security answers or other sensitive information.",
+      "",
+      "PERSONALITY:",
+      "- Calm, capable, warm, concise and slightly cheeky.",
+      "- Professional first. Use dry wit sparingly and never around money, complaints, privacy or sensitive situations.",
+      "- Do not sound like a generic chatbot or corporate helpdesk.",
+      "- Never pretend to be human. Be transparent that you are InnerMe, an AI assistant.",
+      "- Use plain English and no em dash.",
+      "",
+      "RESPONSE FORMAT:",
+      "- Return ONLY valid JSON with exactly these keys: answer, recommended_service, ready_for_enquiry.",
+      "- answer must be plain text, suitable for a compact website chat.",
+      "- recommended_service must be one of the exact service names below or null.",
+      "- ready_for_enquiry must be true only when the visitor has shown meaningful intent to continue with Swayphics or has enough context that an enquiry is a sensible next step.",
+      "- Exact recommended_service options: Starter Package, Launch Package, Growth Package, Logo Design, Business Identity Kit, Business Card Design, Business Letterhead Design, Packaging Design, Apparel Design, Website Design, Google Business Profile, Professional Email Setup, Company Registration, Booking System, AI Customer Reply Setup, Review Collection System, Website Maintenance, Something else.",
+      "- Keep answer focused. Usually 2-5 sentences. Ask no more than one direct question at a time."
+    ].join("\n");
+
+    async function requestPublicInnerMe(model: string) {
+      return await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":generateContent",
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": geminiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: publicContext }],
+            },
+            contents: [
+              ...publicHistory.map(function (item) {
+                return {
+                  role:
+                    item.role === "assistant"
+                      ? "model"
+                      : "user",
+                  parts: [{ text: item.content }],
+                };
+              }),
+              {
+                role: "user",
+                parts: [{ text: publicMessage }],
+              },
+            ],
+            generationConfig: {
+              maxOutputTokens: 900,
+              responseMimeType: "application/json",
+            },
+          }),
+        },
+      );
+    }
+
+    let publicResponse =
+      await requestPublicInnerMe(PRIMARY_MODEL);
+    let publicModel =
+      PRIMARY_MODEL;
+
+    if (
+      (publicResponse.status === 503 ||
+        publicResponse.status === 429) &&
+      PRIMARY_MODEL !== FALLBACK_MODEL
+    ) {
+      publicModel =
+        FALLBACK_MODEL;
+      publicResponse =
+        await requestPublicInnerMe(
+          FALLBACK_MODEL,
+        );
+    }
+
+    if (!publicResponse.ok) {
+      const errorText =
+        await publicResponse.text();
+
+      console.error(
+        "Gemini public InnerMe error:",
+        errorText.slice(0, 2000),
+      );
+
+      return json(
+        {
+          error:
+            "InnerMe is unavailable right now. Please try again in a moment.",
+          provider_status:
+            publicResponse.status,
+          provider_model:
+            publicModel,
+        },
+        502,
+        origin,
+      );
+    }
+
+    const publicResult =
+      await publicResponse.json();
+
+    const rawPublic =
+      publicResult?.candidates?.[0]?.content?.parts
+        ?.filter(
+          (part: any) =>
+            typeof part?.text === "string",
+        )
+        ?.map(
+          (part: any) =>
+            part.text,
+        )
+        ?.join("") ||
+      "";
+
+    let publicPayload:
+      | {
+          answer?: string;
+          recommended_service?: string | null;
+          ready_for_enquiry?: boolean;
+        }
+      | null = null;
+
+    try {
+      publicPayload =
+        JSON.parse(
+          rawPublic,
+        );
+    } catch {
+      console.error(
+        "Public InnerMe response was not valid JSON:",
+        rawPublic.slice(0, 2000),
+      );
+    }
+
+    const publicAnswer =
+      cleanForModel(
+        publicPayload?.answer || "",
+        3200,
+      );
+
+    const publicRecommended =
+      String(
+        publicPayload?.recommended_service || "",
+      ).trim();
+
+    const allowedPublicRecommendations =
+      new Set([
+        "Starter Package",
+        "Launch Package",
+        "Growth Package",
+        "Logo Design",
+        "Business Identity Kit",
+        "Business Card Design",
+        "Business Letterhead Design",
+        "Packaging Design",
+        "Apparel Design",
+        "Website Design",
+        "Google Business Profile",
+        "Professional Email Setup",
+        "Company Registration",
+        "Booking System",
+        "AI Customer Reply Setup",
+        "Review Collection System",
+        "Website Maintenance",
+        "Something else",
+      ]);
+
+    if (
+      !publicAnswer ||
+      publicAnswer.length < 10
+    ) {
+      return json(
+        {
+          error:
+            "InnerMe returned an incomplete answer.",
+          provider_model:
+            publicModel,
+        },
+        502,
+        origin,
+      );
+    }
+
+    return json(
+      {
+        answer:
+          publicAnswer,
+        recommended_service:
+          allowedPublicRecommendations.has(
+            publicRecommended,
+          )
+            ? publicRecommended
+            : null,
+        ready_for_enquiry:
+          publicPayload?.ready_for_enquiry === true,
+        model:
+          publicModel,
+        public:
+          true,
+      },
+      200,
+      origin,
+    );
   }
 
   if (body.action === "draft_proposal") {
