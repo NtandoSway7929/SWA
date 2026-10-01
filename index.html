@@ -1432,6 +1432,630 @@ nav.scrolled .logo img {
 }
 
 
+
+/* =========================================================
+   SWAYPHICS — PUBLIC INNERME
+   ========================================================= */
+
+.innerme-section {
+    position: relative;
+    overflow: hidden;
+    padding: 120px 7% 125px;
+    background:
+        radial-gradient(circle at 88% 18%, rgba(44,145,252,0.13) 0%, rgba(44,145,252,0) 32%),
+        linear-gradient(180deg, #FFFFFF 0%, #F7FAFF 55%, #EEF6FF 100%);
+    color: var(--text-dark);
+}
+
+.innerme-section::before {
+    content: "";
+    position: absolute;
+    width: 640px;
+    height: 640px;
+    left: -360px;
+    bottom: -390px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(1,82,244,0.12) 0%, rgba(1,82,244,0) 70%);
+    filter: blur(18px);
+    pointer-events: none;
+}
+
+.innerme-section > * {
+    position: relative;
+    z-index: 1;
+}
+
+.innerme-shell {
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 0.88fr) minmax(440px, 1.12fr);
+    gap: 64px;
+    align-items: center;
+}
+
+.innerme-intro {
+    max-width: 560px;
+}
+
+.innerme-intro .section-title {
+    margin-bottom: 24px;
+    color: var(--text-dark);
+}
+
+.innerme-intro .section-title span {
+    color: var(--sway-accent);
+}
+
+.innerme-lead {
+    max-width: 530px;
+    margin: 0 0 24px;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+.innerme-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    color: #5C6880;
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+.innerme-note-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #0152F4;
+    box-shadow: 0 0 0 6px rgba(1,82,244,0.08);
+    flex: 0 0 auto;
+}
+
+.innerme-card {
+    width: 100%;
+    max-width: 650px;
+    min-height: 650px;
+    justify-self: end;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(0,32,150,0.10);
+    border-radius: 30px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.86);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow:
+        0 30px 80px rgba(0,32,150,0.13),
+        0 8px 24px rgba(0,32,150,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+.innerme-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 20px 22px;
+    border-bottom: 1px solid rgba(0,32,150,0.08);
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.94), rgba(244,249,255,0.82));
+}
+
+.innerme-identity {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
+.innerme-orb {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    border-radius: 15px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 35% 30%, #77C1FC 0%, #0152F4 42%, #002096 100%);
+    box-shadow:
+        0 10px 22px rgba(1,82,244,0.24),
+        inset 0 1px 0 rgba(255,255,255,0.45);
+}
+
+.innerme-orb::before {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    top: 8px;
+    left: 9px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.92);
+    opacity: 0.92;
+}
+
+.innerme-orb::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 4px;
+    left: 16px;
+    bottom: 9px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.92);
+    box-shadow: 0 -7px 0 -1px rgba(255,255,255,0.78);
+}
+
+.innerme-identity-copy {
+    min-width: 0;
+}
+
+.innerme-kicker {
+    display: block;
+    color: #0152F4;
+    font-size: 0.62rem;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    line-height: 1.2;
+}
+
+.innerme-name {
+    display: block;
+    margin-top: 4px;
+    color: #12203B;
+    font-size: 0.96rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.innerme-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(1,82,244,0.06);
+    color: #51617B;
+    font-size: 0.62rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.innerme-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2F8A5B;
+    box-shadow: 0 0 0 4px rgba(47,138,91,0.10);
+}
+
+.innerme-messages {
+    flex: 1;
+    min-height: 0;
+    padding: 24px 22px 12px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    background:
+        linear-gradient(180deg, rgba(246,250,255,0.62), rgba(255,255,255,0.44));
+}
+
+.innerme-message {
+    display: flex;
+    margin-bottom: 14px;
+}
+
+.innerme-message:last-child {
+    margin-bottom: 0;
+}
+
+.innerme-message[data-role="assistant"] {
+    justify-content: flex-start;
+}
+
+.innerme-message[data-role="user"] {
+    justify-content: flex-end;
+}
+
+.innerme-bubble {
+    width: fit-content;
+    max-width: min(82%, 520px);
+    padding: 12px 14px;
+    border-radius: 17px;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.innerme-message[data-role="assistant"] .innerme-bubble {
+    border: 1px solid rgba(0,32,150,0.08);
+    border-bottom-left-radius: 7px;
+    background: rgba(255,255,255,0.90);
+    color: #26334D;
+    box-shadow: 0 7px 20px rgba(0,32,150,0.055);
+}
+
+.innerme-message[data-role="user"] .innerme-bubble {
+    border-bottom-right-radius: 7px;
+    background: linear-gradient(135deg, #002096 0%, #0152F4 100%);
+    color: #FFFFFF;
+    box-shadow: 0 10px 22px rgba(0,32,150,0.16);
+}
+
+.innerme-message-meta {
+    margin-bottom: 6px;
+    color: #7D899D;
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.10em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.innerme-message[data-role="user"] .innerme-message-meta {
+    color: rgba(255,255,255,0.68);
+    text-align: right;
+}
+
+.innerme-typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 18px;
+}
+
+.innerme-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6E7C92;
+    animation: innerme-typing-bounce 0.9s infinite ease-in-out;
+}
+
+.innerme-typing span:nth-child(2) {
+    animation-delay: 0.14s;
+}
+
+.innerme-typing span:nth-child(3) {
+    animation-delay: 0.28s;
+}
+
+@keyframes innerme-typing-bounce {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.36;
+    }
+    30% {
+        transform: translateY(-4px);
+        opacity: 1;
+    }
+}
+
+.innerme-quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 22px 16px;
+}
+
+.innerme-quick button {
+    appearance: none;
+    border: 1px solid rgba(0,32,150,0.10);
+    border-radius: 999px;
+    padding: 9px 12px;
+    background: rgba(255,255,255,0.84);
+    color: #2E3C56;
+    font: inherit;
+    font-size: 0.63rem;
+    font-weight: 750;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.innerme-quick button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(1,82,244,0.22);
+    background: #FFFFFF;
+    box-shadow: 0 6px 16px rgba(0,32,150,0.07);
+}
+
+.innerme-compose {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 16px 22px 10px;
+    border-top: 1px solid rgba(0,32,150,0.08);
+    background: rgba(255,255,255,0.84);
+}
+
+.innerme-input {
+    width: 100%;
+    min-height: 50px;
+    max-height: 150px;
+    resize: none;
+    border: 1px solid rgba(0,32,150,0.12);
+    border-radius: 17px;
+    padding: 14px 15px;
+    outline: none;
+    background: #FFFFFF;
+    color: #1C2A43;
+    font: inherit;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    box-shadow: inset 0 1px 0 rgba(0,32,150,0.02);
+}
+
+.innerme-input::placeholder {
+    color: #99A4B5;
+}
+
+.innerme-input:focus {
+    border-color: rgba(1,82,244,0.34);
+    box-shadow: 0 0 0 4px rgba(1,82,244,0.07);
+}
+
+.innerme-send {
+    width: 50px;
+    height: 50px;
+    align-self: end;
+    border: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #002096 0%, #0152F4 100%);
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 22px rgba(0,32,150,0.18);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.innerme-send:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 13px 26px rgba(0,32,150,0.22);
+}
+
+.innerme-send:disabled {
+    cursor: default;
+    opacity: 0.46;
+    transform: none;
+}
+
+.innerme-send svg {
+    width: 17px;
+    height: 17px;
+}
+
+.innerme-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 22px 18px;
+    background: rgba(255,255,255,0.84);
+}
+
+.innerme-reset,
+.innerme-handoff {
+    appearance: none;
+    border: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.innerme-reset {
+    padding: 6px 0;
+    color: #76839A;
+    font-size: 0.59rem;
+    font-weight: 750;
+}
+
+.innerme-reset:hover {
+    color: #223351;
+}
+
+.innerme-handoff {
+    display: none;
+    padding: 9px 12px;
+    border: 1px solid rgba(1,82,244,0.16);
+    border-radius: 999px;
+    background: rgba(1,82,244,0.05);
+    color: #0152F4;
+    font-size: 0.62rem;
+    font-weight: 850;
+}
+
+.innerme-handoff.is-visible {
+    display: inline-flex;
+}
+
+.innerme-footnote {
+    padding: 0 22px 19px;
+    color: #8A95A8;
+    font-size: 0.56rem;
+    line-height: 1.55;
+    background: rgba(255,255,255,0.84);
+}
+
+.innerme-recommendation {
+    display: none;
+    margin: 0 22px 15px;
+    padding: 12px 14px;
+    border: 1px solid rgba(1,82,244,0.11);
+    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(1,82,244,0.055), rgba(119,193,252,0.10));
+}
+
+.innerme-recommendation.is-visible {
+    display: block;
+}
+
+.innerme-recommendation-label {
+    display: block;
+    color: #7A879B;
+    font-size: 0.54rem;
+    font-weight: 850;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.innerme-recommendation-service {
+    display: block;
+    margin-top: 4px;
+    color: #18305B;
+    font-size: 0.8rem;
+    font-weight: 850;
+}
+
+.innerme-recommendation-button {
+    margin-top: 8px;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: #0152F4;
+    font: inherit;
+    font-size: 0.62rem;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.innerme-recommendation-button:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 980px) {
+    .innerme-shell {
+        grid-template-columns: 1fr;
+        gap: 44px;
+    }
+
+    .innerme-intro {
+        max-width: 780px;
+    }
+
+    .innerme-card {
+        max-width: none;
+        justify-self: stretch;
+        min-height: 620px;
+    }
+}
+
+@media (max-width: 700px) {
+    .innerme-section {
+        padding: 90px 6% 92px;
+    }
+
+    .innerme-shell {
+        gap: 34px;
+    }
+
+    .innerme-lead {
+        font-size: 1rem;
+        line-height: 1.72;
+    }
+
+    .innerme-card {
+        min-height: 600px;
+        border-radius: 24px;
+    }
+
+    .innerme-card-head {
+        padding: 16px;
+    }
+
+    .innerme-orb {
+        width: 38px;
+        height: 38px;
+        border-radius: 13px;
+    }
+
+    .innerme-status {
+        padding: 6px 9px;
+        font-size: 0.56rem;
+    }
+
+    .innerme-messages {
+        padding: 18px 14px 10px;
+    }
+
+    .innerme-bubble {
+        max-width: 88%;
+        padding: 12px 13px;
+        font-size: 0.78rem;
+        line-height: 1.68;
+    }
+
+    .innerme-quick {
+        padding: 0 14px 13px;
+    }
+
+    .innerme-quick button {
+        flex: 1 1 calc(50% - 8px);
+        min-height: 39px;
+        font-size: 0.60rem;
+    }
+
+    .innerme-compose {
+        padding: 13px 14px 9px;
+        gap: 8px;
+    }
+
+    .innerme-input {
+        min-height: 48px;
+        font-size: 0.78rem;
+    }
+
+    .innerme-send {
+        width: 48px;
+        height: 48px;
+    }
+
+    .innerme-actions {
+        padding: 0 14px 14px;
+    }
+
+    .innerme-footnote {
+        padding: 0 14px 16px;
+        font-size: 0.53rem;
+    }
+
+    .innerme-recommendation {
+        margin: 0 14px 13px;
+    }
+}
+
+@media (max-width: 420px) {
+    .innerme-card {
+        min-height: 585px;
+    }
+
+    .innerme-quick button {
+        flex-basis: 100%;
+    }
+
+    .innerme-status {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .innerme-typing span {
+        animation: none;
+    }
+
+    .innerme-send,
+    .innerme-quick button {
+        transition: none;
+    }
+}
+
 /* Contact section background video */
 
 .contact-section-background-video {
@@ -17345,6 +17969,138 @@ section {
     aria-hidden="true"
 ></div>
 
+
+<!-- PUBLIC INNERME -->
+<section class="innerme-section" id="innerme">
+
+    <div class="section-edge-fade section-edge-fade--innerme" aria-hidden="true"></div>
+
+    <div class="innerme-shell">
+
+        <div class="innerme-intro">
+
+            <div class="section-label">Meet InnerMe</div>
+
+            <h2 class="section-title">
+                Start with the question.<br>
+                <span>Not the service.</span>
+            </h2>
+
+            <p class="innerme-lead">
+                Not sure what your business needs yet? Tell InnerMe what
+                you're trying to build, where you're getting stuck or what
+                you want customers to experience. It will help you work
+                it out and point you toward the Swayphics solution that fits.
+            </p>
+
+            <span class="innerme-note">
+                <span class="innerme-note-dot" aria-hidden="true"></span>
+                Same InnerMe. Public conversation. No access to private Swayphics records.
+            </span>
+
+        </div>
+
+        <div class="innerme-card" aria-label="InnerMe public chat">
+
+            <div class="innerme-card-head">
+
+                <div class="innerme-identity">
+
+                    <div class="innerme-orb" aria-hidden="true"></div>
+
+                    <div class="innerme-identity-copy">
+                        <span class="innerme-kicker">SWAYPHICS</span>
+                        <span class="innerme-name">InnerMe</span>
+                    </div>
+
+                </div>
+
+                <span class="innerme-status">Online</span>
+
+            </div>
+
+            <div
+                class="innerme-messages"
+                id="innerme-messages"
+                aria-live="polite"
+                aria-label="InnerMe conversation"
+            ></div>
+
+            <div class="innerme-recommendation" id="innerme-recommendation">
+                <span class="innerme-recommendation-label">InnerMe suggests</span>
+                <span class="innerme-recommendation-service" id="innerme-recommendation-service"></span>
+                <button
+                    type="button"
+                    class="innerme-recommendation-button"
+                    id="innerme-recommendation-button"
+                >
+                    Continue with Swayphics →
+                </button>
+            </div>
+
+            <div class="innerme-quick" id="innerme-quick">
+                <button type="button" data-innerme-prompt="I'm starting a new business and I'm not sure what I need first.">I'm starting a business</button>
+                <button type="button" data-innerme-prompt="My branding feels weak and I want the business to look more professional.">My branding needs work</button>
+                <button type="button" data-innerme-prompt="I have a business, but I'm not getting enough enquiries online.">I'm not getting enquiries</button>
+                <button type="button" data-innerme-prompt="I want a website, but I'm not sure what it should include.">I need a website</button>
+            </div>
+
+            <div class="innerme-compose">
+
+                <textarea
+                    id="innerme-input"
+                    class="innerme-input"
+                    rows="1"
+                    maxlength="1400"
+                    placeholder="Tell InnerMe what's going on..."
+                    aria-label="Message InnerMe"
+                ></textarea>
+
+                <button
+                    type="button"
+                    class="innerme-send"
+                    id="innerme-send"
+                    aria-label="Send message"
+                    title="Send message"
+                >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M5 12h13"></path>
+                        <path d="m13 6 6 6-6 6"></path>
+                    </svg>
+                </button>
+
+            </div>
+
+            <div class="innerme-actions">
+
+                <button
+                    type="button"
+                    class="innerme-reset"
+                    id="innerme-reset"
+                >
+                    Start a new conversation
+                </button>
+
+                <button
+                    type="button"
+                    class="innerme-handoff"
+                    id="innerme-handoff"
+                >
+                    Send this to Swayphics →
+                </button>
+
+            </div>
+
+            <div class="innerme-footnote">
+                InnerMe is an AI assistant. Please do not share passwords, payment details or other sensitive information in the chat.
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
 <!-- CTA -->
 <section class="cta" id="contact">
 
@@ -20199,6 +20955,621 @@ if (formStatus) {
             }
         );
     });
+})();
+</script>
+
+
+<script id="sway-public-innerme">
+(function () {
+    "use strict";
+
+    var API_URL =
+        "https://sqifhribgsqfaxgtobsa.supabase.co/functions/v1/swayphics-ai";
+
+    var messagesEl =
+        document.getElementById("innerme-messages");
+
+    var inputEl =
+        document.getElementById("innerme-input");
+
+    var sendEl =
+        document.getElementById("innerme-send");
+
+    var quickEl =
+        document.getElementById("innerme-quick");
+
+    var resetEl =
+        document.getElementById("innerme-reset");
+
+    var handoffEl =
+        document.getElementById("innerme-handoff");
+
+    var recommendationEl =
+        document.getElementById("innerme-recommendation");
+
+    var recommendationServiceEl =
+        document.getElementById("innerme-recommendation-service");
+
+    var recommendationButtonEl =
+        document.getElementById("innerme-recommendation-button");
+
+    if (
+        !messagesEl ||
+        !inputEl ||
+        !sendEl ||
+        !resetEl
+    ) {
+        return;
+    }
+
+    var history = [];
+    var isThinking = false;
+    var latestRecommendedService = "";
+    var lastUserMessages = [];
+
+    var allowedServices = new Set([
+        "Starter Package",
+        "Launch Package",
+        "Growth Package",
+        "Logo Design",
+        "Business Identity Kit",
+        "Business Card Design",
+        "Business Letterhead Design",
+        "Packaging Design",
+        "Apparel Design",
+        "Website Design",
+        "Google Business Profile",
+        "Professional Email Setup",
+        "Company Registration",
+        "Booking System",
+        "AI Customer Reply Setup",
+        "Review Collection System",
+        "Website Maintenance",
+        "Something else"
+    ]);
+
+    function escapeHtml(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function track(eventName, parameters) {
+        if (
+            typeof window.swayphicsTrack === "function"
+        ) {
+            window.swayphicsTrack(
+                eventName,
+                parameters || {}
+            );
+        }
+    }
+
+    function scrollMessages() {
+        requestAnimationFrame(function () {
+            messagesEl.scrollTop =
+                messagesEl.scrollHeight;
+        });
+    }
+
+    function addMessage(role, content) {
+        var row =
+            document.createElement("div");
+
+        row.className =
+            "innerme-message";
+
+        row.dataset.role =
+            role;
+
+        var bubble =
+            document.createElement("div");
+
+        bubble.className =
+            "innerme-bubble";
+
+        var meta =
+            document.createElement("div");
+
+        meta.className =
+            "innerme-message-meta";
+
+        meta.textContent =
+            role === "assistant"
+                ? "InnerMe"
+                : "You";
+
+        var body =
+            document.createElement("div");
+
+        body.textContent =
+            String(content || "");
+
+        bubble.appendChild(meta);
+        bubble.appendChild(body);
+        row.appendChild(bubble);
+        messagesEl.appendChild(row);
+
+        scrollMessages();
+
+        return row;
+    }
+
+    function addThinking() {
+        var row =
+            document.createElement("div");
+
+        row.className =
+            "innerme-message";
+
+        row.dataset.role =
+            "assistant";
+
+        var bubble =
+            document.createElement("div");
+
+        bubble.className =
+            "innerme-bubble";
+
+        var meta =
+            document.createElement("div");
+
+        meta.className =
+            "innerme-message-meta";
+
+        meta.textContent =
+            "InnerMe";
+
+        var typing =
+            document.createElement("div");
+
+        typing.className =
+            "innerme-typing";
+
+        typing.innerHTML =
+            "<span></span><span></span><span></span>";
+
+        bubble.appendChild(meta);
+        bubble.appendChild(typing);
+        row.appendChild(bubble);
+        messagesEl.appendChild(row);
+
+        scrollMessages();
+
+        return row;
+    }
+
+    function setBusy(busy) {
+        isThinking = busy;
+
+        sendEl.disabled =
+            busy ||
+            !inputEl.value.trim();
+
+        inputEl.disabled =
+            busy;
+
+        quickEl?.querySelectorAll("button")
+            .forEach(function (button) {
+                button.disabled = busy;
+            });
+    }
+
+    function updateSendState() {
+        sendEl.disabled =
+            isThinking ||
+            !inputEl.value.trim();
+    }
+
+    function showRecommendation(service) {
+        latestRecommendedService =
+            allowedServices.has(service)
+                ? service
+                : "";
+
+        if (!recommendationEl || !recommendationServiceEl) {
+            return;
+        }
+
+        if (!latestRecommendedService) {
+            recommendationEl.classList.remove(
+                "is-visible"
+            );
+            return;
+        }
+
+        recommendationServiceEl.textContent =
+            latestRecommendedService;
+
+        recommendationEl.classList.add(
+            "is-visible"
+        );
+    }
+
+    function buildHandoffMessage() {
+        var meaningful =
+            lastUserMessages
+                .map(function (item) {
+                    return String(item || "").trim();
+                })
+                .filter(Boolean)
+                .slice(-4);
+
+        if (!meaningful.length) {
+            return "";
+        }
+
+        var body =
+            "I spoke with InnerMe on the Swayphics website. " +
+            "Here is what I shared about what I need:" +
+            "\\n\\n• " +
+            meaningful.join("\\n• ");
+
+        if (body.length > 1450) {
+            body =
+                body.slice(0, 1447).trimEnd() +
+                "...";
+        }
+
+        return body;
+    }
+
+    function openContactForm() {
+        var serviceSelect =
+            document.getElementById("service");
+
+        var messageField =
+            document.getElementById("message");
+
+        var selectedService =
+            allowedServices.has(
+                latestRecommendedService
+            )
+                ? latestRecommendedService
+                : "Something else";
+
+        if (serviceSelect) {
+            serviceSelect.value =
+                selectedService;
+
+            serviceSelect.dispatchEvent(
+                new Event(
+                    "change",
+                    { bubbles: true }
+                )
+            );
+        }
+
+        var handoffMessage =
+            buildHandoffMessage();
+
+        if (messageField && handoffMessage) {
+            messageField.value =
+                handoffMessage;
+
+            messageField.dispatchEvent(
+                new Event(
+                    "input",
+                    { bubbles: true }
+                )
+            );
+        }
+
+        var contact =
+            document.getElementById("contact");
+
+        if (contact) {
+            contact.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
+
+        setTimeout(function () {
+            var nameField =
+                document.getElementById("name");
+
+            if (nameField) {
+                nameField.focus({
+                    preventScroll: true
+                });
+            }
+        }, 650);
+
+        track(
+            "innerme_handoff",
+            {
+                recommended_service:
+                    selectedService
+            }
+        );
+    }
+
+    function resetConversation() {
+        history = [];
+        lastUserMessages = [];
+        latestRecommendedService = "";
+
+        messagesEl.innerHTML = "";
+
+        showRecommendation("");
+
+        handoffEl?.classList.remove(
+            "is-visible"
+        );
+
+        quickEl?.classList.remove(
+            "is-hidden"
+        );
+
+        addMessage(
+            "assistant",
+            "Hi. I'm InnerMe, the Swayphics AI. Tell me what you're trying to build, what feels stuck, or what you want customers to experience. We can work it out from there."
+        );
+
+        inputEl.value = "";
+        inputEl.style.height = "auto";
+
+        updateSendState();
+        scrollMessages();
+    }
+
+    async function sendMessage(rawMessage) {
+        if (isThinking) {
+            return;
+        }
+
+        var message =
+            String(rawMessage || "").trim();
+
+        if (!message) {
+            return;
+        }
+
+        if (message.length > 1400) {
+            addMessage(
+                "assistant",
+                "That message is a little long. Keep it to 1,400 characters and we'll keep going."
+            );
+            return;
+        }
+
+        addMessage(
+            "user",
+            message
+        );
+
+        history.push({
+            role: "user",
+            content: message
+        });
+
+        lastUserMessages.push(
+            message
+        );
+
+        if (
+            quickEl &&
+            lastUserMessages.length
+        ) {
+            quickEl.style.display =
+                "none";
+        }
+
+        track(
+            "innerme_message",
+            {}
+        );
+
+        inputEl.value = "";
+        inputEl.style.height = "auto";
+        setBusy(true);
+
+        var thinkingRow =
+            addThinking();
+
+        try {
+            var response =
+                await fetch(
+                    API_URL,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body:
+                            JSON.stringify({
+                                action:
+                                    "public_chat",
+                                message:
+                                    message,
+                                history:
+                                    history
+                                        .slice(-10)
+                            })
+                    }
+                );
+
+            var payload =
+                await response.json()
+                    .catch(function () {
+                        return {};
+                    });
+
+            if (!response.ok) {
+                throw new Error(
+                    payload.error ||
+                    "InnerMe is unavailable right now."
+                );
+            }
+
+            var answer =
+                String(
+                    payload?.answer ||
+                    ""
+                ).trim();
+
+            if (!answer) {
+                throw new Error(
+                    "InnerMe returned an empty answer."
+                );
+            }
+
+            var recommended =
+                String(
+                    payload?.recommended_service ||
+                    ""
+                ).trim();
+
+            showRecommendation(
+                recommended
+            );
+
+            history.push({
+                role:
+                    "assistant",
+                content:
+                    answer
+            });
+
+            if (thinkingRow) {
+                thinkingRow.remove();
+            }
+
+            addMessage(
+                "assistant",
+                answer
+            );
+
+            if (
+                payload?.ready_for_enquiry
+            ) {
+                handoffEl?.classList.add(
+                    "is-visible"
+                );
+            }
+
+        } catch (error) {
+            if (thinkingRow) {
+                thinkingRow.remove();
+            }
+
+            addMessage(
+                "assistant",
+                error?.message ||
+                "I couldn't reach InnerMe right now. Please try again in a moment."
+            );
+        } finally {
+            setBusy(false);
+            updateSendState();
+            inputEl.focus();
+        }
+    }
+
+    sendEl.addEventListener(
+        "click",
+        function () {
+            sendMessage(
+                inputEl.value
+            );
+        }
+    );
+
+    inputEl.addEventListener(
+        "input",
+        function () {
+            inputEl.style.height =
+                "auto";
+
+            inputEl.style.height =
+                Math.min(
+                    inputEl.scrollHeight,
+                    150
+                ) + "px";
+
+            updateSendState();
+        }
+    );
+
+    inputEl.addEventListener(
+        "keydown",
+        function (event) {
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+                event.preventDefault();
+                sendMessage(
+                    inputEl.value
+                );
+            }
+        }
+    );
+
+    quickEl?.querySelectorAll(
+        "[data-innerme-prompt]"
+    ).forEach(function (button) {
+        button.addEventListener(
+            "click",
+            function () {
+                sendMessage(
+                    button.getAttribute(
+                        "data-innerme-prompt"
+                    ) || ""
+                );
+            }
+        );
+    });
+
+    resetEl.addEventListener(
+        "click",
+        resetConversation
+    );
+
+    handoffEl?.addEventListener(
+        "click",
+        openContactForm
+    );
+
+    recommendationButtonEl?.addEventListener(
+        "click",
+        openContactForm
+    );
+
+    var innermeSection =
+        document.getElementById("innerme");
+
+    if (innermeSection) {
+        var openObserver =
+            new IntersectionObserver(
+                function (entries, observer) {
+                    if (
+                        entries.some(
+                            function (entry) {
+                                return entry.isIntersecting;
+                            }
+                        )
+                    ) {
+                        track(
+                            "innerme_view",
+                            {}
+                        );
+                        observer.disconnect();
+                    }
+                },
+                { threshold: 0.35 }
+            );
+
+        openObserver.observe(
+            innermeSection
+        );
+    }
+
+    resetConversation();
 })();
 </script>
 
