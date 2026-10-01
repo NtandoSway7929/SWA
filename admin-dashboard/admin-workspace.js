@@ -21384,25 +21384,35 @@ function simpleBars(items, color) {
                         // Storage cleanup is an enhancement only.
                     }
 
-                    const aiMain =
-                        document.getElementById(
-                            "sway-workspace-main"
+                    /*
+                     * InnerMe deliberately preserves its live panel during
+                     * background workspace syncs. New chat must therefore
+                     * reset the conversation DOM directly instead of calling
+                     * renderView(), which intentionally keeps the existing
+                     * panel mounted.
+                     */
+                    const liveConversation =
+                        workspace.querySelector(
+                            "#sway-ai-conversation"
                         );
 
-                    /*
-                     * InnerMe normally preserves its live DOM during
-                     * background syncs. New chat is an explicit reset,
-                     * so remove the existing panel first to force a fresh
-                     * conversation view instead of leaving old bubbles behind.
-                     */
-                    if (
-                        aiMain &&
-                        state.currentView === "swayphics-ai"
-                    ) {
-                        aiMain.innerHTML = "";
+                    if (liveConversation) {
+                        liveConversation.innerHTML =
+                            '<div class="sway-ai-welcome">' +
+                                '<strong>What can InnerMe help you with?</strong>' +
+                                '<span>Ask about leads, clients, follow-ups, tasks, projects, invoices, payments, portal requests or recent activity.</span>' +
+                            '</div>';
+                        liveConversation.scrollTop = 0;
                     }
 
-                    renderView();
+                    const liveFocusBar =
+                        workspace.querySelector(
+                            ".sway-ai-focus-bar"
+                        );
+
+                    if (liveFocusBar) {
+                        liveFocusBar.remove();
+                    }
 
                     const freshInput =
                         workspace.querySelector("#sway-ai-input");
