@@ -13828,10 +13828,7 @@ function simpleBars(items, color) {
                     selectedTypeState
                 ).find(
                     function (item) {
-                        return (
-                            item.id ===
-                            selectedIdState
-                        );
+                        return String(item.id) === String(selectedIdState);
                     }
                 ) || null
             );
@@ -13856,10 +13853,7 @@ function simpleBars(items, color) {
                 contactInput.value &&
                 records.some(
                     function (item) {
-                        return (
-                            item.id ===
-                            contactInput.value
-                        );
+                        return String(item.id) === String(contactInput.value);
                     }
                 )
             ) {
@@ -13869,10 +13863,7 @@ function simpleBars(items, color) {
                 selectedIdState &&
                 records.some(
                     function (item) {
-                        return (
-                            item.id ===
-                            selectedIdState
-                        );
+                        return String(item.id) === String(selectedIdState);
                     }
                 )
             ) {
@@ -14032,10 +14023,7 @@ function simpleBars(items, color) {
                                         replyContact.type
                                     ).find(
                                         function (item) {
-                                            return (
-                                                item.id ===
-                                                replyContact.id
-                                            );
+                                            return String(item.id) === String(replyContact.id);
                                         }
                                     ) || null
                                 )
