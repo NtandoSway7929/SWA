@@ -63,7 +63,9 @@
         adminNotifications: [],
         notificationsAvailable: false,
         aiConversation: [],
-        aiFocusedRecord: null
+        aiFocusedRecord: null,
+        aiChatSessions: [],
+        aiActiveChatId: ""
     };
 
     const navGroups = [
@@ -1705,6 +1707,251 @@
         }
     }
 
+    const AI_CHAT_HISTORY_VERSION = 1;
+    const AI_CHAT_HISTORY_LIMIT = 10;
+    const AI_CHAT_MESSAGE_LIMIT = 40;
+
+    function aiChatSessionsCacheKey() {
+        return (
+            "swayphics_admin_innerme_chats_" +
+            String(
+                state.currentUser && state.currentUser.id
+                    ? state.currentUser.id
+                    : "guest"
+            )
+        );
+    }
+
+    function aiActiveChatCacheKey() {
+        return (
+            "swayphics_admin_innerme_active_chat_" +
+            String(
+                state.currentUser && state.currentUser.id
+                    ? state.currentUser.id
+                    : "guest"
+            )
+        );
+    }
+
+    function createAIChatId() {
+        if (
+            typeof crypto !== "undefined" &&
+            typeof crypto.randomUUID === "function"
+        ) {
+            return crypto.randomUUID();
+        }
+
+        return (
+            "chat-" +
+            Date.now().toString(36) +
+            "-" +
+            Math.random().toString(36).slice(2, 10)
+        );
+    }
+
+    function normalizeAIChatMessages(messages) {
+        return (
+            Array.isArray(messages)
+                ? messages
+                : []
+        )
+            .filter(function (item) {
+                return (
+                    item &&
+                    (item.role === "user" ||
+                        item.role === "assistant") &&
+                    String(item.content || "").trim()
+                );
+            })
+            .map(function (item) {
+                return {
+                    role: item.role,
+                    content: String(item.content || "").slice(0, 4000),
+                    createdAt: item.createdAt
+                        ? String(item.createdAt)
+                        : ""
+                };
+            })
+            .slice(-AI_CHAT_MESSAGE_LIMIT);
+    }
+
+    function getAIChatTitle(messages) {
+        const firstUserMessage =
+            normalizeAIChatMessages(messages).find(function (item) {
+                return item.role === "user";
+            });
+
+        if (!firstUserMessage) {
+            return "New conversation";
+        }
+
+        const normalized =
+            String(firstUserMessage.content || "")
+                .replace(/\s+/g, " ")
+                .trim();
+
+        if (normalized.length <= 48) {
+            return normalized;
+        }
+
+        return normalized.slice(0, 45).trimEnd() + "…";
+    }
+
+    function normalizeAIChatFocus(focus) {
+        if (!focus || !focus.type || !focus.id) {
+            return null;
+        }
+
+        return {
+            type: String(focus.type),
+            id: String(focus.id),
+            label: String(focus.label || ""),
+            name: String(focus.name || "")
+        };
+    }
+
+    function normalizeAIChatSessions(chats) {
+        if (!Array.isArray(chats)) {
+            return [];
+        }
+
+        return chats
+            .map(function (chat) {
+                const messages =
+                    normalizeAIChatMessages(chat && chat.messages);
+
+                return {
+                    id:
+                        chat && chat.id
+                            ? String(chat.id)
+                            : createAIChatId(),
+                    title:
+                        chat && chat.title
+                            ? String(chat.title).slice(0, 80)
+                            : getAIChatTitle(messages),
+                    createdAt:
+                        chat && chat.createdAt
+                            ? String(chat.createdAt)
+                            : "",
+                    updatedAt:
+                        chat && chat.updatedAt
+                            ? String(chat.updatedAt)
+                            : "",
+                    messages,
+                    focus:
+                        normalizeAIChatFocus(
+                            chat && chat.focus
+                        )
+                };
+            })
+            .filter(function (chat) {
+                return chat.messages.length > 0;
+            })
+            .sort(function (a, b) {
+                return (
+                    new Date(b.updatedAt || b.createdAt || 0).getTime() -
+                    new Date(a.updatedAt || a.createdAt || 0).getTime()
+                );
+            })
+            .slice(0, AI_CHAT_HISTORY_LIMIT);
+    }
+
+    function saveAIChatSessions() {
+        if (
+            !state.currentUser ||
+            !state.currentUser.id
+        ) {
+            return;
+        }
+
+        try {
+            const chats =
+                normalizeAIChatSessions(
+                    state.aiChatSessions
+                );
+
+            state.aiChatSessions = chats;
+
+            sessionStorage.setItem(
+                aiChatSessionsCacheKey(),
+                JSON.stringify({
+                    version: AI_CHAT_HISTORY_VERSION,
+                    active_chat_id:
+                        String(state.aiActiveChatId || ""),
+                    chats
+                })
+            );
+
+            sessionStorage.setItem(
+                aiActiveChatCacheKey(),
+                String(state.aiActiveChatId || "")
+            );
+        } catch (error) {
+            // Chat history is an enhancement only.
+        }
+    }
+
+    function archiveCurrentAIChat() {
+        const messages =
+            normalizeAIChatMessages(
+                state.aiConversation
+            );
+
+        if (!messages.length) {
+            return null;
+        }
+
+        const chatId =
+            state.aiActiveChatId ||
+            createAIChatId();
+
+        const now =
+            new Date().toISOString();
+
+        const existing =
+            Array.isArray(state.aiChatSessions)
+                ? state.aiChatSessions.find(function (chat) {
+                    return String(chat.id) === String(chatId);
+                })
+                : null;
+
+        const chat = {
+            id: String(chatId),
+            title:
+                existing && existing.title
+                    ? existing.title
+                    : getAIChatTitle(messages),
+            createdAt:
+                existing && existing.createdAt
+                    ? existing.createdAt
+                    : String(
+                        messages[0].createdAt || now
+                    ),
+            updatedAt: now,
+            messages,
+            focus:
+                normalizeAIChatFocus(
+                    state.aiFocusedRecord
+                )
+        };
+
+        state.aiChatSessions =
+            [
+                chat
+            ].concat(
+                (state.aiChatSessions || []).filter(function (item) {
+                    return String(item.id) !== String(chat.id);
+                })
+            );
+
+        state.aiActiveChatId =
+            String(chat.id);
+
+        saveAIChatSessions();
+
+        return chat;
+    }
+
     function saveAIConversation() {
         if (
             !state.currentUser ||
@@ -1715,25 +1962,30 @@
         }
 
         try {
-            const history = state.aiConversation
-                .filter(function (item) {
-                    return (
-                        item &&
-                        !item.loading &&
-                        (item.role === "user" ||
-                            item.role === "assistant") &&
-                        String(item.content || "").trim()
-                    );
-                })
-                .slice(-40);
+            const history =
+                normalizeAIChatMessages(
+                    state.aiConversation
+                );
 
-            sessionStorage.setItem(
-                aiConversationCacheKey(),
-                JSON.stringify({
-                    version: 1,
-                    saved_at: Date.now(),
-                    messages: history
-                })
+            state.aiConversation =
+                history;
+
+            if (
+                !state.aiActiveChatId &&
+                history.length
+            ) {
+                state.aiActiveChatId =
+                    createAIChatId();
+            }
+
+            if (history.length) {
+                archiveCurrentAIChat();
+            } else {
+                saveAIChatSessions();
+            }
+
+            sessionStorage.removeItem(
+                aiConversationCacheKey()
             );
         } catch (error) {
             // Conversation persistence is an enhancement only.
@@ -1749,45 +2001,249 @@
         }
 
         try {
-            const raw = sessionStorage.getItem(
-                aiConversationCacheKey()
-            );
+            const raw =
+                sessionStorage.getItem(
+                    aiChatSessionsCacheKey()
+                );
 
-            if (!raw) {
-                return false;
-            }
+            let snapshot =
+                raw
+                    ? JSON.parse(raw)
+                    : null;
 
-            const snapshot = JSON.parse(raw);
+            let chats =
+                snapshot &&
+                snapshot.version === AI_CHAT_HISTORY_VERSION &&
+                Array.isArray(snapshot.chats)
+                    ? normalizeAIChatSessions(
+                        snapshot.chats
+                    )
+                    : [];
 
-            if (
-                !snapshot ||
-                snapshot.version !== 1 ||
-                !Array.isArray(snapshot.messages)
-            ) {
-                return false;
-            }
-
-            state.aiConversation = snapshot.messages
-                .filter(function (item) {
-                    return (
-                        item &&
-                        (item.role === "user" ||
-                            item.role === "assistant") &&
-                        String(item.content || "").trim()
+            /*
+             * Migrate the previous single-conversation cache into the new
+             * multi-chat structure once, without silently losing the existing
+             * conversation.
+             */
+            if (!chats.length) {
+                const legacyRaw =
+                    sessionStorage.getItem(
+                        aiConversationCacheKey()
                     );
-                })
-                .map(function (item) {
-                    return {
-                        role: item.role,
-                        content: String(item.content || "").slice(0, 4000)
-                    };
-                })
-                .slice(-40);
+
+                if (legacyRaw) {
+                    const legacySnapshot =
+                        JSON.parse(legacyRaw);
+
+                    const legacyMessages =
+                        normalizeAIChatMessages(
+                            legacySnapshot &&
+                            legacySnapshot.messages
+                        );
+
+                    if (legacyMessages.length) {
+                        chats = [
+                            {
+                                id: createAIChatId(),
+                                title:
+                                    getAIChatTitle(
+                                        legacyMessages
+                                    ),
+                                createdAt:
+                                    String(
+                                        legacyMessages[0].createdAt ||
+                                        new Date().toISOString()
+                                    ),
+                                updatedAt:
+                                    String(
+                                        legacySnapshot.saved_at
+                                            ? new Date(
+                                                legacySnapshot.saved_at
+                                            ).toISOString()
+                                            : new Date().toISOString()
+                                    ),
+                                messages:
+                                    legacyMessages,
+                                focus:
+                                    normalizeAIChatFocus(
+                                        state.aiFocusedRecord
+                                    )
+                            }
+                        ];
+
+                        sessionStorage.removeItem(
+                            aiConversationCacheKey()
+                        );
+                    }
+                }
+            }
+
+            state.aiChatSessions =
+                chats;
+
+            const activeId =
+                String(
+                    (
+                        snapshot &&
+                        snapshot.version === AI_CHAT_HISTORY_VERSION &&
+                        snapshot.active_chat_id
+                    ) ||
+                    sessionStorage.getItem(
+                        aiActiveChatCacheKey()
+                    ) ||
+                    (chats[0] && chats[0].id) ||
+                    ""
+                );
+
+            const activeChat =
+                chats.find(function (chat) {
+                    return String(chat.id) === activeId;
+                }) ||
+                chats[0] ||
+                null;
+
+            if (!activeChat) {
+                state.aiActiveChatId = createAIChatId();
+                state.aiConversation = [];
+                return false;
+            }
+
+            state.aiActiveChatId =
+                String(activeChat.id);
+
+            state.aiConversation =
+                normalizeAIChatMessages(
+                    activeChat.messages
+                );
+
+            state.aiFocusedRecord =
+                normalizeAIChatFocus(
+                    activeChat.focus
+                );
+
+            saveAIChatSessions();
 
             return state.aiConversation.length > 0;
         } catch (error) {
+            state.aiChatSessions = [];
+            state.aiActiveChatId = createAIChatId();
             return false;
         }
+    }
+
+    function selectAIChat(chatId) {
+        const targetId =
+            String(chatId || "");
+
+        if (!targetId) {
+            return;
+        }
+
+        archiveCurrentAIChat();
+
+        const chat =
+            (state.aiChatSessions || []).find(function (item) {
+                return String(item.id) === targetId;
+            });
+
+        if (!chat) {
+            return;
+        }
+
+        state.aiActiveChatId =
+            String(chat.id);
+
+        state.aiConversation =
+            normalizeAIChatMessages(
+                chat.messages
+            );
+
+        state.aiFocusedRecord =
+            normalizeAIChatFocus(
+                chat.focus
+            );
+
+        saveAIFocusedRecord();
+        saveAIChatSessions();
+
+        const history =
+            document.getElementById(
+                "sway-ai-history-panel"
+            );
+
+        if (history) {
+            history.hidden = true;
+        }
+
+        renderView();
+    }
+
+    function startNewAIChat() {
+        archiveCurrentAIChat();
+
+        state.aiActiveChatId =
+            createAIChatId();
+
+        state.aiConversation = [];
+        state.aiFocusedRecord = null;
+
+        saveAIFocusedRecord();
+        saveAIChatSessions();
+
+        renderView();
+
+        const freshInput =
+            document.getElementById(
+                "sway-ai-input"
+            );
+
+        if (freshInput) {
+            freshInput.focus();
+        }
+    }
+
+    function renderAIChatHistory() {
+        const chats =
+            normalizeAIChatSessions(
+                state.aiChatSessions
+            );
+
+        if (!chats.length) {
+            return (
+                '<div class="sway-ai-history-empty">' +
+                    'Your previous InnerMe chats will appear here.' +
+                '</div>'
+            );
+        }
+
+        return chats.map(function (chat) {
+            const active =
+                String(chat.id) ===
+                String(state.aiActiveChatId);
+
+            const updated =
+                formatAIMessageTime(
+                    chat.updatedAt || chat.createdAt
+                );
+
+            return (
+                '<button type="button" class="sway-ai-history-item' +
+                    (active ? ' is-active' : '') +
+                    '" data-ai-chat-id="' +
+                    esc(chat.id) +
+                    '">' +
+                    '<span class="sway-ai-history-item-copy">' +
+                        '<span class="sway-ai-history-item-title">' +
+                            esc(chat.title) +
+                        '</span>' +
+                        '<span class="sway-ai-history-item-meta">' +
+                            esc(updated || "Earlier") +
+                        '</span>' +
+                    '</span>' +
+                    '<span class="sway-ai-history-item-arrow" aria-hidden="true">›</span>' +
+                '</button>'
+            );
+        }).join("");
     }
 
     function saveWorkspaceSnapshot() {
@@ -19743,12 +20199,28 @@ function simpleBars(items, color) {
                         '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data.</p>' +
                     '</div>' +
                     '<div class="sway-ai-header-actions">' +
+                        '<button type="button" class="sway-ai-history-toggle" id="sway-ai-history-toggle" aria-expanded="false">' +
+                            '<span aria-hidden="true">☷</span>' +
+                            '<span>Chats</span>' +
+                        '</button>' +
                         '<button type="button" class="sway-ai-new-chat" id="sway-ai-new-chat">' +
                             '<span aria-hidden="true">＋</span>' +
                             '<span>New chat</span>' +
                         '</button>' +
                         '<span class="sway-ai-status">Read-only V1</span>' +
                     '</div>' +
+                '<div class="sway-ai-history-panel" id="sway-ai-history-panel" hidden>' +
+                    '<div class="sway-ai-history-head">' +
+                        '<div>' +
+                            '<span class="sway-ai-history-eyebrow">CHAT HISTORY</span>' +
+                            '<strong>Previous conversations</strong>' +
+                        '</div>' +
+                        '<button type="button" class="sway-ai-history-close" id="sway-ai-history-close" aria-label="Close chat history">×</button>' +
+                    '</div>' +
+                    '<div class="sway-ai-history-list">' +
+                        renderAIChatHistory() +
+                    '</div>' +
+                '</div>' +
                 '</div>' +
                 (
                     state.aiFocusedRecord
@@ -21313,9 +21785,9 @@ function simpleBars(items, color) {
         workspace
             .querySelectorAll("[data-ai-prompt]")
             .forEach(function (button) {
-                button.addEventListener("click", function () {
+                button.onclick = function () {
                     askSwayphicsAI(button.dataset.aiPrompt || "");
-                });
+                };
             });
 
         workspace
@@ -21348,73 +21820,81 @@ function simpleBars(items, color) {
             });
         }
 
+        const historyToggle =
+            workspace.querySelector("#sway-ai-history-toggle");
+
+        const historyPanel =
+            workspace.querySelector("#sway-ai-history-panel");
+
+        const historyClose =
+            workspace.querySelector("#sway-ai-history-close");
+
+        if (historyToggle && historyPanel) {
+            historyToggle.onclick = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const open =
+                    historyPanel.hidden === true;
+
+                historyPanel.hidden = !open;
+
+                historyToggle.setAttribute(
+                    "aria-expanded",
+                    open ? "true" : "false"
+                );
+            };
+        }
+
+        if (historyClose && historyPanel && historyToggle) {
+            historyClose.onclick = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                historyPanel.hidden = true;
+                historyToggle.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+            };
+        }
+
+        workspace
+            .querySelectorAll("[data-ai-chat-id]")
+            .forEach(function (button) {
+                button.onclick = function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    selectAIChat(
+                        button.dataset.aiChatId || ""
+                    );
+                };
+            });
+
         const newChatButton =
             workspace.querySelector("#sway-ai-new-chat");
 
         if (newChatButton) {
-            /*
-             * bindViewActions() can run repeatedly during realtime syncs while
-             * the InnerMe panel stays mounted. Assigning onclick replaces any
-             * previous handler, preventing stacked New Chat actions.
-             */
             newChatButton.onclick = async function () {
-                    if (
-                        Array.isArray(state.aiConversation) &&
-                        state.aiConversation.some(function (item) {
-                            return (
-                                item &&
-                                String(item.content || "").trim()
-                            );
-                        })
-                    ) {
-                        const confirmed = await swayConfirm(
-                            "Start a new InnerMe chat? The current conversation will be cleared."
+                if (
+                    Array.isArray(state.aiConversation) &&
+                    state.aiConversation.some(function (item) {
+                        return (
+                            item &&
+                            String(item.content || "").trim()
                         );
+                    })
+                ) {
+                    const confirmed = await swayConfirm(
+                        "Start a new InnerMe chat? The current conversation will be saved in Chat history."
+                    );
 
-                        if (!confirmed) {
-                            return;
-                        }
+                    if (!confirmed) {
+                        return;
                     }
+                }
 
-                    state.aiConversation = [];
-                    clearAIFocusedRecord();
-
-                    try {
-                        sessionStorage.removeItem(
-                            aiConversationCacheKey()
-                        );
-                    } catch (error) {
-                        // Storage cleanup is an enhancement only.
-                    }
-
-                    /*
-                     * InnerMe deliberately preserves its live panel during
-                     * background workspace syncs. New Chat is an explicit
-                     * conversation reset, so replace the whole InnerMe panel
-                     * from the now-empty state instead of trying to mutate
-                     * only the message container.
-                     */
-                    const aiMain =
-                        document.getElementById(
-                            "sway-workspace-main"
-                        );
-
-                    if (
-                        aiMain &&
-                        state.currentView === "swayphics-ai"
-                    ) {
-                        aiMain.innerHTML =
-                            renderSwayphicsAI();
-
-                        bindViewActions();
-                    }
-
-                    const freshInput =
-                        workspace.querySelector("#sway-ai-input");
-
-                    if (freshInput) {
-                        freshInput.focus();
-                    }
+                startNewAIChat();
             };
         }
 
@@ -21422,7 +21902,7 @@ function simpleBars(items, color) {
             workspace.querySelector("#sway-ai-input");
 
         if (aiInput) {
-            aiInput.addEventListener("keydown", function (event) {
+            aiInput.onkeydown = function (event) {
                 if (
                     event.key === "Enter" &&
                     !event.shiftKey &&
@@ -21431,19 +21911,19 @@ function simpleBars(items, color) {
                     event.preventDefault();
                     askSwayphicsAI(aiInput.value);
                 }
-            });
+            };
         }
 
         const aiForm =
             workspace.querySelector("#sway-ai-form");
 
         if (aiForm) {
-            aiForm.addEventListener("submit", function (event) {
+            aiForm.onsubmit = function (event) {
                 event.preventDefault();
                 const input =
                     workspace.querySelector("#sway-ai-input");
                 askSwayphicsAI(input ? input.value : "");
-            });
+            };
         }
     }
 
