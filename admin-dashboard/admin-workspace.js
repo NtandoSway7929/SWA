@@ -769,7 +769,11 @@
 
             return (
                 '<div class="sway-ai-action-row">' +
-                    '<button type="button" class="sway-ai-action sway-ai-action-primary" data-ai-action="open" data-ai-action-view="' +
+                    '<button type="button" class="sway-ai-action sway-ai-action-primary" data-ai-action="open" data-ai-open-record="' +
+                        esc(item.view) +
+                        ":" +
+                        esc(item.id) +
+                        '" data-ai-action-view="' +
                         esc(item.view) +
                         '" data-ai-action-id="' +
                         esc(item.id) +
