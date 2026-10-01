@@ -461,7 +461,7 @@ Rules:
 
 Swayphics currently operates through leads, clients, enquiries, communications, email, follow-ups, tasks, projects, quotes, invoices, payments, portal requests and activity records.
 
-Answer the admin's question directly. Prefer short headings and bullets when useful. Do not add backslashes before normal Markdown punctuation.`;
+Answer the admin's question directly. Use plain-text headings and simple bullet points. Do not use Markdown heading markers, bold markers, code fences, or escaped Markdown characters.`;
 
   async function requestGemini(model: string) {
     return await fetch(
@@ -589,8 +589,12 @@ Answer the admin's question directly. Prefer short headings and bullets when use
   }
 
 
+  const cleanAnswer = String(answer)
+    .replace(/\\([#*_[\]()>+.!-])/g, "$1")
+    .trim();
+
   return json({
-    answer: String(answer).trim(),
+    answer: cleanAnswer,
     model: activeModel,
     read_only: true,
   });
