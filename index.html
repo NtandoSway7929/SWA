@@ -20268,7 +20268,9 @@ if (projectForm) {
 
                         headers: {
                             "Content-Type":
-                                "application/json"
+                                "application/json",
+                            "X-InnerMe-Session":
+                                publicSession
                         },
 
                         body: JSON.stringify({
@@ -21004,6 +21006,39 @@ if (formStatus) {
 
     var history = [];
     var isThinking = false;
+
+    var publicSessionKey =
+        "swayphics_innerme_session";
+
+    var publicSession = "";
+    try {
+        publicSession =
+            localStorage.getItem(
+                publicSessionKey
+            ) || "";
+        if (
+            !publicSession &&
+            window.crypto &&
+            typeof window.crypto.randomUUID ===
+                "function"
+        ) {
+            publicSession =
+                window.crypto.randomUUID();
+            localStorage.setItem(
+                publicSessionKey,
+                publicSession
+            );
+        }
+    } catch (error) {
+        publicSession = "";
+    }
+
+    if (!publicSession) {
+        publicSession =
+            String(Date.now()) +
+            "-" +
+            Math.random().toString(36).slice(2);
+    }
     var latestRecommendedService = "";
     var lastUserMessages = [];
 
