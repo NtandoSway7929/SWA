@@ -791,7 +791,10 @@ Rules:
 - If the data does not establish something, say that clearly.
 - If query_failures contains a dataset name, treat that dataset as unavailable and never describe it as empty.
 - The operational_summary object is the authoritative source for counts and monetary totals.
-- When focused_record is supplied, treat it as the primary subject of the current conversation. It is a server-verified live record selected by the dashboard, with related records grouped underneath it.
+- When focused_record is supplied, it is the primary subject of the current conversation. Answer the admin's question about that record unless the admin explicitly names a different record.
+- Never replace a supplied focused record with another record merely because another record is more prominent in a general summary or raw workspace dataset.
+- For vague follow-ups such as "what happened after that?", "did they reply?", "what about them?", "what was the last update?", or "and then?", resolve the reference to focused_record first.
+- Start your reasoning from focused_record and its related records before considering unrelated workspace rows.
 - Use focused_record and its related records to answer follow-up questions about the selected lead, client, project, task, quote, invoice, enquiry or portal request.
 - Do not infer relationships that are not present in focused_record or the current workspace data.
 - If focused_record is null, identify a record from the current question only when the supplied workspace data clearly establishes the match.
@@ -874,6 +877,23 @@ Answer the admin's question directly.
                   text:
                     "ADMIN QUESTION:\n" +
                     message +
+                    "\n\nFOCUSED RECORD DIRECTIVE:\n" +
+                    (
+                      safeContext.focused_record
+                        ? JSON.stringify({
+                            type: safeContext.focused_record.type,
+                            id: safeContext.focused_record.id,
+                            name:
+                              safeContext.focused_record.record?.business_name ||
+                              safeContext.focused_record.record?.name ||
+                              safeContext.focused_record.record?.title ||
+                              safeContext.focused_record.record?.invoice_number ||
+                              safeContext.focused_record.record?.quote_number ||
+                              safeContext.focused_record.record?.subject ||
+                              ""
+                          })
+                        : "none"
+                    ) +
                     "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
                     JSON.stringify(safeContext),
                 },
