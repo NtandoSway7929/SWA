@@ -2320,6 +2320,14 @@
         .sway-ai-answer-item-text strong { color:#263a54; font-weight:750; }
         .sway-ai-answer-spacer { height:4px; }
         .sway-ai-records { margin-top:16px; padding-top:13px; border-top:1px solid #e6ebf3; }
+        .sway-ai-focus-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 13px; padding:8px 10px; border:1px solid rgba(1,82,244,.10); border-radius:10px; background:rgba(1,82,244,.035); }
+        .sway-ai-focus-label { color:#7b8799; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+        .sway-ai-focus-value { color:#26344b; font-size:10px; font-weight:750; }
+        .sway-ai-focus-clear { margin-left:auto; border:0; background:transparent; color:#0152F4; font:inherit; font-size:9px; font-weight:800; cursor:pointer; }
+        .sway-ai-focus-clear:hover { text-decoration:underline; }
+        body.sway-dark-mode .sway-ai-focus-bar { border-color:#2a3a58; background:rgba(119,193,252,.06); }
+        body.sway-dark-mode .sway-ai-focus-label { color:#9eabc0; }
+        body.sway-dark-mode .sway-ai-focus-value { color:#e5ebf5; }
         .sway-ai-records-label { display:block; margin-bottom:8px; color:#7b8799; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
         .sway-ai-records-list { display:flex; flex-wrap:wrap; gap:7px; }
         .sway-ai-record-link { display:inline-grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:6px; max-width:100%; padding:8px 10px; border:1px solid #dfe6f1; border-radius:10px; background:#fff; color:#26344b; font:inherit; text-align:left; cursor:pointer; transition:border-color .18s ease, background .18s ease, transform .18s ease; }
@@ -10111,7 +10119,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20261001-innerme-v14"></script>
+<script src="admin-workspace.js?v=dashboard-20261001-innerme-v15"></script>
 
 <script>
 (function () {
