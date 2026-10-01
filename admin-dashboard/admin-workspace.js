@@ -14183,6 +14183,19 @@ function simpleBars(items, color) {
             updateRecipient();
         }
 
+        if (!isReply && selectedIdState) {
+            const currentContact = selectedContact();
+            if (currentContact && currentContact.email) {
+                recipientPreview.innerHTML =
+                    '<span>To</span><strong>' +
+                        esc(currentContact.contact_name || currentContact.business_name || "Recipient") +
+                    '</strong><b>' +
+                        esc(currentContact.email) +
+                    '</b>';
+                sendButton.disabled = false;
+            }
+        }
+
         messageInput.focus();
     }
 
