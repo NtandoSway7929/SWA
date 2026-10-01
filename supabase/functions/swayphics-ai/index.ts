@@ -682,7 +682,7 @@ Deno.serve(async (req) => {
     if (type === "project") {
       const clientId = String(record.client_id || "");
 
-      add("client", findById(clientsRows, clientId) ? [findById(clientsRows, clientId)] : []);
+      add("clients", findById(clientsRows, clientId) ? [findById(clientsRows, clientId)] : []);
       add(
         "tasks",
         tasksRows.filter(function (item: any) {
