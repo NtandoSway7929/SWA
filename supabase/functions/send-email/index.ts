@@ -61,7 +61,6 @@ function brandedEmailHtml(
   message: string,
   proposalType: "improv-website" | "no-website" | "not-website-related",
 ) {
-  const normalizedRecipientName = cleanRecipientName(recipientName);
   const normalizedBusinessName = cleanRecipientName(businessName);
 
   const isProposal =
@@ -80,23 +79,6 @@ function brandedEmailHtml(
       : proposalType === "no-website"
         ? "Your next customer should be able to find you online."
         : "Creative support for your business.";
-
-  const introMarkup =
-    '<div style="margin:0 0 24px;">' +
-      '<p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:1.4;letter-spacing:0.16em;font-weight:700;color:#0152F4;text-transform:uppercase;">' +
-        escapeHtml(eyebrow) +
-      "</p>" +
-      '<h1 class="sway-email-title" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:27px;line-height:1.16;letter-spacing:-0.035em;font-weight:700;color:#081533;">' +
-        escapeHtml(title) +
-      "</h1>" +
-      (
-        normalizedBusinessName.length > 0
-          ? '<p style="margin:11px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#7A899D;">Prepared with ' +
-              escapeHtml(normalizedBusinessName) +
-              " in mind.</p>"
-          : ""
-      ) +
-    "</div>";
 
   const proposalImage =
     proposalType === "improv-website"
@@ -190,7 +172,6 @@ function brandedEmailHtml(
 
           <tr>
             <td class="sway-email-content" style="padding:34px 34px 28px;background:#FFFFFF;">
-              ${isProposal ? introMarkup : ""}
               ${messageMarkup}
               ${proposalVisualMarkup}
               ${ctaMarkup}
