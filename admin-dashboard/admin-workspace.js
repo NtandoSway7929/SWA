@@ -19104,6 +19104,29 @@ function simpleBars(items, color) {
             state.aiConversation = [];
         }
 
+        /*
+         * Capture completed conversation turns before adding the current
+         * message. InnerMe uses this history for true multi-turn context.
+         * Keep the window bounded so requests stay lightweight.
+         */
+        const conversationHistory = state.aiConversation
+            .slice(-12)
+            .filter(function (item) {
+                return (
+                    item &&
+                    !item.loading &&
+                    (item.role === "user" ||
+                        item.role === "assistant") &&
+                    String(item.content || "").trim()
+                );
+            })
+            .map(function (item) {
+                return {
+                    role: item.role,
+                    content: String(item.content || "").trim()
+                };
+            });
+
         const userEntry = {
             role: "user",
             content: clean
@@ -19165,7 +19188,8 @@ function simpleBars(items, color) {
                         "Content-Type": "application/json"
                     }),
                     body: JSON.stringify({
-                        message: clean
+                        message: clean,
+                        history: conversationHistory
                     })
                 }
             );
