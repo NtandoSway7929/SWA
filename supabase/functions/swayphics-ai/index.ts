@@ -1,20 +1,37 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://swayphics.co.za",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://swayphics.co.za",
+  "https://www.swayphics.co.za",
+]);
+
+function corsHeaders(origin = "") {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+
+  if (ALLOWED_ORIGINS.has(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
+}
 
 const PRIMARY_MODEL = "gemini-3.8-flash";
 const FALLBACK_MODEL = "gemini-3.5-flash-lite";
 
-function json(data: unknown, status = 200) {
+function json(
+  data: unknown,
+  status = 200,
+  origin = "",
+) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      ...corsHeaders,
+      ...corsHeaders(origin),
       "Content-Type": "application/json",
     },
   });
@@ -29,12 +46,31 @@ function cleanForModel(value: unknown, max = 3000) {
 }
 
 Deno.serve(async (req) => {
+  const origin =
+    req.headers.get("origin") || "";
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders(origin),
+    });
+  }
+
+  if (
+    origin &&
+    !ALLOWED_ORIGINS.has(origin)
+  ) {
+    return json(
+      { error: "Request origin is not allowed." },
+      403,
+    );
   }
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed." }, 405);
+    return json(
+      { error: "Method not allowed." },
+      405,
+    );
   }
 
   const authHeader = req.headers.get("Authorization") || "";
@@ -43,7 +79,7 @@ Deno.serve(async (req) => {
     : "";
 
   if (!accessToken) {
-    return json({ error: "Authentication is required." }, 401);
+    return json({ error: "Authentication is required." }, 401, origin);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -54,14 +90,14 @@ Deno.serve(async (req) => {
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
 
   if (!supabaseUrl || !publicApiKey) {
-    return json({ error: "Supabase server configuration is incomplete." }, 500);
+    return json({ error: "Supabase server configuration is incomplete." }, 500, origin);
   }
 
   if (!geminiKey) {
     return json({
       error:
         "InnerMe is installed, but GEMINI_API_KEY has not been configured in Supabase Edge Function secrets yet.",
-    }, 503);
+    }, 503, origin);
   }
 
   const authSupabase = createClient(supabaseUrl, publicApiKey, {
@@ -81,14 +117,14 @@ Deno.serve(async (req) => {
     await authSupabase.auth.getUser(accessToken);
 
   if (userError || !userData.user) {
-    return json({ error: "Your session is no longer valid." }, 401);
+    return json({ error: "Your session is no longer valid." }, 401, origin);
   }
 
   const { data: isAdmin, error: adminError } =
     await authSupabase.rpc("is_swayphics_admin");
 
   if (adminError || isAdmin !== true) {
-    return json({ error: "You are not an active Swayphics admin." }, 403);
+    return json({ error: "You are not an active Swayphics admin." }, 403, origin);
   }
 
   let body: {
@@ -106,17 +142,17 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return json({ error: "Invalid JSON request." }, 400);
+    return json({ error: "Invalid JSON request." }, 400, origin);
   }
 
   const message = String(body.message || "").trim();
 
   if (!message) {
-    return json({ error: "A message is required." }, 400);
+    return json({ error: "A message is required." }, 400, origin);
   }
 
   if (message.length > 4000) {
-    return json({ error: "Message is too long." }, 400);
+    return json({ error: "Message is too long." }, 400, origin);
   }
 
   /*
@@ -1393,7 +1429,7 @@ Answer the admin's question directly.
         typeof providerError?.message === "string"
           ? providerError.message.slice(0, 500)
           : null,
-    }, 502);
+    }, 502, origin);
   }
 
   const result = await geminiResponse.json();
@@ -1426,7 +1462,7 @@ Answer the admin's question directly.
       provider_message: blockReason
         ? "Gemini did not return usable text."
         : null,
-    }, 502);
+    }, 502, origin);
   }
 
 
@@ -1444,9 +1480,18 @@ Answer the admin's question directly.
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  return json({
-    answer: cleanAnswer,
-    model: activeModel,
-    read_only: true,
-  });
+  return new Response(
+    JSON.stringify({
+      answer: cleanAnswer,
+      model: activeModel,
+      read_only: true,
+    }),
+    {
+      status: 200,
+      headers: {
+        ...corsHeaders(origin),
+        "Content-Type": "application/json",
+      },
+    },
+  );
 });
