@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const MODEL = "gpt-5.6-luna";
+const MODEL = "gemini-3.8-flash";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -51,16 +51,16 @@ Deno.serve(async (req) => {
     req.headers.get("apikey") ||
     Deno.env.get("SUPABASE_ANON_KEY") ||
     Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
-  const openAiKey = Deno.env.get("OPENAI_API_KEY");
+  const geminiKey = Deno.env.get("GEMINI_API_KEY");
 
   if (!supabaseUrl || !serviceRoleKey || !publicApiKey) {
     return json({ error: "Supabase server configuration is incomplete." }, 500);
   }
 
-  if (!openAiKey) {
+  if (!geminiKey) {
     return json({
       error:
-        "InnerMe is installed, but OPENAI_API_KEY has not been configured in Supabase Edge Function secrets yet.",
+        "InnerMe is installed, but GEMINI_API_KEY has not been configured in Supabase Edge Function secrets yet.",
     }, 503);
   }
 
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
     }),
   );
 
-  const systemPrompt = `You are Swayphics AI, the private internal operations assistant for Swayphics.
+  const systemPrompt = `You are InnerMe, the private internal operations assistant for Swayphics.
 
 Your job is to help an authenticated Swayphics admin understand the current business workspace.
 
@@ -199,29 +199,50 @@ Swayphics currently operates through leads, clients, enquiries, communications, 
 
 Answer the admin's question directly. Prefer short headings and bullets when useful.`;
 
-  const openAiResponse = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + openAiKey,
-      "Content-Type": "application/json",
+  const geminiResponse = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/" +
+      encodeURIComponent(MODEL) +
+      ":generateContent",
+    {
+      method: "POST",
+      headers: {
+        "x-goog-api-key": geminiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [
+            {
+              text: systemPrompt,
+            },
+          ],
+        },
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text:
+                  "ADMIN QUESTION:\n" +
+                  message +
+                  "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
+                  JSON.stringify(safeContext),
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: 1400,
+        },
+      }),
     },
-    body: JSON.stringify({
-      model: MODEL,
-      instructions: systemPrompt,
-      input:
-        "ADMIN QUESTION:\n" +
-        message +
-        "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
-        JSON.stringify(safeContext),
-      max_output_tokens: 1400,
-    }),
-  });
+  );
 
-  if (!openAiResponse.ok) {
-    const errorText = await openAiResponse.text();
+  if (!geminiResponse.ok) {
+    const errorText = await geminiResponse.text();
 
     console.error(
-      "OpenAI InnerMe error:",
+      "Gemini InnerMe error:",
       errorText.slice(0, 2000),
     );
 
@@ -235,9 +256,9 @@ Answer the admin's question directly. Prefer short headings and bullets when use
 
     return json({
       error: "The AI provider could not complete the request.",
-      provider_status: openAiResponse.status,
-      provider_code: providerError?.code || null,
-      provider_type: providerError?.type || null,
+      provider_status: geminiResponse.status,
+      provider_code: providerError?.status || null,
+      provider_type: "gemini",
       provider_message:
         typeof providerError?.message === "string"
           ? providerError.message.slice(0, 500)
@@ -245,18 +266,38 @@ Answer the admin's question directly. Prefer short headings and bullets when use
     }, 502);
   }
 
-  const result = await openAiResponse.json();
+  const result = await geminiResponse.json();
+
   const answer =
-    result.output_text ||
-    result.output?.flatMap((item: any) => item.content || [])
-      ?.filter((item: any) => item.type === "output_text")
-      ?.map((item: any) => item.text)
-      ?.join("\n") ||
+    result?.candidates?.[0]?.content?.parts
+      ?.filter((part: any) => typeof part?.text === "string")
+      ?.map((part: any) => part.text)
+      ?.join("\n")
+      ?.trim() ||
     "";
 
   if (!answer) {
-    return json({ error: "The AI provider returned an empty answer." }, 502);
+    const blockReason =
+      result?.promptFeedback?.blockReason ||
+      result?.candidates?.[0]?.finishReason ||
+      null;
+
+    console.error(
+      "Gemini InnerMe returned no answer:",
+      blockReason || "unknown reason",
+    );
+
+    return json({
+      error: "The AI provider returned an empty answer.",
+      provider_status: 200,
+      provider_code: blockReason,
+      provider_type: "gemini",
+      provider_message: blockReason
+        ? "Gemini did not return usable text."
+        : null,
+    }, 502);
   }
+
 
   return json({
     answer: String(answer).trim(),
