@@ -21384,6 +21384,24 @@ function simpleBars(items, color) {
                         // Storage cleanup is an enhancement only.
                     }
 
+                    const aiMain =
+                        document.getElementById(
+                            "sway-workspace-main"
+                        );
+
+                    /*
+                     * InnerMe normally preserves its live DOM during
+                     * background syncs. New chat is an explicit reset,
+                     * so remove the existing panel first to force a fresh
+                     * conversation view instead of leaving old bubbles behind.
+                     */
+                    if (
+                        aiMain &&
+                        state.currentView === "swayphics-ai"
+                    ) {
+                        aiMain.innerHTML = "";
+                    }
+
                     renderView();
 
                     const freshInput =
