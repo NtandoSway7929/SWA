@@ -2295,9 +2295,25 @@
         .sway-ai-welcome strong { display:block; margin-bottom:6px; color:#081533; font-size:18px; }
         .sway-ai-message { display:block; box-sizing:border-box; width:fit-content; max-width:82%; min-width:0; padding:12px 15px; border-radius:15px; overflow:hidden; }
         .sway-ai-message-label { display:block; margin-bottom:5px; font-size:10px; font-weight:800; letter-spacing:.06em; opacity:.68; }
-        .sway-ai-message-content { display:block; width:100%; min-width:0; box-sizing:border-box; white-space:pre-wrap; overflow-wrap:anywhere; word-break:normal; line-height:1.65; }
+        .sway-ai-message-content { display:block; width:100%; min-width:0; box-sizing:border-box; overflow-wrap:anywhere; word-break:normal; line-height:1.65; }
         .sway-ai-user { align-self:flex-end; background:#0152F4; color:#fff; }
         .sway-ai-assistant { align-self:flex-start; display:block; background:#fff; border:1px solid #e1e7f0; color:#26344b; }
+        .sway-ai-answer { display:block; width:100%; }
+        .sway-ai-answer-title { margin:0 0 14px; color:#081533; font-size:16px; font-weight:750; line-height:1.35; letter-spacing:-.01em; }
+        .sway-ai-answer-heading { margin:18px 0 7px; color:#40546C; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+        .sway-ai-answer-heading:first-child { margin-top:0; }
+        .sway-ai-answer-paragraph { margin:0 0 9px; color:#56677e; line-height:1.7; }
+        .sway-ai-answer-item { display:flex; align-items:flex-start; gap:9px; margin:5px 0; }
+        .sway-ai-answer-bullet { flex:0 0 auto; color:#0152F4; font-size:15px; line-height:1.55; }
+        .sway-ai-answer-item-text { flex:1 1 auto; min-width:0; color:#4d6078; line-height:1.65; }
+        .sway-ai-answer-item-text strong { color:#263a54; font-weight:750; }
+        .sway-ai-answer-spacer { height:4px; }
+        body.sway-dark-mode .sway-ai-answer-title { color:#fff; }
+        body.sway-dark-mode .sway-ai-answer-heading { color:#9eabc0; }
+        body.sway-dark-mode .sway-ai-answer-paragraph,
+        body.sway-dark-mode .sway-ai-answer-item-text { color:#b8c3d4; }
+        body.sway-dark-mode .sway-ai-answer-item-text strong { color:#e5ebf5; }
+        body.sway-dark-mode .sway-ai-answer-bullet { color:#77C1FC; }
         .sway-ai-loading { opacity:.65; }
         .sway-ai-form { display:flex; gap:10px; margin-top:14px; }
         .sway-ai-form textarea { flex:1; resize:vertical; min-height:54px; border:1px solid #dfe6f1; border-radius:14px; padding:13px 14px; font:inherit; outline:none; }
@@ -2316,7 +2332,7 @@
             .sway-ai-header { flex-direction:column; }
             .sway-ai-form { flex-direction:column; }
             .sway-ai-form button { min-height:48px; }
-            .sway-ai-message { width:fit-content; max-width:92%; }
+            .sway-ai-message { width:fit-content; max-width:94%; }
         }
 
         .sway-workspace-nav-scroll {
