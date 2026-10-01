@@ -19397,7 +19397,11 @@ function simpleBars(items, color) {
             "sway-ai-message sway-ai-assistant sway-ai-loading";
         loading.innerHTML =
             '<span class="sway-ai-message-label">InnerMe</span>' +
-            '<div class="sway-ai-message-content">Thinking…</div>';
+            '<div class="sway-ai-message-content">' +
+                '<span class="sway-ai-thinking" aria-label="InnerMe is thinking">' +
+                    '<span></span><span></span><span></span>' +
+                '</span>' +
+            '</div>';
 
         const welcome =
             conversation.querySelector(
