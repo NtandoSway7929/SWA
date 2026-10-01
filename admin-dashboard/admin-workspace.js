@@ -20145,6 +20145,232 @@ function simpleBars(items, color) {
     }
 
 
+
+    const AI_CHANGE_WATCH_KEY =
+        "swayphics_innerme_change_watch";
+
+    function getAIChangeWatchTime() {
+        try {
+            const value = Number(
+                localStorage.getItem(
+                    AI_CHANGE_WATCH_KEY
+                ) || 0
+            );
+
+            return Number.isFinite(value)
+                ? value
+                : 0;
+        } catch (error) {
+            return 0;
+        }
+    }
+
+    function setAIChangeWatchTime(value) {
+        try {
+            localStorage.setItem(
+                AI_CHANGE_WATCH_KEY,
+                String(
+                    Number.isFinite(Number(value))
+                        ? Number(value)
+                        : Date.now()
+                )
+            );
+        } catch (error) {
+            // Change watch is an enhancement only.
+        }
+    }
+
+    function aiChangeView(entityType) {
+        const aliases = {
+            lead: "leads",
+            leads: "leads",
+            client: "clients",
+            clients: "clients",
+            project: "projects",
+            projects: "projects",
+            task: "tasks",
+            tasks: "tasks",
+            quote: "quotes",
+            quotes: "quotes",
+            invoice: "invoices",
+            invoices: "invoices",
+            payment: "payments",
+            payments: "payments",
+            enquiry: "enquiries",
+            enquiries: "enquiries",
+            follow_up: "followups",
+            follow_ups: "followups",
+            "portal-request": "portal-requests",
+            portal_requests: "portal-requests"
+        };
+
+        return aliases[
+            String(entityType || "").toLowerCase()
+        ] || "";
+    }
+
+    function getAIChangeWatchItems() {
+        const seenAt =
+            getAIChangeWatchTime();
+
+        const items = [];
+
+        (Array.isArray(state.activities)
+            ? state.activities
+            : []
+        ).forEach(function (activity) {
+            const parsed =
+                parseDashboardDate(
+                    activity.created_at
+                );
+
+            const timestamp =
+                parsed
+                    ? parsed.getTime()
+                    : 0;
+
+            if (
+                !timestamp ||
+                timestamp <= seenAt
+            ) {
+                return;
+            }
+
+            const view =
+                aiChangeView(
+                    activity.entity_type
+                );
+
+            const id =
+                String(
+                    activity.entity_id || ""
+                ).trim();
+
+            const descriptor =
+                view &&
+                id &&
+                typeof getAIFocusedRecordDescriptor === "function"
+                    ? getAIFocusedRecordDescriptor(
+                        view,
+                        id
+                    )
+                    : null;
+
+            items.push({
+                title:
+                    String(
+                        activity.action ||
+                        "Workspace updated"
+                    ).trim(),
+                detail:
+                    descriptor
+                        ? descriptor.name
+                        : (
+                            activity.entity_type
+                                ? formatDisplayText(
+                                    activity.entity_type
+                                )
+                                : "Swayphics workspace"
+                        ),
+                view:
+                    descriptor
+                        ? view
+                        : "",
+                id:
+                    descriptor
+                        ? id
+                        : "",
+                prompt:
+                    descriptor
+                        ? "Tell me what changed with " +
+                          descriptor.name + "."
+                        : "Summarise the latest Swayphics workspace changes.",
+                timestamp
+            });
+        });
+
+        items.sort(function (a, b) {
+            return b.timestamp - a.timestamp;
+        });
+
+        return items.slice(0, 6);
+    }
+
+    function renderAIChangeWatch() {
+        const items =
+            getAIChangeWatchItems();
+
+        if (!items.length) {
+            return "";
+        }
+
+        const latestTimestamp =
+            items.reduce(
+                function (latest, item) {
+                    return Math.max(
+                        latest,
+                        Number(item.timestamp || 0)
+                    );
+                },
+                getAIChangeWatchTime()
+            );
+
+        window.setTimeout(function () {
+            setAIChangeWatchTime(
+                latestTimestamp
+            );
+        }, 0);
+
+        return (
+            '<div class="sway-ai-change-watch">' +
+                '<div class="sway-ai-change-head">' +
+                    '<div>' +
+                        '<span class="sway-ai-proactive-eyebrow">CHANGE WATCH</span>' +
+                        '<strong>Since your last InnerMe visit</strong>' +
+                    '</div>' +
+                    '<span class="sway-ai-change-count">' +
+                        items.length +
+                        (items.length === 1 ? " change" : " changes") +
+                    '</span>' +
+                '</div>' +
+                '<div class="sway-ai-change-list">' +
+                    items.map(function (item) {
+                        const target =
+                            item.view && item.id
+                                ? item.view + ":" + item.id
+                                : "";
+
+                        return (
+                            '<button type="button" class="sway-ai-change-item" ' +
+                                (
+                                    target
+                                        ? 'data-ai-open-record="' +
+                                            esc(target) +
+                                          '"'
+                                        : 'data-ai-prompt="' +
+                                            esc(item.prompt) +
+                                          '"'
+                                ) +
+                            '>' +
+                                '<span class="sway-ai-change-dot" aria-hidden="true"></span>' +
+                                '<span class="sway-ai-change-copy">' +
+                                    '<strong>' +
+                                        esc(item.title) +
+                                    '</strong>' +
+                                    '<span>' +
+                                        esc(item.detail) +
+                                    '</span>' +
+                                '</span>' +
+                                '<span class="sway-ai-change-arrow" aria-hidden="true">→</span>' +
+                            '</button>'
+                        );
+                    }).join("") +
+                '</div>' +
+                '<span class="sway-ai-change-note">Recent workspace activity is shown here automatically.</span>' +
+            '</div>'
+        );
+    }
+
     function renderAIProactiveBrief() {
         const today = dashboardTodayISO();
         const items = [];
@@ -20457,7 +20683,10 @@ function simpleBars(items, color) {
                 ) +
                 (
                     history.length === 0 && !state.aiFocusedRecord
-                        ? renderAIProactiveBrief()
+                        ? (
+                            renderAIProactiveBrief() +
+                            renderAIChangeWatch()
+                        )
                         : ""
                 ) +
                 '<div class="sway-ai-suggestions">' +
@@ -22022,6 +22251,20 @@ function simpleBars(items, color) {
             .querySelectorAll("[data-ai-prompt]")
             .forEach(function (button) {
                 button.onclick = function () {
+                    const proactiveBrief =
+                        document.querySelector(".sway-ai-proactive-brief");
+
+                    if (proactiveBrief) {
+                        proactiveBrief.remove();
+                    }
+
+                    const changeWatch =
+                        document.querySelector(".sway-ai-change-watch");
+
+                    if (changeWatch) {
+                        changeWatch.remove();
+                    }
+
                     askSwayphicsAI(button.dataset.aiPrompt || "");
                 };
             });
