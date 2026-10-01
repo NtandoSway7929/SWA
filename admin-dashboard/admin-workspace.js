@@ -19094,10 +19094,12 @@ function simpleBars(items, color) {
                         '<span class="sway-ai-message-label">' +
                             esc(label) +
                         '</span>' +
-                        '<div>' +
-                            item.role === "assistant"
-                                ? formatAIAnswer(item.content || "")
-                                : esc(item.content || "") +
+                        '<div class="sway-ai-message-content">' +
+                            (
+                                item.role === "assistant"
+                                    ? formatAIAnswer(item.content || "")
+                                    : esc(item.content || "")
+                            ) +
                         '</div>' +
                     '</div>'
                 );
@@ -19209,7 +19211,7 @@ function simpleBars(items, color) {
             "sway-ai-message sway-ai-assistant sway-ai-loading";
         loading.innerHTML =
             '<span class="sway-ai-message-label">InnerMe</span>' +
-            '<div>Thinking…</div>';
+            '<div class="sway-ai-message-content">Thinking…</div>';
 
         const welcome =
             conversation.querySelector(
@@ -19255,7 +19257,7 @@ function simpleBars(items, color) {
             loading.classList.remove("sway-ai-loading");
             loading.innerHTML =
                 '<span class="sway-ai-message-label">InnerMe</span>' +
-                '<div>' +
+                '<div class="sway-ai-message-content">' +
                     formatAIAnswer(answer) +
                 '</div>';
         } catch (error) {
@@ -19269,7 +19271,7 @@ function simpleBars(items, color) {
             loading.classList.remove("sway-ai-loading");
             loading.innerHTML =
                 '<span class="sway-ai-message-label">InnerMe</span>' +
-                '<div>' +
+                '<div class="sway-ai-message-content">' +
                     esc(errorMessage) +
                 '</div>';
         } finally {
