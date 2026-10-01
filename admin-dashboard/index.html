@@ -2468,6 +2468,37 @@
         .sway-ai-byline img { display:block; width:auto; height:15px; max-width:92px; object-fit:contain; }
         .sway-ai-header p { max-width:650px; margin:9px 0 0; color:#66748a; line-height:1.65; }
         .sway-ai-status { white-space:nowrap; padding:8px 11px; border-radius:999px; background:#edf3ff; color:#0152F4; font-size:11px; font-weight:700; }
+        .sway-ai-proactive-brief { margin:22px 0 4px; padding:15px; border:1px solid #e3e9f3; border-radius:16px; background:linear-gradient(145deg,#f9fbff,#ffffff); }
+        .sway-ai-proactive-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+        .sway-ai-proactive-head strong { display:block; margin-top:3px; color:#253650; font-size:13px; }
+        .sway-ai-proactive-eyebrow { display:block; color:#0152F4; font-size:9px; font-weight:850; letter-spacing:.12em; }
+        .sway-ai-proactive-live { flex:0 0 auto; padding:5px 8px; border-radius:999px; background:#edf3ff; color:#0152F4; font-size:8px; font-weight:850; letter-spacing:.08em; }
+        .sway-ai-proactive-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:12px; }
+        .sway-ai-proactive-item { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:10px; width:100%; min-width:0; padding:10px; border:1px solid #e1e7f0; border-radius:12px; background:#fff; color:#26344b; font:inherit; text-align:left; cursor:pointer; transition:border-color .18s ease, transform .18s ease, background .18s ease; }
+        .sway-ai-proactive-item:hover { border-color:#b9caf0; background:#fbfdff; transform:translateY(-1px); }
+        .sway-ai-proactive-item.danger .sway-ai-proactive-count { color:#b42318; background:#fff0ef; }
+        .sway-ai-proactive-item.warning .sway-ai-proactive-count { color:#8a5a00; background:#fff6df; }
+        .sway-ai-proactive-item.info .sway-ai-proactive-count { color:#0152F4; background:#edf3ff; }
+        .sway-ai-proactive-count { display:grid; place-items:center; width:28px; height:28px; border-radius:9px; font-size:11px; font-weight:850; }
+        .sway-ai-proactive-copy { min-width:0; }
+        .sway-ai-proactive-copy strong { display:block; overflow:hidden; color:#2b3b55; font-size:10px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+        .sway-ai-proactive-copy span { display:block; margin-top:2px; overflow:hidden; color:#748197; font-size:9px; line-height:1.45; text-overflow:ellipsis; white-space:nowrap; }
+        .sway-ai-proactive-arrow { color:#8392a8; font-size:14px; font-weight:800; }
+        .sway-ai-proactive-clear { display:flex; align-items:center; gap:10px; margin-top:11px; padding:11px; border-radius:11px; background:#f7fbf8; }
+        .sway-ai-proactive-clear-icon { display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:#e8f5ec; color:#237a3b; font-size:12px; font-weight:850; }
+        .sway-ai-proactive-clear strong { display:block; color:#294233; font-size:10px; }
+        .sway-ai-proactive-clear span:not(.sway-ai-proactive-clear-icon) { display:block; margin-top:2px; color:#708176; font-size:9px; }
+        body.sway-dark-mode .sway-ai-proactive-brief { border-color:#2a3a58; background:#121d30; }
+        body.sway-dark-mode .sway-ai-proactive-head strong { color:#e5ebf5; }
+        body.sway-dark-mode .sway-ai-proactive-live { background:#1a2942; color:#77C1FC; }
+        body.sway-dark-mode .sway-ai-proactive-item { border-color:#2a3a58; background:#162238; color:#e5ebf5; }
+        body.sway-dark-mode .sway-ai-proactive-item:hover { background:#1a2942; border-color:#476aab; }
+        body.sway-dark-mode .sway-ai-proactive-copy strong { color:#e5ebf5; }
+        body.sway-dark-mode .sway-ai-proactive-copy span { color:#9eabc0; }
+        body.sway-dark-mode .sway-ai-proactive-clear { background:#13251a; }
+        body.sway-dark-mode .sway-ai-proactive-clear strong { color:#dbe8df; }
+        body.sway-dark-mode .sway-ai-proactive-clear span:not(.sway-ai-proactive-clear-icon) { color:#9fb0a5; }
+        @media (max-width:700px) { .sway-ai-proactive-grid { grid-template-columns:1fr; } }
         .sway-ai-suggestions { display:flex; flex-wrap:wrap; gap:9px; margin:24px 0; }
         .sway-ai-suggestions button { border:1px solid #dfe6f1; background:#fff; color:#24324a; border-radius:12px; padding:10px 13px; cursor:pointer; font:inherit; font-size:13px; }
         .sway-ai-suggestions button:hover { border-color:#0152F4; color:#0152F4; }
@@ -10301,7 +10332,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20261001-innerme-v26-network-auth-fix"></script>
+<script src="admin-workspace.js?v=dashboard-20261001-innerme-v27-proactive-briefing"></script>
 
 <script>
 (function () {
