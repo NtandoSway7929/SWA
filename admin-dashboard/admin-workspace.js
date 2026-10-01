@@ -19237,6 +19237,19 @@ function simpleBars(items, color) {
             return;
         }
 
+        /*
+         * InnerMe owns its live conversation DOM while it is open.
+         * Background workspace syncs must not rebuild that panel,
+         * otherwise active messages/input state can be detached.
+         */
+        if (
+            state.currentView === "swayphics-ai" &&
+            main.querySelector(".sway-ai-panel")
+        ) {
+            bindViewActions();
+            return;
+        }
+
         if (
             state.currentView === "portfolio" ||
             state.currentView === "testimonials"
