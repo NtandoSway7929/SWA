@@ -21028,6 +21028,10 @@ if (formStatus) {
         "Something else"
     ]);
 
+
+    var formServiceValues = {
+        "Booking System": "Booking / Appointment System"
+    };
     function escapeHtml(value) {
         return String(value || "")
             .replace(/&/g, "&amp;")
@@ -21202,11 +21206,25 @@ if (formStatus) {
             return "";
         }
 
-        var body =
-            "I spoke with InnerMe on the Swayphics website. " +
-            "Here is what I shared about what I need:" +
-            "\\n\\n• " +
-            meaningful.join("\\n• ");
+        var lines = [
+            "I spoke with InnerMe on the Swayphics website and would like help with this:"
+        ];
+
+        lines.push("");
+
+        meaningful.forEach(function (item) {
+            lines.push("• " + item);
+        });
+
+        if (latestRecommendedService) {
+            lines.push("");
+            lines.push(
+                "InnerMe suggested: " +
+                latestRecommendedService
+            );
+        }
+
+        var body = lines.join("\n");
 
         if (body.length > 1450) {
             body =
@@ -21228,7 +21246,12 @@ if (formStatus) {
             allowedServices.has(
                 latestRecommendedService
             )
-                ? latestRecommendedService
+                ? (
+                    formServiceValues[
+                        latestRecommendedService
+                    ] ||
+                    latestRecommendedService
+                )
                 : "Something else";
 
         if (serviceSelect) {
