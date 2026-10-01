@@ -752,6 +752,59 @@
         );
     }
 
+    function getAIFocusedRecordDescriptor(view, id) {
+        const sets = {
+            leads: state.leads,
+            clients: state.clients,
+            projects: state.projects,
+            tasks: state.tasks,
+            quotes: state.quotes,
+            invoices: state.invoices,
+            enquiries: state.enquiries,
+            "portal-requests": state.portalRequests
+        };
+
+        const items = sets[view];
+        if (!Array.isArray(items)) {
+            return null;
+        }
+
+        const item = items.find(function (entry) {
+            return String(entry && entry.id || "") === String(id);
+        });
+
+        if (!item) {
+            return null;
+        }
+
+        const names = {
+            leads: item.business_name,
+            clients: item.business_name,
+            projects: item.name,
+            tasks: item.title,
+            quotes: item.quote_number,
+            invoices: item.invoice_number,
+            enquiries: item.business_name || item.name,
+            "portal-requests": item.subject
+        };
+
+        const labels = {
+            leads: "Lead",
+            clients: "Client",
+            projects: "Project",
+            tasks: "Task",
+            quotes: "Quote",
+            invoices: "Invoice",
+            enquiries: "Enquiry",
+            "portal-requests": "Portal request"
+        };
+
+        return {
+            label: labels[view] || "",
+            name: String(names[view] || "").trim()
+        };
+    }
+
     function openAIRecord(button) {
         const rawTarget = String(
             button && button.dataset && button.dataset.aiOpenRecord || ""
@@ -767,20 +820,17 @@
             return item[0] === view;
         })) return;
 
-        const match = getAIRecordMatches(
-            rawTarget
-        ).find(function (item) {
-            return (
-                item.view === view &&
-                item.id === id
+        const descriptor =
+            getAIFocusedRecordDescriptor(
+                view,
+                id
             );
-        });
 
         setAIFocusedRecord(
             view,
             id,
-            match ? match.label : "",
-            match ? match.name : ""
+            descriptor ? descriptor.label : "",
+            descriptor ? descriptor.name : ""
         );
 
         state.currentView = view;
