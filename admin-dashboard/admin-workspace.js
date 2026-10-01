@@ -1282,6 +1282,102 @@
         );
     }
 
+    function aiConversationCacheKey() {
+        return (
+            "swayphics_admin_innerme_conversation_" +
+            String(
+                state.currentUser && state.currentUser.id
+                    ? state.currentUser.id
+                    : "guest"
+            )
+        );
+    }
+
+    function saveAIConversation() {
+        if (
+            !state.currentUser ||
+            !state.currentUser.id ||
+            !Array.isArray(state.aiConversation)
+        ) {
+            return;
+        }
+
+        try {
+            const history = state.aiConversation
+                .filter(function (item) {
+                    return (
+                        item &&
+                        !item.loading &&
+                        (item.role === "user" ||
+                            item.role === "assistant") &&
+                        String(item.content || "").trim()
+                    );
+                })
+                .slice(-40);
+
+            sessionStorage.setItem(
+                aiConversationCacheKey(),
+                JSON.stringify({
+                    version: 1,
+                    saved_at: Date.now(),
+                    messages: history
+                })
+            );
+        } catch (error) {
+            // Conversation persistence is an enhancement only.
+        }
+    }
+
+    function restoreAIConversation() {
+        if (
+            !state.currentUser ||
+            !state.currentUser.id
+        ) {
+            return false;
+        }
+
+        try {
+            const raw = sessionStorage.getItem(
+                aiConversationCacheKey()
+            );
+
+            if (!raw) {
+                return false;
+            }
+
+            const snapshot = JSON.parse(raw);
+
+            if (
+                !snapshot ||
+                snapshot.version !== 1 ||
+                !Array.isArray(snapshot.messages)
+            ) {
+                return false;
+            }
+
+            state.aiConversation = snapshot.messages
+                .filter(function (item) {
+                    return (
+                        item &&
+                        (item.role === "user" ||
+                            item.role === "assistant") &&
+                        String(item.content || "").trim()
+                    );
+                })
+                .map(function (item) {
+                    return {
+                        role: item.role,
+                        content: String(item.content || "").slice(0, 4000)
+                    };
+                })
+                .slice(-40);
+
+            return state.aiConversation.length > 0;
+        } catch (error) {
+            return false;
+        }
+    }
+
     function saveWorkspaceSnapshot() {
         if (
             !state.currentUser ||
@@ -19343,6 +19439,7 @@ function simpleBars(items, color) {
 
             assistantEntry.content = answer;
             assistantEntry.loading = false;
+            saveAIConversation();
 
             loading.classList.remove("sway-ai-loading");
             loading.innerHTML =
@@ -19357,6 +19454,7 @@ function simpleBars(items, color) {
 
             assistantEntry.content = errorMessage;
             assistantEntry.loading = false;
+            saveAIConversation();
 
             loading.classList.remove("sway-ai-loading");
             loading.innerHTML =
@@ -20846,6 +20944,8 @@ function simpleBars(items, color) {
                 loadState(),
                 refreshData()
             ]);
+
+            restoreAIConversation();
 
             if (
                 await ensureDefaultServiceCatalogue()
