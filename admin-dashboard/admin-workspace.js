@@ -20513,8 +20513,19 @@ function simpleBars(items, color) {
             }
         } catch (error) {
             const errorMessage =
-                error.message ||
-                "InnerMe could not complete the request.";
+                (
+                    error &&
+                    (
+                        error.name === "TypeError" ||
+                        String(error.message || "").toLowerCase() === "failed to fetch"
+                    ) &&
+                    String(error.message || "").toLowerCase().includes("fetch")
+                )
+                    ? "InnerMe could not reach its AI service. The Swayphics AI Edge Function may need to be redeployed in Supabase, or its CORS settings may be blocking this dashboard."
+                    : (
+                        error.message ||
+                        "InnerMe could not complete the request."
+                    );
 
             assistantEntry.content = errorMessage;
             assistantEntry.createdAt = new Date().toISOString();
