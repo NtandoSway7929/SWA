@@ -20920,6 +20920,14 @@ function simpleBars(items, color) {
                             '<img src="../swayphics-logo.png" alt="Swayphics">' +
                         '</div>' +
                         '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data. No fluff, just the useful stuff.</p>' +
+                        '<div class="sway-ai-capabilities" aria-label="InnerMe capabilities">' +
+                            '<span class="sway-ai-capability">Growth</span>' +
+                            '<span class="sway-ai-capability">Sales</span>' +
+                            '<span class="sway-ai-capability">Marketing</span>' +
+                            '<span class="sway-ai-capability">Writing</span>' +
+                            '<span class="sway-ai-capability">Revenue Ops</span>' +
+                            '<span class="sway-ai-capability">Client Success</span>' +
+                        '</div>' +
                     '</div>' +
                     '<div class="sway-ai-header-actions">' +
                         '<button type="button" class="sway-ai-history-toggle" id="sway-ai-history-toggle" aria-expanded="false">' +
@@ -20977,7 +20985,10 @@ function simpleBars(items, color) {
                 '<div class="sway-ai-suggestions">' +
 
                     '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
+                    '<button type="button" data-ai-prompt="Find the clearest sales opportunities in the current pipeline.">Find sales opportunities</button>' +
+                    '<button type="button" data-ai-prompt="What is the biggest marketing opportunity I can act on right now?">Marketing opportunity</button>' +
                     '<button type="button" data-ai-prompt="Which leads need follow-up?">Which leads need follow-up?</button>' +
+                    '<button type="button" data-ai-prompt="Write a strong follow-up for the most promising open lead.">Write a follow-up</button>' +
                     '<button type="button" data-ai-prompt="Give me a concise summary of the current business pipeline.">Summarise my pipeline</button>' +
                     '<button type="button" data-ai-prompt="Show me overdue invoices and outstanding payments.">Overdue money</button>' +
                 '</div>' +
