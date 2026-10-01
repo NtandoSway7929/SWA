@@ -22959,7 +22959,7 @@ function simpleBars(items, color) {
                     const target =
                         event.target instanceof Element
                             ? event.target.closest(
-                                ".sway-lead-actions-menu [data-send-email-type='lead']"
+                                ".sway-lead-email-action[data-send-email-type='lead']"
                             )
                             : null;
 
