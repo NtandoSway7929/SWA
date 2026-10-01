@@ -483,10 +483,441 @@ Deno.serve(async (req) => {
     };
   }
 
-  const focusedRecord = buildFocusedRecord(body.focused_record || null);
+  function buildConnectedContext(focused: any) {
+    if (!focused || !focused.record) {
+      return null;
+    }
+
+    const record = focused.record;
+    const type = String(focused.type || "");
+    const id = String(focused.id || "");
+
+    const leadsRows = leads.data || [];
+    const clientsRows = clients.data || [];
+    const projectsRows = projects.data || [];
+    const tasksRows = tasks.data || [];
+    const quotesRows = quotes.data || [];
+    const invoicesRows = invoices.data || [];
+    const paymentsRows = payments.data || [];
+    const followupRows = followups.data || [];
+    const communicationRows = communications.data || [];
+    const emailRows = emailMessages.data || [];
+    const portalRows = portalRequests.data || [];
+
+    function findById(rows: any[], value: unknown) {
+      const key = String(value || "");
+      if (!key) return null;
+
+      return rows.find(function (item: any) {
+        return String(item?.id || "") === key;
+      }) || null;
+    }
+
+    function uniqueById(rows: any[]) {
+      const seen = new Set<string>();
+
+      return rows.filter(function (item: any) {
+        const key = String(item?.id || "");
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    const connected: Record<string, any[]> = {
+      leads: [],
+      clients: [],
+      projects: [],
+      tasks: [],
+      quotes: [],
+      invoices: [],
+      payments: [],
+      followups: [],
+      communications: [],
+      emails: [],
+      portal_requests: []
+    };
+
+    function add(bucket: string, rows: any[]) {
+      if (!Array.isArray(rows)) return;
+      connected[bucket] = uniqueById(
+        connected[bucket].concat(rows)
+      ).slice(0, 40);
+    }
+
+    if (type === "lead") {
+      const client =
+        findById(
+          clientsRows,
+          record.converted_client_id
+        );
+
+      add("clients", client ? [client] : []);
+      add(
+        "quotes",
+        quotesRows.filter(function (item: any) {
+          return String(item?.lead_id || "") === id;
+        })
+      );
+      add(
+        "followups",
+        followupRows.filter(function (item: any) {
+          return String(item?.lead_id || "") === id;
+        })
+      );
+      add(
+        "communications",
+        communicationRows.filter(function (item: any) {
+          return String(item?.lead_id || "") === id;
+        })
+      );
+      add(
+        "emails",
+        emailRows.filter(function (item: any) {
+          return String(item?.lead_id || "") === id;
+        })
+      );
+
+      if (client) {
+        const clientId = String(client.id);
+
+        add(
+          "projects",
+          projectsRows.filter(function (item: any) {
+            return String(item?.client_id || "") === clientId;
+          })
+        );
+        add(
+          "tasks",
+          tasksRows.filter(function (item: any) {
+            return String(item?.client_id || "") === clientId;
+          })
+        );
+        add(
+          "invoices",
+          invoicesRows.filter(function (item: any) {
+            return String(item?.client_id || "") === clientId;
+          })
+        );
+        add(
+          "payments",
+          paymentsRows.filter(function (item: any) {
+            return String(item?.client_id || "") === clientId;
+          })
+        );
+        add(
+          "portal_requests",
+          portalRows.filter(function (item: any) {
+            return String(item?.client_id || "") === clientId;
+          })
+        );
+      }
+    }
+
+    if (type === "client") {
+      const clientId = id;
+
+      add(
+        "leads",
+        leadsRows.filter(function (item: any) {
+          return String(item?.converted_client_id || "") === clientId;
+        })
+      );
+      add(
+        "projects",
+        projectsRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+      add(
+        "tasks",
+        tasksRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+      add(
+        "quotes",
+        quotesRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+      add(
+        "invoices",
+        invoicesRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+      add(
+        "payments",
+        paymentsRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+      add(
+        "followups",
+        followupRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+      add(
+        "communications",
+        communicationRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+      add(
+        "emails",
+        emailRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+      add(
+        "portal_requests",
+        portalRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+    }
+
+    if (type === "project") {
+      const clientId = String(record.client_id || "");
+
+      add("client", findById(clientsRows, clientId) ? [findById(clientsRows, clientId)] : []);
+      add(
+        "tasks",
+        tasksRows.filter(function (item: any) {
+          return String(item?.project_id || "") === id;
+        })
+      );
+      add(
+        "invoices",
+        invoicesRows.filter(function (item: any) {
+          return String(item?.project_id || "") === id;
+        })
+      );
+      add(
+        "payments",
+        paymentsRows.filter(function (item: any) {
+          return String(item?.project_id || "") === id;
+        })
+      );
+    }
+
+    if (type === "task") {
+      const clientId = String(record.client_id || "");
+      const projectId = String(record.project_id || "");
+
+      add(
+        "clients",
+        findById(clientsRows, clientId)
+          ? [findById(clientsRows, clientId)]
+          : []
+      );
+      add(
+        "projects",
+        findById(projectsRows, projectId)
+          ? [findById(projectsRows, projectId)]
+          : []
+      );
+    }
+
+    if (type === "quote") {
+      add(
+        "clients",
+        findById(clientsRows, record.client_id)
+          ? [findById(clientsRows, record.client_id)]
+          : []
+      );
+      add(
+        "leads",
+        findById(leadsRows, record.lead_id)
+          ? [findById(leadsRows, record.lead_id)]
+          : []
+      );
+      add(
+        "invoices",
+        invoicesRows.filter(function (item: any) {
+          return String(item?.quote_id || "") === id;
+        })
+      );
+    }
+
+    if (type === "invoice") {
+      const clientId = String(record.client_id || "");
+
+      add(
+        "clients",
+        findById(clientsRows, clientId)
+          ? [findById(clientsRows, clientId)]
+          : []
+      );
+      add(
+        "projects",
+        findById(projectsRows, record.project_id)
+          ? [findById(projectsRows, record.project_id)]
+          : []
+      );
+      add(
+        "quotes",
+        findById(quotesRows, record.quote_id)
+          ? [findById(quotesRows, record.quote_id)]
+          : []
+      );
+      add(
+        "payments",
+        paymentsRows.filter(function (item: any) {
+          return String(item?.invoice_id || "") === id;
+        })
+      );
+      add(
+        "emails",
+        emailRows.filter(function (item: any) {
+          return String(item?.client_id || "") === clientId;
+        })
+      );
+    }
+
+    if (type === "enquiry") {
+      add(
+        "leads",
+        findById(leadsRows, record.lead_id)
+          ? [findById(leadsRows, record.lead_id)]
+          : []
+      );
+    }
+
+    if (type === "portal-request") {
+      add(
+        "clients",
+        findById(clientsRows, record.client_id)
+          ? [findById(clientsRows, record.client_id)]
+          : []
+      );
+    }
+
+    /*
+     * Expand the immediate chain one level further so questions about money,
+     * delivery or conversion can be answered across the linked records.
+     */
+    const connectedClientIds = new Set(
+      connected.clients
+        .map(function (item: any) {
+          return String(item?.id || "");
+        })
+        .filter(Boolean)
+    );
+
+    connected.projects.forEach(function (project: any) {
+      if (project?.client_id) {
+        connectedClientIds.add(
+          String(project.client_id)
+        );
+      }
+    });
+
+    if (connectedClientIds.size) {
+      const clientIds = Array.from(connectedClientIds);
+
+      add(
+        "invoices",
+        invoicesRows.filter(function (item: any) {
+          return clientIds.includes(
+            String(item?.client_id || "")
+          );
+        })
+      );
+      add(
+        "payments",
+        paymentsRows.filter(function (item: any) {
+          return clientIds.includes(
+            String(item?.client_id || "")
+          );
+        })
+      );
+    }
+
+    const connectedInvoiceIds = new Set(
+      connected.invoices
+        .map(function (item: any) {
+          return String(item?.id || "");
+        })
+        .filter(Boolean)
+    );
+
+    if (connectedInvoiceIds.size) {
+      add(
+        "payments",
+        paymentsRows.filter(function (item: any) {
+          return connectedInvoiceIds.has(
+            String(item?.invoice_id || "")
+          );
+        })
+      );
+    }
+
+    const connectedLeadIds = new Set(
+      connected.leads
+        .map(function (item: any) {
+          return String(item?.id || "");
+        })
+        .filter(Boolean)
+    );
+
+    if (type === "client" && connectedLeadIds.size) {
+      const leadIds = Array.from(connectedLeadIds);
+
+      add(
+        "quotes",
+        quotesRows.filter(function (item: any) {
+          return leadIds.includes(
+            String(item?.lead_id || "")
+          );
+        })
+      );
+
+      add(
+        "followups",
+        followupRows.filter(function (item: any) {
+          return leadIds.includes(
+            String(item?.lead_id || "")
+          );
+        })
+      );
+
+      add(
+        "communications",
+        communicationRows.filter(function (item: any) {
+          return leadIds.includes(
+            String(item?.lead_id || "")
+          );
+        })
+      );
+    }
+
+    const relationshipCount = Object.keys(connected).reduce(
+      function (sum, key) {
+        return sum + connected[key].length;
+      },
+      0
+    );
+
+    return {
+      primary_type: type,
+      primary_id: id,
+      relationship_count: relationshipCount,
+      connected
+    };
+  }
+
+  const connectedContext =
+    buildConnectedContext(focusedRecord);
 
   if (focusedRecord) {
     safeContext.focused_record = focusedRecord;
+  }
+
+  if (connectedContext) {
+    safeContext.connected_context = connectedContext;
   }
 
   /*
@@ -794,7 +1225,9 @@ Rules:
 - When focused_record is supplied, it is the primary subject of the current conversation. Answer the admin's question about that record unless the admin explicitly names a different record.
 - Never replace a supplied focused record with another record merely because another record is more prominent in a general summary or raw workspace dataset.
 - For vague follow-ups such as "what happened after that?", "did they reply?", "what about them?", "what was the last update?", or "and then?", resolve the reference to focused_record first.
-- Start your reasoning from focused_record and its related records before considering unrelated workspace rows.
+- Start your reasoning from focused_record, then use connected_context for verified relationships across the business chain before considering unrelated workspace rows.
+- When connected_context is available, use it for cross-record questions such as lead-to-client conversion, quote-to-invoice progression, invoice-to-payment status, project delivery, communication history, and outstanding work or money.
+- Treat connected_context relationships as authoritative links, but do not claim an event occurred merely because two records are linked.
 - Use focused_record and its related records to answer follow-up questions about the selected lead, client, project, task, quote, invoice, enquiry or portal request.
 - Do not infer relationships that are not present in focused_record or the current workspace data.
 - If focused_record is null, identify a record from the current question only when the supplied workspace data clearly establishes the match.
@@ -830,6 +1263,7 @@ Swayphics currently operates through leads, clients, enquiries, communications, 
 
 - Conversation history is context only. The current workspace data and operational_summary are authoritative if conversation history conflicts with current records.
 - If a focused record is present, previous conversational references such as "it", "they", "that client", or "that invoice" should resolve to that focused record unless the admin clearly switches subjects.
+- For questions asking for the "full picture", "everything", "what happened", "what is outstanding", or similar broad context about a focused record, synthesize the verified connected_context rather than returning only the primary record.
 - Use the previous conversation to resolve follow-up references such as "that lead", "her", "that invoice", or "what about Maisha" when the reference is established by the supplied history.
 - Do not treat conversation history as a substitute for current workspace data. Re-check the current workspace data on every turn.
 
