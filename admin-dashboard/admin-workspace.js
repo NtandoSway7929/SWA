@@ -20850,6 +20850,125 @@ function simpleBars(items, color) {
         );
     }
 
+    function renderAIGrowthDesk() {
+        const openLeads =
+            state.leads.filter(function (item) {
+                return !["won", "lost"].includes(
+                    String(item.status || "")
+                );
+            });
+
+        const sentQuotes =
+            state.quotes.filter(function (item) {
+                return String(item.status || "") === "sent";
+            });
+
+        const overdueInvoices =
+            state.invoices.filter(function (invoice) {
+                if (
+                    invoice.status === "cancelled" ||
+                    invoice.status === "paid"
+                ) {
+                    return false;
+                }
+
+                const outstanding = Number(
+                    invoice.amount_outstanding != null
+                        ? invoice.amount_outstanding
+                        : invoice.total || 0
+                );
+
+                if (outstanding <= 0) {
+                    return false;
+                }
+
+                const due = dashboardDateKey(invoice.due_date);
+                const today = dashboardTodayISO();
+
+                return Boolean(
+                    invoice.status === "overdue" ||
+                    (due && due < today)
+                );
+            });
+
+        const cards = [
+            {
+                tone: "sales",
+                label: "Sales",
+                value: openLeads.length,
+                detail:
+                    openLeads.length === 1
+                        ? "open opportunity to work"
+                        : "open opportunities to work",
+                prompt:
+                    "Find the clearest sales opportunities in the current pipeline and tell me exactly what to do next."
+            },
+            {
+                tone: "marketing",
+                label: "Marketing",
+                value: state.enquiries.filter(function (item) {
+                    return String(item.status || "") === "new";
+                }).length,
+                detail: "new enquiries currently waiting",
+                prompt:
+                    "Act as my Swayphics marketing strategist. Using the current workspace data, identify the most practical marketing opportunity I can act on next."
+            },
+            {
+                tone: "writing",
+                label: "Writing",
+                value: "Draft",
+                detail: "copy for the next commercial move",
+                prompt:
+                    "Act as my Swayphics commercial copywriter. Based on the current workspace, draft the most useful sales or marketing asset I should use next and explain where to use it."
+            },
+            {
+                tone: "revenue",
+                label: "Revenue",
+                value: overdueInvoices.length,
+                detail:
+                    overdueInvoices.length === 1
+                        ? "overdue invoice to review"
+                        : "overdue invoices to review",
+                prompt:
+                    "Act as my revenue operations advisor. Review the current invoices, payments, quotes and pipeline, identify the clearest revenue leakage, and give me the next practical move."
+            }
+        ];
+
+        return (
+            '<div class="sway-ai-growth-desk">' +
+                '<div class="sway-ai-growth-head">' +
+                    '<div>' +
+                        '<span class="sway-ai-proactive-eyebrow">GROWTH DESK</span>' +
+                        '<strong>Put InnerMe to work.</strong>' +
+                    '</div>' +
+                    '<span class="sway-ai-growth-note">Live workspace context</span>' +
+                '</div>' +
+                '<div class="sway-ai-growth-grid">' +
+                    cards.map(function (card) {
+                        return (
+                            '<button type="button" class="sway-ai-growth-card ' +
+                                esc(card.tone) +
+                                '" data-ai-prompt="' +
+                                esc(card.prompt) +
+                            '">' +
+                                '<span class="sway-ai-growth-label">' +
+                                    esc(card.label) +
+                                '</span>' +
+                                '<span class="sway-ai-growth-value">' +
+                                    esc(card.value) +
+                                '</span>' +
+                                '<span class="sway-ai-growth-detail">' +
+                                    esc(card.detail) +
+                                '</span>' +
+                                '<span class="sway-ai-growth-action">Open →</span>' +
+                            '</button>'
+                        );
+                    }).join("") +
+                '</div>' +
+            '</div>'
+        );
+    }
+
     function renderSwayphicsAI() {
         const history = Array.isArray(state.aiConversation)
             ? state.aiConversation.slice(-40)
@@ -20978,11 +21097,12 @@ function simpleBars(items, color) {
                     history.length === 0 && !state.aiFocusedRecord
                         ? (
                             renderAIProactiveBrief() +
-                            renderAIChangeWatch()
+                            renderAIChangeWatch() +
+                            renderAIGrowthDesk()
                         )
                         : ""
                 ) +
-                '<div class="sway-ai-suggestions">' +
+                '<div class="sway-ai-suggestions">'
 
                     '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
                     '<button type="button" data-ai-prompt="Find the clearest sales opportunities in the current pipeline.">Find sales opportunities</button>' +
