@@ -9389,6 +9389,13 @@ function simpleBars(items, color) {
                         "</td>" +
                         "<td>" +
                             '<div class="sway-row-actions sway-lead-row-actions">' +
+                                (
+                                    item.email
+                                        ? '<button type="button" class="sway-row-action sway-lead-email-action" data-send-email-type="lead" data-send-email-id="' +
+                                          esc(item.id) +
+                                          '">Email</button>'
+                                        : ""
+                                ) +
                                 '<details class="sway-lead-actions-menu">' +
                                     '<summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
                                     '<div class="sway-lead-actions-dropdown">' +
