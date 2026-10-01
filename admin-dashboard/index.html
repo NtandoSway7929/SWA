@@ -8127,15 +8127,15 @@
                                     "apikey":
                                         SUPABASE_PUBLISHABLE_KEY,
                                     "Content-Type":
-                                        "application/x-www-form-urlencoded"
-                                },
-                                body:
-                                    new URLSearchParams({
-                                        grant_type:
-                                            "refresh_token",
-                                        refresh_token:
-                                            refreshToken
-                                    }).toString()
+                                "application/json"
+                        },
+                        body:
+                            JSON.stringify({
+                                grant_type:
+                                    "refresh_token",
+                                refresh_token:
+                                    refreshToken
+                            })
                             }
                         );
 
@@ -10301,7 +10301,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20261001-innerme-v25-network-fix"></script>
+<script src="admin-workspace.js?v=dashboard-20261001-innerme-v26-network-auth-fix"></script>
 
 <script>
 (function () {
