@@ -12149,7 +12149,7 @@ function simpleBars(items, color) {
                     esc(item.id) +
                     '"' +
                     (
-                        item.id === selectedId
+                        String(item.id) === String(selectedId)
                             ? " selected"
                             : ""
                     ) +
@@ -13720,7 +13720,7 @@ function simpleBars(items, color) {
                                     : generateEmailSubject(
                                         selectedType,
                                         selectedRecord,
-                                        proposalTypeState
+                                        "not-website-related"
                                     )
                             ) +
                         '">' +
