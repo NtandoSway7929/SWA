@@ -662,11 +662,16 @@ Answer the admin's question directly.
 
   const cleanAnswer = String(answer)
     .replace(/\\([#*_[\]()>+.!-])/g, "$1")
+    .replace(/\\@/g, "@")
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .replace(/\s{2,}(?=(?:Overdue Follow-ups|Overdue|Due Today|Due Tomorrow|Status and Value|Contact Information|Follow-Up Status|Communication History|Proposed Scope and Recommendations|Current Status|Next Steps)\b)/g, "\n")
-    .replace(/(^|\n)\s*\*\s+/g, "$1• ")
+    .replace(/(^|\s)(\*)\s+/g, "$1• ")
+    .replace(/(^|\s)•\s+/g, "\n• ")
+    .replace(/\n\s*•/g, "\n•")
+    .replace(/\s+(?=(?:Overdue Follow-ups|Due Today|Due Tomorrow|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)\b)/g, "\n")
+    .replace(/^(Leads Needing Follow-Up|Maisha's Touch Lead Overview)\s+/g, "$1\n\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 
   return json({
