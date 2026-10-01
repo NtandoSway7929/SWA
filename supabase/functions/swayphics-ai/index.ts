@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
   if (!openAiKey) {
     return json({
       error:
-        "Swayphics AI is installed, but OPENAI_API_KEY has not been configured in Supabase Edge Function secrets yet.",
+        "InnerMe is installed, but OPENAI_API_KEY has not been configured in Supabase Edge Function secrets yet.",
     }, 503);
   }
 
@@ -219,7 +219,7 @@ Answer the admin's question directly. Prefer short headings and bullets when use
 
   if (!openAiResponse.ok) {
     const errorText = await openAiResponse.text();
-    console.error("OpenAI Swayphics AI error:", errorText.slice(0, 2000));
+    console.error("OpenAI InnerMe error:", errorText.slice(0, 2000));
     return json({
       error: "The AI provider could not complete the request.",
     }, 502);
