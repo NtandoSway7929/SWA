@@ -7231,3 +7231,124 @@
         max-width: calc(100vw - 24px);
     }
 }
+
+
+/* =========================================================
+   CLIENT ONBOARDING
+   ========================================================= */
+.sway-client360-onboarding-summary {
+    grid-column: 1 / -1;
+}
+.sway-client360-onboarding-preview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 9px;
+    margin: 13px 0;
+}
+.sway-client360-onboarding-preview > div {
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid rgba(0,32,150,0.065);
+    border-radius: 12px;
+    background: rgba(247,250,255,0.72);
+}
+.sway-client360-onboarding-preview span,
+.sway-onboarding-field > span {
+    display: block;
+    color: #8190A5;
+    font-size: 0.50rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.sway-client360-onboarding-preview strong {
+    display: block;
+    margin-top: 4px;
+    overflow: hidden;
+    color: var(--sway-dark);
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sway-admin-onboarding-modal {
+    width: min(920px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+.sway-admin-onboarding-section {
+    margin-top: 12px;
+}
+.sway-onboarding-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 9px;
+    margin-top: 12px;
+}
+.sway-onboarding-field {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid rgba(0,32,150,0.065);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.72);
+}
+.sway-onboarding-field > div {
+    margin-top: 5px;
+    color: #56627A;
+    font-size: 0.64rem;
+    font-weight: 600;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.sway-onboarding-services {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+.sway-onboarding-service {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 5px 12px;
+    padding: 13px;
+    border: 1px solid rgba(0,32,150,0.065);
+    border-radius: 13px;
+    background: rgba(255,255,255,0.72);
+}
+.sway-onboarding-service strong {
+    color: var(--sway-dark);
+    font-size: 0.67rem;
+    font-weight: 850;
+}
+.sway-onboarding-service > span {
+    color: var(--sway-blue);
+    font-size: 0.61rem;
+    font-weight: 850;
+}
+.sway-onboarding-service p {
+    grid-column: 1 / -1;
+    color: #56627A;
+    font-size: 0.59rem;
+    line-height: 1.55;
+}
+.sway-admin-onboarding-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    color: #8190A5;
+    font-size: 0.52rem;
+    font-weight: 700;
+}
+@media (max-width: 760px) {
+    .sway-client360-onboarding-preview,
+    .sway-onboarding-fields {
+        grid-template-columns: 1fr;
+    }
+    .sway-admin-onboarding-modal {
+        max-height: calc(100vh - 20px);
+    }
+    .sway-onboarding-service {
+        grid-template-columns: 1fr;
+    }
+}
