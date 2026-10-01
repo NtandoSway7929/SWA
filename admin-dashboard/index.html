@@ -2315,13 +2315,15 @@
         body.sway-dark-mode .sway-ai-answer-item-text strong { color:#e5ebf5; }
         body.sway-dark-mode .sway-ai-answer-bullet { color:#77C1FC; }
         .sway-ai-loading { opacity:.88; }
-        .sway-ai-thinking { display:inline-flex; align-items:center; gap:5px; height:18px; vertical-align:middle; }
-        .sway-ai-thinking span { display:block; width:6px; height:6px; border-radius:50%; background:#0152F4; opacity:.28; transform:translateY(0); animation:sway-ai-thinking-pulse 1.25s ease-in-out infinite; }
-        .sway-ai-thinking span:nth-child(2) { animation-delay:.16s; }
-        .sway-ai-thinking span:nth-child(3) { animation-delay:.32s; }
+        .sway-ai-thinking { display:inline-flex; align-items:center; gap:6px; height:20px; vertical-align:middle; }
+        .sway-ai-thinking span { display:block; position:relative; width:7px; height:7px; flex:0 0 7px; border-radius:50%; background:#0152F4; opacity:.3; transform:translate3d(0,0,0) scale(.82); animation:sway-ai-thinking-pulse 1.05s ease-in-out infinite !important; will-change:transform, opacity; }
+        .sway-ai-thinking span:nth-child(2) { animation-delay:.17s !important; }
+        .sway-ai-thinking span:nth-child(3) { animation-delay:.34s !important; }
         @keyframes sway-ai-thinking-pulse {
-            0%, 60%, 100% { opacity:.28; transform:translateY(0) scale(.82); }
-            30% { opacity:1; transform:translateY(-3px) scale(1); }
+            0%, 100% { opacity:.3; top:0; transform:translate3d(0,0,0) scale(.82); }
+            25% { opacity:.78; top:-4px; transform:translate3d(0,-2px,0) scale(1); }
+            45% { opacity:1; top:-7px; transform:translate3d(0,-4px,0) scale(1.08); }
+            65% { opacity:.78; top:-4px; transform:translate3d(0,-2px,0) scale(1); }
         }
         body.sway-dark-mode .sway-ai-thinking span { background:#77C1FC; }
         @media (prefers-reduced-motion:reduce) {
