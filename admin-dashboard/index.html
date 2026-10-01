@@ -2548,6 +2548,10 @@
         body.sway-dark-mode .sway-ai-panel { background:#0d1525; border-color:#263552; }
         body.sway-dark-mode .sway-ai-header h2 { color:#fff; }
         body.sway-dark-mode .sway-ai-new-chat { background:#162238; border-color:#2a3a58; color:#b5c1d3; }
+        body.sway-dark-mode .sway-ai-history-toggle { background:#162238; border-color:#2a3a58; color:#b5c1d3; }
+        body.sway-dark-mode .sway-ai-history-toggle:hover,
+        body.sway-dark-mode .sway-ai-history-toggle[aria-expanded="true"] { border-color:#476aab; color:#77C1FC; background:#1a2942; }
+
         body.sway-dark-mode .sway-ai-new-chat:hover { border-color:#476aab; color:#77C1FC; background:#1a2942; }
         body.sway-dark-mode .sway-ai-byline { color:#9eabc0; }
         body.sway-dark-mode .sway-ai-header p, body.sway-dark-mode .sway-ai-note { color:#a9b5c8; }
@@ -2556,7 +2560,9 @@
         @media (max-width:700px) {
             .sway-ai-panel { padding:18px; border-radius:18px; }
             .sway-ai-header { flex-direction:column; }
-            .sway-ai-header-actions { width:100%; justify-content:space-between; }
+            .sway-ai-header-actions { width:100%; justify-content:flex-start; flex-wrap:wrap; }
+            .sway-ai-status { margin-left:auto; }
+
             .sway-ai-form { flex-direction:column; }
             .sway-ai-form button { min-height:48px; }
             .sway-ai-message { flex:0 0 auto; width:fit-content; max-width:94%; }
