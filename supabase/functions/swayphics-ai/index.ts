@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
     const forwardedFor =
       req.headers.get("cf-connecting-ip") ||
       req.headers.get("x-forwarded-for") ||
-      "",
+      "";
 
     const networkIdentifier =
       forwardedFor.split(",")[0].trim();
