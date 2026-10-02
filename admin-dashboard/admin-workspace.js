@@ -21660,13 +21660,17 @@ function simpleBars(items, color) {
                         '</div>' +
                     '</div>' +
                     '<div class="sway-ai-header-actions">' +
-                        '<button type="button" class="sway-ai-history-toggle" id="sway-ai-history-toggle" aria-expanded="false">' +
-                            '<span aria-hidden="true">☷</span>' +
-                            '<span>Chats</span>' +
+                        '<button type="submit" form="sway-ai-form" class="sway-ai-send sway-ai-header-send" id="sway-ai-send">' +
+                            '<span aria-hidden="true">↑</span>' +
+                            '<span>Ask InnerMe</span>' +
                         '</button>' +
                         '<button type="button" class="sway-ai-new-chat" id="sway-ai-new-chat">' +
                             '<span aria-hidden="true">＋</span>' +
                             '<span>New chat</span>' +
+                        '</button>' +
+                        '<button type="button" class="sway-ai-history-toggle" id="sway-ai-history-toggle" aria-expanded="false">' +
+                            '<span aria-hidden="true">☷</span>' +
+                            '<span>Chats</span>' +
                         '</button>' +
                         '<span class="sway-ai-status">Read-only V1</span>' +
                     '</div>' +
@@ -21729,7 +21733,6 @@ function simpleBars(items, color) {
                 '</div>' +
                 '<form class="sway-ai-form" id="sway-ai-form">' +
                     '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask InnerMe..." autocomplete="off"></textarea>' +
-                    '<button type="submit" id="sway-ai-send">Ask InnerMe</button>' +
                 '</form>' +
                 '<small class="sway-ai-note">InnerMe is read-only in V1. It can analyse your workspace, but it cannot send emails, delete records or change data. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>'
