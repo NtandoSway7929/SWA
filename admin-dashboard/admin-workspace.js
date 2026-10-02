@@ -21971,13 +21971,10 @@ function simpleBars(items, color) {
                         '<span>Suggestions</span>' +
                     '</button>' +
                     '<div class="sway-ai-suggestions" id="sway-ai-suggestions-panel" aria-hidden="true">' +
-                        '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
-                        '<button type="button" data-ai-prompt="Find the clearest sales opportunities in the current pipeline.">Find sales opportunities</button>' +
-                        '<button type="button" data-ai-prompt="What is the biggest marketing opportunity I can act on right now?">Marketing opportunity</button>' +
-                        '<button type="button" data-ai-prompt="Which leads need follow-up?">Which leads need follow-up?</button>' +
-                        '<button type="button" data-ai-prompt="Write a strong follow-up for the most promising open lead.">Write a follow-up</button>' +
+                        '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention?</button>' +
+                        '<button type="button" data-ai-prompt="Which leads or clients need follow-up today?">Follow-ups</button>' +
+                        '<button type="button" data-ai-prompt="Find the clearest sales opportunities in the current pipeline and tell me what to do next.">Revenue opportunities</button>' +
                         '<button type="button" data-ai-prompt="Give me a concise summary of the current business pipeline.">Summarise my pipeline</button>' +
-                        '<button type="button" data-ai-prompt="Show me overdue invoices and outstanding payments.">Overdue money</button>' +
                     '</div>' +
                     '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask InnerMe..." autocomplete="off"></textarea>' +
                 '</form>' +                '<small class="sway-ai-note">InnerMe is read-only in V1. It can analyse your workspace, but it cannot send emails, delete records or change data. Enter to send · Shift+Enter for a new line.</small>' +
