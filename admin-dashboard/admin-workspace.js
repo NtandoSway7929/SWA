@@ -21273,7 +21273,12 @@ function simpleBars(items, color) {
                         '<button type="button" data-ai-prompt="Find the clearest sales opportunities in the current pipeline and tell me what to do next.">Revenue opportunities</button>' +
                         '<button type="button" data-ai-prompt="Give me a concise summary of the current business pipeline.">Summarise my pipeline</button>' +
                     '</div>' +
-                    '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask InnerMe..." autocomplete="off"></textarea>' +
+                    '<div class="sway-ai-composer-row">' +
+                        '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask InnerMe..." autocomplete="off"></textarea>' +
+                        '<button type="submit" class="sway-ai-send" id="sway-ai-send" aria-label="Ask InnerMe">' +
+                            '<span aria-hidden="true">↑</span>' +
+                        '</button>' +
+                    '</div>' +
                 '</form>' +                '<small class="sway-ai-note">InnerMe is read-only in V1. It can analyse your workspace, but it cannot send emails, delete records or change data. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>'
         );
@@ -21287,13 +21292,6 @@ function simpleBars(items, color) {
 
         const clean = String(message || "").trim();
         if (!clean) return;
-
-        const proactiveBrief =
-            document.querySelector(".sway-ai-proactive-brief");
-
-        if (proactiveBrief) {
-            proactiveBrief.remove();
-        }
 
         if (!Array.isArray(state.aiConversation)) {
             state.aiConversation = [];
