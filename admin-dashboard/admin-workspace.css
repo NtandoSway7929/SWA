@@ -5779,23 +5779,77 @@
    ========================================================= */
 
 @media (max-width: 760px) {
+    /*
+     * Mobile sidebar: compact drawer that occupies the usable viewport,
+     * not a desktop-sized panel pushed below the page header/search bar.
+     */
     .sway-workspace-sidebar {
-        touch-action: pan-y;
-        will-change: transform;
-        overscroll-behavior: contain;
+        top: max(10px, env(safe-area-inset-top));
+        left: 10px;
+        width: min(218px, calc(100vw - 20px));
+        height: calc(100dvh - max(20px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+        max-height: calc(100dvh - max(20px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+        padding: 10px 8px;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 22px 55px rgba(8,21,51,0.22);
     }
 
-    .sway-workspace-sidebar.sway-sidebar-restoring {
-        transition: none !important;
+    .sway-workspace-sidebar-head {
+        gap: 7px;
+        padding: 6px 8px 10px;
     }
 
-    .sway-workspace-mobile-toggle,
+    .sway-workspace-sidebar-kicker {
+        font-size: 0.46rem;
+    }
+
+    .sway-workspace-sidebar-brand strong {
+        font-size: 0.74rem;
+    }
+
+    .sway-workspace-nav-scroll {
+        height: calc(100% - 52px);
+        max-height: none;
+        padding: 6px 1px max(10px, env(safe-area-inset-bottom));
+    }
+
+    .sway-workspace-nav-group {
+        margin-bottom: 4px;
+    }
+
+    .sway-workspace-nav-group-toggle {
+        min-height: 34px;
+        padding: 7px 8px;
+        font-size: 0.51rem;
+    }
+
+    .sway-workspace-nav-button {
+        min-height: 34px;
+        padding: 7px 8px 7px 10px;
+        border-radius: 9px;
+        font-size: 0.61rem;
+    }
+
+    .sway-workspace-mobile-toggle {
+        top: 96px;
+        left: 10px;
+        width: 44px;
+        height: 44px;
+    }
+
     .sway-workspace-mobile-close {
-        touch-action: manipulation;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
     }
 
     #sway-admin-workspace.nav-open {
         overscroll-behavior: none;
+    }
+
+    #sway-admin-workspace.nav-open::after {
+        inset: 0;
     }
 }
  
