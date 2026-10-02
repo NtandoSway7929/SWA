@@ -21514,7 +21514,9 @@ if (formStatus) {
                         method: "POST",
                         headers: {
                             "Content-Type":
-                                "application/json"
+                                "application/json",
+                            "x-innerme-session":
+                                publicSession
                         },
                         body:
                             JSON.stringify({
