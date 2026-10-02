@@ -23711,6 +23711,41 @@ function simpleBars(items, color) {
             .querySelectorAll("[data-ai-prompt]")
             .forEach(function (button) {
                 button.onclick = function () {
+                    const suggestionPanel =
+                        workspace.querySelector("#sway-ai-suggestions-panel");
+
+                    if (suggestionPanel) {
+                        suggestionPanel.classList.remove("is-open");
+                        suggestionPanel.setAttribute("aria-hidden", "true");
+                    }
+
+                    const suggestionToggle =
+                        workspace.querySelector("#sway-ai-suggestion-toggle");
+
+                    if (suggestionToggle) {
+                        suggestionToggle.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+                    }
+
+                    const morePanel =
+                        workspace.querySelector("#sway-ai-more-panel");
+
+                    const moreToggle =
+                        workspace.querySelector("#sway-ai-more-toggle");
+
+                    if (morePanel) {
+                        morePanel.hidden = true;
+                    }
+
+                    if (moreToggle) {
+                        moreToggle.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+                    }
+
                     askSwayphicsAI(
                         button.dataset.aiPrompt || ""
                     );
@@ -23803,6 +23838,25 @@ function simpleBars(items, color) {
                     "aria-expanded",
                     open ? "true" : "false"
                 );
+
+                if (open) {
+                    const morePanel =
+                        workspace.querySelector("#sway-ai-more-panel");
+
+                    const moreToggle =
+                        workspace.querySelector("#sway-ai-more-toggle");
+
+                    if (morePanel) {
+                        morePanel.hidden = true;
+                    }
+
+                    if (moreToggle) {
+                        moreToggle.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+                    }
+                }
             };
         }
 
