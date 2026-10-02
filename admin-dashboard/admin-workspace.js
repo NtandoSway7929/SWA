@@ -22298,7 +22298,19 @@ function simpleBars(items, color) {
                 const summary = details.querySelector(":scope > summary");
 
                 if (summary) {
-                    summary.addEventListener("click", function (event) {
+                    /*
+                     * Do not rely on the browser's native <details> click
+                     * handling here. Safari/iOS can swallow the native toggle
+                     * when the summary sits inside the dashboard's table
+                     * layout. Toggle it ourselves on pointerdown and cancel
+                     * the native action so the menu has one deterministic
+                     * open/close path.
+                     */
+                    summary.addEventListener("pointerdown", function (event) {
+                        if (event.button !== undefined && event.button !== 0) {
+                            return;
+                        }
+
                         event.preventDefault();
                         event.stopPropagation();
 
