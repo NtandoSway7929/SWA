@@ -23711,21 +23711,9 @@ function simpleBars(items, color) {
             .querySelectorAll("[data-ai-prompt]")
             .forEach(function (button) {
                 button.onclick = function () {
-                    const proactiveBrief =
-                        document.querySelector(".sway-ai-proactive-brief");
-
-                    if (proactiveBrief) {
-                        proactiveBrief.remove();
-                    }
-
-                    const changeWatch =
-                        document.querySelector(".sway-ai-change-watch");
-
-                    if (changeWatch) {
-                        changeWatch.remove();
-                    }
-
-                    askSwayphicsAI(button.dataset.aiPrompt || "");
+                    askSwayphicsAI(
+                        button.dataset.aiPrompt || ""
+                    );
                 };
             });
 
