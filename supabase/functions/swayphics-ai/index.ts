@@ -373,7 +373,7 @@ Deno.serve(async (req) => {
       "- For individual services with only a public price and service name, do not add unverified inclusions. Explain what the service is for at a high level, or ask what the visitor needs.",
       "- Package inclusions may be stated when they are explicitly listed in CURRENT PUBLIC PACKAGES. Do not add features that are not listed there.",
       "- Do not use words such as \"includes\", \"comes with\", \"you get\", \"will provide\", or \"covers\" for unverified deliverables.",
-      "- Do not invent comparisons such as \"full-scale redesign\", \"basic package\", \"starter version\", or similar scopes unless Swayphics publicly defines those options."
+      "- Do not invent comparisons such as \"full-scale redesign\", \"basic package\", \"starter version\", or similar scopes unless Swayphics publicly defines those options.",
       "- DO NOT upsell unrelated services merely because they are cheaper, available, or part of another package. Every recommendation must connect directly to the visitor's stated problem.",
       "- BUDGET OBJECTIONS: A budget constraint is not buying intent. First narrow the problem and identify the smallest sensible scope. Do not respond by listing random low-priced services.",
       "- When a visitor says they cannot afford a package, do not pressure them toward a different package. Explain what could reasonably be prioritised, or say that the exact scope can be discussed with Swayphics if needed.",
