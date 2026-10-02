@@ -7581,7 +7581,7 @@ body {
         top: max(76px, calc(env(safe-area-inset-top) + 64px));
         left: 12px;
         z-index: 5000;
-        width: min(310px, calc(100vw - 24px));
+        width: min(218px, calc(100vw - 24px));
         height: calc(100dvh - max(88px, calc(env(safe-area-inset-top) + 76px)));
         min-height: 0;
         max-height: none;
@@ -7791,6 +7791,10 @@ body {
 }
 
 @media (max-width: 420px) {
+    .sway-workspace-sidebar {
+        width: min(208px, calc(100vw - 20px));
+    }
+
     .sway-workspace-heading-actions {
         grid-template-columns: 1fr;
     }
