@@ -3219,9 +3219,10 @@
         position: fixed;
         inset: 0;
         z-index: 4800;
-        background: rgba(8,21,51,0.20);
-        backdrop-filter: blur(2px);
-        -webkit-backdrop-filter: blur(2px);
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        pointer-events: none;
     }
 
     .sway-workspace-nav-scroll {
@@ -7709,9 +7710,10 @@ body {
         position: fixed;
         inset: 0;
         z-index: 4800;
-        background: rgba(8,21,51,0.20);
-        backdrop-filter: blur(2px);
-        -webkit-backdrop-filter: blur(2px);
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        pointer-events: none;
     }
 
     .sway-workspace-heading {
