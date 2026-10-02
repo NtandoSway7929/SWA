@@ -5012,19 +5012,23 @@ function renderShell() {
                 closeQuickCreateMenu();
 
                 /*
-                 * Open InnerMe through the same dashboard route used during
-                 * normal workspace navigation. This avoids relying on a
-                 * transient DOM state and prevents the CTA from ever landing
-                 * on an empty/non-existent page.
+                 * Open InnerMe in the existing workspace shell.
+                 * Do not navigate to a query-string URL because this
+                 * dashboard renders views from state.currentView.
                  */
                 state.currentView = "swayphics-ai";
                 persistWorkspaceView("swayphics-ai");
 
-                const requestedUrl =
-                    window.location.pathname +
-                    "?view=swayphics-ai";
+                if (window.innerWidth <= MOBILE_SIDEBAR_BREAKPOINT) {
+                    setMobileSidebarOpen(false);
+                }
 
-                window.location.assign(requestedUrl);
+                setStandaloneManagerVisibility(
+                    state.currentView
+                );
+
+                renderShell();
+                renderView();
             };
         }
 
