@@ -2307,7 +2307,7 @@ Answer the admin's question directly.
       ?.map((part: any) => part.text)
       ?.join("\n")
       ?.trim() ||
-    "",
+    "";
 
   if (!answer) {
     const blockReason =
