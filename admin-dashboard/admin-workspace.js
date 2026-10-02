@@ -22297,122 +22297,113 @@ function simpleBars(items, color) {
     }
 
     function bindSwayActionDropdowns() {
-        /*
-         * Use one delegated capture-phase click handler for all action menus.
-         * This avoids Safari/iOS inconsistencies with <summary> activation
-         * and also survives every renderView() replacement of the table DOM.
-         */
-        if (workspace.dataset.swayActionDelegationBound !== "true") {
-            workspace.dataset.swayActionDelegationBound = "true";
+        if (workspace.dataset.swayActionDelegationBound === "true") return;
+        workspace.dataset.swayActionDelegationBound = "true";
 
-            workspace.addEventListener(
-                "click",
-                function (event) {
-                    const summary =
-                        event.target &&
-                        typeof event.target.closest === "function"
-                            ? event.target.closest(
-                                ".sway-actions-menu > summary, .sway-lead-actions-menu > summary"
-                            )
-                            : null;
+        const menuSelector =
+            ".sway-actions-menu, .sway-lead-actions-menu";
+        const summarySelector =
+            ".sway-actions-menu > summary, .sway-lead-actions-menu > summary";
 
-                    if (!summary || !workspace.contains(summary)) {
-                        return;
-                    }
+        function getMenu(target) {
+            if (!target || typeof target.closest !== "function") return null;
+            const menu = target.closest(menuSelector);
+            return menu && workspace.contains(menu) ? menu : null;
+        }
 
-                    const details = summary.parentElement;
-
-                    if (!details) {
-                        return;
-                    }
-
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.stopImmediatePropagation();
-
-                    details.open = !details.open;
-
-                    if (details.open) {
-                        requestAnimationFrame(function () {
-                            positionSwayActionDropdown(details);
-                        });
-                    }
-                },
-                true
+        function getOpenMenu() {
+            return workspace.querySelector(
+                ".sway-actions-menu[open], .sway-lead-actions-menu[open]"
             );
         }
 
-        workspace
-            .querySelectorAll(
-                ".sway-actions-menu, .sway-lead-actions-menu"
-            )
-            .forEach(function (details) {
-                if (details.dataset.swayDropdownBound === "true") {
-                    return;
-                }
+        function setExpanded(menu, value) {
+            const summary = menu && menu.querySelector(":scope > summary");
+            if (summary) {
+                summary.setAttribute("aria-expanded", value ? "true" : "false");
+            }
+        }
 
-                details.dataset.swayDropdownBound = "true";
+        function closeMenu(menu) {
+            if (!menu) return;
+            menu.open = false;
+            setExpanded(menu, false);
+        }
 
-                details.addEventListener("toggle", function () {
-                    const dropdown =
-                        details.querySelector(
-                            ":scope > .sway-actions-dropdown, :scope > .sway-lead-actions-dropdown"
-                        );
-
-                    if (!dropdown) {
-                        return;
-                    }
-
-                    if (details.open) {
-                        positionSwayActionDropdown(details);
-
-                        details._swayDropdownReposition =
-                            function () {
-                                positionSwayActionDropdown(
-                                    details
-                                );
-                            };
-
-                        window.addEventListener(
-                            "scroll",
-                            details._swayDropdownReposition,
-                            true
-                        );
-
-                        window.addEventListener(
-                            "resize",
-                            details._swayDropdownReposition
-                        );
-                    } else {
-                        if (
-                            details._swayDropdownReposition
-                        ) {
-                            window.removeEventListener(
-                                "scroll",
-                                details._swayDropdownReposition,
-                                true
-                            );
-
-                            window.removeEventListener(
-                                "resize",
-                                details._swayDropdownReposition
-                            );
-
-                            details._swayDropdownReposition =
-                                null;
-                        }
-
-                        dropdown.style.position = "";
-                        dropdown.style.top = "";
-                        dropdown.style.right = "";
-                        dropdown.style.bottom = "";
-                        dropdown.style.left = "";
-                        dropdown.style.maxHeight = "";
-                        dropdown.style.overflowY = "";
-                        dropdown.style.webkitOverflowScrolling = "";
-                    }
-                });
+        function closeOthers(except) {
+            workspace.querySelectorAll(menuSelector + "[open]").forEach(function (menu) {
+                if (menu !== except) closeMenu(menu);
             });
+        }
+
+        function reposition(menu) {
+            if (!menu || !menu.open) return;
+            if (menu._swayActionRaf) cancelAnimationFrame(menu._swayActionRaf);
+            menu._swayActionRaf = requestAnimationFrame(function () {
+                menu._swayActionRaf = null;
+                if (menu.isConnected && menu.open) {
+                    positionSwayActionDropdown(menu);
+                }
+            });
+        }
+
+        workspace.addEventListener("click", function (event) {
+            const summary =
+                event.target && typeof event.target.closest === "function"
+                    ? event.target.closest(summarySelector)
+                    : null;
+
+            if (!summary || !workspace.contains(summary)) return;
+
+            const menu = summary.parentElement;
+            if (!menu || !menu.matches(menuSelector)) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            const opening = !menu.open;
+            closeOthers(menu);
+            menu.open = opening;
+            setExpanded(menu, opening);
+
+            if (opening) reposition(menu);
+        }, true);
+
+        document.addEventListener("click", function (event) {
+            const openMenu = getOpenMenu();
+            if (!openMenu) return;
+            if (getMenu(event.target) === openMenu) return;
+            closeMenu(openMenu);
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key !== "Escape") return;
+            const openMenu = getOpenMenu();
+            if (!openMenu) return;
+
+            const summary = openMenu.querySelector(":scope > summary");
+            closeMenu(openMenu);
+            if (summary) summary.focus();
+        });
+
+        const repositionOpenMenu = function () {
+            const openMenu = getOpenMenu();
+            if (openMenu) reposition(openMenu);
+        };
+
+        window.addEventListener("scroll", repositionOpenMenu, true);
+        window.addEventListener("resize", repositionOpenMenu);
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener("scroll", repositionOpenMenu);
+            window.visualViewport.addEventListener("resize", repositionOpenMenu);
+        }
+
+        workspace.querySelectorAll(menuSelector).forEach(function (menu) {
+            setExpanded(menu, menu.open);
+            if (menu.open) reposition(menu);
+        });
     }
 
     function bindViewActions() {
