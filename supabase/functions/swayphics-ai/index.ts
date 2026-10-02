@@ -490,7 +490,7 @@ Deno.serve(async (req) => {
               },
             ],
             generationConfig: {
-              maxOutputTokens: 900,
+              maxOutputTokens: 1600,
               responseMimeType: "application/json",
             },
           }),
