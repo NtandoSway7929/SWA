@@ -7914,3 +7914,65 @@ body {
         margin-bottom: env(safe-area-inset-bottom);
     }
 }
+
+
+/* =========================================================
+   SWAYPHICS — MOBILE SIDEBAR TOGGLE LIQUID GLASS
+   Match the homepage header pill's optical material.
+   ========================================================= */
+
+.sway-workspace-mobile-toggle {
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(28px) saturate(220%) brightness(1.05) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(1.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    border-radius: 999px !important;
+    box-shadow:
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+        inset 0 -1px 1px rgba(0, 32, 150, 0.08),
+        0 14px 34px rgba(0, 32, 150, 0.10) !important;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.sway-workspace-mobile-toggle::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    pointer-events: none;
+    background: rgba(255, 255, 255, 0.18);
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    backdrop-filter: blur(8px) saturate(300%) brightness(1.15);
+    -webkit-backdrop-filter: blur(8px) saturate(300%) brightness(1.15);
+}
+
+.sway-workspace-mobile-toggle svg {
+    position: relative;
+    z-index: 1;
+}
+
+.sway-workspace-mobile-toggle:hover {
+    transform: translateY(-0.5px);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .sway-workspace-mobile-toggle {
+        background: rgba(255, 255, 255, 0.98) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 1px solid rgba(0, 32, 150, 0.08) !important;
+    }
+
+    .sway-workspace-mobile-toggle::before {
+        display: none;
+    }
+}
