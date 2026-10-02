@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
     const forwardedFor =
       req.headers.get("cf-connecting-ip") ||
       req.headers.get("x-forwarded-for") ||
-      "";
+      "",
 
     const networkIdentifier =
       forwardedFor.split(",")[0].trim();
@@ -404,7 +404,7 @@ Deno.serve(async (req) => {
       "- CHECK 9: Keep the answer useful even if the visitor never buys from Swayphics.",
       "- CHECK 10: Set ready_for_enquiry independently from recommended_service. A service can be recommended while ready_for_enquiry remains false.",
       "- If the draft fails any check, rewrite it before returning the JSON. Do not mention this quality gate to the visitor.",
-      "";
+      "",
       "",      "PUBLIC ASSISTANT PURPOSE:",
       "1. Understand what the visitor is trying to achieve.",
       "2. Diagnose the problem at a practical level using only what the visitor shares.",
@@ -553,7 +553,7 @@ Deno.serve(async (req) => {
             part.text,
         )
         ?.join("") ||
-      "";
+      "",
 
     let publicPayload:
       | {
@@ -855,7 +855,7 @@ Deno.serve(async (req) => {
         ?.filter((part: any) => typeof part?.text === "string")
         ?.map((part: any) => part.text)
         ?.join("") ||
-      "";
+      "",
 
     let proposal: any = null;
 
@@ -2307,7 +2307,7 @@ Answer the admin's question directly.
       ?.map((part: any) => part.text)
       ?.join("\n")
       ?.trim() ||
-    "";
+    "",
 
   if (!answer) {
     const blockReason =
