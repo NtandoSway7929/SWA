@@ -3947,6 +3947,12 @@
     background: rgba(180,35,24,0.07);
 }
 
+@media (max-width: 760px) {
+    .sway-notification-clear {
+        opacity: 1;
+    }
+}
+
 .sway-notification-arrow {
     color: #98A4B7;
     font-size: 0.95rem;
