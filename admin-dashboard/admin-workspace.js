@@ -21768,14 +21768,6 @@ function simpleBars(items, color) {
                         '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data. No fluff, just the useful stuff.</p>' +
                     '</div>' +
                     '<div class="sway-ai-header-actions">' +
-                        '<button type="submit" form="sway-ai-form" class="sway-ai-send sway-ai-header-send" id="sway-ai-send">' +
-                            '<span aria-hidden="true">↑</span>' +
-                            '<span>Ask InnerMe</span>' +
-                        '</button>' +
-                        '<button type="button" class="sway-ai-new-chat" id="sway-ai-new-chat">' +
-                            '<span aria-hidden="true">＋</span>' +
-                            '<span>New chat</span>' +
-                        '</button>' +
                         '<button type="button" class="sway-ai-more-toggle" id="sway-ai-more-toggle" aria-expanded="false" aria-controls="sway-ai-more-panel">' +
                             '<span aria-hidden="true">•••</span>' +
                             '<span>More</span>' +
@@ -21784,6 +21776,10 @@ function simpleBars(items, color) {
                             '<button type="button" class="sway-ai-history-toggle sway-ai-more-item" id="sway-ai-history-toggle" aria-expanded="false">' +
                                 '<span aria-hidden="true">☷</span>' +
                                 '<span>Chats</span>' +
+                            '</button>' +
+                            '<button type="button" class="sway-ai-new-chat sway-ai-more-item" id="sway-ai-new-chat">' +
+                                '<span aria-hidden="true">＋</span>' +
+                                '<span>New chat</span>' +
                             '</button>' +
                             '<div class="sway-ai-more-status"><span class="sway-ai-status">Read-only V1</span></div>' +
                             '<div class="sway-ai-capabilities" aria-label="InnerMe capabilities">' +
