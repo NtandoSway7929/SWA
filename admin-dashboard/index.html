@@ -3025,9 +3025,6 @@
         body.sway-dark-mode .sway-ai-proactive-clear strong { color:#dbe8df; }
         body.sway-dark-mode .sway-ai-proactive-clear span:not(.sway-ai-proactive-clear-icon) { color:#9fb0a5; }
         @media (max-width:700px) { .sway-ai-proactive-grid { grid-template-columns:1fr; } }
-        .sway-ai-suggestions { display:flex; flex-wrap:wrap; gap:9px; margin:24px 0; }
-        .sway-ai-suggestions button { border:1px solid #dfe6f1; background:#fff; color:#24324a; border-radius:12px; padding:10px 13px; cursor:pointer; font:inherit; font-size:13px; }
-        .sway-ai-suggestions button:hover { border-color:#0152F4; color:#0152F4; }
         .sway-ai-conversation { min-height:280px; max-height:520px; overflow:auto; display:flex; flex-direction:column; gap:12px; padding:18px; border:1px solid #e5eaf2; border-radius:18px; background:#f8faff; }
         .sway-ai-welcome, .sway-ai-message { white-space:pre-wrap; line-height:1.65; }
         .sway-ai-welcome { margin:auto; max-width:540px; text-align:center; color:#66748a; }
@@ -3111,10 +3108,92 @@
         @media (prefers-reduced-motion:reduce) {
             .sway-ai-thinking span { animation:none; opacity:.72; }
         }
-        .sway-ai-form { display:flex; gap:10px; margin-top:14px; }
-        .sway-ai-form textarea { flex:1; resize:vertical; min-height:54px; border:1px solid #dfe6f1; border-radius:14px; padding:13px 14px; font:inherit; outline:none; }
-        .sway-ai-form textarea:focus { border-color:#0152F4; box-shadow:0 0 0 3px rgba(1,82,244,.08); }
-        .sway-ai-form button { align-self:stretch; min-width:100px; border:0; border-radius:14px; padding:0 18px; background:#0152F4; color:#fff; font-weight:700; cursor:pointer; }
+        .sway-ai-form {
+            position:relative;
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+            margin-top:14px;
+        }
+        .sway-ai-form textarea {
+            width:100%;
+            min-height:54px;
+            resize:vertical;
+            border:1px solid #dfe6f1;
+            border-radius:16px;
+            padding:13px 48px 13px 14px;
+            font:inherit;
+            outline:none;
+            background:#fff;
+        }
+        .sway-ai-form textarea:focus {
+            border-color:#0152F4;
+            box-shadow:0 0 0 3px rgba(1,82,244,.08);
+        }
+        .sway-ai-suggestion-toggle {
+            align-self:flex-start;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+            min-height:32px;
+            padding:6px 9px;
+            border:1px solid #dfe6f1;
+            border-radius:999px;
+            background:rgba(255,255,255,.86);
+            color:#66748a;
+            font:inherit;
+            font-size:10px;
+            font-weight:750;
+            cursor:pointer;
+            transition:border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
+        }
+        .sway-ai-suggestion-toggle:hover,
+        .sway-ai-suggestion-toggle[aria-expanded="true"] {
+            border-color:rgba(1,82,244,.22);
+            color:#0152F4;
+            background:#f8faff;
+        }
+        .sway-ai-suggestion-toggle:focus-visible {
+            outline:3px solid rgba(1,82,244,.12);
+            outline-offset:2px;
+        }
+        .sway-ai-suggestion-toggle span:first-child {
+            font-size:13px;
+            line-height:1;
+        }
+        .sway-ai-suggestions {
+            display:none;
+            flex-wrap:wrap;
+            gap:6px;
+            margin:0 0 2px;
+            padding:9px;
+            border:1px solid #e3e9f2;
+            border-radius:14px;
+            background:rgba(248,250,255,.82);
+        }
+        .sway-ai-suggestions.is-open {
+            display:flex;
+        }
+        .sway-ai-suggestions button {
+            border:1px solid #dfe6f1;
+            background:#fff;
+            color:#24324a;
+            border-radius:999px;
+            padding:7px 9px;
+            cursor:pointer;
+            font:inherit;
+            font-size:10px;
+            line-height:1.25;
+        }
+        .sway-ai-suggestions button:hover {
+            border-color:#0152F4;
+            color:#0152F4;
+        }
+        .sway-ai-suggestions button:focus-visible {
+            outline:3px solid rgba(1,82,244,.12);
+            outline-offset:1px;
+        }
         .sway-ai-form button:disabled { opacity:.55; cursor:wait; }
         .sway-ai-note { display:block; margin-top:11px; color:#8995a8; line-height:1.5; }
         body.sway-dark-mode .sway-ai-panel { background:#0d1525; border-color:#263552; }
