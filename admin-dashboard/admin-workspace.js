@@ -3785,14 +3785,25 @@
 
 
 
+    function notificationStorageUserKey() {
+        return String(
+            state.currentUser && state.currentUser.id
+                ? state.currentUser.id
+                : "guest"
+        );
+    }
+
     function notificationReadStorageKey() {
         return (
             "swayphics_admin_notifications_read_" +
-            String(
-                state.currentUser && state.currentUser.id
-                    ? state.currentUser.id
-                    : "guest"
-            )
+            notificationStorageUserKey()
+        );
+    }
+
+    function notificationDismissedStorageKey() {
+        return (
+            "swayphics_admin_notifications_dismissed_" +
+            notificationStorageUserKey()
         );
     }
 
@@ -3825,6 +3836,38 @@
             );
         } catch (error) {
             // Fallback only. Persistent notifications use Supabase.
+        }
+    }
+
+    function notificationDismissedKeys() {
+        try {
+            const stored =
+                JSON.parse(
+                    localStorage.getItem(
+                        notificationDismissedStorageKey()
+                    ) || "[]"
+                );
+
+            return new Set(
+                Array.isArray(stored)
+                    ? stored.map(String)
+                    : []
+            );
+        } catch (error) {
+            return new Set();
+        }
+    }
+
+    function saveNotificationDismissedKeys(keys) {
+        try {
+            localStorage.setItem(
+                notificationDismissedStorageKey(),
+                JSON.stringify(
+                    Array.from(keys).slice(-250)
+                )
+            );
+        } catch (error) {
+            // Dismissal remains available for the current render.
         }
     }
 
@@ -4036,8 +4079,13 @@
             return;
         }
 
+        const dismissedKeys =
+            notificationDismissedKeys();
+
         const notifications =
-            workspaceNotifications();
+            workspaceNotifications().filter(function (item) {
+                return !dismissedKeys.has(String(item.key));
+            });
 
         const readKeys =
             notificationReadKeys();
@@ -4093,7 +4141,7 @@
                         : readKeys.has(item.key);
 
                 return (
-                    '<button type="button" class="sway-notification-item ' +
+                    '<div class="sway-notification-item ' +
                         notificationIconClass(item.type) +
                         (isRead ? " is-read" : "") +
                         '" data-notification-key="' +
@@ -4117,8 +4165,13 @@
                                     : '<i aria-label="Unread"></i>'
                             ) +
                         "</span>" +
-                        '<span class="sway-notification-arrow" aria-hidden="true">›</span>' +
-                    "</button>"
+                        '<span class="sway-notification-actions">' +
+                            '<button type="button" class="sway-notification-clear" data-notification-clear="' +
+                                esc(item.key) +
+                                '" aria-label="Clear notification" title="Clear notification">×</button>' +
+                            '<span class="sway-notification-arrow" aria-hidden="true">›</span>' +
+                        "</span>" +
+                    "</div>"
                 );
             }).join("");
     }
@@ -4260,6 +4313,16 @@
         });
 
         saveNotificationReadKeys(keys);
+        renderNotificationPanel();
+    }
+
+    function clearNotification(key) {
+        const stringKey = String(key);
+        const keys = notificationDismissedKeys();
+
+        keys.add(stringKey);
+        saveNotificationDismissedKeys(keys);
+
         renderNotificationPanel();
     }
 
@@ -4413,6 +4476,18 @@
         };
 
         list.onclick = function (event) {
+            const clearButton =
+                event.target.closest(
+                    "[data-notification-clear]"
+                );
+
+            if (clearButton) {
+                event.preventDefault();
+                event.stopPropagation();
+                clearNotification(clearButton.dataset.notificationClear);
+                return;
+            }
+
             const item =
                 event.target.closest(
                     "[data-notification-key]"
