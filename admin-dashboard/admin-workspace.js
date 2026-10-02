@@ -21725,14 +21725,6 @@ function simpleBars(items, color) {
                             '<img src="../swayphics-logo.png" alt="Swayphics">' +
                         '</div>' +
                         '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data. No fluff, just the useful stuff.</p>' +
-                        '<div class="sway-ai-capabilities" aria-label="InnerMe capabilities">' +
-                            '<span class="sway-ai-capability">Growth</span>' +
-                            '<span class="sway-ai-capability">Sales</span>' +
-                            '<span class="sway-ai-capability">Marketing</span>' +
-                            '<span class="sway-ai-capability">Writing</span>' +
-                            '<span class="sway-ai-capability">Revenue Ops</span>' +
-                            '<span class="sway-ai-capability">Client Success</span>' +
-                        '</div>' +
                     '</div>' +
                     '<div class="sway-ai-header-actions">' +
                         '<button type="submit" form="sway-ai-form" class="sway-ai-send sway-ai-header-send" id="sway-ai-send">' +
@@ -21743,11 +21735,25 @@ function simpleBars(items, color) {
                             '<span aria-hidden="true">＋</span>' +
                             '<span>New chat</span>' +
                         '</button>' +
-                        '<button type="button" class="sway-ai-history-toggle" id="sway-ai-history-toggle" aria-expanded="false">' +
-                            '<span aria-hidden="true">☷</span>' +
-                            '<span>Chats</span>' +
+                        '<button type="button" class="sway-ai-more-toggle" id="sway-ai-more-toggle" aria-expanded="false" aria-controls="sway-ai-more-panel">' +
+                            '<span aria-hidden="true">•••</span>' +
+                            '<span>More</span>' +
                         '</button>' +
-                        '<span class="sway-ai-status">Read-only V1</span>' +
+                        '<div class="sway-ai-more-panel" id="sway-ai-more-panel" hidden>' +
+                            '<button type="button" class="sway-ai-history-toggle sway-ai-more-item" id="sway-ai-history-toggle" aria-expanded="false">' +
+                                '<span aria-hidden="true">☷</span>' +
+                                '<span>Chats</span>' +
+                            '</button>' +
+                            '<div class="sway-ai-more-status"><span class="sway-ai-status">Read-only V1</span></div>' +
+                            '<div class="sway-ai-capabilities" aria-label="InnerMe capabilities">' +
+                                '<span class="sway-ai-capability">Growth</span>' +
+                                '<span class="sway-ai-capability">Sales</span>' +
+                                '<span class="sway-ai-capability">Marketing</span>' +
+                                '<span class="sway-ai-capability">Writing</span>' +
+                                '<span class="sway-ai-capability">Revenue Ops</span>' +
+                                '<span class="sway-ai-capability">Client Success</span>' +
+                            '</div>' +
+                        '</div>' +
                     '</div>' +
                 '<div class="sway-ai-history-panel" id="sway-ai-history-panel" hidden>' +
                     '<div class="sway-ai-history-head">' +
@@ -23634,6 +23640,29 @@ function simpleBars(items, color) {
                 clearAIFocusedRecord();
                 renderView();
             });
+        }
+
+        const moreToggle =
+            workspace.querySelector("#sway-ai-more-toggle");
+
+        const morePanel =
+            workspace.querySelector("#sway-ai-more-panel");
+
+        if (moreToggle && morePanel) {
+            moreToggle.onclick = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const open =
+                    morePanel.hidden === true;
+
+                morePanel.hidden = !open;
+
+                moreToggle.setAttribute(
+                    "aria-expanded",
+                    open ? "true" : "false"
+                );
+            };
         }
 
         const historyToggle =
