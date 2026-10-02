@@ -8339,6 +8339,167 @@
         }
     </style>
 
+
+<style id="innerme-spacious-layout-v1">
+/* InnerMe spacious layout: keep the default view focused on the conversation. */
+.sway-ai-panel {
+    width:100%;
+    max-width:1120px;
+    height:calc(100vh - 154px);
+    min-height:560px;
+    max-height:900px;
+    margin:0 auto;
+    padding:24px;
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+    overflow:hidden;
+}
+.sway-ai-header {
+    flex:0 0 auto;
+    align-items:center;
+    gap:20px;
+    padding-bottom:18px;
+}
+.sway-ai-header > div:first-child {
+    min-width:0;
+}
+.sway-ai-header p {
+    max-width:680px;
+    margin-top:7px;
+}
+.sway-ai-header-actions {
+    width:auto;
+    flex-direction:row;
+    align-items:center;
+    justify-content:flex-end;
+    gap:7px;
+}
+.sway-ai-header-send,
+.sway-ai-new-chat,
+.sway-ai-more-toggle {
+    width:auto;
+    min-height:34px;
+    white-space:nowrap;
+}
+.sway-ai-header-send {
+    padding:7px 11px;
+}
+.sway-ai-new-chat,
+.sway-ai-more-toggle {
+    justify-content:center;
+}
+.sway-ai-more-panel {
+    min-width:250px;
+    max-width:min(430px, calc(100vw - 48px));
+}
+.sway-ai-more-insights {
+    margin-top:10px;
+    border-top:1px solid #e7edf5;
+    padding-top:9px;
+}
+.sway-ai-more-insights summary {
+    cursor:pointer;
+    list-style:none;
+    color:#40546C;
+    font-size:10px;
+    font-weight:800;
+}
+.sway-ai-more-insights summary::-webkit-details-marker {
+    display:none;
+}
+.sway-ai-more-insights summary::after {
+    content:"＋";
+    float:right;
+    color:#8b98ab;
+    font-size:13px;
+}
+.sway-ai-more-insights[open] summary::after {
+    content:"−";
+}
+.sway-ai-more-insights-body {
+    max-height:52vh;
+    margin-top:10px;
+    overflow:auto;
+    padding-right:2px;
+}
+.sway-ai-more-insights-body > * {
+    margin-left:0;
+    margin-right:0;
+}
+.sway-ai-focus-bar {
+    flex:0 0 auto;
+    margin:0 0 12px;
+}
+.sway-ai-conversation {
+    flex:1 1 auto;
+    min-height:0;
+    max-height:none;
+    overflow-y:auto;
+    padding:20px;
+    border-radius:20px;
+}
+.sway-ai-form {
+    flex:0 0 auto;
+    margin-top:12px;
+}
+.sway-ai-note {
+    flex:0 0 auto;
+    margin-top:8px;
+    text-align:center;
+}
+@media (max-width:760px) {
+    .sway-ai-panel {
+        height:auto;
+        min-height:calc(100vh - 132px);
+        max-height:none;
+        padding:18px;
+    }
+    .sway-ai-header {
+        align-items:flex-start;
+        padding-bottom:14px;
+    }
+    .sway-ai-header p {
+        display:none;
+    }
+    .sway-ai-header-actions {
+        flex-wrap:wrap;
+        max-width:48%;
+    }
+    .sway-ai-header-send span:last-child,
+    .sway-ai-new-chat span:last-child,
+    .sway-ai-more-toggle span:last-child {
+        display:none;
+    }
+    .sway-ai-header-send,
+    .sway-ai-new-chat,
+    .sway-ai-more-toggle {
+        width:34px;
+        min-width:34px;
+        padding:7px;
+    }
+    .sway-ai-more-panel {
+        position:fixed;
+        top:92px;
+        right:18px;
+        left:18px;
+        width:auto;
+        max-width:none;
+    }
+    .sway-ai-conversation {
+        min-height:52vh;
+        padding:14px;
+        border-radius:17px;
+    }
+    .sway-ai-message {
+        max-width:90%;
+    }
+    .sway-ai-note {
+        font-size:9px;
+        line-height:1.45;
+    }
+}
+</style>
 </head>
 
 
