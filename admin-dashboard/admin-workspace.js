@@ -22226,7 +22226,140 @@ function simpleBars(items, color) {
         }
     }
 
+    function positionSwayActionDropdown(details) {
+        const summary = details?.querySelector(":scope > summary");
+        const dropdown = details?.querySelector(":scope > .sway-actions-dropdown, :scope > .sway-lead-actions-dropdown");
+
+        if (!summary || !dropdown || !details.open) {
+            return;
+        }
+
+        dropdown.style.position = "fixed";
+        dropdown.style.top = "auto";
+        dropdown.style.right = "auto";
+        dropdown.style.bottom = "auto";
+        dropdown.style.left = "0px";
+        dropdown.style.maxHeight = "min(70dvh, 520px)";
+        dropdown.style.overflowY = "auto";
+        dropdown.style.webkitOverflowScrolling = "touch";
+
+        const summaryRect = summary.getBoundingClientRect();
+        const dropdownRect = dropdown.getBoundingClientRect();
+        const viewportPadding = 10;
+        const gap = 7;
+
+        let left = summaryRect.right - dropdownRect.width;
+        left = Math.max(
+            viewportPadding,
+            Math.min(
+                left,
+                window.innerWidth - dropdownRect.width - viewportPadding
+            )
+        );
+
+        let top = summaryRect.bottom + gap;
+
+        if (
+            top + dropdownRect.height >
+            window.innerHeight - viewportPadding
+        ) {
+            top =
+                summaryRect.top -
+                dropdownRect.height -
+                gap;
+        }
+
+        top = Math.max(
+            viewportPadding,
+            Math.min(
+                top,
+                window.innerHeight -
+                    dropdownRect.height -
+                    viewportPadding
+            )
+        );
+
+        dropdown.style.left = Math.round(left) + "px";
+        dropdown.style.top = Math.round(top) + "px";
+    }
+
+    function bindSwayActionDropdowns() {
+        workspace
+            .querySelectorAll(
+                ".sway-actions-menu, .sway-lead-actions-menu"
+            )
+            .forEach(function (details) {
+                if (details.dataset.swayDropdownBound === "true") {
+                    return;
+                }
+
+                details.dataset.swayDropdownBound = "true";
+
+                details.addEventListener("toggle", function () {
+                    const dropdown =
+                        details.querySelector(
+                            ":scope > .sway-actions-dropdown, :scope > .sway-lead-actions-dropdown"
+                        );
+
+                    if (!dropdown) {
+                        return;
+                    }
+
+                    if (details.open) {
+                        positionSwayActionDropdown(details);
+
+                        details._swayDropdownReposition =
+                            function () {
+                                positionSwayActionDropdown(
+                                    details
+                                );
+                            };
+
+                        window.addEventListener(
+                            "scroll",
+                            details._swayDropdownReposition,
+                            true
+                        );
+
+                        window.addEventListener(
+                            "resize",
+                            details._swayDropdownReposition
+                        );
+                    } else {
+                        if (
+                            details._swayDropdownReposition
+                        ) {
+                            window.removeEventListener(
+                                "scroll",
+                                details._swayDropdownReposition,
+                                true
+                            );
+
+                            window.removeEventListener(
+                                "resize",
+                                details._swayDropdownReposition
+                            );
+
+                            details._swayDropdownReposition =
+                                null;
+                        }
+
+                        dropdown.style.position = "";
+                        dropdown.style.top = "";
+                        dropdown.style.right = "";
+                        dropdown.style.bottom = "";
+                        dropdown.style.left = "";
+                        dropdown.style.maxHeight = "";
+                        dropdown.style.overflowY = "";
+                        dropdown.style.webkitOverflowScrolling = "";
+                    }
+                });
+            });
+    }
+
     function bindViewActions() {
+
+        bindSwayActionDropdowns();
 
         workspace
             .querySelectorAll("[data-ai-action]")
