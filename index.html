@@ -21015,6 +21015,75 @@ if (formStatus) {
     var API_URL =
         "https://sqifhribgsqfaxgtobsa.supabase.co/functions/v1/swayphics-ai";
 
+    var publicSession =
+        (function () {
+            var storageKey =
+                "swayphics_innerme_session";
+            var existing = "";
+
+            try {
+                existing =
+                    sessionStorage.getItem(storageKey) || "";
+            } catch (error) {
+                existing = "";
+            }
+
+            if (existing.length >= 16 && existing.length <= 200) {
+                return existing;
+            }
+
+            var generated = "";
+
+            try {
+                if (
+                    window.crypto &&
+                    typeof window.crypto.randomUUID === "function"
+                ) {
+                    generated =
+                        window.crypto.randomUUID();
+                } else if (
+                    window.crypto &&
+                    typeof window.crypto.getRandomValues === "function"
+                ) {
+                    var bytes =
+                        new Uint8Array(16);
+                    window.crypto.getRandomValues(bytes);
+                    generated =
+                        Array.prototype.map.call(
+                            bytes,
+                            function (byte) {
+                                return byte
+                                    .toString(16)
+                                    .padStart(2, "0");
+                            }
+                        ).join("");
+                }
+            } catch (error) {
+                generated = "";
+            }
+
+            if (!generated) {
+                generated =
+                    "innerme-" +
+                    Date.now().toString(36) +
+                    "-" +
+                    Math.random().toString(36).slice(2) +
+                    "-" +
+                    Math.random().toString(36).slice(2);
+            }
+
+            try {
+                sessionStorage.setItem(
+                    storageKey,
+                    generated
+                );
+            } catch (error) {
+                // Continue with the in-memory session if storage is unavailable.
+            }
+
+            return generated;
+        })();
+
     var messagesEl =
         document.getElementById("innerme-messages");
 
