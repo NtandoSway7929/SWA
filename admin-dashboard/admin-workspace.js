@@ -22295,6 +22295,23 @@ function simpleBars(items, color) {
 
                 details.dataset.swayDropdownBound = "true";
 
+                const summary = details.querySelector(":scope > summary");
+
+                if (summary) {
+                    summary.addEventListener("click", function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        details.open = !details.open;
+
+                        if (details.open) {
+                            requestAnimationFrame(function () {
+                                positionSwayActionDropdown(details);
+                            });
+                        }
+                    });
+                }
+
                 details.addEventListener("toggle", function () {
                     const dropdown =
                         details.querySelector(
