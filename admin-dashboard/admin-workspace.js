@@ -21696,6 +21696,146 @@ function simpleBars(items, color) {
         );
     }
 
+    function renderAIWorkspaceInsights() {
+        const today = dashboardTodayISO();
+
+        const dueFollowups = state.followups.filter(function (item) {
+            if (
+                item.status !== "pending" ||
+                !item.scheduled_for ||
+                (
+                    state.currentUser &&
+                    state.currentUser.id &&
+                    item.assigned_to !== state.currentUser.id
+                )
+            ) {
+                return false;
+            }
+
+            const scheduled = dashboardDateKey(item.scheduled_for);
+            return Boolean(scheduled && scheduled <= today);
+        });
+
+        const overdueInvoices = state.invoices.filter(function (invoice) {
+            if (
+                invoice.status === "cancelled" ||
+                invoice.status === "paid"
+            ) {
+                return false;
+            }
+
+            const outstanding = Number(
+                invoice.amount_outstanding != null
+                    ? invoice.amount_outstanding
+                    : invoice.total || 0
+            );
+
+            if (outstanding <= 0) {
+                return false;
+            }
+
+            const due = dashboardDateKey(invoice.due_date);
+
+            return Boolean(
+                invoice.status === "overdue" ||
+                (due && due < today)
+            );
+        });
+
+        const newEnquiries = state.enquiries.filter(function (item) {
+            return String(item.status || "") === "new";
+        });
+
+        const dueTasks = state.tasks.filter(function (item) {
+            if (
+                item.status === "completed" ||
+                !item.due_date ||
+                (
+                    state.currentUser &&
+                    state.currentUser.id &&
+                    item.assigned_to !== state.currentUser.id
+                )
+            ) {
+                return false;
+            }
+
+            const due = dashboardDateKey(item.due_date);
+            return Boolean(due && due <= today);
+        });
+
+        const items = [
+            {
+                count: dueFollowups.length,
+                title: dueFollowups.length === 1
+                    ? "Follow-up due"
+                    : "Follow-ups due",
+                prompt: "Which leads or clients need follow-up today? Show me the records and the exact next move."
+            },
+            {
+                count: overdueInvoices.length,
+                title: overdueInvoices.length === 1
+                    ? "Overdue invoice"
+                    : "Overdue invoices",
+                prompt: "Show me overdue invoices and outstanding payments, then tell me what I should follow up on."
+            },
+            {
+                count: newEnquiries.length,
+                title: newEnquiries.length === 1
+                    ? "New enquiry"
+                    : "New enquiries",
+                prompt: "Show me the newest website enquiries and tell me which ones need attention first."
+            },
+            {
+                count: dueTasks.length,
+                title: dueTasks.length === 1
+                    ? "Task needs attention"
+                    : "Tasks need attention",
+                prompt: "Which of my tasks are due or overdue? Give me a concise action list."
+            }
+        ];
+
+        const activeItems = items.filter(function (item) {
+            return Number(item.count || 0) > 0;
+        });
+
+        if (!activeItems.length) {
+            return (
+                '<div class="sway-ai-more-insights-body">' +
+                    '<div class="sway-ai-insights-clear">' +
+                        '<span aria-hidden="true">✓</span>' +
+                        '<div>' +
+                            '<strong>Nothing urgent is showing.</strong>' +
+                            '<span>Your current workspace has no follow-ups, overdue invoices, new enquiries or due tasks requiring attention.</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>'
+            );
+        }
+
+        return (
+            '<div class="sway-ai-more-insights-body">' +
+                activeItems.map(function (item) {
+                    return (
+                        '<button type="button" class="sway-ai-insight-row" data-ai-prompt="' +
+                            esc(item.prompt) +
+                        '">' +
+                            '<span class="sway-ai-insight-count">' +
+                                esc(item.count) +
+                            '</span>' +
+                            '<span class="sway-ai-insight-copy">' +
+                                '<strong>' +
+                                    esc(item.title) +
+                                '</strong>' +
+                                '<span>Ask InnerMe to unpack this</span>' +
+                            '</span>' +
+                            '<span class="sway-ai-insight-arrow" aria-hidden="true">→</span>' +
+                        '</button>'
+                    );
+                }).join("") +
+            '</div>'
+        );
+    }
+
     function renderSwayphicsAI() {
         const history = Array.isArray(state.aiConversation)
             ? state.aiConversation.slice(-40)
@@ -21781,23 +21921,9 @@ function simpleBars(items, color) {
                                 '<span aria-hidden="true">＋</span>' +
                                 '<span>New chat</span>' +
                             '</button>' +
-                            '<div class="sway-ai-more-status"><span class="sway-ai-status">Read-only V1</span></div>' +
-                            '<div class="sway-ai-capabilities" aria-label="InnerMe capabilities">' +
-                                '<span class="sway-ai-capability">Growth</span>' +
-                                '<span class="sway-ai-capability">Sales</span>' +
-                                '<span class="sway-ai-capability">Marketing</span>' +
-                                '<span class="sway-ai-capability">Writing</span>' +
-                                '<span class="sway-ai-capability">Revenue Ops</span>' +
-                                '<span class="sway-ai-capability">Client Success</span>' +
-                            '</div>' +
                             '<details class="sway-ai-more-insights">' +
                                 '<summary>Workspace insights</summary>' +
-                                '<div class="sway-ai-more-insights-body">' +
-                                    renderAIProactiveBrief() +
-                                    renderAIChangeWatch() +
-                                    renderAIGrowthDesk() +
-                                    renderAIRevenueEngine() +
-                                '</div>' +
+                                renderAIWorkspaceInsights() +
                             '</details>' +
                         '</div>' +
                     '</div>' +
