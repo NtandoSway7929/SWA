@@ -335,6 +335,41 @@
     z-index: 2100;
 }
 
+.sway-floating-innerme {
+    min-width: 124px;
+    height: 44px;
+    margin-bottom: 9px;
+    padding: 0 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #002096 0%, #0152F4 52%, #2C91FC 100%);
+    color: #FFFFFF;
+    box-shadow: 0 14px 34px rgba(0,32,150,0.20), 0 4px 12px rgba(1,82,244,0.10);
+    font: inherit;
+    font-size: 0.66rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.sway-floating-innerme:hover,
+.sway-floating-innerme:focus-visible {
+    outline: none;
+    transform: translateY(-2px);
+    box-shadow: 0 18px 42px rgba(0,32,150,0.24), 0 6px 16px rgba(1,82,244,0.13);
+}
+
+.sway-floating-innerme span:first-child {
+    font-size: 0.82rem;
+    line-height: 1;
+}
+
 .sway-quick-create-toggle {
     min-width: 92px;
     height: 48px;
@@ -7745,6 +7780,12 @@ body {
     .sway-quick-create {
         right: max(12px, env(safe-area-inset-right));
         bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .sway-floating-innerme {
+        min-width: 116px;
+        height: 42px;
+        margin-bottom: 8px;
     }
 
     .sway-quick-create-menu {
