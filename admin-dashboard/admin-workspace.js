@@ -5010,8 +5010,8 @@ function renderShell() {
                 event.stopPropagation();
 
                 closeQuickCreateMenu();
-                state.currentView = "innerme";
-                persistWorkspaceView("innerme");
+                state.currentView = "swayphics-ai";
+                persistWorkspaceView("swayphics-ai");
                 renderShell();
                 renderView();
             };
