@@ -8567,6 +8567,57 @@ body.sway-dark-mode .sway-ai-insights-clear {
     flex:0 0 auto;
     margin-top:12px;
 }
+.sway-ai-composer-row {
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+}
+.sway-ai-composer-row .sway-ai-form textarea,
+.sway-ai-form textarea {
+    box-sizing:border-box;
+}
+.sway-ai-composer-row textarea {
+    flex:1 1 auto;
+    min-width:0;
+    min-height:58px;
+    resize:none;
+    padding-right:14px;
+}
+.sway-ai-send {
+    flex:0 0 42px;
+    width:42px;
+    height:42px;
+    display:grid;
+    place-items:center;
+    border:0;
+    border-radius:13px;
+    background:linear-gradient(135deg,#002096 0%,#0152F4 55%,#2C91FC 100%);
+    color:#fff;
+    font:inherit;
+    font-size:19px;
+    font-weight:700;
+    line-height:1;
+    cursor:pointer;
+    box-shadow:0 8px 20px rgba(1,82,244,.18);
+    transition:transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+}
+.sway-ai-send:hover {
+    transform:translateY(-1px);
+    box-shadow:0 11px 24px rgba(1,82,244,.24);
+}
+.sway-ai-send:active {
+    transform:translateY(0);
+}
+.sway-ai-send:disabled {
+    opacity:.55;
+    cursor:wait;
+    transform:none;
+    box-shadow:none;
+}
+.sway-ai-send:focus-visible {
+    outline:3px solid rgba(1,82,244,.14);
+    outline-offset:2px;
+}
 .sway-ai-note {
     flex:0 0 auto;
     margin-top:8px;
@@ -8614,6 +8665,14 @@ body.sway-dark-mode .sway-ai-insights-clear {
         min-height:52vh;
         padding:14px;
         border-radius:17px;
+    }
+    .sway-ai-composer-row {
+        align-items:flex-end;
+    }
+    .sway-ai-send {
+        flex-basis:40px;
+        width:40px;
+        height:40px;
     }
     .sway-ai-message {
         max-width:90%;
