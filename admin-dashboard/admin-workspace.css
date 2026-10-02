@@ -5786,7 +5786,7 @@
     .sway-workspace-sidebar {
         top: max(10px, env(safe-area-inset-top));
         left: 10px;
-        width: min(218px, calc(100vw - 20px));
+        width: min(180px, calc(100vw - 20px)) !important;
         height: calc(100dvh - max(20px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
         max-height: calc(100dvh - max(20px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
         padding: 10px 8px;
@@ -7581,7 +7581,7 @@ body {
         top: max(76px, calc(env(safe-area-inset-top) + 64px));
         left: 12px;
         z-index: 5000;
-        width: min(218px, calc(100vw - 24px));
+        width: min(180px, calc(100vw - 24px)) !important;
         height: calc(100dvh - max(88px, calc(env(safe-area-inset-top) + 76px)));
         min-height: 0;
         max-height: none;
@@ -7792,7 +7792,7 @@ body {
 
 @media (max-width: 420px) {
     .sway-workspace-sidebar {
-        width: min(208px, calc(100vw - 20px));
+        width: min(172px, calc(100vw - 20px)) !important;
     }
 
     .sway-workspace-heading-actions {
