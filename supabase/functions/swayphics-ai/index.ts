@@ -569,10 +569,26 @@ Deno.serve(async (req) => {
           rawPublic,
         );
     } catch {
-      console.error(
-        "Public InnerMe response was not valid JSON:",
-        rawPublic.slice(0, 2000),
-      );
+      /*
+       * Gemini can occasionally honour the response instruction semantically
+       * but return the answer as plain text instead of a JSON object.
+       * Do not turn a usable answer into a 502 in that case.
+       */
+      const fallbackAnswer =
+        cleanForModel(rawPublic, 3200);
+
+      if (fallbackAnswer) {
+        publicPayload = {
+          answer: fallbackAnswer,
+          recommended_service: null,
+          ready_for_enquiry: false,
+        };
+      } else {
+        console.error(
+          "Public InnerMe response was not valid JSON:",
+          rawPublic.slice(0, 2000),
+        );
+      }
     }
 
     const publicAnswer =
