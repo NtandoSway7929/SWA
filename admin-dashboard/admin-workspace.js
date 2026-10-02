@@ -21840,23 +21840,25 @@ function simpleBars(items, color) {
                         )
                         : ""
                 ) +
-                '<div class="sway-ai-suggestions">' +
-
-                    '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
-                    '<button type="button" data-ai-prompt="Find the clearest sales opportunities in the current pipeline.">Find sales opportunities</button>' +
-                    '<button type="button" data-ai-prompt="What is the biggest marketing opportunity I can act on right now?">Marketing opportunity</button>' +
-                    '<button type="button" data-ai-prompt="Which leads need follow-up?">Which leads need follow-up?</button>' +
-                    '<button type="button" data-ai-prompt="Write a strong follow-up for the most promising open lead.">Write a follow-up</button>' +
-                    '<button type="button" data-ai-prompt="Give me a concise summary of the current business pipeline.">Summarise my pipeline</button>' +
-                    '<button type="button" data-ai-prompt="Show me overdue invoices and outstanding payments.">Overdue money</button>' +
-                '</div>' +
                 '<div class="sway-ai-conversation" id="sway-ai-conversation">' +
                     conversationHtml +
                 '</div>' +
                 '<form class="sway-ai-form" id="sway-ai-form">' +
+                    '<button type="button" class="sway-ai-suggestion-toggle" id="sway-ai-suggestion-toggle" aria-expanded="false" aria-controls="sway-ai-suggestions-panel">' +
+                        '<span aria-hidden="true">✦</span>' +
+                        '<span>Suggestions</span>' +
+                    '</button>' +
+                    '<div class="sway-ai-suggestions" id="sway-ai-suggestions-panel" aria-hidden="true">' +
+                        '<button type="button" data-ai-prompt="What needs my attention today?">What needs my attention today?</button>' +
+                        '<button type="button" data-ai-prompt="Find the clearest sales opportunities in the current pipeline.">Find sales opportunities</button>' +
+                        '<button type="button" data-ai-prompt="What is the biggest marketing opportunity I can act on right now?">Marketing opportunity</button>' +
+                        '<button type="button" data-ai-prompt="Which leads need follow-up?">Which leads need follow-up?</button>' +
+                        '<button type="button" data-ai-prompt="Write a strong follow-up for the most promising open lead.">Write a follow-up</button>' +
+                        '<button type="button" data-ai-prompt="Give me a concise summary of the current business pipeline.">Summarise my pipeline</button>' +
+                        '<button type="button" data-ai-prompt="Show me overdue invoices and outstanding payments.">Overdue money</button>' +
+                    '</div>' +
                     '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask InnerMe..." autocomplete="off"></textarea>' +
-                '</form>' +
-                '<small class="sway-ai-note">InnerMe is read-only in V1. It can analyse your workspace, but it cannot send emails, delete records or change data. Enter to send · Shift+Enter for a new line.</small>' +
+                '</form>' +                '<small class="sway-ai-note">InnerMe is read-only in V1. It can analyse your workspace, but it cannot send emails, delete records or change data. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>'
         );
     }
@@ -23843,6 +23845,37 @@ function simpleBars(items, color) {
                 const input =
                     workspace.querySelector("#sway-ai-input");
                 askSwayphicsAI(input ? input.value : "");
+            };
+        }
+
+        const aiSuggestionToggle =
+            workspace.querySelector("#sway-ai-suggestion-toggle");
+
+        const aiSuggestionPanel =
+            workspace.querySelector("#sway-ai-suggestions-panel");
+
+        if (aiSuggestionToggle && aiSuggestionPanel) {
+            aiSuggestionToggle.onclick = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const isOpen =
+                    aiSuggestionPanel.classList.contains("is-open");
+
+                aiSuggestionPanel.classList.toggle(
+                    "is-open",
+                    !isOpen
+                );
+
+                aiSuggestionPanel.setAttribute(
+                    "aria-hidden",
+                    isOpen ? "true" : "false"
+                );
+
+                aiSuggestionToggle.setAttribute(
+                    "aria-expanded",
+                    isOpen ? "false" : "true"
+                );
             };
         }
     }
