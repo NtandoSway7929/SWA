@@ -855,7 +855,7 @@ Deno.serve(async (req) => {
         ?.filter((part: any) => typeof part?.text === "string")
         ?.map((part: any) => part.text)
         ?.join("") ||
-      "",
+      "";
 
     let proposal: any = null;
 
