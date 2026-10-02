@@ -7413,7 +7413,20 @@ function simpleBars(items, color) {
                     return;
                 }
 
-                syncWorkspaceData({ fallbackToPolling: true }).catch(function (error) {
+                /*
+                 * Polling is a silent data refresh. Re-rendering the entire
+                 * workspace every 10 seconds makes the dashboard look like
+                 * it is randomly refreshing and can interrupt clicks,
+                 * dropdowns, scrolling, and active inputs.
+                 *
+                 * Realtime events still trigger a visible render when data
+                 * actually changes. Polling only keeps the in-memory state
+                 * current when Realtime is unavailable.
+                 */
+                syncWorkspaceData({
+                    fallbackToPolling: true,
+                    render: false
+                }).catch(function (error) {
                     console.warn("Background workspace sync failed.", error);
                 });
             }, 10000);
