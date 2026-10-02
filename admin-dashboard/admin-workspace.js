@@ -21794,6 +21794,15 @@ function simpleBars(items, color) {
                                 '<span class="sway-ai-capability">Revenue Ops</span>' +
                                 '<span class="sway-ai-capability">Client Success</span>' +
                             '</div>' +
+                            '<details class="sway-ai-more-insights">' +
+                                '<summary>Workspace insights</summary>' +
+                                '<div class="sway-ai-more-insights-body">' +
+                                    renderAIProactiveBrief() +
+                                    renderAIChangeWatch() +
+                                    renderAIGrowthDesk() +
+                                    renderAIRevenueEngine() +
+                                '</div>' +
+                            '</details>' +
                         '</div>' +
                     '</div>' +
                 '<div class="sway-ai-history-panel" id="sway-ai-history-panel" hidden>' +
@@ -21830,16 +21839,7 @@ function simpleBars(items, color) {
                         '</div>'
                         : ""
                 ) +
-                (
-                    history.length === 0 && !state.aiFocusedRecord
-                        ? (
-                            renderAIProactiveBrief() +
-                            renderAIChangeWatch() +
-                            renderAIGrowthDesk() +
-                            renderAIRevenueEngine()
-                        )
-                        : ""
-                ) +
+
                 '<div class="sway-ai-conversation" id="sway-ai-conversation">' +
                     conversationHtml +
                 '</div>' +
