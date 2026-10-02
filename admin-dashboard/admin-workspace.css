@@ -3907,6 +3907,46 @@
     box-shadow: 0 0 0 3px rgba(1,82,244,0.07);
 }
 
+.sway-notification-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.sway-notification-clear {
+    width: 24px;
+    height: 24px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #98A4B7;
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition:
+        opacity 0.18s ease,
+        color 0.18s ease,
+        background 0.18s ease;
+}
+
+.sway-notification-item:hover .sway-notification-clear,
+.sway-notification-item:focus-within .sway-notification-clear {
+    opacity: 1;
+}
+
+.sway-notification-clear:hover,
+.sway-notification-clear:focus-visible {
+    outline: none;
+    color: #B42318;
+    background: rgba(180,35,24,0.07);
+}
+
 .sway-notification-arrow {
     color: #98A4B7;
     font-size: 0.95rem;
