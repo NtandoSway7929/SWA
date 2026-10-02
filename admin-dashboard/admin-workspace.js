@@ -22284,6 +22284,51 @@ function simpleBars(items, color) {
     }
 
     function bindSwayActionDropdowns() {
+        /*
+         * Use one delegated capture-phase click handler for all action menus.
+         * This avoids Safari/iOS inconsistencies with <summary> activation
+         * and also survives every renderView() replacement of the table DOM.
+         */
+        if (workspace.dataset.swayActionDelegationBound !== "true") {
+            workspace.dataset.swayActionDelegationBound = "true";
+
+            workspace.addEventListener(
+                "click",
+                function (event) {
+                    const summary =
+                        event.target &&
+                        typeof event.target.closest === "function"
+                            ? event.target.closest(
+                                ".sway-actions-menu > summary, .sway-lead-actions-menu > summary"
+                            )
+                            : null;
+
+                    if (!summary || !workspace.contains(summary)) {
+                        return;
+                    }
+
+                    const details = summary.parentElement;
+
+                    if (!details) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+
+                    details.open = !details.open;
+
+                    if (details.open) {
+                        requestAnimationFrame(function () {
+                            positionSwayActionDropdown(details);
+                        });
+                    }
+                },
+                true
+            );
+        }
+
         workspace
             .querySelectorAll(
                 ".sway-actions-menu, .sway-lead-actions-menu"
@@ -22294,35 +22339,6 @@ function simpleBars(items, color) {
                 }
 
                 details.dataset.swayDropdownBound = "true";
-
-                const summary = details.querySelector(":scope > summary");
-
-                if (summary) {
-                    /*
-                     * Do not rely on the browser's native <details> click
-                     * handling here. Safari/iOS can swallow the native toggle
-                     * when the summary sits inside the dashboard's table
-                     * layout. Toggle it ourselves on pointerdown and cancel
-                     * the native action so the menu has one deterministic
-                     * open/close path.
-                     */
-                    summary.addEventListener("pointerdown", function (event) {
-                        if (event.button !== undefined && event.button !== 0) {
-                            return;
-                        }
-
-                        event.preventDefault();
-                        event.stopPropagation();
-
-                        details.open = !details.open;
-
-                        if (details.open) {
-                            requestAnimationFrame(function () {
-                                positionSwayActionDropdown(details);
-                            });
-                        }
-                    });
-                }
 
                 details.addEventListener("toggle", function () {
                     const dropdown =
