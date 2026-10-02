@@ -553,7 +553,7 @@ Deno.serve(async (req) => {
             part.text,
         )
         ?.join("") ||
-      "",
+      "";
 
     let publicPayload:
       | {
