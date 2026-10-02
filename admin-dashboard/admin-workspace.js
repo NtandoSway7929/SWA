@@ -9193,6 +9193,10 @@ function simpleBars(items, color) {
                     "Quick actions",
                     "Jump directly into the next operational step.",
                     '<div class="sway-quick-actions">' +
+                        '<button type="button" class="sway-quick-action sway-quick-innerme" data-view-target="innerme">' +
+                            '<span aria-hidden="true">✦</span>' +
+                            '<span>Ask InnerMe</span>' +
+                        '</button>' +
                         quickButton(
                             "+ Add client",
                             "client"
