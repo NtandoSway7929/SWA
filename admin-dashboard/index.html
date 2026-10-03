@@ -14266,7 +14266,7 @@ portfolioForm.addEventListener(
 
     #sway-admin-workspace .sway-cf-chart-layout {
         display: grid;
-        grid-template-columns: 64px minmax(0, 1fr);
+        grid-template-columns: 72px minmax(0, 1fr);
         align-items: stretch;
         min-width: 0;
     }
@@ -14281,6 +14281,10 @@ portfolioForm.addEventListener(
         font-variant-numeric: tabular-nums;
         line-height: 1;
         text-align: right;
+    }
+
+    #sway-admin-workspace .sway-cf-y-axis span {
+        white-space: nowrap;
     }
 
     #sway-admin-workspace .sway-cf-y-axis span:first-child {
@@ -14362,6 +14366,12 @@ portfolioForm.addEventListener(
         box-shadow: 0 0 0 3px rgba(1,82,244,0.09);
     }
 
+    @media (max-width: 1080px) {
+        #sway-admin-workspace .sway-cash-flow-charts.sway-cf-charts {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
     @media (max-width: 760px) {
         #sway-admin-workspace .sway-cash-flow-charts.sway-cf-charts {
             grid-template-columns: minmax(0, 1fr);
@@ -14373,7 +14383,7 @@ portfolioForm.addEventListener(
         }
 
         #sway-admin-workspace .sway-cf-chart-layout {
-            grid-template-columns: 56px minmax(0, 1fr);
+            grid-template-columns: 62px minmax(0, 1fr);
         }
 
         #sway-admin-workspace .sway-cf-y-axis {
@@ -14401,11 +14411,11 @@ portfolioForm.addEventListener(
         }
 
         #sway-admin-workspace .sway-cf-chart-layout {
-            grid-template-columns: 50px minmax(0, 1fr);
+            grid-template-columns: 58px minmax(0, 1fr);
         }
 
         #sway-admin-workspace .sway-cf-y-axis {
-            font-size: 11px;
+            font-size: 12px;
         }
     }
 
