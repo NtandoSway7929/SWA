@@ -21423,22 +21423,89 @@ function simpleBars(items, color) {
         }
     }
 
+    function getSwayActionDropdown(details) {
+        return (
+            details?._swayActionDropdown ||
+            details?.querySelector(
+                ":scope > .sway-actions-dropdown, :scope > .sway-lead-actions-dropdown"
+            ) ||
+            null
+        );
+    }
+
+    function portalSwayActionDropdown(details, dropdown) {
+        if (
+            !details ||
+            !dropdown ||
+            (dropdown.parentNode === document.body &&
+                dropdown._swayActionMenu === details)
+        ) {
+            return;
+        }
+
+        const parent = dropdown.parentNode;
+        if (!parent) return;
+
+        const placeholder = document.createComment("sway-action-dropdown");
+        parent.insertBefore(placeholder, dropdown);
+
+        details._swayActionDropdown = dropdown;
+        dropdown._swayActionPlaceholder = placeholder;
+        dropdown._swayActionMenu = details;
+        document.body.appendChild(dropdown);
+    }
+
+    function restoreSwayActionDropdown(details) {
+        const dropdown = getSwayActionDropdown(details);
+        if (!dropdown) return;
+
+        const placeholder = dropdown._swayActionPlaceholder;
+
+        if (placeholder?.parentNode) {
+            placeholder.parentNode.replaceChild(dropdown, placeholder);
+        } else if (dropdown.parentNode === document.body) {
+            dropdown.remove();
+        }
+
+        dropdown.style.position = "";
+        dropdown.style.top = "";
+        dropdown.style.right = "";
+        dropdown.style.bottom = "";
+        dropdown.style.left = "";
+        dropdown.style.maxHeight = "";
+        dropdown.style.overflowY = "";
+        dropdown.style.webkitOverflowScrolling = "";
+        dropdown.style.visibility = "";
+
+        delete dropdown._swayActionPlaceholder;
+        delete dropdown._swayActionMenu;
+        delete details._swayActionDropdown;
+    }
+
     function positionSwayActionDropdown(details) {
         const summary = details?.querySelector(":scope > summary");
-        const dropdown = details?.querySelector(":scope > .sway-actions-dropdown, :scope > .sway-lead-actions-dropdown");
+        const dropdown = getSwayActionDropdown(details);
 
         if (!summary || !dropdown || !details.open) {
             return;
         }
 
+        /*
+         * Put the open menu directly under <body>. This keeps a fixed popup in
+         * the viewport coordinate system, even when a table, card, or modal
+         * ancestor creates a containing block or clips overflowing content.
+         */
+        portalSwayActionDropdown(details, dropdown);
+
         dropdown.style.position = "fixed";
-        dropdown.style.top = "auto";
+        dropdown.style.top = "0px";
         dropdown.style.right = "auto";
         dropdown.style.bottom = "auto";
         dropdown.style.left = "0px";
         dropdown.style.maxHeight = "min(70dvh, 520px)";
         dropdown.style.overflowY = "auto";
         dropdown.style.webkitOverflowScrolling = "touch";
+        dropdown.style.visibility = "hidden";
 
         const summaryRect = summary.getBoundingClientRect();
         const dropdownRect = dropdown.getBoundingClientRect();
@@ -21460,10 +21527,7 @@ function simpleBars(items, color) {
             top + dropdownRect.height >
             window.innerHeight - viewportPadding
         ) {
-            top =
-                summaryRect.top -
-                dropdownRect.height -
-                gap;
+            top = summaryRect.top - dropdownRect.height - gap;
         }
 
         top = Math.max(
@@ -21478,6 +21542,7 @@ function simpleBars(items, color) {
 
         dropdown.style.left = Math.round(left) + "px";
         dropdown.style.top = Math.round(top) + "px";
+        dropdown.style.visibility = "";
     }
 
     function bindSwayActionDropdowns() {
@@ -21486,11 +21551,21 @@ function simpleBars(items, color) {
 
         const menuSelector =
             ".sway-actions-menu, .sway-lead-actions-menu";
+        const dropdownSelector =
+            ".sway-actions-dropdown, .sway-lead-actions-dropdown";
         const summarySelector =
             ".sway-actions-menu > summary, .sway-lead-actions-menu > summary";
 
         function getMenu(target) {
             if (!target || typeof target.closest !== "function") return null;
+
+            const dropdown = target.closest(dropdownSelector);
+            const portalledMenu = dropdown?._swayActionMenu;
+
+            if (portalledMenu && workspace.contains(portalledMenu)) {
+                return portalledMenu;
+            }
+
             const menu = target.closest(menuSelector);
             return menu && workspace.contains(menu) ? menu : null;
         }
@@ -21511,6 +21586,7 @@ function simpleBars(items, color) {
         function closeMenu(menu) {
             if (!menu) return;
             menu.open = false;
+            restoreSwayActionDropdown(menu);
             setExpanded(menu, false);
         }
 
@@ -21546,18 +21622,53 @@ function simpleBars(items, color) {
             event.stopPropagation();
             event.stopImmediatePropagation();
 
-            const opening = !menu.open;
-            closeOthers(menu);
-            menu.open = opening;
-            setExpanded(menu, opening);
+            if (menu.open) {
+                closeMenu(menu);
+                return;
+            }
 
-            if (opening) reposition(menu);
+            closeOthers(menu);
+            menu.open = true;
+            setExpanded(menu, true);
+
+            // Position before the next paint, then refresh on the next frame.
+            positionSwayActionDropdown(menu);
+            reposition(menu);
+        }, true);
+
+        workspace.addEventListener("toggle", function (event) {
+            const menu = event.target;
+
+            if (!menu || !menu.matches?.(menuSelector)) return;
+
+            if (menu.open) {
+                closeOthers(menu);
+                setExpanded(menu, true);
+                positionSwayActionDropdown(menu);
+            } else {
+                restoreSwayActionDropdown(menu);
+                setExpanded(menu, false);
+            }
         }, true);
 
         document.addEventListener("click", function (event) {
             const openMenu = getOpenMenu();
             if (!openMenu) return;
-            if (getMenu(event.target) === openMenu) return;
+
+            const clickedMenu = getMenu(event.target);
+
+            if (clickedMenu === openMenu) {
+                const action = event.target.closest(
+                    ".sway-actions-dropdown .sway-row-action, .sway-lead-actions-dropdown .sway-row-action"
+                );
+
+                if (action && !action.matches("summary")) {
+                    closeMenu(openMenu);
+                }
+
+                return;
+            }
+
             closeMenu(openMenu);
         });
 
@@ -21586,7 +21697,9 @@ function simpleBars(items, color) {
 
         workspace.querySelectorAll(menuSelector).forEach(function (menu) {
             setExpanded(menu, menu.open);
-            if (menu.open) reposition(menu);
+            if (menu.open) {
+                positionSwayActionDropdown(menu);
+            }
         });
     }
 
