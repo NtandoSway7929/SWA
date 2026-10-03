@@ -8081,8 +8081,6 @@ function simpleBars(items, color) {
                     ) +
                 "</div>" +
 
-                "</div>" +
-
                 '<div class="sway-cash-flow-lower">' +
                     '<div class="sway-cash-flow-table">' +
                         '<div class="sway-cash-flow-table-head">' +
