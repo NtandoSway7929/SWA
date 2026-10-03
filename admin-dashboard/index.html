@@ -4786,14 +4786,25 @@
            TOP HEADER
            ----------------------------------------------------- */
 
+        :root {
+            --admin-container-max: 1260px;
+            --admin-container-gutter: 20px;
+            --admin-header-top: 14px;
+            --admin-header-height: 64px;
+            --admin-layout-gap: 16px;
+        }
+
         .admin-header {
-            padding: 14px 0 0 !important;
+            padding: var(--admin-header-top) 0 0 !important;
             background: transparent !important;
         }
 
         .admin-header-inner {
-            width: min(1260px, calc(100% - 40px)) !important;
-            min-height: 64px !important;
+            width: min(
+                var(--admin-container-max),
+                calc(100% - (2 * var(--admin-container-gutter)))
+            ) !important;
+            min-height: var(--admin-header-height) !important;
             padding: 9px 12px 9px 18px !important;
             gap: 14px !important;
             border: 1px solid var(--ui-border) !important;
@@ -4886,7 +4897,10 @@
            ----------------------------------------------------- */
 
         .admin-main {
-            width: min(1260px, calc(100% - 40px)) !important;
+            width: min(
+                var(--admin-container-max),
+                calc(100% - (2 * var(--admin-container-gutter)))
+            ) !important;
             padding: 34px 0 90px !important;
         }
 
@@ -4896,7 +4910,7 @@
         }
 
         .sway-workspace-shell {
-            grid-template-columns: 248px minmax(0, 1fr) !important;
+            grid-template-columns: 1fr 4fr !important;
             gap: 28px !important;
             align-items: start !important;
         }
@@ -5881,8 +5895,8 @@
 
         @media (max-width: 1100px) {
             .sway-workspace-shell {
-                grid-template-columns: 220px minmax(0,1fr) !important;
-                gap: 20px !important;
+                grid-template-columns: 1fr 4fr !important;
+                gap: 28px !important;
             }
 
             .admin-brand {
@@ -5895,8 +5909,17 @@
         }
 
         @media (max-width: 980px) {
+            :root {
+                --admin-container-gutter: 16px;
+                --admin-header-top: 12px;
+                --admin-header-height: 64px;
+            }
+
             .admin-main {
-                width: min(100% - 32px, 1260px) !important;
+                width: min(
+                    var(--admin-container-max),
+                    calc(100% - (2 * var(--admin-container-gutter)))
+                ) !important;
             }
 
             .sway-workspace-shell {
@@ -5959,18 +5982,30 @@
             }
 
             .admin-header-inner {
-                width: min(100% - 28px, 1260px) !important;
+                width: min(
+                    var(--admin-container-max),
+                    calc(100% - (2 * var(--admin-container-gutter)))
+                ) !important;
             }
         }
 
         @media (max-width: 760px) {
+            :root {
+                --admin-container-gutter: 12px;
+                --admin-header-top: 10px;
+                --admin-header-height: 58px;
+            }
+
             .admin-header {
-                padding-top: 10px !important;
+                padding-top: var(--admin-header-top) !important;
             }
 
             .admin-header-inner {
-                width: calc(100% - 24px) !important;
-                min-height: 58px !important;
+                width: min(
+                    var(--admin-container-max),
+                    calc(100% - (2 * var(--admin-container-gutter)))
+                ) !important;
+                min-height: var(--admin-header-height) !important;
                 padding: 8px 9px 8px 13px !important;
             }
 
@@ -5997,7 +6032,10 @@
             }
 
             .admin-main {
-                width: calc(100% - 24px) !important;
+                width: min(
+                    var(--admin-container-max),
+                    calc(100% - (2 * var(--admin-container-gutter)))
+                ) !important;
                 padding: 24px 0 70px !important;
             }
 
