@@ -776,6 +776,16 @@
 
             return (
                 '<div class="sway-ai-action-row">' +
+                    '<div class="sway-ai-action-context">' +
+                        '<span>' +
+                            esc(item.label) +
+                        '</span>' +
+                        '<strong title="' +
+                            esc(item.name) +
+                        '">' +
+                            esc(item.name) +
+                        '</strong>' +
+                    '</div>' +
                     (
                         supportsFollowUp
                             ? '<button type="button" class="sway-ai-action" data-ai-action="followup" data-ai-action-view="' +
