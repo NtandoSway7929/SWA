@@ -19,9 +19,9 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Raleway:wght@600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="admin-workspace.css?v=dashboard-20261003-floating-innerme-v9">
+    <link rel="stylesheet" href="admin-workspace.css?v=dashboard-20261003-premium-visual-system-v1">
 
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#002096">
@@ -4768,6 +4768,33 @@
             --ui-focus: rgba(1,82,244,0.16);
             --ui-speed: 180ms;
             --ui-ease: cubic-bezier(0.22, 1, 0.36, 1);
+            --ui-font-display: 'Raleway', sans-serif;
+            --ui-font-body: 'Montserrat', sans-serif;
+            --ui-bg: #F8FAFC;
+            --ui-surface: #FFFFFF;
+            --ui-surface-soft: #F8FAFC;
+            --ui-surface-hover: #F1F6FF;
+            --ui-border: rgba(1,82,244,0.12);
+            --ui-border-strong: rgba(1,82,244,0.20);
+            --ui-shadow-xs: 0 1px 2px rgba(8,21,51,0.035);
+            --ui-shadow-sm: 0 8px 26px rgba(0,32,150,0.055);
+            --ui-shadow-md: 0 18px 48px rgba(0,32,150,0.085);
+            --ui-shadow-lg: 0 30px 88px rgba(0,32,150,0.16);
+            --ui-radius-sm: 9px;
+            --ui-radius-md: 13px;
+            --ui-radius-lg: 18px;
+            --ui-radius-xl: 22px;
+            --ui-radius-pill: 9999px;
+            --ui-text: #081533;
+            --ui-text-soft: #56627A;
+            --ui-text-faint: #8190A5;
+            --ui-blue: #0152F4;
+            --ui-deep: #002096;
+            --ui-focus: rgba(1,82,244,0.20);
+            --ui-control-height: 42px;
+            --ui-control-radius: 12px;
+            --ui-section-gap: 22px;
+            --ui-card-gap: 14px;
         }
 
         /* -----------------------------------------------------
@@ -8798,7 +8825,861 @@ body.sway-dark-mode .sway-ai-form {
                 height: 42px !important;
             }
         }
-    </style>
+    
+
+        /* =====================================================
+           SWAYPHICS PREMIUM DESIGN SYSTEM
+           Light-first surfaces, consistent typography and 4px rhythm.
+           ===================================================== */
+        :root {
+            --sway-font-display: var(--ui-font-display);
+            --sway-font-body: var(--ui-font-body);
+            --sway-space-1: 4px;
+            --sway-space-2: 8px;
+            --sway-space-3: 12px;
+            --sway-space-4: 16px;
+            --sway-space-5: 20px;
+            --sway-space-6: 24px;
+            --sway-control-height: var(--ui-control-height);
+            --sway-control-radius: var(--ui-control-radius);
+            --sway-border: var(--ui-border);
+            --sway-shadow-card: 0 12px 34px rgba(8,21,51,0.045);
+            --sway-shadow-float: 0 22px 60px rgba(0,32,150,0.13);
+            --sway-transition: 180ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(ellipse at 88% 2%, rgba(1,82,244,0.055), transparent 32%),
+                linear-gradient(180deg, #F8FAFC 0%, #F5F8FD 100%) !important;
+            color: var(--ui-text) !important;
+            font-family: var(--ui-font-body) !important;
+            font-size: 14px;
+            line-height: 1.55;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        h1, h2, h3, h4, h5, h6,
+        .admin-brand,
+        #sway-admin-workspace .sway-workspace-heading h2,
+        #sway-admin-workspace .sway-panel-title h3,
+        #sway-admin-workspace .sway-ai-header h2 {
+            font-family: var(--ui-font-display) !important;
+            letter-spacing: -0.025em;
+        }
+
+        body input,
+        body select,
+        body textarea,
+        body button,
+        body table,
+        body th,
+        body td {
+            font-family: var(--ui-font-body) !important;
+        }
+
+        code, pre, kbd,
+        [data-code], [data-identifier] {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+        }
+
+        a {
+            color: var(--ui-blue);
+            text-decoration-color: rgba(1,82,244,0.28);
+            text-underline-offset: 3px;
+        }
+
+        button, a, input, select, textarea {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :focus-visible {
+            outline: 3px solid rgba(1,82,244,0.24);
+            outline-offset: 2px;
+        }
+
+        /* Header and workspace frame */
+        .admin-header {
+            padding-top: 12px !important;
+            z-index: 120;
+        }
+
+        .admin-header-inner {
+            width: min(1320px, calc(100% - 40px)) !important;
+            min-height: 64px !important;
+            padding: 9px 12px 9px 18px !important;
+            gap: 16px !important;
+            border: 1px solid rgba(1,82,244,0.10) !important;
+            border-radius: 20px !important;
+            background: rgba(255,255,255,0.88) !important;
+            box-shadow: var(--ui-shadow-sm), inset 0 1px 0 rgba(255,255,255,0.92) !important;
+            backdrop-filter: blur(18px) saturate(135%) !important;
+            -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
+        }
+
+        .admin-brand-logo {
+            max-height: 32px;
+            object-fit: contain;
+        }
+
+        .admin-global-search-field {
+            min-height: 42px !important;
+            padding: 0 12px !important;
+            border: 1px solid var(--ui-border) !important;
+            border-radius: 12px !important;
+            background: #F8FAFC !important;
+            box-shadow: inset 0 1px 2px rgba(8,21,51,0.025);
+            transition: border-color var(--sway-transition), box-shadow var(--sway-transition), background var(--sway-transition);
+        }
+
+        .admin-global-search-field:focus-within {
+            border-color: rgba(1,82,244,0.42) !important;
+            background: #FFFFFF !important;
+            box-shadow: 0 0 0 3px rgba(1,82,244,0.12) !important;
+        }
+
+        .admin-global-search-field input {
+            color: var(--ui-text) !important;
+            font-size: 0.82rem !important;
+        }
+
+        .admin-global-search-field input::placeholder {
+            color: var(--ui-text-faint) !important;
+        }
+
+        .admin-global-search-field kbd {
+            border-color: rgba(1,82,244,0.12) !important;
+            border-radius: 7px !important;
+            background: #FFFFFF !important;
+            color: var(--ui-text-faint) !important;
+        }
+
+        .admin-global-search-results,
+        .admin-notification-panel {
+            border: 1px solid rgba(1,82,244,0.12) !important;
+            border-radius: 18px !important;
+            background: rgba(255,255,255,0.97) !important;
+            box-shadow: var(--sway-shadow-float) !important;
+            backdrop-filter: blur(18px) saturate(135%);
+            -webkit-backdrop-filter: blur(18px) saturate(135%);
+        }
+
+        .admin-theme-toggle,
+        .admin-notification-toggle,
+        .logout-button {
+            min-height: 40px !important;
+            border-radius: 11px !important;
+            transition: transform var(--sway-transition), color var(--sway-transition), background var(--sway-transition), border-color var(--sway-transition), box-shadow var(--sway-transition) !important;
+        }
+
+        .admin-theme-toggle:hover,
+        .admin-notification-toggle:hover,
+        .logout-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .admin-status {
+            min-height: 34px;
+            padding: 0 11px !important;
+            border: 1px solid rgba(1,82,244,0.12) !important;
+            border-radius: 9999px !important;
+            background: rgba(1,82,244,0.045) !important;
+            color: #0031C5 !important;
+            font-size: 0.72rem !important;
+            font-weight: 700 !important;
+        }
+
+        .admin-status-dot {
+            box-shadow: 0 0 0 3px rgba(1,82,244,0.10);
+        }
+
+        .admin-main {
+            width: min(1320px, calc(100% - 40px)) !important;
+            padding: 26px 0 72px !important;
+            margin-inline: auto;
+        }
+
+        #sway-admin-workspace {
+            font-family: var(--ui-font-body) !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-shell {
+            grid-template-columns: minmax(210px, 0.82fr) minmax(0, 4fr) !important;
+            gap: 24px !important;
+            align-items: start !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-sidebar {
+            border: 1px solid rgba(1,82,244,0.10) !important;
+            border-radius: 20px !important;
+            background: rgba(255,255,255,0.82) !important;
+            box-shadow: var(--ui-shadow-sm), inset 0 1px 0 rgba(255,255,255,0.92) !important;
+            backdrop-filter: blur(16px) saturate(125%);
+            -webkit-backdrop-filter: blur(16px) saturate(125%);
+        }
+
+        #sway-admin-workspace .sway-workspace-nav-button {
+            min-height: 43px !important;
+            padding: 10px 12px 10px 14px !important;
+            border: 1px solid transparent !important;
+            border-radius: 12px !important;
+            color: #56627A !important;
+            font-size: 0.76rem !important;
+            font-weight: 650 !important;
+            transition: color var(--sway-transition), background var(--sway-transition), border-color var(--sway-transition), transform var(--sway-transition), box-shadow var(--sway-transition) !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-nav-button:hover {
+            border-color: rgba(1,82,244,0.10) !important;
+            background: rgba(1,82,244,0.045) !important;
+            color: #0031C5 !important;
+            transform: translateX(1px);
+        }
+
+        #sway-admin-workspace .sway-workspace-nav-button.active {
+            border-color: rgba(1,82,244,0.14) !important;
+            background: linear-gradient(100deg, rgba(1,82,244,0.105), rgba(44,145,252,0.045)) !important;
+            color: #0031C5 !important;
+            box-shadow: inset 3px 0 0 #0152F4, 0 4px 12px rgba(1,82,244,0.05) !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-heading {
+            align-items: flex-end !important;
+            gap: 18px !important;
+            margin-bottom: 3px;
+        }
+
+        #sway-admin-workspace .sway-workspace-heading h2 {
+            color: #081533 !important;
+            font-size: clamp(1.65rem, 2.6vw, 2.25rem) !important;
+            font-weight: 800 !important;
+            line-height: 1.1 !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-heading p {
+            max-width: 720px;
+            color: #64728A !important;
+            font-size: 0.84rem !important;
+            line-height: 1.6 !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-view,
+        #sway-admin-workspace .sway-workspace-main {
+            gap: 22px !important;
+        }
+
+        /* Stat cards, metric summaries and shared surfaces */
+        #sway-admin-workspace .sway-workspace-grid {
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr)) !important;
+            gap: var(--ui-card-gap) !important;
+        }
+
+        #sway-admin-workspace .sway-stat-card,
+        #sway-admin-workspace .sway-panel,
+        #sway-admin-workspace .sway-attention-panel,
+        #sway-admin-workspace .sway-followup-automation,
+        #sway-admin-workspace .sway-cash-flow,
+        #sway-admin-workspace .sway-revenue-pipeline,
+        #sway-admin-workspace .sway-insight-panel {
+            border: 1px solid rgba(1,82,244,0.10) !important;
+            border-radius: 18px !important;
+            background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(248,251,255,0.90)) !important;
+            box-shadow: var(--sway-shadow-card), inset 0 1px 0 rgba(255,255,255,0.92) !important;
+            backdrop-filter: blur(14px) saturate(120%);
+            -webkit-backdrop-filter: blur(14px) saturate(120%);
+        }
+
+        #sway-admin-workspace .sway-stat-card {
+            min-height: 142px !important;
+            padding: 20px !important;
+            transition: transform var(--sway-transition), border-color var(--sway-transition), box-shadow var(--sway-transition) !important;
+        }
+
+        #sway-admin-workspace .sway-stat-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 18px auto;
+            height: 2px;
+            border-radius: 0 0 2px 2px;
+            background: linear-gradient(90deg, rgba(1,82,244,0.42), rgba(44,145,252,0.12), transparent);
+            pointer-events: none;
+        }
+
+        #sway-admin-workspace .sway-stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(1,82,244,0.19) !important;
+            box-shadow: 0 18px 40px rgba(0,32,150,0.075), inset 0 1px 0 #FFFFFF !important;
+        }
+
+        #sway-admin-workspace .sway-stat-card .label {
+            color: #748198 !important;
+            font-size: 0.72rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.045em;
+        }
+
+        #sway-admin-workspace .sway-stat-card .value {
+            color: #081533 !important;
+            font-size: clamp(1.55rem, 2.3vw, 2rem) !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.045em !important;
+            line-height: 1.08 !important;
+        }
+
+        #sway-admin-workspace .sway-stat-card .hint {
+            color: #718097 !important;
+            font-size: 0.73rem !important;
+            line-height: 1.45 !important;
+        }
+
+        #sway-admin-workspace .sway-panel {
+            padding: 21px !important;
+        }
+
+        #sway-admin-workspace .sway-panel-title {
+            align-items: flex-start;
+            margin-bottom: 17px !important;
+            padding-bottom: 13px;
+            border-bottom: 1px solid rgba(1,82,244,0.075);
+        }
+
+        #sway-admin-workspace .sway-panel-title h3 {
+            color: #081533 !important;
+            font-size: 1rem !important;
+            font-weight: 750 !important;
+        }
+
+        #sway-admin-workspace .sway-panel-title p {
+            color: #748198 !important;
+            font-size: 0.75rem !important;
+            line-height: 1.5 !important;
+        }
+
+        /* Tables, lists, status and empty states */
+        #sway-admin-workspace .sway-table-wrap {
+            border: 1px solid rgba(1,82,244,0.08);
+            border-radius: 14px;
+            background: rgba(255,255,255,0.72);
+        }
+
+        #sway-admin-workspace .sway-table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+
+        #sway-admin-workspace .sway-table th {
+            padding: 12px 11px !important;
+            border-bottom: 1px solid rgba(1,82,244,0.11) !important;
+            background: #F7F9FD;
+            color: #748198 !important;
+            font-size: 0.68rem !important;
+            font-weight: 750 !important;
+            letter-spacing: 0.065em !important;
+            text-transform: uppercase !important;
+            white-space: nowrap;
+        }
+
+        #sway-admin-workspace .sway-table td {
+            padding: 12px 11px !important;
+            border-bottom: 1px solid rgba(8,21,51,0.055) !important;
+            color: #34445D !important;
+            font-size: 0.76rem !important;
+            line-height: 1.5;
+        }
+
+        #sway-admin-workspace .sway-table tbody tr {
+            transition: background var(--sway-transition);
+        }
+
+        #sway-admin-workspace .sway-table tbody tr:hover td {
+            background: rgba(1,82,244,0.028);
+        }
+
+        #sway-admin-workspace .sway-table tbody tr:last-child td {
+            border-bottom: 0 !important;
+        }
+
+        #sway-admin-workspace .sway-table-empty,
+        #sway-admin-workspace .sway-loading,
+        #sway-admin-workspace .sway-error {
+            min-height: 112px;
+            display: grid;
+            place-content: center;
+            gap: 6px;
+            border-radius: 14px;
+            color: #748198 !important;
+            font-size: 0.82rem !important;
+            line-height: 1.55;
+        }
+
+        #sway-admin-workspace .sway-chip,
+        #sway-admin-workspace .testimonial-admin-status,
+        #sway-admin-workspace .portfolio-admin-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 24px;
+            padding: 4px 9px !important;
+            border: 1px solid rgba(1,82,244,0.09);
+            border-radius: 9999px !important;
+            background: rgba(1,82,244,0.055) !important;
+            color: #0031C5 !important;
+            font-size: 0.68rem !important;
+            font-weight: 750 !important;
+            letter-spacing: 0.01em;
+            text-transform: none !important;
+            white-space: nowrap;
+        }
+
+        #sway-admin-workspace .sway-chip::before,
+        #sway-admin-workspace .testimonial-admin-status::before,
+        #sway-admin-workspace .portfolio-admin-status::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            flex: 0 0 6px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.78;
+        }
+
+        #sway-admin-workspace .sway-chip.success,
+        #sway-admin-workspace .testimonial-admin-status.approved {
+            border-color: rgba(22,163,74,0.14) !important;
+            background: rgba(22,163,74,0.075) !important;
+            color: #167247 !important;
+        }
+
+        #sway-admin-workspace .sway-chip.warning,
+        #sway-admin-workspace .testimonial-admin-status.pending {
+            border-color: rgba(245,158,11,0.17) !important;
+            background: rgba(245,158,11,0.085) !important;
+            color: #95600A !important;
+        }
+
+        #sway-admin-workspace .sway-chip.danger,
+        #sway-admin-workspace .testimonial-admin-status.rejected,
+        #sway-admin-workspace .portfolio-admin-status.inactive {
+            border-color: rgba(190,52,52,0.16) !important;
+            background: rgba(190,52,52,0.075) !important;
+            color: #A33333 !important;
+        }
+
+        /* Inputs and control hierarchy */
+        #sway-admin-workspace :is(
+            input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+            select,
+            textarea
+        ),
+        .sway-proposal-review-fields :is(input, select, textarea) {
+            min-height: 42px;
+            padding: 10px 12px !important;
+            border: 1px solid rgba(1,82,244,0.14) !important;
+            border-radius: 11px !important;
+            background: #FFFFFF !important;
+            color: #081533 !important;
+            font-size: 0.8rem !important;
+            box-shadow: inset 0 1px 2px rgba(8,21,51,0.025);
+            transition: border-color var(--sway-transition), box-shadow var(--sway-transition), background var(--sway-transition);
+        }
+
+        #sway-admin-workspace textarea,
+        .sway-proposal-review-fields textarea {
+            line-height: 1.55 !important;
+        }
+
+        #sway-admin-workspace :is(input, select, textarea)::placeholder,
+        .sway-proposal-review-fields :is(input, textarea)::placeholder {
+            color: #8995A8 !important;
+            opacity: 1;
+        }
+
+        #sway-admin-workspace :is(input, select, textarea):focus,
+        .sway-proposal-review-fields :is(input, select, textarea):focus {
+            border-color: rgba(1,82,244,0.52) !important;
+            background: #FFFFFF !important;
+            box-shadow: 0 0 0 3px rgba(1,82,244,0.16) !important;
+            outline: none !important;
+        }
+
+        #sway-admin-workspace :is(label, .sway-form-field label) {
+            color: #526078;
+            font-size: 0.74rem;
+            font-weight: 700;
+        }
+
+        #sway-admin-workspace .sway-workspace-button,
+        #sway-admin-workspace .sway-row-action,
+        #sway-admin-workspace .sway-quick-action,
+        #sway-admin-workspace .sway-ai-new-chat,
+        #sway-admin-workspace .sway-ai-more-toggle,
+        #sway-admin-workspace .sway-push-enable,
+        #sway-admin-workspace .testimonial-admin-action,
+        #sway-admin-workspace .portfolio-admin-action {
+            min-height: 38px;
+            border: 1px solid rgba(1,82,244,0.13) !important;
+            border-radius: 10px !important;
+            background: rgba(255,255,255,0.88);
+            color: #34445D !important;
+            font-size: 0.74rem !important;
+            font-weight: 700 !important;
+            box-shadow: 0 2px 7px rgba(8,21,51,0.025);
+            transition: transform var(--sway-transition), color var(--sway-transition), border-color var(--sway-transition), background var(--sway-transition), box-shadow var(--sway-transition) !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-button:hover,
+        #sway-admin-workspace .sway-row-action:hover,
+        #sway-admin-workspace .sway-quick-action:hover,
+        #sway-admin-workspace .sway-ai-new-chat:hover,
+        #sway-admin-workspace .sway-ai-more-toggle:hover,
+        #sway-admin-workspace .sway-push-enable:hover,
+        #sway-admin-workspace .testimonial-admin-action:hover,
+        #sway-admin-workspace .portfolio-admin-action:hover {
+            border-color: rgba(1,82,244,0.27) !important;
+            background: #F7FAFF !important;
+            color: #0031C5 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 7px 16px rgba(0,32,150,0.07) !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-button.primary,
+        #sway-admin-workspace .sway-row-action.primary,
+        #sway-admin-workspace .sway-ai-send,
+        #sway-admin-workspace .sway-push-enable,
+        #sway-admin-workspace .testimonial-admin-action.approve,
+        #sway-admin-workspace .portfolio-admin-action.primary {
+            border-color: transparent !important;
+            background: linear-gradient(180deg, #1767F5 0%, #0152F4 100%) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 7px 17px rgba(1,82,244,0.18), inset 0 1px 0 rgba(255,255,255,0.24) !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-button.primary:hover,
+        #sway-admin-workspace .sway-ai-send:hover,
+        #sway-admin-workspace .testimonial-admin-action.approve:hover {
+            background: linear-gradient(180deg, #2C91FC 0%, #0152F4 100%) !important;
+            color: #FFFFFF !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-button.danger,
+        #sway-admin-workspace .sway-row-action.danger,
+        #sway-admin-workspace .testimonial-admin-action.delete,
+        #sway-admin-workspace .portfolio-admin-action.delete {
+            border-color: rgba(190,52,52,0.16) !important;
+            background: rgba(190,52,52,0.045) !important;
+            color: #A33333 !important;
+        }
+
+        /* Dropdowns and floating actions keep the same raised surface language. */
+        #sway-admin-workspace .sway-actions-dropdown,
+        #sway-admin-workspace .sway-lead-actions-dropdown,
+        #sway-admin-workspace .sway-quick-create-menu,
+        #sway-admin-workspace .sway-ai-more-panel {
+            border: 1px solid rgba(1,82,244,0.12) !important;
+            border-radius: 15px !important;
+            background: rgba(255,255,255,0.985) !important;
+            box-shadow: var(--sway-shadow-float) !important;
+        }
+
+        /* Modals and drawers */
+        #sway-admin-workspace .sway-modal-backdrop,
+        #sway-admin-workspace .sway-client360-backdrop {
+            background: rgba(6,9,19,0.44) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+        }
+
+        #sway-admin-workspace .sway-modal-card,
+        #sway-admin-workspace .sway-client360-card,
+        #sway-admin-workspace .sway-project-timeline-card,
+        #sway-admin-workspace .sway-client-portal-link-card,
+        #sway-admin-workspace .sway-email-composer-card,
+        #sway-admin-workspace .sway-dialog {
+            border: 1px solid rgba(1,82,244,0.12) !important;
+            border-radius: 20px !important;
+            background: rgba(255,255,255,0.97) !important;
+            box-shadow: 0 28px 80px rgba(8,21,51,0.20), inset 0 1px 0 rgba(255,255,255,0.95) !important;
+            backdrop-filter: blur(18px) saturate(125%);
+            -webkit-backdrop-filter: blur(18px) saturate(125%);
+        }
+
+        /* Rich-list surfaces share the dashboard's card finish. */
+        #sway-admin-workspace :is(.portfolio-admin-item, .testimonial-admin-card, .sway-client360-section, .sway-client360-card-item) {
+            border-color: rgba(1,82,244,0.10) !important;
+            border-radius: 15px !important;
+            box-shadow: 0 8px 24px rgba(8,21,51,0.04) !important;
+            transition: transform var(--sway-transition), border-color var(--sway-transition), box-shadow var(--sway-transition);
+        }
+
+        #sway-admin-workspace :is(.portfolio-admin-item, .testimonial-admin-card):hover {
+            border-color: rgba(1,82,244,0.20) !important;
+            box-shadow: 0 14px 30px rgba(0,32,150,0.075) !important;
+            transform: translateY(-2px);
+        }
+
+        /* Dark mode uses the same blue identity with deeper neutral surfaces. */
+        body.sway-dark-mode {
+            --ui-bg: #060913;
+            --ui-surface: #0A0F1D;
+            --ui-surface-soft: #0D1524;
+            --ui-surface-hover: #101C30;
+            --ui-border: rgba(119,193,252,0.13);
+            --ui-border-strong: rgba(119,193,252,0.23);
+            --ui-text: #F3F7FC;
+            --ui-text-soft: #B7C5D7;
+            --ui-text-faint: #91A2B8;
+            --ui-shadow-xs: 0 1px 2px rgba(0,0,0,0.24);
+            --ui-shadow-sm: 0 10px 30px rgba(0,0,0,0.25);
+            --ui-shadow-md: 0 20px 48px rgba(0,0,0,0.32);
+            --ui-shadow-lg: 0 30px 84px rgba(0,0,0,0.44);
+        }
+
+        body.sway-dark-mode {
+            background:
+                radial-gradient(ellipse at 88% 2%, rgba(1,82,244,0.12), transparent 32%),
+                linear-gradient(180deg, #060913 0%, #0A0F1D 100%) !important;
+            color: #EAF0F8 !important;
+            color-scheme: dark;
+        }
+
+        body.sway-dark-mode .admin-header-inner,
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-sidebar {
+            border-color: rgba(119,193,252,0.14) !important;
+            background: rgba(10,15,29,0.90) !important;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.035) !important;
+        }
+
+        body.sway-dark-mode .admin-status {
+            border-color: rgba(119,193,252,0.18) !important;
+            background: rgba(1,82,244,0.13) !important;
+            color: #A9D2FF !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-nav-button {
+            color: #AAB9CD !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-nav-button:hover,
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-nav-button.active {
+            border-color: rgba(119,193,252,0.17) !important;
+            background: linear-gradient(100deg, rgba(1,82,244,0.24), rgba(44,145,252,0.08)) !important;
+            color: #FFFFFF !important;
+            box-shadow: inset 3px 0 0 #2C91FC, 0 6px 17px rgba(1,82,244,0.10) !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-heading h2,
+        body.sway-dark-mode #sway-admin-workspace .sway-panel-title h3,
+        body.sway-dark-mode #sway-admin-workspace .sway-stat-card .value {
+            color: #F3F7FC !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-heading p,
+        body.sway-dark-mode #sway-admin-workspace .sway-panel-title p,
+        body.sway-dark-mode #sway-admin-workspace .sway-stat-card .label,
+        body.sway-dark-mode #sway-admin-workspace .sway-stat-card .hint {
+            color: #AAB9CD !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-stat-card,
+        body.sway-dark-mode #sway-admin-workspace .sway-panel,
+        body.sway-dark-mode #sway-admin-workspace .sway-attention-panel,
+        body.sway-dark-mode #sway-admin-workspace .sway-followup-automation,
+        body.sway-dark-mode #sway-admin-workspace .sway-cash-flow,
+        body.sway-dark-mode #sway-admin-workspace .sway-revenue-pipeline,
+        body.sway-dark-mode #sway-admin-workspace .sway-insight-panel,
+        body.sway-dark-mode #sway-admin-workspace :is(.portfolio-admin-item, .testimonial-admin-card, .sway-client360-section, .sway-client360-card-item) {
+            border-color: rgba(119,193,252,0.13) !important;
+            background: linear-gradient(145deg, rgba(13,21,36,0.97), rgba(10,15,29,0.94)) !important;
+            box-shadow: 0 14px 38px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.035) !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-table-wrap {
+            border-color: rgba(119,193,252,0.12);
+            background: rgba(10,15,29,0.62);
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-table th {
+            border-color: rgba(119,193,252,0.14) !important;
+            background: rgba(17,29,49,0.88);
+            color: #AAB9CD !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-table td {
+            border-color: rgba(119,193,252,0.075) !important;
+            color: #DCE6F3 !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-table tbody tr:hover td {
+            background: rgba(1,82,244,0.11);
+        }
+
+        body.sway-dark-mode #sway-admin-workspace :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea),
+        body.sway-dark-mode .sway-proposal-review-fields :is(input, select, textarea) {
+            border-color: rgba(119,193,252,0.17) !important;
+            background: #0D1524 !important;
+            color: #F3F7FC !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace :is(input, select, textarea)::placeholder,
+        body.sway-dark-mode .sway-proposal-review-fields :is(input, textarea)::placeholder {
+            color: #91A2B8 !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace :is(input, select, textarea):focus,
+        body.sway-dark-mode .sway-proposal-review-fields :is(input, select, textarea):focus {
+            border-color: rgba(119,193,252,0.48) !important;
+            box-shadow: 0 0 0 3px rgba(1,82,244,0.23) !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace :is(label, .sway-form-field label) {
+            color: #B7C5D7;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-button,
+        body.sway-dark-mode #sway-admin-workspace .sway-row-action,
+        body.sway-dark-mode #sway-admin-workspace .sway-quick-action,
+        body.sway-dark-mode #sway-admin-workspace .sway-ai-new-chat,
+        body.sway-dark-mode #sway-admin-workspace .sway-ai-more-toggle,
+        body.sway-dark-mode #sway-admin-workspace .sway-push-enable,
+        body.sway-dark-mode #sway-admin-workspace .testimonial-admin-action,
+        body.sway-dark-mode #sway-admin-workspace .portfolio-admin-action {
+            border-color: rgba(119,193,252,0.14) !important;
+            background: rgba(17,29,49,0.82) !important;
+            color: #DCE6F3 !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-button.primary,
+        body.sway-dark-mode #sway-admin-workspace .sway-row-action.primary,
+        body.sway-dark-mode #sway-admin-workspace .sway-ai-send,
+        body.sway-dark-mode #sway-admin-workspace .sway-push-enable,
+        body.sway-dark-mode #sway-admin-workspace .testimonial-admin-action.approve {
+            border-color: transparent !important;
+            background: linear-gradient(180deg, #1767F5 0%, #0152F4 100%) !important;
+            color: #FFFFFF !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-row-action.danger,
+        body.sway-dark-mode #sway-admin-workspace .testimonial-admin-action.delete,
+        body.sway-dark-mode #sway-admin-workspace .portfolio-admin-action.delete {
+            border-color: rgba(255,154,154,0.18) !important;
+            background: rgba(190,52,52,0.11) !important;
+            color: #FFB0B0 !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-actions-dropdown,
+        body.sway-dark-mode #sway-admin-workspace .sway-lead-actions-dropdown,
+        body.sway-dark-mode #sway-admin-workspace .sway-quick-create-menu,
+        body.sway-dark-mode #sway-admin-workspace .sway-ai-more-panel,
+        body.sway-dark-mode .admin-global-search-results,
+        body.sway-dark-mode .admin-notification-panel {
+            border-color: rgba(119,193,252,0.15) !important;
+            background: rgba(10,15,29,0.985) !important;
+            color: #EAF0F8 !important;
+        }
+
+        body.sway-dark-mode #sway-admin-workspace .sway-modal-card,
+        body.sway-dark-mode #sway-admin-workspace .sway-client360-card,
+        body.sway-dark-mode #sway-admin-workspace .sway-project-timeline-card,
+        body.sway-dark-mode #sway-admin-workspace .sway-client-portal-link-card,
+        body.sway-dark-mode #sway-admin-workspace .sway-email-composer-card,
+        body.sway-dark-mode #sway-admin-workspace .sway-dialog {
+            border-color: rgba(119,193,252,0.15) !important;
+            background: rgba(10,15,29,0.985) !important;
+            color: #EAF0F8 !important;
+            box-shadow: 0 30px 88px rgba(0,0,0,0.45) !important;
+        }
+
+        @media (max-width: 980px) {
+            .admin-main {
+                width: min(100% - 32px, 1320px) !important;
+            }
+
+            #sway-admin-workspace .sway-workspace-shell {
+                grid-template-columns: minmax(0, 1fr) !important;
+                gap: 18px !important;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .admin-header {
+                padding-top: max(8px, env(safe-area-inset-top)) !important;
+            }
+
+            .admin-header-inner {
+                width: calc(100% - 24px) !important;
+                min-height: 58px !important;
+                padding: 7px 8px 7px 12px !important;
+                gap: 8px !important;
+                border-radius: 16px !important;
+            }
+
+            .admin-main {
+                width: calc(100% - 28px) !important;
+                padding-top: 20px !important;
+            }
+
+            #sway-admin-workspace .sway-workspace-heading {
+                align-items: flex-start !important;
+                padding-left: 52px !important;
+            }
+
+            #sway-admin-workspace .sway-workspace-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 11px !important;
+            }
+
+            #sway-admin-workspace .sway-stat-card {
+                min-height: 130px !important;
+                padding: 15px !important;
+            }
+
+            #sway-admin-workspace .sway-panel {
+                padding: 16px !important;
+            }
+
+            #sway-admin-workspace .sway-table-wrap {
+                max-width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #sway-admin-workspace .sway-table th,
+            #sway-admin-workspace .sway-table td {
+                padding: 10px 9px !important;
+            }
+        }
+
+        @media (max-width: 460px) {
+            #sway-admin-workspace .sway-workspace-grid {
+                grid-template-columns: minmax(0, 1fr) !important;
+            }
+
+            #sway-admin-workspace .sway-stat-card {
+                min-height: 118px !important;
+            }
+
+            #sway-admin-workspace .sway-workspace-heading {
+                padding-left: 46px !important;
+            }
+
+            .admin-status {
+                min-height: 30px;
+                padding-inline: 8px !important;
+                font-size: 0.66rem !important;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                scroll-behavior: auto !important;
+                transition-duration: 0.01ms !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+            }
+        }
+</style>
 </head>
 
 
