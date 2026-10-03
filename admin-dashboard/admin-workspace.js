@@ -23095,6 +23095,51 @@ function simpleBars(items, color) {
                     "aria-expanded",
                     open ? "true" : "false"
                 );
+
+                /*
+                 * Keep InnerMe's compact controls mutually exclusive.
+                 * Opening More should never leave Chat history or Suggestions
+                 * open underneath it.
+                 */
+                if (open) {
+                    const historyPanel =
+                        workspace.querySelector("#sway-ai-history-panel");
+
+                    const historyToggle =
+                        workspace.querySelector("#sway-ai-history-toggle");
+
+                    const suggestionPanel =
+                        workspace.querySelector("#sway-ai-suggestions-panel");
+
+                    const suggestionToggle =
+                        workspace.querySelector("#sway-ai-suggestion-toggle");
+
+                    if (historyPanel) {
+                        historyPanel.hidden = true;
+                    }
+
+                    if (historyToggle) {
+                        historyToggle.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+                    }
+
+                    if (suggestionPanel) {
+                        suggestionPanel.classList.remove("is-open");
+                        suggestionPanel.setAttribute(
+                            "aria-hidden",
+                            "true"
+                        );
+                    }
+
+                    if (suggestionToggle) {
+                        suggestionToggle.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+                    }
+                }
             };
         }
 
