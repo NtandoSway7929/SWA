@@ -21273,7 +21273,7 @@ function simpleBars(items, color) {
                             '<span aria-hidden="true">↑</span>' +
                         '</button>' +
                     '</div>' +
-                '</form>' +                '<small class="sway-ai-note">InnerMe is read-only in V1. It can analyse your workspace, but it cannot send emails, delete records or change data. Enter to send · Shift+Enter for a new line.</small>' +
+                '</form>' +                '<small class="sway-ai-note">InnerMe is read-only by default. It can analyse your workspace, but changes only happen when you explicitly use an action button. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>'
         );
     }
