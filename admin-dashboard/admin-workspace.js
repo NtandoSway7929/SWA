@@ -23055,41 +23055,43 @@ function simpleBars(items, color) {
         workspace
             .querySelectorAll("[data-ai-copy]")
             .forEach(function (button) {
-                button.addEventListener("click", function (event) {
+                button.onclick = function (event) {
                     event.preventDefault();
                     event.stopPropagation();
                     copyAIMessage(button);
-                });
+                };
             });
 
         workspace
             .querySelectorAll("[data-ai-action]")
             .forEach(function (button) {
-                button.addEventListener("click", function (event) {
+                button.onclick = function (event) {
                     event.preventDefault();
                     event.stopPropagation();
                     handleAIAction(button);
-                });
+                };
             });
 
         workspace
             .querySelectorAll("[data-ai-open-record]")
             .forEach(function (button) {
-                button.addEventListener("click", function (event) {
+                button.onclick = function (event) {
                     event.preventDefault();
                     event.stopPropagation();
                     openAIRecord(button);
-                });
+                };
             });
 
         const aiFocusClear =
             workspace.querySelector("#sway-ai-focus-clear");
 
         if (aiFocusClear) {
-            aiFocusClear.addEventListener("click", function () {
+            aiFocusClear.onclick = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
                 clearAIFocusedRecord();
                 renderView();
-            });
+            };
         }
 
         const moreToggle =
