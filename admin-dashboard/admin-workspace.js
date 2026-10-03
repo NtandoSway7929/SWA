@@ -816,7 +816,6 @@
                 (
                     actionButtons
                         ? '<div class="sway-ai-actions">' +
-                            '<span class="sway-ai-actions-label">Actions</span>' +
                             actionButtons +
                           "</div>"
                         : ""
@@ -945,11 +944,6 @@
             String(button?.dataset?.aiActionId || "");
 
         if (!action || !view || !id) {
-            return;
-        }
-
-        if (action === "open") {
-            openAIRecord(button);
             return;
         }
 
