@@ -4425,26 +4425,53 @@
             };
         }
 
-        document.addEventListener(
-            "click",
-            function (event) {
-                if (
-                    !panel.contains(event.target) &&
-                    !button.contains(event.target)
-                ) {
-                    closeNotificationCenter();
-                }
-            }
-        );
+        /*
+         * The notification panel is re-rendered with the workspace header.
+         * Bind the global dismiss listeners once and resolve the current
+         * button/panel at event time so repeated renders cannot stack
+         * document listeners or leave them pointing at detached nodes.
+         */
+        if (workspace.dataset.notificationDismissBound !== "true") {
+            workspace.dataset.notificationDismissBound = "true";
 
-        document.addEventListener(
-            "keydown",
-            function (event) {
-                if (event.key === "Escape") {
-                    closeNotificationCenter();
+            document.addEventListener(
+                "click",
+                function (event) {
+                    const currentButton =
+                        document.getElementById(
+                            "sway-notification-toggle"
+                        );
+
+                    const currentPanel =
+                        document.getElementById(
+                            "sway-notification-panel"
+                        );
+
+                    if (
+                        !currentPanel ||
+                        !currentButton
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        !currentPanel.contains(event.target) &&
+                        !currentButton.contains(event.target)
+                    ) {
+                        closeNotificationCenter();
+                    }
                 }
-            }
-        );
+            );
+
+            document.addEventListener(
+                "keydown",
+                function (event) {
+                    if (event.key === "Escape") {
+                        closeNotificationCenter();
+                    }
+                }
+            );
+        }
 
         updateNotificationCenter();
     }
