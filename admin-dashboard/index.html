@@ -2294,30 +2294,6 @@
         }
         .sway-ai-header { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; }
         .sway-ai-header-actions { display:flex; flex-direction:column; align-items:stretch; gap:8px; flex-shrink:0; width:148px; }
-        .sway-ai-header-send {
-            width:100%;
-            min-height:36px;
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            gap:6px;
-            border:0;
-            border-radius:10px;
-            padding:8px 11px;
-            background:#0152F4;
-            color:#fff;
-            font:inherit;
-            font-size:11px;
-            font-weight:800;
-            cursor:pointer;
-            box-shadow:0 8px 18px rgba(1,82,244,.18);
-            transition:transform .18s ease, box-shadow .18s ease, background .18s ease, opacity .18s ease;
-        }
-        .sway-ai-header-send span:first-child { font-size:15px; line-height:1; font-weight:700; }
-        .sway-ai-header-send:hover { background:#0047d9; transform:translateY(-1px); box-shadow:0 10px 22px rgba(1,82,244,.22); }
-        .sway-ai-header-send:active { transform:translateY(0); }
-        .sway-ai-header-send:disabled { opacity:.55; cursor:wait; transform:none; box-shadow:none; }
-        .sway-ai-header-send:focus-visible { outline:3px solid rgba(1,82,244,.14); outline-offset:2px; }
         .sway-ai-new-chat { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:7px 10px; border:1px solid #dfe6f1; border-radius:10px; background:#fff; color:#5e6d82; font:inherit; font-size:11px; font-weight:700; cursor:pointer; transition:border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease; }
         .sway-ai-new-chat span:first-child { font-size:16px; line-height:1; font-weight:500; }
         .sway-ai-new-chat:hover { border-color:#b9caf0; color:#0152F4; background:#f8faff; transform:translateY(-1px); }
@@ -2539,241 +2515,6 @@
         .sway-ai-byline { display:flex; align-items:center; gap:6px; margin-top:7px; color:#7b8799; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:lowercase; }
         .sway-ai-byline img { display:block; width:auto; height:15px; max-width:92px; object-fit:contain; }
         .sway-ai-header p { max-width:650px; margin:9px 0 0; color:#66748a; line-height:1.65; }
-        .sway-ai-capabilities {
-            display:flex;
-            flex-wrap:wrap;
-            gap:6px;
-            margin-top:13px;
-        }
-        .sway-ai-capability {
-            display:inline-flex;
-            align-items:center;
-            min-height:25px;
-            padding:5px 8px;
-            border:1px solid #dfe6f1;
-            border-radius:999px;
-            background:#fbfcfe;
-            color:#5c6b80;
-            font-size:8px;
-            font-weight:800;
-            letter-spacing:.03em;
-        }
-        .sway-ai-growth-desk {
-            margin:14px 0 4px;
-            padding:14px;
-            border:1px solid #e3e9f3;
-            border-radius:16px;
-            background:linear-gradient(145deg,#f9fbff,#ffffff);
-        }
-        .sway-ai-growth-head {
-            display:flex;
-            align-items:flex-start;
-            justify-content:space-between;
-            gap:12px;
-        }
-        .sway-ai-growth-head strong {
-            display:block;
-            margin-top:3px;
-            color:#253650;
-            font-size:13px;
-        }
-        .sway-ai-growth-note {
-            flex:0 0 auto;
-            color:#8190a5;
-            font-size:8px;
-            font-weight:750;
-        }
-        .sway-ai-growth-grid {
-            display:grid;
-            grid-template-columns:repeat(4,minmax(0,1fr));
-            gap:8px;
-            margin-top:11px;
-        }
-        .sway-ai-growth-card {
-            min-width:0;
-            min-height:112px;
-            padding:11px;
-            border:1px solid #e1e7f0;
-            border-radius:12px;
-            background:#fff;
-            color:#26344b;
-            font:inherit;
-            text-align:left;
-            cursor:pointer;
-            transition:border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
-        }
-        .sway-ai-growth-card:hover {
-            border-color:#b9caf0;
-            background:#fbfdff;
-            transform:translateY(-1px);
-            box-shadow:0 9px 20px rgba(8,21,51,.06);
-        }
-        .sway-ai-growth-label {
-            display:block;
-            color:#0152F4;
-            font-size:8px;
-            font-weight:850;
-            letter-spacing:.12em;
-            text-transform:uppercase;
-        }
-        .sway-ai-growth-value {
-            display:block;
-            margin-top:7px;
-            color:#081533;
-            font-size:20px;
-            font-weight:850;
-            line-height:1;
-            letter-spacing:-.03em;
-        }
-        .sway-ai-growth-detail {
-            display:block;
-            margin-top:6px;
-            color:#748197;
-            font-size:9px;
-            line-height:1.45;
-        }
-        .sway-ai-growth-action {
-            display:block;
-            margin-top:10px;
-            color:#5f7088;
-            font-size:8px;
-            font-weight:800;
-        }
-        .sway-ai-growth-card.marketing .sway-ai-growth-label { color:#41658e; }
-        .sway-ai-growth-card.writing .sway-ai-growth-label { color:#41658e; }
-        .sway-ai-growth-card.revenue .sway-ai-growth-label { color:#2f6e50; }
-        body.sway-dark-mode .sway-ai-growth-desk {
-            border-color:#2a3a58;
-            background:#121d30;
-        }
-        body.sway-dark-mode .sway-ai-growth-head strong { color:#e5ebf5; }
-        body.sway-dark-mode .sway-ai-growth-note { color:#9eabc0; }
-        body.sway-dark-mode .sway-ai-growth-card {
-            border-color:#2a3a58;
-            background:#162238;
-            color:#e5ebf5;
-        }
-        body.sway-dark-mode .sway-ai-growth-card:hover {
-            background:#1a2942;
-            border-color:#476aab;
-        }
-        body.sway-dark-mode .sway-ai-growth-value { color:#fff; }
-        body.sway-dark-mode .sway-ai-growth-detail { color:#9eabc0; }
-        body.sway-dark-mode .sway-ai-growth-action { color:#b8c3d4; }
-        .sway-ai-revenue-engine {
-            margin:14px 0 4px;
-            padding:14px;
-            border:1px solid #e3e9f3;
-            border-radius:16px;
-            background:linear-gradient(145deg,#f9fbff,#ffffff);
-        }
-        .sway-ai-revenue-head {
-            display:flex;
-            align-items:flex-start;
-            justify-content:space-between;
-            gap:12px;
-        }
-        .sway-ai-revenue-head strong {
-            display:block;
-            margin-top:3px;
-            color:#253650;
-            font-size:13px;
-        }
-        .sway-ai-revenue-note {
-            flex:0 0 auto;
-            color:#8190a5;
-            font-size:8px;
-            font-weight:750;
-        }
-        .sway-ai-revenue-grid {
-            display:grid;
-            grid-template-columns:repeat(4,minmax(0,1fr));
-            gap:8px;
-            margin-top:11px;
-        }
-        .sway-ai-revenue-card {
-            min-width:0;
-            min-height:118px;
-            padding:11px;
-            border:1px solid #e1e7f0;
-            border-radius:12px;
-            background:#fff;
-            color:#26344b;
-            font:inherit;
-            text-align:left;
-            cursor:pointer;
-            transition:border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
-        }
-        .sway-ai-revenue-card:hover {
-            border-color:#b9caf0;
-            background:#fbfdff;
-            transform:translateY(-1px);
-            box-shadow:0 9px 20px rgba(8,21,51,.06);
-        }
-        .sway-ai-revenue-label {
-            display:block;
-            color:#0152F4;
-            font-size:8px;
-            font-weight:850;
-            letter-spacing:.12em;
-            text-transform:uppercase;
-        }
-        .sway-ai-revenue-value {
-            display:block;
-            margin-top:7px;
-            overflow:hidden;
-            color:#081533;
-            font-size:18px;
-            font-weight:850;
-            line-height:1;
-            letter-spacing:-.03em;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-        }
-        .sway-ai-revenue-detail {
-            display:block;
-            margin-top:7px;
-            color:#748197;
-            font-size:9px;
-            line-height:1.45;
-        }
-        .sway-ai-revenue-action {
-            display:block;
-            margin-top:11px;
-            color:#5f7088;
-            font-size:8px;
-            font-weight:800;
-        }
-        .sway-ai-revenue-card.collect .sway-ai-revenue-label { color:#2f6e50; }
-        .sway-ai-revenue-card.convert .sway-ai-revenue-label { color:#0152F4; }
-        .sway-ai-revenue-card.capture .sway-ai-revenue-label { color:#41658e; }
-        .sway-ai-revenue-card.reactivate .sway-ai-revenue-label { color:#745f2b; }
-        .sway-ai-revenue-footnote {
-            display:block;
-            margin-top:10px;
-            color:#8a96a8;
-            font-size:8px;
-            line-height:1.45;
-        }
-        body.sway-dark-mode .sway-ai-revenue-engine {
-            border-color:#2a3a58;
-            background:#121d30;
-        }
-        body.sway-dark-mode .sway-ai-revenue-head strong { color:#e5ebf5; }
-        body.sway-dark-mode .sway-ai-revenue-note { color:#9eabc0; }
-        body.sway-dark-mode .sway-ai-revenue-card {
-            border-color:#2a3a58;
-            background:#162238;
-            color:#e5ebf5;
-        }
-        body.sway-dark-mode .sway-ai-revenue-card:hover {
-            background:#1a2942;
-            border-color:#476aab;
-        }
-        body.sway-dark-mode .sway-ai-revenue-value { color:#fff; }
-        body.sway-dark-mode .sway-ai-revenue-detail { color:#9eabc0; }
-        body.sway-dark-mode .sway-ai-revenue-action { color:#b8c3d4; }
-        body.sway-dark-mode .sway-ai-revenue-footnote { color:#8090a6; }
         .sway-proposal-review-card {
             width:min(920px,calc(100vw - 32px));
             max-height:min(90vh,920px);
@@ -2937,25 +2678,6 @@
             justify-content:flex-start;
             min-height:38px;
         }
-        .sway-ai-more-status {
-            padding:7px 8px 8px;
-            border-top:1px solid #edf1f6;
-            border-bottom:1px solid #edf1f6;
-            margin:7px 0;
-        }
-        .sway-ai-more-panel .sway-ai-status {
-            display:inline-flex;
-        }
-        .sway-ai-more-panel .sway-ai-capabilities {
-            margin-top:0;
-            gap:5px;
-        }
-        .sway-ai-more-panel .sway-ai-capability {
-            font-size:8px;
-            min-height:23px;
-            padding:4px 7px;
-        }
-        .sway-ai-status { white-space:nowrap; padding:8px 11px; border-radius:999px; background:#edf3ff; color:#0152F4; font-size:11px; font-weight:700; }
         .sway-quick-innerme {
             width:100%;
             justify-content:center;
@@ -2975,56 +2697,6 @@
             font-size:13px;
         }
 
-        .sway-ai-change-watch { margin:10px 0 4px; padding:14px; border:1px solid #e3e9f3; border-radius:15px; background:#ffffff; }
-        .sway-ai-change-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-        .sway-ai-change-count { flex:0 0 auto; color:#6f7e94; font-size:9px; font-weight:750; }
-        .sway-ai-change-list { display:grid; gap:6px; margin-top:11px; }
-        .sway-ai-change-item { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:9px; width:100%; min-width:0; padding:9px 10px; border:1px solid #e5eaf2; border-radius:10px; background:#fbfcfe; color:#26344b; font:inherit; text-align:left; cursor:pointer; transition:border-color .18s ease, background .18s ease; }
-        .sway-ai-change-item:hover { border-color:#b9caf0; background:#f8faff; }
-        .sway-ai-change-dot { width:7px; height:7px; border-radius:50%; background:#0152F4; box-shadow:0 0 0 3px rgba(1,82,244,.08); }
-        .sway-ai-change-copy { min-width:0; }
-        .sway-ai-change-copy strong { display:block; overflow:hidden; color:#2b3b55; font-size:10px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
-        .sway-ai-change-copy span { display:block; margin-top:2px; overflow:hidden; color:#748197; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
-        .sway-ai-change-arrow { color:#8392a8; font-size:14px; font-weight:800; }
-        .sway-ai-change-note { display:block; margin-top:8px; color:#8995a8; font-size:8px; line-height:1.4; }
-        body.sway-dark-mode .sway-ai-change-watch { border-color:#2a3a58; background:#121d30; }
-        body.sway-dark-mode .sway-ai-change-count { color:#9eabc0; }
-        body.sway-dark-mode .sway-ai-change-item { border-color:#2a3a58; background:#162238; color:#e5ebf5; }
-        body.sway-dark-mode .sway-ai-change-item:hover { border-color:#476aab; background:#1a2942; }
-        body.sway-dark-mode .sway-ai-change-copy strong { color:#e5ebf5; }
-        body.sway-dark-mode .sway-ai-change-copy span { color:#9eabc0; }
-        body.sway-dark-mode .sway-ai-change-note { color:#8090a6; }
-        .sway-ai-proactive-brief { margin:22px 0 4px; padding:15px; border:1px solid #e3e9f3; border-radius:16px; background:linear-gradient(145deg,#f9fbff,#ffffff); }
-        .sway-ai-proactive-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
-        .sway-ai-proactive-head strong { display:block; margin-top:3px; color:#253650; font-size:13px; }
-        .sway-ai-proactive-eyebrow { display:block; color:#0152F4; font-size:9px; font-weight:850; letter-spacing:.12em; }
-        .sway-ai-proactive-live { flex:0 0 auto; padding:5px 8px; border-radius:999px; background:#edf3ff; color:#0152F4; font-size:8px; font-weight:850; letter-spacing:.08em; }
-        .sway-ai-proactive-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:12px; }
-        .sway-ai-proactive-item { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:10px; width:100%; min-width:0; padding:10px; border:1px solid #e1e7f0; border-radius:12px; background:#fff; color:#26344b; font:inherit; text-align:left; cursor:pointer; transition:border-color .18s ease, transform .18s ease, background .18s ease; }
-        .sway-ai-proactive-item:hover { border-color:#b9caf0; background:#fbfdff; transform:translateY(-1px); }
-        .sway-ai-proactive-item.danger .sway-ai-proactive-count { color:#b42318; background:#fff0ef; }
-        .sway-ai-proactive-item.warning .sway-ai-proactive-count { color:#8a5a00; background:#fff6df; }
-        .sway-ai-proactive-item.info .sway-ai-proactive-count { color:#0152F4; background:#edf3ff; }
-        .sway-ai-proactive-count { display:grid; place-items:center; width:28px; height:28px; border-radius:9px; font-size:11px; font-weight:850; }
-        .sway-ai-proactive-copy { min-width:0; }
-        .sway-ai-proactive-copy strong { display:block; overflow:hidden; color:#2b3b55; font-size:10px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
-        .sway-ai-proactive-copy span { display:block; margin-top:2px; overflow:hidden; color:#748197; font-size:9px; line-height:1.45; text-overflow:ellipsis; white-space:nowrap; }
-        .sway-ai-proactive-arrow { color:#8392a8; font-size:14px; font-weight:800; }
-        .sway-ai-proactive-clear { display:flex; align-items:center; gap:10px; margin-top:11px; padding:11px; border-radius:11px; background:#f7fbf8; }
-        .sway-ai-proactive-clear-icon { display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:#e8f5ec; color:#237a3b; font-size:12px; font-weight:850; }
-        .sway-ai-proactive-clear strong { display:block; color:#294233; font-size:10px; }
-        .sway-ai-proactive-clear span:not(.sway-ai-proactive-clear-icon) { display:block; margin-top:2px; color:#708176; font-size:9px; }
-        body.sway-dark-mode .sway-ai-proactive-brief { border-color:#2a3a58; background:#121d30; }
-        body.sway-dark-mode .sway-ai-proactive-head strong { color:#e5ebf5; }
-        body.sway-dark-mode .sway-ai-proactive-live { background:#1a2942; color:#77C1FC; }
-        body.sway-dark-mode .sway-ai-proactive-item { border-color:#2a3a58; background:#162238; color:#e5ebf5; }
-        body.sway-dark-mode .sway-ai-proactive-item:hover { background:#1a2942; border-color:#476aab; }
-        body.sway-dark-mode .sway-ai-proactive-copy strong { color:#e5ebf5; }
-        body.sway-dark-mode .sway-ai-proactive-copy span { color:#9eabc0; }
-        body.sway-dark-mode .sway-ai-proactive-clear { background:#13251a; }
-        body.sway-dark-mode .sway-ai-proactive-clear strong { color:#dbe8df; }
-        body.sway-dark-mode .sway-ai-proactive-clear span:not(.sway-ai-proactive-clear-icon) { color:#9fb0a5; }
-        @media (max-width:700px) { .sway-ai-proactive-grid { grid-template-columns:1fr; } }
         .sway-ai-conversation { min-height:280px; max-height:520px; overflow:auto; display:flex; flex-direction:column; gap:12px; padding:18px; border:1px solid #e5eaf2; border-radius:18px; background:#f8faff; }
         .sway-ai-welcome, .sway-ai-message { white-space:pre-wrap; line-height:1.65; }
         .sway-ai-welcome { margin:auto; max-width:540px; text-align:center; color:#66748a; }
@@ -8375,15 +8047,11 @@
     justify-content:flex-end;
     gap:7px;
 }
-.sway-ai-header-send,
 .sway-ai-new-chat,
 .sway-ai-more-toggle {
     width:auto;
     min-height:34px;
     white-space:nowrap;
-}
-.sway-ai-header-send {
-    padding:7px 11px;
 }
 .sway-ai-new-chat,
 .sway-ai-more-toggle {
@@ -8641,12 +8309,10 @@ body.sway-dark-mode .sway-ai-insights-clear {
         flex-wrap:wrap;
         max-width:48%;
     }
-    .sway-ai-header-send span:last-child,
     .sway-ai-new-chat span:last-child,
     .sway-ai-more-toggle span:last-child {
         display:none;
     }
-    .sway-ai-header-send,
     .sway-ai-new-chat,
     .sway-ai-more-toggle {
         width:34px;
