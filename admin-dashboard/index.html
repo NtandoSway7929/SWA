@@ -14121,6 +14121,300 @@ portfolioForm.addEventListener(
             transition: none;
         }
     }
+
+    #sway-admin-workspace .sway-cash-flow-charts.sway-cf-charts {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+        gap: 20px !important;
+    }
+
+    #sway-admin-workspace .sway-insight-panel.sway-cf-panel {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        padding: 23px !important;
+        border: 1px solid rgba(1, 82, 244, 0.12) !important;
+        border-radius: 20px !important;
+        background:
+            radial-gradient(ellipse at 100% 0%, rgba(119,193,252,0.12), transparent 44%),
+            linear-gradient(145deg, #FFFFFF 0%, #F8FAFE 100%) !important;
+        box-shadow:
+            0 16px 42px rgba(0, 32, 150, 0.075),
+            inset 0 1px 0 rgba(255,255,255,0.96) !important;
+        backdrop-filter: blur(14px) saturate(125%);
+        -webkit-backdrop-filter: blur(14px) saturate(125%);
+    }
+
+    #sway-admin-workspace .sway-insight-panel.sway-cf-panel::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 22px;
+        left: 22px;
+        height: 3px;
+        border-radius: 0 0 6px 6px;
+        background: linear-gradient(90deg, var(--cf-accent), rgba(119,193,252,0.30), transparent);
+        pointer-events: none;
+    }
+
+    #sway-admin-workspace .sway-insight-panel.sway-cf-panel--actual {
+        --cf-accent: #002096;
+    }
+
+    #sway-admin-workspace .sway-insight-panel.sway-cf-panel--scheduled {
+        --cf-accent: #0152F4;
+    }
+
+    #sway-admin-workspace .sway-cf-panel .sway-panel-title {
+        margin-bottom: 16px !important;
+    }
+
+    #sway-admin-workspace .sway-cf-panel .sway-panel-title h3 {
+        color: #081533;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.25;
+    }
+
+    #sway-admin-workspace .sway-cf-panel .sway-panel-title p {
+        max-width: 400px;
+        margin-top: 6px;
+        color: #68758B;
+        font-size: 13px;
+        line-height: 1.55;
+    }
+
+    #sway-admin-workspace .sway-cf-chart {
+        min-width: 0;
+    }
+
+    #sway-admin-workspace .sway-cf-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin: 2px 0 17px;
+    }
+
+    #sway-admin-workspace .sway-cf-summary > div {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    #sway-admin-workspace .sway-cf-eyebrow {
+        color: #66748B;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.045em;
+        line-height: 1.35;
+        text-transform: uppercase;
+    }
+
+    #sway-admin-workspace .sway-cf-total {
+        color: #002096;
+        font-size: clamp(28px, 2.5vw, 36px);
+        font-weight: 800;
+        letter-spacing: -0.055em;
+        line-height: 1.06;
+        font-variant-numeric: tabular-nums;
+    }
+
+    #sway-admin-workspace .sway-cf-supporting {
+        max-width: 360px;
+        color: #68758B;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    #sway-admin-workspace .sway-cf-status {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 7px;
+        margin-top: 3px;
+        padding: 8px 11px;
+        border: 1px solid rgba(1, 82, 244, 0.12);
+        border-radius: 999px;
+        background: rgba(1, 82, 244, 0.055);
+        color: #0031C5;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.035em;
+        line-height: 1;
+    }
+
+    #sway-admin-workspace .sway-cf-status i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--cf-accent);
+        box-shadow: 0 0 0 3px rgba(1, 82, 244, 0.09);
+    }
+
+    #sway-admin-workspace .sway-cf-chart-surface {
+        min-width: 0;
+        padding: 15px 13px 9px;
+        border: 1px solid rgba(1, 82, 244, 0.075);
+        border-radius: 16px;
+        background:
+            linear-gradient(180deg, rgba(246,249,255,0.96), rgba(255,255,255,0.80));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
+    }
+
+    #sway-admin-workspace .sway-cf-chart-layout {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+        align-items: stretch;
+        min-width: 0;
+    }
+
+    #sway-admin-workspace .sway-cf-y-axis {
+        display: grid;
+        grid-template-rows: repeat(4, minmax(0, 1fr));
+        height: clamp(194px, 20vw, 228px);
+        padding: 2px 8px 0 0;
+        color: #68758B;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        text-align: right;
+    }
+
+    #sway-admin-workspace .sway-cf-y-axis span:first-child {
+        align-self: start;
+    }
+
+    #sway-admin-workspace .sway-cf-y-axis span:nth-child(2),
+    #sway-admin-workspace .sway-cf-y-axis span:nth-child(3) {
+        align-self: center;
+    }
+
+    #sway-admin-workspace .sway-cf-y-axis span:last-child {
+        align-self: end;
+    }
+
+    #sway-admin-workspace .sway-cf-plot {
+        min-width: 0;
+    }
+
+    #sway-admin-workspace .sway-cf-svg {
+        display: block;
+        width: 100%;
+        height: clamp(194px, 20vw, 228px);
+        overflow: visible;
+    }
+
+    #sway-admin-workspace .sway-cf-grid-line {
+        stroke: rgba(13, 39, 91, 0.105);
+        stroke-width: 1;
+        stroke-dasharray: 3 7;
+        vector-effect: non-scaling-stroke;
+    }
+
+    #sway-admin-workspace .sway-cf-current-line {
+        stroke: var(--cf-accent);
+        stroke-opacity: 0.22;
+        stroke-width: 1.5;
+        stroke-dasharray: 4 6;
+        vector-effect: non-scaling-stroke;
+    }
+
+    #sway-admin-workspace .sway-cf-point {
+        fill: #FFFFFF !important;
+        stroke: var(--cf-accent);
+        stroke-width: 3;
+        transition: r 160ms ease, filter 160ms ease;
+    }
+
+    #sway-admin-workspace .sway-cf-point.current {
+        fill: var(--cf-accent) !important;
+        stroke: #FFFFFF;
+        stroke-width: 3.5;
+        filter: drop-shadow(0 2px 5px rgba(0,32,150,0.23));
+    }
+
+    #sway-admin-workspace .sway-cf-chart-footer {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        margin-top: 11px;
+        color: #68758B;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    #sway-admin-workspace .sway-cf-chart-footer > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    #sway-admin-workspace .sway-cf-chart-footer i.current {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--cf-accent);
+        box-shadow: 0 0 0 3px rgba(1,82,244,0.09);
+    }
+
+    @media (max-width: 760px) {
+        #sway-admin-workspace .sway-cash-flow-charts.sway-cf-charts {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 16px !important;
+        }
+
+        #sway-admin-workspace .sway-insight-panel.sway-cf-panel {
+            padding: 19px !important;
+        }
+
+        #sway-admin-workspace .sway-cf-chart-layout {
+            grid-template-columns: 56px minmax(0, 1fr);
+        }
+
+        #sway-admin-workspace .sway-cf-y-axis {
+            padding-right: 7px;
+            font-size: 12px;
+        }
+
+        #sway-admin-workspace .sway-cf-chart-surface {
+            padding: 12px 9px 8px;
+        }
+    }
+
+    @media (max-width: 420px) {
+        #sway-admin-workspace .sway-cf-summary {
+            gap: 10px;
+        }
+
+        #sway-admin-workspace .sway-cf-total {
+            font-size: 28px;
+        }
+
+        #sway-admin-workspace .sway-cf-status {
+            padding: 7px 9px;
+            font-size: 11px;
+        }
+
+        #sway-admin-workspace .sway-cf-chart-layout {
+            grid-template-columns: 50px minmax(0, 1fr);
+        }
+
+        #sway-admin-workspace .sway-cf-y-axis {
+            font-size: 11px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        #sway-admin-workspace .sway-cf-point {
+            transition: none;
+        }
+    }
+
 </style>
 
 </body>
