@@ -8565,6 +8565,195 @@ body.sway-dark-mode .sway-ai-form {
         }
     </style>
 
+
+    <style id="sway-final-ui-system-20261003">
+        /* =====================================================
+           SWAYPHICS FINAL UI SYSTEM
+           Mathematical spacing scale: 4px base unit.
+           1u = 4px, 2u = 8px, 3u = 12px, 4u = 16px.
+           Brand colors are restricted to the official blue palette.
+           ===================================================== */
+        :root {
+            --sway-navy: #002096;
+            --sway-strong: #0031C5;
+            --sway-blue: #0152F4;
+            --sway-light: #2C91FC;
+            --sway-sky: #77C1FC;
+            --sway-space-1: 4px;
+            --sway-space-2: 8px;
+            --sway-space-3: 12px;
+            --sway-space-4: 16px;
+            --sway-space-5: 20px;
+            --sway-space-6: 24px;
+            --sway-control-height: 40px;
+            --sway-control-radius: 10px;
+        }
+
+        /* -----------------------------------------------------
+           Overview/stat cards
+           Each card has one fixed three-row rhythm. The label and
+           value occupy deterministic rows; the hint fills the final
+           row so different copy lengths cannot move values vertically.
+           ----------------------------------------------------- */
+        #sway-admin-workspace .sway-stat-card {
+            display: grid !important;
+            grid-template-rows: minmax(18px, auto) minmax(30px, auto) minmax(34px, 1fr) !important;
+            row-gap: var(--sway-space-2) !important;
+            align-content: stretch !important;
+            padding: var(--sway-space-5) !important;
+        }
+
+        #sway-admin-workspace .sway-stat-card .label {
+            display: block;
+            min-height: 18px;
+            margin: 0 !important;
+            line-height: 1.25;
+        }
+
+        #sway-admin-workspace .sway-stat-card .value {
+            display: flex;
+            align-items: center;
+            min-height: 30px;
+            margin: 0 !important;
+            line-height: 1.15;
+        }
+
+        #sway-admin-workspace .sway-stat-card .hint {
+            display: flex;
+            align-items: flex-start;
+            min-height: 34px;
+            margin: 0 !important;
+            padding-top: var(--sway-space-1);
+            line-height: 1.45;
+        }
+
+        /* -----------------------------------------------------
+           Shared heading actions
+           40px is the dashboard control height. Horizontal padding
+           is 14px on each side, leaving the same internal rhythm for
+           buttons with different text lengths. min-width keeps sibling
+           actions identical without forcing unrelated buttons wider.
+           ----------------------------------------------------- */
+        #sway-admin-workspace .sway-heading-action {
+            width: 132px !important;
+            min-width: 132px !important;
+            height: var(--sway-control-height) !important;
+            min-height: var(--sway-control-height) !important;
+            padding: 0 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: var(--sway-control-radius) !important;
+            font-weight: 800 !important;
+            line-height: 1 !important;
+            white-space: nowrap;
+        }
+
+        /* -----------------------------------------------------
+           InnerMe header/menu
+           The 4px inset matches the base spacing unit and prevents
+           the context control from visually touching the panel edge.
+           ----------------------------------------------------- */
+        #sway-admin-workspace .sway-ai-header-actions {
+            padding-right: var(--sway-space-1) !important;
+        }
+
+        #sway-admin-workspace .sway-ai-more-toggle {
+            margin-right: var(--sway-space-1) !important;
+        }
+
+        #sway-admin-workspace .sway-ai-more-panel {
+            right: var(--sway-space-1) !important;
+        }
+
+        /* -----------------------------------------------------
+           InnerMe composer
+           Available row width = 100% - send-button width - gap.
+           Flex min-width:0 lets the textarea consume only the
+           remaining track instead of colliding with the submit button.
+           ----------------------------------------------------- */
+        #sway-admin-workspace .sway-ai-composer-row {
+            display: flex !important;
+            align-items: flex-end !important;
+            gap: var(--sway-space-3) !important;
+            min-width: 0 !important;
+            width: 100% !important;
+            padding: var(--sway-space-1) !important;
+        }
+
+        #sway-admin-workspace .sway-ai-composer-row textarea {
+            flex: 1 1 auto !important;
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding-right: var(--sway-space-2) !important;
+        }
+
+        #sway-admin-workspace .sway-ai-send {
+            flex: 0 0 46px !important;
+            width: 46px !important;
+            height: 46px !important;
+            margin: 0 !important;
+        }
+
+        /* -----------------------------------------------------
+           Mobile action rhythm
+           One column eliminates compressed controls. The same 40px
+           control height is retained, with a 10px vertical gap.
+           ----------------------------------------------------- */
+        @media (max-width: 760px) {
+            #sway-admin-workspace .sway-workspace-heading-actions {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                gap: 10px !important;
+                width: 100% !important;
+            }
+
+            #sway-admin-workspace .sway-heading-action {
+                width: 100% !important;
+                min-width: 0 !important;
+                height: var(--sway-control-height) !important;
+            }
+
+            #sway-admin-workspace .sway-stat-card {
+                padding: var(--sway-space-4) !important;
+            }
+
+            #sway-admin-workspace .sway-ai-header-actions {
+                padding-right: 0 !important;
+            }
+
+            #sway-admin-workspace .sway-ai-more-toggle {
+                margin-right: 0 !important;
+            }
+
+            #sway-admin-workspace .sway-ai-more-panel {
+                right: 0 !important;
+            }
+
+            #sway-admin-workspace .sway-ai-composer-row {
+                gap: 10px !important;
+                padding: 2px !important;
+            }
+
+            #sway-admin-workspace .sway-ai-composer-row textarea {
+                padding-right: 6px !important;
+            }
+        }
+
+        @media (max-width: 420px) {
+            #sway-admin-workspace .sway-ai-composer-row {
+                gap: 8px !important;
+            }
+
+            #sway-admin-workspace .sway-ai-send {
+                flex-basis: 42px !important;
+                width: 42px !important;
+                height: 42px !important;
+            }
+        }
+    </style>
 </head>
 
 
