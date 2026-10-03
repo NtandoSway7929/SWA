@@ -7057,6 +7057,270 @@ function simpleBars(items, color) {
         );
     }
 
+
+    function businessCashFlowChart(values, labels, color, mode, ariaLabel) {
+        const numbers =
+            (values || []).map(function (value) {
+                return Number(value || 0);
+            });
+        const periodTotal =
+            numbers.reduce(function (sum, value) {
+                return sum + value;
+            }, 0);
+        const maxValue =
+            Math.max.apply(null, numbers.concat([1]));
+        const left = 22;
+        const right = 944;
+        const top = 18;
+        const bottom = 220;
+        const count = numbers.length;
+        const currentIndex =
+            mode === "actual"
+                ? Math.max(0, count - 1)
+                : 0;
+        const currentX =
+            count > 1
+                ? left +
+                  (right - left) *
+                  currentIndex /
+                  (count - 1)
+                : (left + right) / 2;
+        const points =
+            numbers.map(function (value, index) {
+                return {
+                    x:
+                        count > 1
+                            ? left +
+                              (right - left) *
+                              index /
+                              (count - 1)
+                            : (left + right) / 2,
+                    y:
+                        bottom -
+                        Math.max(0, value) /
+                        maxValue *
+                        (bottom - top),
+                    value: value,
+                    index: index
+                };
+            });
+
+        let linePath = "";
+
+        if (points.length) {
+            linePath =
+                "M " +
+                points[0].x.toFixed(1) +
+                " " +
+                points[0].y.toFixed(1);
+
+            for (let index = 1; index < points.length; index += 1) {
+                const previous = points[index - 1];
+                const current = points[index];
+                const middle =
+                    (previous.x + current.x) / 2;
+
+                linePath +=
+                    " C " +
+                    (middle - 14).toFixed(1) +
+                    " " +
+                    previous.y.toFixed(1) +
+                    " " +
+                    (middle + 14).toFixed(1) +
+                    " " +
+                    current.y.toFixed(1) +
+                    " " +
+                    current.x.toFixed(1) +
+                    " " +
+                    current.y.toFixed(1);
+            }
+        }
+
+        const areaPath =
+            points.length
+                ? linePath +
+                  " L " +
+                  points[points.length - 1].x.toFixed(1) +
+                  " " +
+                  bottom +
+                  " L " +
+                  points[0].x.toFixed(1) +
+                  " " +
+                  bottom +
+                  " Z"
+                : "";
+        const grid =
+            [0, 1, 2, 3].map(function (index) {
+                const y =
+                    top +
+                    (bottom - top) *
+                    index / 3;
+
+                return (
+                    '<line x1="' + left +
+                    '" y1="' + y +
+                    '" x2="' + right +
+                    '" y2="' + y +
+                    '" class="sway-cf-grid-line"></line>'
+                );
+            }).join("");
+        const currentLabel =
+            labels[currentIndex] ||
+            "current month";
+        const gradientId =
+            mode === "actual"
+                ? "sway-cash-actual-fill"
+                : "sway-cash-scheduled-fill";
+        const isActual =
+            mode === "actual";
+        const summaryLabel =
+            isActual
+                ? "Received · trailing six calendar months"
+                : "Scheduled · current month through next five";
+        const supportingText =
+            isActual
+                ? "Paid payments recorded, including the current month to date."
+                : "Outstanding invoice balances with a recorded due date.";
+        const statusLabel =
+            isActual
+                ? "ACTUALS"
+                : "UPCOMING";
+        const statusClass =
+            isActual
+                ? "actual"
+                : "scheduled";
+
+        return (
+            '<div class="sway-cf-chart" role="group" aria-label="' +
+                esc(ariaLabel) +
+            '">' +
+                '<div class="sway-cf-summary">' +
+                    "<div>" +
+                        '<span class="sway-cf-eyebrow">' +
+                            summaryLabel +
+                        "</span>" +
+                        '<strong class="sway-cf-total">' +
+                            esc(money(periodTotal)) +
+                        "</strong>" +
+                        '<span class="sway-cf-supporting">' +
+                            supportingText +
+                        "</span>" +
+                    "</div>" +
+                    '<span class="sway-cf-status ' +
+                        statusClass +
+                    '">' +
+                        '<i></i>' +
+                        statusLabel +
+                    "</span>" +
+                "</div>" +
+                '<div class="sway-cf-chart-surface">' +
+                    '<div class="sway-cf-chart-layout">' +
+                        '<div class="sway-cf-y-axis">' +
+                            [1, 2 / 3, 1 / 3, 0].map(function (fraction) {
+                                return (
+                                    "<span>" +
+                                        esc(
+                                            insightCompactValue(
+                                                maxValue * fraction,
+                                                true
+                                            )
+                                        ) +
+                                    "</span>"
+                                );
+                            }).join("") +
+                        "</div>" +
+                        '<div class="sway-cf-plot">' +
+                            '<svg class="sway-cf-svg" viewBox="0 0 960 238" preserveAspectRatio="none" role="img" aria-label="' +
+                                esc(ariaLabel) +
+                                '">' +
+                                "<defs>" +
+                                    '<linearGradient id="' +
+                                        gradientId +
+                                    '" x1="0" y1="0" x2="0" y2="1">' +
+                                        '<stop offset="0%" stop-color="' +
+                                            color +
+                                        '" stop-opacity="0.24"></stop>' +
+                                        '<stop offset="100%" stop-color="' +
+                                            color +
+                                        '" stop-opacity="0.015"></stop>' +
+                                    "</linearGradient>" +
+                                "</defs>" +
+                                grid +
+                                '<line x1="' + currentX.toFixed(1) +
+                                    '" y1="' + top +
+                                    '" x2="' + currentX.toFixed(1) +
+                                    '" y2="' + bottom +
+                                    '" class="sway-cf-current-line"></line>' +
+                                (
+                                    areaPath
+                                        ? '<path d="' +
+                                            areaPath +
+                                            '" fill="url(#' +
+                                            gradientId +
+                                            ')"></path>'
+                                        : ""
+                                ) +
+                                (
+                                    linePath
+                                        ? '<path d="' +
+                                            linePath +
+                                            '" fill="none" stroke="' +
+                                            color +
+                                            '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>'
+                                        : ""
+                                ) +
+                                points.map(function (point) {
+                                    return (
+                                        '<circle cx="' +
+                                            point.x.toFixed(1) +
+                                            '" cy="' +
+                                            point.y.toFixed(1) +
+                                            '" r="' +
+                                            (
+                                                point.index === currentIndex
+                                                    ? "7"
+                                                    : "4.5"
+                                            ) +
+                                            '" class="' +
+                                            (
+                                                point.index === currentIndex
+                                                    ? "sway-cf-point current"
+                                                    : "sway-cf-point"
+                                            ) +
+                                            '" fill="' +
+                                            color +
+                                            '" vector-effect="non-scaling-stroke">' +
+                                            "<title>" +
+                                                esc(
+                                                    (labels[point.index] || "") +
+                                                    " · " +
+                                                    money(point.value)
+                                                ) +
+                                            "</title>" +
+                                        "</circle>"
+                                    );
+                                }).join("") +
+                            "</svg>" +
+                            insightXAxis(labels) +
+                        "</div>" +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-cf-chart-footer">' +
+                    '<span><i class="current"></i>Current month: ' +
+                        esc(currentLabel) +
+                    "</span>" +
+                    "<span>" +
+                        (
+                            isActual
+                                ? "Six-month total"
+                                : "Six-month scheduled"
+                        ) +
+                    "</span>" +
+                "</div>" +
+            "</div>"
+        );
+    }
+
     function businessConversionGauge() {
         const total =
             state.leads.length;
@@ -7790,39 +8054,33 @@ function simpleBars(items, color) {
                     "</div>" +
                 "</div>" +
 
-                '<div class="sway-cash-flow-charts">' +
+                '<div class="sway-cash-flow-charts sway-cf-charts">' +
                     insightPanel(
                         "Cash collected",
-                        "Paid payments across the last six months and next six-month window.",
-                        businessTrendChart(
-                            [
-                                {
-                                    name: "Cash collected",
-                                    values: collectedSeries,
-                                    color: "#002096"
-                                }
-                            ],
-                            monthLabels,
-                            true,
-                            "Cash collected by month"
-                        )
+                        "Actual payments received across the last six calendar months.",
+                        businessCashFlowChart(
+                            collectedSeries.slice(0, 6),
+                            monthLabels.slice(0, 6),
+                            "#002096",
+                            "actual",
+                            "Cash collected over the last six calendar months"
+                        ),
+                        "sway-cf-panel sway-cf-panel--actual"
                     ) +
                     insightPanel(
                         "Invoice due schedule",
-                        "Outstanding balances by invoice due month.",
-                        businessTrendChart(
-                            [
-                                {
-                                    name: "Due balance",
-                                    values: dueSeries,
-                                    color: "#0152F4"
-                                }
-                            ],
-                            monthLabels,
-                            true,
-                            "Outstanding invoice due schedule"
-                        )
+                        "Open invoice balances scheduled from this month through the next five.",
+                        businessCashFlowChart(
+                            dueSeries.slice(5, 11),
+                            monthLabels.slice(5, 11),
+                            "#0152F4",
+                            "scheduled",
+                            "Outstanding invoice balances scheduled over the next six months"
+                        ),
+                        "sway-cf-panel sway-cf-panel--scheduled"
                     ) +
+                "</div>" +
+
                 "</div>" +
 
                 '<div class="sway-cash-flow-lower">' +
