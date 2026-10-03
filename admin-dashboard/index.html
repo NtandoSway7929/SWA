@@ -9802,7 +9802,135 @@ body.sway-dark-mode .sway-ai-form {
                 animation-iteration-count: 1 !important;
             }
         }
-</style>
+
+
+        /* =====================================================
+           SWAYPHICS REFINEMENT PASS
+           A quieter surface system, consistent controls, and
+           viewport-safe presentation for portalled row menus.
+           ===================================================== */
+        :root {
+            --sway-shadow-card: var(--ui-shadow-sm);
+            --sway-shadow-float: var(--ui-shadow-md);
+        }
+
+        #sway-admin-workspace .sway-workspace-sidebar,
+        #sway-admin-workspace .sway-stat-card,
+        #sway-admin-workspace .sway-panel,
+        #sway-admin-workspace .sway-attention-panel,
+        #sway-admin-workspace .sway-followup-automation,
+        #sway-admin-workspace .sway-cash-flow,
+        #sway-admin-workspace .sway-revenue-pipeline,
+        #sway-admin-workspace .sway-insight-panel,
+        #sway-admin-workspace .sway-table-wrap {
+            border-color: var(--ui-border) !important;
+            background: var(--ui-surface) !important;
+            box-shadow: var(--ui-shadow-sm) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        #sway-admin-workspace .sway-workspace-nav-button {
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+
+        #sway-admin-workspace .sway-stat-card .value,
+        #sway-admin-workspace .sway-table :is(th, td) {
+            font-variant-numeric: tabular-nums;
+        }
+
+        #sway-admin-workspace .sway-table th {
+            background: var(--ui-surface-soft) !important;
+        }
+
+        #sway-admin-workspace .sway-table-wrap {
+            overscroll-behavior-x: contain;
+        }
+
+        #sway-admin-workspace :is(
+            .sway-workspace-button,
+            .sway-heading-action,
+            .sway-row-action,
+            .sway-quick-action,
+            .sway-ai-new-chat,
+            .sway-ai-more-toggle,
+            .sway-push-enable,
+            .testimonial-admin-action,
+            .portfolio-admin-action
+        ) {
+            min-height: 40px !important;
+        }
+
+        .sway-actions-dropdown,
+        .sway-lead-actions-dropdown {
+            min-width: min(190px, calc(100vw - 20px)) !important;
+            max-width: calc(100vw - 20px) !important;
+            padding: 8px !important;
+            gap: 4px !important;
+            border-color: var(--ui-border-strong) !important;
+            border-radius: 14px !important;
+            background: var(--ui-surface) !important;
+            box-shadow: var(--sway-shadow-float), 0 3px 10px rgba(8,21,51,0.08) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        .sway-actions-dropdown .sway-row-action,
+        .sway-lead-actions-dropdown .sway-row-action {
+            min-height: 42px !important;
+            padding: 10px 12px !important;
+            border-radius: 10px !important;
+        }
+
+        .sway-actions-dropdown .sway-row-action:focus-visible,
+        .sway-lead-actions-dropdown .sway-row-action:focus-visible {
+            outline: 3px solid rgba(1,82,244,0.24) !important;
+            outline-offset: 1px !important;
+        }
+
+        @media (max-width: 760px) {
+            #sway-admin-workspace :is(
+                input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+                select,
+                textarea,
+                .sway-workspace-button,
+                .sway-heading-action,
+                .sway-row-action,
+                .sway-quick-action,
+                .sway-ai-new-chat,
+                .sway-ai-more-toggle,
+                .sway-push-enable,
+                .testimonial-admin-action,
+                .portfolio-admin-action
+            ) {
+                min-height: 44px !important;
+            }
+
+            .sway-actions-dropdown,
+            .sway-lead-actions-dropdown {
+                min-width: min(180px, calc(100vw - 20px)) !important;
+                max-width: calc(100vw - 20px) !important;
+            }
+
+            .sway-actions-dropdown .sway-row-action,
+            .sway-lead-actions-dropdown .sway-row-action {
+                min-height: 44px !important;
+            }
+        }
+
+        @media (forced-colors: active) {
+            #sway-admin-workspace .sway-workspace-nav-button.active,
+            #sway-admin-workspace :is(.sway-workspace-button, .sway-row-action, .sway-heading-action):focus-visible,
+            .sway-actions-dropdown .sway-row-action:focus-visible,
+            .sway-lead-actions-dropdown .sway-row-action:focus-visible {
+                outline: 2px solid Highlight !important;
+                outline-offset: 2px !important;
+            }
+        }
+
+    </style>
 </head>
 
 
