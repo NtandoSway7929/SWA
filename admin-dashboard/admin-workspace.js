@@ -6267,9 +6267,989 @@ function simpleBars(items, color) {
         };
     }
 
-    function insightPanel(title, subtitle, content) {
+
+    function insightCompactValue(value, currency) {
+        const number = Number(value || 0);
+
+        return currency
+            ? new Intl.NumberFormat("en-ZA", {
+                style: "currency",
+                currency: "ZAR",
+                notation: "compact",
+                maximumFractionDigits: 1
+            }).format(number)
+            : Math.round(number).toLocaleString("en-ZA");
+    }
+
+    function insightXAxis(labels) {
+        if (!labels || !labels.length) return "";
+
+        const count = Math.min(6, labels.length);
+        const indexes = [];
+
+        for (let index = 0; index < count; index += 1) {
+            indexes.push(
+                count === 1
+                    ? 0
+                    : Math.round(
+                        index *
+                        (labels.length - 1) /
+                        (count - 1)
+                    )
+            );
+        }
+
         return (
-            '<section class="sway-panel sway-insight-panel">' +
+            '<div class="sway-bi-x-axis">' +
+                indexes.map(function (index) {
+                    const position =
+                        labels.length > 1
+                            ? index / (labels.length - 1) * 100
+                            : 50;
+
+                    return (
+                        '<span style="left:' +
+                            position +
+                            '%">' +
+                            esc(labels[index]) +
+                        "</span>"
+                    );
+                }).join("") +
+            "</div>"
+        );
+    }
+
+    function businessTrendChart(series, labels, currency, ariaLabel) {
+        const left = 22;
+        const right = 944;
+        const top = 18;
+        const bottom = 214;
+        const count = labels.length;
+        const values = [];
+
+        series.forEach(function (item) {
+            (item.values || []).forEach(function (value) {
+                values.push(Number(value || 0));
+            });
+        });
+
+        const maxValue =
+            Math.max.apply(null, values.concat([1]));
+
+        const grid =
+            [0, 1, 2, 3].map(function (index) {
+                const y =
+                    top +
+                    (bottom - top) *
+                    index / 3;
+
+                return (
+                    '<line x1="' + left +
+                    '" y1="' + y +
+                    '" x2="' + right +
+                    '" y2="' + y +
+                    '" class="sway-bi-grid-line"></line>'
+                );
+            }).join("");
+
+        const paths =
+            series.map(function (item) {
+                const points =
+                    (item.values || []).map(function (value, index) {
+                        const x =
+                            count > 1
+                                ? left +
+                                  (right - left) *
+                                  index /
+                                  (count - 1)
+                                : (left + right) / 2;
+                        const y =
+                            bottom -
+                            Math.max(0, Number(value || 0)) /
+                            maxValue *
+                            (bottom - top);
+
+                        return {
+                            x: x,
+                            y: y,
+                            value: Number(value || 0),
+                            index: index
+                        };
+                    });
+
+                if (!points.length) return "";
+
+                const line =
+                    points.map(function (point, index) {
+                        return (
+                            (index ? "L " : "M ") +
+                            point.x.toFixed(1) +
+                            " " +
+                            point.y.toFixed(1)
+                        );
+                    }).join(" ");
+
+                const area =
+                    line +
+                    " L " +
+                    points[points.length - 1].x.toFixed(1) +
+                    " " + bottom +
+                    " L " +
+                    points[0].x.toFixed(1) +
+                    " " + bottom +
+                    " Z";
+
+                return (
+                    '<path d="' + area +
+                        '" fill="' + item.color +
+                        '" fill-opacity="0.075"></path>' +
+                    '<path d="' + line +
+                        '" fill="none" stroke="' +
+                        item.color +
+                        '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>' +
+                    points.map(function (point) {
+                        return (
+                            '<circle cx="' + point.x.toFixed(1) +
+                            '" cy="' + point.y.toFixed(1) +
+                            '" r="5" fill="#FFFFFF" stroke="' +
+                            item.color +
+                            '" stroke-width="3" vector-effect="non-scaling-stroke">' +
+                                "<title>" +
+                                    esc(
+                                        item.name +
+                                        " · " +
+                                        (labels[point.index] || "") +
+                                        " · " +
+                                        (
+                                            currency
+                                                ? money(point.value)
+                                                : String(Math.round(point.value))
+                                        )
+                                    ) +
+                                "</title>" +
+                            "</circle>"
+                        );
+                    }).join("")
+                );
+            }).join("");
+
+        const legend =
+            series.map(function (item) {
+                const last =
+                    item.values && item.values.length
+                        ? item.values[item.values.length - 1]
+                        : 0;
+
+                return (
+                    '<span class="sway-bi-legend-item">' +
+                        '<i style="background-color:' +
+                            item.color +
+                        '"></i>' +
+                        "<span>" +
+                            esc(item.name) +
+                        "</span>" +
+                        "<strong>" +
+                            esc(insightCompactValue(last, currency)) +
+                        "</strong>" +
+                    "</span>"
+                );
+            }).join("");
+
+        return (
+            '<div class="sway-bi-chart" role="group" aria-label="' +
+                esc(ariaLabel) +
+            '">' +
+                '<div class="sway-bi-chart-legend">' +
+                    legend +
+                "</div>" +
+                '<div class="sway-bi-chart-layout">' +
+                    '<div class="sway-bi-y-axis">' +
+                        [1, 2 / 3, 1 / 3, 0].map(function (fraction) {
+                            return (
+                                "<span>" +
+                                    esc(
+                                        insightCompactValue(
+                                            maxValue * fraction,
+                                            currency
+                                        )
+                                    ) +
+                                "</span>"
+                            );
+                        }).join("") +
+                    "</div>" +
+                    '<div class="sway-bi-plot-wrap">' +
+                        '<svg class="sway-bi-svg" viewBox="0 0 960 232" preserveAspectRatio="none" role="img" aria-label="' +
+                            esc(ariaLabel) +
+                            '">' +
+                            grid +
+                            paths +
+                        "</svg>" +
+                        insightXAxis(labels) +
+                    "</div>" +
+                "</div>" +
+            "</div>"
+        );
+    }
+
+    function businessGroupedBars(series, labels, ariaLabel) {
+        const left = 22;
+        const right = 944;
+        const top = 18;
+        const bottom = 214;
+        const count = labels.length;
+        const values = [];
+
+        series.forEach(function (item) {
+            (item.values || []).forEach(function (value) {
+                values.push(Number(value || 0));
+            });
+        });
+
+        const maxValue =
+            Math.max.apply(null, values.concat([1]));
+
+        const groupWidth =
+            count
+                ? (right - left) / count
+                : 0;
+        const totalBarWidth =
+            Math.min(groupWidth * 0.68, 52);
+        const gap =
+            series.length > 1
+                ? Math.min(6, totalBarWidth * 0.12)
+                : 0;
+        const barWidth =
+            series.length
+                ? (totalBarWidth - gap * (series.length - 1)) /
+                  series.length
+                : 0;
+
+        const grid =
+            [0, 1, 2, 3].map(function (index) {
+                const y =
+                    top +
+                    (bottom - top) *
+                    index / 3;
+
+                return (
+                    '<line x1="' + left +
+                    '" y1="' + y +
+                    '" x2="' + right +
+                    '" y2="' + y +
+                    '" class="sway-bi-grid-line"></line>'
+                );
+            }).join("");
+
+        const bars = [];
+
+        for (let index = 0; index < count; index += 1) {
+            const groupCenter =
+                left + groupWidth * (index + 0.5);
+            const groupStart =
+                groupCenter -
+                totalBarWidth / 2;
+
+            series.forEach(function (item, seriesIndex) {
+                const value =
+                    Number(
+                        item.values &&
+                        item.values[index] ||
+                        0
+                    );
+                const height =
+                    value / maxValue *
+                    (bottom - top);
+                const x =
+                    groupStart +
+                    seriesIndex *
+                    (barWidth + gap);
+                const y =
+                    bottom - height;
+
+                bars.push(
+                    '<rect x="' + x.toFixed(1) +
+                    '" y="' + y.toFixed(1) +
+                    '" width="' + barWidth.toFixed(1) +
+                    '" height="' + Math.max(0, height).toFixed(1) +
+                    '" rx="6" fill="' + item.color +
+                    '" class="sway-bi-bar">' +
+                        "<title>" +
+                            esc(
+                                item.name +
+                                " · " +
+                                (labels[index] || "") +
+                                " · " +
+                                Math.round(value)
+                            ) +
+                        "</title>" +
+                    "</rect>"
+                );
+            });
+        }
+
+        return (
+            '<div class="sway-bi-chart" role="group" aria-label="' +
+                esc(ariaLabel) +
+            '">' +
+                '<div class="sway-bi-chart-legend">' +
+                    series.map(function (item) {
+                        const total =
+                            (item.values || []).reduce(function (sum, value) {
+                                return sum + Number(value || 0);
+                            }, 0);
+
+                        return (
+                            '<span class="sway-bi-legend-item">' +
+                                '<i style="background-color:' +
+                                    item.color +
+                                '"></i>' +
+                                "<span>" +
+                                    esc(item.name) +
+                                "</span>" +
+                                "<strong>" +
+                                    esc(String(Math.round(total))) +
+                                "</strong>" +
+                            "</span>"
+                        );
+                    }).join("") +
+                "</div>" +
+                '<div class="sway-bi-chart-layout">' +
+                    '<div class="sway-bi-y-axis">' +
+                        [1, 2 / 3, 1 / 3, 0].map(function (fraction) {
+                            return (
+                                "<span>" +
+                                    esc(
+                                        insightCompactValue(
+                                            maxValue * fraction,
+                                            false
+                                        )
+                                    ) +
+                                "</span>"
+                            );
+                        }).join("") +
+                    "</div>" +
+                    '<div class="sway-bi-plot-wrap">' +
+                        '<svg class="sway-bi-svg" viewBox="0 0 960 232" preserveAspectRatio="none" role="img" aria-label="' +
+                            esc(ariaLabel) +
+                            '">' +
+                            grid +
+                            bars.join("") +
+                        "</svg>" +
+                        insightXAxis(labels) +
+                    "</div>" +
+                "</div>" +
+            "</div>"
+        );
+    }
+
+    function businessHorizontalBars(items, currency, ariaLabel) {
+        const visible =
+            (items || []).filter(function (item) {
+                return Number(item.value || 0) >= 0;
+            });
+        const maxValue =
+            Math.max.apply(
+                null,
+                visible.map(function (item) {
+                    return Number(item.value || 0);
+                }).concat([1])
+            );
+
+        if (!visible.length) {
+            return (
+                '<div class="sway-bi-empty">' +
+                    "No records are available for this period." +
+                "</div>"
+            );
+        }
+
+        return (
+            '<div class="sway-bi-horizontal-chart" role="img" aria-label="' +
+                esc(ariaLabel) +
+            '">' +
+                visible.map(function (item, index) {
+                    const value =
+                        Number(item.value || 0);
+                    const width =
+                        value
+                            ? Math.max(3, value / maxValue * 100)
+                            : 0;
+                    const colors = [
+                        "#0152F4",
+                        "#002096",
+                        "#2C91FC",
+                        "#77C1FC",
+                        "#5B8DEA",
+                        "#5C6F91"
+                    ];
+
+                    return (
+                        '<div class="sway-bi-hbar-row">' +
+                            '<span class="sway-bi-hbar-label">' +
+                                esc(item.label) +
+                            "</span>" +
+                            '<span class="sway-bi-hbar-track">' +
+                                '<i style="width:' + width +
+                                "%;background-color:" +
+                                    colors[index % colors.length] +
+                                '"></i>' +
+                            "</span>" +
+                            '<strong class="sway-bi-hbar-value">' +
+                                esc(
+                                    insightCompactValue(
+                                        value,
+                                        currency || item.currency === true
+                                    )
+                                ) +
+                            "</strong>" +
+                        "</div>"
+                    );
+                }).join("") +
+            "</div>"
+        );
+    }
+
+    function businessDonutChart(items) {
+        const palette = [
+            "#0152F4",
+            "#002096",
+            "#2C91FC",
+            "#77C1FC",
+            "#5B8DEA",
+            "#5C6F91"
+        ];
+        const sorted =
+            (items || [])
+                .map(function (item) {
+                    return {
+                        label: item.label,
+                        value: Number(item.value || 0)
+                    };
+                })
+                .filter(function (item) {
+                    return item.value > 0;
+                })
+                .sort(function (a, b) {
+                    return b.value - a.value;
+                });
+        const visible =
+            sorted.slice(0, 5);
+        const remainder =
+            sorted.slice(5).reduce(function (sum, item) {
+                return sum + item.value;
+            }, 0);
+
+        if (remainder > 0) {
+            visible.push({
+                label: "Other sources",
+                value: remainder
+            });
+        }
+
+        const total =
+            visible.reduce(function (sum, item) {
+                return sum + item.value;
+            }, 0);
+
+        if (!total) {
+            return (
+                '<div class="sway-bi-empty">' +
+                    "No recorded source data is available yet." +
+                "</div>"
+            );
+        }
+
+        let cursor = 0;
+        const segments =
+            visible.map(function (item, index) {
+                const start = cursor;
+                cursor += item.value / total * 100;
+
+                return (
+                    palette[index % palette.length] +
+                    " " +
+                    start.toFixed(2) +
+                    "% " +
+                    cursor.toFixed(2) +
+                    "%"
+                );
+            }).join(", ");
+
+        return (
+            '<div class="sway-bi-donut-wrap">' +
+                '<div class="sway-bi-donut" role="img" aria-label="' +
+                    esc(
+                        "Lead-source distribution: " +
+                        visible.map(function (item) {
+                            return item.label + " " + item.value;
+                        }).join(", ")
+                    ) +
+                    '" style="background:conic-gradient(' +
+                        segments +
+                    ')">' +
+                    '<div class="sway-bi-donut-hole">' +
+                        "<strong>" +
+                            esc(String(total)) +
+                        "</strong>" +
+                        "<span>leads</span>" +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-bi-donut-legend">' +
+                    visible.map(function (item, index) {
+                        return (
+                            '<div class="sway-bi-donut-row">' +
+                                '<i style="background-color:' +
+                                    palette[index % palette.length] +
+                                '"></i>' +
+                                '<span title="' +
+                                    esc(item.label) +
+                                '">' +
+                                    esc(formatDisplayText(item.label)) +
+                                "</span>" +
+                                "<strong>" +
+                                    esc(String(item.value)) +
+                                "</strong>" +
+                                "<small>" +
+                                    Math.round(item.value / total * 100) +
+                                    "%" +
+                                "</small>" +
+                            "</div>"
+                        );
+                    }).join("") +
+                "</div>" +
+            "</div>"
+        );
+    }
+
+    function leadSourceTrendChart() {
+        const months = chartMonths();
+        const labels =
+            months.map(function (month) {
+                return month.label;
+            });
+        const monthKeys =
+            new Set(
+                months.map(function (month) {
+                    return month.key;
+                })
+            );
+        const totals = {};
+
+        state.leads.forEach(function (lead) {
+            const monthKey =
+                chartMonthKey(lead.created_at);
+
+            if (!monthKeys.has(monthKey)) return;
+
+            const source =
+                lead.source ||
+                "Unspecified";
+
+            totals[source] =
+                (totals[source] || 0) + 1;
+        });
+
+        const ranked =
+            Object.keys(totals)
+                .map(function (source) {
+                    return {
+                        source: source,
+                        count: totals[source]
+                    };
+                })
+                .sort(function (a, b) {
+                    return b.count - a.count;
+                });
+        const topSources =
+            ranked.slice(0, 4).map(function (item) {
+                return item.source;
+            });
+
+        if (!ranked.length) {
+            return (
+                '<div class="sway-bi-empty">' +
+                    "No leads were created in the last 12 months." +
+                "</div>"
+            );
+        }
+
+        const colors = [
+            "#0152F4",
+            "#002096",
+            "#2C91FC",
+            "#77C1FC",
+            "#5B8DEA"
+        ];
+        const names =
+            topSources.slice();
+        const hasOther =
+            ranked.length > topSources.length;
+
+        if (hasOther) names.push("Other sources");
+
+        const series =
+            names.map(function (name, seriesIndex) {
+                return {
+                    name: name,
+                    color: colors[seriesIndex % colors.length],
+                    values: months.map(function (month) {
+                        return state.leads.filter(function (lead) {
+                            const source =
+                                lead.source ||
+                                "Unspecified";
+                            const isVisibleSource =
+                                topSources.includes(source);
+                            const matchesSource =
+                                name === "Other sources"
+                                    ? !isVisibleSource
+                                    : source === name;
+
+                            return (
+                                matchesSource &&
+                                chartMonthKey(lead.created_at) === month.key
+                            );
+                        }).length;
+                    })
+                };
+            });
+
+        const totalsByMonth =
+            months.map(function (month, index) {
+                return series.reduce(function (sum, item) {
+                    return sum + Number(item.values[index] || 0);
+                }, 0);
+            });
+        const maxValue =
+            Math.max.apply(null, totalsByMonth.concat([1]));
+        const left = 22;
+        const right = 944;
+        const top = 18;
+        const bottom = 214;
+        const grid =
+            [0, 1, 2, 3].map(function (index) {
+                const y =
+                    top +
+                    (bottom - top) *
+                    index / 3;
+
+                return (
+                    '<line x1="' + left +
+                    '" y1="' + y +
+                    '" x2="' + right +
+                    '" y2="' + y +
+                    '" class="sway-bi-grid-line"></line>'
+                );
+            }).join("");
+        let cumulative =
+            months.map(function () { return 0; });
+
+        const areas =
+            series.map(function (item) {
+                const lower = cumulative.slice();
+                const upper =
+                    item.values.map(function (value, index) {
+                        return lower[index] + Number(value || 0);
+                    });
+                const topPoints =
+                    upper.map(function (value, index) {
+                        const x =
+                            left +
+                            (right - left) *
+                            index /
+                            Math.max(1, months.length - 1);
+                        const y =
+                            bottom -
+                            value / maxValue *
+                            (bottom - top);
+
+                        return { x: x, y: y };
+                    });
+                const lowerPoints =
+                    lower.map(function (value, index) {
+                        const x =
+                            left +
+                            (right - left) *
+                            index /
+                            Math.max(1, months.length - 1);
+                        const y =
+                            bottom -
+                            value / maxValue *
+                            (bottom - top);
+
+                        return { x: x, y: y };
+                    });
+                const path =
+                    topPoints.map(function (point, index) {
+                        return (
+                            (index ? "L " : "M ") +
+                            point.x.toFixed(1) +
+                            " " +
+                            point.y.toFixed(1)
+                        );
+                    }).join(" ") +
+                    " " +
+                    lowerPoints.slice().reverse().map(function (point) {
+                        return (
+                            "L " +
+                            point.x.toFixed(1) +
+                            " " +
+                            point.y.toFixed(1)
+                        );
+                    }).join(" ") +
+                    " Z";
+
+                cumulative = upper;
+
+                return (
+                    '<path d="' + path +
+                        '" fill="' + item.color +
+                        '" fill-opacity="0.82" stroke="#FFFFFF" stroke-width="1.5" vector-effect="non-scaling-stroke">' +
+                        "<title>" + esc(item.name) + "</title>" +
+                    "</path>"
+                );
+            }).join("");
+        const legend =
+            series.map(function (item) {
+                const total =
+                    item.values.reduce(function (sum, value) {
+                        return sum + Number(value || 0);
+                    }, 0);
+
+                return (
+                    '<span class="sway-bi-legend-item">' +
+                        '<i style="background-color:' +
+                            item.color +
+                        '"></i>' +
+                        "<span>" +
+                            esc(formatDisplayText(item.name)) +
+                        "</span>" +
+                        "<strong>" +
+                            esc(String(total)) +
+                        "</strong>" +
+                    "</span>"
+                );
+            }).join("");
+
+        return (
+            '<div class="sway-bi-chart" role="group" aria-label="Monthly leads by recorded source">' +
+                '<div class="sway-bi-chart-legend">' +
+                    legend +
+                "</div>" +
+                '<div class="sway-bi-chart-layout">' +
+                    '<div class="sway-bi-y-axis">' +
+                        [1, 2 / 3, 1 / 3, 0].map(function (fraction) {
+                            return (
+                                "<span>" +
+                                    Math.round(maxValue * fraction) +
+                                "</span>"
+                            );
+                        }).join("") +
+                    "</div>" +
+                    '<div class="sway-bi-plot-wrap">' +
+                        '<svg class="sway-bi-svg" viewBox="0 0 960 232" preserveAspectRatio="none" role="img" aria-label="Monthly lead volume by source; only recorded lead sources are included">' +
+                            grid +
+                            areas +
+                        "</svg>" +
+                        insightXAxis(labels) +
+                    "</div>" +
+                "</div>" +
+            "</div>"
+        );
+    }
+
+    function businessConversionGauge() {
+        const total =
+            state.leads.length;
+        const won =
+            state.leads.filter(function (lead) {
+                return lead.status === "won";
+            }).length;
+        const rate =
+            total
+                ? won / total * 100
+                : 0;
+
+        return (
+            '<div class="sway-bi-gauge-wrap">' +
+                '<div class="sway-bi-gauge" role="img" aria-label="' +
+                    esc(
+                        "Won lead share: " +
+                        rate.toFixed(0) +
+                        " percent, " +
+                        won +
+                        " won of " +
+                        total +
+                        " currently tracked leads"
+                    ) +
+                    '">' +
+                    '<svg viewBox="0 0 220 132" aria-hidden="true" focusable="false">' +
+                        '<path class="sway-bi-gauge-track" pathLength="100" d="M 20 112 A 90 90 0 0 1 200 112"></path>' +
+                        '<path class="sway-bi-gauge-value" pathLength="100" stroke-dasharray="' +
+                            rate.toFixed(2) +
+                            ' 100" d="M 20 112 A 90 90 0 0 1 200 112"></path>' +
+                    "</svg>" +
+                    '<div class="sway-bi-gauge-label">' +
+                        "<strong>" +
+                            rate.toFixed(0) +
+                            "%" +
+                        "</strong>" +
+                        "<span>" +
+                            won +
+                            " won / " +
+                            total +
+                            " leads" +
+                        "</span>" +
+                    "</div>" +
+                "</div>" +
+            "</div>"
+        );
+    }
+
+    function businessProjectScatter(projects) {
+        const items =
+            (projects || []).map(function (project) {
+                return {
+                    name: project.name || "Untitled project",
+                    cost: Number(project.estimated_cost || 0),
+                    value: Number(project.value || 0)
+                };
+            }).filter(function (project) {
+                return (
+                    Number.isFinite(project.cost) &&
+                    Number.isFinite(project.value) &&
+                    project.cost > 0 &&
+                    project.value > 0
+                );
+            });
+
+        if (!items.length) {
+            return (
+                '<div class="sway-bi-scatter-empty">' +
+                    "<strong>Project economics</strong>" +
+                    "<span>Record both a project value and estimated cost to compare them here.</span>" +
+                "</div>"
+            );
+        }
+
+        const maxValue =
+            Math.max.apply(
+                null,
+                items.map(function (item) {
+                    return Math.max(item.cost, item.value);
+                }).concat([1])
+            ) * 1.08;
+        const left = 78;
+        const right = 924;
+        const top = 28;
+        const bottom = 382;
+        const ticks =
+            [1, 2 / 3, 1 / 3, 0];
+        const grid =
+            ticks.map(function (fraction) {
+                const y =
+                    bottom -
+                    fraction *
+                    (bottom - top);
+                const x =
+                    left +
+                    fraction *
+                    (right - left);
+
+                return (
+                    '<line x1="' + left +
+                    '" y1="' + y +
+                    '" x2="' + right +
+                    '" y2="' + y +
+                    '" class="sway-bi-grid-line"></line>' +
+                    '<line x1="' + x +
+                    '" y1="' + top +
+                    '" x2="' + x +
+                    '" y2="' + bottom +
+                    '" class="sway-bi-grid-line"></line>'
+                );
+            }).join("");
+        const breakEven =
+            '<line x1="' + left +
+            '" y1="' + bottom +
+            '" x2="' + right +
+            '" y2="' + top +
+            '" class="sway-bi-break-even"></line>';
+        const points =
+            items.map(function (item) {
+                const x =
+                    left +
+                    item.cost /
+                    maxValue *
+                    (right - left);
+                const y =
+                    bottom -
+                    item.value /
+                    maxValue *
+                    (bottom - top);
+
+                return (
+                    '<circle cx="' + x.toFixed(1) +
+                    '" cy="' + y.toFixed(1) +
+                    '" r="8" class="sway-bi-scatter-point" vector-effect="non-scaling-stroke">' +
+                        "<title>" +
+                            esc(
+                                item.name +
+                                " · value " +
+                                money(item.value) +
+                                " · estimated cost " +
+                                money(item.cost)
+                            ) +
+                        "</title>" +
+                    "</circle>"
+                );
+            }).join("");
+        const axisValues =
+            [1, 2 / 3, 1 / 3, 0].map(function (fraction) {
+                return esc(
+                    insightCompactValue(
+                        maxValue * fraction,
+                        true
+                    )
+                );
+            });
+
+        return (
+            '<div class="sway-bi-scatter-wrap">' +
+                '<div class="sway-bi-scatter-y-title">Project value</div>' +
+                '<div class="sway-bi-scatter-layout">' +
+                    '<div class="sway-bi-scatter-y-axis">' +
+                        axisValues.map(function (value) {
+                            return "<span>" + value + "</span>";
+                        }).join("") +
+                    "</div>" +
+                    '<div class="sway-bi-scatter-plot">' +
+                        '<svg viewBox="0 0 960 410" preserveAspectRatio="none" role="img" aria-label="Scatter plot of recorded project value against estimated project cost; dashed line marks equal value and cost">' +
+                            grid +
+                            breakEven +
+                            points +
+                        "</svg>" +
+                        '<div class="sway-bi-scatter-x-ticks">' +
+                            "<span>R0</span>" +
+                            "<span>" +
+                                esc(insightCompactValue(maxValue / 2, true)) +
+                            "</span>" +
+                            "<span>" +
+                                esc(insightCompactValue(maxValue, true)) +
+                            "</span>" +
+                        "</div>" +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-bi-scatter-x-title">Estimated project cost</div>' +
+                '<div class="sway-bi-scatter-key"><i></i> Value equals estimated cost</div>' +
+            "</div>"
+        );
+    }
+
+    function insightPanel(title, subtitle, content, modifier) {
+        return (
+            '<section class="sway-panel sway-insight-panel ' +
+                esc(modifier || "") +
+            '">' +
                 '<div class="sway-panel-title">' +
                     "<div>" +
                         "<h3>" +
@@ -6295,6 +7275,12 @@ function simpleBars(items, color) {
             data.months.map(function (month) {
                 return month.label;
             });
+        const newLeads =
+            data.months.map(function (month) {
+                return state.leads.filter(function (lead) {
+                    return chartMonthKey(lead.created_at) === month.key;
+                }).length;
+            });
 
         return (
             '<div class="sway-live-toolbar">' +
@@ -6307,50 +7293,76 @@ function simpleBars(items, color) {
                 liveBadge() +
             "</div>" +
 
-            '<div class="sway-insight-grid">' +
+            '<div class="sway-insight-grid sway-bi-grid">' +
                 insightPanel(
-                    "Revenue collected",
-                    "Paid payments by month.",
-                    trendChart(
-                        data.revenue,
+                    "Business momentum",
+                    "Cash received, invoices issued and estimated pipeline created by month.",
+                    businessTrendChart(
+                        [
+                            {
+                                name: "Cash received",
+                                values: data.revenue,
+                                color: "#002096"
+                            },
+                            {
+                                name: "Invoices issued",
+                                values: data.invoiced,
+                                color: "#0152F4"
+                            },
+                            {
+                                name: "New pipeline",
+                                values: data.pipeline,
+                                color: "#77C1FC"
+                            }
+                        ],
                         labels,
-                        "#002096",
-                        "Revenue collected",
-                        true
-                    )
-                ) +
-                insightPanel(
-                    "Pipeline created",
-                    "Estimated lead value entering the pipeline.",
-                    trendChart(
-                        data.pipeline,
-                        labels,
-                        "#0152F4",
-                        "Pipeline created",
-                        true
-                    )
+                        true,
+                        "Monthly business momentum"
+                    ),
+                    "sway-bi-panel--wide"
                 ) +
             "</div>" +
 
-            '<div class="sway-insight-grid">' +
+            '<div class="sway-insight-grid sway-bi-grid">' +
                 insightPanel(
-                    "Website demand",
-                    "New enquiries received each month.",
-                    barChartSimple(
-                        data.enquiries,
+                    "Demand signals",
+                    "Website enquiries and new leads recorded each month.",
+                    businessTrendChart(
+                        [
+                            {
+                                name: "Enquiries",
+                                values: data.enquiries,
+                                color: "#2C91FC"
+                            },
+                            {
+                                name: "New leads",
+                                values: newLeads,
+                                color: "#002096"
+                            }
+                        ],
                         labels,
-                        "#2C91FC",
-                        "Website demand"
+                        false,
+                        "Monthly enquiry and lead counts"
                     )
                 ) +
                 insightPanel(
                     "Delivery throughput",
-                    "Tasks created each month.",
-                    barChartSimple(
-                        data.tasksCreated,
+                    "Compare task creation with completed work each month.",
+                    businessGroupedBars(
+                        [
+                            {
+                                name: "Created",
+                                values: data.tasksCreated,
+                                color: "#77C1FC"
+                            },
+                            {
+                                name: "Completed",
+                                values: data.tasksCompleted,
+                                color: "#0152F4"
+                            }
+                        ],
                         labels,
-                        "#77C1FC",
-                        "Task creation"
+                        "Monthly tasks created and completed"
                     )
                 ) +
             "</div>"
@@ -6782,23 +7794,33 @@ function simpleBars(items, color) {
                     insightPanel(
                         "Cash collected",
                         "Paid payments across the last six months and next six-month window.",
-                        trendChart(
-                            collectedSeries,
+                        businessTrendChart(
+                            [
+                                {
+                                    name: "Cash collected",
+                                    values: collectedSeries,
+                                    color: "#002096"
+                                }
+                            ],
                             monthLabels,
-                            "#002096",
-                            "Cash collected",
-                            true
+                            true,
+                            "Cash collected by month"
                         )
                     ) +
                     insightPanel(
                         "Invoice due schedule",
                         "Outstanding balances by invoice due month.",
-                        trendChart(
-                            dueSeries,
+                        businessTrendChart(
+                            [
+                                {
+                                    name: "Due balance",
+                                    values: dueSeries,
+                                    color: "#0152F4"
+                                }
+                            ],
                             monthLabels,
-                            "#0152F4",
-                            "Invoice due schedule",
-                            true
+                            true,
+                            "Outstanding invoice due schedule"
                         )
                     ) +
                 "</div>" +
@@ -6849,12 +7871,17 @@ function simpleBars(items, color) {
                     insightPanel(
                         "Invoice value issued",
                         "Invoice value issued by month.",
-                        trendChart(
-                            invoiceSeries,
+                        businessTrendChart(
+                            [
+                                {
+                                    name: "Invoice value",
+                                    values: invoiceSeries,
+                                    color: "#2C91FC"
+                                }
+                            ],
                             monthLabels,
-                            "#2C91FC",
-                            "Invoice value issued",
-                            true
+                            true,
+                            "Invoice value issued by month"
                         )
                     ) +
                 "</div>" +
@@ -7139,227 +8166,56 @@ function simpleBars(items, color) {
 
             renderRevenuePipeline() +
 
-            '<div class="sway-insight-grid">' +
+            '<div class="sway-insight-grid sway-bi-grid">' +
                 insightPanel(
-                    "Revenue movement",
-                    "Cash collected from paid payments.",
-                    trendChart(
-                        data.revenue,
-                        labels,
-                        "#002096",
-                        "Revenue movement"
-                    )
-                ) +
-                insightPanel(
-                    "Billed value movement",
-                    "Invoice value issued by month.",
-                    trendChart(
-                        data.invoiced,
-                        labels,
-                        "#2C91FC",
-                        "Billed value movement"
-                    )
-                ) +
-            '</div>' +
-
-            '<div class="sway-insight-grid">' +
-                insightPanel(
-                    "Pipeline movement",
-                    "Estimated value of newly created leads.",
-                    trendChart(
-                        data.pipeline,
-                        labels,
-                        "#0152F4",
-                        "Pipeline movement"
-                    )
+                    "Lead-source trend",
+                    "Monthly new leads grouped by recorded source.",
+                    leadSourceTrendChart(),
+                    "sway-bi-panel--wide"
                 ) +
             "</div>" +
 
-            '<div class="sway-insight-grid">' +
-                insightPanel(
-                    "Website demand",
-                    "Enquiries received by month.",
-                    barChartSimple(
-                        data.enquiries,
-                        labels,
-                        "#2C91FC",
-                        "Website enquiry movement"
-                    )
-                ) +
+            '<div class="sway-insight-grid sway-bi-grid">' +
                 insightPanel(
                     "Delivery throughput",
-                    "Tasks created by month.",
-                    barChartSimple(
-                        data.tasksCreated,
-                        labels,
-                        "#77C1FC",
-                        "Task creation movement"
-                    )
-                ) +
-            "</div>" +
-
-            '<div class="sway-insight-grid">' +
-                insightPanel(
-                    "Lead funnel",
-                    "Current distribution across pipeline stages.",
-                    simpleBars(
-                        leadStages,
-                        "#0152F4"
-                    )
-                ) +
-                insightPanel(
-                    "Project workload",
-                    "Current distribution across project stages.",
-                    simpleBars(
-                        projectStages,
-                        "#2C91FC"
-                    )
-                ) +
-            "</div>" +
-
-            '<div class="sway-insight-grid">' +
-                insightPanel(
-                    "Financial position",
-                    "Current paid versus outstanding amounts.",
-                    simpleBars(
+                    "Tasks created compared with completed tasks each month.",
+                    businessGroupedBars(
                         [
                             {
-                                label: "Paid",
-                                value: paid,
-                                currency: true
+                                name: "Created",
+                                values: data.tasksCreated,
+                                color: "#77C1FC"
                             },
                             {
-                                label: "Outstanding",
-                                value: outstanding,
-                                currency: true
+                                name: "Completed",
+                                values: data.tasksCompleted,
+                                color: "#002096"
                             }
                         ],
-                        "#002096"
+                        labels,
+                        "Monthly task throughput"
                     )
                 ) +
                 insightPanel(
                     "Service demand",
-                    "Combined enquiry and lead interest volume.",
-                    simpleBars(
+                    "Combined enquiry and lead interest volume by service.",
+                    businessHorizontalBars(
                         serviceDemand,
-                        "#0152F4"
+                        false,
+                        "Service demand ranking"
                     )
                 ) +
             "</div>" +
 
-            '<div class="sway-insight-grid">' +
+            '<div class="sway-insight-grid sway-bi-grid">' +
                 insightPanel(
-                    "Task throughput",
-                    "Created versus completed tasks by month.",
-                    '<div class="sway-chart-legend">' +
-                        '<span class="sway-chart-legend-item"><i style="background:#77C1FC"></i>Created</span>' +
-                        '<span class="sway-chart-legend-item"><i style="background:#002096"></i>Completed</span>' +
-                    "</div>" +
-                    '<div class="sway-mini-bar-series">' +
-                        data.tasksCreated.map(function (value, index) {
-                            const created =
-                                Number(value || 0);
-                            const completed =
-                                Number(
-                                    data.tasksCompleted[index] ||
-                                    0
-                                );
-                            const max =
-                                Math.max(
-                                    created,
-                                    completed,
-                                    1
-                                );
-
-                            return (
-                                '<div class="sway-mini-bar-group">' +
-                                    '<span class="sway-mini-bar created" style="height:' +
-                                        (
-                                            created /
-                                            max *
-                                            100
-                                        ) +
-                                        '%"></span>' +
-                                    '<span class="sway-mini-bar completed" style="height:' +
-                                        (
-                                            completed /
-                                            max *
-                                            100
-                                        ) +
-                                        '%"></span>' +
-                                    '<small>' +
-                                        esc(
-                                            labels[index]
-                                        ) +
-                                    "</small>" +
-                                "</div>"
-                            );
-                        }).join("") +
-                    "</div>"
-                ) +
-                insightPanel(
-                    "Live activity pulse",
-                    "Operational activity recorded in the last 24 hours.",
-                    (function () {
-                        const now =
-                            new Date();
-
-                        const currentHour =
-                            new Date(
-                                now.getTime()
-                            );
-
-                        currentHour.setMinutes(
-                            0,
-                            0,
-                            0
-                        );
-
-                        const labels24 = [];
-                        const values24 = [];
-
-                        for (let i = 23; i >= 0; i -= 1) {
-                            const point =
-                                new Date(
-                                    currentHour.getTime() -
-                                    i * 60 * 60 * 1000
-                                );
-
-                            const key =
-                                dashboardHourKey(
-                                    point
-                                );
-
-                            labels24.push(
-                                point.toLocaleTimeString(
-                                    "en-ZA",
-                                    {
-                                        timeZone:
-                                            SOUTH_AFRICA_TIME_ZONE,
-                                        hour: "2-digit",
-                                        minute: "2-digit"
-                                    }
-                                )
-                            );
-
-                            values24.push(
-                                state.activities.filter(function (item) {
-                                    return (
-                                        dashboardHourKey(
-                                            item.created_at
-                                        ) === key
-                                    );
-                                }).length
-                            );
-                        }
-
-                        return trendChart(
-                            values24,
-                            labels24,
-                            "#002096",
-                            "Live activity pulse"
-                        );
-                    })()
+                    "Project workload",
+                    "Current project distribution by delivery stage.",
+                    businessHorizontalBars(
+                        projectStages,
+                        false,
+                        "Current project workload by stage"
+                    )
                 ) +
             "</div>" +
 
@@ -15425,6 +16281,13 @@ function simpleBars(items, color) {
                         "<p>Historical stage entries are counted from the point stage tracking was enabled.</p>" +
                     "</div>" +
                 "</div>" +
+                '<div class="sway-bi-conversion-wrap">' +
+                    '<div class="sway-bi-conversion-copy">' +
+                        "<strong>Won lead share</strong>" +
+                        "<span>Won records as a share of all leads currently tracked; this is not a cohort conversion rate.</span>" +
+                    "</div>" +
+                    businessConversionGauge() +
+                "</div>" +
                 '<div class="sway-table-wrap">' +
                     '<table class="sway-table">' +
                         "<thead><tr><th>Stage</th><th>Leads ever entering stage</th><th>Currently here</th></tr></thead>" +
@@ -15526,6 +16389,20 @@ function simpleBars(items, color) {
                         "<p>Compare volume, current conversion and estimated value by recorded lead source.</p>" +
                     "</div>" +
                 "</div>" +
+                '<div class="sway-bi-source-overview">' +
+                    businessDonutChart(
+                        rows.map(function (item) {
+                            return {
+                                label: item.source,
+                                value: item.leads
+                            };
+                        })
+                    ) +
+                    '<div class="sway-bi-source-copy">' +
+                        "<strong>Lead-source mix</strong>" +
+                        "<span>Share of current lead records by recorded source.</span>" +
+                    "</div>" +
+                "</div>" +
                 '<div class="sway-table-wrap">' +
                     '<table class="sway-table">' +
                         "<thead><tr>" +
@@ -15620,6 +16497,7 @@ function simpleBars(items, color) {
                         "<p>Estimated revenue less the internal project cost you record against each service.</p>" +
                     "</div>" +
                 "</div>" +
+                businessProjectScatter(state.projects) +
                 (
                     rows.length
                         ? '<div class="sway-table-wrap">' +
