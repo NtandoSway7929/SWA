@@ -9310,14 +9310,14 @@ body.sway-dark-mode .sway-ai-form {
             font-weight: 700;
         }
 
-        #sway-admin-workspace .sway-workspace-button,
-        #sway-admin-workspace .sway-row-action,
-        #sway-admin-workspace .sway-quick-action,
-        #sway-admin-workspace .sway-ai-new-chat,
-        #sway-admin-workspace .sway-ai-more-toggle,
-        #sway-admin-workspace .sway-push-enable,
-        #sway-admin-workspace .testimonial-admin-action,
-        #sway-admin-workspace .portfolio-admin-action {
+        .sway-workspace-button,
+        .sway-row-action,
+        .sway-quick-action,
+        .sway-ai-new-chat,
+        .sway-ai-more-toggle,
+        .sway-push-enable,
+        .testimonial-admin-action,
+        .portfolio-admin-action {
             min-height: 38px;
             border: 1px solid rgba(1,82,244,0.13) !important;
             border-radius: 10px !important;
@@ -9344,10 +9344,10 @@ body.sway-dark-mode .sway-ai-form {
             box-shadow: 0 7px 16px rgba(0,32,150,0.07) !important;
         }
 
-        #sway-admin-workspace .sway-workspace-button.primary,
-        #sway-admin-workspace .sway-row-action.primary,
+        .sway-workspace-button.primary,
+        .sway-row-action.primary,
         #sway-admin-workspace .sway-ai-send,
-        #sway-admin-workspace .sway-push-enable,
+        .sway-push-enable,
         #sway-admin-workspace .testimonial-admin-action.approve,
         #sway-admin-workspace .portfolio-admin-action.primary {
             border-color: transparent !important;
@@ -9363,8 +9363,8 @@ body.sway-dark-mode .sway-ai-form {
             color: #FFFFFF !important;
         }
 
-        #sway-admin-workspace .sway-workspace-button.danger,
-        #sway-admin-workspace .sway-row-action.danger,
+        .sway-workspace-button.danger,
+        .sway-row-action.danger,
         #sway-admin-workspace .testimonial-admin-action.delete,
         #sway-admin-workspace .portfolio-admin-action.delete {
             border-color: rgba(190,52,52,0.16) !important;
@@ -9384,19 +9384,88 @@ body.sway-dark-mode .sway-ai-form {
         }
 
         /* Modals and drawers */
-        #sway-admin-workspace :is(.sway-modal-backdrop, .sway-client360-backdrop, .portfolio-modal-backdrop, .sway-dialog-backdrop, .sway-email-composer-backdrop) { 
+        :is(.sway-modal-backdrop, .sway-client360-backdrop, .portfolio-modal-backdrop, .sway-dialog-backdrop, .sway-email-composer-backdrop) { 
             background: rgba(6,9,19,0.44) !important;
             backdrop-filter: blur(8px) !important;
             -webkit-backdrop-filter: blur(8px) !important;
         }
 
-        #sway-admin-workspace :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) {
+        :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) {
             border: 1px solid rgba(1,82,244,0.12) !important;
             border-radius: 20px !important;
             background: rgba(255,255,255,0.97) !important;
             box-shadow: 0 28px 80px rgba(8,21,51,0.20), inset 0 1px 0 rgba(255,255,255,0.95) !important;
             backdrop-filter: blur(18px) saturate(125%);
             -webkit-backdrop-filter: blur(18px) saturate(125%);
+        }
+
+
+        /* Dialog content may sit outside the workspace during presentation. */
+        :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) :is(.sway-workspace-button, .sway-row-action, .testimonial-admin-action, .portfolio-admin-action) {
+            min-height: 38px;
+            border: 1px solid rgba(1,82,244,0.13) !important;
+            border-radius: 10px !important;
+            background: rgba(255,255,255,0.88);
+            color: #34445D !important;
+            font-family: var(--ui-font-body) !important;
+            font-size: 0.74rem !important;
+            font-weight: 700 !important;
+            box-shadow: 0 2px 7px rgba(8,21,51,0.025);
+            transition: transform var(--sway-transition), color var(--sway-transition), border-color var(--sway-transition), background var(--sway-transition), box-shadow var(--sway-transition) !important;
+        }
+
+        :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) :is(.sway-workspace-button.primary, .sway-row-action.primary, .testimonial-admin-action.approve, .portfolio-admin-action.primary) {
+            border-color: transparent !important;
+            background: linear-gradient(180deg, #1767F5 0%, #0152F4 100%) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 7px 17px rgba(1,82,244,0.18), inset 0 1px 0 rgba(255,255,255,0.24) !important;
+        }
+
+        :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) :is(.sway-workspace-button.danger, .sway-row-action.danger, .testimonial-admin-action.delete, .portfolio-admin-action.delete) {
+            border-color: rgba(190,52,52,0.16) !important;
+            background: rgba(190,52,52,0.045) !important;
+            color: #A33333 !important;
+        }
+
+        :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+            min-height: 42px;
+            padding: 10px 12px !important;
+            border: 1px solid rgba(1,82,244,0.14) !important;
+            border-radius: 11px !important;
+            background: #FFFFFF !important;
+            color: #081533 !important;
+            font-family: var(--ui-font-body) !important;
+            font-size: 0.8rem !important;
+            box-shadow: inset 0 1px 2px rgba(8,21,51,0.025);
+            transition: border-color var(--sway-transition), box-shadow var(--sway-transition), background var(--sway-transition);
+        }
+
+        :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) :is(input, select, textarea):focus {
+            border-color: rgba(1,82,244,0.52) !important;
+            box-shadow: 0 0 0 3px rgba(1,82,244,0.16) !important;
+            outline: none !important;
+        }
+
+        body.sway-dark-mode :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) :is(.sway-workspace-button, .sway-row-action, .testimonial-admin-action, .portfolio-admin-action) {
+            border-color: rgba(119,193,252,0.14) !important;
+            background: rgba(17,29,49,0.82) !important;
+            color: #DCE6F3 !important;
+        }
+
+        body.sway-dark-mode :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) :is(.sway-workspace-button.primary, .sway-row-action.primary, .testimonial-admin-action.approve, .portfolio-admin-action.primary) {
+            border-color: transparent !important;
+            background: linear-gradient(180deg, #1767F5 0%, #0152F4 100%) !important;
+            color: #FFFFFF !important;
+        }
+
+        body.sway-dark-mode :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+            border-color: rgba(119,193,252,0.17) !important;
+            background: #0D1524 !important;
+            color: #F3F7FC !important;
+        }
+
+        body.sway-dark-mode :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) :is(input, select, textarea)::placeholder {
+            color: #91A2B8 !important;
         }
 
         /* Rich-list surfaces share the dashboard's card finish. */
@@ -9531,30 +9600,30 @@ body.sway-dark-mode .sway-ai-form {
             color: #B7C5D7;
         }
 
-        body.sway-dark-mode #sway-admin-workspace .sway-workspace-button,
-        body.sway-dark-mode #sway-admin-workspace .sway-row-action,
-        body.sway-dark-mode #sway-admin-workspace .sway-quick-action,
-        body.sway-dark-mode #sway-admin-workspace .sway-ai-new-chat,
-        body.sway-dark-mode #sway-admin-workspace .sway-ai-more-toggle,
-        body.sway-dark-mode #sway-admin-workspace .sway-push-enable,
-        body.sway-dark-mode #sway-admin-workspace .testimonial-admin-action,
-        body.sway-dark-mode #sway-admin-workspace .portfolio-admin-action {
+        body.sway-dark-mode .sway-workspace-button,
+        body.sway-dark-mode .sway-row-action,
+        body.sway-dark-mode .sway-quick-action,
+        body.sway-dark-mode .sway-ai-new-chat,
+        body.sway-dark-mode .sway-ai-more-toggle,
+        body.sway-dark-mode .sway-push-enable,
+        body.sway-dark-mode .testimonial-admin-action,
+        body.sway-dark-mode .portfolio-admin-action {
             border-color: rgba(119,193,252,0.14) !important;
             background: rgba(17,29,49,0.82) !important;
             color: #DCE6F3 !important;
         }
 
-        body.sway-dark-mode #sway-admin-workspace .sway-workspace-button.primary,
-        body.sway-dark-mode #sway-admin-workspace .sway-row-action.primary,
+        body.sway-dark-mode .sway-workspace-button.primary,
+        body.sway-dark-mode .sway-row-action.primary,
         body.sway-dark-mode #sway-admin-workspace .sway-ai-send,
-        body.sway-dark-mode #sway-admin-workspace .sway-push-enable,
+        body.sway-dark-mode .sway-push-enable,
         body.sway-dark-mode #sway-admin-workspace .testimonial-admin-action.approve {
             border-color: transparent !important;
             background: linear-gradient(180deg, #1767F5 0%, #0152F4 100%) !important;
             color: #FFFFFF !important;
         }
 
-        body.sway-dark-mode #sway-admin-workspace .sway-row-action.danger,
+        body.sway-dark-mode .sway-row-action.danger,
         body.sway-dark-mode #sway-admin-workspace .testimonial-admin-action.delete,
         body.sway-dark-mode #sway-admin-workspace .portfolio-admin-action.delete {
             border-color: rgba(255,154,154,0.18) !important;
@@ -9573,7 +9642,7 @@ body.sway-dark-mode .sway-ai-form {
             color: #EAF0F8 !important;
         }
 
-        body.sway-dark-mode #sway-admin-workspace :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) {
+        body.sway-dark-mode :is(.sway-modal-card, .sway-client360-card, .sway-project-timeline-card, .sway-client-portal-link-card, .sway-email-composer-card, .sway-dialog, .portfolio-modal-card, .sway-proposal-review-card) {
             border-color: rgba(119,193,252,0.15) !important;
             background: rgba(10,15,29,0.985) !important;
             color: #EAF0F8 !important;
