@@ -6281,7 +6281,7 @@ function simpleBars(items, color) {
             : Math.round(number).toLocaleString("en-ZA");
     }
 
-    function insightXAxis(labels) {
+    function insightXAxis(labels, maxLabels) {
         if (!labels || !labels.length) return "";
 
         const count = Math.min(maxLabels || 6, labels.length);
