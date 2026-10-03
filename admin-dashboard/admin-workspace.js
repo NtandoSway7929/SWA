@@ -6284,7 +6284,7 @@ function simpleBars(items, color) {
     function insightXAxis(labels) {
         if (!labels || !labels.length) return "";
 
-        const count = Math.min(6, labels.length);
+        const count = Math.min(maxLabels || 6, labels.length);
         const indexes = [];
 
         for (let index = 0; index < count; index += 1) {
@@ -7223,7 +7223,7 @@ function simpleBars(items, color) {
                                             insightCompactValue(
                                                 maxValue * fraction,
                                                 true
-                                            )
+                                            ).replace(/\s/g, "")
                                         ) +
                                     "</span>"
                                 );
@@ -7301,7 +7301,7 @@ function simpleBars(items, color) {
                                     );
                                 }).join("") +
                             "</svg>" +
-                            insightXAxis(labels) +
+                            insightXAxis(labels, 4) +
                         "</div>" +
                     "</div>" +
                 "</div>" +
