@@ -21498,19 +21498,6 @@ function simpleBars(items, color) {
                     '">Copy</button>' +
                 '</div>';
 
-            const liveCopyButton =
-                loading.querySelector("[data-ai-copy]");
-
-            if (liveCopyButton) {
-                liveCopyButton.addEventListener(
-                    "click",
-                    function (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        copyAIMessage(liveCopyButton);
-                    }
-                );
-            }
         } catch (error) {
             const errorMessage =
                 (
