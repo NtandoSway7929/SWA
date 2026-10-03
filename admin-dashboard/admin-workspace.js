@@ -8999,8 +8999,8 @@ function simpleBars(items, color) {
 
         return (
             heading(
-                '<button type="button" class="sway-workspace-button primary" data-quick="task">+ New task</button>' +
-                '<button type="button" class="sway-workspace-button" data-quick="lead">+ New lead</button>'
+                '<button type="button" class="sway-workspace-button sway-heading-action primary" data-quick="task">+ New task</button>' +
+                '<button type="button" class="sway-workspace-button sway-heading-action" data-quick="lead">+ New lead</button>'
             ) +
 
             renderInsightsOverview() +
@@ -14453,7 +14453,7 @@ function simpleBars(items, color) {
 
         return (
             heading(
-                '<button class="sway-workspace-button" data-view-target="services">Manage services</button>' +
+                '<button class="sway-workspace-button sway-heading-action" data-view-target="services">Manage services</button>' +
                 (
                     archivedInvoices.length
                         ? '<button class="sway-workspace-button" data-invoice-filter="archived">' +
@@ -14467,7 +14467,7 @@ function simpleBars(items, color) {
                           "</button>"
                         : ""
                 ) +
-                '<button class="sway-workspace-button primary" data-add-invoice>+ New invoice</button>'
+                '<button class="sway-workspace-button sway-heading-action primary" data-add-invoice>+ New invoice</button>'
             ) +
 
             '<div class="sway-workspace-grid">' +
