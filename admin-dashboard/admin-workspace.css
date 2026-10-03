@@ -16,8 +16,10 @@
 
 .sway-workspace-shell {
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
-    gap: 24px;
+    /* 1:4 column ratio. With a 28px gap this produces exact proportional
+       columns from the remaining container width at every desktop viewport. */
+    grid-template-columns: 1fr 4fr;
+    gap: 28px;
     align-items: start;
 }
 
