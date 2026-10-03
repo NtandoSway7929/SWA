@@ -23317,6 +23317,23 @@ function simpleBars(items, color) {
 
         if (newChatButton) {
             newChatButton.onclick = async function () {
+                const morePanel =
+                    workspace.querySelector("#sway-ai-more-panel");
+
+                const moreToggle =
+                    workspace.querySelector("#sway-ai-more-toggle");
+
+                if (morePanel) {
+                    morePanel.hidden = true;
+                }
+
+                if (moreToggle) {
+                    moreToggle.setAttribute(
+                        "aria-expanded",
+                        "false"
+                    );
+                }
+
                 if (
                     Array.isArray(state.aiConversation) &&
                     state.aiConversation.some(function (item) {
