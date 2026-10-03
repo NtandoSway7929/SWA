@@ -23098,6 +23098,84 @@ function simpleBars(items, color) {
             };
         }
 
+        /*
+         * InnerMe is rendered in-place between view updates, so bind the
+         * global dismiss handler once. This keeps More and Suggestions from
+         * getting trapped open and avoids stacking document listeners.
+         */
+        if (workspace.dataset.innermeDismissBound !== "true") {
+            workspace.dataset.innermeDismissBound = "true";
+
+            document.addEventListener("click", function (event) {
+                const panel =
+                    workspace.querySelector("#sway-ai-more-panel");
+
+                const toggle =
+                    workspace.querySelector("#sway-ai-more-toggle");
+
+                if (
+                    panel &&
+                    toggle &&
+                    !panel.hidden &&
+                    !panel.contains(event.target) &&
+                    !toggle.contains(event.target)
+                ) {
+                    panel.hidden = true;
+                    toggle.setAttribute(
+                        "aria-expanded",
+                        "false"
+                    );
+                }
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key !== "Escape") {
+                    return;
+                }
+
+                const panel =
+                    workspace.querySelector("#sway-ai-more-panel");
+
+                const toggle =
+                    workspace.querySelector("#sway-ai-more-toggle");
+
+                if (panel && !panel.hidden) {
+                    panel.hidden = true;
+
+                    if (toggle) {
+                        toggle.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+                    }
+                }
+
+                const suggestionPanel =
+                    workspace.querySelector("#sway-ai-suggestions-panel");
+
+                const suggestionToggle =
+                    workspace.querySelector("#sway-ai-suggestion-toggle");
+
+                if (
+                    suggestionPanel &&
+                    suggestionPanel.classList.contains("is-open")
+                ) {
+                    suggestionPanel.classList.remove("is-open");
+                    suggestionPanel.setAttribute(
+                        "aria-hidden",
+                        "true"
+                    );
+
+                    if (suggestionToggle) {
+                        suggestionToggle.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+                    }
+                }
+            });
+        }
+
         const historyToggle =
             workspace.querySelector("#sway-ai-history-toggle");
 
