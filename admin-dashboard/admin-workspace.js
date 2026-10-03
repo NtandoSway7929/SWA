@@ -22813,7 +22813,7 @@ function simpleBars(items, color) {
             };
         }
 
-
+    }
 
     function getRequestedNotificationTarget() {
         try {
