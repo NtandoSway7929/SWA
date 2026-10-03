@@ -7980,3 +7980,185 @@ body {
         display: none;
     }
 }
+
+
+/* =========================================================
+   FINAL LAYOUT / CASCADE HARDENING — 2026-10-03
+   Keep the dashboard mathematically stable across desktop,
+   tablet and mobile without changing component behavior.
+   ========================================================= */
+
+#sway-admin-workspace,
+#sway-admin-workspace *,
+.admin-header-inner,
+.admin-header-inner *,
+.admin-main,
+.admin-main * {
+    min-width: 0;
+}
+
+#sway-admin-workspace {
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+}
+
+.sway-workspace-main,
+.sway-workspace-view,
+.sway-workspace-panel,
+.sway-panel,
+.sway-table-wrap {
+    width: 100%;
+    max-width: 100%;
+}
+
+.sway-workspace-heading,
+.sway-workspace-heading-actions,
+.sway-panel-title,
+.sway-row-actions,
+.sway-client360-head,
+.sway-email-inbox-panel-head {
+    min-width: 0;
+}
+
+.sway-workspace-heading > *,
+.sway-workspace-heading-actions > *,
+.sway-panel-title > *,
+.sway-row-actions > *,
+.sway-client360-head > *,
+.sway-email-inbox-panel-head > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Prevent long labels, IDs and email addresses from widening cards. */
+.sway-workspace-heading h2,
+.sway-workspace-heading p,
+.sway-panel-title h3,
+.sway-panel-title p,
+.sway-row-action,
+.sway-workspace-button,
+.sway-email-inbox-item,
+.sway-email-thread-message,
+.sway-client360-card,
+.sway-panel {
+    overflow-wrap: anywhere;
+}
+
+/* Tables scroll inside their own viewport, never the dashboard itself. */
+.sway-table-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+    contain: inline-size;
+}
+
+.sway-table {
+    width: max-content;
+    min-width: 620px;
+    max-width: none;
+}
+
+/* Dropdowns are viewport-positioned, so ancestor overflow cannot clip them. */
+.sway-actions-dropdown,
+.sway-lead-actions-dropdown {
+    contain: layout paint;
+}
+
+/* Keep modal content internally scrollable and prevent action rows from
+   creating a second horizontal page overflow. */
+.sway-modal-card,
+.sway-client360-card,
+.sway-project-timeline-card,
+.sway-client-portal-link-card,
+.sway-email-composer-card {
+    width: min(920px, 100%);
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+@media (min-width: 981px) {
+    .sway-workspace-shell {
+        display: grid !important;
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(0, 4fr) !important;
+        gap: 28px !important;
+        align-items: start;
+    }
+
+    .sway-workspace-sidebar {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+@media (min-width: 761px) and (max-width: 980px) {
+    /* Tablet uses the same drawer model as the JS breakpoint. */
+    .sway-workspace-shell {
+        display: block !important;
+        width: 100%;
+    }
+
+    .sway-workspace-sidebar {
+        width: min(260px, calc(100vw - 32px)) !important;
+        left: 16px;
+    }
+
+    .sway-workspace-mobile-toggle {
+        left: 18px;
+    }
+
+    .sway-workspace-heading {
+        padding-left: 64px;
+    }
+
+    .sway-workspace-heading-actions {
+        display: flex;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .sway-workspace-heading-actions > * {
+        flex: 1 1 180px;
+    }
+}
+
+@media (max-width: 760px) {
+    .sway-workspace-heading {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .sway-workspace-heading-actions > * {
+        min-width: 0;
+    }
+
+    .sway-panel-title,
+    .sway-client360-head,
+    .sway-email-inbox-panel-head {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .sway-row-actions {
+        max-width: 100%;
+    }
+
+    .sway-table-wrap {
+        margin-right: 0;
+        border-radius: inherit;
+    }
+}
+
+@media (max-width: 420px) {
+    .sway-workspace-sidebar {
+        width: min(240px, calc(100vw - 20px)) !important;
+        left: 10px;
+    }
+
+    .sway-workspace-mobile-toggle {
+        left: 10px;
+    }
+}
