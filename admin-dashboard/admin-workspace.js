@@ -21952,19 +21952,6 @@ function simpleBars(items, color) {
         bindSwayActionDropdowns();
 
         workspace
-            .querySelectorAll("[data-ai-action]")
-            .forEach(function (button) {
-                button.addEventListener(
-                    "click",
-                    function (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        handleAIAction(button);
-                    }
-                );
-            });
-
-        workspace
             .querySelectorAll("[data-refresh-workspace]")
             .forEach(function (button) {
                 button.addEventListener(
