@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="admin-workspace.css?v=dashboard-20261003-premium-visual-system-v1">
+    <link rel="stylesheet" href="admin-workspace.css?v=dashboard-20261004-swayphics-visual-system-v1">
 
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#002096">
@@ -14468,4 +14468,648 @@ outline:3px solid #77C1FC!important;
 outline-offset:3px!important;
 }
 }
+
+/* =========================================================
+   SWAYPHICS ADMIN — WHITE, BRAND-LED DESIGN PASS (2026-10-04)
+   Visual-only overrides: Plus Jakarta Sans and all existing
+   navigation, data, authentication and chat behavior remain intact.
+   ========================================================= */
+
+body.sway-dark-mode {
+    --swd-bg-primary: #0A0F1D;
+    --swd-bg-secondary: #101827;
+    --swd-surface-raised: #152137;
+    --swd-text: #E9F0FA;
+    --swd-text-muted: #AAB7CB;
+    --swd-text-soft: #8999B2;
+    --swd-border: rgba(255,255,255,0.10);
+    --swd-border-strong: rgba(255,255,255,0.16);
+    --swd-shadow-card: 0 12px 32px rgba(0,0,0,0.22);
+    --swd-shadow-float: 0 22px 64px rgba(0,0,0,0.42);
+}
+
+.admin-main {
+    width: min(1440px, calc(100% - 48px)) !important;
+    margin-inline: auto !important;
+}
+
+#sway-admin-workspace {
+    color: var(--swd-text) !important;
+    font-family: var(--swd-font-body) !important;
+}
+
+#sway-admin-workspace :is(h1, h2, h3, h4, .sway-stat-card .value) {
+    font-family: var(--swd-font-display) !important;
+    color: var(--swd-text);
+}
+
+#sway-admin-workspace .sway-workspace-shell {
+    display: grid !important;
+    grid-template-columns: 232px minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 24px !important;
+}
+
+#sway-admin-workspace .sway-workspace-sidebar {
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    border-radius: 22px !important;
+    background: linear-gradient(155deg, var(--swd-brand-navy), var(--swd-brand-strong-blue)) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 22px 54px rgba(0,32,150,0.20) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#sway-admin-workspace .sway-workspace-sidebar-head {
+    border-bottom-color: rgba(255,255,255,0.16) !important;
+}
+
+#sway-admin-workspace .sway-workspace-sidebar-kicker {
+    color: var(--swd-brand-sky-blue) !important;
+    font-size: 0.63rem !important;
+    letter-spacing: 0.16em !important;
+}
+
+#sway-admin-workspace .sway-workspace-sidebar-brand strong {
+    color: #FFFFFF !important;
+    font-size: 1rem !important;
+    letter-spacing: -0.02em;
+}
+
+#sway-admin-workspace .sway-workspace-nav-group {
+    border-color: rgba(255,255,255,0.12) !important;
+}
+
+#sway-admin-workspace .sway-workspace-nav-group-toggle,
+#sway-admin-workspace .sway-workspace-nav-button {
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    color: rgba(255,255,255,0.82) !important;
+    font-family: var(--swd-font-body) !important;
+    font-size: 0.76rem !important;
+    font-weight: 650 !important;
+    transition: background var(--swd-motion), color var(--swd-motion), transform var(--swd-motion) !important;
+}
+
+#sway-admin-workspace .sway-workspace-nav-group-toggle:hover,
+#sway-admin-workspace .sway-workspace-nav-button:not(.active):hover {
+    color: #FFFFFF !important;
+    background: rgba(255,255,255,0.10) !important;
+}
+
+#sway-admin-workspace .sway-workspace-nav-group-label,
+#sway-admin-workspace .sway-workspace-nav-group-icon,
+#sway-admin-workspace .sway-workspace-nav-group-toggle > i {
+    color: rgba(255,255,255,0.72) !important;
+}
+
+#sway-admin-workspace .sway-workspace-nav-button.active {
+    color: #FFFFFF !important;
+    background: linear-gradient(120deg, var(--swd-brand-accent-blue), var(--swd-brand-light-blue)) !important;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.17), inset 0 1px 0 rgba(255,255,255,0.22) !important;
+}
+
+#sway-admin-workspace .sway-workspace-nav-count,
+#sway-admin-workspace .sway-workspace-count {
+    border: 1px solid rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.11) !important;
+    color: #FFFFFF !important;
+    font-size: 0.68rem !important;
+}
+
+#sway-admin-workspace .sway-workspace-mobile-close {
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    background: rgba(255,255,255,0.09) !important;
+    color: #FFFFFF !important;
+}
+
+#sway-admin-workspace .sway-workspace-view {
+    gap: 24px !important;
+}
+
+#sway-admin-workspace .sway-workspace-heading h2 {
+    color: var(--swd-brand-navy) !important;
+    font-size: clamp(1.8rem, 2.8vw, 2.45rem) !important;
+    font-weight: 750 !important;
+    letter-spacing: -0.045em !important;
+    line-height: 1.08 !important;
+}
+
+#sway-admin-workspace .sway-workspace-heading p {
+    max-width: 720px;
+    color: var(--swd-text-muted) !important;
+    font-size: 0.84rem !important;
+    line-height: 1.65 !important;
+}
+
+#sway-admin-workspace .sway-stat-card,
+#sway-admin-workspace .sway-panel,
+#sway-admin-workspace .sway-insight-panel,
+#sway-admin-workspace .sway-attention-panel,
+#sway-admin-workspace .sway-followup-automation,
+#sway-admin-workspace .sway-cash-flow,
+#sway-admin-workspace .sway-revenue-pipeline {
+    border: 1px solid var(--swd-border) !important;
+    border-radius: var(--swd-radius-card) !important;
+    background: var(--swd-bg-primary) !important;
+    box-shadow: var(--swd-shadow-card), inset 0 1px 0 rgba(255,255,255,0.85) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#sway-admin-workspace .sway-stat-card {
+    position: relative;
+    padding: 21px !important;
+    transition: transform var(--swd-motion), box-shadow var(--swd-motion), border-color var(--swd-motion) !important;
+}
+
+#sway-admin-workspace .sway-stat-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 18px;
+    right: 18px;
+    height: 2px;
+    border-radius: 0 0 999px 999px;
+    background: linear-gradient(90deg, rgba(1,82,244,0.52), rgba(44,145,252,0.18), transparent);
+    pointer-events: none;
+}
+
+#sway-admin-workspace .sway-stat-card .label {
+    color: var(--swd-text-muted) !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.045em !important;
+    line-height: 1.4 !important;
+}
+
+#sway-admin-workspace .sway-stat-card .value {
+    color: var(--swd-brand-navy) !important;
+    font-size: clamp(1.55rem, 2vw, 2rem) !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.045em !important;
+    line-height: 1.14 !important;
+    font-variant-numeric: tabular-nums;
+}
+
+#sway-admin-workspace .sway-stat-card .hint {
+    color: var(--swd-text-muted) !important;
+    font-size: 0.75rem !important;
+    line-height: 1.5 !important;
+}
+
+#sway-admin-workspace .sway-panel {
+    padding: 22px !important;
+}
+
+#sway-admin-workspace .sway-panel-title {
+    gap: 12px !important;
+    margin-bottom: 18px !important;
+}
+
+#sway-admin-workspace .sway-panel-title h3 {
+    color: var(--swd-brand-navy) !important;
+    font-size: 1rem !important;
+    font-weight: 750 !important;
+    letter-spacing: -0.025em !important;
+    line-height: 1.3 !important;
+}
+
+#sway-admin-workspace .sway-panel-title p {
+    color: var(--swd-text-muted) !important;
+    font-size: 0.78rem !important;
+    line-height: 1.55 !important;
+}
+
+#sway-admin-workspace .sway-insight-grid {
+    gap: 18px !important;
+    margin-top: 0 !important;
+}
+
+#sway-admin-workspace .sway-bi-panel--wide {
+    grid-column: 1 / -1;
+}
+
+#sway-admin-workspace .sway-live-toolbar {
+    border: 1px solid var(--swd-border) !important;
+    border-radius: 16px !important;
+    background: var(--swd-bg-secondary) !important;
+    color: var(--swd-text-muted) !important;
+    padding: 14px 16px !important;
+}
+
+#sway-admin-workspace .sway-live-toolbar strong {
+    color: var(--swd-text) !important;
+    font-size: 0.84rem !important;
+}
+
+#sway-admin-workspace .sway-table-wrap {
+    border: 1px solid var(--swd-border) !important;
+    border-radius: 16px !important;
+    background: var(--swd-bg-primary) !important;
+}
+
+#sway-admin-workspace .sway-table th {
+    padding: 13px 12px !important;
+    background: var(--swd-bg-secondary) !important;
+    color: var(--swd-text-soft) !important;
+    font-size: 0.69rem !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.075em !important;
+    text-transform: uppercase !important;
+    white-space: nowrap;
+}
+
+#sway-admin-workspace .sway-table td {
+    padding: 13px 12px !important;
+    border-bottom: 1px solid var(--swd-border) !important;
+    color: var(--swd-text) !important;
+    font-size: 0.79rem !important;
+    line-height: 1.5 !important;
+}
+
+#sway-admin-workspace .sway-table tbody tr {
+    transition: background var(--swd-motion);
+}
+
+#sway-admin-workspace .sway-table tbody tr:hover td {
+    background: rgba(1,82,244,0.035) !important;
+}
+
+#sway-admin-workspace .sway-chip {
+    min-height: 24px;
+    padding: 4px 9px !important;
+    border: 1px solid transparent;
+    font-size: 0.66rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.01em;
+}
+
+#sway-admin-workspace .sway-workspace-button,
+#sway-admin-workspace .sway-row-action,
+#sway-admin-workspace .sway-quick-action,
+#sway-admin-workspace .sway-quick-create-item,
+#sway-admin-workspace .sway-ai-new-chat,
+#sway-admin-workspace .sway-ai-more-toggle,
+#sway-admin-workspace .sway-push-enable {
+    min-height: 44px !important;
+    border-radius: var(--swd-radius-control) !important;
+    font-family: var(--swd-font-body) !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+    transition: transform var(--swd-motion), color var(--swd-motion), background var(--swd-motion), box-shadow var(--swd-motion), border-color var(--swd-motion) !important;
+}
+
+#sway-admin-workspace .sway-workspace-button {
+    border-color: var(--swd-border-strong) !important;
+    background: var(--swd-bg-primary) !important;
+    color: var(--swd-brand-navy) !important;
+    padding-inline: 16px !important;
+}
+
+#sway-admin-workspace .sway-workspace-button:hover {
+    border-color: rgba(1,82,244,0.32) !important;
+    background: rgba(1,82,244,0.045) !important;
+    color: var(--swd-brand-accent-blue) !important;
+    transform: translateY(-1px);
+}
+
+#sway-admin-workspace .sway-workspace-button.primary,
+#sway-admin-workspace .sway-quick-create-toggle {
+    border-color: var(--swd-brand-accent-blue) !important;
+    background: linear-gradient(180deg, var(--swd-brand-accent-blue), var(--swd-brand-strong-blue)) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 8px 18px rgba(1,82,244,0.18), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+}
+
+#sway-admin-workspace .sway-workspace-button.primary:hover,
+#sway-admin-workspace .sway-quick-create-toggle:hover {
+    background: var(--swd-brand-strong-blue) !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px);
+}
+
+#sway-admin-workspace .sway-workspace-button.danger,
+#sway-admin-workspace .sway-row-action.danger {
+    border-color: rgba(180,35,24,0.16) !important;
+    background: rgba(180,35,24,0.045) !important;
+    color: #B42318 !important;
+}
+
+#sway-admin-workspace .sway-actions-dropdown,
+#sway-admin-workspace .sway-lead-actions-dropdown {
+    border: 1px solid var(--swd-border-strong) !important;
+    border-radius: 16px !important;
+    background: var(--swd-bg-primary) !important;
+    box-shadow: var(--swd-shadow-float) !important;
+}
+
+#sway-admin-workspace .sway-actions-dropdown .sway-row-action,
+#sway-admin-workspace .sway-lead-actions-dropdown .sway-row-action {
+    min-height: 44px !important;
+    padding: 10px 12px !important;
+    border-radius: 11px !important;
+    font-size: 0.75rem !important;
+}
+
+#sway-admin-workspace :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+    border-color: var(--swd-border-strong);
+    border-radius: var(--swd-radius-control);
+    background: var(--swd-bg-primary);
+    color: var(--swd-text);
+    font-family: var(--swd-font-body);
+}
+
+#sway-admin-workspace :is(input, select, textarea):focus {
+    border-color: var(--swd-brand-accent-blue) !important;
+    box-shadow: var(--swd-focus-ring) !important;
+    outline: none !important;
+}
+
+#sway-admin-workspace :focus-visible {
+    outline: 3px solid rgba(119,193,252,0.78) !important;
+    outline-offset: 2px !important;
+}
+
+#sway-admin-workspace .sway-modal-card,
+#sway-admin-workspace .sway-client360-card,
+#sway-admin-workspace .sway-project-timeline-card,
+#sway-admin-workspace .sway-client-portal-link-card,
+#sway-admin-workspace .sway-email-composer-card {
+    border: 1px solid var(--swd-border) !important;
+    border-radius: 24px !important;
+    background: var(--swd-bg-primary) !important;
+    box-shadow: var(--swd-shadow-float) !important;
+}
+
+#sway-admin-workspace .sway-ai-conversation {
+    border: 1px solid var(--swd-border) !important;
+    border-radius: 22px !important;
+    background: var(--swd-bg-secondary) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7) !important;
+}
+
+#sway-admin-workspace .sway-ai-header p,
+#sway-admin-workspace .sway-ai-note {
+    color: var(--swd-text-muted) !important;
+    font-size: 0.82rem !important;
+    line-height: 1.65 !important;
+}
+
+#sway-admin-workspace .sway-ai-message-content {
+    font-family: var(--swd-font-body) !important;
+    font-size: 0.88rem !important;
+    line-height: 1.7 !important;
+}
+
+#sway-admin-workspace .sway-ai-assistant .sway-ai-message-content {
+    border: 1px solid var(--swd-border) !important;
+    border-radius: 18px !important;
+    background: var(--swd-bg-primary) !important;
+    color: var(--swd-text) !important;
+    box-shadow: 0 4px 16px rgba(8,21,51,0.035) !important;
+}
+
+#sway-admin-workspace .sway-ai-user .sway-ai-message-content {
+    border: 1px solid rgba(1,82,244,0.22) !important;
+    border-radius: 18px !important;
+    background: rgba(1,82,244,0.09) !important;
+    color: var(--swd-brand-navy) !important;
+}
+
+#sway-admin-workspace .sway-ai-history-panel {
+    border: 1px solid var(--swd-border) !important;
+    border-radius: 22px !important;
+    background: var(--swd-bg-primary) !important;
+    box-shadow: var(--swd-shadow-float) !important;
+}
+
+#sway-admin-workspace .sway-ai-history-item {
+    border-color: var(--swd-border) !important;
+    border-radius: 14px !important;
+    background: var(--swd-bg-primary) !important;
+}
+
+#sway-admin-workspace .sway-ai-history-item:hover,
+#sway-admin-workspace .sway-ai-insight-row:hover {
+    border-color: var(--swd-border-strong) !important;
+    background: rgba(1,82,244,0.045) !important;
+}
+
+#sway-admin-workspace .sway-ai-thinking {
+    color: var(--swd-brand-accent-blue) !important;
+}
+
+#sway-admin-workspace :is(.sway-chart-y-label, .sway-chart-axis-label, .sway-bi-x-axis, .sway-bi-y-axis, .sway-bi-hbar-label, .sway-bi-hbar-value, .sway-bi-gauge-label, .sway-bi-scatter-x-ticks, .sway-cf-y-axis, .sway-cf-chart-footer) {
+    font-family: var(--swd-font-body) !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+}
+
+#sway-admin-workspace .sway-bi-legend-item,
+#sway-admin-workspace .sway-chart-period-label {
+    color: var(--swd-text-muted) !important;
+    font-size: 0.73rem !important;
+    font-weight: 650 !important;
+}
+
+#sway-admin-workspace .sway-chart-value-label,
+#sway-admin-workspace .sway-bi-hbar-value {
+    color: var(--swd-text) !important;
+    font-size: 12px !important;
+    font-weight: 750 !important;
+}
+
+#sway-admin-workspace .sway-bi-grid-line,
+#sway-admin-workspace .sway-chart-grid-line {
+    stroke: rgba(0,32,150,0.11);
+}
+
+@media (hover: hover) {
+    #sway-admin-workspace .sway-stat-card:hover {
+        border-color: rgba(1,82,244,0.22) !important;
+        box-shadow: 0 16px 38px rgba(0,32,150,0.09) !important;
+        transform: translateY(-2px);
+    }
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+    .admin-main {
+        width: min(1440px, calc(100% - 36px)) !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-shell {
+        grid-template-columns: 210px minmax(0, 1fr) !important;
+        gap: 18px !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-grid {
+        grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    }
+}
+
+@media (max-width: 980px) {
+    #sway-admin-workspace .sway-workspace-shell {
+        display: block !important;
+        grid-template-columns: minmax(0,1fr) !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-sidebar {
+        z-index: 5001 !important;
+        background: linear-gradient(155deg, var(--swd-brand-navy), var(--swd-brand-strong-blue)) !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-mobile-toggle {
+        position: fixed !important;
+        z-index: 7000 !important;
+        isolation: isolate !important;
+        border: 1px solid rgba(1,82,244,0.18) !important;
+        background: rgba(255,255,255,0.97) !important;
+        color: var(--swd-brand-navy) !important;
+        box-shadow: 0 10px 28px rgba(0,32,150,0.17) !important;
+        backdrop-filter: blur(16px) saturate(130%) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-mobile-toggle :is(svg, span) {
+        color: var(--swd-brand-navy) !important;
+        stroke: currentColor;
+    }
+
+    #sway-admin-workspace .sway-workspace-mobile-toggle:focus-visible {
+        outline: 3px solid var(--swd-brand-sky-blue) !important;
+        outline-offset: 3px !important;
+    }
+}
+
+@media (max-width: 760px) {
+    .admin-main {
+        width: calc(100% - 24px) !important;
+        padding-top: 20px !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-view {
+        gap: 18px !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-heading h2 {
+        font-size: clamp(1.7rem, 8vw, 2.2rem) !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-grid {
+        grid-template-columns: minmax(0,1fr) !important;
+        gap: 12px !important;
+    }
+
+    #sway-admin-workspace .sway-stat-card {
+        min-height: 0 !important;
+        padding: 19px !important;
+    }
+
+    #sway-admin-workspace .sway-panel {
+        padding: 18px !important;
+    }
+
+    #sway-admin-workspace .sway-insight-grid {
+        grid-template-columns: minmax(0,1fr) !important;
+        gap: 14px !important;
+    }
+
+    #sway-admin-workspace .sway-bi-panel--wide {
+        grid-column: auto;
+    }
+
+    #sway-admin-workspace :is(
+        .sway-workspace-button,
+        .sway-row-action,
+        .sway-quick-action,
+        .sway-quick-create-item,
+        .sway-ai-new-chat,
+        .sway-ai-more-toggle,
+        .sway-ai-history-toggle,
+        .sway-ai-send,
+        .sway-push-enable
+    ) {
+        min-height: 44px !important;
+    }
+
+    #sway-admin-workspace :is(
+        input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+        select,
+        textarea
+    ) {
+        min-height: 44px !important;
+        font-size: 16px !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .admin-main {
+        width: calc(100% - 20px) !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-sidebar {
+        width: min(226px, calc(100vw - 24px)) !important;
+    }
+
+    #sway-admin-workspace .sway-panel {
+        padding: 16px !important;
+        border-radius: 18px !important;
+    }
+
+    #sway-admin-workspace .sway-ai-conversation {
+        padding: 16px 11px !important;
+        border-radius: 18px !important;
+    }
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-workspace-sidebar {
+    background: linear-gradient(155deg, #002096, #0031C5) !important;
+}
+
+body.sway-dark-mode #sway-admin-workspace :is(
+    .sway-stat-card,
+    .sway-panel,
+    .sway-insight-panel,
+    .sway-attention-panel,
+    .sway-followup-automation,
+    .sway-cash-flow,
+    .sway-revenue-pipeline,
+    .sway-ai-conversation,
+    .sway-ai-history-panel,
+    .sway-ai-assistant .sway-ai-message-content,
+    .sway-ai-history-item,
+    .sway-table-wrap
+) {
+    background: var(--swd-surface-raised) !important;
+    border-color: var(--swd-border) !important;
+    color: var(--swd-text) !important;
+    box-shadow: var(--swd-shadow-card) !important;
+}
+
+body.sway-dark-mode #sway-admin-workspace :is(
+    .sway-workspace-heading h2,
+    .sway-panel-title h3,
+    .sway-stat-card .value,
+    .sway-ai-user .sway-ai-message-content
+) {
+    color: var(--swd-text) !important;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-ai-user .sway-ai-message-content {
+    background: rgba(1,82,244,0.2) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #sway-admin-workspace *,
+    #sway-admin-workspace *::before,
+    #sway-admin-workspace *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
 </style>
