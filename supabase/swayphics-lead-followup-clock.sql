@@ -125,7 +125,13 @@ declare
     v_lead_id uuid;
 begin
     if tg_op = 'DELETE' then
-        if old.lead_id is not null then
+        if old.lead_id is not null
+           and exists (
+               select 1
+               from public.leads
+               where id = old.lead_id
+           )
+        then
             perform public.recalculate_swayphics_lead_contact_clock(
                 old.lead_id
             );
@@ -136,7 +142,13 @@ begin
 
     if tg_op = 'UPDATE'
        and old.lead_id is not null
-       and old.lead_id is distinct from new.lead_id then
+       and old.lead_id is distinct from new.lead_id
+       and exists (
+           select 1
+           from public.leads
+           where id = old.lead_id
+       )
+    then
         perform public.recalculate_swayphics_lead_contact_clock(
             old.lead_id
         );
