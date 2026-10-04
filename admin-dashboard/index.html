@@ -14777,6 +14777,197 @@ portfolioForm.addEventListener(
             }
         }
     </style>
+
+
+    <style id="sway-dark-innerme-card-fix-v1">
+        /* =====================================================
+           DARK MODE SURFACE + INNERME CHAT
+           Dark mode uses solid dark cards and a dark conversation
+           canvas. Light mode keeps the existing chat unchanged.
+           ===================================================== */
+
+        body.sway-dark-mode #sway-admin-workspace .sway-stat-card,
+        body.sway-dark-mode #sway-admin-workspace .sway-panel,
+        body.sway-dark-mode #sway-admin-workspace .sway-attention-panel,
+        body.sway-dark-mode #sway-admin-workspace .sway-followup-automation,
+        body.sway-dark-mode #sway-admin-workspace .sway-cash-flow,
+        body.sway-dark-mode #sway-admin-workspace .sway-revenue-pipeline,
+        body.sway-dark-mode #sway-admin-workspace .sway-insight-panel,
+        body.sway-dark-mode #sway-admin-workspace .sway-social-summary,
+        body.sway-dark-mode #sway-admin-workspace .sway-social-account-card,
+        body.sway-dark-mode #sway-admin-workspace .sway-email-summary,
+        body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-panel,
+        body.sway-dark-mode #sway-admin-workspace .sway-email-thread-head,
+        body.sway-dark-mode #sway-admin-workspace .sway-automated-reminders,
+        body.sway-dark-mode #sway-admin-workspace .sway-lead-source-panel,
+        body.sway-dark-mode #sway-admin-workspace .sway-lead-conversion-panel,
+        body.sway-dark-mode #sway-admin-workspace .sway-service-profitability,
+        body.sway-dark-mode #sway-admin-workspace .sway-workspace-loading,
+        body.sway-dark-mode #sway-admin-workspace .sway-client360-section,
+        body.sway-dark-mode #sway-admin-workspace .sway-client360-notes,
+        body.sway-dark-mode #sway-admin-workspace .sway-client360-history,
+        body.sway-dark-mode #sway-admin-workspace .portfolio-admin-item,
+        body.sway-dark-mode #sway-admin-workspace .testimonial-admin-card {
+            background: #0D1524 !important;
+            background-image: none !important;
+        }
+
+        /* Keep nested card surfaces dark too, rather than allowing
+           light-mode translucent white fills to show through. */
+        body.sway-dark-mode #sway-admin-workspace .sway-social-summary-stats > div,
+        body.sway-dark-mode #sway-admin-workspace .sway-social-account-stats > div,
+        body.sway-dark-mode #sway-admin-workspace .sway-social-recent-item,
+        body.sway-dark-mode #sway-admin-workspace .sway-social-performance-row,
+        body.sway-dark-mode #sway-admin-workspace .sway-social-content-toolbar,
+        body.sway-dark-mode #sway-admin-workspace .sway-automated-reminders-stats > div,
+        body.sway-dark-mode #sway-admin-workspace .sway-automated-reminder-item,
+        body.sway-dark-mode #sway-admin-workspace .sway-email-summary-grid > div,
+        body.sway-dark-mode #sway-admin-workspace .sway-email-thread-message,
+        body.sway-dark-mode #sway-admin-workspace .sway-client360-onboarding-preview > div,
+        body.sway-dark-mode #sway-admin-workspace .sway-onboarding-field,
+        body.sway-dark-mode #sway-admin-workspace .sway-onboarding-service,
+        body.sway-dark-mode #sway-admin-workspace .sway-onboarding-asset,
+        body.sway-dark-mode #sway-admin-workspace .sway-export-card,
+        body.sway-dark-mode #sway-admin-workspace .sway-project-timeline-step,
+        body.sway-dark-mode #sway-admin-workspace .sway-project-timeline-meta > div,
+        body.sway-dark-mode #sway-admin-workspace .sway-portal-request-full,
+        body.sway-dark-mode #sway-admin-workspace .sway-table-wrap {
+            background: #101A2C !important;
+            background-image: none !important;
+        }
+
+        /* InnerMe: dark canvas + white message bubbles + dark-grey text. */
+        body.sway-dark-mode .sway-ai-panel {
+            background: #0B1423 !important;
+            background-image: none !important;
+            border-color: rgba(119,193,252,0.10) !important;
+        }
+
+        body.sway-dark-mode .sway-ai-conversation {
+            background: #101A2C !important;
+            background-image: none !important;
+            border-color: rgba(119,193,252,0.16) !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.035),
+                0 14px 36px rgba(0,0,0,0.18) !important;
+        }
+
+        body.sway-dark-mode .sway-ai-user,
+        body.sway-dark-mode .sway-ai-assistant {
+            background: #FFFFFF !important;
+            background-image: none !important;
+            border: 1px solid rgba(8,21,51,0.10) !important;
+            color: #34445D !important;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.18) !important;
+        }
+
+        body.sway-dark-mode .sway-ai-message-content,
+        body.sway-dark-mode .sway-ai-message-content *,
+        body.sway-dark-mode .sway-ai-answer-title,
+        body.sway-dark-mode .sway-ai-answer-heading,
+        body.sway-dark-mode .sway-ai-answer-paragraph,
+        body.sway-dark-mode .sway-ai-answer-item-text,
+        body.sway-dark-mode .sway-ai-answer-item-text strong {
+            color: #34445D !important;
+        }
+
+        body.sway-dark-mode .sway-ai-message-label {
+            color: #56627A !important;
+            opacity: 1 !important;
+        }
+
+        body.sway-dark-mode .sway-ai-message-time,
+        body.sway-dark-mode .sway-ai-copy {
+            color: #66748A !important;
+        }
+
+        body.sway-dark-mode .sway-ai-copy:focus-visible {
+            outline-color: rgba(1,82,244,0.28) !important;
+        }
+
+        body.sway-dark-mode .sway-ai-answer-bullet {
+            color: #0152F4 !important;
+        }
+
+        body.sway-dark-mode .sway-ai-records {
+            border-top-color: #DCE3EC !important;
+        }
+
+        body.sway-dark-mode .sway-ai-records-label,
+        body.sway-dark-mode .sway-ai-focus-label {
+            color: #66748A !important;
+        }
+
+        body.sway-dark-mode .sway-ai-focus-value {
+            color: #34445D !important;
+        }
+
+        body.sway-dark-mode .sway-ai-record-link {
+            background: #F4F7FC !important;
+            background-image: none !important;
+            border-color: #D7DFEA !important;
+            color: #34445D !important;
+        }
+
+        body.sway-dark-mode .sway-ai-record-link-name {
+            color: #34445D !important;
+        }
+
+        body.sway-dark-mode .sway-ai-record-link-arrow {
+            color: #66748A !important;
+        }
+
+        body.sway-dark-mode .sway-ai-actions {
+            border-top-color: #DCE3EC !important;
+        }
+
+        body.sway-dark-mode .sway-ai-action {
+            background: #F4F7FC !important;
+            border-color: #D7DFEA !important;
+            color: #34445D !important;
+        }
+
+        body.sway-dark-mode .sway-ai-action:hover {
+            background: #EEF4FF !important;
+            border-color: #8DB8F4 !important;
+            color: #0031C5 !important;
+        }
+
+        /* Composer remains dark in dark mode, with readable text. */
+        body.sway-dark-mode .sway-ai-form {
+            background: #111D31 !important;
+            background-image: none !important;
+            border-color: rgba(119,193,252,0.14) !important;
+        }
+
+        body.sway-dark-mode .sway-ai-form textarea {
+            background: transparent !important;
+            color: #F3F7FC !important;
+            caret-color: #77C1FC !important;
+        }
+
+        body.sway-dark-mode .sway-ai-form textarea::placeholder {
+            color: #91A2B8 !important;
+        }
+
+        body.sway-dark-mode .sway-ai-suggestions {
+            background: #111D31 !important;
+            background-image: none !important;
+            border-color: rgba(119,193,252,0.12) !important;
+        }
+
+        body.sway-dark-mode .sway-ai-suggestions button {
+            background: #F4F7FC !important;
+            border-color: #D7DFEA !important;
+            color: #34445D !important;
+        }
+
+        body.sway-dark-mode .sway-ai-suggestions button:hover {
+            background: #FFFFFF !important;
+            border-color: #8DB8F4 !important;
+            color: #0031C5 !important;
+        }
+    </style>
 </body>
 
 </html>
