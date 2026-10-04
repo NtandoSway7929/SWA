@@ -8162,31 +8162,3 @@ body {
         left: 10px;
     }
 }
-
-
-/* =========================================================
-   SWAYPHICS ADMIN — brand-led visual system (2026-10-04)
-   Typography intentionally remains Plus Jakarta Sans.
-   ========================================================= */
-:root {
-    --swd-bg-primary: #FFFFFF;
-    --swd-bg-secondary: #F4F7F9;
-    --swd-brand-navy: #002096;
-    --swd-brand-strong-blue: #0031C5;
-    --swd-brand-accent-blue: #0152F4;
-    --swd-brand-light-blue: #2C91FC;
-    --swd-brand-sky-blue: #77C1FC;
-    --swd-text: #081533;
-    --swd-text-muted: #56627A;
-    --swd-text-soft: #8190A5;
-    --swd-border: rgba(1, 82, 244, 0.12);
-    --swd-border-strong: rgba(1, 82, 244, 0.20);
-    --swd-shadow-card: 0 12px 32px rgba(8, 21, 51, 0.055);
-    --swd-shadow-float: 0 22px 64px rgba(0, 32, 150, 0.16);
-    --swd-radius-card: 20px;
-    --swd-radius-control: 12px;
-    --swd-font-display: var(--ui-font-display, 'Plus Jakarta Sans', sans-serif);
-    --swd-font-body: var(--ui-font-body, 'Plus Jakarta Sans', sans-serif);
-    --swd-motion: 180ms cubic-bezier(0.22, 1, 0.36, 1);
-    --swd-focus-ring: 0 0 0 3px rgba(1, 82, 244, 0.18);
-}
