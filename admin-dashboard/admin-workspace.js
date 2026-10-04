@@ -5601,6 +5601,69 @@ function renderShell() {
         );
     }
 
+    function smoothSvgLinePath(points) {
+        if (!Array.isArray(points) || !points.length) return "";
+
+        const coordinate = function (value) {
+            return Number(value).toFixed(1);
+        };
+
+        let path =
+            "M " +
+            coordinate(points[0].x) +
+            " " +
+            coordinate(points[0].y);
+
+        for (let index = 0; index < points.length - 1; index += 1) {
+            const previous =
+                points[Math.max(0, index - 1)];
+            const start =
+                points[index];
+            const end =
+                points[index + 1];
+            const next =
+                points[Math.min(points.length - 1, index + 2)];
+            const minY =
+                Math.min(Number(start.y), Number(end.y));
+            const maxY =
+                Math.max(Number(start.y), Number(end.y));
+            const control1Y =
+                Math.max(
+                    minY,
+                    Math.min(
+                        maxY,
+                        Number(start.y) +
+                        (Number(end.y) - Number(previous.y)) / 6
+                    )
+                );
+            const control2Y =
+                Math.max(
+                    minY,
+                    Math.min(
+                        maxY,
+                        Number(end.y) -
+                        (Number(next.y) - Number(start.y)) / 6
+                    )
+                );
+
+            path +=
+                " C " +
+                coordinate(Number(start.x) + (Number(end.x) - Number(previous.x)) / 6) +
+                " " +
+                coordinate(control1Y) +
+                " " +
+                coordinate(Number(end.x) - (Number(next.x) - Number(start.x)) / 6) +
+                " " +
+                coordinate(control2Y) +
+                " " +
+                coordinate(end.x) +
+                " " +
+                coordinate(end.y);
+        }
+
+        return path;
+    }
+
     function trendChart(values, labels, color, label, currency) {
         const width = 900;
         const height = 390;
@@ -5656,10 +5719,22 @@ function renderShell() {
                 };
             });
 
-        const pointString =
-            points.map(function (point) {
-                return point.x + "," + point.y;
-            }).join(" ");
+        const linePath =
+            smoothSvgLinePath(points);
+
+        const areaPath =
+            points.length > 1
+                ? linePath +
+                  " L " +
+                  points[points.length - 1].x.toFixed(1) +
+                  " " +
+                  (top + plotHeight).toFixed(1) +
+                  " L " +
+                  points[0].x.toFixed(1) +
+                  " " +
+                  (top + plotHeight).toFixed(1) +
+                  " Z"
+                : "";
 
         let grid = "";
 
@@ -5765,12 +5840,12 @@ function renderShell() {
                         '" r="' +
                             (
                                 isPeak || isLatest
-                                    ? 7
-                                    : 5
+                                    ? 6
+                                    : 4
                             ) +
-                        '" fill="' +
+                        '" fill="#FFFFFF" stroke="' +
                             color +
-                        '" class="sway-chart-point">' +
+                        '" stroke-width="2.5" vector-effect="non-scaling-stroke" class="sway-chart-point">' +
                             "<title>" +
                                 esc(
                                     String(
@@ -5854,17 +5929,9 @@ function renderShell() {
                         grid +
                         (
                             points.length > 1
-                                ? '<polygon points="' +
-                                  left +
-                                  "," +
-                                  (top + plotHeight) +
-                                  " " +
-                                  pointString +
-                                  " " +
-                                  points[points.length - 1].x +
-                                  "," +
-                                  (top + plotHeight) +
-                                  '" fill="url(#sway-insight-area-gradient)" class="sway-chart-area"></polygon>'
+                                ? '<path d="' +
+                                  areaPath +
+                                  '" fill="url(#sway-insight-area-gradient)" class="sway-chart-area"></path>'
                                 : ""
                         ) +
                         '<line x1="' +
@@ -5876,11 +5943,11 @@ function renderShell() {
                             '" y2="' +
                             (top + plotHeight) +
                             '" class="sway-chart-baseline"></line>' +
-                        '<polyline points="' +
-                            pointString +
+                        '<path d="' +
+                            linePath +
                             '" fill="none" stroke="' +
                             color +
-                            '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="sway-chart-line"></polyline>' +
+                            '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" class="sway-chart-line"></path>' +
                         pointMarks +
                         xLabels +
                     "</svg>" +
@@ -6380,14 +6447,7 @@ function simpleBars(items, color) {
                 if (!points.length) return "";
 
                 const line =
-                    points.map(function (point, index) {
-                        return (
-                            (index ? "L " : "M ") +
-                            point.x.toFixed(1) +
-                            " " +
-                            point.y.toFixed(1)
-                        );
-                    }).join(" ");
+                    smoothSvgLinePath(points);
 
                 const area =
                     line +
@@ -6402,18 +6462,18 @@ function simpleBars(items, color) {
                 return (
                     '<path d="' + area +
                         '" fill="' + item.color +
-                        '" fill-opacity="0.075"></path>' +
+                        '" fill-opacity="0.055" class="sway-bi-line-area"></path>' +
                     '<path d="' + line +
                         '" fill="none" stroke="' +
                         item.color +
-                        '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>' +
+                        '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" class="sway-bi-line"></path>' +
                     points.map(function (point) {
                         return (
                             '<circle cx="' + point.x.toFixed(1) +
                             '" cy="' + point.y.toFixed(1) +
-                            '" r="5" fill="#FFFFFF" stroke="' +
+                            '" r="4.5" fill="#FFFFFF" stroke="' +
                             item.color +
-                            '" stroke-width="3" vector-effect="non-scaling-stroke">' +
+                            '" stroke-width="2.5" vector-effect="non-scaling-stroke" class="sway-bi-line-point">' +
                                 "<title>" +
                                     esc(
                                         item.name +
