@@ -6676,10 +6676,11 @@ function simpleBars(items, color) {
                             : 0;
                     const colors = [
                         "#0152F4",
-            "#0031C5",
-            "#2C91FC",
-            "#77C1FC",
-            "#002096"
+                        "#002096",
+                        "#2C91FC",
+                        "#77C1FC",
+                        "#5B8DEA",
+                        "#5C6F91"
                     ];
 
                     return (
@@ -6711,10 +6712,11 @@ function simpleBars(items, color) {
     function businessDonutChart(items) {
         const palette = [
             "#0152F4",
-            "#0031C5",
+            "#002096",
             "#2C91FC",
             "#77C1FC",
-            "#002096"
+            "#5B8DEA",
+            "#5C6F91"
         ];
         const sorted =
             (items || [])
@@ -6873,10 +6875,10 @@ function simpleBars(items, color) {
 
         const colors = [
             "#0152F4",
-            "#0031C5",
+            "#002096",
             "#2C91FC",
             "#77C1FC",
-            "#002096"
+            "#5B8DEA"
         ];
         const names =
             topSources.slice();
