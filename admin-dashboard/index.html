@@ -14427,6 +14427,356 @@ portfolioForm.addEventListener(
 
 </style>
 
+
+
+    <style id="sway-dark-readability-audit-v1">
+        /* =====================================================
+           DARK MODE READABILITY AUDIT
+           Normalises newer workspace modules that were still
+           carrying light-mode surfaces/text into dark mode.
+           ===================================================== */
+
+        body.sway-dark-mode .sway-social-summary,
+        body.sway-dark-mode .sway-social-account-card,
+        body.sway-dark-mode .sway-email-summary,
+        body.sway-dark-mode .sway-email-inbox-panel,
+        body.sway-dark-mode .sway-email-thread-head,
+        body.sway-dark-mode .sway-automated-reminders,
+        body.sway-dark-mode .sway-lead-source-panel,
+        body.sway-dark-mode .sway-lead-conversion-panel,
+        body.sway-dark-mode .sway-service-profitability,
+        body.sway-dark-mode .sway-workspace-loading {
+            border-color: rgba(119,193,252,0.13) !important;
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(13,21,36,0.97),
+                    rgba(10,15,29,0.94)
+                ) !important;
+            box-shadow:
+                0 14px 38px rgba(0,0,0,0.22),
+                inset 0 1px 0 rgba(255,255,255,0.035) !important;
+            color: #F3F7FC;
+        }
+
+        body.sway-dark-mode .sway-social-summary-stats > div,
+        body.sway-dark-mode .sway-social-account-stats > div,
+        body.sway-dark-mode .sway-social-recent-item,
+        body.sway-dark-mode .sway-social-performance-row,
+        body.sway-dark-mode .sway-social-content-toolbar,
+        body.sway-dark-mode .sway-automated-reminders-stats > div,
+        body.sway-dark-mode .sway-automated-reminder-item,
+        body.sway-dark-mode .sway-email-summary-grid > div,
+        body.sway-dark-mode .sway-email-thread-message,
+        body.sway-dark-mode .sway-client360-onboarding-preview > div,
+        body.sway-dark-mode .sway-onboarding-field,
+        body.sway-dark-mode .sway-onboarding-service,
+        body.sway-dark-mode .sway-onboarding-asset,
+        body.sway-dark-mode .sway-export-card,
+        body.sway-dark-mode .sway-project-timeline-step,
+        body.sway-dark-mode .sway-project-timeline-meta > div,
+        body.sway-dark-mode .sway-portal-request-full {
+            border-color: rgba(119,193,252,0.09) !important;
+            background: rgba(255,255,255,0.035) !important;
+            color: #EAF0F8;
+        }
+
+        body.sway-dark-mode .sway-social-summary p,
+        body.sway-dark-mode .sway-social-account-heading span,
+        body.sway-dark-mode .sway-social-recent-date,
+        body.sway-dark-mode .sway-social-integration-note p,
+        body.sway-dark-mode .sway-social-content-toolbar span,
+        body.sway-dark-mode .sway-social-analytics-empty p,
+        body.sway-dark-mode .sway-social-performance-row > span small,
+        body.sway-dark-mode .sway-social-performance-row > div small,
+        body.sway-dark-mode .sway-social-summary-stats span,
+        body.sway-dark-mode .sway-social-account-stats span,
+        body.sway-dark-mode .sway-email-summary-copy p,
+        body.sway-dark-mode .sway-email-summary-grid span,
+        body.sway-dark-mode .sway-email-last-sync,
+        body.sway-dark-mode .sway-email-inbox-preview,
+        body.sway-dark-mode .sway-email-inbox-date,
+        body.sway-dark-mode .sway-email-inbox-empty span,
+        body.sway-dark-mode .sway-email-thread-contact > span,
+        body.sway-dark-mode .sway-email-thread-message-meta span,
+        body.sway-dark-mode .sway-onboarding-field > div,
+        body.sway-dark-mode .sway-onboarding-service p,
+        body.sway-dark-mode .sway-admin-onboarding-meta,
+        body.sway-dark-mode .sway-onboarding-asset-copy span {
+            color: #AEBCCE !important;
+        }
+
+        body.sway-dark-mode .sway-social-account-heading strong,
+        body.sway-dark-mode .sway-social-summary-stats strong,
+        body.sway-dark-mode .sway-social-account-stats strong,
+        body.sway-dark-mode .sway-social-recent-copy strong,
+        body.sway-dark-mode .sway-social-content-toolbar strong,
+        body.sway-dark-mode .sway-social-analytics-empty strong,
+        body.sway-dark-mode .sway-social-performance-row strong,
+        body.sway-dark-mode .sway-social-performance-row > span,
+        body.sway-dark-mode .sway-social-integration-note strong,
+        body.sway-dark-mode .sway-email-summary-copy h3,
+        body.sway-dark-mode .sway-email-summary-grid strong,
+        body.sway-dark-mode .sway-email-inbox-copy > strong,
+        body.sway-dark-mode .sway-email-thread-head h2,
+        body.sway-dark-mode .sway-email-thread-contact strong,
+        body.sway-dark-mode .sway-email-thread-message-meta strong,
+        body.sway-dark-mode .sway-onboarding-service strong,
+        body.sway-dark-mode .sway-client360-onboarding-preview strong,
+        body.sway-dark-mode .sway-export-card strong,
+        body.sway-dark-mode .sway-project-timeline-step strong,
+        body.sway-dark-mode .sway-project-timeline-meta strong,
+        body.sway-dark-mode .sway-portal-request-open-title,
+        body.sway-dark-mode .sway-portal-request-full-message {
+            color: #F3F7FC !important;
+        }
+
+        body.sway-dark-mode .sway-email-inbox-subject,
+        body.sway-dark-mode .sway-email-thread-message-body,
+        body.sway-dark-mode .sway-email-recipient-preview b,
+        body.sway-dark-mode .sway-onboarding-asset-copy strong {
+            color: #DCE6F3 !important;
+        }
+
+        body.sway-dark-mode .sway-email-inbox-item {
+            border-bottom-color: rgba(119,193,252,0.07) !important;
+            color: #F3F7FC !important;
+        }
+
+        body.sway-dark-mode .sway-email-inbox-item:hover,
+        body.sway-dark-mode .sway-email-inbox-item:focus-visible,
+        body.sway-dark-mode .sway-social-recent-item:hover {
+            background: rgba(119,193,252,0.075) !important;
+        }
+
+        body.sway-dark-mode .sway-email-thread-message-meta {
+            border-bottom-color: rgba(119,193,252,0.08) !important;
+        }
+
+        body.sway-dark-mode .sway-email-thread-message.outbound {
+            border-color: rgba(119,193,252,0.12) !important;
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(1,82,244,0.09),
+                    rgba(255,255,255,0.035)
+                ) !important;
+        }
+
+        body.sway-dark-mode .sway-email-inbox-error {
+            border-color: rgba(255,154,154,0.18) !important;
+            background: rgba(190,52,52,0.12) !important;
+            color: #FFB0B0 !important;
+        }
+
+        body.sway-dark-mode .sway-email-unread-count {
+            border-color: rgba(119,193,252,0.16) !important;
+            background: rgba(1,82,244,0.14) !important;
+            color: #A9D2FF !important;
+        }
+
+        body.sway-dark-mode .sway-email-composer-card,
+        body.sway-dark-mode .sway-project-timeline-card,
+        body.sway-dark-mode .sway-client-portal-link-card {
+            border-color: rgba(119,193,252,0.15) !important;
+            background: rgba(10,15,29,0.985) !important;
+        }
+
+        body.sway-dark-mode .sway-email-composer-head,
+        body.sway-dark-mode .sway-project-timeline-head,
+        body.sway-dark-mode .sway-project-timeline-meta {
+            border-bottom-color: rgba(119,193,252,0.08) !important;
+        }
+
+        body.sway-dark-mode .sway-email-field input,
+        body.sway-dark-mode .sway-email-field select,
+        body.sway-dark-mode .sway-email-field textarea {
+            border-color: rgba(119,193,252,0.17) !important;
+            background: #0D1524 !important;
+            color: #F3F7FC !important;
+        }
+
+        body.sway-dark-mode .sway-email-field input:focus,
+        body.sway-dark-mode .sway-email-field select:focus,
+        body.sway-dark-mode .sway-email-field textarea:focus {
+            border-color: rgba(119,193,252,0.48) !important;
+            background: #101C30 !important;
+            box-shadow: 0 0 0 3px rgba(1,82,244,0.23) !important;
+        }
+
+        body.sway-dark-mode .sway-email-recipient-preview,
+        body.sway-dark-mode .sway-email-composer-note,
+        body.sway-dark-mode .sway-client-portal-link-note {
+            border-color: rgba(119,193,252,0.09) !important;
+            background: rgba(119,193,252,0.055) !important;
+            color: #B7C5D7 !important;
+        }
+
+        body.sway-dark-mode .sway-email-recipient-preview span,
+        body.sway-dark-mode .sway-email-composer-note span {
+            color: #AEBCCE !important;
+        }
+
+        body.sway-dark-mode .sway-email-recipient-preview strong,
+        body.sway-dark-mode .sway-email-composer-note strong,
+        body.sway-dark-mode .sway-client-portal-link-note strong {
+            color: #F3F7FC !important;
+        }
+
+        body.sway-dark-mode .sway-automated-reminders-head h3,
+        body.sway-dark-mode .sway-automated-reminders-stats strong,
+        body.sway-dark-mode .sway-automated-reminder-item strong,
+        body.sway-dark-mode .sway-lead-source-head h3,
+        body.sway-dark-mode .sway-service-profitability-head h3,
+        body.sway-dark-mode .sway-project-timeline-head h3 {
+            color: #F3F7FC !important;
+        }
+
+        body.sway-dark-mode .sway-automated-reminders-head p,
+        body.sway-dark-mode .sway-automated-reminders-stats span,
+        body.sway-dark-mode .sway-automated-reminder-item small,
+        body.sway-dark-mode .sway-lead-source-head p,
+        body.sway-dark-mode .sway-service-profitability-head p,
+        body.sway-dark-mode .sway-project-timeline-head p,
+        body.sway-dark-mode .sway-project-timeline-meta span,
+        body.sway-dark-mode .sway-project-timeline-special,
+        body.sway-dark-mode .sway-client-portal-link-note,
+        body.sway-dark-mode .sway-portal-request-message,
+        body.sway-dark-mode .sway-export-card p {
+            color: #AEBCCE !important;
+        }
+
+        body.sway-dark-mode .sway-automated-reminders-clear {
+            border-color: rgba(127,224,162,0.18) !important;
+            background: rgba(34,197,94,0.08) !important;
+        }
+
+        body.sway-dark-mode .sway-automated-reminders-clear strong {
+            color: #91E8B0 !important;
+        }
+
+        body.sway-dark-mode .sway-client-health-chip {
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.075);
+            color: #C0CCDB !important;
+        }
+
+        body.sway-dark-mode .sway-client-health-chip.healthy,
+        body.sway-dark-mode .sway-client-health-chip.success {
+            border-color: rgba(127,224,162,0.20);
+            background: rgba(22,163,74,0.14);
+            color: #91E8B0 !important;
+        }
+
+        body.sway-dark-mode .sway-client-health-chip.needs-attention,
+        body.sway-dark-mode .sway-client-health-chip.warning {
+            border-color: rgba(247,201,120,0.22);
+            background: rgba(245,158,11,0.14);
+            color: #FFD98A !important;
+        }
+
+        body.sway-dark-mode .sway-client-health-chip.at-risk,
+        body.sway-dark-mode .sway-client-health-chip.danger {
+            border-color: rgba(255,154,154,0.18);
+            background: rgba(190,52,52,0.12);
+            color: #FFB0B0 !important;
+        }
+
+        body.sway-dark-mode .sway-project-timeline-step.complete {
+            border-color: rgba(119,193,252,0.18) !important;
+            background: rgba(1,82,244,0.09) !important;
+        }
+
+        body.sway-dark-mode .sway-project-timeline-node {
+            background: rgba(255,255,255,0.075) !important;
+            color: #C0CCDB !important;
+        }
+
+        body.sway-dark-mode .sway-project-timeline-special {
+            border-color: rgba(255,255,255,0.07) !important;
+            background: rgba(255,255,255,0.035) !important;
+        }
+
+        body.sway-dark-mode .sway-export-card,
+        body.sway-dark-mode .sway-portal-request-full,
+        body.sway-dark-mode .sway-onboarding-field,
+        body.sway-dark-mode .sway-onboarding-service,
+        body.sway-dark-mode .sway-onboarding-asset,
+        body.sway-dark-mode .sway-client360-onboarding-preview > div {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.025) !important;
+        }
+
+        body.sway-dark-mode .sway-onboarding-service > span,
+        body.sway-dark-mode .sway-portal-request-open-hint {
+            color: #78C3FF !important;
+        }
+
+        body.sway-dark-mode .sway-social-platform-icon,
+        body.sway-dark-mode .sway-social-recent-icon,
+        body.sway-dark-mode .sway-social-analytics-empty > span,
+        body.sway-dark-mode .sway-automated-reminder-icon,
+        body.sway-dark-mode .sway-email-inbox-empty-mark {
+            background: rgba(119,193,252,0.09) !important;
+            color: #78C3FF !important;
+        }
+
+        body.sway-dark-mode .sway-social-account-status {
+            background: rgba(255,255,255,0.07) !important;
+            color: #C0CCDB !important;
+        }
+
+        body.sway-dark-mode .sway-social-account-status.connected {
+            background: rgba(34,197,94,0.12) !important;
+            color: #91E8B0 !important;
+        }
+
+        body.sway-dark-mode .sway-social-integration-note {
+            border-color: rgba(119,193,252,0.10) !important;
+            background: rgba(119,193,252,0.045) !important;
+        }
+
+        body.sway-dark-mode .sway-social-content-toolbar {
+            border-color: rgba(119,193,252,0.10) !important;
+            background: rgba(255,255,255,0.045) !important;
+        }
+
+        body.sway-dark-mode .sway-workspace-loading-orb::after {
+            background: #0D1524 !important;
+        }
+
+        body.sway-dark-mode .sway-workspace-loading-grid span {
+            background:
+                linear-gradient(
+                    90deg,
+                    rgba(255,255,255,0.045),
+                    rgba(119,193,252,0.14),
+                    rgba(255,255,255,0.045)
+                );
+        }
+
+        /* The mobile drawer trigger had a later light-mode !important
+           rule; restate the dark state after that cascade. */
+        @media (max-width: 980px) {
+            body.sway-dark-mode .sway-workspace-mobile-toggle {
+                border-color: rgba(119,193,252,0.15) !important;
+                background: rgba(15,24,37,0.95) !important;
+                color: #EAF0F8 !important;
+                box-shadow:
+                    0 14px 34px rgba(0,0,0,0.35),
+                    0 1px 5px rgba(0,0,0,0.20) !important;
+            }
+
+            body.sway-dark-mode #sway-admin-workspace.nav-open .sway-workspace-mobile-toggle {
+                background: #002096 !important;
+                border-color: rgba(119,193,252,0.22) !important;
+                color: #FFFFFF !important;
+            }
+
+            body.sway-dark-mode .sway-workspace-mobile-toggle span {
+                background: #E7EFF9 !important;
+            }
+        }
+    </style>
 </body>
 
 </html>
