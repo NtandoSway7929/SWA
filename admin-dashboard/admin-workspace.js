@@ -22017,18 +22017,57 @@ function simpleBars(items, color) {
                         ? " sway-ai-loading"
                         : "";
 
-                const timestamp = formatAIMessageTime(item.createdAt);
-                const timestampHtml = timestamp
-                    ? '<span class="sway-ai-message-time">' + esc(timestamp) + '</span>'
-                    : "";
+                const timestamp =
+                    formatAIMessageTime(item.createdAt);
+
+                const timestampHtml =
+                    timestamp
+                        ? '<span class="sway-ai-message-time">' +
+                            esc(timestamp) +
+                          '</span>'
+                        : "";
+
                 const copyHtml =
                     item.role === "assistant" &&
                     !item.loading &&
                     String(item.content || "").trim()
-                        ? '<button type="button" class="sway-ai-copy" data-ai-copy="' + esc(String(item.content || "")) + '">Copy</button>'
+                        ? '<button type="button" class="sway-ai-copy" data-ai-copy="' +
+                            esc(String(item.content || "")) +
+                          '">Copy</button>'
                         : "";
 
+                const contentHtml =
+                    item.loading
+                        ? '<span class="sway-ai-thinking" aria-label="InnerMe is thinking">' +
+                            '<span></span><span></span><span></span>' +
+                          '</span>'
+                        : (
+                            item.role === "assistant"
+                                ? formatAIAnswer(String(item.content || ""))
+                                : esc(String(item.content || ""))
+                          );
+
                 return (
+                    '<div class="sway-ai-message ' +
+                        roleClass +
+                        loadingClass +
+                        '">' +
+                        '<span class="sway-ai-message-label">' +
+                            label +
+                        '</span>' +
+                        '<div class="sway-ai-message-content">' +
+                            contentHtml +
+                        '</div>' +
+                        '<div class="sway-ai-message-meta">' +
+                            timestampHtml +
+                            copyHtml +
+                        '</div>' +
+                    '</div>'
+                );
+            }).join("")
+            : "";
+
+        return (
             heading(
                 '<div class="sway-ai-header-actions">' +
                     '<button type="button" class="sway-ai-more-toggle" id="sway-ai-more-toggle" aria-expanded="false" aria-controls="sway-ai-more-panel">' +
@@ -22085,17 +22124,18 @@ function simpleBars(items, color) {
                         '</div>'
                         : ""
                 ) +
-
                 '<div class="sway-ai-conversation" id="sway-ai-conversation">' +
                     conversationHtml +
                 '</div>' +
-                '<form class="sway-ai-form" id="sway-ai-form">' +                    '<div class="sway-ai-composer-row">' +
+                '<form class="sway-ai-form" id="sway-ai-form">' +
+                    '<div class="sway-ai-composer-row">' +
                         '<textarea id="sway-ai-input" rows="2" maxlength="4000" placeholder="Ask InnerMe..." autocomplete="off"></textarea>' +
                         '<button type="submit" class="sway-ai-send" id="sway-ai-send" aria-label="Ask InnerMe">' +
                             '<span aria-hidden="true">↑</span>' +
                         '</button>' +
                     '</div>' +
-                '</form>' +                '<small class="sway-ai-note">InnerMe is read-only by default. It can analyse your workspace, but changes only happen when you explicitly use an action button. Enter to send · Shift+Enter for a new line.</small>' +
+                '</form>' +
+                '<small class="sway-ai-note">InnerMe is read-only by default. It can analyse your workspace, but changes only happen when you explicitly use an action button. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>'
         );
     }
