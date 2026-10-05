@@ -8460,48 +8460,23 @@ body {
 }
 
 
-/* INNERME HEADER / MENU FINAL PASS — 2026-10-05 */
+/* INNERME SECTION LAYOUT
+   Match every other workspace view:
+   heading and description stay outside the content rectangle;
+   only the chat surface is the panel. */
 .sway-ai-panel {
     width: 100%;
     max-width: 100%;
+    margin-top: 0 !important;
     box-sizing: border-box;
 }
 
-.sway-ai-header {
-    display: flex !important;
-    align-items: flex-start !important;
-    justify-content: space-between !important;
-    gap: 28px !important;
-    width: 100% !important;
-    min-height: 0 !important;
-    margin: 0 0 20px !important;
-    padding: 4px 4px 20px !important;
-    box-sizing: border-box !important;
+.sway-ai-panel.sway-panel {
+    padding: 20px !important;
 }
 
-.sway-ai-header > div:first-child {
-    min-width: 0;
-    flex: 1 1 auto;
-}
-
-.sway-ai-header h2 {
-    margin: 4px 0 0 !important;
-    line-height: 1.05 !important;
-}
-
-.sway-ai-header p {
-    max-width: 760px !important;
-    margin: 10px 0 0 !important;
-    line-height: 1.6 !important;
-}
-
-.sway-ai-header-actions {
-    position: relative !important;
-    flex: 0 0 auto !important;
-    display: flex !important;
-    align-items: flex-start !important;
-    padding-top: 2px !important;
-    z-index: 20 !important;
+.sway-workspace-heading-actions {
+    position: relative;
 }
 
 .sway-ai-more-toggle {
@@ -8547,19 +8522,8 @@ body.sway-dark-mode .sway-ai-more-panel {
 }
 
 @media (max-width: 760px) {
-    .sway-ai-header {
-        gap: 16px !important;
-        margin-bottom: 16px !important;
-        padding: 2px 2px 16px !important;
-    }
-
-    .sway-ai-header p {
-        margin-top: 9px !important;
-        line-height: 1.55 !important;
-    }
-
-    .sway-ai-header-actions {
-        padding-top: 0 !important;
+    .sway-ai-panel.sway-panel {
+        padding: 15px !important;
     }
 
     .sway-ai-more-panel {
@@ -8567,8 +8531,3 @@ body.sway-dark-mode .sway-ai-more-panel {
         width: min(230px, calc(100vw - 28px)) !important;
     }
 }
-
-
-/* INNERME SECTION HEADING CONTRACT */
-.sway-workspace-heading-actions { position: relative; }
-.sway-ai-more-panel { top: calc(100% + 8px) !important; right: 0 !important; }
