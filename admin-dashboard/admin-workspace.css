@@ -8078,15 +8078,16 @@ body {
 }
 
 @media (min-width: 981px) {
-    /* Desktop navigation is a real column, not a floating/sticky layer.
-       The active workspace owns the entire second grid track. */
+    /* Desktop geometry contract.
+       Available width W is divided into:
+       250px sidebar + 28px gutter + (W - 278px) content.
+       Flex is used deliberately here so neither child can occupy the
+       other's horizontal space. */
     #sway-admin-workspace .sway-workspace-shell {
-        display: grid !important;
-        grid-template-columns: 250px minmax(0, 1fr) !important;
-        grid-template-areas: "sidebar main" !important;
-        column-gap: 28px !important;
-        row-gap: 0 !important;
-        align-items: start !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-start !important;
+        gap: 28px !important;
         width: 100% !important;
         max-width: 100% !important;
         box-sizing: border-box !important;
@@ -8094,24 +8095,23 @@ body {
     }
 
     #sway-admin-workspace .sway-workspace-sidebar {
-        grid-area: sidebar !important;
         position: relative !important;
-        top: auto !important;
-        left: auto !important;
-        align-self: start !important;
+        inset: auto !important;
+        flex: 0 0 250px !important;
         width: 250px !important;
         min-width: 250px !important;
         max-width: 250px !important;
+        height: calc(100vh - 124px) !important;
         box-sizing: border-box !important;
         z-index: 1 !important;
     }
 
     #sway-admin-workspace .sway-workspace-main {
-        grid-area: main !important;
         position: relative !important;
+        flex: 1 1 auto !important;
+        width: auto !important;
         min-width: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
+        max-width: none !important;
         margin: 0 !important;
         box-sizing: border-box !important;
         overflow: visible !important;
@@ -8122,6 +8122,10 @@ body {
         min-width: 0 !important;
         max-width: 100% !important;
         box-sizing: border-box !important;
+    }
+
+    #sway-admin-workspace .sway-quick-create {
+        flex: 0 0 auto !important;
     }
 }
 
