@@ -8078,9 +8078,8 @@ body {
 }
 
 @media (min-width: 981px) {
-    /* Desktop layout contract: the sidebar owns column 1 and the active
-       workspace owns column 2. Nothing in the active workspace may occupy
-       the sidebar's horizontal track. */
+    /* Desktop navigation is a real column, not a floating/sticky layer.
+       The active workspace owns the entire second grid track. */
     #sway-admin-workspace .sway-workspace-shell {
         display: grid !important;
         grid-template-columns: 250px minmax(0, 1fr) !important;
@@ -8091,25 +8090,37 @@ body {
         width: 100% !important;
         max-width: 100% !important;
         box-sizing: border-box !important;
+        overflow: visible !important;
     }
 
     #sway-admin-workspace .sway-workspace-sidebar {
         grid-area: sidebar !important;
-        position: sticky !important;
-        top: 100px !important;
+        position: relative !important;
+        top: auto !important;
         left: auto !important;
+        align-self: start !important;
         width: 250px !important;
         min-width: 250px !important;
         max-width: 250px !important;
         box-sizing: border-box !important;
+        z-index: 1 !important;
     }
 
     #sway-admin-workspace .sway-workspace-main {
         grid-area: main !important;
+        position: relative !important;
         min-width: 0 !important;
         width: 100% !important;
-        max-width: none !important;
+        max-width: 100% !important;
         margin: 0 !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+        z-index: 1 !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-main > * {
+        min-width: 0 !important;
+        max-width: 100% !important;
         box-sizing: border-box !important;
     }
 }
