@@ -22051,7 +22051,7 @@ function simpleBars(items, color) {
                     '</div>' +
                 '</div>'
             ) +
-            '<section class="sway-ai-panel">' +
+            '<section class="sway-ai-panel sway-panel">' +
                 '<div class="sway-ai-history-panel" id="sway-ai-history-panel" hidden>' +
                     '<div class="sway-ai-history-head">' +
                         '<div>' +
