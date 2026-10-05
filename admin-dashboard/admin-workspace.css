@@ -8458,3 +8458,112 @@ body {
         z-index: 5001 !important;
     }
 }
+
+
+/* INNERME HEADER / MENU FINAL PASS — 2026-10-05 */
+.sway-ai-panel {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.sway-ai-header {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 28px !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 0 20px !important;
+    padding: 4px 4px 20px !important;
+    box-sizing: border-box !important;
+}
+
+.sway-ai-header > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.sway-ai-header h2 {
+    margin: 4px 0 0 !important;
+    line-height: 1.05 !important;
+}
+
+.sway-ai-header p {
+    max-width: 760px !important;
+    margin: 10px 0 0 !important;
+    line-height: 1.6 !important;
+}
+
+.sway-ai-header-actions {
+    position: relative !important;
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    padding-top: 2px !important;
+    z-index: 20 !important;
+}
+
+.sway-ai-more-toggle {
+    position: relative !important;
+    z-index: 21 !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+.sway-ai-more-panel {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    right: 0 !important;
+    z-index: 100 !important;
+    width: min(250px, calc(100vw - 32px)) !important;
+    padding: 8px !important;
+    border: 1px solid rgba(1,82,244,0.10) !important;
+    border-radius: 16px !important;
+    background: rgba(255,255,255,0.98) !important;
+    box-shadow: 0 18px 45px rgba(8,21,51,0.14) !important;
+    box-sizing: border-box !important;
+}
+
+.sway-ai-more-panel[hidden] {
+    display: none !important;
+}
+
+.sway-ai-more-item,
+.sway-ai-more-insights summary {
+    width: 100% !important;
+    min-height: 40px !important;
+    box-sizing: border-box !important;
+}
+
+.sway-ai-conversation {
+    margin-top: 0 !important;
+}
+
+body.sway-dark-mode .sway-ai-more-panel {
+    border-color: rgba(119,193,252,0.14) !important;
+    background: #0A0F1D !important;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.34) !important;
+}
+
+@media (max-width: 760px) {
+    .sway-ai-header {
+        gap: 16px !important;
+        margin-bottom: 16px !important;
+        padding: 2px 2px 16px !important;
+    }
+
+    .sway-ai-header p {
+        margin-top: 9px !important;
+        line-height: 1.55 !important;
+    }
+
+    .sway-ai-header-actions {
+        padding-top: 0 !important;
+    }
+
+    .sway-ai-more-panel {
+        right: 0 !important;
+        width: min(230px, calc(100vw - 28px)) !important;
+    }
+}
