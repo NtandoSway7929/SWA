@@ -8413,3 +8413,12 @@ body {
         height: calc(100dvh - max(64px, calc(env(safe-area-inset-top) + 56px))) !important;
     }
 }
+
+/* FINAL MOBILE DRAWER STACKING: below top bar, above workspace content. */
+@media (max-width: 980px) {
+    #sway-admin-workspace .sway-workspace-sidebar {
+        top: max(82px, calc(env(safe-area-inset-top) + 70px)) !important;
+        height: calc(100dvh - max(94px, calc(env(safe-area-inset-top) + 82px))) !important;
+        z-index: 5001 !important;
+    }
+}
