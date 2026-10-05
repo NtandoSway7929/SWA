@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="admin-workspace.css?v=dashboard-20261004-graph-table-fix-v1">
+    <link rel="stylesheet" href="admin-workspace.css?v=dashboard-20261005-swipe-only-v1">
 
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#002096">
@@ -9969,6 +9969,30 @@ body.sway-dark-mode .sway-ai-form {
     }
 }
 </style>
+
+    <style id="sway-mobile-swipe-only-final">
+        /* Mobile navigation is swipe-only. No visible opener is rendered. */
+        @media (max-width: 980px) {
+            #sway-admin-workspace .sway-workspace-mobile-toggle {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                width: 0 !important;
+                height: 0 !important;
+                min-width: 0 !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                pointer-events: none !important;
+            }
+
+            #sway-admin-workspace .sway-workspace-sidebar {
+                top: max(52px, calc(env(safe-area-inset-top) + 44px)) !important;
+                height: calc(100dvh - max(64px, calc(env(safe-area-inset-top) + 56px))) !important;
+            }
+        }
+    </style>
 </head>
 
 
@@ -13031,7 +13055,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20261003-insights-bi-v3"></script>
+<script src="admin-workspace.js?v=dashboard-20261005-swipe-only-v1"></script>
 
 <script>
 (function () {
