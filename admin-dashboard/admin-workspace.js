@@ -23941,6 +23941,43 @@ function simpleBars(items, color) {
                 );
             });
 
+        const moreToggle =
+            workspace.querySelector("#sway-ai-more-toggle");
+
+        const morePanel =
+            workspace.querySelector("#sway-ai-more-panel");
+
+        if (moreToggle && morePanel) {
+            moreToggle.onclick = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const open = morePanel.hidden === true;
+                morePanel.hidden = !open;
+                moreToggle.setAttribute("aria-expanded", open ? "true" : "false");
+
+                if (open) {
+                    morePanel.setAttribute("tabindex", "-1");
+                }
+            };
+
+            morePanel.addEventListener("click", function (event) {
+                event.stopPropagation();
+            });
+
+            document.addEventListener("click", function (event) {
+                if (
+                    !morePanel.hidden &&
+                    !morePanel.contains(event.target) &&
+                    event.target !== moreToggle &&
+                    !moreToggle.contains(event.target)
+                ) {
+                    morePanel.hidden = true;
+                    moreToggle.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
+
         const historyToggle =
             workspace.querySelector("#sway-ai-history-toggle");
 
