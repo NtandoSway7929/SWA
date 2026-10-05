@@ -2968,6 +2968,10 @@
                 "Overview",
                 "Your operational picture at a glance."
             ],
+            "swayphics-ai": [
+                "InnerMe",
+                "Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data."
+            ],
             insights: [
                 "Insights",
                 "Live financial, sales and delivery intelligence."
@@ -22025,63 +22029,29 @@ function simpleBars(items, color) {
                         : "";
 
                 return (
-                    '<div class="sway-ai-message ' +
-                    roleClass +
-                    loadingClass +
-                    '">' +
-                        '<span class="sway-ai-message-label">' +
-                            esc(label) +
-                        '</span>' +
-                        '<div class="sway-ai-message-content">' +
-                            (
-                                item.role === "assistant"
-                                    ? formatAIAnswer(item.content || "")
-                                    : esc(item.content || "")
-                            ) +
-                        '</div>' +
-                        (timestampHtml || copyHtml ? '<div class="sway-ai-message-meta">' + timestampHtml + copyHtml + '</div>' : "") +
-                    '</div>'
-                );
-            }).join("")
-            : (
-                '<div class="sway-ai-welcome">' +
-                    '<strong>What needs a closer look?</strong>' +
-                    '<span>Ask about leads, clients, follow-ups, tasks, projects, invoices, payments, portal requests or recent activity. InnerMe will keep the answer useful and to the point.</span>' +
-                '</div>'
-            );
-
-        return (
-            '<section class="sway-ai-panel">' +
-                '<div class="sway-ai-header">' +
-                    '<div>' +
-                        '<span class="sway-ai-eyebrow">INNERME</span>' +
-                        '<h2>InnerMe</h2>' +
-                        '<div class="sway-ai-byline" aria-label="an ai agent by Swayphics">' +
-                            '<span>an ai agent by</span>' +
-                            '<img src="../swayphics-logo.png" alt="Swayphics">' +
-                        '</div>' +
-                        '<p>Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data. No fluff, just the useful stuff.</p>' +
-                    '</div>' +
-                    '<div class="sway-ai-header-actions">' +
-                        '<button type="button" class="sway-ai-more-toggle" id="sway-ai-more-toggle" aria-expanded="false" aria-controls="sway-ai-more-panel">' +
-                            '<span aria-hidden="true">•••</span>' +
-                            '<span>More</span>' +
+            heading(
+                '<div class="sway-ai-header-actions">' +
+                    '<button type="button" class="sway-ai-more-toggle" id="sway-ai-more-toggle" aria-expanded="false" aria-controls="sway-ai-more-panel">' +
+                        '<span aria-hidden="true">•••</span>' +
+                        '<span>More</span>' +
+                    '</button>' +
+                    '<div class="sway-ai-more-panel" id="sway-ai-more-panel" hidden>' +
+                        '<button type="button" class="sway-ai-history-toggle sway-ai-more-item" id="sway-ai-history-toggle" aria-expanded="false">' +
+                            '<span aria-hidden="true">☷</span>' +
+                            '<span>Chats</span>' +
                         '</button>' +
-                        '<div class="sway-ai-more-panel" id="sway-ai-more-panel" hidden>' +
-                            '<button type="button" class="sway-ai-history-toggle sway-ai-more-item" id="sway-ai-history-toggle" aria-expanded="false">' +
-                                '<span aria-hidden="true">☷</span>' +
-                                '<span>Chats</span>' +
-                            '</button>' +
-                            '<button type="button" class="sway-ai-new-chat sway-ai-more-item" id="sway-ai-new-chat">' +
-                                '<span aria-hidden="true">＋</span>' +
-                                '<span>New chat</span>' +
-                            '</button>' +
-                            '<details class="sway-ai-more-insights">' +
-                                '<summary>Workspace insights</summary>' +
-                                renderAIWorkspaceInsights() +
-                            '</details>' +
-                        '</div>' +
+                        '<button type="button" class="sway-ai-new-chat sway-ai-more-item" id="sway-ai-new-chat">' +
+                            '<span aria-hidden="true">＋</span>' +
+                            '<span>New chat</span>' +
+                        '</button>' +
+                        '<details class="sway-ai-more-insights">' +
+                            '<summary>Workspace insights</summary>' +
+                            renderAIWorkspaceInsights() +
+                        '</details>' +
                     '</div>' +
+                '</div>'
+            ) +
+            '<section class="sway-ai-panel">' +
                 '<div class="sway-ai-history-panel" id="sway-ai-history-panel" hidden>' +
                     '<div class="sway-ai-history-head">' +
                         '<div>' +
@@ -22093,7 +22063,6 @@ function simpleBars(items, color) {
                     '<div class="sway-ai-history-list">' +
                         renderAIChatHistory() +
                     '</div>' +
-                '</div>' +
                 '</div>' +
                 (
                     state.aiFocusedRecord
