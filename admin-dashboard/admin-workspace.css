@@ -8365,3 +8365,29 @@ body {
         animation: none !important;
     }
 }
+
+
+/* =========================================================
+   MOBILE SIDEBAR — SWIPE ONLY
+   ========================================================= */
+@media (max-width: 980px) {
+    /* Mobile navigation is opened from the left-edge swipe only. */
+    .sway-workspace-mobile-toggle {
+        display: none !important;
+    }
+
+    .sway-workspace-sidebar {
+        top: max(64px, calc(env(safe-area-inset-top) + 52px)) !important;
+        height: calc(100dvh - max(76px, calc(env(safe-area-inset-top) + 64px))) !important;
+    }
+
+    .sway-workspace-heading {
+        padding-left: 0 !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .sway-workspace-heading {
+        padding-left: 0 !important;
+    }
+}
