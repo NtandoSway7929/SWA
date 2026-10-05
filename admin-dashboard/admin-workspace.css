@@ -8078,18 +8078,28 @@ body {
 }
 
 @media (min-width: 981px) {
+    /* Desktop: reserve a dedicated sidebar track so workspace content can
+       never render underneath the navigation panel. */
     .sway-workspace-shell {
         display: grid !important;
-        grid-template-columns:
-            minmax(0, 1fr)
-            minmax(0, 4fr) !important;
+        grid-template-columns: 250px minmax(0, 1fr) !important;
         gap: 28px !important;
         align-items: start;
     }
 
     .sway-workspace-sidebar {
-        width: 100%;
-        max-width: none;
+        position: sticky !important;
+        top: 100px !important;
+        width: 250px !important;
+        max-width: 250px !important;
+        min-width: 250px !important;
+        box-sizing: border-box;
+    }
+
+    .sway-workspace-main {
+        min-width: 0 !important;
+        width: auto !important;
+        max-width: 100% !important;
     }
 }
 
