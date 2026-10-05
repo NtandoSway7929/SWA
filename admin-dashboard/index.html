@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="admin-workspace.css?v=dashboard-20261005-swipe-only-v1">
+    <link rel="stylesheet" href="admin-workspace.css?v=dashboard-20261005-innerme-v2">
 
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#002096">
@@ -10066,6 +10066,48 @@ body.sway-dark-mode .sway-ai-header p{color:#a9b5c8!important}
             }
         }
     </style>
+    <style id="innerme-header-final-20261005">
+        .sway-ai-header {
+            display: flex !important;
+            align-items: flex-start !important;
+            justify-content: space-between !important;
+            gap: 28px !important;
+            min-height: 0 !important;
+            margin: 0 0 20px !important;
+            padding: 4px 4px 20px !important;
+        }
+        .sway-ai-header h2 {
+            margin: 4px 0 0 !important;
+            line-height: 1.05 !important;
+        }
+        .sway-ai-header p {
+            margin: 10px 0 0 !important;
+            line-height: 1.6 !important;
+            max-width: 760px !important;
+        }
+        .sway-ai-header-actions {
+            position: relative !important;
+            z-index: 20 !important;
+            flex: 0 0 auto !important;
+        }
+        .sway-ai-more-panel {
+            position: absolute !important;
+            top: calc(100% + 8px) !important;
+            right: 0 !important;
+            z-index: 100 !important;
+        }
+        @media (max-width:760px) {
+            .sway-ai-header {
+                gap: 16px !important;
+                margin-bottom: 16px !important;
+                padding: 2px 2px 16px !important;
+            }
+            .sway-ai-header p {
+                margin-top: 9px !important;
+                line-height: 1.55 !important;
+            }
+        }
+    </style>
 </head>
 
 
@@ -13128,7 +13170,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=dashboard-20261005-swipe-only-v1"></script>
+<script src="admin-workspace.js?v=dashboard-20261005-innerme-v2"></script>
 
 <script>
 (function () {
