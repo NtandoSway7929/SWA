@@ -9932,36 +9932,7 @@ body.sway-dark-mode .sway-ai-form {
 
     
 
-        /* Mobile navigation: keep the opener in a reserved header slot and
-           keep the drawer compact instead of floating over page content. */
-        @media (max-width: 760px) {
-            .admin-header-inner {
-                padding-left: 60px !important;
-            }
 
-            .admin-brand-logo {
-                width: min(112px, 100%) !important;
-                max-height: 28px !important;
-            }
-
-            #sway-admin-workspace .sway-workspace-mobile-toggle {
-                position: fixed !important;
-                top: max(15px, calc(env(safe-area-inset-top) + 12px)) !important;
-                left: max(12px, env(safe-area-inset-left)) !important;
-                right: auto !important;
-                bottom: auto !important;
-                z-index: 121 !important;
-                width: 44px !important;
-                height: 44px !important;
-                padding: 0 !important;
-                border: 1px solid var(--ui-border) !important;
-                border-radius: 14px !important;
-                background: var(--ui-surface) !important;
-                color: var(--ui-text) !important;
-                box-shadow: var(--ui-shadow-sm) !important;
-                backdrop-filter: none !important;
-                -webkit-backdrop-filter: none !important;
-            }
 
             #sway-admin-workspace .sway-workspace-sidebar {
                 width: min(248px, calc(100vw - 24px)) !important;
@@ -14999,14 +14970,6 @@ body.sway-dark-mode .sway-ai-header p{color:#a9b5c8!important}
 
 @media(max-width:980px){
 #sway-admin-workspace .sway-workspace-sidebar{z-index:5001!important}
-#sway-admin-workspace .sway-workspace-mobile-toggle{
-position:fixed!important;
-z-index:7000!important;
-isolation:isolate!important;
-}
-#sway-admin-workspace .sway-workspace-mobile-toggle:focus-visible{
-outline:3px solid #77C1FC!important;
-outline-offset:3px!important;
 }
 }
 </style>
