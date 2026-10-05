@@ -8078,28 +8078,39 @@ body {
 }
 
 @media (min-width: 981px) {
-    /* Desktop: reserve a dedicated sidebar track so workspace content can
-       never render underneath the navigation panel. */
-    .sway-workspace-shell {
+    /* Desktop layout contract: the sidebar owns column 1 and the active
+       workspace owns column 2. Nothing in the active workspace may occupy
+       the sidebar's horizontal track. */
+    #sway-admin-workspace .sway-workspace-shell {
         display: grid !important;
         grid-template-columns: 250px minmax(0, 1fr) !important;
-        gap: 28px !important;
-        align-items: start;
+        grid-template-areas: "sidebar main" !important;
+        column-gap: 28px !important;
+        row-gap: 0 !important;
+        align-items: start !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
     }
 
-    .sway-workspace-sidebar {
+    #sway-admin-workspace .sway-workspace-sidebar {
+        grid-area: sidebar !important;
         position: sticky !important;
         top: 100px !important;
+        left: auto !important;
         width: 250px !important;
-        max-width: 250px !important;
         min-width: 250px !important;
-        box-sizing: border-box;
+        max-width: 250px !important;
+        box-sizing: border-box !important;
     }
 
-    .sway-workspace-main {
+    #sway-admin-workspace .sway-workspace-main {
+        grid-area: main !important;
         min-width: 0 !important;
-        width: auto !important;
-        max-width: 100% !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
     }
 }
 
