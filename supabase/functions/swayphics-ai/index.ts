@@ -2669,8 +2669,7 @@ Deno.serve(async (req) => {
                 parts: [
                   {
                     text:
-                      "VERIFIED RECORD CONTEXT:
-" +
+                      "VERIFIED RECORD CONTEXT:\n" +
                       JSON.stringify(draftSource),
                   },
                 ],
