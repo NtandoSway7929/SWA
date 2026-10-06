@@ -22687,6 +22687,105 @@ function simpleBars(items, color) {
             );
         };
 
+        const revenue = briefing.revenue_intelligence || {};
+        const revenueMoney = function (value) {
+            return "R" + Math.round(Number(value || 0)).toLocaleString("en-ZA");
+        };
+        const revenueFocus = revenue.focus || {};
+        const revenueCards = [
+            {
+                label: "Open pipeline",
+                value: revenueMoney(revenueCardsSource(revenue, "open_pipeline_value_zar"))
+            },
+            {
+                label: "Quotes awaiting",
+                value: revenueMoney(revenueCardsSource(revenue, "quotes_awaiting_value_zar"))
+            },
+            {
+                label: "Cash outstanding",
+                value: revenueMoney(revenueCardsSource(revenue, "cash_outstanding_value_zar"))
+            },
+            {
+                label: "Overdue follow-up value",
+                value: revenueMoney(revenueCardsSource(revenue, "overdue_followup_pipeline_value_zar"))
+            }
+        ];
+
+        function revenueCardsSource(source, key) {
+            return Number(source?.metrics?.[key] || 0);
+        }
+
+        const revenueHtml =
+            '<section class="sway-ai-revenue-intelligence" aria-label="InnerMe Revenue Intelligence">' +
+                '<div class="sway-ai-revenue-head">' +
+                    '<div>' +
+                        '<span class="sway-ai-revenue-kicker">REVENUE INTELLIGENCE</span>' +
+                        '<strong>Where the money is sitting</strong>' +
+                        '<p>Separating sales potential, decisions still pending, and cash still to collect.</p>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="sway-ai-revenue-metrics">' +
+                    revenueCards.map(function (item) {
+                        return (
+                            '<div class="sway-ai-revenue-metric">' +
+                                '<span>' + esc(item.label) + '</span>' +
+                                '<strong>' + esc(item.value) + '</strong>' +
+                            '</div>'
+                        );
+                    }).join("") +
+                '</div>' +
+                (
+                    revenueFocus.title
+                        ? '<div class="sway-ai-revenue-focus">' +
+                            '<div>' +
+                                '<span class="sway-ai-revenue-focus-kicker">' +
+                                    esc(revenueFocus.label || "COMMERCIAL ATTENTION") +
+                                '</span>' +
+                                '<strong>' + esc(revenueFocus.title) + '</strong>' +
+                                '<p>' + esc(revenueFocus.detail || "") + '</p>' +
+                            '</div>' +
+                            (
+                                revenueFocus.prompt
+                                    ? '<button type="button" class="sway-ai-revenue-focus-action" data-ai-prompt="' +
+                                        esc(revenueFocus.prompt) +
+                                      '">Investigate →</button>'
+                                    : ""
+                            ) +
+                          '</div>'
+                        : ""
+                ) +
+                (
+                    Array.isArray(revenue.top_opportunities) &&
+                    revenue.top_opportunities.length
+                        ? '<div class="sway-ai-revenue-opportunities">' +
+                            '<span class="sway-ai-revenue-opportunities-kicker">TOP OPEN OPPORTUNITIES</span>' +
+                            revenue.top_opportunities.slice(0, 3).map(function (item) {
+                                return (
+                                    '<button type="button" class="sway-ai-revenue-opportunity" data-ai-prompt="' +
+                                        esc(item.prompt || "Review this opportunity and tell me the strongest commercial next move.") +
+                                    '">' +
+                                        '<span>' +
+                                            '<strong>' + esc(item.name || "Open opportunity") + '</strong>' +
+                                            '<small>' +
+                                                esc(
+                                                    (item.status || "Open") +
+                                                    (
+                                                        item.next_follow_up
+                                                            ? " · Follow-up " + item.next_follow_up
+                                                            : " · No follow-up scheduled"
+                                                    )
+                                                ) +
+                                            '</small>' +
+                                        '</span>' +
+                                        '<b>' + esc(revenueMoney(item.value_zar)) + '</b>' +
+                                    '</button>'
+                                );
+                            }).join("") +
+                          '</div>'
+                        : '<div class="sway-ai-revenue-empty">No valued open opportunities are currently available to rank.</div>'
+                ) +
+            '</section>';
+
         const changeRadar = state.aiChangeRadar || {
             initialized: true,
             checked_at: null,
@@ -22875,9 +22974,10 @@ function simpleBars(items, color) {
                         String(metrics.new_enquiries || 0)
                     ) +
                 '</div>' +
+                revenueHtml +
                 changeRadarHtml +
                 priorityHtml +
-            '</section>'
+            '</section>
         );
     }
 
