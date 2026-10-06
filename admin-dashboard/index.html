@@ -10600,6 +10600,217 @@ body.sway-dark-mode .sway-ai-header p{color:#a9b5c8!important}
             }
         }
     </style>
+<style id="innerme-change-radar-20261006">
+        .sway-ai-change-radar {
+            margin: 13px 0 14px;
+            padding: 12px 13px;
+            border: 1px solid #dfe6f1;
+            border-radius: 15px;
+            background: rgba(248,250,255,.80);
+        }
+
+        .sway-ai-change-radar.is-initialized {
+            background: rgba(1,82,244,.028);
+        }
+
+        .sway-ai-change-radar-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .sway-ai-change-radar-head > div {
+            min-width: 0;
+        }
+
+        .sway-ai-change-radar-kicker {
+            display: block;
+            margin-bottom: 3px;
+            color: #0152F4;
+            font-size: 7px;
+            font-weight: 900;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+
+        .sway-ai-change-radar-head strong {
+            display: block;
+            color: #33425A;
+            font-size: 10px;
+            font-weight: 850;
+            line-height: 1.4;
+        }
+
+        .sway-ai-change-radar-head p {
+            margin: 4px 0 0;
+            color: #7D8BA0;
+            font-size: 8px;
+            line-height: 1.5;
+        }
+
+        .sway-ai-change-radar-count {
+            min-width: 27px;
+            height: 27px;
+            display: inline-grid;
+            flex: 0 0 27px;
+            place-items: center;
+            border: 1px solid rgba(1,82,244,.10);
+            border-radius: 50%;
+            background: rgba(1,82,244,.055);
+            color: #0152F4;
+            font-size: 7px;
+            font-weight: 900;
+            letter-spacing: .06em;
+        }
+
+        .sway-ai-change-radar-list {
+            display: grid;
+            gap: 5px;
+            margin-top: 9px;
+        }
+
+        .sway-ai-change-radar-item {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 5px minmax(0,1fr) auto;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            padding: 8px;
+            border: 1px solid rgba(0,32,150,.06);
+            border-radius: 10px;
+            background: #fff;
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+            transition:
+                border-color .18s ease,
+                background .18s ease,
+                transform .18s ease;
+        }
+
+        .sway-ai-change-radar-item:hover {
+            border-color: rgba(1,82,244,.16);
+            background: #f8faff;
+            transform: translateY(-1px);
+        }
+
+        .sway-ai-change-radar-mark {
+            align-self: stretch;
+            min-height: 28px;
+            border-radius: 999px;
+            background: #77C1FC;
+        }
+
+        .sway-ai-change-radar-mark.high {
+            background: #0152F4;
+        }
+
+        .sway-ai-change-radar-copy {
+            min-width: 0;
+            display: grid;
+            gap: 1px;
+        }
+
+        .sway-ai-change-radar-copy > span {
+            color: #8A99AD;
+            font-size: 7px;
+            font-weight: 850;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .sway-ai-change-radar-copy strong {
+            min-width: 0;
+            overflow: hidden;
+            color: #44536A;
+            font-size: 9px;
+            font-weight: 850;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sway-ai-change-radar-copy small {
+            min-width: 0;
+            overflow: hidden;
+            color: #7D8BA0;
+            font-size: 8px;
+            line-height: 1.4;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sway-ai-change-radar-arrow {
+            flex: 0 0 auto;
+            color: #0152F4;
+            font-size: 7px;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        body.sway-dark-mode .sway-ai-change-radar {
+            border-color: #2A3A58;
+            background: rgba(17,29,49,.64);
+        }
+
+        body.sway-dark-mode .sway-ai-change-radar.is-initialized {
+            background: rgba(1,82,244,.045);
+        }
+
+        body.sway-dark-mode .sway-ai-change-radar-head strong {
+            color: #E5EBF5;
+        }
+
+        body.sway-dark-mode .sway-ai-change-radar-head p,
+        body.sway-dark-mode .sway-ai-change-radar-copy small {
+            color: #8A99AD;
+        }
+
+        body.sway-dark-mode .sway-ai-change-radar-item {
+            border-color: #263552;
+            background: #162238;
+        }
+
+        body.sway-dark-mode .sway-ai-change-radar-item:hover {
+            border-color: #35578C;
+            background: #1A2942;
+        }
+
+        body.sway-dark-mode .sway-ai-change-radar-copy > span {
+            color: #8090A6;
+        }
+
+        body.sway-dark-mode .sway-ai-change-radar-copy strong {
+            color: #DCE6F3;
+        }
+
+        @media (max-width: 760px) {
+            .sway-ai-change-radar {
+                padding: 11px;
+                border-radius: 14px;
+            }
+
+            .sway-ai-change-radar-head {
+                gap: 9px;
+            }
+
+            .sway-ai-change-radar-head p {
+                font-size: 8px;
+            }
+
+            .sway-ai-change-radar-item {
+                grid-template-columns: 5px minmax(0,1fr);
+            }
+
+            .sway-ai-change-radar-arrow {
+                grid-column: 2;
+                justify-self: start;
+                margin-top: 3px;
+            }
+        }
+    </style>
     <style id="innerme-v2-operator-upgrade-20261006">
         /* InnerMe V2: proactive briefing, compact command shortcuts, and safe drafting UI. */
         .sway-ai-v2-briefing {
