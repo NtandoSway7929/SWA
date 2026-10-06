@@ -93,12 +93,15 @@ Deno.serve(async (req) => {
       service_interest?: string;
       estimated_value?: number | string;
     };
+    channel?: string;
   } = {};
   try {
     body = await req.json();
   } catch {
     return json({ error: "Invalid JSON request." }, 400, origin);
   }
+
+  const action = String(body.action || "").trim();
 
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
   /*
@@ -902,8 +905,10 @@ Deno.serve(async (req) => {
   }
 
   const message = String(body.message || "").trim();
+  const actionNeedsMessage =
+    !["briefing", "draft_followup"].includes(action);
 
-  if (!message) {
+  if (actionNeedsMessage && !message) {
     return json({ error: "A message is required." }, 400, origin);
   }
 
@@ -2007,6 +2012,764 @@ Deno.serve(async (req) => {
     },
   };
 
+  /*
+   * INNERME V2 · PROACTIVE BRIEFING
+   * The briefing is deliberately structured on the server from verified
+   * workspace data. Gemini may summarise the evidence, but it does not
+   * decide which records exist or alter any totals.
+   */
+  if (action === "briefing") {
+    const priorityCandidates: Array<{
+      category: string;
+      title: string;
+      detail: string;
+      view: string;
+      id: string;
+      prompt: string;
+      severity: string;
+    }> = [];
+
+    const seenPriorityKeys = new Set<string>();
+
+    function addPriority(item: {
+      category: string;
+      title: string;
+      detail: string;
+      view: string;
+      id?: string | null;
+      prompt: string;
+      severity?: string;
+    }) {
+      const id = String(item.id || "");
+      const key = item.view + ":" + id + ":" + item.title;
+
+      if (seenPriorityKeys.has(key)) {
+        return;
+      }
+
+      seenPriorityKeys.add(key);
+
+      priorityCandidates.push({
+        category: item.category,
+        title: cleanForModel(item.title, 180),
+        detail: cleanForModel(item.detail, 260),
+        view: item.view,
+        id,
+        prompt: cleanForModel(item.prompt, 700),
+        severity: item.severity || "medium",
+      });
+    }
+
+    const sortedOverdueFollowups = pendingFollowupsOverdue
+      .slice()
+      .sort(function (a: any, b: any) {
+        return String(a?.scheduled_for || "").localeCompare(
+          String(b?.scheduled_for || "")
+        );
+      });
+
+    sortedOverdueFollowups.slice(0, 2).forEach(function (item: any) {
+      const lead = item?.lead_id
+        ? leadById.get(String(item.lead_id))
+        : null;
+      const targetName =
+        lead?.business_name ||
+        (item?.client_id
+          ? (clients.data || []).find(function (client: any) {
+              return String(client?.id || "") === String(item.client_id);
+            })?.business_name
+          : null) ||
+        "Client or lead";
+
+      addPriority({
+        category: "Overdue follow-up",
+        title: targetName,
+        detail:
+          "Follow-up due " +
+          String(item?.scheduled_for || "earlier") +
+          (item?.channel ? " · " + cleanForModel(item.channel, 40) : ""),
+        view: "followups",
+        id: item?.id || "",
+        prompt:
+          "Open the overdue follow-up for " +
+          targetName +
+          " and tell me the strongest next move. Include what is already known and what I should say or do next.",
+        severity: "high",
+      });
+    });
+
+    pendingFollowupsDueToday.slice(0, 2).forEach(function (item: any) {
+      const lead = item?.lead_id
+        ? leadById.get(String(item.lead_id))
+        : null;
+      const targetName =
+        lead?.business_name ||
+        (item?.client_id
+          ? (clients.data || []).find(function (client: any) {
+              return String(client?.id || "") === String(item.client_id);
+            })?.business_name
+          : null) ||
+        "Client or lead";
+
+      addPriority({
+        category: "Due today",
+        title: targetName,
+        detail:
+          "Follow-up scheduled today" +
+          (item?.channel ? " · " + cleanForModel(item.channel, 40) : ""),
+        view: "followups",
+        id: item?.id || "",
+        prompt:
+          "Review today's follow-up for " +
+          targetName +
+          " and tell me the exact next move.",
+        severity: "high",
+      });
+    });
+
+    leadFollowupsOverdue.slice(0, 2).forEach(function (lead: any) {
+      addPriority({
+        category: "Lead follow-up",
+        title: lead?.business_name || "Lead",
+        detail:
+          "Lead profile follow-up is overdue" +
+          (lead?.next_follow_up
+            ? " · " + String(lead.next_follow_up)
+            : ""),
+        view: "leads",
+        id: lead?.id || "",
+        prompt:
+          "Review " +
+          (lead?.business_name || "this lead") +
+          " and tell me the strongest next move for the overdue follow-up.",
+        severity: "high",
+      });
+    });
+
+    const overdueInvoices = (invoices.data || [])
+      .filter(function (invoice: any) {
+        if (
+          invoice?.status === "cancelled" ||
+          invoice?.status === "paid" ||
+          invoice?.archived === true
+        ) {
+          return false;
+        }
+
+        const outstanding = Number(
+          invoice?.amount_outstanding != null
+            ? invoice.amount_outstanding
+            : invoice?.total || 0
+        );
+
+        const due = String(invoice?.due_date || "");
+
+        return (
+          outstanding > 0 &&
+          (
+            invoice?.status === "overdue" ||
+            (due && due < businessToday)
+          )
+        );
+      })
+      .sort(function (a: any, b: any) {
+        const av = Number(a?.amount_outstanding != null
+          ? a.amount_outstanding
+          : a?.total || 0);
+        const bv = Number(b?.amount_outstanding != null
+          ? b.amount_outstanding
+          : b?.total || 0);
+        return bv - av;
+      });
+
+    overdueInvoices.slice(0, 2).forEach(function (invoice: any) {
+      const outstanding = Number(
+        invoice?.amount_outstanding != null
+          ? invoice.amount_outstanding
+          : invoice?.total || 0
+      );
+
+      const client =
+        (clients.data || []).find(function (item: any) {
+          return String(item?.id || "") === String(invoice?.client_id || "");
+        });
+
+      addPriority({
+        category: "Outstanding",
+        title: invoice?.invoice_number || "Outstanding invoice",
+        detail:
+          (client?.business_name || "Client") +
+          " · R" +
+          Math.max(0, Math.round(outstanding)).toLocaleString("en-ZA") +
+          " outstanding",
+        view: "invoices",
+        id: invoice?.id || "",
+        prompt:
+          "Review overdue invoice " +
+          (invoice?.invoice_number || "") +
+          " and tell me the most professional collection next step based on the current record.",
+        severity: "high",
+      });
+    });
+
+    const newestEnquiries = (enquiries.data || [])
+      .filter(function (item: any) {
+        return String(item?.status || "") === "new";
+      })
+      .slice()
+      .sort(function (a: any, b: any) {
+        return new Date(b?.created_at || 0).getTime() -
+          new Date(a?.created_at || 0).getTime();
+      });
+
+    newestEnquiries.slice(0, 2).forEach(function (item: any) {
+      addPriority({
+        category: "New enquiry",
+        title:
+          item?.business_name ||
+          item?.name ||
+          "New website enquiry",
+        detail:
+          (item?.service
+            ? cleanForModel(item.service, 70) + " · "
+            : "") +
+          "Received " +
+          String(item?.created_at || ""),
+        view: "enquiries",
+        id: item?.id || "",
+        prompt:
+          "Review the newest website enquiry from " +
+          (item?.business_name || item?.name || "this business") +
+          " and tell me how I should qualify and respond first.",
+        severity: "medium",
+      });
+    });
+
+    const awaitingQuotes = (quotes.data || [])
+      .filter(function (quote: any) {
+        return String(quote?.status || "") === "sent";
+      })
+      .slice()
+      .sort(function (a: any, b: any) {
+        return Number(b?.amount || 0) - Number(a?.amount || 0);
+      });
+
+    awaitingQuotes.slice(0, 2).forEach(function (quote: any) {
+      const client =
+        (clients.data || []).find(function (item: any) {
+          return String(item?.id || "") === String(quote?.client_id || "");
+        });
+
+      addPriority({
+        category: "Quote awaiting response",
+        title:
+          quote?.quote_number ||
+          quote?.title ||
+          "Quote awaiting response",
+        detail:
+          (client?.business_name || "Client") +
+          " · R" +
+          Math.max(0, Math.round(Number(quote?.amount || 0))).toLocaleString("en-ZA"),
+        view: "quotes",
+        id: quote?.id || "",
+        prompt:
+          "Review quote " +
+          (quote?.quote_number || "") +
+          " and tell me the most useful next move to progress it.",
+        severity: "medium",
+      });
+    });
+
+    const dueTasks = (tasks.data || [])
+      .filter(function (task: any) {
+        if (
+          task?.status === "completed" ||
+          !task?.due_date
+        ) {
+          return false;
+        }
+
+        const due = String(task?.due_date || "");
+
+        return (
+          due &&
+          due <= businessToday &&
+          String(task?.assigned_to || "") === String(userData.user.id || "")
+        );
+      })
+      .sort(function (a: any, b: any) {
+        return String(a?.due_date || "").localeCompare(
+          String(b?.due_date || "")
+        );
+      });
+
+    dueTasks.slice(0, 2).forEach(function (task: any) {
+      addPriority({
+        category: "Task due",
+        title: task?.title || "Task needs attention",
+        detail:
+          (task?.due_date ? String(task.due_date) + " · " : "") +
+          cleanForModel(task?.status || "Open", 40),
+        view: "tasks",
+        id: task?.id || "",
+        prompt:
+          "Review my task " +
+          (task?.title || "this task") +
+          " and tell me whether I should do it now, delegate it, or reschedule it, based on the workspace evidence.",
+        severity: "medium",
+      });
+    });
+
+    const topOpenLeads = activeLeads
+      .slice()
+      .sort(function (a: any, b: any) {
+        return Number(b?.estimated_value || 0) -
+          Number(a?.estimated_value || 0);
+      });
+
+    if (topOpenLeads.length) {
+      const lead = topOpenLeads[0];
+
+      addPriority({
+        category: "Pipeline focus",
+        title: lead?.business_name || "Top active lead",
+        detail:
+          "Open lead value · R" +
+          Math.max(
+            0,
+            Math.round(Number(lead?.estimated_value || 0))
+          ).toLocaleString("en-ZA"),
+        view: "leads",
+        id: lead?.id || "",
+        prompt:
+          "Look at " +
+          (lead?.business_name || "the strongest active lead") +
+          " and tell me the shortest credible path to move it forward.",
+        severity: "medium",
+      });
+    }
+
+    const priorities = priorityCandidates.slice(0, 5);
+
+    const briefingMetrics = {
+      open_pipeline_value_zar:
+        Math.round(Number(
+          safeContext.operational_summary.lead_value_zar.open_pipeline || 0
+        ) * 100) / 100,
+      active_leads:
+        Number(
+          safeContext.operational_summary.lead_counts.active_excluding_follow_up || 0
+        ),
+      overdue_followups:
+        Number(
+          safeContext.operational_summary.followup_counts.pending_overdue || 0
+        ) +
+        Number(
+          safeContext.operational_summary.followup_counts.lead_next_followups_overdue || 0
+        ),
+      due_today:
+        Number(
+          safeContext.operational_summary.followup_counts.pending_due_today || 0
+        ) +
+        Number(
+          safeContext.operational_summary.followup_counts.lead_next_followups_due_today || 0
+        ),
+      overdue_invoices: overdueInvoices.length,
+      new_enquiries: Number(
+        safeContext.operational_summary.enquiry_summary.new || 0
+      ),
+      quotes_awaiting_response: awaitingQuotes.length,
+    };
+
+    const fallbackHeadline =
+      priorities.length
+        ? priorities[0].title + " is the first thing I would look at."
+        : "The workspace is unusually quiet right now.";
+
+    const fallbackSummary =
+      priorities.length
+        ? (
+            "There are " +
+            priorities.length +
+            " priority items surfaced from today's workspace data. Start with " +
+            priorities[0].category.toLowerCase() +
+            " for " +
+            priorities[0].title +
+            "."
+          )
+        : "No urgent workspace signal is showing in the current records.";
+
+    const briefingSource = {
+      metrics: briefingMetrics,
+      priorities: priorities.map(function (item) {
+        return {
+          category: item.category,
+          title: item.title,
+          detail: item.detail,
+        };
+      }),
+      date: businessToday,
+    };
+
+    let briefingHeadline = fallbackHeadline;
+    let briefingSummary = fallbackSummary;
+    let briefingModel = "deterministic";
+
+    if (geminiKey) {
+      const briefingSystem = [
+        "You are InnerMe, the private Swayphics business operator.",
+        "Write a very short daily executive brief using only the supplied evidence.",
+        "Do not invent records, causes, urgency, outcomes, or numbers.",
+        "Return ONLY valid JSON with exactly these keys: headline, summary.",
+        "headline: one direct sentence, maximum 90 characters.",
+        "summary: two concise sentences, maximum 320 characters.",
+        "Do not use an em dash.",
+      ].join("\n");
+
+      async function requestBriefing(model: string) {
+        return await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/models/" +
+            encodeURIComponent(model) +
+            ":generateContent",
+          {
+            method: "POST",
+            headers: {
+              "x-goog-api-key": geminiKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              systemInstruction: {
+                parts: [{ text: briefingSystem }],
+              },
+              contents: [
+                {
+                  role: "user",
+                  parts: [
+                    {
+                      text:
+                        "DATE:\n" +
+                        businessToday +
+                        "\n\nVERIFIED WORKSPACE SNAPSHOT:\n" +
+                        JSON.stringify(briefingSource),
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                maxOutputTokens: 320,
+                responseMimeType: "application/json",
+              },
+            }),
+          },
+        );
+      }
+
+      let briefingResponse = await requestBriefing(PRIMARY_MODEL);
+      briefingModel = PRIMARY_MODEL;
+
+      if (
+        (briefingResponse.status === 503 ||
+          briefingResponse.status === 429) &&
+        PRIMARY_MODEL !== FALLBACK_MODEL
+      ) {
+        briefingModel = FALLBACK_MODEL;
+        briefingResponse = await requestBriefing(FALLBACK_MODEL);
+      }
+
+      if (briefingResponse.ok) {
+        try {
+          const briefingResult = await briefingResponse.json();
+          const rawBriefing =
+            briefingResult?.candidates?.[0]?.content?.parts
+              ?.filter((part: any) => typeof part?.text === "string")
+              ?.map((part: any) => part.text)
+              ?.join("") ||
+            "";
+
+          const parsed =
+            JSON.parse(rawBriefing);
+
+          if (
+            parsed &&
+            typeof parsed.headline === "string" &&
+            typeof parsed.summary === "string"
+          ) {
+            briefingHeadline =
+              cleanForModel(parsed.headline, 120) ||
+              fallbackHeadline;
+            briefingSummary =
+              cleanForModel(parsed.summary, 360) ||
+              fallbackSummary;
+          }
+        } catch (error) {
+          console.warn(
+            "InnerMe briefing summary was not valid JSON.",
+            error,
+          );
+        }
+      }
+    }
+
+    return json(
+      {
+        briefing: {
+          generated_at: new Date().toISOString(),
+          generated_date_johannesburg: businessToday,
+          headline: briefingHeadline,
+          summary: briefingSummary,
+          priorities,
+          metrics: briefingMetrics,
+        },
+        model: briefingModel,
+        read_only: true,
+      },
+      200,
+      origin,
+    );
+  }
+
+  /*
+   * INNERME V2 · SAFE DRAFTING
+   * This action can generate client-facing copy for an authenticated admin,
+   * but it never writes to Supabase or sends a message.
+   */
+  if (action === "draft_followup") {
+    if (
+      !focusedRecord ||
+      !["lead", "client"].includes(String(focusedRecord.type || ""))
+    ) {
+      return json(
+        { error: "Choose a lead or client record before drafting a follow-up." },
+        400,
+        origin,
+      );
+    }
+
+    const requestedChannel =
+      String(body.channel || "whatsapp").trim().toLowerCase() === "email"
+        ? "Email"
+        : "WhatsApp";
+
+    const record = focusedRecord.record || {};
+    const related = connectedContext?.connected || {};
+
+    const recentCommunications = Array.isArray(related.communications)
+      ? related.communications.slice(-8).map(function (item: any) {
+          return {
+            channel: item?.channel || "",
+            direction: item?.direction || "",
+            subject: cleanForModel(item?.subject || "", 180),
+            message: cleanForModel(item?.message || "", 900),
+            contacted_at: item?.contacted_at || item?.created_at || "",
+          };
+        })
+      : [];
+
+    const recentEmails = Array.isArray(related.emails)
+      ? related.emails.slice(-8).map(function (item: any) {
+          return {
+            direction: item?.direction || "",
+            subject: cleanForModel(item?.subject || "", 180),
+            text_body: cleanForModel(item?.text_body || "", 1000),
+            received_at: item?.received_at || item?.created_at || "",
+          };
+        })
+      : [];
+
+    const relatedQuotes = Array.isArray(related.quotes)
+      ? related.quotes.slice(-6).map(function (item: any) {
+          return {
+            quote_number: item?.quote_number || "",
+            status: item?.status || "",
+            amount: item?.amount || 0,
+            valid_until: item?.valid_until || "",
+          };
+        })
+      : [];
+
+    const draftSource = {
+      channel: requestedChannel,
+      record_type: focusedRecord.type,
+      record: {
+        business_name:
+          cleanForModel(
+            record?.business_name || "",
+            180,
+          ),
+        contact_name:
+          cleanForModel(
+            record?.contact_name || "",
+            120,
+          ),
+        email:
+          cleanForModel(
+            record?.email || "",
+            180,
+          ),
+        phone:
+          cleanForModel(
+            record?.phone || "",
+            80,
+          ),
+        service_interest:
+          cleanForModel(
+            record?.service_interest || "",
+            180,
+          ),
+        status:
+          cleanForModel(
+            record?.status || "",
+            80,
+          ),
+        estimated_value:
+          Number(record?.estimated_value || 0),
+        next_follow_up:
+          cleanForModel(
+            record?.next_follow_up || "",
+            40,
+          ),
+      },
+      recent_communications: recentCommunications,
+      recent_emails: recentEmails,
+      related_quotes: relatedQuotes,
+    };
+
+    const draftSystem = [
+      "You are InnerMe, the private Swayphics business operator.",
+      "Draft one natural follow-up message for an authenticated Swayphics admin.",
+      "Use only the supplied record and related communication evidence.",
+      "Do not invent prior contact, promises, prices, dates, deliverables, discounts, outcomes, availability or client opinions.",
+      "If the evidence does not show prior contact, write a first-touch check-in rather than falsely saying 'following up on our last message'.",
+      "Keep the message specific to the record and commercially useful.",
+      "Use 'we' when speaking for Swayphics.",
+      "For WhatsApp, keep it concise and conversational.",
+      "For Email, write a clear subject and a concise body.",
+      "Do not use an em dash.",
+      "Return ONLY valid JSON with exactly these keys: subject, message.",
+    ].join("\n");
+
+    async function requestDraft(model: string) {
+      return await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":generateContent",
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": geminiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: draftSystem }],
+            },
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text:
+                      "VERIFIED RECORD CONTEXT:\n" +
+                      JSON.stringify(draftSource),
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              maxOutputTokens: 700,
+              responseMimeType: "application/json",
+            },
+          }),
+        },
+      );
+    }
+
+    let draftResponse = await requestDraft(PRIMARY_MODEL);
+    let draftModel = PRIMARY_MODEL;
+
+    if (
+      (draftResponse.status === 503 ||
+        draftResponse.status === 429) &&
+      PRIMARY_MODEL !== FALLBACK_MODEL
+    ) {
+      draftModel = FALLBACK_MODEL;
+      draftResponse = await requestDraft(FALLBACK_MODEL);
+    }
+
+    if (!draftResponse.ok) {
+      return json(
+        {
+          error: "InnerMe could not draft the follow-up.",
+          provider_status: draftResponse.status,
+          provider_model: draftModel,
+        },
+        502,
+        origin,
+      );
+    }
+
+    const draftResult = await draftResponse.json();
+    const rawDraft =
+      draftResult?.candidates?.[0]?.content?.parts
+        ?.filter((part: any) => typeof part?.text === "string")
+        ?.map((part: any) => part.text)
+        ?.join("") ||
+      "";
+
+    let parsedDraft: any = null;
+
+    try {
+      parsedDraft = JSON.parse(rawDraft);
+    } catch {
+      parsedDraft = {
+        subject: "",
+        message: cleanForModel(rawDraft, 1800),
+      };
+    }
+
+    const draftedMessage =
+      cleanForModel(parsedDraft?.message || "", 1800);
+
+    if (!draftedMessage || draftedMessage.length < 10) {
+      return json(
+        {
+          error: "InnerMe returned an incomplete follow-up draft.",
+          provider_model: draftModel,
+        },
+        502,
+        origin,
+      );
+    }
+
+    return json(
+      {
+        draft: {
+          channel: requestedChannel,
+          subject:
+            requestedChannel === "Email"
+              ? cleanForModel(parsedDraft?.subject || "", 180)
+              : "",
+          message: draftedMessage,
+          record: {
+            type: focusedRecord.type,
+            id: focusedRecord.id,
+            name:
+              cleanForModel(
+                record?.business_name ||
+                record?.contact_name ||
+                "Record",
+                180,
+              ),
+          },
+        },
+        model: draftModel,
+        read_only: true,
+      },
+      200,
+      origin,
+    );
+  }
+
   const systemPrompt = `You are InnerMe, the private internal operations assistant for Swayphics.
 
 Your job is to help an authenticated Swayphics admin understand the current business workspace and turn that understanding into practical business progress.
@@ -2160,8 +2923,10 @@ Rules:
 - When dates matter, use generated_date_johannesburg from operational_summary and treat Africa/Johannesburg as the Swayphics business timezone.
 - "Due today" and "overdue" must be based on generated_date_johannesburg, not UTC.
 - Do not let raw rows override a value in operational_summary.
-- You are READ-ONLY in V1. Do not claim to have changed, deleted, sent, created, or updated anything.
-- You may identify actions the admin could take, but phrase them as suggestions.
+- InnerMe V2 is read-first and action-ready, but not autonomous. It may analyse workspace data, prepare drafts, recommend actions, and surface the next move.
+- Do not claim to have changed, deleted, sent, created, or updated anything unless a separate, explicit workspace action has actually verified that mutation.
+- Drafting is not sending. A generated follow-up, email, proposal, task or other action is only a draft until the admin explicitly uses the relevant workspace control.
+- You may identify actions the admin could take, and when a safe draft would help, provide the draft or point the admin to the explicit action.
 - Do not expose secrets, API keys, authentication tokens, or internal security details.
 - If asked to perform an unsupported action, explain that V1 is read-only.
 

@@ -69,7 +69,11 @@
         aiFocusedRecord: null,
         leadProposals: [],
         aiChatSessions: [],
-        aiActiveChatId: ""
+        aiActiveChatId: "",
+        aiBriefing: null,
+        aiBriefingLoading: false,
+        aiBriefingError: "",
+        aiRequestInFlight: false
     };
 
     const navGroups = [
@@ -774,6 +778,9 @@
             const supportsEdit =
                 ["projects", "tasks", "quotes", "invoices", "portal-requests"].includes(item.view);
 
+            const supportsDraft =
+                ["leads", "clients"].includes(item.view);
+
             return (
                 '<div class="sway-ai-action-row">' +
                     '<div class="sway-ai-action-context">' +
@@ -811,6 +818,15 @@
                                 '" data-ai-action-id="' +
                                 esc(item.id) +
                               '">Edit</button>'
+                            : ""
+                    ) +
+                    (
+                        supportsDraft
+                            ? '<button type="button" class="sway-ai-action" data-ai-action="draft-followup" data-ai-action-view="' +
+                                esc(item.view) +
+                                '" data-ai-action-id="' +
+                                esc(item.id) +
+                              '">Draft</button>'
                             : ""
                     ) +
                 "</div>"
@@ -945,6 +961,245 @@
         }, 80);
     }
 
+    function renderAIFollowupDraftModal(view, id, initialChannel) {
+        const recordSets = {
+            leads: state.leads,
+            clients: state.clients
+        };
+
+        const record =
+            Array.isArray(recordSets[view])
+                ? recordSets[view].find(function (item) {
+                    return String(item?.id || "") === String(id);
+                })
+                : null;
+
+        if (!record) {
+            swayAlert("That lead or client is no longer available.");
+            return;
+        }
+
+        const modal = document.createElement("div");
+        modal.className = "sway-modal sway-ai-draft-modal";
+
+        const displayName =
+            record.business_name ||
+            record.contact_name ||
+            "this record";
+
+        modal.innerHTML =
+            '<div class="sway-modal-backdrop"></div>' +
+            '<div class="sway-modal-card sway-ai-draft-card" role="dialog" aria-modal="true" aria-labelledby="sway-ai-draft-title">' +
+                '<div class="sway-modal-header">' +
+                    '<div>' +
+                        '<span class="admin-label">INNERME V2 · DRAFT</span>' +
+                        '<h3 id="sway-ai-draft-title">Prepare a follow-up</h3>' +
+                        '<p class="sway-ai-draft-lead">' +
+                            esc(displayName) +
+                        '</p>' +
+                    '</div>' +
+                    '<button type="button" class="sway-modal-close" aria-label="Close">×</button>' +
+                '</div>' +
+                '<div class="sway-ai-draft-toolbar">' +
+                    '<label>Channel<select id="sway-ai-draft-channel">' +
+                        '<option value="WhatsApp">WhatsApp</option>' +
+                        '<option value="Email">Email</option>' +
+                    '</select></label>' +
+                    '<button type="button" class="sway-workspace-button" id="sway-ai-draft-generate">Generate draft</button>' +
+                '</div>' +
+                '<label class="sway-ai-draft-field" id="sway-ai-draft-subject-wrap">Subject<input id="sway-ai-draft-subject" type="text" autocomplete="off"></label>' +
+                '<label class="sway-ai-draft-field">Message<textarea id="sway-ai-draft-message" rows="9" spellcheck="true"></textarea></label>' +
+                '<div class="sway-ai-draft-actions">' +
+                    '<button type="button" class="sway-workspace-button" id="sway-ai-draft-copy">Copy draft</button>' +
+                    '<button type="button" class="sway-workspace-button primary" id="sway-ai-draft-close">Done</button>' +
+                '</div>' +
+                '<p class="sway-ai-draft-note">Nothing is sent automatically. Review the wording before using it with the client or lead.</p>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+
+        const close = function () {
+            modal.remove();
+        };
+
+        const backdrop =
+            modal.querySelector(".sway-modal-backdrop");
+        const closeButton =
+            modal.querySelector(".sway-modal-close");
+        const doneButton =
+            modal.querySelector("#sway-ai-draft-close");
+        const channelSelect =
+            modal.querySelector("#sway-ai-draft-channel");
+        const subjectWrap =
+            modal.querySelector("#sway-ai-draft-subject-wrap");
+        const subjectInput =
+            modal.querySelector("#sway-ai-draft-subject");
+        const messageInput =
+            modal.querySelector("#sway-ai-draft-message");
+        const generateButton =
+            modal.querySelector("#sway-ai-draft-generate");
+        const copyButton =
+            modal.querySelector("#sway-ai-draft-copy");
+
+        if (!channelSelect || !messageInput || !generateButton) {
+            close();
+            return;
+        }
+
+        channelSelect.value =
+            String(initialChannel || "WhatsApp").toLowerCase() === "email"
+                ? "Email"
+                : "WhatsApp";
+
+        closeButton?.addEventListener("click", close);
+        doneButton?.addEventListener("click", close);
+        backdrop?.addEventListener("click", close);
+
+        const updateSubjectVisibility = function () {
+            if (!subjectWrap) return;
+
+            subjectWrap.style.display =
+                channelSelect.value === "Email"
+                    ? "grid"
+                    : "none";
+        };
+
+        async function generateDraft() {
+            if (generateButton.disabled) {
+                return;
+            }
+
+            generateButton.disabled = true;
+            generateButton.textContent = "Drafting…";
+            messageInput.value = "Preparing a draft…";
+
+            try {
+                const result = await api(
+                    "/functions/v1/swayphics-ai",
+                    {
+                        method: "POST",
+                        headers: headers({
+                            "Content-Type": "application/json"
+                        }),
+                        body: JSON.stringify({
+                            action: "draft_followup",
+                            channel: channelSelect.value,
+                            focused_record: {
+                                type:
+                                    view === "clients"
+                                        ? "client"
+                                        : "lead",
+                                id: id
+                            }
+                        })
+                    }
+                );
+
+                if (!result || !result.draft) {
+                    throw new Error(
+                        "InnerMe did not return a follow-up draft."
+                    );
+                }
+
+                if (subjectInput) {
+                    subjectInput.value =
+                        result.draft.subject || "";
+                }
+
+                messageInput.value =
+                    result.draft.message || "";
+            } catch (error) {
+                messageInput.value = "";
+
+                swayAlert(
+                    error.message ||
+                    "InnerMe could not draft the follow-up."
+                );
+            } finally {
+                generateButton.disabled = false;
+                generateButton.textContent = "Generate draft";
+            }
+        }
+
+        channelSelect.addEventListener(
+            "change",
+            function () {
+                updateSubjectVisibility();
+                generateDraft();
+            }
+        );
+
+        generateButton.addEventListener(
+            "click",
+            generateDraft
+        );
+
+        copyButton?.addEventListener(
+            "click",
+            async function () {
+                const message =
+                    String(messageInput.value || "").trim();
+
+                const subject =
+                    channelSelect.value === "Email" && subjectInput
+                        ? String(subjectInput.value || "").trim()
+                        : "";
+
+                if (!message) {
+                    swayAlert("There is no draft to copy yet.");
+                    return;
+                }
+
+                const textToCopy =
+                    subject
+                        ? "Subject: " +
+                          subject +
+                          "\n\n" +
+                          message
+                        : message;
+
+                try {
+                    if (
+                        navigator.clipboard &&
+                        typeof navigator.clipboard.writeText === "function"
+                    ) {
+                        await navigator.clipboard.writeText(
+                            textToCopy
+                        );
+                    } else {
+                        const temporary =
+                            document.createElement("textarea");
+
+                        temporary.value = textToCopy;
+                        temporary.style.position = "fixed";
+                        temporary.style.opacity = "0";
+
+                        document.body.appendChild(
+                            temporary
+                        );
+
+                        temporary.select();
+                        document.execCommand("copy");
+                        temporary.remove();
+                    }
+
+                    copyButton.textContent = "Copied";
+
+                    window.setTimeout(function () {
+                        if (copyButton.isConnected) {
+                            copyButton.textContent = "Copy draft";
+                        }
+                    }, 1200);
+                } catch (error) {
+                    swayAlert("The draft could not be copied.");
+                }
+            }
+        );
+
+        updateSubjectVisibility();
+        generateDraft();
+    }
+
     function handleAIAction(button) {
         const action =
             String(button?.dataset?.aiAction || "");
@@ -1034,6 +1289,15 @@
                     ? "client"
                     : "lead",
                 id
+            );
+            return;
+        }
+
+        if (action === "draft-followup") {
+            renderAIFollowupDraftModal(
+                view,
+                id,
+                "WhatsApp"
             );
         }
     }
@@ -21995,6 +22259,282 @@ function simpleBars(items, color) {
         );
     }
 
+    function renderAIWorkspaceBriefing() {
+        if (state.aiBriefingLoading) {
+            return (
+                '<section class="sway-ai-v2-briefing is-loading" id="sway-ai-briefing">' +
+                    '<div class="sway-ai-v2-briefing-top">' +
+                        '<div>' +
+                            '<span class="sway-ai-v2-kicker">INNERME V2 · TODAY</span>' +
+                            '<strong>Preparing your workspace brief</strong>' +
+                        '</div>' +
+                        '<span class="sway-ai-v2-live">LIVE DATA</span>' +
+                    '</div>' +
+                    '<div class="sway-ai-v2-loading-line">' +
+                        '<span class="sway-ai-thinking" aria-hidden="true"><span></span><span></span><span></span></span>' +
+                        '<span>Reading the current pipeline, follow-ups, enquiries and billing.</span>' +
+                    '</div>' +
+                '</section>'
+            );
+        }
+
+        if (state.aiBriefingError) {
+            return (
+                '<section class="sway-ai-v2-briefing is-error" id="sway-ai-briefing">' +
+                    '<div class="sway-ai-v2-briefing-top">' +
+                        '<div>' +
+                            '<span class="sway-ai-v2-kicker">INNERME V2 · TODAY</span>' +
+                            '<strong>Briefing unavailable</strong>' +
+                        '</div>' +
+                        '<button type="button" class="sway-ai-v2-refresh" data-ai-refresh-briefing>Retry</button>' +
+                    '</div>' +
+                    '<p>' +
+                        esc(state.aiBriefingError) +
+                    '</p>' +
+                '</section>'
+            );
+        }
+
+        const briefing = state.aiBriefing || {};
+        const metrics = briefing.metrics || {};
+        const priorities =
+            Array.isArray(briefing.priorities)
+                ? briefing.priorities.slice(0, 5)
+                : [];
+
+        const metric = function (label, value) {
+            return (
+                '<div class="sway-ai-v2-metric">' +
+                    '<span>' + esc(label) + '</span>' +
+                    '<strong>' + esc(value) + '</strong>' +
+                '</div>'
+            );
+        };
+
+        const priorityHtml =
+            priorities.length
+                ? (
+                    '<div class="sway-ai-v2-priorities">' +
+                        priorities.map(function (item) {
+                            return (
+                                '<button type="button" class="sway-ai-v2-priority" data-ai-prompt="' +
+                                    esc(item.prompt || (
+                                        "Review " +
+                                        (item.title || "this priority") +
+                                        " and tell me the strongest next move."
+                                    )) +
+                                '">' +
+                                    '<span class="sway-ai-v2-priority-mark ' +
+                                        esc(item.severity || "medium") +
+                                        '" aria-hidden="true"></span>' +
+                                    '<span class="sway-ai-v2-priority-copy">' +
+                                        '<span class="sway-ai-v2-priority-category">' +
+                                            esc(item.category || "Priority") +
+                                        '</span>' +
+                                        '<strong>' +
+                                            esc(item.title || "Workspace item") +
+                                        '</strong>' +
+                                        '<small>' +
+                                            esc(item.detail || "") +
+                                        '</small>' +
+                                    '</span>' +
+                                    '<span class="sway-ai-v2-priority-action">Ask →</span>' +
+                                '</button>'
+                            );
+                        }).join("") +
+                    '</div>'
+                )
+                : (
+                    '<div class="sway-ai-v2-clear">' +
+                        '<span aria-hidden="true">✓</span>' +
+                        '<span>No urgent signal is showing in the current workspace records.</span>' +
+                    '</div>'
+                );
+
+        return (
+            '<section class="sway-ai-v2-briefing" id="sway-ai-briefing">' +
+                '<div class="sway-ai-v2-briefing-top">' +
+                    '<div>' +
+                        '<span class="sway-ai-v2-kicker">INNERME V2 · TODAY</span>' +
+                        '<strong>' +
+                            esc(briefing.headline || "Here is what matters today.") +
+                        '</strong>' +
+                        '<p>' +
+                            esc(briefing.summary || "I have checked the current workspace signals.") +
+                        '</p>' +
+                    '</div>' +
+                    '<button type="button" class="sway-ai-v2-refresh" data-ai-refresh-briefing aria-label="Refresh workspace brief">Refresh</button>' +
+                '</div>' +
+                '<div class="sway-ai-v2-metrics">' +
+                    metric(
+                        "Pipeline",
+                        "R" +
+                        Math.round(
+                            Number(metrics.open_pipeline_value_zar || 0)
+                        ).toLocaleString("en-ZA")
+                    ) +
+                    metric(
+                        "Active leads",
+                        String(metrics.active_leads || 0)
+                    ) +
+                    metric(
+                        "Follow-ups",
+                        String(
+                            Number(metrics.overdue_followups || 0) +
+                            Number(metrics.due_today || 0)
+                        )
+                    ) +
+                    metric(
+                        "New enquiries",
+                        String(metrics.new_enquiries || 0)
+                    ) +
+                '</div>' +
+                priorityHtml +
+            '</section>'
+        );
+    }
+
+    async function loadAIWorkspaceBriefing(force) {
+        if (state.currentView !== "swayphics-ai") {
+            return;
+        }
+
+        if (state.aiBriefingLoading) {
+            return;
+        }
+
+        const today = dashboardTodayISO();
+
+        if (
+            !force &&
+            state.aiBriefing &&
+            state.aiBriefing.generated_date_johannesburg === today
+        ) {
+            return;
+        }
+
+        state.aiBriefingLoading = true;
+        state.aiBriefingError = "";
+
+        const container =
+            document.getElementById("sway-ai-briefing");
+
+        if (container) {
+            container.outerHTML =
+                renderAIWorkspaceBriefing();
+        }
+
+        try {
+            const result = await api(
+                "/functions/v1/swayphics-ai",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        action: "briefing"
+                    })
+                }
+            );
+
+            if (!result || !result.briefing) {
+                throw new Error(
+                    "InnerMe did not return a workspace briefing."
+                );
+            }
+
+            state.aiBriefing =
+                result.briefing;
+        } catch (error) {
+            state.aiBriefingError =
+                error.message ||
+                "InnerMe could not prepare the workspace briefing.";
+        } finally {
+            state.aiBriefingLoading = false;
+
+            const live =
+                document.getElementById("sway-ai-briefing");
+
+            if (
+                live &&
+                state.currentView === "swayphics-ai"
+            ) {
+                live.outerHTML =
+                    renderAIWorkspaceBriefing();
+            }
+
+            bindAIQuickPromptActions();
+            bindAIBriefingActions();
+        }
+    }
+
+    function bindAIQuickPromptActions() {
+        workspace
+            .querySelectorAll("[data-ai-prompt]")
+            .forEach(function (button) {
+                if (button.dataset.aiPromptBound === "true") {
+                    return;
+                }
+
+                button.dataset.aiPromptBound = "true";
+
+                button.onclick = function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const prompt =
+                        String(button.dataset.aiPrompt || "").trim();
+
+                    if (!prompt || state.aiRequestInFlight) {
+                        return;
+                    }
+
+                    const morePanel =
+                        workspace.querySelector(
+                            "#sway-ai-more-panel"
+                        );
+
+                    const moreToggle =
+                        workspace.querySelector(
+                            "#sway-ai-more-toggle"
+                        );
+
+                    if (morePanel) {
+                        morePanel.hidden = true;
+                    }
+
+                    if (moreToggle) {
+                        moreToggle.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+                    }
+
+                    askSwayphicsAI(prompt);
+                };
+            });
+    }
+
+    function bindAIBriefingActions() {
+        workspace
+            .querySelectorAll("[data-ai-refresh-briefing]")
+            .forEach(function (button) {
+                if (button.dataset.aiBriefingBound === "true") {
+                    return;
+                }
+
+                button.dataset.aiBriefingBound = "true";
+
+                button.onclick = function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    loadAIWorkspaceBriefing(true);
+                };
+            });
+    }
+
     function renderSwayphicsAI() {
         const history = Array.isArray(state.aiConversation)
             ? state.aiConversation.slice(-40)
@@ -22124,6 +22664,16 @@ function simpleBars(items, color) {
                         '</div>'
                         : ""
                 ) +
+                renderAIWorkspaceBriefing() +
+                '<div class="sway-ai-v2-command-strip">' +
+                    '<span class="sway-ai-v2-command-label">Quick commands</span>' +
+                    '<div class="sway-ai-v2-command-list">' +
+                        '<button type="button" data-ai-prompt="What should I do today? Give me the three highest-value moves from the current workspace.">What should I do today?</button>' +
+                        '<button type="button" data-ai-prompt="Where is the most obvious revenue leak in the current workspace? Separate verified data from your interpretation.">Where is revenue leaking?</button>' +
+                        '<button type="button" data-ai-prompt="Which lead should I contact first today? Compare the strongest current opportunities and explain the evidence.">Which lead first?</button>' +
+                        '<button type="button" data-ai-prompt="Give me a practical three-step plan for today using only the current Swayphics workspace data.">3-step plan</button>' +
+                    '</div>' +
+                '</div>' +
                 '<div class="sway-ai-conversation" id="sway-ai-conversation">' +
                     conversationHtml +
                 '</div>' +
@@ -22135,12 +22685,16 @@ function simpleBars(items, color) {
                         '</button>' +
                     '</div>' +
                 '</form>' +
-                '<small class="sway-ai-note">InnerMe is read-only by default. It can analyse your workspace, but changes only happen when you explicitly use an action button. Enter to send · Shift+Enter for a new line.</small>' +
+                '<small class="sway-ai-note">InnerMe V2 can analyse, brief and draft from your live workspace. Nothing is sent or changed automatically. Explicit workspace actions remain in your control. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>'
         );
     }
 
     async function askSwayphicsAI(message) {
+        if (state.aiRequestInFlight) {
+            return;
+        }
+
         const conversation = document.getElementById("sway-ai-conversation");
         const input = document.getElementById("sway-ai-input");
         const send = document.getElementById("sway-ai-send");
@@ -22250,6 +22804,8 @@ function simpleBars(items, color) {
             userEntry,
             assistantEntry
         );
+
+        state.aiRequestInFlight = true;
 
         state.aiConversation =
             state.aiConversation.slice(-40);
@@ -22393,6 +22949,7 @@ function simpleBars(items, color) {
                     '</span>' +
                 '</div>';
         } finally {
+            state.aiRequestInFlight = false;
             input.disabled = false;
             send.disabled = false;
             input.focus();
@@ -22615,6 +23172,10 @@ function simpleBars(items, color) {
             }
 
             bindViewActions();
+
+            if (state.currentView === "swayphics-ai") {
+                loadAIWorkspaceBriefing(false);
+            }
         } catch (error) {
             main.innerHTML =
                 '<div class="sway-error">' +
@@ -24056,6 +24617,9 @@ function simpleBars(items, color) {
                     );
                 };
             });
+
+        bindAIQuickPromptActions();
+        bindAIBriefingActions();
 
         workspace
             .querySelectorAll("[data-ai-delete-chat]")
