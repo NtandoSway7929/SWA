@@ -1213,29 +1213,6 @@
             return;
         }
 
-        const recordSets = {
-            leads: state.leads,
-            clients: state.clients,
-            projects: state.projects,
-            tasks: state.tasks,
-            quotes: state.quotes,
-            invoices: state.invoices,
-            enquiries: state.enquiries,
-            "portal-requests": state.portalRequests
-        };
-
-        const record =
-            Array.isArray(recordSets[view])
-                ? recordSets[view].find(function (item) {
-                    return String(item?.id || "") === id;
-                })
-                : null;
-
-        if (!record) {
-            swayAlert("That workspace record is no longer available.");
-            return;
-        }
-
         if (action === "open") {
             state.currentView = view;
             persistWorkspaceView(view);
@@ -1283,6 +1260,30 @@
                 }
             }, 80);
 
+            return;
+        }
+
+
+        const recordSets = {
+            leads: state.leads,
+            clients: state.clients,
+            projects: state.projects,
+            tasks: state.tasks,
+            quotes: state.quotes,
+            invoices: state.invoices,
+            enquiries: state.enquiries,
+            "portal-requests": state.portalRequests
+        };
+
+        const record =
+            Array.isArray(recordSets[view])
+                ? recordSets[view].find(function (item) {
+                    return String(item?.id || "") === id;
+                })
+                : null;
+
+        if (!record) {
+            swayAlert("That workspace record is no longer available.");
             return;
         }
 
