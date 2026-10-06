@@ -10108,6 +10108,583 @@ body.sway-dark-mode .sway-ai-header p{color:#a9b5c8!important}
             }
         }
     </style>
+    <style id="innerme-v2-operator-upgrade-20261006">
+        /* InnerMe V2: proactive briefing, compact command shortcuts, and safe drafting UI. */
+        .sway-ai-v2-briefing {
+            margin: 0 0 14px;
+            padding: 15px 16px 14px;
+            border: 1px solid #dfe6f1;
+            border-radius: 18px;
+            background:
+                linear-gradient(
+                    145deg,
+                    #fbfcff 0%,
+                    #f5f8fd 100%
+                );
+            box-shadow: 0 10px 28px rgba(8,21,51,.045);
+        }
+
+        .sway-ai-v2-briefing-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .sway-ai-v2-kicker {
+            display: block;
+            margin-bottom: 4px;
+            color: #0152F4;
+            font-size: 8px;
+            font-weight: 900;
+            letter-spacing: .15em;
+            text-transform: uppercase;
+        }
+
+        .sway-ai-v2-briefing-top strong {
+            display: block;
+            color: #263650;
+            font-size: 14px;
+            font-weight: 850;
+            line-height: 1.35;
+            letter-spacing: -.015em;
+        }
+
+        .sway-ai-v2-briefing-top p {
+            max-width: 720px;
+            margin: 5px 0 0;
+            color: #65748B;
+            font-size: 10px;
+            line-height: 1.6;
+        }
+
+        .sway-ai-v2-live {
+            flex: 0 0 auto;
+            min-height: 24px;
+            display: inline-flex;
+            align-items: center;
+            padding: 0 8px;
+            border: 1px solid rgba(1,82,244,.10);
+            border-radius: 999px;
+            background: rgba(1,82,244,.055);
+            color: #0152F4;
+            font-size: 7px;
+            font-weight: 900;
+            letter-spacing: .08em;
+        }
+
+        .sway-ai-v2-refresh {
+            flex: 0 0 auto;
+            min-height: 30px;
+            padding: 6px 9px;
+            border: 1px solid #dfe6f1;
+            border-radius: 9px;
+            background: #fff;
+            color: #61708A;
+            font: inherit;
+            font-size: 9px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .sway-ai-v2-refresh:hover {
+            border-color: #b9caf0;
+            color: #0152F4;
+            background: #f8faff;
+        }
+
+        .sway-ai-v2-metrics {
+            display: grid;
+            grid-template-columns: repeat(4,minmax(0,1fr));
+            gap: 7px;
+            margin-top: 12px;
+        }
+
+        .sway-ai-v2-metric {
+            min-width: 0;
+            padding: 8px 9px;
+            border: 1px solid rgba(0,32,150,.065);
+            border-radius: 11px;
+            background: rgba(255,255,255,.76);
+        }
+
+        .sway-ai-v2-metric span {
+            display: block;
+            color: #8A99AD;
+            font-size: 7px;
+            font-weight: 850;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .sway-ai-v2-metric strong {
+            display: block;
+            margin-top: 3px;
+            overflow: hidden;
+            color: #263650;
+            font-size: 11px;
+            font-weight: 850;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sway-ai-v2-priorities {
+            display: grid;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .sway-ai-v2-priority {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 7px minmax(0,1fr) auto;
+            align-items: center;
+            gap: 8px;
+            min-height: 43px;
+            padding: 8px 9px;
+            border: 1px solid rgba(0,32,150,.065);
+            border-radius: 11px;
+            background: rgba(255,255,255,.78);
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+            transition:
+                border-color .18s ease,
+                background .18s ease,
+                transform .18s ease,
+                box-shadow .18s ease;
+        }
+
+        .sway-ai-v2-priority:hover {
+            border-color: rgba(1,82,244,.18);
+            background: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(8,21,51,.055);
+        }
+
+        .sway-ai-v2-priority:focus-visible {
+            outline: 3px solid rgba(1,82,244,.12);
+            outline-offset: 1px;
+        }
+
+        .sway-ai-v2-priority-mark {
+            align-self: stretch;
+            min-height: 25px;
+            border-radius: 999px;
+            background: #77C1FC;
+        }
+
+        .sway-ai-v2-priority-mark.high {
+            background: #0152F4;
+        }
+
+        .sway-ai-v2-priority-mark.medium {
+            background: #77C1FC;
+        }
+
+        .sway-ai-v2-priority-copy {
+            min-width: 0;
+            display: grid;
+            gap: 1px;
+        }
+
+        .sway-ai-v2-priority-category {
+            color: #7A899E;
+            font-size: 7px;
+            font-weight: 850;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+
+        .sway-ai-v2-priority-copy strong {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            color: #33425A;
+            font-size: 10px;
+            font-weight: 850;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sway-ai-v2-priority-copy small {
+            display: block;
+            overflow: hidden;
+            color: #7D8BA0;
+            font-size: 8px;
+            line-height: 1.45;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sway-ai-v2-priority-action {
+            color: #0152F4;
+            font-size: 8px;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        .sway-ai-v2-clear {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 11px;
+            background: rgba(18,135,78,.055);
+            color: #597262;
+            font-size: 9px;
+            line-height: 1.5;
+        }
+
+        .sway-ai-v2-clear > span:first-child {
+            width: 22px;
+            height: 22px;
+            display: grid;
+            flex: 0 0 22px;
+            place-items: center;
+            border-radius: 50%;
+            background: rgba(18,135,78,.10);
+            color: #16734B;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .sway-ai-v2-loading-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 9px;
+            color: #7A899E;
+            font-size: 9px;
+            line-height: 1.5;
+        }
+
+        .sway-ai-v2-briefing .sway-ai-thinking {
+            height: 18px;
+        }
+
+        .sway-ai-v2-command-strip {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin: 0 0 10px;
+            padding: 0 2px;
+        }
+
+        .sway-ai-v2-command-label {
+            flex: 0 0 auto;
+            color: #8592A5;
+            font-size: 8px;
+            font-weight: 850;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .sway-ai-v2-command-list {
+            min-width: 0;
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 2px 0 3px;
+            scrollbar-width: thin;
+        }
+
+        .sway-ai-v2-command-list button {
+            flex: 0 0 auto;
+            min-height: 31px;
+            padding: 6px 10px;
+            border: 1px solid #dfe6f1;
+            border-radius: 999px;
+            background: #fff;
+            color: #53627A;
+            font: inherit;
+            font-size: 8px;
+            font-weight: 800;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .sway-ai-v2-command-list button:hover {
+            border-color: rgba(1,82,244,.20);
+            color: #0152F4;
+            background: #f8faff;
+        }
+
+        .sway-ai-v2-command-list button:focus-visible {
+            outline: 3px solid rgba(1,82,244,.12);
+            outline-offset: 1px;
+        }
+
+        .sway-ai-action-row {
+            grid-template-columns: minmax(140px,1fr) repeat(3,minmax(0,auto)) !important;
+        }
+
+        .sway-ai-draft-card {
+            width: min(720px, calc(100vw - 28px));
+            max-height: min(88vh, 820px);
+            overflow: auto;
+        }
+
+        .sway-ai-draft-lead {
+            margin: 3px 0 0;
+            color: #7B8799;
+            font-size: 9px;
+        }
+
+        .sway-ai-draft-toolbar {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 10px 11px;
+            border: 1px solid #e1e7f0;
+            border-radius: 12px;
+            background: #f8faff;
+        }
+
+        .sway-ai-draft-toolbar label,
+        .sway-ai-draft-field {
+            display: grid;
+            gap: 5px;
+            color: #52627A;
+            font-size: 8px;
+            font-weight: 850;
+        }
+
+        .sway-ai-draft-toolbar select,
+        .sway-ai-draft-field input,
+        .sway-ai-draft-field textarea {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #dce4ef;
+            border-radius: 10px;
+            background: #fff;
+            color: #263650;
+            font: inherit;
+            font-size: 10px;
+            line-height: 1.55;
+            outline: none;
+        }
+
+        .sway-ai-draft-toolbar select,
+        .sway-ai-draft-field input {
+            min-height: 36px;
+            padding: 7px 9px;
+        }
+
+        .sway-ai-draft-field {
+            margin-top: 10px;
+        }
+
+        .sway-ai-draft-field textarea {
+            min-height: 220px;
+            resize: vertical;
+            padding: 10px 11px;
+        }
+
+        .sway-ai-draft-toolbar select:focus,
+        .sway-ai-draft-field input:focus,
+        .sway-ai-draft-field textarea:focus {
+            border-color: #7ca4ee;
+            box-shadow: 0 0 0 3px rgba(1,82,244,.08);
+        }
+
+        .sway-ai-draft-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 13px;
+        }
+
+        .sway-ai-draft-note {
+            margin: 9px 0 0;
+            color: #8A96A8;
+            font-size: 8px;
+            line-height: 1.5;
+            text-align: right;
+        }
+
+        .sway-ai-v2-briefing.is-error {
+            border-color: rgba(184,46,46,.12);
+            background: #fffafa;
+        }
+
+        .sway-ai-v2-briefing.is-error > p {
+            margin: 8px 0 0;
+            color: #8A5A5A;
+            font-size: 9px;
+            line-height: 1.5;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-briefing {
+            border-color: #2a3a58;
+            background: linear-gradient(145deg,#111d31 0%,#101a2c 100%);
+            box-shadow: 0 10px 28px rgba(0,0,0,.12);
+        }
+
+        body.sway-dark-mode .sway-ai-v2-briefing-top strong,
+        body.sway-dark-mode .sway-ai-v2-metric strong,
+        body.sway-dark-mode .sway-ai-v2-priority-copy strong {
+            color: #e5ebf5;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-briefing-top p,
+        body.sway-dark-mode .sway-ai-v2-priority-copy small {
+            color: #9eabc0;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-refresh,
+        body.sway-dark-mode .sway-ai-v2-command-list button {
+            border-color: #2a3a58;
+            background: #162238;
+            color: #b5c1d3;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-refresh:hover,
+        body.sway-dark-mode .sway-ai-v2-command-list button:hover {
+            border-color: #476aab;
+            background: #1a2942;
+            color: #77C1FC;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-metric,
+        body.sway-dark-mode .sway-ai-v2-priority {
+            border-color: #263552;
+            background: rgba(22,34,56,.78);
+        }
+
+        body.sway-dark-mode .sway-ai-v2-priority:hover {
+            border-color: #35578c;
+            background: #162238;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-metric span,
+        body.sway-dark-mode .sway-ai-v2-command-label,
+        body.sway-dark-mode .sway-ai-v2-priority-category {
+            color: #8090A6;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-priority-action {
+            color: #77C1FC;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-clear {
+            background: rgba(18,135,78,.07);
+            color: #9fb6aa;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-loading-line {
+            color: #8998ad;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-briefing.is-error {
+            border-color: #49313a;
+            background: #21171e;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-briefing.is-error > p {
+            color: #d39ca7;
+        }
+
+        body.sway-dark-mode .sway-ai-draft-toolbar {
+            border-color: #2a3a58;
+            background: #121d30;
+        }
+
+        body.sway-dark-mode .sway-ai-draft-toolbar label,
+        body.sway-dark-mode .sway-ai-draft-field {
+            color: #b5c1d3;
+        }
+
+        body.sway-dark-mode .sway-ai-draft-toolbar select,
+        body.sway-dark-mode .sway-ai-draft-field input,
+        body.sway-dark-mode .sway-ai-draft-field textarea {
+            border-color: #2a3a58;
+            background: #162238;
+            color: #edf2f9;
+        }
+
+        body.sway-dark-mode .sway-ai-draft-note {
+            color: #8090A6;
+        }
+
+        @media (max-width: 760px) {
+            .sway-ai-v2-briefing {
+                padding: 13px;
+                border-radius: 16px;
+            }
+
+            .sway-ai-v2-briefing-top {
+                gap: 10px;
+            }
+
+            .sway-ai-v2-briefing-top strong {
+                font-size: 13px;
+            }
+
+            .sway-ai-v2-briefing-top p {
+                font-size: 9px;
+            }
+
+            .sway-ai-v2-metrics {
+                grid-template-columns: repeat(2,minmax(0,1fr));
+            }
+
+            .sway-ai-v2-command-strip {
+                display: block;
+            }
+
+            .sway-ai-v2-command-label {
+                display: block;
+                margin: 0 0 5px;
+            }
+
+            .sway-ai-v2-command-list {
+                width: 100%;
+            }
+
+            .sway-ai-action-row {
+                grid-template-columns: minmax(0,1fr) repeat(3,minmax(0,1fr)) !important;
+            }
+
+            .sway-ai-action {
+                min-width: 0;
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+            }
+
+            .sway-ai-draft-card {
+                width: calc(100vw - 18px);
+                max-height: 94vh;
+                padding: 16px;
+                border-radius: 16px;
+            }
+
+            .sway-ai-draft-toolbar {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .sway-ai-draft-toolbar button {
+                width: 100%;
+            }
+
+            .sway-ai-draft-actions {
+                flex-direction: column-reverse;
+            }
+
+            .sway-ai-draft-actions button {
+                width: 100%;
+            }
+
+            .sway-ai-draft-field textarea {
+                min-height: 250px;
+            }
+        }
+    </style>
 </head>
 
 
