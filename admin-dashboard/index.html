@@ -10301,6 +10301,305 @@ body.sway-dark-mode .sway-ai-header p{color:#a9b5c8!important}
             }
         }
     </style>
+<style id="innerme-action-centre-20261006">
+        .sway-ai-v2-action-centre {
+            margin-top: 13px;
+            padding-top: 13px;
+            border-top: 1px solid rgba(0,32,150,.07);
+        }
+
+        .sway-ai-v2-action-centre-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 9px;
+        }
+
+        .sway-ai-v2-action-centre-head > div {
+            min-width: 0;
+        }
+
+        .sway-ai-v2-action-centre-kicker {
+            display: block;
+            margin-bottom: 3px;
+            color: #0152F4;
+            font-size: 7px;
+            font-weight: 900;
+            letter-spacing: .14em;
+        }
+
+        .sway-ai-v2-action-centre-head strong {
+            display: block;
+            color: #263650;
+            font-size: 12px;
+            font-weight: 850;
+            letter-spacing: -.01em;
+        }
+
+        .sway-ai-v2-action-centre-head p {
+            margin: 4px 0 0;
+            color: #7A899E;
+            font-size: 8px;
+            line-height: 1.5;
+        }
+
+        .sway-ai-v2-action-centre-count {
+            flex: 0 0 auto;
+            min-width: 24px;
+            height: 24px;
+            display: inline-grid;
+            place-items: center;
+            border: 1px solid rgba(1,82,244,.10);
+            border-radius: 50%;
+            background: rgba(1,82,244,.05);
+            color: #0152F4;
+            font-size: 8px;
+            font-weight: 900;
+        }
+
+        .sway-ai-v2-priorities {
+            display: grid;
+            gap: 7px;
+            margin-top: 0;
+        }
+
+        .sway-ai-v2-priority {
+            position: relative;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 7px minmax(0,1fr);
+            align-items: start;
+            gap: 9px;
+            min-height: 0;
+            padding: 10px;
+            border: 1px solid rgba(0,32,150,.065);
+            border-radius: 13px;
+            background: rgba(255,255,255,.78);
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            transition:
+                border-color .18s ease,
+                background .18s ease,
+                transform .18s ease,
+                box-shadow .18s ease;
+        }
+
+        .sway-ai-v2-priority:hover {
+            border-color: rgba(1,82,244,.17);
+            background: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 7px 18px rgba(8,21,51,.045);
+        }
+
+        .sway-ai-v2-priority-mark {
+            width: 7px;
+            height: 100%;
+            min-height: 36px;
+            border-radius: 999px;
+            background: #77C1FC;
+        }
+
+        .sway-ai-v2-priority-mark.high {
+            background: #0152F4;
+        }
+
+        .sway-ai-v2-priority-mark.medium {
+            background: #77C1FC;
+        }
+
+        .sway-ai-v2-priority-copy {
+            min-width: 0;
+            display: grid;
+            gap: 2px;
+        }
+
+        .sway-ai-v2-priority-copy strong {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            color: #33425A;
+            font-size: 10px;
+            font-weight: 850;
+            line-height: 1.35;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sway-ai-v2-priority-copy small {
+            display: block;
+            overflow: hidden;
+            color: #7D8BA0;
+            font-size: 8px;
+            line-height: 1.45;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sway-ai-v2-priority-category {
+            color: #7A899E;
+            font-size: 7px;
+            font-weight: 850;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+
+        .sway-ai-v2-recommended {
+            display: grid;
+            grid-template-columns: auto minmax(0,1fr);
+            gap: 6px;
+            align-items: baseline;
+            margin-top: 4px;
+            color: #56667D;
+            font-size: 8px;
+            line-height: 1.45;
+        }
+
+        .sway-ai-v2-recommended span {
+            color: #0152F4;
+            font-size: 7px;
+            font-weight: 900;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .sway-ai-v2-priority-actions {
+            grid-column: 2;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .sway-ai-v2-priority-actions button {
+            min-height: 30px;
+            padding: 6px 9px;
+            border-radius: 9px;
+            font: inherit;
+            font-size: 8px;
+            font-weight: 850;
+            cursor: pointer;
+            transition:
+                border-color .18s ease,
+                background .18s ease,
+                color .18s ease,
+                transform .18s ease;
+        }
+
+        .sway-ai-v2-priority-primary {
+            border: 1px solid transparent;
+            background: #0152F4;
+            color: #fff;
+            box-shadow: 0 5px 14px rgba(1,82,244,.13);
+        }
+
+        .sway-ai-v2-priority-primary:hover {
+            background: #003CCB;
+            transform: translateY(-1px);
+        }
+
+        .sway-ai-v2-priority-open {
+            border: 1px solid #dfe6f1;
+            background: #fff;
+            color: #53627A;
+        }
+
+        .sway-ai-v2-priority-open:hover {
+            border-color: #b9caf0;
+            background: #f8faff;
+            color: #0152F4;
+        }
+
+        .sway-ai-v2-priority-dismiss {
+            margin-left: auto;
+            border: 0;
+            background: transparent;
+            color: #9AA6B8;
+            padding-inline: 5px !important;
+        }
+
+        .sway-ai-v2-priority-dismiss:hover {
+            color: #5D6B80;
+            background: rgba(0,32,150,.035);
+        }
+
+        body.sway-dark-mode .sway-ai-v2-action-centre {
+            border-top-color: rgba(255,255,255,.08);
+        }
+
+        body.sway-dark-mode .sway-ai-v2-action-centre-head strong {
+            color: #E5EBF5;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-action-centre-head p,
+        body.sway-dark-mode .sway-ai-v2-recommended {
+            color: #94A4BA;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-priority {
+            border-color: #263552;
+            background: rgba(22,34,56,.78);
+        }
+
+        body.sway-dark-mode .sway-ai-v2-priority:hover {
+            border-color: #35578C;
+            background: #162238;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-priority-copy strong {
+            color: #E5EBF5;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-priority-copy small,
+        body.sway-dark-mode .sway-ai-v2-priority-category {
+            color: #8090A6;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-priority-open {
+            border-color: #2A3A58;
+            background: #162238;
+            color: #B5C1D3;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-priority-open:hover {
+            border-color: #476AAB;
+            background: #1A2942;
+            color: #77C1FC;
+        }
+
+        body.sway-dark-mode .sway-ai-v2-priority-dismiss {
+            color: #7D8BA0;
+        }
+
+        @media (max-width: 760px) {
+            .sway-ai-v2-action-centre-head {
+                gap: 10px;
+            }
+
+            .sway-ai-v2-action-centre-head p {
+                font-size: 8px;
+            }
+
+            .sway-ai-v2-priority {
+                padding: 9px;
+            }
+
+            .sway-ai-v2-recommended {
+                grid-template-columns: 1fr;
+                gap: 2px;
+            }
+
+            .sway-ai-v2-priority-actions {
+                gap: 5px;
+            }
+
+            .sway-ai-v2-priority-actions button {
+                min-height: 32px;
+            }
+        }
+    </style>
     <style id="innerme-v2-operator-upgrade-20261006">
         /* InnerMe V2: proactive briefing, compact command shortcuts, and safe drafting UI. */
         .sway-ai-v2-briefing {
