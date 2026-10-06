@@ -73,7 +73,8 @@
         aiBriefing: null,
         aiBriefingLoading: false,
         aiBriefingError: "",
-        aiRequestInFlight: false
+        aiRequestInFlight: false,
+        aiDismissedBriefingKeys: []
     };
 
     const navGroups = [
@@ -1234,6 +1235,57 @@
             swayAlert("That workspace record is no longer available.");
             return;
         }
+
+        if (action === "open") {
+            state.currentView = view;
+            persistWorkspaceView(view);
+            renderShell();
+            renderView();
+
+            window.setTimeout(function () {
+                const selectors = {
+                    leads: '[data-edit="leads"][data-id="' + id + '"]',
+                    clients: '[data-client360="' + id + '"]',
+                    projects: '[data-project-timeline="' + id + '"]',
+                    tasks: '[data-edit="tasks"][data-id="' + id + '"]',
+                    quotes: '[data-edit="quotes"][data-id="' + id + '"]',
+                    invoices: '[data-invoice-action="edit"][data-id="' + id + '"]',
+                    followups: '[data-edit="followups"][data-id="' + id + '"]',
+                    enquiries: '[data-edit="enquiries"][data-id="' + id + '"]',
+                    "portal-requests": '[data-portal-request-view="' + id + '"]'
+                };
+
+                const target =
+                    workspace.querySelector(selectors[view] || "");
+
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center"
+                    });
+
+                    target.classList.add("sway-ai-record-highlight");
+
+                    window.setTimeout(function () {
+                        target.classList.remove("sway-ai-record-highlight");
+                    }, 1600);
+                    return;
+                }
+
+                const main =
+                    document.getElementById("sway-workspace-main");
+
+                if (main) {
+                    main.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start"
+                    });
+                }
+            }, 80);
+
+            return;
+        }
+
 
         if (action === "edit") {
             if (view === "portal-requests") {
@@ -22259,6 +22311,81 @@ function simpleBars(items, color) {
         );
     }
 
+    function getAIBriefingPriorityKey(item) {
+        return [
+            String(item?.category || ""),
+            String(item?.view || ""),
+            String(item?.id || ""),
+            String(item?.title || "")
+        ].join("|");
+    }
+
+    function getAIBriefingActionConfig(item) {
+        const view = String(item?.view || "");
+
+        if (view === "leads" || view === "clients") {
+            return {
+                label: view === "clients" ? "Open client" : "Open lead",
+                primary: "draft-followup",
+                primaryLabel: "Draft follow-up"
+            };
+        }
+
+        if (view === "invoices") {
+            return {
+                label: "Review invoice",
+                primary: "edit",
+                primaryLabel: "Review"
+            };
+        }
+
+        if (view === "quotes") {
+            return {
+                label: "Review quote",
+                primary: "edit",
+                primaryLabel: "Review"
+            };
+        }
+
+        if (view === "tasks") {
+            return {
+                label: "Open task",
+                primary: "edit",
+                primaryLabel: "Open"
+            };
+        }
+
+        if (view === "followups") {
+            return {
+                label: "Open follow-up",
+                primary: "open",
+                primaryLabel: "Open"
+            };
+        }
+
+        if (view === "enquiries") {
+            return {
+                label: "Open enquiry",
+                primary: "open",
+                primaryLabel: "Open"
+            };
+        }
+
+        if (view === "portal-requests") {
+            return {
+                label: "Review request",
+                primary: "edit",
+                primaryLabel: "Review"
+            };
+        }
+
+        return {
+            label: "Open record",
+            primary: "open",
+            primaryLabel: "Open"
+        };
+    }
+
     function renderAIWorkspaceBriefing() {
         if (state.aiBriefingLoading) {
             return (
@@ -22298,9 +22425,17 @@ function simpleBars(items, color) {
         const briefing = state.aiBriefing || {};
         const metrics = briefing.metrics || {};
         const priorities =
-            Array.isArray(briefing.priorities)
-                ? briefing.priorities.slice(0, 5)
-                : [];
+            (
+                Array.isArray(briefing.priorities)
+                    ? briefing.priorities.slice(0, 5)
+                    : []
+            ).filter(function (item) {
+                const key = getAIBriefingPriorityKey(item);
+                return !(
+                    Array.isArray(state.aiDismissedBriefingKeys) &&
+                    state.aiDismissedBriefingKeys.includes(key)
+                );
+            });
 
         const metric = function (label, value) {
             return (
@@ -22314,40 +22449,80 @@ function simpleBars(items, color) {
         const priorityHtml =
             priorities.length
                 ? (
-                    '<div class="sway-ai-v2-priorities">' +
-                        priorities.map(function (item) {
-                            return (
-                                '<button type="button" class="sway-ai-v2-priority" data-ai-prompt="' +
-                                    esc(item.prompt || (
-                                        "Review " +
-                                        (item.title || "this priority") +
-                                        " and tell me the strongest next move."
-                                    )) +
-                                '">' +
-                                    '<span class="sway-ai-v2-priority-mark ' +
-                                        esc(item.severity || "medium") +
-                                        '" aria-hidden="true"></span>' +
-                                    '<span class="sway-ai-v2-priority-copy">' +
-                                        '<span class="sway-ai-v2-priority-category">' +
-                                            esc(item.category || "Priority") +
-                                        '</span>' +
-                                        '<strong>' +
-                                            esc(item.title || "Workspace item") +
-                                        '</strong>' +
-                                        '<small>' +
-                                            esc(item.detail || "") +
-                                        '</small>' +
-                                    '</span>' +
-                                    '<span class="sway-ai-v2-priority-action">Ask →</span>' +
-                                '</button>'
-                            );
-                        }).join("") +
-                    '</div>'
+                    '<section class="sway-ai-v2-action-centre" aria-label="InnerMe Action Centre">' +
+                        '<div class="sway-ai-v2-action-centre-head">' +
+                            '<div>' +
+                                '<span class="sway-ai-v2-action-centre-kicker">ACTION CENTRE</span>' +
+                                '<strong>Your next moves</strong>' +
+                                '<p>Turn today\'s signals into practical actions. Nothing is sent or changed automatically.</p>' +
+                            '</div>' +
+                            '<span class="sway-ai-v2-action-centre-count">' +
+                                esc(String(priorities.length)) +
+                            '</span>' +
+                        '</div>' +
+                        '<div class="sway-ai-v2-priorities">' +
+                            priorities.map(function (item) {
+                                const config = getAIBriefingActionConfig(item);
+                                const key = getAIBriefingPriorityKey(item);
+
+                                return (
+                                    '<article class="sway-ai-v2-priority" data-ai-briefing-key="' +
+                                        esc(key) +
+                                    '">' +
+                                        '<span class="sway-ai-v2-priority-mark ' +
+                                            esc(item.severity || "medium") +
+                                            '" aria-hidden="true"></span>' +
+                                        '<div class="sway-ai-v2-priority-copy">' +
+                                            '<span class="sway-ai-v2-priority-category">' +
+                                                esc(item.category || "Priority") +
+                                            '</span>' +
+                                            '<strong>' +
+                                                esc(item.title || "Workspace item") +
+                                            '</strong>' +
+                                            '<small>' +
+                                                esc(item.detail || "") +
+                                            '</small>' +
+                                            '<span class="sway-ai-v2-recommended">' +
+                                                '<span>Recommended action</span>' +
+                                                esc(config.primaryLabel === "Draft follow-up"
+                                                    ? "Prepare a tailored follow-up before contacting the record."
+                                                    : config.primaryLabel === "Review"
+                                                        ? "Open the record, verify the current status, then decide the next move."
+                                                        : "Open the record and act on the current workspace evidence."
+                                                ) +
+                                            '</span>' +
+                                        '</div>' +
+                                        '<div class="sway-ai-v2-priority-actions">' +
+                                            '<button type="button" class="sway-ai-v2-priority-primary" data-ai-action="' +
+                                                esc(config.primary) +
+                                                '" data-ai-action-view="' +
+                                                esc(item.view || "") +
+                                                '" data-ai-action-id="' +
+                                                esc(item.id || "") +
+                                            '">' +
+                                                esc(config.primaryLabel) +
+                                            '</button>' +
+                                            '<button type="button" class="sway-ai-v2-priority-open" data-ai-action="open" data-ai-action-view="' +
+                                                esc(item.view || "") +
+                                                '" data-ai-action-id="' +
+                                                esc(item.id || "") +
+                                            '">' +
+                                                esc(config.label) +
+                                            '</button>' +
+                                            '<button type="button" class="sway-ai-v2-priority-dismiss" data-ai-dismiss-briefing="' +
+                                                esc(key) +
+                                                '" aria-label="Dismiss this priority">Dismiss</button>' +
+                                        '</div>' +
+                                    '</article>'
+                                );
+                            }).join("") +
+                        '</div>' +
+                    '</section>'
                 )
                 : (
                     '<div class="sway-ai-v2-clear">' +
                         '<span aria-hidden="true">✓</span>' +
-                        '<span>No urgent signal is showing in the current workspace records.</span>' +
+                        '<span>No active Action Centre items are showing from the current workspace records.</span>' +
                     '</div>'
                 );
 
@@ -22531,6 +22706,56 @@ function simpleBars(items, color) {
                     event.stopPropagation();
 
                     loadAIWorkspaceBriefing(true);
+                };
+            });
+    }
+
+
+    function bindAIActionCentre() {
+        workspace
+            .querySelectorAll("[data-ai-action]")
+            .forEach(function (button) {
+                button.onclick = function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    handleAIAction(button);
+                };
+            });
+
+        workspace
+            .querySelectorAll("[data-ai-dismiss-briefing]")
+            .forEach(function (button) {
+                button.onclick = function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const key =
+                        String(button.dataset.aiDismissBriefing || "").trim();
+
+                    if (!key) {
+                        return;
+                    }
+
+                    if (!Array.isArray(state.aiDismissedBriefingKeys)) {
+                        state.aiDismissedBriefingKeys = [];
+                    }
+
+                    if (!state.aiDismissedBriefingKeys.includes(key)) {
+                        state.aiDismissedBriefingKeys.push(key);
+                    }
+
+                    const briefing =
+                        document.getElementById("sway-ai-briefing");
+
+                    if (briefing) {
+                        briefing.outerHTML =
+                            renderAIWorkspaceBriefing();
+                    }
+
+                    bindAIActionCentre();
+                    bindAIQuickPromptActions();
+                    bindAIBriefingActions();
                 };
             });
     }
@@ -24626,6 +24851,7 @@ function simpleBars(items, color) {
 
         bindAIQuickPromptActions();
         bindAIBriefingActions();
+        bindAIActionCentre();
 
         workspace
             .querySelectorAll("[data-ai-delete-chat]")
