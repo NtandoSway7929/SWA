@@ -2284,11 +2284,7 @@ Deno.serve(async (req) => {
       .filter(function (task: any) {
         if (
           task?.status === "completed" ||
-          !task?.due_date ||
-          (
-            state &&
-            false
-          )
+          !task?.due_date
         ) {
           return false;
         }
