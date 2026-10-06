@@ -2447,13 +2447,9 @@ Deno.serve(async (req) => {
                   parts: [
                     {
                       text:
-                        "DATE:
-" +
+                        "DATE:\n" +
                         businessToday +
-                        "
-
-VERIFIED WORKSPACE SNAPSHOT:
-" +
+                        "\n\nVERIFIED WORKSPACE SNAPSHOT:\n" +
                         JSON.stringify(briefingSource),
                     },
                   ],
