@@ -2351,6 +2351,198 @@ Deno.serve(async (req) => {
 
     const priorities = priorityCandidates.slice(0, 5);
 
+    /*
+     * INNERME V2 · REVENUE INTELLIGENCE
+     * Keep commercial arithmetic deterministic and distinguish sales potential
+     * from quote decisions and cash collection.
+     */
+    const overdueLeadValue = leadFollowupsOverdue.reduce(function (
+      sum: number,
+      lead: any,
+    ) {
+      const value = Number(lead?.estimated_value || 0);
+      return sum + (Number.isFinite(value) ? value : 0);
+    }, 0);
+
+    const sentQuoteValue = awaitingQuotes.reduce(function (
+      sum: number,
+      quote: any,
+    ) {
+      const value = Number(quote?.amount || 0);
+      return sum + (Number.isFinite(value) ? value : 0);
+    }, 0);
+
+    const overdueCashValue = overdueInvoices.reduce(function (
+      sum: number,
+      invoice: any,
+    ) {
+      const value = Number(
+        invoice?.amount_outstanding != null
+          ? invoice.amount_outstanding
+          : invoice?.total || 0
+      );
+      return sum + (Number.isFinite(value) ? Math.max(0, value) : 0);
+    }, 0);
+
+    const topOpenOpportunities = pipelineLeads
+      .map(function (lead: any) {
+        return {
+          id: String(lead?.id || ""),
+          name: cleanForModel(
+            lead?.business_name ||
+              lead?.contact_name ||
+              "Open lead",
+            180,
+          ),
+          value_zar: Number(lead?.estimated_value || 0),
+          status: cleanForModel(lead?.status || "open", 60),
+          next_follow_up: cleanForModel(
+            lead?.next_follow_up || "",
+            40,
+          ),
+        };
+      })
+      .filter(function (item: any) {
+        return Boolean(item.id) &&
+          Number.isFinite(item.value_zar) &&
+          item.value_zar > 0;
+      })
+      .sort(function (a: any, b: any) {
+        return b.value_zar - a.value_zar;
+      })
+      .slice(0, 3)
+      .map(function (item: any) {
+        return Object.assign({}, item, {
+          prompt:
+            "Review the open opportunity for " +
+            item.name +
+            " and tell me the strongest commercial next move. Use only the current workspace evidence.",
+        });
+      });
+
+    let revenueFocus: {
+      label: string;
+      title: string;
+      detail: string;
+      view: string;
+      id: string;
+      prompt: string;
+    } = {
+      label: "COMMERCIAL ATTENTION",
+      title: "No material revenue bottleneck is visible.",
+      detail:
+        "There is no overdue invoice, awaiting-response quote, or overdue lead follow-up with value attached in the current records.",
+      view: "",
+      id: "",
+      prompt:
+        "Review the current workspace and tell me whether there is any commercially important revenue opportunity or bottleneck I should act on.",
+    };
+
+    if (overdueCashValue > 0 && overdueInvoices.length) {
+      const invoice = overdueInvoices[0];
+      const invoiceValue = Number(
+        invoice?.amount_outstanding != null
+          ? invoice.amount_outstanding
+          : invoice?.total || 0
+      );
+      revenueFocus = {
+        label: "CASH COLLECTION",
+        title: cleanForModel(
+          invoice?.invoice_number || "Overdue invoice",
+          160,
+        ),
+        detail:
+          "The largest currently overdue invoice has R" +
+          Math.round(invoiceValue).toLocaleString("en-ZA") +
+          " outstanding. Review collection action before chasing colder sales.",
+        view: "invoices",
+        id: String(invoice?.id || ""),
+        prompt:
+          "Review the largest overdue invoice and tell me the most professional next collection move based only on the current record.",
+      };
+    } else if (sentQuoteValue > 0 && awaitingQuotes.length) {
+      const quote = awaitingQuotes[0];
+      revenueFocus = {
+        label: "SALES WAITING",
+        title: cleanForModel(
+          quote?.quote_number ||
+            quote?.title ||
+            "Quote awaiting response",
+          160,
+        ),
+        detail:
+          "A sent quote worth R" +
+          Math.round(Number(quote?.amount || 0)).toLocaleString("en-ZA") +
+          " is still waiting on a decision. That is the clearest active sales handoff.",
+        view: "quotes",
+        id: String(quote?.id || ""),
+        prompt:
+          "Review the largest quote currently awaiting a response and tell me the strongest next commercial move using only the current workspace evidence.",
+      };
+    } else if (overdueLeadValue > 0 && leadFollowupsOverdue.length) {
+      const lead = leadFollowupsOverdue
+        .slice()
+        .sort(function (a: any, b: any) {
+          return Number(b?.estimated_value || 0) -
+            Number(a?.estimated_value || 0);
+        })[0];
+
+      revenueFocus = {
+        label: "PIPELINE FOLLOW-THROUGH",
+        title: cleanForModel(
+          lead?.business_name || "Overdue lead follow-up",
+          160,
+        ),
+        detail:
+          "This open opportunity has an overdue follow-up and R" +
+          Math.round(Number(lead?.estimated_value || 0)).toLocaleString("en-ZA") +
+          " of estimated value attached.",
+        view: "leads",
+        id: String(lead?.id || ""),
+        prompt:
+          "Review the highest-value lead with an overdue follow-up and tell me the strongest next commercial move based only on the current record.",
+      };
+    } else if (topOpenOpportunities.length) {
+      const lead = topOpenOpportunities[0];
+      revenueFocus = {
+        label: "OPEN OPPORTUNITY",
+        title: lead.name,
+        detail:
+          "This is the highest-value open lead currently visible at R" +
+          Math.round(Number(lead.value_zar || 0)).toLocaleString("en-ZA") +
+          ". Prioritise a clear next step rather than adding more activity.",
+        view: "leads",
+        id: lead.id,
+        prompt:
+          "Review the highest-value open opportunity and tell me the strongest next commercial move using only the current workspace evidence.",
+      };
+    }
+
+    const revenueIntelligence = {
+      metrics: {
+        open_pipeline_value_zar:
+          Math.round(Number(
+            safeContext.operational_summary.lead_value_zar.open_pipeline || 0
+          ) * 100) / 100,
+        quotes_awaiting_value_zar:
+          Math.round(sentQuoteValue * 100) / 100,
+        cash_outstanding_value_zar:
+          Math.round(overdueCashValue * 100) / 100,
+        overdue_followup_pipeline_value_zar:
+          Math.round(overdueLeadValue * 100) / 100,
+      },
+      counts: {
+        open_pipeline_leads: pipelineLeads.length,
+        quotes_awaiting_response: awaitingQuotes.length,
+        overdue_invoices: overdueInvoices.length,
+        leads_with_overdue_followup: leadFollowupsOverdue.length,
+      },
+      focus: revenueFocus,
+      top_opportunities: topOpenOpportunities,
+      generated_date_johannesburg: businessToday,
+      read_only: true,
+    };
+
     const briefingMetrics = {
       open_pipeline_value_zar:
         Math.round(Number(
@@ -2408,6 +2600,7 @@ Deno.serve(async (req) => {
           detail: item.detail,
         };
       }),
+      revenue_intelligence: revenueIntelligence,
       date: businessToday,
     };
 
@@ -2519,6 +2712,7 @@ Deno.serve(async (req) => {
           summary: briefingSummary,
           priorities,
           metrics: briefingMetrics,
+          revenue_intelligence: revenueIntelligence,
         },
         model: briefingModel,
         read_only: true,
