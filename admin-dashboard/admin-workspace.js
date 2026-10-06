@@ -22665,6 +22665,12 @@ function simpleBars(items, color) {
                         : ""
                 ) +
                 renderAIWorkspaceBriefing() +
+                '<div class="sway-ai-pulse-orb" aria-hidden="true">' +
+                    '<span class="sway-ai-pulse-orb-ring sway-ai-pulse-orb-ring-outer"></span>' +
+                    '<span class="sway-ai-pulse-orb-ring sway-ai-pulse-orb-ring-middle"></span>' +
+                    '<span class="sway-ai-pulse-orb-core"></span>' +
+                    '<span class="sway-ai-pulse-orb-shimmer"></span>' +
+                '</div>' +
                 '<div class="sway-ai-v2-command-strip">' +
                     '<span class="sway-ai-v2-command-label">Quick commands</span>' +
                     '<div class="sway-ai-v2-command-list">' +
