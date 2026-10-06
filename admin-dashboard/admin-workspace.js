@@ -22977,7 +22977,7 @@ function simpleBars(items, color) {
                 revenueHtml +
                 changeRadarHtml +
                 priorityHtml +
-            '</section>
+            '</section>'
         );
     }
 
