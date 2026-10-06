@@ -74,7 +74,8 @@
         aiBriefingLoading: false,
         aiBriefingError: "",
         aiRequestInFlight: false,
-        aiDismissedBriefingKeys: []
+        aiDismissedBriefingKeys: [],
+        aiChangeRadar: null
     };
 
     const navGroups = [
@@ -22312,6 +22313,245 @@ function simpleBars(items, color) {
         );
     }
 
+    function aiMonitoringSnapshotCacheKey() {
+        return (
+            "swayphics_admin_innerme_monitoring_" +
+            String(
+                state.currentUser && state.currentUser.id
+                    ? state.currentUser.id
+                    : "guest"
+            )
+        );
+    }
+
+    function aiMonitoringSnapshot() {
+        function rows(list, mapper, limit) {
+            return (Array.isArray(list) ? list : [])
+                .slice(0, limit || 200)
+                .map(mapper)
+                .filter(function (item) {
+                    return item && item.id;
+                });
+        }
+
+        return {
+            version: 1,
+            checked_at: new Date().toISOString(),
+            leads: rows(state.leads, function (item) {
+                return {
+                    id: String(item?.id || ""),
+                    name: String(item?.business_name || "").trim(),
+                    status: String(item?.status || ""),
+                    value: Number(item?.estimated_value || 0),
+                    next_follow_up: String(item?.next_follow_up || "")
+                };
+            }),
+            enquiries: rows(state.enquiries, function (item) {
+                return {
+                    id: String(item?.id || ""),
+                    name: String(item?.business_name || item?.name || "Enquiry").trim(),
+                    status: String(item?.status || "")
+                };
+            }),
+            quotes: rows(state.quotes, function (item) {
+                return {
+                    id: String(item?.id || ""),
+                    name: String(item?.quote_number || item?.title || "Quote").trim(),
+                    status: String(item?.status || ""),
+                    amount: Number(item?.amount || 0)
+                };
+            }),
+            invoices: rows(state.invoices, function (item) {
+                return {
+                    id: String(item?.id || ""),
+                    name: String(item?.invoice_number || "Invoice").trim(),
+                    status: String(item?.status || ""),
+                    outstanding: Number(
+                        item?.amount_outstanding != null
+                            ? item.amount_outstanding
+                            : Math.max(0, Number(item?.total || 0) - Number(item?.amount_paid || 0))
+                    ),
+                    due_date: String(item?.due_date || "")
+                };
+            }),
+            followups: rows(state.followups, function (item) {
+                return {
+                    id: String(item?.id || ""),
+                    name: String(item?.note || "Follow-up").trim(),
+                    status: String(item?.status || ""),
+                    scheduled_for: String(item?.scheduled_for || "")
+                };
+            }),
+            tasks: rows(state.tasks, function (item) {
+                return {
+                    id: String(item?.id || ""),
+                    name: String(item?.title || "Task").trim(),
+                    status: String(item?.status || ""),
+                    due_date: String(item?.due_date || "")
+                };
+            }),
+            projects: rows(state.projects, function (item) {
+                return {
+                    id: String(item?.id || ""),
+                    name: String(item?.name || "Project").trim(),
+                    status: String(item?.status || "")
+                };
+            }),
+            emails: rows(state.emailMessages, function (item) {
+                return {
+                    id: String(item?.id || ""),
+                    name: String(item?.subject || item?.from_name || item?.from_email || "Email").trim(),
+                    direction: String(item?.direction || ""),
+                    is_read: item?.is_read === true
+                };
+            }, 250)
+        };
+    }
+
+    function aiMonitoringMap(rows) {
+        const map = new Map();
+
+        (Array.isArray(rows) ? rows : []).forEach(function (item) {
+            map.set(String(item.id), item);
+        });
+
+        return map;
+    }
+
+    function aiMonitoringSignature(item) {
+        if (!item) return "";
+
+        return JSON.stringify(item);
+    }
+
+    function aiBuildChangeRadar(previous, current) {
+        if (!previous || previous.version !== 1) {
+            return {
+                initialized: true,
+                checked_at: null,
+                changes: []
+            };
+        }
+
+        const definitions = [
+            ["emails", "Inbox", "New inbound email", "Email updated", "email"],
+            ["leads", "Lead", "New lead", "Lead changed", "leads"],
+            ["enquiries", "Enquiry", "New enquiry", "Enquiry updated", "enquiries"],
+            ["quotes", "Quote", "New quote", "Quote changed", "quotes"],
+            ["invoices", "Invoice", "New invoice", "Invoice changed", "invoices"],
+            ["followups", "Follow-up", "New follow-up", "Follow-up changed", "followups"],
+            ["tasks", "Task", "New task", "Task changed", "tasks"],
+            ["projects", "Project", "New project", "Project changed", "projects"]
+        ];
+
+        const changes = [];
+
+        definitions.forEach(function (definition) {
+            const previousMap = aiMonitoringMap(previous[definition[0]]);
+            const currentMap = aiMonitoringMap(current[definition[0]]);
+
+            currentMap.forEach(function (item, id) {
+                const before = previousMap.get(id);
+
+                if (!before) {
+                    if (
+                        definition[0] !== "emails" ||
+                        item.direction === "inbound"
+                    ) {
+                        changes.push({
+                            type: "new",
+                            label: definition[1],
+                            title: definition[2],
+                            detail: item.name || id,
+                            view: definition[4],
+                            id,
+                            severity: definition[0] === "emails" ? "high" : "medium"
+                        });
+                    }
+                    return;
+                }
+
+                if (
+                    aiMonitoringSignature(before) !== aiMonitoringSignature(item) &&
+                    (
+                        definition[0] !== "emails" ||
+                        item.direction === "inbound" ||
+                        item.is_read !== true
+                    )
+                ) {
+                    changes.push({
+                        type: "changed",
+                        label: definition[1],
+                        title: definition[3],
+                        detail: item.name || id,
+                        view: definition[4],
+                        id,
+                        severity:
+                            definition[0] === "emails" || definition[0] === "invoices"
+                                ? "high"
+                                : "medium"
+                    });
+                }
+            });
+        });
+
+        return {
+            initialized: false,
+            checked_at: previous.checked_at || null,
+            changes: changes.slice(0, 5).map(function (item) {
+                const promptByView = {
+                    leads: "Review the changed lead activity and tell me what needs attention first.",
+                    enquiries: "Review the changed enquiries and tell me which one should be qualified first.",
+                    quotes: "Review the changed quotes and tell me which one has the clearest next move.",
+                    invoices: "Review the changed invoices and tell me which billing item needs attention first.",
+                    followups: "Review the changed follow-ups and tell me which one needs action first.",
+                    tasks: "Review the changed tasks and tell me what should be handled first.",
+                    projects: "Review the project changes and tell me whether any delivery risk needs attention.",
+                    email: "Review the latest inbox changes and tell me what needs attention first."
+                };
+
+                return Object.assign({}, item, {
+                    prompt: promptByView[item.view] || "Review this change and tell me what I should do next."
+                });
+            })
+        };
+    }
+
+    function loadAIMonitoringBaseline() {
+        try {
+            const raw = sessionStorage.getItem(aiMonitoringSnapshotCacheKey());
+            const parsed = raw ? JSON.parse(raw) : null;
+
+            return parsed && parsed.version === 1
+                ? parsed
+                : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function saveAIMonitoringBaseline(snapshot) {
+        try {
+            sessionStorage.setItem(
+                aiMonitoringSnapshotCacheKey(),
+                JSON.stringify(snapshot)
+            );
+        } catch (error) {
+            // Monitoring persistence is an enhancement only.
+        }
+    }
+
+    function buildAIMonitoringRadar() {
+        const current = aiMonitoringSnapshot();
+        const previous = loadAIMonitoringBaseline();
+        const radar = aiBuildChangeRadar(previous, current);
+
+        saveAIMonitoringBaseline(current);
+
+        state.aiChangeRadar = radar;
+        return radar;
+    }
+
     function getAIBriefingPriorityKey(item) {
         return [
             String(item?.category || ""),
@@ -22447,6 +22687,76 @@ function simpleBars(items, color) {
             );
         };
 
+        const changeRadar = state.aiChangeRadar || {
+            initialized: true,
+            checked_at: null,
+            changes: []
+        };
+
+        const changeRadarHtml =
+            changeRadar.initialized
+                ? (
+                    '<section class="sway-ai-change-radar is-initialized" aria-label="InnerMe Change Radar">' +
+                        '<div class="sway-ai-change-radar-head">' +
+                            '<div>' +
+                                '<span class="sway-ai-change-radar-kicker">CHANGE RADAR</span>' +
+                                '<strong>Monitoring is now active</strong>' +
+                                '<p>InnerMe will surface new or materially changed workspace records the next time you check.</p>' +
+                            '</div>' +
+                            '<span class="sway-ai-change-radar-count">ON</span>' +
+                        '</div>' +
+                    '</section>'
+                )
+                : (
+                    '<section class="sway-ai-change-radar" aria-label="InnerMe Change Radar">' +
+                        '<div class="sway-ai-change-radar-head">' +
+                            '<div>' +
+                                '<span class="sway-ai-change-radar-kicker">CHANGE RADAR</span>' +
+                                '<strong>' +
+                                    (
+                                        changeRadar.changes.length
+                                            ? String(changeRadar.changes.length) + " changes since your last check"
+                                            : "No material changes since your last check"
+                                    ) +
+                                '</strong>' +
+                                '<p>' +
+                                    (
+                                        changeRadar.checked_at
+                                            ? "Last checked " + formatAIMessageTime(changeRadar.checked_at) + "."
+                                            : "InnerMe checked the workspace and found no material change to surface."
+                                    ) +
+                                '</p>' +
+                            '</div>' +
+                            '<span class="sway-ai-change-radar-count">' +
+                                esc(String(changeRadar.changes.length)) +
+                            '</span>' +
+                        '</div>' +
+                        (
+                            changeRadar.changes.length
+                                ? '<div class="sway-ai-change-radar-list">' +
+                                    changeRadar.changes.map(function (item) {
+                                        return (
+                                            '<button type="button" class="sway-ai-change-radar-item" data-ai-prompt="' +
+                                                esc(item.prompt || "Review this change and tell me what I should do next.") +
+                                            '">' +
+                                                '<span class="sway-ai-change-radar-mark ' +
+                                                    esc(item.severity || "medium") +
+                                                    '" aria-hidden="true"></span>' +
+                                                '<span class="sway-ai-change-radar-copy">' +
+                                                    '<span>' + esc(item.label || "Workspace") + '</span>' +
+                                                    '<strong>' + esc(item.title || "Workspace changed") + '</strong>' +
+                                                    '<small>' + esc(item.detail || "") + '</small>' +
+                                                '</span>' +
+                                                '<span class="sway-ai-change-radar-arrow">Ask →</span>' +
+                                            '</button>'
+                                        );
+                                    }).join("") +
+                                  '</div>'
+                                : ""
+                        ) +
+                    '</section>'
+                );
+
         const priorityHtml =
             priorities.length
                 ? (
@@ -22565,6 +22875,7 @@ function simpleBars(items, color) {
                         String(metrics.new_enquiries || 0)
                     ) +
                 '</div>' +
+                changeRadarHtml +
                 priorityHtml +
             '</section>'
         );
@@ -22588,6 +22899,8 @@ function simpleBars(items, color) {
         ) {
             return;
         }
+
+        buildAIMonitoringRadar();
 
         state.aiBriefingLoading = true;
         state.aiBriefingError = "";
