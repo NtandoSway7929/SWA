@@ -8655,6 +8655,51 @@ body {
 .sway-ai-knowledge-trace-link:hover {
     text-decoration: underline;
 }
+.sway-ai-knowledge-trace-supported {
+    display: block;
+    margin-top: 2px;
+    color: #0152F4;
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.sway-ai-knowledge-trace-copy small {
+    display: block;
+    margin-top: 2px;
+    color: #6C7A90;
+    font-size: 9px;
+    line-height: 1.35;
+}
+
+.sway-ai-knowledge-trace-warning {
+    margin: 0 8px 8px;
+    padding: 7px 9px;
+    border: 1px solid rgba(247,201,120,0.22);
+    border-radius: 8px;
+    background: rgba(245,158,11,0.08);
+    color: #8A6423;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+body.sway-dark-mode .sway-ai-knowledge-trace-supported {
+    color: #0152F4;
+}
+
+body.sway-dark-mode .sway-ai-knowledge-trace-copy small {
+    color: #66748A;
+}
+
+body.sway-dark-mode .sway-ai-knowledge-trace-warning {
+    border-color: rgba(247,201,120,0.20);
+    background: rgba(245,158,11,0.09);
+    color: #8A6423;
+}
+
+
 
 body.sway-dark-mode .sway-ai-knowledge-trace {
     border-color: rgba(119,193,252,0.12);
