@@ -8505,10 +8505,149 @@ body {
 }
 
 .sway-ai-more-item,
-.sway-ai-more-insights summary {
+.sway-ai-more-insights summary,
+.sway-ai-knowledge-test > summary {
     width: 100% !important;
     min-height: 40px !important;
     box-sizing: border-box !important;
+}
+
+.sway-ai-knowledge-test {
+    width: 100% !important;
+    margin: 2px 0 !important;
+    box-sizing: border-box !important;
+}
+
+.sway-ai-knowledge-test > summary {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 9px 10px !important;
+    border-radius: 11px !important;
+    cursor: pointer !important;
+    list-style: none !important;
+}
+
+.sway-ai-knowledge-test > summary::-webkit-details-marker {
+    display: none !important;
+}
+
+.sway-ai-knowledge-test > summary::after {
+    content: "›" !important;
+    transform: rotate(90deg) !important;
+    transition: transform 160ms ease !important;
+}
+
+.sway-ai-knowledge-test[open] > summary::after {
+    transform: rotate(-90deg) !important;
+}
+
+.sway-ai-knowledge-test-controls {
+    display: grid !important;
+    gap: 8px !important;
+    padding: 6px 10px 10px !important;
+}
+
+.sway-ai-knowledge-test-controls > span {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+    opacity: 0.68 !important;
+}
+
+.sway-ai-knowledge-test-button {
+    width: 100% !important;
+    min-height: 36px !important;
+    padding: 8px 10px !important;
+    border: 1px solid rgba(1,82,244,0.14) !important;
+    border-radius: 10px !important;
+    background: rgba(1,82,244,0.06) !important;
+    color: inherit !important;
+    font: inherit !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    cursor: pointer !important;
+}
+
+.sway-ai-knowledge-test-button:disabled {
+    opacity: 0.6 !important;
+    cursor: wait !important;
+}
+
+.sway-ai-knowledge-test-results {
+    display: grid !important;
+    gap: 8px !important;
+    max-height: min(420px, 52vh) !important;
+    overflow-y: auto !important;
+    padding: 0 10px 10px !important;
+}
+
+.sway-ai-knowledge-test-status,
+.sway-ai-knowledge-test-empty,
+.sway-ai-knowledge-test-error {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+    opacity: 0.72 !important;
+}
+
+.sway-ai-knowledge-test-error {
+    color: #b42318 !important;
+}
+
+.sway-ai-knowledge-test-result {
+    padding: 9px !important;
+    border: 1px solid rgba(1,82,244,0.10) !important;
+    border-radius: 11px !important;
+    background: rgba(1,82,244,0.025) !important;
+    box-sizing: border-box !important;
+}
+
+.sway-ai-knowledge-test-result-head {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+
+.sway-ai-knowledge-test-result-head strong {
+    font-size: 12px !important;
+}
+
+.sway-ai-knowledge-test-result-head > span {
+    flex: 0 0 auto !important;
+    font-size: 9px !important;
+    opacity: 0.58 !important;
+}
+
+.sway-ai-knowledge-test-query {
+    margin-top: 5px !important;
+    font-size: 10px !important;
+    line-height: 1.4 !important;
+    opacity: 0.68 !important;
+}
+
+.sway-ai-knowledge-test-result ol {
+    margin: 8px 0 0 18px !important;
+    padding: 0 !important;
+}
+
+.sway-ai-knowledge-test-result li {
+    margin: 0 0 7px !important;
+    padding-left: 2px !important;
+    font-size: 10px !important;
+    line-height: 1.4 !important;
+}
+
+.sway-ai-knowledge-test-result li strong {
+    display: block !important;
+    font-size: 10px !important;
+}
+
+.sway-ai-knowledge-test-meta {
+    display: block !important;
+    margin-top: 2px !important;
+    font-size: 9px !important;
+    opacity: 0.58 !important;
 }
 
 .sway-ai-conversation {
@@ -8519,6 +8658,20 @@ body.sway-dark-mode .sway-ai-more-panel {
     border-color: rgba(119,193,252,0.14) !important;
     background: #0A0F1D !important;
     box-shadow: 0 18px 45px rgba(0,0,0,0.34) !important;
+}
+
+body.sway-dark-mode .sway-ai-knowledge-test-button {
+    border-color: rgba(119,193,252,0.18) !important;
+    background: rgba(119,193,252,0.07) !important;
+}
+
+body.sway-dark-mode .sway-ai-knowledge-test-result {
+    border-color: rgba(119,193,252,0.12) !important;
+    background: rgba(119,193,252,0.035) !important;
+}
+
+body.sway-dark-mode .sway-ai-knowledge-test-error {
+    color: #ffb4ab !important;
 }
 
 @media (max-width: 760px) {
