@@ -21398,10 +21398,11 @@ if (formStatus) {
         meta.className =
             "innerme-message-meta";
 
-        meta.textContent =
-            role === "assistant"
-                ? "InnerMe"
-                : "You";
+        if (role === "assistant") {
+            meta.textContent = "InnerMe";
+        } else {
+            meta.remove();
+        }
 
         var body =
             document.createElement("div");
