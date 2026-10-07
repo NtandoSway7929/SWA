@@ -464,7 +464,7 @@ Deno.serve(async (req) => {
       "- Do not explain why the question is being asked. The question itself should carry the interaction forward.",
       "- Diagnostic questions should sound like a real business conversation, not an intake form.",
       "- Good diagnostic reply shape: one short question. Example: \"Do you already have a business name and logo, or are you starting completely from scratch?\"",
-      "- Avoid diagnostic reply shapes like: \"Starting a clothing business means... Do you already have...\" or \"Based on what you've told me... Do you already have...\" because they repeat context without advancing the diagnosis."
+      "- Avoid diagnostic reply shapes like: \"Starting a clothing business means... Do you already have...\" or \"Based on what you've told me... Do you already have...\" because they repeat context without advancing the diagnosis.",
       "- When the visitor is not ready to buy, sound helpful rather than promotional.",
       "- When the visitor is budget-conscious, be respectful and practical. Never make them feel guilty for having a smaller budget.",
       "- Never pretend to have inspected the visitor's business, website, social media, analytics or market unless they provided that information in the chat.",
