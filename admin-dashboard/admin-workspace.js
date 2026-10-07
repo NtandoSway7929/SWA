@@ -74,6 +74,11 @@
         aiBriefingLoading: false,
         aiBriefingError: "",
         aiRequestInFlight: false,
+        aiKnowledgeEmbedding: {
+            running: false,
+            lastResult: null,
+            error: ""
+        },
         aiDismissedBriefingKeys: [],
         aiChangeRadar: null
     };
@@ -23125,6 +23130,104 @@ function simpleBars(items, color) {
     }
 
 
+    async function buildInnerMeKnowledgeIndex() {
+        const button =
+            workspace.querySelector(
+                "#sway-ai-build-knowledge-index"
+            );
+
+        if (
+            state.aiKnowledgeEmbedding &&
+            state.aiKnowledgeEmbedding.running
+        ) {
+            return;
+        }
+
+        state.aiKnowledgeEmbedding = {
+            running: true,
+            lastResult:
+                state.aiKnowledgeEmbedding
+                    ? state.aiKnowledgeEmbedding.lastResult
+                    : null,
+            error: ""
+        };
+
+        if (button) {
+            button.disabled = true;
+            button.setAttribute(
+                "aria-busy",
+                "true"
+            );
+
+            const label =
+                button.querySelector(
+                    "[data-ai-knowledge-index-label]"
+                );
+
+            if (label) {
+                label.textContent =
+                    "Building…";
+            }
+        }
+
+        try {
+            const result = await api(
+                "/functions/v1/swayphics-ai",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        action: "embed_knowledge"
+                    })
+                }
+            );
+
+            state.aiKnowledgeEmbedding.lastResult =
+                result && result.embedding
+                    ? result.embedding
+                    : result;
+        } catch (error) {
+            state.aiKnowledgeEmbedding.error =
+                error.message ||
+                "InnerMe knowledge indexing failed.";
+        } finally {
+            state.aiKnowledgeEmbedding.running = false;
+
+            if (button) {
+                button.disabled = false;
+                button.removeAttribute(
+                    "aria-busy"
+                );
+
+                const label =
+                    button.querySelector(
+                        "[data-ai-knowledge-index-label]"
+                    );
+
+                if (label) {
+                    const result =
+                        state.aiKnowledgeEmbedding.lastResult;
+
+                    const count =
+                        result &&
+                        Number(result.count);
+
+                    label.textContent =
+                        state.aiKnowledgeEmbedding.error
+                            ? "Build Knowledge Index"
+                            : Number.isFinite(count)
+                                ? "Knowledge indexed (" +
+                                  count +
+                                  ")"
+                                : "Build Knowledge Index";
+                }
+            }
+        }
+    }
+
+
     function bindAIActionCentre() {
         workspace
             .querySelectorAll("[data-ai-action]")
@@ -23261,6 +23364,10 @@ function simpleBars(items, color) {
                         '<button type="button" class="sway-ai-new-chat sway-ai-more-item" id="sway-ai-new-chat">' +
                             '<span aria-hidden="true">＋</span>' +
                             '<span>New chat</span>' +
+                        '</button>' +
+                        '<button type="button" class="sway-ai-more-item" id="sway-ai-build-knowledge-index">' +
+                            '<span aria-hidden="true">◇</span>' +
+                            '<span data-ai-knowledge-index-label>Build Knowledge Index</span>' +
                         '</button>' +
                         '<details class="sway-ai-more-insights">' +
                             '<summary>Workspace insights</summary>' +
@@ -25275,6 +25382,21 @@ function simpleBars(items, color) {
 
         bindAIQuickPromptActions();
         bindAIBriefingActions();
+
+        const buildKnowledgeIndexButton =
+            workspace.querySelector(
+                "#sway-ai-build-knowledge-index"
+            );
+
+        if (buildKnowledgeIndexButton) {
+            buildKnowledgeIndexButton.onclick =
+                function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    buildInnerMeKnowledgeIndex();
+                };
+        }
+
         bindAIActionCentre();
 
         workspace
