@@ -85,6 +85,12 @@
             results: [],
             error: ""
         },
+        aiKnowledgeFeedbackReview: {
+            loading: false,
+            loadedAt: null,
+            items: [],
+            error: ""
+        },
         aiDismissedBriefingKeys: [],
         aiChangeRadar: null
     };
@@ -1777,6 +1783,281 @@
         correction
             .querySelector("textarea")
             ?.focus();
+    }
+
+    async function loadInnerMeFeedbackReview(forceRefresh) {
+        const reviewState =
+            state.aiKnowledgeFeedbackReview ||
+            {
+                loading: false,
+                loadedAt: null,
+                items: [],
+                error: ""
+            };
+
+        state.aiKnowledgeFeedbackReview = reviewState;
+
+        if (
+            reviewState.loading ||
+            (
+                forceRefresh !== true &&
+                reviewState.loadedAt &&
+                Date.now() - Number(reviewState.loadedAt) < 30000
+            )
+        ) {
+            return;
+        }
+
+        reviewState.loading = true;
+        reviewState.error = "";
+
+        try {
+            const rows = await api(
+                "/rest/v1/innerme_feedback?select=id,chat_id,user_message,assistant_answer,feedback_type,correction,knowledge_attribution,review_status,created_at&review_status=eq.unreviewed&order=created_at.desc&limit=30"
+            );
+
+            reviewState.items =
+                Array.isArray(rows)
+                    ? rows
+                    : [];
+            reviewState.loadedAt = Date.now();
+        } catch (error) {
+            reviewState.items = [];
+            reviewState.error =
+                error.message ||
+                "The InnerMe learning review could not be loaded.";
+        } finally {
+            reviewState.loading = false;
+
+            const panel =
+                workspace.querySelector(
+                    "#sway-ai-learning-review-results"
+                );
+
+            if (panel) {
+                panel.innerHTML =
+                    renderInnerMeFeedbackReviewResults();
+            }
+
+            const count =
+                workspace.querySelector(
+                    "[data-ai-learning-review-count]"
+                );
+
+            if (count) {
+                count.textContent =
+                    String(reviewState.items.length);
+            }
+        }
+    }
+
+    function renderInnerMeFeedbackReviewResults() {
+        const reviewState =
+            state.aiKnowledgeFeedbackReview ||
+            {
+                loading: false,
+                loadedAt: null,
+                items: [],
+                error: ""
+            };
+
+        if (reviewState.loading) {
+            return '<div class="sway-ai-learning-review-status">Loading review queue…</div>';
+        }
+
+        if (reviewState.error) {
+            return (
+                '<div class="sway-ai-learning-review-error">' +
+                    esc(reviewState.error) +
+                '</div>'
+            );
+        }
+
+        const items =
+            Array.isArray(reviewState.items)
+                ? reviewState.items
+                : [];
+
+        if (!items.length) {
+            return '<div class="sway-ai-learning-review-status">No unreviewed corrections yet.</div>';
+        }
+
+        return items.map(function (item) {
+            const created =
+                item.created_at
+                    ? formatAIMessageTime(item.created_at)
+                    : "";
+
+            const correction =
+                String(item.correction || "").trim();
+
+            const attribution =
+                item.knowledge_attribution &&
+                typeof item.knowledge_attribution === "object"
+                    ? item.knowledge_attribution
+                    : null;
+
+            const attributedTitles =
+                attribution &&
+                Array.isArray(attribution.matches)
+                    ? attribution.matches
+                        .slice(0, 4)
+                        .map(function (match) {
+                            return String(match && match.title || "").trim();
+                        })
+                        .filter(Boolean)
+                    : [];
+
+            return (
+                '<article class="sway-ai-learning-review-item" data-ai-feedback-review-id="' +
+                    esc(String(item.id || "")) +
+                '">' +
+                    '<div class="sway-ai-learning-review-head">' +
+                        '<div>' +
+                            '<strong>' +
+                                esc(
+                                    item.feedback_type === "needs_correction"
+                                        ? "Correction"
+                                        : "Useful response"
+                                ) +
+                            '</strong>' +
+                            (
+                                created
+                                    ? '<span>' + esc(created) + '</span>'
+                                    : ""
+                            ) +
+                        '</div>' +
+                        '<span class="sway-ai-learning-review-status-chip">' +
+                            esc(String(item.review_status || "unreviewed")) +
+                        '</span>' +
+                    '</div>' +
+                    '<div class="sway-ai-learning-review-question">' +
+                        '<span>Question</span>' +
+                        '<p>' +
+                            esc(item.user_message || "") +
+                        '</p>' +
+                    '</div>' +
+                    '<div class="sway-ai-learning-review-answer">' +
+                        '<span>InnerMe answer</span>' +
+                        '<p>' +
+                            esc(item.assistant_answer || "") +
+                        '</p>' +
+                    '</div>' +
+                    (
+                        correction
+                            ? '<div class="sway-ai-learning-review-correction">' +
+                                '<span>Admin correction</span>' +
+                                '<p>' +
+                                    esc(correction) +
+                                '</p>' +
+                              '</div>'
+                            : ""
+                    ) +
+                    (
+                        attributedTitles.length
+                            ? '<div class="sway-ai-learning-review-evidence">' +
+                                '<span>Attributed evidence</span>' +
+                                '<p>' +
+                                    esc(attributedTitles.join(" · ")) +
+                                '</p>' +
+                              '</div>'
+                            : ""
+                    ) +
+                    (
+                        item.feedback_type === "needs_correction"
+                            ? '<div class="sway-ai-learning-review-actions">' +
+                                '<button type="button" class="sway-ai-learning-review-button primary" data-ai-review-action="reviewed" data-ai-review-id="' +
+                                    esc(String(item.id || "")) +
+                                '">Mark reviewed</button>' +
+                              '</div>'
+                            : ""
+                    ) +
+                '</article>'
+            );
+        }).join("");
+    }
+
+    async function markInnerMeFeedbackReviewed(id) {
+        const feedbackId =
+            String(id || "").trim();
+
+        if (!feedbackId) {
+            return;
+        }
+
+        const button =
+            workspace.querySelector(
+                '[data-ai-review-action="reviewed"][data-ai-review-id="' +
+                    CSS.escape(feedbackId) +
+                '"]'
+            );
+
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Saving…";
+        }
+
+        try {
+            await api(
+                "/rest/v1/innerme_feedback?id=eq." +
+                    encodeURIComponent(feedbackId),
+                {
+                    method: "PATCH",
+                    headers: headers({
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal"
+                    }),
+                    body: JSON.stringify({
+                        review_status: "reviewed",
+                        reviewed_at: new Date().toISOString(),
+                        reviewed_by:
+                            state.currentUser &&
+                            state.currentUser.id
+                                ? state.currentUser.id
+                                : null
+                    })
+                }
+            );
+
+            state.aiKnowledgeFeedbackReview.items =
+                (
+                    state.aiKnowledgeFeedbackReview.items || []
+                ).filter(function (item) {
+                    return String(item.id) !== feedbackId;
+                });
+
+            const panel =
+                workspace.querySelector(
+                    "#sway-ai-learning-review-results"
+                );
+
+            if (panel) {
+                panel.innerHTML =
+                    renderInnerMeFeedbackReviewResults();
+            }
+
+            const count =
+                workspace.querySelector(
+                    "[data-ai-learning-review-count]"
+                );
+
+            if (count) {
+                count.textContent =
+                    String(
+                        state.aiKnowledgeFeedbackReview.items.length
+                    );
+            }
+        } catch (error) {
+            if (button) {
+                button.disabled = false;
+                button.textContent = "Mark reviewed";
+            }
+
+            swayAlert(
+                error.message ||
+                "The InnerMe feedback could not be marked reviewed."
+            );
+        }
     }
 
     function formatDisplayText(value) {
@@ -23971,6 +24252,16 @@ function simpleBars(items, color) {
                             '<span aria-hidden="true">◇</span>' +
                             '<span data-ai-knowledge-index-label>Build Knowledge Index</span>' +
                         '</button>' +
+                        '<details class="sway-ai-learning-review">' +
+                            '<summary>Learning review <span class="sway-ai-learning-review-count" data-ai-learning-review-count>0</span></summary>' +
+                            '<div class="sway-ai-learning-review-controls">' +
+                                '<span>Review corrections before anything is added to InnerMe knowledge.</span>' +
+                                '<button type="button" class="sway-ai-learning-review-refresh" id="sway-ai-learning-review-refresh">Refresh review queue</button>' +
+                            '</div>' +
+                            '<div class="sway-ai-learning-review-results" id="sway-ai-learning-review-results">' +
+                                '<div class="sway-ai-learning-review-status">Open this section to load the review queue.</div>' +
+                            '</div>' +
+                        '</details>' +
                         '<details class="sway-ai-knowledge-test">' +
                             '<summary>Knowledge Retrieval Test</summary>' +
                             '<div class="sway-ai-knowledge-test-controls">' +
@@ -26086,6 +26377,63 @@ function simpleBars(items, color) {
 
         bindAIQuickPromptActions();
         bindAIBriefingActions();
+
+        const learningReview =
+            workspace.querySelector(
+                ".sway-ai-learning-review"
+            );
+
+        const learningReviewRefresh =
+            workspace.querySelector(
+                "#sway-ai-learning-review-refresh"
+            );
+
+        const learningReviewResults =
+            workspace.querySelector(
+                "#sway-ai-learning-review-results"
+            );
+
+        if (learningReview) {
+            learningReview.addEventListener("toggle", function () {
+                if (learningReview.open) {
+                    loadInnerMeFeedbackReview(false);
+                }
+            });
+        }
+
+        if (learningReviewRefresh) {
+            learningReviewRefresh.onclick =
+                function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    loadInnerMeFeedbackReview(true);
+                };
+        }
+
+        if (learningReviewResults) {
+            learningReviewResults.addEventListener("click", function (event) {
+                const target =
+                    event.target &&
+                    event.target.closest
+                        ? event.target.closest("[data-ai-review-action]")
+                        : null;
+
+                if (!target) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (
+                    target.dataset.aiReviewAction === "reviewed"
+                ) {
+                    markInnerMeFeedbackReviewed(
+                        target.dataset.aiReviewId || ""
+                    );
+                }
+            });
+        }
 
         const knowledgeRetrievalTestButton =
             workspace.querySelector(
