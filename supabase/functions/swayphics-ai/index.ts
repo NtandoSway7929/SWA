@@ -623,7 +623,10 @@ Deno.serve(async (req) => {
       "- Keep answer focused. Usually 1-3 sentences. For a diagnostic turn, prefer exactly one sentence containing the single direct question. For a recommendation, explain the fit and next step without adding a diagnostic question unless the recommendation is genuinely uncertain.",
     ].join("\n");
 
-    async function requestPublicInnerMe(model: string) {
+    async function requestPublicInnerMe(
+      model: string,
+      repairDirective = "",
+    ) {
       return await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
@@ -665,6 +668,18 @@ Deno.serve(async (req) => {
                   },
                 ],
               },
+              ...(repairDirective
+                ? [{
+                    role: "user",
+                    parts: [
+                      {
+                        text:
+                          "[Internal quality repair directive]\\n" +
+                          repairDirective,
+                      },
+                    ],
+                  }]
+                : []),
             ],
             generationConfig: {
               maxOutputTokens: 1600,
@@ -821,15 +836,99 @@ Deno.serve(async (req) => {
         ? String(publicPayload?.recommendation_confidence || "").trim()
         : null;
 
+    let finalPublicPayload = publicPayload;
+    let finalPublicAnswer = publicAnswer;
+
     const proposedQuestionTopics =
       publicAnswer.includes("?")
         ? detectPublicDiagnosticTopics(publicAnswer)
         : [];
 
-    const repeatedDiagnosticTopics =
+    let repeatedDiagnosticTopics =
       proposedQuestionTopics.filter((topic) =>
         diagnosticLedger.coveredTopics.includes(topic),
       );
+
+    if (repeatedDiagnosticTopics.length) {
+      const repairDirective = [
+        "Your previous draft reopened a diagnostic topic that has already been covered.",
+        "Covered topics: " +
+          diagnosticLedger.coveredTopics.join(", ") +
+          ".",
+        "Do not ask another question about any covered topic.",
+        "Re-evaluate the visitor's original goal together with the answers already given.",
+        "If those facts now support a verified Swayphics service or package, recommend it immediately.",
+        "If one genuinely uncovered distinction still matters, ask exactly one question about that uncovered distinction.",
+        "Do not restate the visitor's situation before the question.",
+        "Return the same required JSON structure and nothing else.",
+      ].join("\n");
+
+      const repairedResponse =
+        await requestPublicInnerMe(
+          publicModel,
+          repairDirective,
+        );
+
+      if (repairedResponse.ok) {
+        const repairedResult =
+          await repairedResponse.json();
+
+        const repairedRaw =
+          repairedResult?.candidates?.[0]?.content?.parts
+            ?.filter(
+              (part: any) =>
+                typeof part?.text === "string",
+            )
+            ?.map(
+              (part: any) =>
+                part.text,
+            )
+            ?.join("") ||
+          "";
+
+        try {
+          const repairedPayload = JSON.parse(repairedRaw);
+
+          if (
+            repairedPayload &&
+            typeof repairedPayload.answer === "string" &&
+            repairedPayload.answer.trim().length >= 10
+          ) {
+            finalPublicPayload = repairedPayload;
+            finalPublicAnswer =
+              cleanForModel(
+                repairedPayload.answer,
+                3200,
+              );
+
+            const repairedQuestionTopics =
+              finalPublicAnswer.includes("?")
+                ? detectPublicDiagnosticTopics(finalPublicAnswer)
+                : [];
+
+            repeatedDiagnosticTopics =
+              repairedQuestionTopics.filter((topic) =>
+                diagnosticLedger.coveredTopics.includes(topic),
+              );
+
+            if (!repeatedDiagnosticTopics.length) {
+              console.info(
+                "InnerMe Lite repaired a repeated diagnostic question.",
+              );
+            } else {
+              console.warn(
+                "InnerMe Lite repair still referenced a covered diagnostic topic.",
+                repeatedDiagnosticTopics,
+              );
+            }
+          }
+        } catch {
+          console.warn(
+            "InnerMe Lite diagnostic repair did not return valid JSON.",
+          );
+        }
+      }
+    }
 
     const allowedPublicRecommendations =
       new Set([
@@ -894,34 +993,56 @@ Deno.serve(async (req) => {
     return json(
       {
         answer:
-          publicAnswer,
+          finalPublicAnswer,
         visitor_goal:
-          publicVisitorGoal || null,
+          cleanForModel(
+            finalPublicPayload?.visitor_goal || "",
+            220,
+          ) || null,
         problem_area:
-          publicProblemArea || null,
+          cleanForModel(
+            finalPublicPayload?.problem_area || "",
+            220,
+          ) || null,
         business_stage:
-          publicBusinessStage,
+          ["new_business", "existing_business", "unsure"].includes(
+            String(finalPublicPayload?.business_stage || "").trim(),
+          )
+            ? String(finalPublicPayload?.business_stage || "").trim()
+            : null,
         recommended_service:
           allowedPublicRecommendations.has(
-            publicRecommended,
+            String(finalPublicPayload?.recommended_service || "").trim(),
           )
-            ? publicRecommended
+            ? String(finalPublicPayload?.recommended_service || "").trim()
             : null,
         recommended_price_label:
           allowedPublicRecommendations.has(
-            publicRecommended,
+            String(finalPublicPayload?.recommended_service || "").trim(),
           )
-            ? publicServicePriceLabels[publicRecommended] || ""
+            ? publicServicePriceLabels[
+                String(finalPublicPayload?.recommended_service || "").trim()
+              ] || ""
             : "",
         recommendation_reason:
-          allowedPublicRecommendations.has(publicRecommended)
-            ? publicRecommendationReason || null
+          allowedPublicRecommendations.has(
+            String(finalPublicPayload?.recommended_service || "").trim(),
+          )
+            ? cleanForModel(
+                finalPublicPayload?.recommendation_reason || "",
+                260,
+              ) || null
             : null,
         recommendation_confidence:
-          publicRecommendationConfidence,
+          ["high", "medium", "low"].includes(
+            String(finalPublicPayload?.recommendation_confidence || "").trim(),
+          )
+            ? String(finalPublicPayload?.recommendation_confidence || "").trim()
+            : null,
         ready_for_enquiry:
-          publicPayload?.ready_for_enquiry === true,
+          finalPublicPayload?.ready_for_enquiry === true,
         diagnostic_guard_triggered:
+          proposedQuestionTopics.length > 0 &&
           repeatedDiagnosticTopics.length > 0,
         model:
           publicModel,
