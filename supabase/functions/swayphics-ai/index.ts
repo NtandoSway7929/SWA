@@ -243,10 +243,12 @@ Deno.serve(async (req) => {
 
     const publicHistory = Array.isArray(body.history)
       ? body.history
-          .slice(-10)
+          .slice(-8)
           .map(function (item: any) {
             const role =
-              item?.role === "user"
+              item?.role === "assistant"
+                ? "assistant"
+                : item?.role === "user"
                 ? "user"
                 : "";
 
@@ -260,18 +262,20 @@ Deno.serve(async (req) => {
               : null;
           })
           .filter(Boolean) as Array<{
-            role: "user";
+            role: "user" | "assistant";
             content: string;
           }>
       : [];
 
     /*
-     * Only visitor-authored history is sent back to the model.
-     * Prior model replies are intentionally excluded so an earlier
-     * hallucination cannot become trusted context on the next turn.
+     * The browser transcript is untrusted conversational context. We now
+     * include prior InnerMe replies so the model can reason across turns,
+     * while the system prompt continues to treat verified public context
+     * as authoritative over anything in the transcript.
      */
     if (
       publicHistory.length &&
+      publicHistory[publicHistory.length - 1].role === "user" &&
       publicHistory[publicHistory.length - 1].content === publicMessage
     ) {
       publicHistory.pop();
@@ -384,6 +388,10 @@ Deno.serve(async (req) => {
       "- EXPLORATORY QUESTIONS: Be comfortable saying \"you may not need that yet\" when the conversation supports it. Helping the visitor avoid unnecessary work is part of the consultation.",
       "- UNCERTAINTY: If two services are plausible and the visitor has not given enough information, do not guess. Ask one focused question that separates the options.",
       "- Do not repeat a question the visitor has already answered unless their answer was genuinely ambiguous.",
+      "- DIAGNOSTIC BUDGET: Aim to identify the visitor's direction within 2 focused questions and normally no more than 3 user turns. If enough evidence exists earlier, recommend sooner.",
+      "- Do not prolong a conversation merely to collect more detail. Ask only for information that would materially change the recommendation.",
+      "- A visitor who says "I'm not sure" should be guided by the outcome they want, the current bottleneck, or what they want customers to do next, rather than being asked to choose a Swayphics service.",
+      "- Prefer outcome language such as visibility, trust, enquiries, booking friction, customer response and online presence over internal service terminology when diagnosing the problem.",
       "- CAUSE-AND-EFFECT ACCURACY: Separate observed facts, reasonable hypotheses and verified conclusions.",
       "- Observed facts are things the visitor explicitly told you or facts explicitly present in the verified public context.",
       "- Treat possible causes as hypotheses, not established explanations, when you have not inspected the visitor's business, profile, website, analytics or other underlying data.",
@@ -442,9 +450,14 @@ Deno.serve(async (req) => {
       "- Be transparent that you are an AI assistant when the visitor asks or when relevant.",
       "- Use plain English and no em dash.",
       "",      "RESPONSE FORMAT:",
-      "- Return ONLY valid JSON with exactly these keys: answer, recommended_service, ready_for_enquiry.",
+      "- Return ONLY valid JSON with exactly these keys: answer, visitor_goal, problem_area, business_stage, recommended_service, recommendation_reason, recommendation_confidence, ready_for_enquiry.",
       "- answer must be plain text, suitable for a compact website chat.",
+      "- visitor_goal should be a concise statement of the outcome the visitor wants, based only on the conversation, or null when not yet clear.",
+      "- problem_area should identify the practical bottleneck in plain language, based only on the conversation, or null when not yet clear.",
+      "- business_stage should be one of: new_business, existing_business, unsure, or null.",
       "- recommended_service must be one of the exact service names below or null.",
+      "- recommendation_reason should be one concise, evidence-based sentence explaining why the recommended service fits what the visitor described, or null when there is no recommendation.",
+      "- recommendation_confidence should be high, medium, low, or null. Use high only when the conversation clearly supports the recommendation.",
       "- ready_for_enquiry must be true only when there is meaningful enquiry intent, not merely because a recommendation was made.",
       "- Set ready_for_enquiry true when the visitor explicitly wants to proceed, asks to start, asks for a quote, asks to book/contact Swayphics, or clearly confirms they want the recommended service.",
       "- Keep ready_for_enquiry false while the visitor is still exploring, comparing, asking general questions, or only asking about prices.",
@@ -561,7 +574,12 @@ Deno.serve(async (req) => {
     let publicPayload:
       | {
           answer?: string;
+          visitor_goal?: string | null;
+          problem_area?: string | null;
+          business_stage?: string | null;
           recommended_service?: string | null;
+          recommendation_reason?: string | null;
+          recommendation_confidence?: "high" | "medium" | "low" | null;
           ready_for_enquiry?: boolean;
         }
       | null = null;
@@ -583,7 +601,12 @@ Deno.serve(async (req) => {
       if (fallbackAnswer) {
         publicPayload = {
           answer: fallbackAnswer,
+          visitor_goal: null,
+          problem_area: null,
+          business_stage: null,
           recommended_service: null,
+          recommendation_reason: null,
+          recommendation_confidence: null,
           ready_for_enquiry: false,
         };
       } else {
@@ -604,6 +627,38 @@ Deno.serve(async (req) => {
       String(
         publicPayload?.recommended_service || "",
       ).trim();
+
+    const publicVisitorGoal =
+      cleanForModel(
+        publicPayload?.visitor_goal || "",
+        220,
+      );
+
+    const publicProblemArea =
+      cleanForModel(
+        publicPayload?.problem_area || "",
+        220,
+      );
+
+    const publicBusinessStage =
+      ["new_business", "existing_business", "unsure"].includes(
+        String(publicPayload?.business_stage || "").trim(),
+      )
+        ? String(publicPayload?.business_stage || "").trim()
+        : null;
+
+    const publicRecommendationReason =
+      cleanForModel(
+        publicPayload?.recommendation_reason || "",
+        260,
+      );
+
+    const publicRecommendationConfidence =
+      ["high", "medium", "low"].includes(
+        String(publicPayload?.recommendation_confidence || "").trim(),
+      )
+        ? String(publicPayload?.recommendation_confidence || "").trim()
+        : null;
 
     const allowedPublicRecommendations =
       new Set([
@@ -627,6 +682,27 @@ Deno.serve(async (req) => {
         "Something else",
       ]);
 
+    const publicServicePriceLabels: Record<string, string> = {
+      "Starter Package": "R999",
+      "Launch Package": "R1,999",
+      "Growth Package": "R3,499",
+      "Logo Design": "R250",
+      "Business Identity Kit": "Custom quote",
+      "Business Card Design": "R100",
+      "Business Letterhead Design": "R150",
+      "Packaging Design": "R150",
+      "Apparel Design": "R50-R100",
+      "Website Design": "From R1500",
+      "Google Business Profile": "R500-R900",
+      "Professional Email Setup": "R300-R600",
+      "Digital Business Card / Link-in-Bio": "R250-R500",
+      "Company Registration": "R500",
+      "Booking System": "R600-R1200",
+      "AI Customer Reply Setup": "R600-R1200",
+      "Review Collection System": "R300-R700",
+      "Website Maintenance": "R250-R750/month",
+    };
+
     if (
       !publicAnswer ||
       publicAnswer.length < 10
@@ -647,12 +723,30 @@ Deno.serve(async (req) => {
       {
         answer:
           publicAnswer,
+        visitor_goal:
+          publicVisitorGoal || null,
+        problem_area:
+          publicProblemArea || null,
+        business_stage:
+          publicBusinessStage,
         recommended_service:
           allowedPublicRecommendations.has(
             publicRecommended,
           )
             ? publicRecommended
             : null,
+        recommended_price_label:
+          allowedPublicRecommendations.has(
+            publicRecommended,
+          )
+            ? publicServicePriceLabels[publicRecommended] || ""
+            : "",
+        recommendation_reason:
+          allowedPublicRecommendations.has(publicRecommended)
+            ? publicRecommendationReason || null
+            : null,
+        recommendation_confidence:
+          publicRecommendationConfidence,
         ready_for_enquiry:
           publicPayload?.ready_for_enquiry === true,
         model:
