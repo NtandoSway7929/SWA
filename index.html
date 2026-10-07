@@ -1761,35 +1761,74 @@ nav.scrolled .logo img {
 }
 
 .innerme-send {
-    width: 50px;
-    height: 50px;
+    position: relative;
+    width: 48px;
+    height: 48px;
     align-self: end;
-    border: 0;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #002096 0%, #0152F4 100%);
+    flex: 0 0 48px;
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 32% 24%, rgba(119,193,252,0.78) 0%, rgba(119,193,252,0.16) 28%, rgba(119,193,252,0) 48%),
+        linear-gradient(145deg, #0152F4 0%, #002096 100%);
     color: #FFFFFF;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 10px 22px rgba(0,32,150,0.18);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    overflow: hidden;
+    box-shadow:
+        0 10px 24px rgba(0,32,150,0.19),
+        0 0 0 1px rgba(1,82,244,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.24),
+        inset 0 -8px 18px rgba(0,32,150,0.14);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.innerme-send::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 50%;
+    pointer-events: none;
 }
 
 .innerme-send:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 13px 26px rgba(0,32,150,0.22);
+    transform: translateY(-1px) scale(1.03);
+    box-shadow:
+        0 13px 28px rgba(0,32,150,0.23),
+        0 0 0 4px rgba(1,82,244,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.28),
+        inset 0 -8px 18px rgba(0,32,150,0.12);
+}
+
+.innerme-send:active {
+    transform: scale(0.98);
 }
 
 .innerme-send:disabled {
     cursor: default;
-    opacity: 0.46;
+    opacity: 0.42;
     transform: none;
 }
 
 .innerme-send svg {
-    width: 17px;
-    height: 17px;
+    position: relative;
+    z-index: 1;
+    width: 18px;
+    height: 18px;
+}
+
+.innerme-send svg path {
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
 }
 
 .innerme-actions {
