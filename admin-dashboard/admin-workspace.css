@@ -8680,6 +8680,47 @@ body {
     border-top: 1px solid rgba(1,82,244,0.08);
 }
 
+.sway-ai-learning-review-candidate {
+    display: grid;
+    gap: 4px;
+    padding-top: 7px;
+    border-top: 1px solid rgba(1,82,244,0.08);
+}
+
+.sway-ai-learning-review-candidate > span {
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    opacity: 0.52;
+}
+
+.sway-ai-learning-review-candidate strong {
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.sway-ai-learning-review-candidate p {
+    margin: 0;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.sway-ai-learning-review-candidate small,
+.sway-ai-learning-review-candidate-status {
+    font-size: 9px;
+    color: #65748A;
+}
+
+body.sway-dark-mode .sway-ai-learning-review-candidate {
+    border-top-color: rgba(119,193,252,0.10);
+}
+
+body.sway-dark-mode .sway-ai-learning-review-candidate small,
+body.sway-dark-mode .sway-ai-learning-review-candidate-status {
+    color: #8998AC;
+}
+
 .sway-ai-learning-review-actions {
     display: flex;
     justify-content: flex-end;
