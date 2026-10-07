@@ -1216,6 +1216,16 @@ Deno.serve(async (req) => {
         {
           error:
             "The InnerMe knowledge retrieval query could not be completed.",
+          retrieval_error: {
+            message:
+              retrievalError.message || null,
+            details:
+              retrievalError.details || null,
+            hint:
+              retrievalError.hint || null,
+            code:
+              retrievalError.code || null,
+          },
         },
         500,
         origin,
