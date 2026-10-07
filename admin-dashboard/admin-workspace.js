@@ -1606,6 +1606,179 @@
         );
     }
 
+    function renderAIKnowledgeFeedback(item) {
+        if (!item || item.role !== "assistant" || item.loading) {
+            return "";
+        }
+
+        const feedbackType =
+            String(item.feedback_type || "").trim();
+
+        if (feedbackType === "helpful") {
+            return (
+                '<div class="sway-ai-feedback sway-ai-feedback-complete">' +
+                    '<span>Marked useful</span>' +
+                '</div>'
+            );
+        }
+
+        if (feedbackType === "needs_correction") {
+            return (
+                '<div class="sway-ai-feedback sway-ai-feedback-complete">' +
+                    '<span>Correction saved for review</span>' +
+                '</div>'
+            );
+        }
+
+        return (
+            '<div class="sway-ai-feedback">' +
+                '<span class="sway-ai-feedback-label">Was this useful?</span>' +
+                '<button type="button" class="sway-ai-feedback-button" data-ai-feedback="helpful">Yes</button>' +
+                '<button type="button" class="sway-ai-feedback-button" data-ai-feedback="needs_correction">Needs correction</button>' +
+            '</div>'
+        );
+    }
+
+    async function submitInnerMeFeedback(messageElement, feedbackType, correction) {
+        if (!messageElement || !["helpful", "needs_correction"].includes(feedbackType)) {
+            return;
+        }
+
+        const createdAt =
+            String(messageElement.getAttribute("data-ai-message-created-at") || "");
+
+        const assistantEntry =
+            Array.isArray(state.aiConversation)
+                ? state.aiConversation.find(function (item) {
+                    return (
+                        item.role === "assistant" &&
+                        String(item.createdAt || "") === createdAt
+                    );
+                })
+                : null;
+
+        if (!assistantEntry) {
+            swayAlert("That InnerMe response is no longer available for feedback.");
+            return;
+        }
+
+        const assistantAnswer =
+            String(assistantEntry.content || "").trim();
+
+        if (!assistantAnswer || assistantEntry.loading) {
+            return;
+        }
+
+        let userMessage = "";
+        const assistantIndex = state.aiConversation.indexOf(assistantEntry);
+
+        if (assistantIndex > 0) {
+            const preceding = state.aiConversation[assistantIndex - 1];
+            if (preceding && preceding.role === "user") {
+                userMessage = String(preceding.content || "").trim();
+            }
+        }
+
+        if (!userMessage) {
+            userMessage = "Previous InnerMe conversation context";
+        }
+
+        const feedbackButtons =
+            messageElement.querySelectorAll("[data-ai-feedback]");
+
+        feedbackButtons.forEach(function (button) {
+            button.disabled = true;
+        });
+
+        try {
+            const result = await api(
+                "/functions/v1/swayphics-ai",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        action: "record_knowledge_feedback",
+                        message: userMessage,
+                        assistant_answer: assistantAnswer,
+                        feedback_type: feedbackType,
+                        correction: correction || "",
+                        chat_id: state.aiActiveChatId || "",
+                        feedback_knowledge_retrieval:
+                            assistantEntry.knowledge_retrieval || null,
+                        feedback_knowledge_attribution:
+                            assistantEntry.knowledge_attribution || null
+                    })
+                }
+            );
+
+            if (!result || result.ok !== true) {
+                throw new Error("InnerMe feedback was not saved.");
+            }
+
+            assistantEntry.feedback_type = feedbackType;
+            assistantEntry.feedback_correction =
+                correction || "";
+
+            messageElement
+                .querySelector(".sway-ai-feedback")
+                ?.replaceWith(
+                    document.createRange().createContextualFragment(
+                        renderAIKnowledgeFeedback(assistantEntry)
+                    )
+                );
+
+            saveAIConversation();
+        } catch (error) {
+            feedbackButtons.forEach(function (button) {
+                button.disabled = false;
+            });
+
+            swayAlert(
+                error.message ||
+                "InnerMe feedback could not be saved."
+            );
+        }
+    }
+
+    function handleInnerMeFeedback(messageElement, feedbackType) {
+        if (feedbackType === "helpful") {
+            submitInnerMeFeedback(
+                messageElement,
+                "helpful",
+                ""
+            );
+            return;
+        }
+
+        const existing =
+            messageElement.querySelector(".sway-ai-feedback-correction");
+
+        if (existing) {
+            existing.remove();
+            return;
+        }
+
+        const correction = document.createElement("div");
+        correction.className =
+            "sway-ai-feedback-correction";
+        correction.innerHTML =
+            '<textarea rows="3" maxlength="3000" placeholder="Tell InnerMe what was wrong or what it should have considered."></textarea>' +
+            '<div class="sway-ai-feedback-correction-actions">' +
+                '<button type="button" class="sway-ai-feedback-button secondary" data-ai-feedback-cancel="true">Cancel</button>' +
+                '<button type="button" class="sway-ai-feedback-button primary" data-ai-feedback-submit="true">Save correction</button>' +
+            '</div>';
+
+        messageElement
+            .querySelector(".sway-ai-feedback")
+            ?.appendChild(correction);
+
+        correction
+            .querySelector("textarea")
+            ?.focus();
+    }
+
     function formatDisplayText(value) {
         return String(value == null ? "" : value)
             .replace(/_/g, " ")
@@ -2421,7 +2594,15 @@
                                             })
                                         : []
                             }
-                            : null
+                            : null,
+                    feedback_type:
+                        ["helpful", "needs_correction"].includes(
+                            String(item.feedback_type || "")
+                        )
+                            ? String(item.feedback_type)
+                            : "",
+                    feedback_correction:
+                        String(item.feedback_correction || "").slice(0, 3000)
                 };
             })
             .slice(-AI_CHAT_MESSAGE_LIMIT);
@@ -23750,6 +23931,8 @@ function simpleBars(items, color) {
                     '<div class="sway-ai-message ' +
                         roleClass +
                         loadingClass +
+                        '" data-ai-message-created-at="' +
+                        esc(String(item.createdAt || "")) +
                         '">' +
                         '<span class="sway-ai-message-label">' +
                             label +
@@ -23761,6 +23944,7 @@ function simpleBars(items, color) {
                             timestampHtml +
                             copyHtml +
                             knowledgeHtml +
+                            renderAIKnowledgeFeedback(item) +
                         '</div>' +
                     '</div>'
                 );
@@ -24016,6 +24200,10 @@ function simpleBars(items, color) {
         const loading = document.createElement("div");
         loading.className =
             "sway-ai-message sway-ai-assistant sway-ai-loading";
+        loading.setAttribute(
+            "data-ai-message-created-at",
+            messageCreatedAt
+        );
         loading.innerHTML =
             '<span class="sway-ai-message-label">InnerMe</span>' +
             '<div class="sway-ai-message-content">' +
@@ -24116,6 +24304,7 @@ function simpleBars(items, color) {
                         assistantEntry.knowledge_retrieval,
                         assistantEntry.knowledge_attribution
                     ) +
+                    renderAIKnowledgeFeedback(assistantEntry) +
                 '</div>';
 
         } catch (error) {
@@ -24666,9 +24855,84 @@ function simpleBars(items, color) {
         });
     }
 
+    function bindAIFeedbackEvents() {
+        if (workspace.__swayInnerMeFeedbackBound) {
+            return;
+        }
+
+        workspace.__swayInnerMeFeedbackBound = true;
+
+        workspace.addEventListener("click", function (event) {
+            const feedbackButton =
+                event.target && typeof event.target.closest === "function"
+                    ? event.target.closest("[data-ai-feedback]")
+                    : null;
+
+            if (feedbackButton) {
+                const messageElement =
+                    feedbackButton.closest(".sway-ai-message");
+
+                if (!messageElement) {
+                    return;
+                }
+
+                event.preventDefault();
+                handleInnerMeFeedback(
+                    messageElement,
+                    String(feedbackButton.getAttribute("data-ai-feedback") || "")
+                );
+                return;
+            }
+
+            const cancelButton =
+                event.target && typeof event.target.closest === "function"
+                    ? event.target.closest("[data-ai-feedback-cancel]")
+                    : null;
+
+            if (cancelButton) {
+                const messageElement =
+                    cancelButton.closest(".sway-ai-message");
+
+                if (messageElement) {
+                    messageElement
+                        .querySelector(".sway-ai-feedback-correction")
+                        ?.remove();
+                }
+
+                return;
+            }
+
+            const saveButton =
+                event.target && typeof event.target.closest === "function"
+                    ? event.target.closest("[data-ai-feedback-submit]")
+                    : null;
+
+            if (saveButton) {
+                const messageElement =
+                    saveButton.closest(".sway-ai-message");
+                const textarea =
+                    messageElement?.querySelector(".sway-ai-feedback-correction textarea");
+                const correction =
+                    String(textarea?.value || "").trim();
+
+                if (!correction) {
+                    swayAlert("Please describe the correction before saving it.");
+                    return;
+                }
+
+                submitInnerMeFeedback(
+                    messageElement,
+                    "needs_correction",
+                    correction
+                );
+            }
+        });
+    }
+
     function bindViewActions() {
 
         bindSwayActionDropdowns();
+        bindAIFeedbackEvents();
 
         workspace
             .querySelectorAll("[data-refresh-workspace]")
