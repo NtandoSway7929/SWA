@@ -1366,6 +1366,12 @@ Deno.serve(async (req) => {
     communications,
     activities,
     emailMessages,
+    innermeDecisions,
+    innermePlaybooks,
+    innermeExperiments,
+    innermeInsights,
+    innermePreferences,
+    innermeAgents,
   ] = await Promise.all([
     workspaceSupabase.from("tasks").select("*").order("created_at", { ascending: false }).limit(60),
     workspaceSupabase.from("leads").select("*").order("created_at", { ascending: false }).limit(60),
@@ -1380,6 +1386,12 @@ Deno.serve(async (req) => {
     workspaceSupabase.from("communication_logs").select("*").order("contacted_at", { ascending: false }).limit(100),
     workspaceSupabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(60),
     workspaceSupabase.from("email_messages").select("id,direction,mailbox,thread_id,from_name,from_email,to_email,subject,text_body,received_at,is_read,client_id,lead_id,created_at,updated_at").eq("mailbox", "info@swayphics.co.za").order("received_at", { ascending: false }).limit(100),
+    workspaceSupabase.from("innerme_decisions").select("id,title,decision,context,rationale,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(50),
+    workspaceSupabase.from("innerme_playbooks").select("id,name,purpose,definition_of_done,steps,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(30),
+    workspaceSupabase.from("innerme_experiments").select("id,name,hypothesis,action,success_metric,status,review_date,result,learning,created_at,updated_at").in("status",["idea","running"]).order("updated_at",{ascending:false}).limit(30),
+    workspaceSupabase.from("innerme_insights").select("id,title,insight,evidence,confidence,category,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(50),
+    workspaceSupabase.from("innerme_preferences").select("id,category,preference_key,value,source,updated_at").order("updated_at",{ascending:false}).limit(100),
+    workspaceSupabase.from("innerme_agents").select("id,slug,name,purpose,inputs,outputs,definition_of_done,trust_stage,permissions,status,instructions,updated_at").eq("status","active").order("name",{ascending:true}).limit(30),
   ]);
 
   const queryResults = {
@@ -1396,6 +1408,12 @@ Deno.serve(async (req) => {
     communications,
     activities,
     emailMessages,
+    innermeDecisions,
+    innermePlaybooks,
+    innermeExperiments,
+    innermeInsights,
+    innermePreferences,
+    innermeAgents,
   };
 
   const queryFailures = Object.entries(queryResults)
@@ -1426,6 +1444,14 @@ Deno.serve(async (req) => {
     communications: compactRows(communications.data || [], 100),
     activities: compactRows(activities.data || []),
     email_messages: compactRows(emailMessages.data || [], 100),
+    innerme_business_brain: {
+      decisions: compactRows(innermeDecisions.data || [], 50),
+      playbooks: compactRows(innermePlaybooks.data || [], 30),
+      active_experiments: compactRows(innermeExperiments.data || [], 30),
+      insights: compactRows(innermeInsights.data || [], 50),
+      preferences: compactRows(innermePreferences.data || [], 100),
+      agents: compactRows(innermeAgents.data || [], 30),
+    },
   };
 
   const safeContext = JSON.parse(
@@ -3548,6 +3574,13 @@ KNOWN SWAYPHICS BUSINESS CONTEXT:
 - When the admin asks how to grow Swayphics, think across the full funnel rather than defaulting to "post more content": target audience, positioning, offer, acquisition, enquiry flow, qualification, sales conversation, proposal, follow-up, conversion, delivery, retention, referrals, and cash collection.
 
 Swayphics currently operates through leads, clients, enquiries, communications, email, follow-ups, tasks, projects, quotes, invoices, payments, portal requests and activity records.
+
+- INNERME BUSINESS BRAIN: Treat safeContext.innerme_business_brain as persistent institutional context. Active decisions are approved operating decisions until superseded or retired. Active playbooks are reusable operating procedures. Active experiments are current tests that should be evaluated against their success metric and review date. Active insights are evidence-backed observations, not unquestionable facts. Preferences are explicit operating/style rules. Active agents describe specialist scopes, trust stages and permissions.
+- When a current request conflicts with a stored decision or preference, explicitly flag the conflict rather than silently choosing one.
+- When a playbook fits the request, use it before inventing a new process.
+- When a task produces a reusable lesson, identify it as a candidate business-brain asset. Do not pretend it has been stored unless a verified write operation occurs.
+- Never treat an insight as verified merely because it is stored. Respect its confidence and evidence.
+- Do not expose internal agent routing or database structure unless useful to the admin.
 
 - Conversation history is context only. The current workspace data and operational_summary are authoritative if conversation history conflicts with conversation history.
 - If a focused record is present, previous conversational references such as "it", "they", "that client", or "that invoice" should resolve to that focused record unless the admin clearly switches subjects.
