@@ -195,6 +195,12 @@ Deno.serve(async (req) => {
     };
     channel?: string;
     knowledge_ids?: string[];
+    query?: string;
+    match_threshold?: number | string;
+    match_count?: number | string;
+    filter_domain?: string | null;
+    filter_jurisdiction?: string | null;
+    filter_knowledge_type?: string | null;
   } = {};
   try {
     body = await req.json();
@@ -1079,7 +1085,11 @@ Deno.serve(async (req) => {
     return json({ error: "Supabase server configuration is incomplete." }, 500, origin);
   }
 
-  if (!geminiKey) {
+  if (
+    !geminiKey &&
+    action !== "embed_knowledge" &&
+    action !== "search_knowledge"
+  ) {
     return json({
       error:
         "InnerMe is installed, but GEMINI_API_KEY has not been configured in Supabase Edge Function secrets yet.",
@@ -1111,6 +1121,121 @@ Deno.serve(async (req) => {
 
   if (adminError || isAdmin !== true) {
     return json({ error: "You are not an active Swayphics admin." }, 403, origin);
+  }
+
+  /*
+   * INNERME KNOWLEDGE RETRIEVAL TEST
+   * This action is only reachable after the authenticated admin check.
+   * It generates a query embedding with the same model used to index
+   * the knowledge base, then calls the verified retrieval RPC.
+   * No LLM is involved and the result never enters normal InnerMe chat.
+   */
+  if (body.action === "search_knowledge") {
+    const query = String(body.query || "").trim();
+
+    if (!query) {
+      return json(
+        { error: "A knowledge retrieval query is required." },
+        400,
+        origin,
+      );
+    }
+
+    if (query.length > 1200) {
+      return json(
+        {
+          error:
+            "Keep the retrieval test query under 1,200 characters.",
+        },
+        400,
+        origin,
+      );
+    }
+
+    const thresholdRaw = Number(body.match_threshold);
+    const matchThreshold =
+      Number.isFinite(thresholdRaw)
+        ? Math.max(0, Math.min(thresholdRaw, 1))
+        : 0.45;
+
+    const countRaw = Number(body.match_count);
+    const matchCount =
+      Number.isFinite(countRaw)
+        ? Math.max(1, Math.min(Math.round(countRaw), 12))
+        : 8;
+
+    const model = new Supabase.ai.Session("gte-small");
+    const rawEmbedding = await model.run(query, {
+      mean_pool: true,
+      normalize: true,
+    });
+
+    const queryEmbedding = Array.from(rawEmbedding as Iterable<number>);
+
+    if (queryEmbedding.length !== 384) {
+      return json(
+        {
+          error:
+            "The retrieval embedding has an unexpected dimension.",
+          embedding_dimensions: queryEmbedding.length,
+        },
+        500,
+        origin,
+      );
+    }
+
+    const { data: matches, error: retrievalError } =
+      await authSupabase.rpc(
+        "match_innerme_knowledge",
+        {
+          query_embedding: queryEmbedding,
+          match_threshold: matchThreshold,
+          match_count: matchCount,
+          filter_domain:
+            body.filter_domain
+              ? String(body.filter_domain).trim()
+              : null,
+          filter_jurisdiction:
+            body.filter_jurisdiction
+              ? String(body.filter_jurisdiction).trim()
+              : null,
+          filter_knowledge_type:
+            body.filter_knowledge_type
+              ? String(body.filter_knowledge_type).trim()
+              : null,
+        },
+      );
+
+    if (retrievalError) {
+      console.error(
+        "InnerMe knowledge retrieval error:",
+        retrievalError.message,
+      );
+
+      return json(
+        {
+          error:
+            "The InnerMe knowledge retrieval query could not be completed.",
+        },
+        500,
+        origin,
+      );
+    }
+
+    return json(
+      {
+        ok: true,
+        query,
+        match_threshold: matchThreshold,
+        requested_match_count: matchCount,
+        matches: Array.isArray(matches) ? matches : [],
+        embedding_model: "gte-small",
+        embedding_dimensions: queryEmbedding.length,
+        read_only: true,
+      },
+      200,
+      origin,
+    );
   }
 
   /*
