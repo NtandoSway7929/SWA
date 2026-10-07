@@ -1507,7 +1507,7 @@
     }
 
 
-    function renderAIKnowledgeTrace(retrieval) {
+    function renderAIKnowledgeTrace(retrieval, attribution) {
         if (
             !retrieval ||
             !Array.isArray(retrieval.matches) ||
@@ -1517,6 +1517,16 @@
         }
 
         const matches = retrieval.matches.slice(0, 6);
+        const attributed =
+            attribution &&
+            Array.isArray(attribution.matches)
+                ? attribution.matches.slice(0, 6)
+                : [];
+        const attributedById = new Map(
+            attributed.map(function (item) {
+                return [String(item.id || ""), item];
+            })
+        );
 
         const rows = matches.map(function (match) {
             const similarity =
@@ -1531,6 +1541,8 @@
 
             const sourceLink =
                 String(match.source_url || "").trim();
+            const attributionMatch =
+                attributedById.get(String(match.id || "")) || null;
 
             return (
                 '<div class="sway-ai-knowledge-trace-row">' +
@@ -1543,6 +1555,16 @@
                             ' · ' +
                             esc(String(match.evidence_level || "evidence")) +
                         '</span>' +
+                        (
+                            attributionMatch
+                                ? '<em class="sway-ai-knowledge-trace-supported">Supporting evidence · ' +
+                                    esc(attributionMatch.confidence) +
+                                  '</em>' +
+                                  '<small>' +
+                                    esc(attributionMatch.reason) +
+                                  '</small>'
+                                : ""
+                        ) +
                     '</div>' +
                     '<span class="sway-ai-knowledge-trace-score">' +
                         esc(similarity) +
@@ -1560,9 +1582,23 @@
 
         return (
             '<details class="sway-ai-knowledge-trace">' +
-                '<summary>Knowledge retrieved · ' +
-                    esc(String(matches.length)) +
+                '<summary>' +
+                    (
+                        attributed.length
+                            ? 'Evidence used · ' +
+                              esc(String(attributed.length)) +
+                              ' of ' +
+                              esc(String(matches.length))
+                            : 'Knowledge retrieved · ' +
+                              esc(String(matches.length))
+                    ) +
                 '</summary>' +
+                (
+                    attribution &&
+                    attribution.error
+                        ? '<div class="sway-ai-knowledge-trace-warning">Evidence attribution unavailable for this answer.</div>'
+                        : ""
+                ) +
                 '<div class="sway-ai-knowledge-trace-list">' +
                     rows +
                 '</div>' +
@@ -2348,6 +2384,39 @@
                                                     source_name: String(match && match.source_name || "").slice(0, 180),
                                                     source_publisher: String(match && match.source_publisher || "").slice(0, 120),
                                                     source_url: String(match && match.source_url || "").slice(0, 500)
+                                                };
+                                            })
+                                        : []
+                            }
+                            : null,
+                    knowledge_attribution:
+                        item.knowledge_attribution &&
+                        typeof item.knowledge_attribution === "object"
+                            ? {
+                                attributed:
+                                    item.knowledge_attribution.attributed === true,
+                                provider_model:
+                                    String(
+                                        item.knowledge_attribution.provider_model || ""
+                                    ).slice(0, 80),
+                                error:
+                                    String(
+                                        item.knowledge_attribution.error || ""
+                                    ).slice(0, 500),
+                                matches:
+                                    Array.isArray(item.knowledge_attribution.matches)
+                                        ? item.knowledge_attribution.matches
+                                            .slice(0, 6)
+                                            .map(function (match) {
+                                                return {
+                                                    id: String(match && match.id || ""),
+                                                    reason: String(match && match.reason || "").slice(0, 260),
+                                                    confidence:
+                                                        ["high","medium","low"].includes(
+                                                            String(match && match.confidence || "")
+                                                        )
+                                                            ? String(match.confidence)
+                                                            : "medium"
                                                 };
                                             })
                                         : []
@@ -24022,6 +24091,10 @@ function simpleBars(items, color) {
                 result && result.knowledge_retrieval
                     ? result.knowledge_retrieval
                     : null;
+            assistantEntry.knowledge_attribution =
+                result && result.knowledge_attribution
+                    ? result.knowledge_attribution
+                    : null;
             assistantEntry.createdAt = new Date().toISOString();
             assistantEntry.loading = false;
             saveAIConversation();
@@ -24039,7 +24112,10 @@ function simpleBars(items, color) {
                     '<button type="button" class="sway-ai-copy" data-ai-copy="' +
                         esc(answer) +
                     '">Copy</button>' +
-                    renderAIKnowledgeTrace(assistantEntry.knowledge_retrieval) +
+                    renderAIKnowledgeTrace(
+                        assistantEntry.knowledge_retrieval,
+                        assistantEntry.knowledge_attribution
+                    ) +
                 '</div>';
 
         } catch (error) {
