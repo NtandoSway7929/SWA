@@ -1813,7 +1813,7 @@
 
         try {
             const rows = await api(
-                "/rest/v1/innerme_feedback?select=id,chat_id,user_message,assistant_answer,feedback_type,correction,knowledge_attribution,review_status,created_at&review_status=eq.unreviewed&order=created_at.desc&limit=30"
+                "/rest/v1/innerme_feedback?select=id,chat_id,user_message,assistant_answer,feedback_type,correction,knowledge_attribution,review_status,created_at&feedback_type=eq.needs_correction&order=created_at.desc&limit=30"
             );
 
             reviewState.items =
@@ -1853,18 +1853,36 @@
                     });
 
                     reviewState.items =
-                        reviewState.items.map(function (item) {
-                            return Object.assign(
-                                {},
-                                item,
-                                {
-                                    learning_candidate:
-                                        candidatesByFeedback.get(
-                                            String(item && item.id || "")
-                                        ) || null
+                        reviewState.items
+                            .map(function (item) {
+                                return Object.assign(
+                                    {},
+                                    item,
+                                    {
+                                        learning_candidate:
+                                            candidatesByFeedback.get(
+                                                String(item && item.id || "")
+                                            ) || null
+                                    }
+                                );
+                            })
+                            .filter(function (item) {
+                                const candidate =
+                                    item && item.learning_candidate
+                                        ? item.learning_candidate
+                                        : null;
+
+                                if (String(item && item.review_status || "") === "unreviewed") {
+                                    return true;
                                 }
-                            );
-                        });
+
+                                return (
+                                    candidate &&
+                                    ["candidate", "approved"].includes(
+                                        String(candidate.status || "")
+                                    )
+                                );
+                            });
                 } catch (candidateLoadError) {
                     console.warn(
                         "InnerMe learning candidates could not be loaded.",
@@ -2045,15 +2063,36 @@
                         item.feedback_type === "needs_correction"
                             ? '<div class="sway-ai-learning-review-actions">' +
                                 (
-                                    item.learning_candidate
-                                        ? '<span class="sway-ai-learning-review-candidate-status">Candidate created</span>'
-                                        : '<button type="button" class="sway-ai-learning-review-button" data-ai-review-action="candidate" data-ai-review-id="' +
+                                    !item.learning_candidate
+                                        ? '<button type="button" class="sway-ai-learning-review-button" data-ai-review-action="candidate" data-ai-review-id="' +
                                             esc(String(item.id || "")) +
                                           '">Create learning candidate</button>'
+                                        : (
+                                            String(item.learning_candidate.status || "") === "candidate"
+                                                ? '<button type="button" class="sway-ai-learning-review-button" data-ai-review-action="approve" data-ai-review-id="' +
+                                                    esc(String(item.learning_candidate.id || "")) +
+                                                  '">Approve</button>' +
+                                                  '<button type="button" class="sway-ai-learning-review-button" data-ai-review-action="reject" data-ai-review-id="' +
+                                                    esc(String(item.learning_candidate.id || "")) +
+                                                  '">Reject</button>'
+                                                : String(item.learning_candidate.status || "") === "approved"
+                                                    ? '<button type="button" class="sway-ai-learning-review-button primary" data-ai-review-action="apply" data-ai-review-id="' +
+                                                        esc(String(item.learning_candidate.id || "")) +
+                                                      '">Apply to knowledge</button>'
+                                                    : String(item.learning_candidate.status || "") === "rejected"
+                                                        ? '<span class="sway-ai-learning-review-candidate-status">Candidate rejected</span>'
+                                                        : String(item.learning_candidate.status || "") === "applied"
+                                                            ? '<span class="sway-ai-learning-review-candidate-status">Applied • verification required before retrieval</span>'
+                                                            : ""
+                                        )
                                 ) +
-                                '<button type="button" class="sway-ai-learning-review-button primary" data-ai-review-action="reviewed" data-ai-review-id="' +
-                                    esc(String(item.id || "")) +
-                                '">Mark reviewed</button>' +
+                                (
+                                    !item.learning_candidate
+                                        ? '<button type="button" class="sway-ai-learning-review-button primary" data-ai-review-action="reviewed" data-ai-review-id="' +
+                                            esc(String(item.id || "")) +
+                                        '">Mark reviewed</button>'
+                                        : ""
+                                ) +
                               '</div>'
                             : ""
                     ) +
@@ -2136,6 +2175,136 @@
             swayAlert(
                 error.message ||
                 "The InnerMe learning candidate could not be created."
+            );
+        }
+    }
+
+    async function reviewInnerMeLearningCandidate(id, decision) {
+        const candidateId =
+            String(id || "").trim();
+
+        const normalizedDecision =
+            String(decision || "").trim();
+
+        if (
+            !candidateId ||
+            !["approved", "rejected"].includes(normalizedDecision)
+        ) {
+            return;
+        }
+
+        const selector =
+            '[data-ai-review-action="' +
+                normalizedDecision.replace(
+                    "approved",
+                    "approve"
+                ).replace(
+                    "rejected",
+                    "reject"
+                ) +
+            '"][data-ai-review-id="' +
+                CSS.escape(candidateId) +
+            '"]';
+
+        const button =
+            workspace.querySelector(selector);
+
+        if (button) {
+            button.disabled = true;
+            button.textContent =
+                normalizedDecision === "approved"
+                    ? "Approving…"
+                    : "Rejecting…";
+        }
+
+        try {
+            await api(
+                "/rest/v1/rpc/review_innerme_learning_candidate",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        p_candidate_id: candidateId,
+                        p_decision: normalizedDecision
+                    })
+                }
+            );
+
+            await loadInnerMeFeedbackReview(true);
+        } catch (error) {
+            if (button) {
+                button.disabled = false;
+                button.textContent =
+                    normalizedDecision === "approved"
+                        ? "Approve"
+                        : "Reject";
+            }
+
+            swayAlert(
+                error.message ||
+                "The InnerMe learning candidate could not be reviewed."
+            );
+        }
+    }
+
+    async function applyInnerMeLearningCandidate(id) {
+        const candidateId =
+            String(id || "").trim();
+
+        if (!candidateId) {
+            return;
+        }
+
+        const confirmed =
+            await swayConfirm(
+                "Apply this approved learning candidate to InnerMe knowledge? The changed record will require source verification before it can return to retrieval."
+            );
+
+        if (!confirmed) {
+            return;
+        }
+
+        const button =
+            workspace.querySelector(
+                '[data-ai-review-action="apply"][data-ai-review-id="' +
+                    CSS.escape(candidateId) +
+                '"]'
+            );
+
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Applying…";
+        }
+
+        try {
+            await api(
+                "/rest/v1/rpc/apply_innerme_learning_candidate",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        p_candidate_id: candidateId
+                    })
+                }
+            );
+
+            await loadInnerMeFeedbackReview(true);
+            swayAlert(
+                "Learning candidate applied. The changed knowledge record is now held for source verification and is excluded from retrieval until verified and re-indexed."
+            );
+        } catch (error) {
+            if (button) {
+                button.disabled = false;
+                button.textContent = "Apply to knowledge";
+            }
+
+            swayAlert(
+                error.message ||
+                "The InnerMe learning candidate could not be applied."
             );
         }
     }
@@ -26601,6 +26770,35 @@ function simpleBars(items, color) {
                     target.dataset.aiReviewAction === "candidate"
                 ) {
                     generateInnerMeLearningCandidate(
+                        target.dataset.aiReviewId || ""
+                    );
+                    return;
+                }
+
+                if (
+                    target.dataset.aiReviewAction === "approve"
+                ) {
+                    reviewInnerMeLearningCandidate(
+                        target.dataset.aiReviewId || "",
+                        "approved"
+                    );
+                    return;
+                }
+
+                if (
+                    target.dataset.aiReviewAction === "reject"
+                ) {
+                    reviewInnerMeLearningCandidate(
+                        target.dataset.aiReviewId || "",
+                        "rejected"
+                    );
+                    return;
+                }
+
+                if (
+                    target.dataset.aiReviewAction === "apply"
+                ) {
+                    applyInnerMeLearningCandidate(
                         target.dataset.aiReviewId || ""
                     );
                 }
