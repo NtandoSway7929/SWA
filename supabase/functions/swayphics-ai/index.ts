@@ -4212,6 +4212,177 @@ Answer the admin's question directly.
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
+  /*
+   * PHASE 4E · EVIDENCE ATTRIBUTION
+   * A separate, small verification pass identifies which retrieved records
+   * materially support the final answer. This never changes the answer.
+   * The model can only select IDs that were actually retrieved for this turn.
+   */
+  let innermeKnowledgeAttribution: {
+    attributed: boolean;
+    matches: Array<{
+      id: string;
+      reason: string;
+      confidence: "high" | "medium" | "low";
+    }>;
+    provider_model: string | null;
+    error: string | null;
+  } = {
+    attributed: false,
+    matches: [],
+    provider_model: null,
+    error: null,
+  };
+
+  if (innermeKnowledgeMatches.length > 0) {
+    const attributionCandidates = innermeKnowledgeMatches.map(function (item: any) {
+      return {
+        id: String(item?.id || ""),
+        title: cleanForModel(item?.title || "", 180),
+        evidence_level: cleanForModel(item?.evidence_level || "", 40),
+        statement: cleanForModel(item?.statement || "", 900),
+        application: cleanForModel(item?.application || "", 700),
+      };
+    }).filter(function (item: any) {
+      return Boolean(item.id);
+    });
+
+    if (attributionCandidates.length > 0) {
+      const attributionPrompt = [
+        "You are verifying evidence attribution for an internal Swayphics answer.",
+        "Do not rewrite or improve the answer.",
+        "Identify only the retrieved knowledge records that materially support claims, reasoning, or recommendations actually present in the answer.",
+        "Do not select a record merely because it is related to the topic.",
+        "You may select only IDs present in the supplied candidate list.",
+        "Return JSON only in this exact shape:",
+        '{"supported_ids":[{"id":"...","reason":"brief factual reason","confidence":"high"}]}',
+        'confidence must be exactly "high", "medium", or "low".',
+        "ADMIN QUESTION:",
+        cleanForModel(message, 1200),
+        "INNERME ANSWER:",
+        cleanForModel(cleanAnswer, 5000),
+        "RETRIEVED KNOWLEDGE CANDIDATES:",
+        JSON.stringify(attributionCandidates),
+      ].join("\n\n");
+
+      async function requestKnowledgeAttribution(model: string) {
+        return await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/models/" +
+            encodeURIComponent(model) +
+            ":generateContent",
+          {
+            method: "POST",
+            headers: {
+              "x-goog-api-key": geminiKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: "user",
+                  parts: [{ text: attributionPrompt }],
+                },
+              ],
+              generationConfig: {
+                maxOutputTokens: 500,
+                responseMimeType: "application/json",
+              },
+            }),
+          },
+        );
+      }
+
+      try {
+        let attributionResponse =
+          await requestKnowledgeAttribution(PRIMARY_MODEL);
+        let attributionModel = PRIMARY_MODEL;
+
+        if (
+          (attributionResponse.status === 503 ||
+            attributionResponse.status === 429) &&
+          PRIMARY_MODEL !== FALLBACK_MODEL
+        ) {
+          attributionModel = FALLBACK_MODEL;
+          attributionResponse =
+            await requestKnowledgeAttribution(FALLBACK_MODEL);
+        }
+
+        if (!attributionResponse.ok) {
+          throw new Error(
+            "Knowledge attribution provider returned HTTP " +
+              String(attributionResponse.status) +
+              ".",
+          );
+        }
+
+        const attributionResult =
+          await attributionResponse.json();
+
+        const rawAttribution =
+          attributionResult?.candidates?.[0]?.content?.parts
+            ?.filter((part: any) => typeof part?.text === "string")
+            ?.map((part: any) => part.text)
+            ?.join("") ||
+          "";
+
+        const parsedAttribution =
+          JSON.parse(rawAttribution || "{}");
+
+        const allowedIds = new Set(
+          attributionCandidates.map(function (item: any) {
+            return item.id;
+          }),
+        );
+
+        const attributedMatches =
+          Array.isArray(parsedAttribution?.supported_ids)
+            ? parsedAttribution.supported_ids
+                .map(function (item: any) {
+                  const id = String(item?.id || "").trim();
+                  const confidence =
+                    ["high", "medium", "low"].includes(
+                      String(item?.confidence || "").trim(),
+                    )
+                      ? String(item.confidence).trim()
+                      : "medium";
+
+                  return {
+                    id,
+                    reason: cleanForModel(
+                      item?.reason || "",
+                      260,
+                    ),
+                    confidence: confidence as "high" | "medium" | "low",
+                  };
+                })
+                .filter(function (item: any) {
+                  return allowedIds.has(item.id) && item.reason;
+                })
+                .slice(0, 6)
+            : [];
+
+        innermeKnowledgeAttribution = {
+          attributed: attributedMatches.length > 0,
+          matches: attributedMatches,
+          provider_model: attributionModel,
+          error: null,
+        };
+      } catch (error) {
+        innermeKnowledgeAttribution.error =
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : String(error).slice(0, 500);
+
+        console.error(
+          "InnerMe knowledge attribution error:",
+          innermeKnowledgeAttribution.error,
+        );
+      }
+    }
+  }
+
+
+
   return new Response(
     JSON.stringify({
       answer: cleanAnswer,
@@ -4236,6 +4407,7 @@ Answer the admin's question directly.
         }),
         retrieval_error: innermeKnowledgeRetrievalError || null,
       },
+      knowledge_attribution: innermeKnowledgeAttribution,
     }),
     {
       status: 200,
