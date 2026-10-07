@@ -79,6 +79,12 @@
             lastResult: null,
             error: ""
         },
+        aiKnowledgeRetrievalTest: {
+            running: false,
+            lastRunAt: null,
+            results: [],
+            error: ""
+        },
         aiDismissedBriefingKeys: [],
         aiChangeRadar: null
     };
@@ -23110,6 +23116,223 @@ function simpleBars(items, color) {
             });
     }
 
+    async function runInnerMeKnowledgeRetrievalTest() {
+        const button =
+            workspace.querySelector(
+                "#sway-ai-run-knowledge-retrieval-test"
+            );
+
+        const resultsPanel =
+            workspace.querySelector(
+                "#sway-ai-knowledge-retrieval-results"
+            );
+
+        if (
+            state.aiKnowledgeRetrievalTest &&
+            state.aiKnowledgeRetrievalTest.running
+        ) {
+            return;
+        }
+
+        const tests = [
+            {
+                id: "funnel",
+                label: "Funnel diagnosis",
+                query:
+                    "A business gets plenty of website visitors but very few enquiries. What should I investigate?"
+            },
+            {
+                id: "break-even",
+                label: "Break-even",
+                query:
+                    "How do I calculate how many units a business needs to sell to cover its fixed costs?"
+            },
+            {
+                id: "value-proposition",
+                label: "Value proposition",
+                query:
+                    "How can I determine whether a business's offer actually solves an important customer problem?"
+            }
+        ];
+
+        state.aiKnowledgeRetrievalTest = {
+            running: true,
+            lastRunAt:
+                state.aiKnowledgeRetrievalTest &&
+                state.aiKnowledgeRetrievalTest.lastRunAt
+                    ? state.aiKnowledgeRetrievalTest.lastRunAt
+                    : null,
+            results: [],
+            error: ""
+        };
+
+        if (button) {
+            button.disabled = true;
+            button.setAttribute(
+                "aria-busy",
+                "true"
+            );
+            button.textContent =
+                "Testing retrieval…";
+        }
+
+        if (resultsPanel) {
+            resultsPanel.innerHTML =
+                '<div class="sway-ai-knowledge-test-status">Running 3 controlled queries…</div>';
+        }
+
+        try {
+            const results = [];
+
+            for (const test of tests) {
+                const result = await api(
+                    "/functions/v1/swayphics-ai",
+                    {
+                        method: "POST",
+                        headers: headers({
+                            "Content-Type": "application/json"
+                        }),
+                        body: JSON.stringify({
+                            action: "search_knowledge",
+                            query: test.query,
+                            match_threshold: 0.45,
+                            match_count: 5
+                        })
+                    }
+                );
+
+                results.push({
+                    id: test.id,
+                    label: test.label,
+                    query: test.query,
+                    matches:
+                        result && Array.isArray(result.matches)
+                            ? result.matches
+                            : [],
+                    embedding_model:
+                        result && result.embedding_model
+                            ? result.embedding_model
+                            : "",
+                    embedding_dimensions:
+                        result &&
+                        Number(result.embedding_dimensions)
+                            ? Number(result.embedding_dimensions)
+                            : null
+                });
+            }
+
+            state.aiKnowledgeRetrievalTest.results = results;
+            state.aiKnowledgeRetrievalTest.lastRunAt =
+                new Date().toISOString();
+
+            if (resultsPanel) {
+                resultsPanel.innerHTML =
+                    results
+                        .map(function (test) {
+                            const matches =
+                                Array.isArray(test.matches)
+                                    ? test.matches
+                                    : [];
+
+                            return (
+                                '<div class="sway-ai-knowledge-test-result">' +
+                                    '<div class="sway-ai-knowledge-test-result-head">' +
+                                        '<strong>' +
+                                            esc(test.label) +
+                                        '</strong>' +
+                                        '<span>' +
+                                            esc(
+                                                String(
+                                                    test.embedding_model ||
+                                                    "gte-small"
+                                                ) +
+                                                " · " +
+                                                String(
+                                                    test.embedding_dimensions ||
+                                                    384
+                                                ) +
+                                                "d"
+                                            ) +
+                                        '</span>' +
+                                    '</div>' +
+                                    '<div class="sway-ai-knowledge-test-query">' +
+                                        esc(test.query) +
+                                    '</div>' +
+                                    (
+                                        matches.length
+                                            ? '<ol>' +
+                                                matches
+                                                    .map(function (match) {
+                                                        return (
+                                                            '<li>' +
+                                                                '<strong>' +
+                                                                    esc(
+                                                                        match.title ||
+                                                                        match.slug ||
+                                                                        "Untitled"
+                                                                    ) +
+                                                                '</strong>' +
+                                                                '<span class="sway-ai-knowledge-test-meta">' +
+                                                                    esc(
+                                                                        Number.isFinite(
+                                                                            Number(match.similarity)
+                                                                        )
+                                                                            ? Number(match.similarity).toFixed(3)
+                                                                            : "—"
+                                                                    ) +
+                                                                    " · " +
+                                                                    esc(
+                                                                        match.evidence_level ||
+                                                                        "unknown"
+                                                                    ) +
+                                                                    " · " +
+                                                                    esc(
+                                                                        match.source_name ||
+                                                                        "Unknown source"
+                                                                    ) +
+                                                                '</span>' +
+                                                            '</li>'
+                                                        );
+                                                    })
+                                                    .join("") +
+                                              '</ol>'
+                                            : '<div class="sway-ai-knowledge-test-empty">No matches returned.</div>'
+                                    ) +
+                                '</div>'
+                            );
+                        })
+                        .join("");
+            }
+        } catch (error) {
+            state.aiKnowledgeRetrievalTest.error =
+                error.message ||
+                "Knowledge retrieval testing failed.";
+
+            if (resultsPanel) {
+                resultsPanel.innerHTML =
+                    '<div class="sway-ai-knowledge-test-error">' +
+                        esc(
+                            state.aiKnowledgeRetrievalTest.error
+                        ) +
+                    '</div>';
+            }
+        } finally {
+            state.aiKnowledgeRetrievalTest.running = false;
+
+            if (button) {
+                button.disabled = false;
+                button.removeAttribute(
+                    "aria-busy"
+                );
+                button.textContent =
+                    state.aiKnowledgeRetrievalTest.error
+                        ? "Run retrieval test"
+                        : "Run again";
+            }
+        }
+    }
+
+
     function bindAIBriefingActions() {
         workspace
             .querySelectorAll("[data-ai-refresh-briefing]")
@@ -23391,6 +23614,16 @@ function simpleBars(items, color) {
                             '<span aria-hidden="true">◇</span>' +
                             '<span data-ai-knowledge-index-label>Build Knowledge Index</span>' +
                         '</button>' +
+                        '<details class="sway-ai-knowledge-test">' +
+                            '<summary>Knowledge Retrieval Test</summary>' +
+                            '<div class="sway-ai-knowledge-test-controls">' +
+                                '<span>Runs 3 controlled semantic-search checks without changing InnerMe answers.</span>' +
+                                '<button type="button" class="sway-ai-knowledge-test-button" id="sway-ai-run-knowledge-retrieval-test">Run retrieval test</button>' +
+                            '</div>' +
+                            '<div class="sway-ai-knowledge-test-results" id="sway-ai-knowledge-retrieval-results">' +
+                                '<div class="sway-ai-knowledge-test-status">Not run yet.</div>' +
+                            '</div>' +
+                        '</details>' +
                         '<details class="sway-ai-more-insights">' +
                             '<summary>Workspace insights</summary>' +
                             renderAIWorkspaceInsights() +
@@ -25404,6 +25637,21 @@ function simpleBars(items, color) {
 
         bindAIQuickPromptActions();
         bindAIBriefingActions();
+
+        const knowledgeRetrievalTestButton =
+            workspace.querySelector(
+                "#sway-ai-run-knowledge-retrieval-test"
+            );
+
+        if (knowledgeRetrievalTestButton) {
+            knowledgeRetrievalTestButton.onclick =
+                function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    runInnerMeKnowledgeRetrievalTest();
+                };
+        }
 
         const buildKnowledgeIndexButton =
             workspace.querySelector(
