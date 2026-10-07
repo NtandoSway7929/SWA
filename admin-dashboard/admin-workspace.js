@@ -1507,6 +1507,69 @@
     }
 
 
+    function renderAIKnowledgeTrace(retrieval) {
+        if (
+            !retrieval ||
+            !Array.isArray(retrieval.matches) ||
+            !retrieval.matches.length
+        ) {
+            return "";
+        }
+
+        const matches = retrieval.matches.slice(0, 6);
+
+        const rows = matches.map(function (match) {
+            const similarity =
+                Number.isFinite(Number(match.similarity))
+                    ? (Number(match.similarity) * 100).toFixed(1) + "%"
+                    : "n/a";
+
+            const source =
+                String(match.source_name || "").trim() ||
+                String(match.source_publisher || "").trim() ||
+                "Verified source";
+
+            const sourceLink =
+                String(match.source_url || "").trim();
+
+            return (
+                '<div class="sway-ai-knowledge-trace-row">' +
+                    '<div class="sway-ai-knowledge-trace-copy">' +
+                        '<strong>' +
+                            esc(match.title || "Knowledge record") +
+                        '</strong>' +
+                        '<span>' +
+                            esc(source) +
+                            ' · ' +
+                            esc(String(match.evidence_level || "evidence")) +
+                        '</span>' +
+                    '</div>' +
+                    '<span class="sway-ai-knowledge-trace-score">' +
+                        esc(similarity) +
+                    '</span>' +
+                    (
+                        sourceLink
+                            ? '<a class="sway-ai-knowledge-trace-link" href="' +
+                                esc(sourceLink) +
+                                '" target="_blank" rel="noopener noreferrer">Source</a>'
+                            : ""
+                    ) +
+                '</div>'
+            );
+        }).join("");
+
+        return (
+            '<details class="sway-ai-knowledge-trace">' +
+                '<summary>Knowledge retrieved · ' +
+                    esc(String(matches.length)) +
+                '</summary>' +
+                '<div class="sway-ai-knowledge-trace-list">' +
+                    rows +
+                '</div>' +
+            '</details>'
+        );
+    }
+
     function formatDisplayText(value) {
         return String(value == null ? "" : value)
             .replace(/_/g, " ")
@@ -2255,7 +2318,41 @@
                     content: String(item.content || "").slice(0, 4000),
                     createdAt: item.createdAt
                         ? String(item.createdAt)
-                        : ""
+                        : "",
+                    knowledge_retrieval:
+                        item.knowledge_retrieval &&
+                        typeof item.knowledge_retrieval === "object"
+                            ? {
+                                used:
+                                    item.knowledge_retrieval.used === true,
+                                match_count:
+                                    Math.max(
+                                        0,
+                                        Number(
+                                            item.knowledge_retrieval.match_count || 0
+                                        )
+                                    ),
+                                matches:
+                                    Array.isArray(item.knowledge_retrieval.matches)
+                                        ? item.knowledge_retrieval.matches
+                                            .slice(0, 6)
+                                            .map(function (match) {
+                                                return {
+                                                    id: String(match && match.id || ""),
+                                                    title: String(match && match.title || "").slice(0, 180),
+                                                    similarity:
+                                                        Number.isFinite(Number(match && match.similarity))
+                                                            ? Number(match.similarity)
+                                                            : null,
+                                                    evidence_level: String(match && match.evidence_level || "").slice(0, 40),
+                                                    source_name: String(match && match.source_name || "").slice(0, 180),
+                                                    source_publisher: String(match && match.source_publisher || "").slice(0, 120),
+                                                    source_url: String(match && match.source_url || "").slice(0, 500)
+                                                };
+                                            })
+                                        : []
+                            }
+                            : null
                 };
             })
             .slice(-AI_CHAT_MESSAGE_LIMIT);
@@ -23563,6 +23660,12 @@ function simpleBars(items, color) {
                           '">Copy</button>'
                         : "";
 
+                const knowledgeHtml =
+                    item.role === "assistant" &&
+                    !item.loading
+                        ? renderAIKnowledgeTrace(item.knowledge_retrieval)
+                        : "";
+
                 const contentHtml =
                     item.loading
                         ? '<span class="sway-ai-thinking" aria-label="InnerMe is thinking">' +
@@ -23588,6 +23691,7 @@ function simpleBars(items, color) {
                         '<div class="sway-ai-message-meta">' +
                             timestampHtml +
                             copyHtml +
+                            knowledgeHtml +
                         '</div>' +
                     '</div>'
                 );
@@ -23914,6 +24018,10 @@ function simpleBars(items, color) {
                     : "I could not produce an answer.";
 
             assistantEntry.content = answer;
+            assistantEntry.knowledge_retrieval =
+                result && result.knowledge_retrieval
+                    ? result.knowledge_retrieval
+                    : null;
             assistantEntry.createdAt = new Date().toISOString();
             assistantEntry.loading = false;
             saveAIConversation();
@@ -23931,6 +24039,7 @@ function simpleBars(items, color) {
                     '<button type="button" class="sway-ai-copy" data-ai-copy="' +
                         esc(answer) +
                     '">Copy</button>' +
+                    renderAIKnowledgeTrace(assistantEntry.knowledge_retrieval) +
                 '</div>';
 
         } catch (error) {
