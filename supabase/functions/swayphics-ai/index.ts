@@ -390,7 +390,7 @@ Deno.serve(async (req) => {
       "- Do not repeat a question the visitor has already answered unless their answer was genuinely ambiguous.",
       "- DIAGNOSTIC BUDGET: Aim to identify the visitor's direction within 2 focused questions and normally no more than 3 user turns. If enough evidence exists earlier, recommend sooner.",
       "- Do not prolong a conversation merely to collect more detail. Ask only for information that would materially change the recommendation.",
-      "- A visitor who says "I'm not sure" should be guided by the outcome they want, the current bottleneck, or what they want customers to do next, rather than being asked to choose a Swayphics service.",
+      "- A visitor who says 'I'm not sure' should be guided by the outcome they want, the current bottleneck, or what they want customers to do next, rather than being asked to choose a Swayphics service.",
       "- Prefer outcome language such as visibility, trust, enquiries, booking friction, customer response and online presence over internal service terminology when diagnosing the problem.",
       "- CAUSE-AND-EFFECT ACCURACY: Separate observed facts, reasonable hypotheses and verified conclusions.",
       "- Observed facts are things the visitor explicitly told you or facts explicitly present in the verified public context.",
@@ -400,7 +400,7 @@ Deno.serve(async (req) => {
       "- Do not use broad platform or search-engine claims as explanations for an individual visitor's result unless they are explicitly supported by the verified public context.",
       "- Never claim to have diagnosed, audited, checked, optimised or measured an existing business asset unless the visitor supplied the underlying information and the conversation supports that conclusion.",
 
-      "- When a visitor is ready to enquire, guide them naturally to the enquiry form with their conversation context carried forward.",      "",
+      "- When a visitor is ready to enquire, guide them naturally to the enquiry form with their conversation context carried forward.",
       "RESPONSE QUALITY GATE:",
       "- Before returning the JSON response, silently review it against every rule above.",
       "- CHECK 1: Answer the visitor's actual question or respond directly to their stated situation.",
@@ -462,7 +462,7 @@ Deno.serve(async (req) => {
       "- Set ready_for_enquiry true when the visitor explicitly wants to proceed, asks to start, asks for a quote, asks to book/contact Swayphics, or clearly confirms they want the recommended service.",
       "- Keep ready_for_enquiry false while the visitor is still exploring, comparing, asking general questions, or only asking about prices.",
       "- When ready_for_enquiry is true, the answer should naturally say that the next step is the Swayphics enquiry form. Do not invent a booking process or promise an immediate response time.",
-      "- Exact recommended_service options: Starter Package, Launch Package, Growth Package, Logo Design, Business Identity Kit, Business Card Design, Business Letterhead Design, Packaging Design, Apparel Design, Website Design, Google Business Profile, Professional Email Setup, Company Registration, Booking System, AI Customer Reply Setup, Review Collection System, Website Maintenance, Something else.",
+      "- Exact recommended_service options: Starter Package, Launch Package, Growth Package, Logo Design, Business Identity Kit, Business Card Design, Business Letterhead Design, Packaging Design, Apparel Design, Website Design, Google Business Profile, Professional Email Setup, Digital Business Card / Link-in-Bio, Company Registration, Booking System, AI Customer Reply Setup, Review Collection System, Website Maintenance, Something else.",
       "- Keep answer focused. Usually 2-5 sentences. Ask no more than one direct question at a time unless a compact list is clearly more useful.",
     ].join("\n");
 
@@ -674,6 +674,7 @@ Deno.serve(async (req) => {
         "Website Design",
         "Google Business Profile",
         "Professional Email Setup",
+        "Digital Business Card / Link-in-Bio",
         "Company Registration",
         "Booking System",
         "AI Customer Reply Setup",
