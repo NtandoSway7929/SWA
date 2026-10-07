@@ -2101,6 +2101,56 @@
         }).join("");
     }
 
+    async function verifyInnerMeKnowledge(id, sourceUrl, notes, reviewDays) {
+        const knowledgeId = String(id || "").trim();
+        if (!knowledgeId) return;
+
+        try {
+            await api(
+                "/rest/v1/rpc/verify_innerme_knowledge",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        p_knowledge_id: knowledgeId,
+                        p_verified_source_url: String(sourceUrl || "").trim() || null,
+                        p_verification_notes: String(notes || "").trim() || null,
+                        p_review_days: Number.isFinite(Number(reviewDays))
+                            ? Number(reviewDays)
+                            : 90
+                    })
+                }
+            );
+
+            await api(
+                "/functions/v1/swayphics-ai",
+                {
+                    method: "POST",
+                    headers: headers({
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        action: "embed_knowledge",
+                        knowledge_ids: [knowledgeId]
+                    })
+                }
+            );
+
+            await loadInnerMeFeedbackReview(true);
+
+            swayAlert(
+                "Knowledge verified and re-indexed. InnerMe can use it again."
+            );
+        } catch (error) {
+            swayAlert(
+                error.message ||
+                "The InnerMe knowledge record could not be verified."
+            );
+        }
+    }
+
     async function generateInnerMeLearningCandidate(id) {
         const feedbackId =
             String(id || "").trim();
