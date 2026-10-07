@@ -8574,6 +8574,116 @@ body {
     cursor: wait !important;
 }
 
+.sway-ai-feedback {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 7px;
+}
+
+.sway-ai-feedback-label {
+    margin-right: 2px;
+    color: #7A8799;
+    font-size: 9px;
+    line-height: 1.3;
+}
+
+.sway-ai-feedback-button {
+    min-height: 26px;
+    padding: 4px 9px;
+    border: 1px solid rgba(1,82,244,0.12);
+    border-radius: 8px;
+    background: rgba(1,82,244,0.035);
+    color: inherit;
+    font: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sway-ai-feedback-button:hover {
+    border-color: rgba(1,82,244,0.28);
+    background: rgba(1,82,244,0.075);
+}
+
+.sway-ai-feedback-button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.sway-ai-feedback-button.primary {
+    background: #0152F4;
+    border-color: #0152F4;
+    color: #FFFFFF;
+}
+
+.sway-ai-feedback-button.secondary {
+    background: transparent;
+}
+
+.sway-ai-feedback-complete span {
+    color: #65748A;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.sway-ai-feedback-correction {
+    flex: 1 0 100%;
+    display: grid;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.sway-ai-feedback-correction textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 72px;
+    padding: 8px 9px;
+    border: 1px solid rgba(1,82,244,0.14);
+    border-radius: 9px;
+    background: rgba(255,255,255,0.80);
+    color: #34445D;
+    font: inherit;
+    font-size: 10px;
+    line-height: 1.45;
+    resize: vertical;
+}
+
+.sway-ai-feedback-correction textarea:focus {
+    outline: none;
+    border-color: rgba(1,82,244,0.40);
+    box-shadow: 0 0 0 3px rgba(1,82,244,0.09);
+}
+
+.sway-ai-feedback-correction-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+body.sway-dark-mode .sway-ai-feedback-label,
+body.sway-dark-mode .sway-ai-feedback-complete span {
+    color: #8998AC;
+}
+
+body.sway-dark-mode .sway-ai-feedback-button {
+    border-color: rgba(119,193,252,0.13);
+    background: rgba(119,193,252,0.045);
+    color: #34445D;
+}
+
+body.sway-dark-mode .sway-ai-feedback-button:hover {
+    border-color: rgba(119,193,252,0.30);
+    background: #FFFFFF;
+}
+
+body.sway-dark-mode .sway-ai-feedback-correction textarea {
+    border-color: rgba(119,193,252,0.14);
+    background: #F4F7FC;
+    color: #34445D;
+}
+
 .sway-ai-knowledge-trace {
     width: 100%;
     margin-top: 6px;
