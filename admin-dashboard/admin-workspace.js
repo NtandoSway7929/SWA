@@ -23130,6 +23130,28 @@ function simpleBars(items, color) {
     }
 
 
+    document.addEventListener("click", function (event) {
+        const target =
+            event.target &&
+            typeof event.target.closest === "function"
+                ? event.target.closest("#sway-ai-build-knowledge-index")
+                : null;
+
+        if (!target || !document.contains(target)) {
+            return;
+        }
+
+        if (event.__swayKnowledgeIndexHandled) {
+            return;
+        }
+
+        event.__swayKnowledgeIndexHandled = true;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        buildInnerMeKnowledgeIndex();
+    }, true);
+
     async function buildInnerMeKnowledgeIndex() {
         const button =
             workspace.querySelector(
