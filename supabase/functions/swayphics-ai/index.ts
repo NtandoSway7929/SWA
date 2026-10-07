@@ -1251,10 +1251,8 @@ Deno.serve(async (req) => {
   /*
    * INNERME KNOWLEDGE EMBEDDING
    * This action is only reachable after the authenticated admin check.
-   * It forwards the same verified admin JWT to the dedicated embedding
-   * worker, which uses the server-side Supabase secret only inside the
-   * worker to update vector embeddings. No service key is sent to the
-   * browser or accepted from the client.
+   * It embeds active pending/error knowledge directly in this function
+   * using the same gte-small model used by retrieval queries.
    */
   if (body.action === "embed_knowledge") {
     const knowledgeIds = Array.isArray(body.knowledge_ids)
@@ -1264,51 +1262,165 @@ Deno.serve(async (req) => {
           .slice(0, 25)
       : [];
 
-    const workerUrl =
-      supabaseUrl + "/functions/v1/innerme-knowledge-embed";
+    let query = authSupabase
+      .from("innerme_knowledge")
+      .select("id, slug, embedding_text")
+      .eq("status", "active")
+      .in("embedding_status", ["pending", "error"])
+      .limit(25);
 
-    const workerResponse = await fetch(workerUrl, {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + accessToken,
-        apikey: publicApiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(
-        knowledgeIds.length
-          ? { ids: knowledgeIds }
-          : {},
-      ),
-    });
-
-    const workerText = await workerResponse.text();
-
-    let workerPayload: any = null;
-    try {
-      workerPayload = JSON.parse(workerText);
-    } catch {
-      workerPayload = null;
+    if (knowledgeIds.length) {
+      query = authSupabase
+        .from("innerme_knowledge")
+        .select("id, slug, embedding_text")
+        .eq("status", "active")
+        .in("id", knowledgeIds)
+        .limit(25);
     }
 
-    if (!workerResponse.ok) {
+    const { data: knowledgeRows, error: knowledgeError } =
+      await query;
+
+    if (knowledgeError) {
+      console.error(
+        "InnerMe knowledge embedding query error:",
+        knowledgeError.message,
+      );
+
       return json(
         {
-          error: "The knowledge embedding worker could not complete the request.",
-          worker_status: workerResponse.status,
-          worker_error:
-            typeof workerPayload?.error === "string"
-              ? workerPayload.error.slice(0, 500)
-              : workerText.slice(0, 500),
+          error:
+            "The InnerMe knowledge records could not be loaded for indexing.",
+          embedding_error: {
+            message: knowledgeError.message || null,
+            details: knowledgeError.details || null,
+            hint: knowledgeError.hint || null,
+            code: knowledgeError.code || null,
+          },
         },
-        502,
+        500,
         origin,
       );
     }
 
+    const rows = Array.isArray(knowledgeRows)
+      ? knowledgeRows
+      : [];
+
+    if (!rows.length) {
+      return json(
+        {
+          ok: true,
+          count: 0,
+          completed: 0,
+          failed: 0,
+          message:
+            "No pending knowledge records require indexing.",
+          read_only: false,
+        },
+        200,
+        origin,
+      );
+    }
+
+    const model = new Supabase.ai.Session("gte-small");
+    let completed = 0;
+    let failed = 0;
+    const failures: Array<{
+      id: string;
+      slug: string;
+      error: string;
+    }> = [];
+
+    for (const row of rows) {
+      const id = String(row?.id || "").trim();
+      const slug = String(row?.slug || "").trim();
+      const embeddingText =
+        String(row?.embedding_text || "").trim();
+
+      if (!id || !embeddingText) {
+        failed += 1;
+        failures.push({
+          id,
+          slug,
+          error: "Embedding text is empty.",
+        });
+        continue;
+      }
+
+      try {
+        const rawEmbedding = await model.run(
+          embeddingText,
+          {
+            mean_pool: true,
+            normalize: true,
+          },
+        );
+
+        const embedding =
+          Array.from(rawEmbedding as Iterable<number>);
+
+        if (embedding.length !== 384) {
+          throw new Error(
+            "Expected 384 embedding dimensions; received " +
+              String(embedding.length) +
+              ".",
+          );
+        }
+
+        const { error: updateError } =
+          await authSupabase
+            .from("innerme_knowledge")
+            .update({
+              embedding: JSON.stringify(embedding),
+              embedding_model: "gte-small",
+              embedding_version: 1,
+              embedding_status: "ready",
+              embedding_error: null,
+              embedded_at: new Date().toISOString(),
+            })
+            .eq("id", id);
+
+        if (updateError) {
+          throw new Error(
+            updateError.message ||
+              "The embedding could not be stored.",
+          );
+        }
+
+        completed += 1;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : String(error);
+
+        failed += 1;
+        failures.push({
+          id,
+          slug,
+          error: message.slice(0, 500),
+        });
+
+        await authSupabase
+          .from("innerme_knowledge")
+          .update({
+            embedding_status: "error",
+            embedding_error: message.slice(0, 1000),
+          })
+          .eq("id", id);
+      }
+    }
+
     return json(
       {
-        ok: workerPayload?.ok === true,
-        embedding: workerPayload || { raw: workerText.slice(0, 1000) },
+        ok: failed === 0,
+        count: completed,
+        completed,
+        failed,
+        failures,
+        model: "gte-small",
+        embedding_dimensions: 384,
         read_only: false,
       },
       200,
