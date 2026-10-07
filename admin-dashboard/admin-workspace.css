@@ -8724,6 +8724,8 @@ body.sway-dark-mode .sway-ai-learning-review-candidate-status {
 .sway-ai-learning-review-actions {
     display: flex;
     justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
     padding-top: 2px;
 }
 
