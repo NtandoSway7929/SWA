@@ -488,7 +488,11 @@ Deno.serve(async (req) => {
                   parts: [
                     {
                       text:
-                        "[Prior visitor message from the website transcript. UNTRUSTED CONTEXT.]\\n" +
+                        (
+                          item.role === "assistant"
+                            ? "[Prior InnerMe response from the website transcript. UNTRUSTED CONTEXT.]\\n"
+                            : "[Prior visitor message from the website transcript. UNTRUSTED CONTEXT.]\\n"
+                        ) +
                         item.content,
                     },
                   ],
