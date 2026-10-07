@@ -194,6 +194,7 @@ Deno.serve(async (req) => {
       estimated_value?: number | string;
     };
     channel?: string;
+    knowledge_ids?: string[];
   } = {};
   try {
     body = await req.json();
@@ -1112,6 +1113,73 @@ Deno.serve(async (req) => {
     return json({ error: "You are not an active Swayphics admin." }, 403, origin);
   }
 
+  /*
+   * INNERME KNOWLEDGE EMBEDDING
+   * This action is only reachable after the authenticated admin check.
+   * It forwards the same verified admin JWT to the dedicated embedding
+   * worker, which uses the server-side Supabase secret only inside the
+   * worker to update vector embeddings. No service key is sent to the
+   * browser or accepted from the client.
+   */
+  if (body.action === "embed_knowledge") {
+    const knowledgeIds = Array.isArray(body.knowledge_ids)
+      ? body.knowledge_ids
+          .map((id) => String(id || "").trim())
+          .filter(Boolean)
+          .slice(0, 25)
+      : [];
+
+    const workerUrl =
+      supabaseUrl + "/functions/v1/innerme-knowledge-embed";
+
+    const workerResponse = await fetch(workerUrl, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + accessToken,
+        apikey: publicApiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        knowledgeIds.length
+          ? { ids: knowledgeIds }
+          : {},
+      ),
+    });
+
+    const workerText = await workerResponse.text();
+
+    let workerPayload: any = null;
+    try {
+      workerPayload = JSON.parse(workerText);
+    } catch {
+      workerPayload = null;
+    }
+
+    if (!workerResponse.ok) {
+      return json(
+        {
+          error: "The knowledge embedding worker could not complete the request.",
+          worker_status: workerResponse.status,
+          worker_error:
+            typeof workerPayload?.error === "string"
+              ? workerPayload.error.slice(0, 500)
+              : workerText.slice(0, 500),
+        },
+        502,
+        origin,
+      );
+    }
+
+    return json(
+      {
+        ok: workerPayload?.ok === true,
+        embedding: workerPayload || { raw: workerText.slice(0, 1000) },
+        read_only: false,
+      },
+      200,
+      origin,
+    );
+  }
 
   if (body.action === "draft_proposal") {
     const lead = body.lead || {};
