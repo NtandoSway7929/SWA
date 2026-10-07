@@ -21860,6 +21860,12 @@ if (formStatus) {
         button.addEventListener(
             "click",
             function () {
+                track(
+                    "innerme_quick_prompt_selected",
+                    {
+                        prompt: button.textContent.trim(),
+                    }
+                );
                 sendMessage(
                     button.getAttribute(
                         "data-innerme-prompt"
