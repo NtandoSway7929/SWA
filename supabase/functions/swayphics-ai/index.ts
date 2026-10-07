@@ -202,6 +202,7 @@ Deno.serve(async (req) => {
     filter_jurisdiction?: string | null;
     filter_knowledge_type?: string | null;
     feedback_type?: string;
+    assistant_answer?: string;
     correction?: string;
     chat_id?: string;
     feedback_knowledge_retrieval?: unknown;
@@ -1145,7 +1146,7 @@ Deno.serve(async (req) => {
     }
 
     const userMessage = cleanForModel(body.message, 4000);
-    const assistantAnswer = cleanForModel(body.correction ? body.assistant_answer : body.assistant_answer, 7000);
+    const assistantAnswer = cleanForModel(body.assistant_answer, 7000);
     const correction = cleanForModel(body.correction || "", 3000);
     const chatId = cleanForModel(body.chat_id || "", 120);
 
