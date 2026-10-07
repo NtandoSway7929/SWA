@@ -1521,6 +1521,7 @@ nav.scrolled .logo img {
     box-shadow:
         0 10px 22px rgba(1,82,244,0.24),
         inset 0 1px 0 rgba(255,255,255,0.45);
+    animation: innerme-orb-breathe 4.8s ease-in-out infinite;
 }
 
 .innerme-orb::before {
@@ -1604,6 +1605,11 @@ nav.scrolled .logo img {
 .innerme-message {
     display: flex;
     margin-bottom: 14px;
+    animation: innerme-message-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.innerme-message[data-role="user"] {
+    animation-name: innerme-message-user-in;
 }
 
 .innerme-message:last-child {
@@ -1682,6 +1688,65 @@ nav.scrolled .logo img {
     animation-delay: 0.28s;
 }
 
+@keyframes innerme-orb-breathe {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow:
+            0 10px 22px rgba(1,82,244,0.24),
+            0 0 0 0 rgba(1,82,244,0);
+    }
+    50% {
+        transform: scale(1.045);
+        box-shadow:
+            0 12px 26px rgba(1,82,244,0.27),
+            0 0 0 7px rgba(1,82,244,0.045);
+    }
+}
+
+@keyframes innerme-message-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes innerme-message-user-in {
+    from {
+        opacity: 0;
+        transform: translateX(10px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes innerme-quick-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes innerme-recommendation-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 @keyframes innerme-typing-bounce {
     0%, 60%, 100% {
         transform: translateY(0);
@@ -1698,6 +1763,26 @@ nav.scrolled .logo img {
     flex-wrap: wrap;
     gap: 8px;
     padding: 0 22px 16px;
+}
+
+.innerme-quick button {
+    animation: innerme-quick-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.innerme-quick button:nth-child(2) {
+    animation-delay: 0.05s;
+}
+
+.innerme-quick button:nth-child(3) {
+    animation-delay: 0.1s;
+}
+
+.innerme-quick button:nth-child(4) {
+    animation-delay: 0.15s;
+}
+
+.innerme-quick button:nth-child(5) {
+    animation-delay: 0.2s;
 }
 
 .innerme-quick button {
@@ -1749,6 +1834,10 @@ nav.scrolled .logo img {
     font-size: 0.82rem;
     line-height: 1.55;
     box-shadow: inset 0 1px 0 rgba(0,32,150,0.02);
+    transition:
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.25s ease;
 }
 
 .innerme-input::placeholder {
@@ -1894,6 +1983,7 @@ nav.scrolled .logo img {
 
 .innerme-recommendation.is-visible {
     display: block;
+    animation: innerme-recommendation-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .innerme-recommendation-label {
@@ -2061,12 +2151,20 @@ nav.scrolled .logo img {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .innerme-orb,
+    .innerme-message,
+    .innerme-quick button,
+    .innerme-recommendation {
+        animation: none;
+    }
+
     .innerme-typing span {
         animation: none;
     }
 
     .innerme-send,
-    .innerme-quick button {
+    .innerme-quick button,
+    .innerme-input {
         transition: none;
     }
 }
