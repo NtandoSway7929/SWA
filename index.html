@@ -1870,8 +1870,24 @@ nav.scrolled .logo img {
     display: block;
     margin-top: 4px;
     color: #18305B;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     font-weight: 850;
+}
+
+.innerme-recommendation-price {
+    display: block;
+    margin-top: 3px;
+    color: #0152F4;
+    font-size: 0.64rem;
+    font-weight: 850;
+}
+
+.innerme-recommendation-reason {
+    display: block;
+    margin-top: 8px;
+    color: #56657D;
+    font-size: 0.67rem;
+    line-height: 1.55;
 }
 
 .innerme-recommendation-button {
@@ -18005,7 +18021,7 @@ section {
                     class="innerme-recommendation-button"
                     id="innerme-recommendation-button"
                 >
-                    Continue with Swayphics →
+                    Continue to enquiry →
                 </button>
             </div>
 
@@ -18023,7 +18039,7 @@ section {
                     class="innerme-input"
                     rows="1"
                     maxlength="1400"
-                    placeholder="Tell InnerMe what's going on..."
+                    placeholder="Tell InnerMe what you're trying to achieve..."
                     aria-label="Message InnerMe"
                 ></textarea>
 
@@ -21106,6 +21122,12 @@ if (formStatus) {
     var recommendationServiceEl =
         document.getElementById("innerme-recommendation-service");
 
+    var recommendationPriceEl =
+        document.getElementById("innerme-recommendation-price");
+
+    var recommendationReasonEl =
+        document.getElementById("innerme-recommendation-reason");
+
     var recommendationButtonEl =
         document.getElementById("innerme-recommendation-button");
 
@@ -21156,6 +21178,10 @@ if (formStatus) {
             Math.random().toString(36).slice(2);
     }
     var latestRecommendedService = "";
+    var latestRecommendationPrice = "";
+    var latestRecommendationReason = "";
+    var latestVisitorGoal = "";
+    var latestProblemArea = "";
     var lastUserMessages = [];
 
     var allowedServices = new Set([
@@ -21319,11 +21345,30 @@ if (formStatus) {
             !inputEl.value.trim();
     }
 
-    function showRecommendation(service) {
-        latestRecommendedService =
+    function showRecommendation(service, priceLabel, reason) {
+        var nextService =
             allowedServices.has(service)
                 ? service
                 : "";
+
+        var nextPrice =
+            nextService
+                ? String(priceLabel || "").trim()
+                : "";
+
+        var nextReason =
+            nextService
+                ? String(reason || "").trim().slice(0, 260)
+                : "";
+
+        var changed =
+            nextService !== latestRecommendedService ||
+            nextPrice !== latestRecommendationPrice ||
+            nextReason !== latestRecommendationReason;
+
+        latestRecommendedService = nextService;
+        latestRecommendationPrice = nextPrice;
+        latestRecommendationReason = nextReason;
 
         if (!recommendationEl || !recommendationServiceEl) {
             return;
@@ -21333,15 +21378,41 @@ if (formStatus) {
             recommendationEl.classList.remove(
                 "is-visible"
             );
+            if (recommendationPriceEl) {
+                recommendationPriceEl.textContent = "";
+            }
+            if (recommendationReasonEl) {
+                recommendationReasonEl.textContent = "";
+            }
             return;
         }
 
         recommendationServiceEl.textContent =
             latestRecommendedService;
 
+        if (recommendationPriceEl) {
+            recommendationPriceEl.textContent =
+                latestRecommendationPrice;
+        }
+
+        if (recommendationReasonEl) {
+            recommendationReasonEl.textContent =
+                latestRecommendationReason;
+        }
+
         recommendationEl.classList.add(
             "is-visible"
         );
+
+        if (changed) {
+            track(
+                "innerme_recommendation_shown",
+                {
+                    service: latestRecommendedService,
+                    price: latestRecommendationPrice || "",
+                }
+            );
+        }
     }
 
     function buildHandoffMessage() {
@@ -21351,7 +21422,7 @@ if (formStatus) {
                     return String(item || "").trim();
                 })
                 .filter(Boolean)
-                .slice(-4);
+                .slice(-3);
 
         if (!meaningful.length) {
             return "";
@@ -21361,19 +21432,29 @@ if (formStatus) {
             "I spoke with InnerMe on the Swayphics website and would like help with this:"
         ];
 
+        if (latestVisitorGoal) {
+            lines.push("");
+            lines.push("What I'm trying to achieve: " + latestVisitorGoal);
+        }
+
+        if (latestProblemArea) {
+            lines.push("Main challenge: " + latestProblemArea);
+        }
+
+        if (latestRecommendationReason) {
+            lines.push("Why InnerMe recommended it: " + latestRecommendationReason);
+        }
+
+        if (latestRecommendedService) {
+            lines.push("Recommended service: " + latestRecommendedService);
+        }
+
         lines.push("");
+        lines.push("My recent messages:");
 
         meaningful.forEach(function (item) {
             lines.push("• " + item);
         });
-
-        if (latestRecommendedService) {
-            lines.push("");
-            lines.push(
-                "InnerMe suggested: " +
-                latestRecommendedService
-            );
-        }
 
         var body = lines.join("\n");
 
@@ -21454,6 +21535,16 @@ if (formStatus) {
         }, 650);
 
         track(
+            "innerme_enquiry_started",
+            {
+                recommended_service:
+                    selectedService,
+                messages:
+                    innermeMessageCount
+            }
+        );
+
+        track(
             "innerme_handoff",
             {
                 recommended_service:
@@ -21478,12 +21569,16 @@ if (formStatus) {
         history = [];
         lastUserMessages = [];
         latestRecommendedService = "";
+        latestRecommendationPrice = "";
+        latestRecommendationReason = "";
+        latestVisitorGoal = "";
+        latestProblemArea = "";
         innermeMessageCount = 0;
         innermeConversationStarted = false;
 
         messagesEl.innerHTML = "";
 
-        showRecommendation("");
+        showRecommendation("", "", "");
 
         handoffEl?.classList.remove(
             "is-visible"
@@ -21495,7 +21590,7 @@ if (formStatus) {
 
         addMessage(
             "assistant",
-            "Hi. I'm InnerMe, the Swayphics AI. Tell me what you're building, what is getting in the way, or what you want customers to experience. I'll help you figure out the next step."
+            "Tell me what you're building, what is getting in the way, or what you want customers to experience. I'll help you work out the next sensible step."
         );
 
         inputEl.value = "";
@@ -21630,8 +21725,15 @@ if (formStatus) {
                 ).trim();
 
             showRecommendation(
-                recommended
+                recommended,
+                String(payload?.recommended_price_label || "").trim(),
+                String(payload?.recommendation_reason || "").trim()
             );
+
+            latestVisitorGoal =
+                String(payload?.visitor_goal || "").trim().slice(0, 220);
+            latestProblemArea =
+                String(payload?.problem_area || "").trim().slice(0, 220);
 
             track(
                 "innerme_response",
@@ -21641,7 +21743,11 @@ if (formStatus) {
                     recommended_service:
                         recommended || "",
                     ready_for_enquiry:
-                        payload?.ready_for_enquiry === true
+                        payload?.ready_for_enquiry === true,
+                    visitor_goal:
+                        latestVisitorGoal || "",
+                    problem_area:
+                        latestProblemArea || ""
                 }
             );
 
@@ -21771,7 +21877,15 @@ if (formStatus) {
 
     recommendationButtonEl?.addEventListener(
         "click",
-        openContactForm
+        function () {
+            track(
+                "innerme_recommendation_continue",
+                {
+                    service: latestRecommendedService || ""
+                }
+            );
+            openContactForm();
+        }
     );
 
     var innermeSection =
