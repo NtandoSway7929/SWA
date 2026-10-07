@@ -201,6 +201,11 @@ Deno.serve(async (req) => {
     filter_domain?: string | null;
     filter_jurisdiction?: string | null;
     filter_knowledge_type?: string | null;
+    feedback_type?: string;
+    correction?: string;
+    chat_id?: string;
+    feedback_knowledge_retrieval?: unknown;
+    feedback_knowledge_attribution?: unknown;
   } = {};
   try {
     body = await req.json();
@@ -1121,6 +1126,99 @@ Deno.serve(async (req) => {
 
   if (adminError || isAdmin !== true) {
     return json({ error: "You are not an active Swayphics admin." }, 403, origin);
+  }
+
+  /*
+   * PHASE 4F · INNERME FEEDBACK LOOP
+   * Admin feedback is stored for human review. It does not automatically
+   * modify knowledge, prompts, permissions, or business rules.
+   */
+  if (body.action === "record_knowledge_feedback") {
+    const feedbackType = String(body.feedback_type || "").trim();
+
+    if (!["helpful", "needs_correction"].includes(feedbackType)) {
+      return json(
+        { error: "A valid InnerMe feedback type is required." },
+        400,
+        origin,
+      );
+    }
+
+    const userMessage = cleanForModel(body.message, 4000);
+    const assistantAnswer = cleanForModel(body.correction ? body.assistant_answer : body.assistant_answer, 7000);
+    const correction = cleanForModel(body.correction || "", 3000);
+    const chatId = cleanForModel(body.chat_id || "", 120);
+
+    if (!userMessage || !assistantAnswer) {
+      return json(
+        { error: "The original question and InnerMe answer are required." },
+        400,
+        origin,
+      );
+    }
+
+    if (feedbackType === "needs_correction" && !correction) {
+      return json(
+        { error: "Please describe what InnerMe got wrong or what should change." },
+        400,
+        origin,
+      );
+    }
+
+    const sanitizeSnapshot = function (value: unknown, max = 12000) {
+      try {
+        const raw = JSON.stringify(value ?? null);
+        return raw.length <= max ? value ?? null : raw.slice(0, max);
+      } catch {
+        return null;
+      }
+    };
+
+    const { data: feedbackRow, error: feedbackError } =
+      await authSupabase
+        .from("innerme_feedback")
+        .insert({
+          admin_user_id: userData.user.id,
+          chat_id: chatId || null,
+          user_message: userMessage,
+          assistant_answer: assistantAnswer,
+          feedback_type: feedbackType,
+          correction: correction || null,
+          knowledge_retrieval:
+            sanitizeSnapshot(body.feedback_knowledge_retrieval),
+          knowledge_attribution:
+            sanitizeSnapshot(body.feedback_knowledge_attribution),
+        })
+        .select("id, created_at, feedback_type, review_status")
+        .single();
+
+    if (feedbackError || !feedbackRow) {
+      console.error(
+        "InnerMe feedback storage error:",
+        feedbackError?.message || "No feedback row returned.",
+      );
+
+      return json(
+        { error: "InnerMe could not store this feedback." },
+        500,
+        origin,
+      );
+    }
+
+    return json(
+      {
+        ok: true,
+        feedback_id: feedbackRow.id,
+        feedback_type: feedbackRow.feedback_type,
+        review_status: feedbackRow.review_status,
+        created_at: feedbackRow.created_at,
+        learning_note:
+          "Stored for human review. The knowledge base was not changed automatically.",
+        read_only: false,
+      },
+      200,
+      origin,
+    );
   }
 
   /*
