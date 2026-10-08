@@ -31,15 +31,16 @@ on public.innerme_intervention_strategy_profiles(confidence, adjustment_score de
 
 alter table public.innerme_intervention_strategy_profiles enable row level security;
 
-drop policy if exists "InnerMe intervention strategy profiles admins can read"
+drop policy if exists "InnerMe intervention strategy profiles admins can manage"
 on public.innerme_intervention_strategy_profiles;
-create policy "InnerMe intervention strategy profiles admins can read"
+create policy "InnerMe intervention strategy profiles admins can manage"
 on public.innerme_intervention_strategy_profiles
-for select to authenticated
-using ((select public.is_swayphics_admin()));
+for all to authenticated
+using ((select public.is_swayphics_admin()))
+with check ((select public.is_swayphics_admin()));
 
 revoke all on table public.innerme_intervention_strategy_profiles from anon;
-grant select on table public.innerme_intervention_strategy_profiles to authenticated;
+grant select,insert,update on table public.innerme_intervention_strategy_profiles to authenticated;
 grant all on table public.innerme_intervention_strategy_profiles to service_role;
 
 create or replace function public.refresh_innerme_intervention_strategy_profiles()
