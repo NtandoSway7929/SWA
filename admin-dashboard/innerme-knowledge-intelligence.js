@@ -931,7 +931,7 @@
             '<details class="sway-ai-ki-execution" data-sway-ai-ki-execution-panel>' +
                 '<summary>Execution intelligence</summary>' +
                 '<div class="sway-ai-ki-execution-controls">' +
-                    '<span>Turns approved InnerMe decisions into evidence-linked draft execution plans. Plans require explicit approval and Phase 9 does not execute external actions.</span>' +
+                    '<span>Turns approved InnerMe decisions into evidence-linked draft execution plans. Plans require explicit approval, and controlled actions require a separate approval and execution gate.</span>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-refresh>Refresh approved decisions</button>' +
                 '</div>' +
                 '<div class="sway-ai-ki-execution-summary"><p class="sway-ai-ki-muted">No execution plans loaded.</p></div>' +
@@ -1569,7 +1569,7 @@
             if(!planId) return;
 
             const confirmation=approve
-                ? "Approve this execution plan? Phase 9 will mark the plan ready, but it will not execute any workspace or external action."
+                ? "Approve this execution plan? It will be ready for controlled action proposals, but no workspace or external action will be executed yet."
                 : "Cancel this execution plan draft?";
 
             if(!window.confirm(confirmation)) return;
