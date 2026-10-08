@@ -210,6 +210,85 @@
         return Array.isArray(data) ? data : [];
     }
 
+    async function loadInterventionSelections() {
+        const response = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_incident_intervention_selection" +
+                "?select=incident_id,selected_option_id,selection_status,recommended_first_action,selection_rationale,sequence,alternatives,decision_gate,confidence,updated_at" +
+                "&limit=100",
+            {
+                method: "GET",
+                headers: headers()
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return [];
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to load intervention selections."
+            );
+        }
+
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function loadInterventionOptions() {
+        const response = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_incident_intervention_options" +
+                "?select=incident_id,counterfactual_id,dependency_id,selection_score,expected_priority_reduction,risk_score,reversibility_score,evidence_support_score,directness_score,sequence_score,sequence_rank,recommendation_status,conflict_status,action_statement,sequencing_reason,conflict_notes,decision_gate,updated_at" +
+                "&order=incident_id,sequence_rank&limit=500",
+            {
+                method: "GET",
+                headers: headers()
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return [];
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to load intervention options."
+            );
+        }
+
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function refreshInterventionSelection() {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/rpc/refresh_innerme_incident_intervention_selection",
+            {
+                method: "POST",
+                headers: headers(),
+                body: "{}"
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return null;
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Intervention selection refresh failed."
+            );
+        }
+
+        return Number(data || 0);
+    }
+
     async function refreshCounterfactuals() {
         const response = await fetch(
             SUPABASE_URL + "/rest/v1/rpc/refresh_innerme_incident_counterfactuals",
@@ -428,7 +507,7 @@
         }).join("");
     }
 
-    function render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, generated) {
+    function render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, generated) {
         const active = incidents.filter(function (item) {
             return ["open", "acknowledged"].includes(String(item.status));
         });
@@ -488,6 +567,18 @@
             counterfactualMap.get(key).push(item);
         });
 
+        const interventionSelectionMap = new Map();
+        selections.forEach(function (item) {
+            interventionSelectionMap.set(String(item.incident_id || ""), item);
+        });
+
+        const interventionOptionsMap = new Map();
+        interventionOptions.forEach(function (item) {
+            const key = String(item.incident_id || "");
+            if (!interventionOptionsMap.has(key)) interventionOptionsMap.set(key, []);
+            interventionOptionsMap.get(key).push(item);
+        });
+
         const summary = panel.querySelector("[data-im-incident-summary]");
         summary.innerHTML =
             '<div><span>Active</span><strong>' + esc(counts.active) + '</strong></div>' +
@@ -525,6 +616,8 @@
                 const graph = dependencyMap.get(String(incident.id)) || [];
                 const hypotheses = hypothesisMap.get(String(incident.id)) || [];
                 const counterfactuals = counterfactualMap.get(String(incident.id)) || [];
+                const selection = interventionSelectionMap.get(String(incident.id)) || null;
+                const optionList = interventionOptionsMap.get(String(incident.id)) || [];
                 const eventHistory = eventMap.get(String(incident.id)) || [];
                 const dependencyHtml = graph.length
                     ? '<div class="sway-ai-incident-dependencies">' +
@@ -563,6 +656,23 @@
                                 '<small>Gate: ' + esc(cf.decision_gate || "") + '</small>' +
                             '</div>';
                         }).join("") +
+                      '</div>'
+                    : '';
+                const interventionHtml = selection
+                    ? '<div class="sway-ai-incident-intervention-selection">' +
+                        '<div class="sway-ai-incident-intelligence-head"><strong>Recommended intervention order</strong><span>' + esc(selection.confidence || "low") + ' confidence · ' + esc(selection.selection_status || "do_not_intervene") + '</span></div>' +
+                        '<p><strong>First action:</strong> ' + esc(selection.recommended_first_action || "") + '</p>' +
+                        '<p><strong>Rationale:</strong> ' + esc(selection.selection_rationale || "") + '</p>' +
+                        '<div class="sway-ai-incident-intervention-sequence">' +
+                            optionList.slice(0, 4).map(function (option) {
+                                return '<div class="sway-ai-incident-intervention-option">' +
+                                    '<div class="sway-ai-incident-hypothesis-head"><strong>#' + esc(option.sequence_rank || "") + ' · ' + esc(option.recommendation_status || "deferred") + '</strong><span>' + esc(String(option.selection_score || 0) + '/100 · reduce ' + String(option.expected_priority_reduction || 0)) + '</span></div>' +
+                                    '<p>' + esc(option.action_statement || "") + '</p>' +
+                                    '<small>' + esc((option.conflict_status || "none") + ' · risk ' + String(option.risk_score || 0) + ' · reversible ' + String(option.reversibility_score || 0)) + '</small>' +
+                                '</div>';
+                            }).join("") +
+                        '</div>' +
+                        '<small>Gate: ' + esc(selection.decision_gate || "Administrative validation required.") + '</small>' +
                       '</div>'
                     : '';
                 const analysisHtml = analysis
@@ -616,6 +726,7 @@
                         analysisHtml +
                         hypothesisHtml +
                         counterfactualHtml +
+                        interventionHtml +
                         dependencyHtml +
                         '<div class="sway-ai-incident-reason"><strong>Why this is correlated</strong><p>' + esc(incident.correlation_reason || "") + '</p></div>' +
                         '<div class="sway-ai-incident-reason"><strong>Recommended response</strong><p>' + esc(incident.recommended_response || "") + '</p></div>' +
@@ -672,7 +783,14 @@
             ".sway-ai-incident-pill.critical,.sway-ai-incident-pill.high{background:rgba(190,52,52,.12);color:#B42323}" +
             ".sway-ai-incident-pill.medium{background:rgba(247,201,120,.14);color:#9A6700}" +
             ".sway-ai-incident-pill.low{background:rgba(1,82,244,.08);color:#0152F4}" +
-            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-counterfactuals{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-counterfactual-row{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-counterfactual-row:first-of-type{border-top:0}.sway-ai-incident-counterfactual-row p{margin:3px 0;font-size:8px;line-height:1.4}.sway-ai-incident-counterfactual-row small{display:block;font-size:7px;opacity:.6}body.sway-dark-mode .sway-ai-incident-counterfactuals{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}.sway-ai-incident-hypotheses{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-hypothesis-row{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-hypothesis-row:first-of-type{border-top:0}.sway-ai-incident-hypothesis-head{display:flex;justify-content:space-between;gap:8px}.sway-ai-incident-hypothesis-head strong{font-size:8px;text-transform:capitalize}.sway-ai-incident-hypothesis-head span,.sway-ai-incident-hypothesis-row small{font-size:7px;opacity:.6}.sway-ai-incident-hypothesis-row p{margin:3px 0;font-size:8px;line-height:1.4}body.sway-dark-mode .sway-ai-incident-hypotheses{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}.sway-ai-incident-dependency-row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-dependency-row:first-of-type{border-top:0}.sway-ai-incident-dependency-row span{font-size:8px;line-height:1.4}.sway-ai-incident-dependency-row small{font-size:7px;opacity:.55;white-space:nowrap}body.sway-dark-mode .sway-ai-incident-root-analysis,body.sway-dark-mode .sway-ai-incident-dependencies{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}body.sway-dark-mode .sway-ai-incident-intelligence{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}@media(max-width:700px){.sway-ai-incident-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
+            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intervention-selection{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.11);border-radius:9px;background:rgba(1,82,244,.026)}
+.sway-ai-incident-intervention-sequence{display:grid;gap:5px}
+.sway-ai-incident-intervention-option{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}
+.sway-ai-incident-intervention-option:first-child{border-top:0}
+.sway-ai-incident-intervention-option p{margin:3px 0;font-size:8px;line-height:1.4}
+.sway-ai-incident-intervention-option small,.sway-ai-incident-intervention-selection>small{display:block;font-size:7px;opacity:.62}
+body.sway-dark-mode .sway-ai-incident-intervention-selection{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}
+.sway-ai-incident-counterfactuals{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-counterfactual-row{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-counterfactual-row:first-of-type{border-top:0}.sway-ai-incident-counterfactual-row p{margin:3px 0;font-size:8px;line-height:1.4}.sway-ai-incident-counterfactual-row small{display:block;font-size:7px;opacity:.6}body.sway-dark-mode .sway-ai-incident-counterfactuals{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}.sway-ai-incident-hypotheses{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-hypothesis-row{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-hypothesis-row:first-of-type{border-top:0}.sway-ai-incident-hypothesis-head{display:flex;justify-content:space-between;gap:8px}.sway-ai-incident-hypothesis-head strong{font-size:8px;text-transform:capitalize}.sway-ai-incident-hypothesis-head span,.sway-ai-incident-hypothesis-row small{font-size:7px;opacity:.6}.sway-ai-incident-hypothesis-row p{margin:3px 0;font-size:8px;line-height:1.4}body.sway-dark-mode .sway-ai-incident-hypotheses{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}.sway-ai-incident-dependency-row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-dependency-row:first-of-type{border-top:0}.sway-ai-incident-dependency-row span{font-size:8px;line-height:1.4}.sway-ai-incident-dependency-row small{font-size:7px;opacity:.55;white-space:nowrap}body.sway-dark-mode .sway-ai-incident-root-analysis,body.sway-dark-mode .sway-ai-incident-dependencies{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}body.sway-dark-mode .sway-ai-incident-intelligence{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}@media(max-width:700px){.sway-ai-incident-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
             ".sway-ai-incident-reason{display:grid;gap:2px}.sway-ai-incident-reason strong{font-size:8px;text-transform:uppercase;letter-spacing:.04em;opacity:.58}" +
             ".sway-ai-incident-reason p{margin:0;font-size:9px;line-height:1.45}" +
             ".sway-ai-incident-detail{border-top:1px solid rgba(1,82,244,.08);padding-top:6px}.sway-ai-incident-detail>summary{font-size:8px;cursor:pointer;opacity:.72}" +
@@ -727,6 +845,7 @@
                 const analysisGenerated = await refreshRootAnalysis();
                 const hypothesisGenerated = await refreshHypothesisTests();
                 const counterfactualGenerated = await refreshCounterfactuals();
+                const interventionGenerated = await refreshInterventionSelection();
                 const incidents = await loadIncidents();
                 const events = await loadEvents();
                 const intelligence = await loadIntelligence();
@@ -734,7 +853,9 @@
                 const dependencies = await loadDependencies();
                 const hypotheses = await loadHypothesisTests();
                 const counterfactuals = await loadCounterfactuals();
-                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated + counterfactualGenerated);
+                const selections = await loadInterventionSelections();
+                const interventionOptions = await loadInterventionOptions();
+                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated + counterfactualGenerated + interventionGenerated);
             } catch (error) {
                 panel.querySelector("[data-im-incidents]").innerHTML =
                     '<p class="sway-ai-ki-error">' + esc(error.message || "Incident correlation failed.") + "</p>";
