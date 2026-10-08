@@ -1254,6 +1254,12 @@ Deno.serve(async (req) => {
     let scoreTotal = 0;
     let completedCases = 0;
     const failures: Array<{ case_key: string; error: string }> = [];
+    const currentCaseResults = new Map<string, {
+      case_key: string;
+      severity: string;
+      passed: boolean;
+      score: number;
+    }>();
 
     function numericScore(value: unknown, fallback = 0) {
       const raw = Number(value);
@@ -1519,16 +1525,32 @@ Deno.serve(async (req) => {
           throw new Error(resultError.message || "Evaluation result could not be stored.");
         }
 
+        currentCaseResults.set(String(item.id || ""), {
+          case_key: String(item.case_key || ""),
+          severity: String(item.severity || "standard"),
+          passed,
+          score,
+        });
+
         scoreTotal += score;
         if (passed) passedCases += 1;
         completedCases += 1;
       } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : String(error).slice(0, 500);
+
+        currentCaseResults.set(String(item.id || ""), {
+          case_key: String(item.case_key || ""),
+          severity: String(item.severity || "standard"),
+          passed: false,
+          score: 0,
+        });
+
         failures.push({
           case_key: String(item.case_key || ""),
-          error:
-            error instanceof Error
-              ? error.message.slice(0, 500)
-              : String(error).slice(0, 500),
+          error: errorMessage,
         });
       }
     }
@@ -1542,39 +1564,57 @@ Deno.serve(async (req) => {
       : 0;
 
     const regressedCases = benchmarkCases
-      .map(function(item: any) {
+      .filter(function(item: any) {
         const prior = baselineResults.get(String(item.id || ""));
-        const currentResultPassed =
-          prior
-            ? null
-            : null;
+        const current = currentCaseResults.get(String(item.id || ""));
+        return prior?.passed === true && current?.passed !== true;
+      })
+      .map(function(item: any) {
         return {
-          case_id: String(item.id || ""),
           case_key: String(item.case_key || ""),
           severity: String(item.severity || "standard"),
-          was_passed: prior?.passed === true,
         };
       });
 
-    const criticalFailures = benchmarkCases.filter(function(item: any) {
-      const hasResultFailure =
-        item &&
-        String(item.severity || "standard") === "critical";
-      return hasResultFailure;
-    }).reduce(function(total: number, item: any) {
-      const prior = baselineResults.get(String(item.id || ""));
-      return total + (
-        prior?.passed === true
-          ? 0
-          : 0
-      );
+    const currentCriticalFailures = benchmarkCases.reduce(function(total: number, item: any) {
+      if (String(item.severity || "standard") !== "critical") {
+        return total;
+      }
+      const current = currentCaseResults.get(String(item.id || ""));
+      return total + (current?.passed === true ? 0 : 1);
     }, 0);
 
-    const currentCriticalFailures = benchmarkCases.reduce(function(total: number, item: any) {
-      if (String(item.severity || "standard") !== "critical") return total;
-      const resultScoreRows = 0;
-      return total + 0;
-    }, 0);
+    const deltaAverageScore =
+      baselineRun && Number(baselineRun.total_cases || 0) === benchmarkCases.length
+        ? Number((averageScore - Number(baselineRun.average_score || 0)).toFixed(2))
+        : null;
+
+    const deltaPassRate =
+      baselineRun && Number(baselineRun.total_cases || 0) === benchmarkCases.length
+        ? Number((passRate - Number(baselineRun.pass_rate || 0)).toFixed(2))
+        : null;
+
+    let regressionStatus = "baseline";
+
+    if (failures.length && completedCases < benchmarkCases.length) {
+      regressionStatus = baselineRun ? "inconclusive" : "inconclusive";
+    } else if (!baselineRun || Number(baselineRun.total_cases || 0) !== benchmarkCases.length) {
+      regressionStatus = "baseline";
+    } else if (
+      currentCriticalFailures > 0 ||
+      regressedCases.length > 0 ||
+      Number(deltaAverageScore || 0) <= -5 ||
+      Number(deltaPassRate || 0) <= -10
+    ) {
+      regressionStatus = "regressed";
+    } else if (
+      Number(deltaAverageScore || 0) >= 5 ||
+      Number(deltaPassRate || 0) >= 10
+    ) {
+      regressionStatus = "improved";
+    } else {
+      regressionStatus = "stable";
+    }
 
     const runStatus =
       completedCases === benchmarkCases.length && !failures.length
@@ -1591,6 +1631,18 @@ Deno.serve(async (req) => {
       average_score: averageScore,
       pass_rate: passRate,
       failures,
+      baseline_run_id:
+        baselineRun && Number(baselineRun.total_cases || 0) === benchmarkCases.length
+          ? baselineRun.id
+          : null,
+      benchmark_version: INNERME_BENCHMARK_VERSION,
+      knowledge_snapshot_changed:
+        Boolean(baselineRun && baselineRun.knowledge_snapshot_hash !== knowledgeSnapshotHash),
+      delta_average_score: deltaAverageScore,
+      delta_pass_rate: deltaPassRate,
+      regression_status: regressionStatus,
+      critical_failures: currentCriticalFailures,
+      regressed_cases: regressedCases,
     };
 
     await authSupabase
@@ -1604,6 +1656,11 @@ Deno.serve(async (req) => {
         average_score: averageScore,
         completed_at: completedAt,
         status: runStatus,
+        regression_status: regressionStatus,
+        delta_average_score: deltaAverageScore,
+        delta_pass_rate: deltaPassRate,
+        critical_failures: currentCriticalFailures,
+        regression_summary: summary,
         summary,
       })
       .eq("id", runId);
@@ -1619,6 +1676,17 @@ Deno.serve(async (req) => {
         failed_cases: Math.max(0, benchmarkCases.length - passedCases),
         average_score: averageScore,
         pass_rate: passRate,
+        regression_status: regressionStatus,
+        delta_average_score: deltaAverageScore,
+        delta_pass_rate: deltaPassRate,
+        critical_failures: currentCriticalFailures,
+        regressed_cases: regressedCases,
+        baseline_run_id:
+          baselineRun && Number(baselineRun.total_cases || 0) === benchmarkCases.length
+            ? baselineRun.id
+            : null,
+        knowledge_snapshot_changed:
+          Boolean(baselineRun && baselineRun.knowledge_snapshot_hash !== knowledgeSnapshotHash),
         failures,
         live_knowledge_changed: false,
         evaluation_only: true,
