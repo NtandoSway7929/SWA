@@ -946,6 +946,15 @@
                 '<div class="sway-ai-ki-experiments-summary"><p class="sway-ai-ki-muted">No experiments loaded.</p></div>' +
                 '<div class="sway-ai-ki-experiments-results"><p class="sway-ai-ki-muted">Open this section to load experiments.</p></div>' +
             '</details>' +
+            '<details class="sway-ai-ki-closed-loop" data-sway-ai-ki-closed-loop-panel>' +
+                '<summary>Closed-loop learning</summary>' +
+                '<div class="sway-ai-ki-closed-loop-controls">' +
+                    '<span>Feeds reviewed outcomes and experiment learnings into governed knowledge candidates. Nothing becomes live knowledge automatically; verification and regression review remain required.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-closed-loop-refresh>Refresh learning signals</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-closed-loop-summary"><p class="sway-ai-ki-muted">No closed-loop learning signals loaded.</p></div>' +
+                '<div class="sway-ai-ki-closed-loop-results"><p class="sway-ai-ki-muted">Open this section to load reviewed outcomes and experiments.</p></div>' +
+            '</details>' +
             '<details class="sway-ai-ki-outcomes" data-sway-ai-ki-outcomes-panel>' +
                 '<summary>Outcome intelligence</summary>' +
                 '<div class="sway-ai-ki-outcomes-controls">' +
@@ -1611,6 +1620,156 @@
                 target.disabled=false;
                 target.textContent=approve ? "Approve plan" : "Cancel draft";
                 window.alert(error.message||"Execution plan review failed.");
+            }
+        });
+
+
+        const closedLoopPanel=details.querySelector("[data-sway-ai-ki-closed-loop-panel]");
+        const closedLoopRefresh=details.querySelector("[data-sway-ai-ki-closed-loop-refresh]");
+        const closedLoopSummary=details.querySelector(".sway-ai-ki-closed-loop-summary");
+        const closedLoopResults=details.querySelector(".sway-ai-ki-closed-loop-results");
+
+        async function loadClosedLoopLearning(){
+            const [outcomesResponse,experimentsResponse,candidatesResponse]=await Promise.all([
+                fetch(SUPABASE_URL+"/rest/v1/innerme_outcomes?select=id,title,objective,status,attribution,result_summary,assessment_notes,evidence,verified_at,updated_at&status=in.(achieved,partially_achieved,not_achieved,inconclusive)&verified_at=not.is.null&order=updated_at.desc&limit=50",{method:"GET",headers:authHeaders()}),
+                fetch(SUPABASE_URL+"/rest/v1/innerme_experiments?select=id,name,hypothesis,status,result,learning,evidence,reviewed_at,confidence,updated_at&status=in.(completed,inconclusive,abandoned)&reviewed_at=not.is.null&order=updated_at.desc&limit=50",{method:"GET",headers:authHeaders()}),
+                fetch(SUPABASE_URL+"/rest/v1/innerme_learning_candidates?select=id,feedback_id,candidate_key,source_type,source_id,source_label,source_evidence,requires_verification,requires_regression,candidate_type,target_knowledge_id,title,domain,knowledge_type,statement,application,constraints,do_not_use_when,rationale,confidence,status,created_at,updated_at&source_type=in.(outcome,experiment)&order=updated_at.desc&limit=100",{method:"GET",headers:authHeaders()})
+            ]);
+
+            const outcomes=await outcomesResponse.json().catch(function(){return [];});
+            const experiments=await experimentsResponse.json().catch(function(){return [];});
+            const candidates=await candidatesResponse.json().catch(function(){return [];});
+
+            if(!outcomesResponse.ok) throw new Error(outcomes&&(outcomes.message||outcomes.error||outcomes.hint)?String(outcomes.message||outcomes.error||outcomes.hint):"Unable to load reviewed outcomes.");
+            if(!experimentsResponse.ok) throw new Error(experiments&&(experiments.message||experiments.error||experiments.hint)?String(experiments.message||experiments.error||experiments.hint):"Unable to load reviewed experiments.");
+            if(!candidatesResponse.ok) throw new Error(candidates&&(candidates.message||candidates.error||candidates.hint)?String(candidates.message||candidates.error||candidates.hint):"Unable to load closed-loop learning candidates.");
+
+            const candidateRows=Array.isArray(candidates)?candidates:[];
+            const targetIds=candidateRows.map(function(item){return String(item.target_knowledge_id||"");}).filter(Boolean);
+            let knowledge=[];
+            if(targetIds.length){
+                const uniqueIds=Array.from(new Set(targetIds));
+                const knowledgeResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_knowledge?select=id,title&status=eq.active&id=in.("+uniqueIds.join(",")+")&limit=100",{method:"GET",headers:authHeaders()});
+                const knowledgeData=await knowledgeResponse.json().catch(function(){return [];});
+                if(!knowledgeResponse.ok) throw new Error(knowledgeData&&(knowledgeData.message||knowledgeData.error||knowledgeData.hint)?String(knowledgeData.message||knowledgeData.error||knowledgeData.hint):"Unable to load candidate knowledge targets.");
+                knowledge=Array.isArray(knowledgeData)?knowledgeData:[];
+            }
+            return {outcomes:Array.isArray(outcomes)?outcomes:[],experiments:Array.isArray(experiments)?experiments:[],candidates:candidateRows,knowledge:knowledge};
+        }
+
+        function renderClosedLoopLearning(data){
+            const outcomes=Array.isArray(data&&data.outcomes)?data.outcomes:[];
+            const experiments=Array.isArray(data&&data.experiments)?data.experiments:[];
+            const candidates=Array.isArray(data&&data.candidates)?data.candidates:[];
+            const knowledge=Array.isArray(data&&data.knowledge)?data.knowledge:[];
+            const sourceRows=outcomes.map(function(item){return Object.assign({source_type:"outcome"},item);})
+                .concat(experiments.map(function(item){return Object.assign({source_type:"experiment"},item);}));
+            const candidateBySource=new Map();
+            candidates.forEach(function(item){candidateBySource.set(String(item.source_type||"")+":"+String(item.source_id||""),item);});
+            const knowledgeMap=new Map(knowledge.map(function(item){return [String(item.id||""),String(item.title||"Knowledge record")];}));
+            const pending=candidates.filter(function(item){return String(item.status||"")==="candidate";}).length;
+            const approved=candidates.filter(function(item){return String(item.status||"")==="approved";}).length;
+            const applied=candidates.filter(function(item){return String(item.status||"")==="applied";}).length;
+            closedLoopSummary.innerHTML='<div class="sway-ai-ki-closed-loop-summary-grid"><div><span>Reviewed outcomes</span><strong>'+esc(outcomes.length)+'</strong></div><div><span>Reviewed experiments</span><strong>'+esc(experiments.length)+'</strong></div><div><span>Awaiting review</span><strong>'+esc(pending)+'</strong></div><div><span>Approved</span><strong>'+esc(approved)+'</strong></div><div><span>Applied</span><strong>'+esc(applied)+'</strong></div></div>';
+
+            if(!sourceRows.length) return '<p class="sway-ai-ki-muted">No reviewed outcomes or experiments are available yet. The loop will activate after the first real governed result.</p>';
+
+            return sourceRows.map(function(source){
+                const sourceId=String(source.id||"");
+                const sourceType=String(source.source_type||"");
+                const key=sourceType+":"+sourceId;
+                const candidate=candidateBySource.get(key)||null;
+                const sourceName=sourceType==="outcome" ? String(source.title||"Reviewed outcome") : String(source.name||"Reviewed experiment");
+                const signal=sourceType==="outcome" ? String(source.result_summary||source.assessment_notes||"") : String(source.learning||source.result||"");
+                let candidateHtml="";
+
+                if(candidate){
+                    const knowledgeTitle=knowledgeMap.get(String(candidate.target_knowledge_id||"")) || "Verified knowledge target";
+                    let actions="";
+                    if(String(candidate.status||"")==="candidate"){
+                        actions='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-loop-review=\"approved\" data-id=\"'+esc(String(candidate.id||""))+'\">Approve candidate</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-loop-review=\"rejected\" data-id=\"'+esc(String(candidate.id||""))+'\">Reject</button>';
+                    }else if(String(candidate.status||"")==="approved"){
+                        actions='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-loop-apply=\"'+esc(String(candidate.id||""))+'\">Apply to knowledge</button>';
+                    }else if(String(candidate.status||"")==="applied"){
+                        actions='<span class="sway-ai-ki-closed-loop-note">Applied. Source verification, re-indexing and regression review are required before retrieval uses the revised knowledge.</span>';
+                    }
+                    candidateHtml='<div class="sway-ai-ki-closed-loop-candidate"><div class="sway-ai-ki-closed-loop-candidate-head"><strong>'+esc(candidate.title||"Learning candidate")+'</strong><em>'+esc(candidate.status||"candidate")+'</em></div><p>'+esc(candidate.statement||"")+'</p><div class="sway-ai-ki-closed-loop-meta"><span>Target: '+esc(knowledgeTitle)+'</span><span>Confidence: '+esc(candidate.confidence||"medium")+'</span><span>Verification: required</span><span>Regression: required</span></div><div class="sway-ai-ki-closed-loop-actions">'+actions+'</div></div>';
+                }else{
+                    candidateHtml='<div class="sway-ai-ki-closed-loop-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-loop-generate=\"'+esc(sourceId)+'\" data-source-type=\"'+esc(sourceType)+'\">Generate learning candidate</button></div>';
+                }
+
+                return '<article class="sway-ai-ki-closed-loop-item"><div class="sway-ai-ki-closed-loop-head"><div><strong>'+esc(sourceName)+'</strong><span>'+esc(sourceType)+' · reviewed</span></div></div><p class="sway-ai-ki-closed-loop-signal">'+esc(signal||"No learning signal recorded.")+'</p>'+candidateHtml+'</article>';
+            }).join("");
+        }
+
+        async function refreshClosedLoopLearning(showLoading=true){
+            if(showLoading) closedLoopResults.innerHTML='<p class="sway-ai-ki-muted">Loading reviewed learning signals…</p>';
+            try{
+                const data=await loadClosedLoopLearning();
+                closedLoopResults.innerHTML=renderClosedLoopLearning(data);
+                closedLoopResults.__swayClosedLoopData=data;
+                return data;
+            }catch(error){
+                closedLoopSummary.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Closed-loop learning failed to load.")+'</p>';
+                closedLoopResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Closed-loop learning failed to load.")+'</p>';
+                return null;
+            }
+        }
+
+        if(closedLoopPanel) closedLoopPanel.addEventListener("toggle",function(){if(closedLoopPanel.open) refreshClosedLoopLearning();});
+        if(closedLoopRefresh) closedLoopRefresh.addEventListener("click",function(event){event.preventDefault();event.stopPropagation();refreshClosedLoopLearning();});
+
+        closedLoopResults.addEventListener("click",async function(event){
+            const generate=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-loop-generate]"):null;
+            const review=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-loop-review]"):null;
+            const apply=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-loop-apply]"):null;
+            const target=generate||review||apply;
+            if(!target) return;
+            event.preventDefault();event.stopPropagation();
+
+            try{
+                if(generate){
+                    const sourceId=String(generate.dataset.swayAiKiLoopGenerate||"").trim();
+                    const sourceType=String(generate.dataset.sourceType||"").trim();
+                    if(!sourceId||!["outcome","experiment"].includes(sourceType)) return;
+                    if(!window.confirm("Generate a governed learning candidate from this reviewed "+sourceType+"? No live knowledge will be changed.")) return;
+                    generate.disabled=true;generate.textContent="Drafting…";
+                    const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{method:"POST",headers:authHeaders(),body:JSON.stringify({action:"generate_closed_loop_learning_candidate",learning_source_type:sourceType,learning_source_id:sourceId})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Closed-loop learning candidate generation failed.");
+                    await refreshClosedLoopLearning(false);
+                    if(data.candidate){window.alert("Learning candidate created. Review it before it can affect InnerMe knowledge.");}
+                    else{window.alert(String(data.reason||"No suitable existing knowledge target was found."));}
+                    return;
+                }
+
+                if(review){
+                    const candidateId=String(review.dataset.id||"").trim();
+                    const decision=String(review.dataset.swayAiKiLoopReview||"").trim();
+                    if(!candidateId||!["approved","rejected"].includes(decision)) return;
+                    if(!window.confirm(decision==="approved"?"Approve this learning candidate?":"Reject this learning candidate?")) return;
+                    review.disabled=true;review.textContent=decision==="approved"?"Approving…":"Rejecting…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/mark_innerme_learning_candidate_reviewed",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_candidate_id:candidateId,p_decision:decision})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Learning candidate review failed.");
+                    await refreshClosedLoopLearning(false);
+                    return;
+                }
+
+                if(apply){
+                    const candidateId=String(apply.dataset.swayAiKiLoopApply||"").trim();
+                    if(!candidateId) return;
+                    if(!window.confirm("Apply this approved learning candidate? The target knowledge will be removed from retrieval until it is verified and re-indexed.")) return;
+                    apply.disabled=true;apply.textContent="Applying…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/apply_innerme_learning_candidate",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_candidate_id:candidateId})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Learning candidate application failed.");
+                    await refreshClosedLoopLearning(false);
+                    return;
+                }
+            }catch(error){
+                target.disabled=false;
+                window.alert(error.message||"Closed-loop learning action failed.");
             }
         });
 
@@ -2323,6 +2482,36 @@
         "body.sway-dark-mode .sway-ai-ki-eval-fail{background:rgba(190,52,52,.14);color:#FFB0B0}" +
         "body.sway-dark-mode .sway-ai-ki-eval-item details{border-top-color:rgba(119,193,252,.1)}" +
         "@media(max-width:680px){.sway-ai-ki-eval-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-eval-head{display:grid;gap:6px}.sway-ai-ki-eval-head em{width:fit-content}}" +
+        ".sway-ai-ki-closed-loop{width:100%;margin:4px 0}" +
+        ".sway-ai-ki-closed-loop>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
+        ".sway-ai-ki-closed-loop>summary::-webkit-details-marker{display:none}" +
+        ".sway-ai-ki-closed-loop>summary:after{content:'›';transform:rotate(90deg);transition:transform .16s ease}" +
+        ".sway-ai-ki-closed-loop[open]>summary:after{transform:rotate(-90deg)}" +
+        ".sway-ai-ki-closed-loop-controls{display:grid;gap:8px;padding:6px 10px 10px}" +
+        ".sway-ai-ki-closed-loop-controls>span{font-size:11px;line-height:1.45;opacity:.68}" +
+        ".sway-ai-ki-closed-loop-summary,.sway-ai-ki-closed-loop-results{display:grid;gap:9px;padding:0 10px 10px}" +
+        ".sway-ai-ki-closed-loop-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}" +
+        ".sway-ai-ki-closed-loop-summary-grid>div{display:grid;gap:3px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-closed-loop-summary-grid span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-closed-loop-summary-grid strong{font-size:11px}" +
+        ".sway-ai-ki-closed-loop-item{display:grid;gap:9px;padding:11px;border:1px solid rgba(1,82,244,.1);border-radius:12px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-closed-loop-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-closed-loop-head>div{display:grid;gap:3px;min-width:0}" +
+        ".sway-ai-ki-closed-loop-head strong{font-size:11px;line-height:1.35}" +
+        ".sway-ai-ki-closed-loop-head span{font-size:9px;opacity:.58}" +
+        ".sway-ai-ki-closed-loop-signal{margin:0;font-size:10px;line-height:1.5;white-space:pre-wrap}" +
+        ".sway-ai-ki-closed-loop-candidate{display:grid;gap:7px;padding:9px;border:1px solid rgba(1,82,244,.09);border-radius:10px;background:rgba(1,82,244,.018)}" +
+        ".sway-ai-ki-closed-loop-candidate-head{display:flex;align-items:center;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-closed-loop-candidate-head strong{font-size:10px}" +
+        ".sway-ai-ki-closed-loop-candidate-head em{padding:4px 6px;border-radius:999px;background:rgba(1,82,244,.08);color:#0152F4;font-size:8px;font-style:normal;font-weight:800}" +
+        ".sway-ai-ki-closed-loop-candidate p{margin:0;font-size:9px;line-height:1.5;white-space:pre-wrap}" +
+        ".sway-ai-ki-closed-loop-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:8px;line-height:1.35;opacity:.62}" +
+        ".sway-ai-ki-closed-loop-actions{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap}" +
+        ".sway-ai-ki-closed-loop-note{font-size:8px;line-height:1.45;opacity:.65}" +
+        "body.sway-dark-mode .sway-ai-ki-closed-loop-summary-grid>div,body.sway-dark-mode .sway-ai-ki-closed-loop-item,body.sway-dark-mode .sway-ai-ki-closed-loop-candidate{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-closed-loop-candidate-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
+        "@media(max-width:900px){.sway-ai-ki-closed-loop-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
+        "@media(max-width:680px){.sway-ai-ki-closed-loop-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-closed-loop-head{display:grid;gap:6px}.sway-ai-ki-closed-loop-candidate-head{display:grid;gap:6px}.sway-ai-ki-closed-loop-candidate-head em{width:fit-content}}" +
         ".sway-ai-ki-experiments{width:100%;margin:4px 0}" +
         ".sway-ai-ki-experiments>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
         ".sway-ai-ki-experiments>summary::-webkit-details-marker{display:none}" +
