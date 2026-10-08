@@ -39,12 +39,6 @@ create table if not exists public.innerme_predictive_forecasts (
 create index if not exists idx_innerme_predictive_forecasts_current
 on public.innerme_predictive_forecasts(forecast_date desc,horizon_days,forecast_type);
 
-create index if not exists idx_innerme_predictive_forecasts_status
-on public.innerme_predictive_forecasts(status,confidence,updated_at desc);
-
-create index if not exists idx_innerme_predictive_forecasts_verification
-on public.innerme_predictive_forecasts(verification_status,horizon_end);
-
 alter table public.innerme_predictive_forecasts enable row level security;
 
 drop policy if exists "InnerMe predictive forecasts admins can manage"
