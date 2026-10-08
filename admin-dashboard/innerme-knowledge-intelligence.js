@@ -509,6 +509,84 @@
         );
     }
 
+    async function analyseKnowledgeGaps() {
+        const response = await fetch(SUPABASE_URL + "/functions/v1/swayphics-ai", {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ action: "generate_knowledge_gap_candidates" })
+        });
+        const data = await response.json().catch(function(){ return null; });
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Knowledge-gap analysis failed."
+            );
+        }
+        return data;
+    }
+
+    async function loadKnowledgeGapQueue() {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/innerme_knowledge_gaps?select=id,title,gap_statement,domain,jurisdiction,why_needed,evidence_basis,recommended_evidence_level,recommended_source_type,acquisition_target,example_queries,source_signals,demand_count,priority,confidence,status,reviewed_at,created_at,updated_at&status=in.(candidate,approved)&order=priority.desc,created_at.desc&limit=50",
+            { method:"GET", headers:authHeaders() }
+        );
+        const data = await response.json().catch(function(){ return []; });
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to load the knowledge-gap queue."
+            );
+        }
+        return Array.isArray(data) ? data : [];
+    }
+
+    function renderKnowledgeGapQueue(items) {
+        if (!items.length) {
+            return '<p class="sway-ai-ki-good">No active knowledge-acquisition candidates are waiting for review.</p>';
+        }
+        return items.map(function(item){
+            const status=String(item.status || "candidate");
+            const examples=Array.isArray(item.example_queries) ? item.example_queries.filter(Boolean).slice(0,4) : [];
+            const buttons=status==="candidate"
+                ? '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-gap-approve="'+esc(String(item.id || ""))+'">Approve acquisition</button>' +
+                  '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-gap-dismiss="'+esc(String(item.id || ""))+'">Dismiss</button>'
+                : '<span class="sway-ai-ki-gap-approved-note">Approved for source acquisition. No live knowledge was added.</span>';
+            return '<article class="sway-ai-ki-gap-item">' +
+                '<div class="sway-ai-ki-gap-head"><div><strong>'+esc(item.title || "Untitled knowledge gap")+'</strong><span>'+esc(item.domain || "Unclassified")+(item.jurisdiction ? " · "+esc(item.jurisdiction) : "")+'</span></div><em>'+esc(status.replace(/_/g," "))+' · P'+esc(item.priority || 50)+'</em></div>' +
+                '<p class="sway-ai-ki-gap-statement">'+esc(item.gap_statement || "")+'</p>' +
+                '<div class="sway-ai-ki-gap-grid"><div><span>Why needed</span><strong>'+esc(item.why_needed || "Evidence indicates this topic needs better coverage.")+'</strong></div><div><span>Acquisition target</span><strong>'+esc(item.acquisition_target || "Identify a suitable verified source.")+'</strong></div></div>' +
+                '<div class="sway-ai-ki-gap-meta"><span>Evidence: '+esc(item.recommended_evidence_level || "unknown")+'</span><span>Source type: '+esc(item.recommended_source_type || "Not specified")+'</span><span>Demand signals: '+esc(item.demand_count || 1)+'</span><span>Confidence: '+esc(item.confidence || "medium")+'</span></div>' +
+                (examples.length ? '<div class="sway-ai-ki-gap-examples"><span>Questions this gap should help answer</span>'+examples.map(function(ex){return '<code>'+esc(ex)+'</code>';}).join("")+'</div>' : "") +
+                '<div class="sway-ai-ki-gap-actions">'+buttons+'</div></article>';
+        }).join("");
+    }
+
+    async function reviewKnowledgeGap(gapId,decision,resultsElement) {
+        const id=String(gapId || "").trim();
+        if(!id || !["approved","dismissed"].includes(decision)) return;
+        const label=decision==="approved" ? "Approve this knowledge-acquisition target?" : "Dismiss this knowledge-acquisition target?";
+        if(!window.confirm(label)) return;
+        const button=document.querySelector('[data-sway-ai-ki-gap-'+decision+'="'+CSS.escape(id)+'"]');
+        if(button){ button.disabled=true; button.textContent=decision==="approved" ? "Approving…" : "Dismissing…"; }
+        try{
+            const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/review_innerme_knowledge_gap",{
+                method:"POST",
+                headers:authHeaders(),
+                body:JSON.stringify({p_gap_id:id,p_decision:decision})
+            });
+            const data=await response.json().catch(function(){return null;});
+            if(!response.ok) throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Knowledge-gap review failed.");
+            const items=await loadKnowledgeGapQueue();
+            resultsElement.innerHTML=renderKnowledgeGapQueue(items);
+            resultsElement.__swayGapItems=items;
+        }catch(error){
+            if(button){button.disabled=false;button.textContent=decision==="approved" ? "Approve acquisition" : "Dismiss";}
+            window.alert(error.message || "Knowledge-gap review failed.");
+        }
+    }
+
     function ensurePanel() {
         if (document.getElementById(PANEL_ID)) return;
 
