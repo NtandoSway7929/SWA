@@ -203,7 +203,7 @@ begin
     if auth.uid() is null or not public.is_swayphics_admin() then
         raise exception 'Swayphics admin access required.';
     end if;
-    if p_decision not in ('verify','reject') then
+    if p_decision is null or p_decision not in ('verify','reject') then
         raise exception 'Decision must be verify or reject.';
     end if;
 
@@ -501,7 +501,7 @@ begin
     if auth.uid() is null or not public.is_swayphics_admin() then
         raise exception 'Swayphics admin access required.';
     end if;
-    if p_decision not in ('approve','reject') then
+    if p_decision is null or p_decision not in ('approve','reject') then
         raise exception 'Decision must be approve or reject.';
     end if;
 
@@ -528,7 +528,6 @@ begin
         select 1 from public.innerme_trust_calibration_reviews newer
         where newer.target_type=v_review.target_type
           and newer.target_key=v_review.target_key
-          and newer.status='review_required'
           and newer.calculated_at > v_review.calculated_at
     ) then
         raise exception 'A newer trust proposal exists. Refresh calibration and review the latest proposal.';
