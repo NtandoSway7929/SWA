@@ -953,6 +953,32 @@
                         ) +
                       '</div>'
                     : '';
+                const coordinationHtml = coordinationRun
+                    ? '<div class="sway-ai-incident-coordination">' +
+                        '<div class="sway-ai-incident-intelligence-head"><strong>Agent coordination</strong><span>' +
+                            esc(coordinationRun.coordination_mode || "sequential") + ' · ' +
+                            esc(coordinationRun.status || "proposed") +
+                        '</span></div>' +
+                        '<p><strong>Team:</strong> ' + esc(String(coordinationRun.agent_count || coordinationAssignments.length)) +
+                            ' agent(s) · ' + esc(coordinationRun.conflict_status || "none") + '</p>' +
+                        '<div class="sway-ai-incident-agent-list">' +
+                            coordinationAssignments.slice().sort(function (a, b) {
+                                return Number(a.sequence_rank || 0) - Number(b.sequence_rank || 0);
+                            }).map(function (assignment) {
+                                const agent = agentMap.get(String(assignment.agent_id || "")) || {};
+                                return '<div class="sway-ai-incident-agent-row">' +
+                                    '<div><strong>#' + esc(assignment.sequence_rank) + ' · ' + esc(assignment.assignment_role || "specialist") + '</strong><span>' +
+                                        esc(agent.name || "InnerMe agent") + '</span></div>' +
+                                    '<small>Trust ' + esc(assignment.trust_stage || agent.trust_stage || 1) + ' · ' +
+                                        esc(assignment.status || "pending") + '</small>' +
+                                '</div>';
+                            }).join("") +
+                        '</div>' +
+                        '<small>' + esc(String(coordinationHandoffs.length) +
+                            " controlled handoff(s); authority and credentials are not transferred between agents.") + '</small>' +
+                      '</div>'
+                    : '';
+
                 const interventionHtml = selection
                     ? '<div class="sway-ai-incident-intervention-selection">' +
                         '<div class="sway-ai-incident-intelligence-head"><strong>Recommended intervention order</strong><span>' + esc(selection.confidence || "low") + ' confidence · ' + esc(selection.selection_status || "do_not_intervene") + '</span></div>' +
@@ -1035,6 +1061,7 @@
                         interventionHtml +
                         executionHtml +
                         outcomeHtml +
+                        coordinationHtml +
                         dependencyHtml +
                         '<div class="sway-ai-incident-reason"><strong>Why this is correlated</strong><p>' + esc(incident.correlation_reason || "") + '</p></div>' +
                         '<div class="sway-ai-incident-reason"><strong>Recommended response</strong><p>' + esc(incident.recommended_response || "") + '</p></div>' +
