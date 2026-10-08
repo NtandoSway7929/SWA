@@ -73,7 +73,7 @@
 
         const knowledgeResponse = await fetch(
             SUPABASE_URL +
-                "/rest/v1/innerme_knowledge?select=id,slug,title,domain,knowledge_type,statement,application,constraints,do_not_use_when,evidence_level,confidence,jurisdiction,priority,source_id,verification_status,verification_method,verification_notes,last_verified_at,review_after,embedding_status,updated_at&status=eq.active&verification_status=neq.verified&order=updated_at.desc&limit=50",
+                "/rest/v1/innerme_knowledge?select=id,slug,title,domain,knowledge_type,statement,application,constraints,do_not_use_when,evidence_level,confidence,jurisdiction,priority,source_id,verification_status,verification_method,verification_notes,last_verified_at,review_after,embedding_status,updated_at&status=eq.active&order=updated_at.desc&limit=100",
             {
                 method: "GET",
                 headers: authHeaders()
@@ -118,11 +118,23 @@
             sources.set(String(source.id || ""), source);
         });
 
-        return (Array.isArray(knowledgeData) ? knowledgeData : []).map(function (item) {
-            return Object.assign({}, item, {
-                source_record: sources.get(String(item.source_id || "")) || null
+        return (Array.isArray(knowledgeData) ? knowledgeData : [])
+            .filter(function (item) {
+                const status = String(item && item.verification_status || "").trim();
+                const reviewAfter = item && item.review_after
+                    ? new Date(item.review_after).getTime()
+                    : NaN;
+
+                return (
+                    status !== "verified" ||
+                    (Number.isFinite(reviewAfter) && reviewAfter <= Date.now())
+                );
+            })
+            .map(function (item) {
+                return Object.assign({}, item, {
+                    source_record: sources.get(String(item.source_id || "")) || null
+                });
             });
-        });
     }
 
     function verificationMethodFor(source) {
