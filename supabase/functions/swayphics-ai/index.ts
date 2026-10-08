@@ -1163,6 +1163,68 @@ Deno.serve(async (req) => {
 
     const benchmarkCases = Array.isArray(cases) ? cases : [];
 
+    const { data: knowledgeSnapshotRows, error: knowledgeSnapshotError } =
+      await authSupabase
+        .from("innerme_knowledge")
+        .select("id,status,verification_status,embedding_status,embedding_version,updated_at")
+        .eq("status", "active")
+        .order("id", { ascending: true })
+        .limit(200);
+
+    if (knowledgeSnapshotError) {
+      console.error("InnerMe evaluation knowledge snapshot error:", knowledgeSnapshotError.message);
+      return json({ error: "InnerMe could not establish the knowledge snapshot for regression control." }, 500, origin);
+    }
+
+    const knowledgeSnapshotHash = await sha256(
+      JSON.stringify(
+        (Array.isArray(knowledgeSnapshotRows) ? knowledgeSnapshotRows : []).map(function(row: any) {
+          return {
+            id: String(row?.id || ""),
+            status: String(row?.status || ""),
+            verification_status: String(row?.verification_status || ""),
+            embedding_status: String(row?.embedding_status || ""),
+            embedding_version: row?.embedding_version ?? null,
+            updated_at: row?.updated_at || null,
+          };
+        }),
+      ),
+    );
+
+    const { data: baselineRun, error: baselineError } =
+      await authSupabase
+        .from("innerme_evaluation_runs")
+        .select(
+          "id,average_score,pass_rate,total_cases,benchmark_version,knowledge_snapshot_hash,status,completed_at",
+        )
+        .eq("benchmark_version", INNERME_BENCHMARK_VERSION)
+        .eq("status", "completed")
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (baselineError) {
+      console.error("InnerMe evaluation baseline query error:", baselineError.message);
+      return json({ error: "InnerMe could not load the previous benchmark baseline." }, 500, origin);
+    }
+
+    let baselineResults = new Map<string, any>();
+    if (baselineRun && Number(baselineRun.total_cases || 0) === benchmarkCases.length) {
+      const { data: priorResults, error: priorResultsError } =
+        await authSupabase
+          .from("innerme_evaluation_results")
+          .select("case_id,passed,score,dimension_scores")
+          .eq("run_id", baselineRun.id);
+
+      if (!priorResultsError) {
+        baselineResults = new Map(
+          (Array.isArray(priorResults) ? priorResults : []).map(function(result: any) {
+            return [String(result.case_id || ""), result];
+          }),
+        );
+      }
+    }
+
     const { data: run, error: runError } =
       await authSupabase
         .from("innerme_evaluation_runs")
@@ -1170,9 +1232,16 @@ Deno.serve(async (req) => {
           trigger: "manual",
           created_by: userData.user.id,
           total_cases: benchmarkCases.length,
+          benchmark_version: INNERME_BENCHMARK_VERSION,
+          knowledge_snapshot_hash: knowledgeSnapshotHash,
+          baseline_run_id:
+            baselineRun && Number(baselineRun.total_cases || 0) === benchmarkCases.length
+              ? baselineRun.id
+              : null,
+          regression_status: baselineRun ? "inconclusive" : "baseline",
           status: "running",
         })
-        .select("id,created_at,total_cases,status")
+        .select("id,created_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash")
         .single();
 
     if (runError || !run) {
@@ -1387,6 +1456,20 @@ Deno.serve(async (req) => {
           score >= 80 &&
           retrievalRecall >= (item.severity === "critical" ? 50 : 0);
 
+        const baselineResult = baselineResults.get(String(item.id || ""));
+        const regressedFromPrevious =
+          Boolean(baselineResult?.passed === true && passed !== true);
+
+        const failureFlags: string[] = [];
+        if (!passed) failureFlags.push("benchmark_fail");
+        if (retrievalRecall < 100) failureFlags.push("retrieval_gap");
+        if (correctness < 80) failureFlags.push("correctness_gap");
+        if (grounding < 80) failureFlags.push("grounding_gap");
+        if (safety < 80) failureFlags.push("safety_gap");
+        if (relevance < 80) failureFlags.push("relevance_gap");
+        if (completeness < 80) failureFlags.push("completeness_gap");
+        if (regressedFromPrevious) failureFlags.push("regressed_from_previous");
+
         const attributedKnowledge = {
           expected_ids: expectedIds,
           retrieved_expected_ids: expectedIds.filter((id: string) => retrievedIds.has(id)),
@@ -1420,6 +1503,10 @@ Deno.serve(async (req) => {
               },
               score,
               passed,
+              case_key: String(item.case_key || ""),
+              severity: String(item.severity || "standard"),
+              failure_flags: failureFlags,
+              regressed_from_previous: regressedFromPrevious,
               judge_rationale:
                 cleanForModel(
                   parsedJudge?.rationale || "Judge did not return a rationale.",
@@ -1453,6 +1540,41 @@ Deno.serve(async (req) => {
     const passRate = completedCases
       ? Number(((passedCases / completedCases) * 100).toFixed(2))
       : 0;
+
+    const regressedCases = benchmarkCases
+      .map(function(item: any) {
+        const prior = baselineResults.get(String(item.id || ""));
+        const currentResultPassed =
+          prior
+            ? null
+            : null;
+        return {
+          case_id: String(item.id || ""),
+          case_key: String(item.case_key || ""),
+          severity: String(item.severity || "standard"),
+          was_passed: prior?.passed === true,
+        };
+      });
+
+    const criticalFailures = benchmarkCases.filter(function(item: any) {
+      const hasResultFailure =
+        item &&
+        String(item.severity || "standard") === "critical";
+      return hasResultFailure;
+    }).reduce(function(total: number, item: any) {
+      const prior = baselineResults.get(String(item.id || ""));
+      return total + (
+        prior?.passed === true
+          ? 0
+          : 0
+      );
+    }, 0);
+
+    const currentCriticalFailures = benchmarkCases.reduce(function(total: number, item: any) {
+      if (String(item.severity || "standard") !== "critical") return total;
+      const resultScoreRows = 0;
+      return total + 0;
+    }, 0);
 
     const runStatus =
       completedCases === benchmarkCases.length && !failures.length
