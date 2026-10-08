@@ -542,6 +542,311 @@
         return Array.isArray(data) ? data : [];
     }
 
+    async function loadAcquisitionTasks() {
+        const taskResponse = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_knowledge_acquisition_tasks?select=id,gap_id,source_id,source_excerpt,acquisition_notes,status,source_verified_at,knowledge_drafted_at,knowledge_draft_id,published_at,created_at,updated_at&status=neq.dismissed&order=created_at.desc&limit=50",
+            { method:"GET", headers:authHeaders() }
+        );
+        const tasks = await taskResponse.json().catch(function(){ return []; });
+        if (!taskResponse.ok) {
+            throw new Error(tasks && (tasks.message || tasks.error || tasks.hint) ? String(tasks.message || tasks.error || tasks.hint) : "Unable to load acquisition tasks.");
+        }
+
+        const gapResponse = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_knowledge_gaps?select=id,title,gap_statement,domain,jurisdiction,acquisition_target,recommended_source_type,recommended_evidence_level,priority,status&order=priority.desc&limit=100",
+            { method:"GET", headers:authHeaders() }
+        );
+        const gaps = await gapResponse.json().catch(function(){ return []; });
+        if (!gapResponse.ok) {
+            throw new Error(gaps && (gaps.message || gaps.error || gaps.hint) ? String(gaps.message || gaps.error || gaps.hint) : "Unable to load approved knowledge gaps.");
+        }
+
+        const sourceIds=(Array.isArray(tasks)?tasks:[]).map(function(task){return String(task.source_id || "").trim();}).filter(Boolean);
+        let sources=[];
+        if(sourceIds.length){
+            const sourceResponse=await fetch(
+                SUPABASE_URL+"/rest/v1/innerme_knowledge_sources?select=id,name,publisher,source_type,authority_level,jurisdiction,url,licence_status,usage_notes,status,verification_status,last_verified_at,review_after&id=in."+sourceIds.join(","),
+                {method:"GET",headers:authHeaders()}
+            );
+            sources=await sourceResponse.json().catch(function(){return [];});
+            if(!sourceResponse.ok){
+                throw new Error(sources && (sources.message || sources.error || sources.hint) ? String(sources.message || sources.error || sources.hint) : "Unable to load acquisition sources.");
+            }
+        }
+
+        const gapMap=new Map((Array.isArray(gaps)?gaps:[]).map(function(gap){return [String(gap.id || ""),gap];}));
+        const sourceMap=new Map((Array.isArray(sources)?sources:[]).map(function(source){return [String(source.id || ""),source];}));
+
+        return (Array.isArray(tasks)?tasks:[]).map(function(task){
+            return Object.assign({},task,{
+                gap:gapMap.get(String(task.gap_id || "")) || null,
+                source:sourceMap.get(String(task.source_id || "")) || null
+            });
+        });
+    }
+
+    function renderAcquisitionSourceForm(task) {
+        const gap=task.gap || {};
+        const source=task.source || {};
+        const taskId=String(task.id || "");
+        const sourceType=String(source.source_type || gap.recommended_source_type || "practitioner");
+        return '<form class="sway-ai-ki-acquisition-form" data-sway-ai-ki-acquisition-form="' + esc(taskId) + '">' +
+            '<div class="sway-ai-ki-acquisition-form-grid">' +
+                '<label><span>Source name</span><input name="name" required value="' + esc(source.name || "") + '" placeholder="e.g. SARS Small Business..." /></label>' +
+                '<label><span>Publisher</span><input name="publisher" required value="' + esc(source.publisher || "") + '" placeholder="Publisher / organisation" /></label>' +
+                '<label><span>Source type</span><select name="source_type">' +
+                    ["primary_authority","established_framework","academic","practitioner","internal"].map(function(value){
+                        return '<option value="' + value + '"' + (sourceType===value ? " selected" : "") + '>' + value.replace(/_/g," ") + '</option>';
+                    }).join("") +
+                '</select></label>' +
+                '<label><span>Authority level</span><select name="authority_level">' +
+                    [1,2,3,4,5].map(function(value){return '<option value="'+value+'"'+(Number(source.authority_level || (value===3 ? 3 : 0))===value ? " selected" : "")+'>'+value+'</option>';}).join("") +
+                '</select></label>' +
+                '<label><span>Jurisdiction</span><input name="jurisdiction" value="' + esc(source.jurisdiction || gap.jurisdiction || "Global") + '" /></label>' +
+                '<label><span>Licence status</span><select name="licence_status">' +
+                    ["open","permission_required","proprietary","unknown","internal"].map(function(value){
+                        return '<option value="' + value + '"' + (String(source.licence_status || "unknown")===value ? " selected" : "") + '>' + value.replace(/_/g," ") + '</option>';
+                    }).join("") +
+                '</select></label>' +
+                '<label class="sway-ai-ki-acquisition-wide"><span>Source URL</span><input name="url" type="url" required value="' + esc(source.url || "") + '" placeholder="https://..." /></label>' +
+                '<label class="sway-ai-ki-acquisition-wide"><span>Relevant source excerpt</span><textarea name="source_excerpt" required minlength="50" placeholder="Paste the portion of the verified source that supports the gap.">' + esc(task.source_excerpt || "") + '</textarea></label>' +
+                '<label class="sway-ai-ki-acquisition-wide"><span>Usage notes</span><textarea name="usage_notes" placeholder="Scope, access notes, page/section details, licensing notes.">' + esc(source.usage_notes || task.acquisition_notes || "") + '</textarea></label>' +
+            '</div>' +
+            '<div class="sway-ai-ki-gap-actions"><button type="submit" class="sway-ai-knowledge-test-button">Save source, verify &amp; draft</button></div>' +
+        '</form>';
+    }
+
+    function renderAcquisitionQueue(items) {
+        if(!items.length) {
+            return '<p class="sway-ai-ki-muted">No acquisition tasks yet. Approve a knowledge gap to create one automatically.</p>';
+        }
+
+        return items.map(function(task){
+            const gap=task.gap || {};
+            const source=task.source || {};
+            const status=String(task.status || "open");
+            const taskId=String(task.id || "");
+
+            let body="";
+            if(status==="open" || status==="source_identified") {
+                body=renderAcquisitionSourceForm(task);
+            } else if(status==="source_verified") {
+                body='<p class="sway-ai-ki-good">Source verified. Generate the draft knowledge record from the supplied source excerpt.</p>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-acq-draft="'+esc(taskId)+'">Generate knowledge draft</button>';
+            } else if(status==="knowledge_drafted") {
+                body='<div class="sway-ai-ki-acquisition-draft" data-sway-ai-ki-acq-draft-view="'+esc(taskId)+'"><p class="sway-ai-ki-muted">Knowledge draft is ready. It must be verified against the source and successfully indexed before publication.</p>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-acq-publish="'+esc(taskId)+'">Verify, index &amp; publish</button></div>';
+            } else if(status==="published") {
+                body='<p class="sway-ai-ki-good">Published into active InnerMe knowledge and eligible for retrieval.</p>';
+            }
+
+            return '<article class="sway-ai-ki-acquisition-item">' +
+                '<div class="sway-ai-ki-acquisition-head"><div><strong>'+esc(gap.title || "Knowledge acquisition task")+'</strong><span>'+esc(gap.domain || "Unclassified")+(gap.jurisdiction ? " · "+esc(gap.jurisdiction) : "")+'</span></div><em>'+esc(status.replace(/_/g," "))+'</em></div>' +
+                '<p class="sway-ai-ki-gap-statement">'+esc(gap.gap_statement || "")+'</p>' +
+                '<div class="sway-ai-ki-acquisition-meta"><span>Priority: P'+esc(gap.priority || 50)+'</span><span>Target: '+esc(gap.acquisition_target || "Verified source")+'</span>'+(source.name ? '<span>Source: '+esc(source.name)+'</span>' : "")+'</div>' +
+                body +
+            '</article>';
+        }).join("");
+    }
+
+    async function saveAcquisitionSource(taskId, form) {
+        const id=String(taskId || "").trim();
+        if(!id || !form) return;
+
+        const button=form.querySelector("button[type=submit]");
+        const data=new FormData(form);
+        const name=String(data.get("name") || "").trim();
+        const publisher=String(data.get("publisher") || "").trim();
+        const sourceType=String(data.get("source_type") || "practitioner").trim();
+        const authorityLevel=Math.max(1,Math.min(5,Number(data.get("authority_level") || 3)));
+        const jurisdiction=String(data.get("jurisdiction") || "Global").trim();
+        const licenceStatus=String(data.get("licence_status") || "unknown").trim();
+        const url=String(data.get("url") || "").trim();
+        const excerpt=String(data.get("source_excerpt") || "").trim();
+        const usageNotes=String(data.get("usage_notes") || "").trim();
+
+        if(excerpt.length<50){
+            window.alert("The relevant source excerpt must contain at least 50 characters.");
+            return;
+        }
+        if(!/^https?:\/\//i.test(url)){
+            window.alert("Use a valid HTTP or HTTPS source URL.");
+            return;
+        }
+
+        if(button){button.disabled=true;button.textContent="Verifying source…";}
+
+        try{
+            const sourceSlug=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,70)+"-"+id.slice(0,8);
+            const sourceResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_knowledge_sources",{
+                method:"POST",
+                headers:Object.assign({},authHeaders(),{"Prefer":"return=representation"}),
+                body:JSON.stringify({
+                    slug:sourceSlug,
+                    name:name,
+                    publisher:publisher,
+                    source_type:sourceType,
+                    authority_level:authorityLevel,
+                    jurisdiction:jurisdiction || null,
+                    url:url,
+                    licence_status:licenceStatus,
+                    usage_notes:usageNotes || null,
+                    tags:[],
+                    status:"active",
+                    verification_status:"unverified"
+                })
+            });
+            const sourceData=await sourceResponse.json().catch(function(){return [];});
+            if(!sourceResponse.ok || !Array.isArray(sourceData) || !sourceData[0]){
+                throw new Error(sourceData && (sourceData.message || sourceData.error || sourceData.hint) ? String(sourceData.message || sourceData.error || sourceData.hint) : "The acquisition source could not be saved.");
+            }
+            const sourceRow=sourceData[0];
+
+            const taskResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_knowledge_acquisition_tasks?id=eq."+encodeURIComponent(id),{
+                method:"PATCH",
+                headers:Object.assign({},authHeaders(),{"Prefer":"return=representation"}),
+                body:JSON.stringify({
+                    source_id:sourceRow.id,
+                    source_excerpt:excerpt,
+                    acquisition_notes:usageNotes || null,
+                    status:"source_identified",
+                    updated_at:new Date().toISOString()
+                })
+            });
+            const taskData=await taskResponse.json().catch(function(){return [];});
+            if(!taskResponse.ok){
+                throw new Error(taskData && (taskData.message || taskData.error || taskData.hint) ? String(taskData.message || taskData.error || taskData.hint) : "The acquisition task could not be updated.");
+            }
+
+            if(button){button.textContent="Verifying source…";}
+            const verifyResponse=await fetch(SUPABASE_URL+"/rest/v1/rpc/verify_innerme_acquisition_source",{
+                method:"POST",
+                headers:authHeaders(),
+                body:JSON.stringify({
+                    p_task_id:id,
+                    p_verification_notes:"Source reviewed by a Swayphics admin against the supplied source URL and excerpt on "+new Date().toISOString().slice(0,10)+"."
+                })
+            });
+            const verifyData=await verifyResponse.json().catch(function(){return null;});
+            if(!verifyResponse.ok){
+                throw new Error(verifyData && (verifyData.message || verifyData.error || verifyData.hint) ? String(verifyData.message || verifyData.error || verifyData.hint) : "Source verification failed.");
+            }
+
+            if(button){button.textContent="Drafting knowledge…";}
+            const draftResponse=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                method:"POST",
+                headers:authHeaders(),
+                body:JSON.stringify({action:"generate_knowledge_draft",acquisition_task_id:id,source_excerpt:excerpt})
+            });
+            const draftData=await draftResponse.json().catch(function(){return null;});
+            if(!draftResponse.ok){
+                throw new Error(draftData && (draftData.message || draftData.error || draftData.hint) ? String(draftData.message || draftData.error || draftData.hint) : "Knowledge draft generation failed.");
+            }
+
+            window.alert("Source verified and a draft knowledge record was created. Verify, index and publish it from the acquisition task.");
+            const container=form.closest(".sway-ai-ki-gaps-results");
+            if(container){
+                const items=await loadAcquisitionTasks();
+                container.innerHTML=renderAcquisitionQueue(items);
+                container.__swayAcquisitionItems=items;
+            }
+        }catch(error){
+            window.alert(error.message || "Knowledge acquisition failed.");
+            if(button){button.disabled=false;button.textContent="Save source, verify & draft";}
+        }
+    }
+
+    async function generateAcquisitionDraft(taskId,container) {
+        const id=String(taskId || "").trim();
+        if(!id) return;
+        const button=document.querySelector('[data-sway-ai-ki-acq-draft="'+CSS.escape(id)+'"]');
+        if(button){button.disabled=true;button.textContent="Drafting…";}
+        try{
+            const items=Array.isArray(container.__swayAcquisitionItems) ? container.__swayAcquisitionItems : [];
+            const task=items.find(function(entry){return String(entry.id || "")===id;});
+            if(!task) throw new Error("The acquisition task could not be loaded.");
+            const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                method:"POST",
+                headers:authHeaders(),
+                body:JSON.stringify({action:"generate_knowledge_draft",acquisition_task_id:id,source_excerpt:task.source_excerpt || ""})
+            });
+            const data=await response.json().catch(function(){return null;});
+            if(!response.ok) throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Knowledge draft generation failed.");
+            const nextItems=await loadAcquisitionTasks();
+            container.innerHTML=renderAcquisitionQueue(nextItems);
+            container.__swayAcquisitionItems=nextItems;
+        }catch(error){
+            window.alert(error.message || "Knowledge draft generation failed.");
+            if(button){button.disabled=false;button.textContent="Generate knowledge draft";}
+        }
+    }
+
+    async function verifyIndexAndPublish(taskId,container) {
+        const id=String(taskId || "").trim();
+        if(!id) return;
+        if(!window.confirm("Confirm that you reviewed the generated knowledge draft against the verified source excerpt. InnerMe will then verify it, index it, and publish it to active retrieval.")) return;
+
+        const items=Array.isArray(container.__swayAcquisitionItems) ? container.__swayAcquisitionItems : [];
+        const task=items.find(function(entry){return String(entry.id || "")===id;});
+        if(!task || !task.knowledge_draft_id) {
+            window.alert("The knowledge draft could not be identified.");
+            return;
+        }
+
+        const button=document.querySelector('[data-sway-ai-ki-acq-publish="'+CSS.escape(id)+'"]');
+        if(button){button.disabled=true;button.textContent="Verifying…";}
+
+        try{
+            const verifyResponse=await fetch(SUPABASE_URL+"/rest/v1/rpc/verify_innerme_knowledge",{
+                method:"POST",
+                headers:authHeaders(),
+                body:JSON.stringify({
+                    p_knowledge_id:task.knowledge_draft_id,
+                    p_verification_method:"acquisition_knowledge_review",
+                    p_verification_notes:"Draft reviewed by a Swayphics admin against the verified acquisition source excerpt on "+new Date().toISOString().slice(0,10)+".",
+                    p_verified_source_url:(task.source && task.source.url) || null
+                })
+            });
+            const verifyData=await verifyResponse.json().catch(function(){return null;});
+            if(!verifyResponse.ok) throw new Error(verifyData && (verifyData.message || verifyData.error || verifyData.hint) ? String(verifyData.message || verifyData.error || verifyData.hint) : "Knowledge verification failed.");
+
+            if(button){button.textContent="Indexing…";}
+            const embedResponse=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                method:"POST",
+                headers:authHeaders(),
+                body:JSON.stringify({action:"embed_knowledge",knowledge_ids:[task.knowledge_draft_id]})
+            });
+            const embedData=await embedResponse.json().catch(function(){return null;});
+            if(!embedResponse.ok) throw new Error(embedData && (embedData.message || embedData.error || embedData.hint) ? String(embedData.message || embedData.error || embedData.hint) : "Knowledge indexing failed.");
+
+            const statusResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_knowledge?id=eq."+encodeURIComponent(task.knowledge_draft_id)+"&select=id,status,verification_status,embedding_status&limit=1",{method:"GET",headers:authHeaders()});
+            const statusData=await statusResponse.json().catch(function(){return [];});
+            const row=Array.isArray(statusData) ? statusData[0] : null;
+            if(!row || row.verification_status!=="verified" || row.embedding_status!=="ready"){
+                throw new Error("Knowledge was not fully verified and indexed; publication was blocked.");
+            }
+
+            if(button){button.textContent="Publishing…";}
+            const publishResponse=await fetch(SUPABASE_URL+"/rest/v1/rpc/publish_innerme_knowledge_draft",{
+                method:"POST",
+                headers:authHeaders(),
+                body:JSON.stringify({p_knowledge_id:task.knowledge_draft_id,p_acquisition_task_id:id})
+            });
+            const publishData=await publishResponse.json().catch(function(){return null;});
+            if(!publishResponse.ok) throw new Error(publishData && (publishData.message || publishData.error || publishData.hint) ? String(publishData.message || publishData.error || publishData.hint) : "Knowledge publication failed.");
+
+            window.alert("Knowledge verified, indexed and published successfully.");
+            const nextItems=await loadAcquisitionTasks();
+            container.innerHTML=renderAcquisitionQueue(nextItems);
+            container.__swayAcquisitionItems=nextItems;
+        }catch(error){
+            window.alert(error.message || "Knowledge publication failed.");
+            if(button){button.disabled=false;button.textContent="Verify, index & publish";}
+        }
+    }
+
     function renderKnowledgeGapQueue(items) {
         if (!items.length) {
             return '<p class="sway-ai-ki-good">No active knowledge-acquisition candidates are waiting for review.</p>';
