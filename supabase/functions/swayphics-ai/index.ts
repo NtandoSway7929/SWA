@@ -1620,7 +1620,7 @@ Deno.serve(async (req) => {
       completedCases === benchmarkCases.length && !failures.length
         ? "completed"
         : completedCases > 0
-        ? "completed"
+        ? "inconclusive"
         : "failed";
 
     const summary = {
