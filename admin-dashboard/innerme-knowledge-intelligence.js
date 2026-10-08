@@ -917,6 +917,16 @@
                 '<div class="sway-ai-ki-gaps-analysis"><p class="sway-ai-ki-muted">Not analysed yet.</p></div>' +
                 '<div class="sway-ai-ki-gaps-results"><p class="sway-ai-ki-muted">Open this section to load acquisition candidates.</p></div>' +
             '</details>' +
+            '<details class="sway-ai-ki-evaluation" data-sway-ai-ki-evaluation-panel>' +
+                '<summary>Evaluation &amp; benchmarking</summary>' +
+                '<div class="sway-ai-ki-evaluation-controls">' +
+                    '<span>Runs fixed InnerMe test cases against verified knowledge and records retrieval recall, answer quality, grounding, safety and pass/fail outcomes.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-run>Run benchmark</button>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-refresh>Refresh results</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-evaluation-summary"><p class="sway-ai-ki-muted">No benchmark results loaded.</p></div>' +
+                '<div class="sway-ai-ki-evaluation-results"><p class="sway-ai-ki-muted">Open this section to load benchmark results.</p></div>' +
+            '</details>' +
             '<details class="sway-ai-ki-acquisition" data-sway-ai-ki-acquisition-panel>' +
                 '<summary>Acquisition tasks</summary>' +
                 '<div class="sway-ai-ki-acquisition-controls">' +
@@ -1045,6 +1055,152 @@
                 gapsResults
             );
         });
+
+        const evaluationPanel = details.querySelector("[data-sway-ai-ki-evaluation-panel]");
+        const evaluationSummary = details.querySelector(".sway-ai-ki-evaluation-summary");
+        const evaluationResults = details.querySelector(".sway-ai-ki-evaluation-results");
+        const evaluationRun = details.querySelector("[data-sway-ai-ki-eval-run]");
+        const evaluationRefresh = details.querySelector("[data-sway-ai-ki-eval-refresh]");
+
+        async function loadEvaluationResults() {
+            const runsResponse = await fetch(
+                SUPABASE_URL +
+                    "/rest/v1/innerme_evaluation_runs?select=id,trigger,provider_model,total_cases,passed_cases,failed_cases,pass_rate,average_score,started_at,completed_at,status,summary&order=started_at.desc&limit=5",
+                { method:"GET", headers:authHeaders() }
+            );
+            const runs = await runsResponse.json().catch(function(){return [];});
+            if(!runsResponse.ok){
+                throw new Error(runs && (runs.message || runs.error || runs.hint) ? String(runs.message || runs.error || runs.hint) : "Unable to load benchmark runs.");
+            }
+
+            const latest=Array.isArray(runs) ? runs[0] : null;
+            if(!latest) {
+                return {latest:null,results:[]};
+            }
+
+            const resultsResponse=await fetch(
+                SUPABASE_URL +
+                    "/rest/v1/innerme_evaluation_results?select=id,run_id,case_id,prompt,answer,retrieval_matches,attributed_knowledge,dimension_scores,score,passed,judge_rationale,provider_model,created_at&run_id=eq."+encodeURIComponent(latest.id)+"&order=score.asc",
+                { method:"GET", headers:authHeaders() }
+            );
+            const results=await resultsResponse.json().catch(function(){return [];});
+            if(!resultsResponse.ok){
+                throw new Error(results && (results.message || results.error || results.hint) ? String(results.message || results.error || results.hint) : "Unable to load benchmark case results.");
+            }
+
+            return {latest:latest,results:Array.isArray(results)?results:[]};
+        }
+
+        function renderEvaluation(data) {
+            const latest=data.latest;
+            const results=data.results || [];
+
+            if(!latest){
+                evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">No benchmark run has been completed yet.</p>';
+                evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Run the benchmark to establish the first InnerMe baseline.</p>';
+                return;
+            }
+
+            evaluationSummary.innerHTML=
+                '<div class="sway-ai-ki-eval-summary-grid">' +
+                    '<div><span>Average score</span><strong>'+esc(latest.average_score || 0)+'/100</strong></div>' +
+                    '<div><span>Pass rate</span><strong>'+esc(latest.pass_rate || 0)+'%</strong></div>' +
+                    '<div><span>Passed</span><strong>'+esc(latest.passed_cases || 0)+' / '+esc(latest.total_cases || 0)+'</strong></div>' +
+                    '<div><span>Status</span><strong>'+esc(String(latest.status || "unknown").replace(/_/g," "))+'</strong></div>' +
+                '</div>' +
+                '<p class="sway-ai-ki-foot">Baseline rule: a case passes at 80+ overall and must satisfy the benchmark safety and evidence requirements.</p>';
+
+            if(!results.length){
+                evaluationResults.innerHTML='<p class="sway-ai-ki-error">The benchmark run exists but contains no case results.</p>';
+                return;
+            }
+
+            evaluationResults.innerHTML=results.map(function(result){
+                const dims=result.dimension_scores || {};
+                const recall=Number(dims.retrieval_recall || 0);
+                const status=result.passed===true ? "PASS" : "FAIL";
+                const className=result.passed===true ? "sway-ai-ki-eval-pass" : "sway-ai-ki-eval-fail";
+                return '<article class="sway-ai-ki-eval-item">' +
+                    '<div class="sway-ai-ki-eval-head"><div><strong>'+esc((result.case_id || "Benchmark case").slice(0,8))+'</strong><span>'+esc(status)+' · '+esc(Number(result.score || 0).toFixed(0))+'/100</span></div><em class="'+className+'">'+esc(status)+'</em></div>' +
+                    '<p><strong>Question:</strong> '+esc(result.prompt || "")+'</p>' +
+                    '<p><strong>Retrieval recall:</strong> '+esc(recall)+'%</p>' +
+                    '<div class="sway-ai-ki-eval-dims">' +
+                        '<span>Correctness '+esc(dims.correctness || 0)+'</span>' +
+                        '<span>Grounding '+esc(dims.grounding || 0)+'</span>' +
+                        '<span>Relevance '+esc(dims.relevance || 0)+'</span>' +
+                        '<span>Safety '+esc(dims.safety || 0)+'</span>' +
+                        '<span>Completeness '+esc(dims.completeness || 0)+'</span>' +
+                    '</div>' +
+                    '<details><summary>View answer &amp; judge rationale</summary>' +
+                        '<div class="sway-ai-ki-eval-answer"><strong>InnerMe answer</strong><p>'+esc(result.answer || "No answer recorded.")+'</p><strong>Judge rationale</strong><p>'+esc(result.judge_rationale || "No rationale recorded.")+'</p></div>' +
+                    '</details>' +
+                '</article>';
+            }).join("");
+        }
+
+        async function refreshEvaluation() {
+            evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Loading latest benchmark…</p>';
+            try {
+                const data=await loadEvaluationResults();
+                renderEvaluation(data);
+            } catch(error) {
+                evaluationResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message || "Benchmark results failed to load.")+'</p>';
+            }
+        }
+
+        if(evaluationPanel){
+            evaluationPanel.addEventListener("toggle",function(){
+                if(evaluationPanel.open) refreshEvaluation();
+            });
+        }
+
+        if(evaluationRefresh){
+            evaluationRefresh.addEventListener("click",function(event){
+                event.preventDefault();
+                event.stopPropagation();
+                refreshEvaluation();
+            });
+        }
+
+        if(evaluationRun){
+            evaluationRun.addEventListener("click",async function(event){
+                event.preventDefault();
+                event.stopPropagation();
+                if(evaluationRun.disabled) return;
+
+                evaluationRun.disabled=true;
+                evaluationRun.textContent="Running…";
+                evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">Running the fixed benchmark cases…</p>';
+                evaluationResults.innerHTML='<p class="sway-ai-ki-muted">InnerMe is being evaluated case by case.</p>';
+
+                try{
+                    const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                        method:"POST",
+                        headers:authHeaders(),
+                        body:JSON.stringify({action:"run_innerme_benchmark",benchmark_limit:12})
+                    });
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok){
+                        throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Benchmark execution failed.");
+                    }
+                    await refreshEvaluation();
+                    window.alert(
+                        "Benchmark complete: " +
+                        String(data.passed_cases || 0) +
+                        "/" +
+                        String(data.completed_cases || data.total_cases || 0) +
+                        " cases passed, average score " +
+                        String(data.average_score || 0) +
+                        "/100."
+                    );
+                }catch(error){
+                    evaluationResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message || "Benchmark execution failed.")+'</p>';
+                }finally{
+                    evaluationRun.disabled=false;
+                    evaluationRun.textContent="Run benchmark";
+                }
+            });
+        }
 
         const acquisitionPanel = details.querySelector("[data-sway-ai-ki-acquisition-panel]");
         const acquisitionResults = details.querySelector(".sway-ai-ki-acquisition-results");
@@ -1218,6 +1374,38 @@
         "body.sway-dark-mode .sway-ai-ki-verification-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
         "body.sway-dark-mode .sway-ai-ki-verification-source{border-top-color:rgba(119,193,252,.1)}" +
         "body.sway-dark-mode .sway-ai-ki-verification-source a{color:#9FD5FF}" +
+        ".sway-ai-ki-evaluation{width:100%;margin:4px 0}" +
+        ".sway-ai-ki-evaluation>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
+        ".sway-ai-ki-evaluation>summary::-webkit-details-marker{display:none}" +
+        ".sway-ai-ki-evaluation>summary:after{content:'›';transform:rotate(90deg);transition:transform .16s ease}" +
+        ".sway-ai-ki-evaluation[open]>summary:after{transform:rotate(-90deg)}" +
+        ".sway-ai-ki-evaluation-controls{display:grid;gap:8px;padding:6px 10px 10px}" +
+        ".sway-ai-ki-evaluation-controls>span{font-size:11px;line-height:1.45;opacity:.68}" +
+        ".sway-ai-ki-evaluation-summary,.sway-ai-ki-evaluation-results{display:grid;gap:9px;padding:0 10px 10px}" +
+        ".sway-ai-ki-eval-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}" +
+        ".sway-ai-ki-eval-summary-grid>div{display:grid;gap:3px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-eval-summary-grid span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-eval-summary-grid strong{font-size:11px}" +
+        ".sway-ai-ki-eval-item{display:grid;gap:7px;padding:10px;border:1px solid rgba(1,82,244,.1);border-radius:12px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-eval-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-eval-head>div{display:grid;gap:3px;min-width:0}" +
+        ".sway-ai-ki-eval-head strong{font-size:10px}" +
+        ".sway-ai-ki-eval-head span{font-size:9px;opacity:.6}" +
+        ".sway-ai-ki-eval-head em{padding:4px 6px;border-radius:999px;font-size:8px;font-style:normal;font-weight:800}" +
+        ".sway-ai-ki-eval-pass{background:rgba(34,197,94,.1);color:#157347}" +
+        ".sway-ai-ki-eval-fail{background:rgba(220,53,69,.1);color:#b42318}" +
+        ".sway-ai-ki-eval-item>p{margin:0;font-size:9px;line-height:1.45}" +
+        ".sway-ai-ki-eval-dims{display:flex;flex-wrap:wrap;gap:5px;font-size:8px;line-height:1.35;opacity:.7}" +
+        ".sway-ai-ki-eval-item details{border-top:1px solid rgba(1,82,244,.08);padding-top:6px}" +
+        ".sway-ai-ki-eval-item summary{font-size:9px;cursor:pointer}" +
+        ".sway-ai-ki-eval-answer{display:grid;gap:4px;margin-top:7px}" +
+        ".sway-ai-ki-eval-answer strong{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-eval-answer p{margin:0;font-size:9px;line-height:1.5;white-space:pre-wrap}" +
+        "body.sway-dark-mode .sway-ai-ki-eval-summary-grid>div,body.sway-dark-mode .sway-ai-ki-eval-item{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-eval-pass{background:rgba(34,197,94,.14);color:#91E8B0}" +
+        "body.sway-dark-mode .sway-ai-ki-eval-fail{background:rgba(190,52,52,.14);color:#FFB0B0}" +
+        "body.sway-dark-mode .sway-ai-ki-eval-item details{border-top-color:rgba(119,193,252,.1)}" +
+        "@media(max-width:680px){.sway-ai-ki-eval-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-eval-head{display:grid;gap:6px}.sway-ai-ki-eval-head em{width:fit-content}}"
         ".sway-ai-ki-acquisition{width:100%;margin:4px 0}" +
         ".sway-ai-ki-acquisition>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
         ".sway-ai-ki-acquisition>summary::-webkit-details-marker{display:none}" +
