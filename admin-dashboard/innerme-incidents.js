@@ -55,6 +55,28 @@
     }
 
     // Phase 29 uses the central intelligence runner for calibration-aware refreshes.
+    async function refreshFullIntelligence() {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/rpc/run_innerme_incident_intelligence",
+            {
+                method: "POST",
+                headers: headers(),
+                body: "{}"
+            }
+        );
+        const data = await response.json().catch(function () {
+            return null;
+        });
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Integrated InnerMe intelligence refresh failed."
+            );
+        }
+        return Number(data || 0);
+    }
+
     async function loadIncidents() {
         const response = await fetch(
             SUPABASE_URL +
@@ -1092,8 +1114,8 @@
         const generatedLabel = panel.querySelector("[data-im-incident-generated]");
         generatedLabel.textContent =
             generated > 0
-                ? generated + " new, changed or newly prioritised incident signal(s) processed."
-                : "No new or changed incident signals detected.";
+                ? generated + " records processed across the integrated incident, outcome, strategy, trust, coordination and predictive intelligence pipeline."
+                : "Integrated intelligence refresh completed. No new calibration or signal records were required.";
     }
 
     function injectStyles() {
@@ -1205,7 +1227,7 @@ body.sway-dark-mode .sway-ai-incident-intervention-selection{border-color:rgba(1
                 const coordinationAssignments = await loadAgentCoordinationAssignments();
                 const coordinationHandoffs = await loadAgentCoordinationHandoffs();
                 const agents = await loadInnerMeAgents();
-                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, executions, outcomes, coordinationRuns, coordinationAssignments, coordinationHandoffs, agents, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated + counterfactualGenerated + interventionGenerated + coordinationGenerated);
+                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, executions, outcomes, coordinationRuns, coordinationAssignments, coordinationHandoffs, agents, generated);
             } catch (error) {
                 panel.querySelector("[data-im-incidents]").innerHTML =
                     '<p class="sway-ai-ki-error">' + esc(error.message || "Incident correlation failed.") + "</p>";
