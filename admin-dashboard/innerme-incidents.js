@@ -129,6 +129,85 @@
         return Array.isArray(data) ? data : [];
     }
 
+    async function loadRootAnalysis() {
+        const response = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_incident_root_analysis" +
+                "?select=incident_id,analysis_status,confidence,leading_dependency_id,leading_factor,blocking_factor,evidence_summary,alternative_explanations,next_validation_step,method,condition_fingerprint,updated_at" +
+                "&order=updated_at.desc&limit=100",
+            {
+                method: "GET",
+                headers: headers()
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return [];
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to load incident dependency analysis."
+            );
+        }
+
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function loadDependencies() {
+        const response = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_incident_dependencies" +
+                "?select=incident_id,dependency_rank,dependency_score,dependency_type,source_table,source_id,relationship,label,is_unresolved,evidence" +
+                "&order=incident_id,dependency_rank&limit=500",
+            {
+                method: "GET",
+                headers: headers()
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return [];
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to load incident dependency graph."
+            );
+        }
+
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function refreshRootAnalysis() {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/rpc/refresh_innerme_incident_root_analysis",
+            {
+                method: "POST",
+                headers: headers(),
+                body: "{}"
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return null;
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Dependency analysis refresh failed."
+            );
+        }
+
+        return Number(data || 0);
+    }
+
     async function loadEvents() {
         const response = await fetch(
             SUPABASE_URL +
@@ -245,7 +324,7 @@
         }).join("");
     }
 
-    function render(panel, incidents, events, intelligence, generated) {
+    function render(panel, incidents, events, intelligence, analyses, dependencies, generated) {
         const active = incidents.filter(function (item) {
             return ["open", "acknowledged"].includes(String(item.status));
         });
@@ -278,6 +357,18 @@
             result[band] = (result[band] || 0) + 1;
             return result;
         }, { total: 0, critical: 0, high: 0, medium: 0, low: 0 });
+
+        const analysisMap = new Map();
+        analyses.forEach(function (item) {
+            analysisMap.set(String(item.incident_id || ""), item);
+        });
+
+        const dependencyMap = new Map();
+        dependencies.forEach(function (item) {
+            const key = String(item.incident_id || "");
+            if (!dependencyMap.has(key)) dependencyMap.set(key, []);
+            dependencyMap.get(key).push(item);
+        });
 
         const summary = panel.querySelector("[data-im-incident-summary]");
         summary.innerHTML =
@@ -312,7 +403,29 @@
                 const status = String(incident.status || "open");
                 const isActive = ["open", "acknowledged"].includes(status);
                 const info = intelligenceMap.get(String(incident.id)) || null;
+                const analysis = analysisMap.get(String(incident.id)) || null;
+                const graph = dependencyMap.get(String(incident.id)) || [];
                 const eventHistory = eventMap.get(String(incident.id)) || [];
+                const dependencyHtml = graph.length
+                    ? '<div class="sway-ai-incident-dependencies">' +
+                        '<div class="sway-ai-incident-intelligence-head"><strong>Dependency chain</strong><span>' + esc(String(graph.length)) + ' linked record(s)</span></div>' +
+                        graph.slice(0, 6).map(function (dependency) {
+                            return '<div class="sway-ai-incident-dependency-row">' +
+                                '<span><strong>#' + esc(dependency.dependency_rank) + '</strong> ' + esc(dependency.label || dependency.relationship || "Dependency") + '</span>' +
+                                '<small>' + esc(String(dependency.dependency_score || 0) + '/100 · ' + (dependency.is_unresolved ? "unresolved" : "resolved")) + '</small>' +
+                            '</div>';
+                        }).join("") +
+                      '</div>'
+                    : '';
+                const analysisHtml = analysis
+                    ? '<div class="sway-ai-incident-root-analysis">' +
+                        '<div class="sway-ai-incident-intelligence-head"><strong>Leading-factor analysis</strong><span>' + esc(analysis.confidence || "low") + ' confidence · ' + esc(analysis.analysis_status || "active") + '</span></div>' +
+                        '<p><strong>Leading factor:</strong> ' + esc(analysis.leading_factor || "") + '</p>' +
+                        '<p><strong>Blocking factor:</strong> ' + esc(analysis.blocking_factor || "") + '</p>' +
+                        '<p><strong>Evidence:</strong> ' + esc(analysis.evidence_summary || "") + '</p>' +
+                        '<p><strong>Next validation:</strong> ' + esc(analysis.next_validation_step || "") + '</p>' +
+                      '</div>'
+                    : '<div class="sway-ai-incident-root-analysis sway-ai-incidents-muted">No dependency analysis is currently available.</div>';
                 const intelligenceHtml = info
                     ? '<div class="sway-ai-incident-intelligence">' +
                         '<div class="sway-ai-incident-intelligence-head">' +
@@ -352,6 +465,8 @@
                         '<h4>' + esc(incident.title || "Operational incident") + '</h4>' +
                         '<p>' + esc(incident.summary || "") + '</p>' +
                         intelligenceHtml +
+                        analysisHtml +
+                        dependencyHtml +
                         '<div class="sway-ai-incident-reason"><strong>Why this is correlated</strong><p>' + esc(incident.correlation_reason || "") + '</p></div>' +
                         '<div class="sway-ai-incident-reason"><strong>Recommended response</strong><p>' + esc(incident.recommended_response || "") + '</p></div>' +
                         '<details class="sway-ai-incident-detail">' +
@@ -407,7 +522,7 @@
             ".sway-ai-incident-pill.critical,.sway-ai-incident-pill.high{background:rgba(190,52,52,.12);color:#B42323}" +
             ".sway-ai-incident-pill.medium{background:rgba(247,201,120,.14);color:#9A6700}" +
             ".sway-ai-incident-pill.low{background:rgba(1,82,244,.08);color:#0152F4}" +
-            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}body.sway-dark-mode .sway-ai-incident-intelligence{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}@media(max-width:700px){.sway-ai-incident-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
+            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-dependency-row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-dependency-row:first-of-type{border-top:0}.sway-ai-incident-dependency-row span{font-size:8px;line-height:1.4}.sway-ai-incident-dependency-row small{font-size:7px;opacity:.55;white-space:nowrap}body.sway-dark-mode .sway-ai-incident-root-analysis,body.sway-dark-mode .sway-ai-incident-dependencies{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}body.sway-dark-mode .sway-ai-incident-intelligence{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}@media(max-width:700px){.sway-ai-incident-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
             ".sway-ai-incident-reason{display:grid;gap:2px}.sway-ai-incident-reason strong{font-size:8px;text-transform:uppercase;letter-spacing:.04em;opacity:.58}" +
             ".sway-ai-incident-reason p{margin:0;font-size:9px;line-height:1.45}" +
             ".sway-ai-incident-detail{border-top:1px solid rgba(1,82,244,.08);padding-top:6px}.sway-ai-incident-detail>summary{font-size:8px;cursor:pointer;opacity:.72}" +
@@ -441,8 +556,8 @@
             '<details class="sway-ai-incidents" data-sway-incident-panel>' +
                 '<summary>Operational incidents</summary>' +
                 '<div class="sway-ai-incidents-top">' +
-                    '<span>Correlates independent exceptions into compound operational incidents. Correlation is deterministic, source-backed and advisory. It does not mutate leads, clients, tasks, projects, invoices or InnerMe action state.</span>' +
-                    '<button type="button" class="sway-ai-knowledge-test-button" data-im-incident-refresh>Run correlation</button>' +
+                    '<span>Correlates exceptions, prioritises incidents and traces their live workspace dependencies. Analysis is deterministic, source-backed and advisory. It does not mutate leads, clients, tasks, projects, invoices or InnerMe action state.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-im-incident-refresh>Run incident analysis</button>' +
                 '</div>' +
                 '<div class="sway-ai-incident-summary" data-im-incident-summary></div>' +
                 '<p class="sway-ai-incident-generated" data-im-incident-generated>Not scanned yet.</p>' +
@@ -459,16 +574,19 @@
             try {
                 const generated = await correlate();
                 const intelligenceGenerated = await refreshIntelligence();
+                const analysisGenerated = await refreshRootAnalysis();
                 const incidents = await loadIncidents();
                 const events = await loadEvents();
                 const intelligence = await loadIntelligence();
-                render(panel, incidents, events, intelligence, generated + intelligenceGenerated);
+                const analyses = await loadRootAnalysis();
+                const dependencies = await loadDependencies();
+                render(panel, incidents, events, intelligence, analyses, dependencies, generated + intelligenceGenerated + analysisGenerated);
             } catch (error) {
                 panel.querySelector("[data-im-incidents]").innerHTML =
                     '<p class="sway-ai-ki-error">' + esc(error.message || "Incident correlation failed.") + "</p>";
             } finally {
                 refreshButton.disabled = false;
-                refreshButton.textContent = "Run correlation";
+                refreshButton.textContent = "Run incident analysis";
             }
         }
 
