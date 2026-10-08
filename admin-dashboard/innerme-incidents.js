@@ -183,6 +183,58 @@
         return Array.isArray(data) ? data : [];
     }
 
+    async function loadCounterfactuals() {
+        const response = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_incident_counterfactuals" +
+                "?select=incident_id,dependency_id,hypothesis_test_id,current_priority,counterfactual_priority,estimated_priority_delta,residual_risk_band,intervention_class,proposed_intervention,expected_effect,expected_signal,reversibility,intervention_risk,decision_gate,confidence,assumptions,evidence,updated_at" +
+                "&order=estimated_priority_delta.asc,counterfactual_priority.asc&limit=500",
+            {
+                method: "GET",
+                headers: headers()
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return [];
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to load incident counterfactuals."
+            );
+        }
+
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function refreshCounterfactuals() {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/rpc/refresh_innerme_incident_counterfactuals",
+            {
+                method: "POST",
+                headers: headers(),
+                body: "{}"
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return null;
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Counterfactual analysis refresh failed."
+            );
+        }
+
+        return Number(data || 0);
+    }
+
     async function refreshHypothesisTests() {
         const response = await fetch(
             SUPABASE_URL + "/rest/v1/rpc/refresh_innerme_incident_hypothesis_tests",
@@ -376,7 +428,7 @@
         }).join("");
     }
 
-    function render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, generated) {
+    function render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, generated) {
         const active = incidents.filter(function (item) {
             return ["open", "acknowledged"].includes(String(item.status));
         });
@@ -429,6 +481,13 @@
             hypothesisMap.get(key).push(item);
         });
 
+        const counterfactualMap = new Map();
+        counterfactuals.forEach(function (item) {
+            const key = String(item.incident_id || "");
+            if (!counterfactualMap.has(key)) counterfactualMap.set(key, []);
+            counterfactualMap.get(key).push(item);
+        });
+
         const summary = panel.querySelector("[data-im-incident-summary]");
         summary.innerHTML =
             '<div><span>Active</span><strong>' + esc(counts.active) + '</strong></div>' +
@@ -465,6 +524,7 @@
                 const analysis = analysisMap.get(String(incident.id)) || null;
                 const graph = dependencyMap.get(String(incident.id)) || [];
                 const hypotheses = hypothesisMap.get(String(incident.id)) || [];
+                const counterfactuals = counterfactualMap.get(String(incident.id)) || [];
                 const eventHistory = eventMap.get(String(incident.id)) || [];
                 const dependencyHtml = graph.length
                     ? '<div class="sway-ai-incident-dependencies">' +
@@ -485,6 +545,22 @@
                                 '<div class="sway-ai-incident-hypothesis-head"><strong>' + esc(test.validation_status || "inconclusive") + '</strong><span>' + esc(String(test.support_score || 0) + '/100 support · ' + String(test.contradiction_score || 0) + '/100 contradiction') + '</span></div>' +
                                 '<p>' + esc(test.hypothesis || "") + '</p>' +
                                 '<small>Next test: ' + esc(test.next_test || "") + '</small>' +
+                            '</div>';
+                        }).join("") +
+                      '</div>'
+                    : '';
+                const counterfactualHtml = counterfactuals.length
+                    ? '<div class="sway-ai-incident-counterfactuals">' +
+                        '<div class="sway-ai-incident-intelligence-head"><strong>Counterfactual intervention</strong><span>estimated effect only</span></div>' +
+                        counterfactuals.slice(0, 3).map(function (cf) {
+                            const delta = Number(cf.estimated_priority_delta || 0);
+                            const direction = delta < 0 ? 'lower' : delta > 0 ? 'higher' : 'unchanged';
+                            return '<div class="sway-ai-incident-counterfactual-row">' +
+                                '<div class="sway-ai-incident-hypothesis-head"><strong>' + esc(direction) + '</strong><span>' + esc(String(cf.current_priority || 0) + ' → ' + String(cf.counterfactual_priority || 0) + ' priority') + '</span></div>' +
+                                '<p><strong>Intervention:</strong> ' + esc(cf.proposed_intervention || "") + '</p>' +
+                                '<p><strong>Expected signal:</strong> ' + esc(cf.expected_signal || "") + '</p>' +
+                                '<small>' + esc((cf.confidence || "low") + ' confidence · ' + (cf.residual_risk_band || "low") + ' residual risk · ' + (cf.reversibility || "Review required")) + '</small>' +
+                                '<small>Gate: ' + esc(cf.decision_gate || "") + '</small>' +
                             '</div>';
                         }).join("") +
                       '</div>'
@@ -539,6 +615,7 @@
                         intelligenceHtml +
                         analysisHtml +
                         hypothesisHtml +
+                        counterfactualHtml +
                         dependencyHtml +
                         '<div class="sway-ai-incident-reason"><strong>Why this is correlated</strong><p>' + esc(incident.correlation_reason || "") + '</p></div>' +
                         '<div class="sway-ai-incident-reason"><strong>Recommended response</strong><p>' + esc(incident.recommended_response || "") + '</p></div>' +
@@ -595,7 +672,7 @@
             ".sway-ai-incident-pill.critical,.sway-ai-incident-pill.high{background:rgba(190,52,52,.12);color:#B42323}" +
             ".sway-ai-incident-pill.medium{background:rgba(247,201,120,.14);color:#9A6700}" +
             ".sway-ai-incident-pill.low{background:rgba(1,82,244,.08);color:#0152F4}" +
-            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-hypotheses{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-hypothesis-row{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-hypothesis-row:first-of-type{border-top:0}.sway-ai-incident-hypothesis-head{display:flex;justify-content:space-between;gap:8px}.sway-ai-incident-hypothesis-head strong{font-size:8px;text-transform:capitalize}.sway-ai-incident-hypothesis-head span,.sway-ai-incident-hypothesis-row small{font-size:7px;opacity:.6}.sway-ai-incident-hypothesis-row p{margin:3px 0;font-size:8px;line-height:1.4}body.sway-dark-mode .sway-ai-incident-hypotheses{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}.sway-ai-incident-dependency-row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-dependency-row:first-of-type{border-top:0}.sway-ai-incident-dependency-row span{font-size:8px;line-height:1.4}.sway-ai-incident-dependency-row small{font-size:7px;opacity:.55;white-space:nowrap}body.sway-dark-mode .sway-ai-incident-root-analysis,body.sway-dark-mode .sway-ai-incident-dependencies{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}body.sway-dark-mode .sway-ai-incident-intelligence{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}@media(max-width:700px){.sway-ai-incident-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
+            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-counterfactuals{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-counterfactual-row{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-counterfactual-row:first-of-type{border-top:0}.sway-ai-incident-counterfactual-row p{margin:3px 0;font-size:8px;line-height:1.4}.sway-ai-incident-counterfactual-row small{display:block;font-size:7px;opacity:.6}body.sway-dark-mode .sway-ai-incident-counterfactuals{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}.sway-ai-incident-hypotheses{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-hypothesis-row{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-hypothesis-row:first-of-type{border-top:0}.sway-ai-incident-hypothesis-head{display:flex;justify-content:space-between;gap:8px}.sway-ai-incident-hypothesis-head strong{font-size:8px;text-transform:capitalize}.sway-ai-incident-hypothesis-head span,.sway-ai-incident-hypothesis-row small{font-size:7px;opacity:.6}.sway-ai-incident-hypothesis-row p{margin:3px 0;font-size:8px;line-height:1.4}body.sway-dark-mode .sway-ai-incident-hypotheses{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}.sway-ai-incident-dependency-row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-dependency-row:first-of-type{border-top:0}.sway-ai-incident-dependency-row span{font-size:8px;line-height:1.4}.sway-ai-incident-dependency-row small{font-size:7px;opacity:.55;white-space:nowrap}body.sway-dark-mode .sway-ai-incident-root-analysis,body.sway-dark-mode .sway-ai-incident-dependencies{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}body.sway-dark-mode .sway-ai-incident-intelligence{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}@media(max-width:700px){.sway-ai-incident-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
             ".sway-ai-incident-reason{display:grid;gap:2px}.sway-ai-incident-reason strong{font-size:8px;text-transform:uppercase;letter-spacing:.04em;opacity:.58}" +
             ".sway-ai-incident-reason p{margin:0;font-size:9px;line-height:1.45}" +
             ".sway-ai-incident-detail{border-top:1px solid rgba(1,82,244,.08);padding-top:6px}.sway-ai-incident-detail>summary{font-size:8px;cursor:pointer;opacity:.72}" +
@@ -649,13 +726,15 @@
                 const intelligenceGenerated = await refreshIntelligence();
                 const analysisGenerated = await refreshRootAnalysis();
                 const hypothesisGenerated = await refreshHypothesisTests();
+                const counterfactualGenerated = await refreshCounterfactuals();
                 const incidents = await loadIncidents();
                 const events = await loadEvents();
                 const intelligence = await loadIntelligence();
                 const analyses = await loadRootAnalysis();
                 const dependencies = await loadDependencies();
                 const hypotheses = await loadHypothesisTests();
-                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated);
+                const counterfactuals = await loadCounterfactuals();
+                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated + counterfactualGenerated);
             } catch (error) {
                 panel.querySelector("[data-im-incidents]").innerHTML =
                     '<p class="sway-ai-ki-error">' + esc(error.message || "Incident correlation failed.") + "</p>";
