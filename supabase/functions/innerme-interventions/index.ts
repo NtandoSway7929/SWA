@@ -183,25 +183,6 @@ Deno.serve(async (req) => {
     const selection = execution.innerme_incident_intervention_selection;
     const option = execution.innerme_incident_intervention_options;
 
-    if (
-      !selection ||
-      selection.selection_status !== "selected" ||
-      selection.selected_option_id !== execution.option_id ||
-      option.recommendation_status !== "recommended" ||
-      option.conflict_status === "blocked" ||
-      selection.condition_fingerprint !== execution.condition_fingerprint ||
-      option.condition_fingerprint !== execution.condition_fingerprint
-    ) {
-      return json(
-        {
-          error:
-            "The intervention approval conditions are no longer valid. Re-run incident analysis.",
-        },
-        409,
-        origin,
-      );
-    }
-
     if (action === "verify") {
       if (!execution.task_id) {
         return json({
@@ -275,6 +256,25 @@ Deno.serve(async (req) => {
       return json(
         { error: "Supported actions are execute and verify." },
         400,
+        origin,
+      );
+    }
+
+    if (
+      !selection ||
+      selection.selection_status !== "selected" ||
+      selection.selected_option_id !== execution.option_id ||
+      option.recommendation_status !== "recommended" ||
+      option.conflict_status === "blocked" ||
+      selection.condition_fingerprint !== execution.condition_fingerprint ||
+      option.condition_fingerprint !== execution.condition_fingerprint
+    ) {
+      return json(
+        {
+          error:
+            "The intervention approval conditions are no longer valid. Re-run incident analysis.",
+        },
+        409,
         origin,
       );
     }
