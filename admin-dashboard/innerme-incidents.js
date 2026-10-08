@@ -701,7 +701,7 @@
         }).join("");
     }
 
-    function render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, executions, outcomes, generated) {
+    function render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, executions, outcomes, coordinationRuns, coordinationAssignments, coordinationHandoffs, agents, generated) {
         const active = incidents.filter(function (item) {
             return ["open", "acknowledged"].includes(String(item.status));
         });
@@ -783,6 +783,27 @@
         const outcomeMap = new Map();
         outcomes.forEach(function (item) {
             outcomeMap.set(String(item.execution_id || ""), item);
+        });
+
+        const coordinationMap = new Map();
+        coordinationRuns.forEach(function (run) {
+            coordinationMap.set(String(run.target_id || ""), run);
+        });
+        const assignmentsMap = new Map();
+        coordinationAssignments.forEach(function (item) {
+            const key = String(item.run_id || "");
+            if (!assignmentsMap.has(key)) assignmentsMap.set(key, []);
+            assignmentsMap.get(key).push(item);
+        });
+        const handoffsMap = new Map();
+        coordinationHandoffs.forEach(function (item) {
+            const key = String(item.run_id || "");
+            if (!handoffsMap.has(key)) handoffsMap.set(key, []);
+            handoffsMap.get(key).push(item);
+        });
+        const agentMap = new Map();
+        agents.forEach(function (agent) {
+            agentMap.set(String(agent.id || ""), agent);
         });
 
         const summary = panel.querySelector("[data-im-incident-summary]");
@@ -873,6 +894,13 @@
                 const currentOutcome = currentExecution
                     ? outcomeMap.get(String(currentExecution.id)) || null
                     : null;
+                const coordinationRun = coordinationMap.get(String(incident.id)) || null;
+                const coordinationAssignments = coordinationRun
+                    ? (assignmentsMap.get(String(coordinationRun.id)) || [])
+                    : [];
+                const coordinationHandoffs = coordinationRun
+                    ? (handoffsMap.get(String(coordinationRun.id)) || [])
+                    : [];
                 const executionHtml =
                     selection && selection.selection_status === "selected"
                         ? '<div class="sway-ai-incident-execution">' +
