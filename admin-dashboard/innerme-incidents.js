@@ -292,6 +292,42 @@
         return Array.isArray(data) ? data : [];
     }
 
+    async function refreshAgentCoordination() {
+        const response = await fetch(SUPABASE_URL + "/rest/v1/rpc/refresh_innerme_agent_coordination", {
+            method: "POST", headers: headers(), body: "{}"
+        });
+        const data = await response.json().catch(function () { return null; });
+        if (!response.ok) throw new Error((data && (data.message || data.error || data.hint)) || "Agent coordination refresh failed.");
+        return Number(data || 0);
+    }
+
+    async function loadAgentCoordinationRuns() {
+        const response = await fetch(SUPABASE_URL + "/rest/v1/innerme_agent_coordination_runs?select=id,run_key,target_type,target_id,objective,rationale,coordination_mode,status,conflict_status,conflict_notes,agent_count,condition_fingerprint,approval_required,updated_at&target_type=eq.incident&order=updated_at.desc&limit=200", { method: "GET", headers: headers() });
+        const data = await response.json().catch(function () { return []; });
+        if (!response.ok) throw new Error("Unable to load agent coordination runs.");
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function loadAgentCoordinationAssignments() {
+        const response = await fetch(SUPABASE_URL + "/rest/v1/innerme_agent_coordination_assignments?select=id,run_id,agent_id,assignment_role,sequence_rank,objective,expected_output,trust_stage,status,depends_on_assignment_id,handoff_required,updated_at&order=sequence_rank.asc&limit=500", { method: "GET", headers: headers() });
+        const data = await response.json().catch(function () { return []; });
+        if (!response.ok) throw new Error("Unable to load agent coordination assignments.");
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function loadAgentCoordinationHandoffs() {
+        const response = await fetch(SUPABASE_URL + "/rest/v1/innerme_agent_coordination_handoffs?select=id,run_id,from_assignment_id,to_assignment_id,sequence_rank,status,handoff_contract,updated_at&order=sequence_rank.asc&limit=500", { method: "GET", headers: headers() });
+        const data = await response.json().catch(function () { return []; });
+        if (!response.ok) throw new Error("Unable to load agent coordination handoffs.");
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function loadInnerMeAgents() {
+        const response = await fetch(SUPABASE_URL + "/rest/v1/innerme_agents?select=id,slug,name,trust_stage,status,permissions&order=name.asc&limit=50", { method: "GET", headers: headers() });
+        const data = await response.json().catch(function () { return []; });
+        if (!response.ok) throw new Error("Unable to load InnerMe agents.");
+        return Array.isArray(data) ? data : [];
+    }
     async function proposeLearningCandidate(outcomeId) {
         const response = await fetch(
             SUPABASE_URL + "/rest/v1/rpc/propose_innerme_intervention_learning_candidate",
