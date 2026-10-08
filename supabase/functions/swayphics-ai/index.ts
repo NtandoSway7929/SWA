@@ -6039,7 +6039,7 @@ Deno.serve(async (req) => {
       "Use relative timing with due_offset_days rather than inventing calendar dates.",
       "Return JSON only in this exact shape:",
       '{"plan":{"plan_key":"decision-id","title":"...","objective":"...","rationale":"...","evidence":[{"source":"workspace|knowledge","type":"lead|follow_up|quote|invoice|enquiry|communication|email|task|client|project|payment|decision|insight|knowledge","id":"...","why":"..."}],"success_metric":"...","completion_criteria":["..."],"expected_outcome":"...","duration_days":7,"effort":"low|medium|high","urgency":"critical|high|normal|low","confidence":"high|medium|low","risk":"..."},"steps":[{"step_order":1,"title":"...","action":"...","purpose":"...","owner_role":"Swayphics admin","due_offset_days":0,"depends_on_step_order":null,"success_signal":"...","verification_method":"...","risk_level":"low|medium|high","notes":"..."}]}',
-      "plan_key must equal the active decision ID.",
+      "plan_key is supplied by the server and must not be invented or relied on by the model.",
       "duration_days must be an integer from 0 to 365.",
       "due_offset_days must be an integer from 0 to 365.",
       "The first step should be the highest-confidence immediate move. Later steps should depend on earlier steps when appropriate.",
@@ -6290,7 +6290,7 @@ Deno.serve(async (req) => {
       : String(decision.confidence || "medium");
 
     const planPayload = {
-      plan_key: decisionId,
+      plan_key: await sha256(decisionId + "|" + crypto.randomUUID()),
       decision_id: decisionId,
       title: cleanPlanTitle,
       objective: cleanObjective,
