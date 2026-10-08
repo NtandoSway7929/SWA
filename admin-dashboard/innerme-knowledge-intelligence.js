@@ -927,6 +927,16 @@
                 '<div class="sway-ai-ki-decisions-summary"><p class="sway-ai-ki-muted">No decision analysis run yet.</p></div>' +
                 '<div class="sway-ai-ki-decisions-results"><p class="sway-ai-ki-muted">Open this section to load decision candidates.</p></div>' +
             '</details>' +
+
+            '<details class="sway-ai-ki-execution" data-sway-ai-ki-execution-panel>' +
+                '<summary>Execution intelligence</summary>' +
+                '<div class="sway-ai-ki-execution-controls">' +
+                    '<span>Turns approved InnerMe decisions into evidence-linked draft execution plans. Plans require explicit approval and Phase 9 does not execute external actions.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-refresh>Refresh approved decisions</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-execution-summary"><p class="sway-ai-ki-muted">No execution plans loaded.</p></div>' +
+                '<div class="sway-ai-ki-execution-results"><p class="sway-ai-ki-muted">Open this section to load approved decisions.</p></div>' +
+            '</details>' +
             '<details class="sway-ai-ki-evaluation" data-sway-ai-ki-evaluation-panel>' +
                 '<summary>Evaluation &amp; benchmarking</summary>' +
                 '<div class="sway-ai-ki-evaluation-controls">' +
@@ -944,7 +954,7 @@
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-acq-refresh>Refresh acquisition tasks</button>' +
                 '</div>' +
                 '<div class="sway-ai-ki-acquisition-results"><p class="sway-ai-ki-muted">Open this section to load acquisition tasks.</p></div>' +
-            '</details>'
+            '</details>' +
             '<details class="sway-ai-ki-verification" data-sway-ai-ki-verification-panel>' +
                 '<summary>Source verification</summary>' +
                 '<div class="sway-ai-ki-verification-controls">' +
@@ -1176,11 +1186,252 @@
                 const data=await response.json().catch(function(){return null;});
                 if(!response.ok) throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Decision review failed.");
                 await refreshDecisionCandidates();
+                await refreshExecutionPlans(false);
                 window.alert(approve ? "Decision approved and added to InnerMe's active business brain." : "Decision candidate dismissed.");
             }catch(error){
                 target.disabled=false;
                 target.textContent=approve ? "Approve decision" : "Dismiss";
                 window.alert(error.message||"Decision review failed.");
+            }
+        });
+
+
+        const executionPanel=details.querySelector("[data-sway-ai-ki-execution-panel]");
+        const executionRefresh=details.querySelector("[data-sway-ai-ki-execution-refresh]");
+        const executionSummary=details.querySelector(".sway-ai-ki-execution-summary");
+        const executionResults=details.querySelector(".sway-ai-ki-execution-results");
+
+        async function loadExecutionPlans() {
+            const decisionsResponse=await fetch(
+                SUPABASE_URL+
+                    "/rest/v1/innerme_decisions?select=id,title,decision,context,rationale,evidence,expected_impact,effort,urgency,confidence,recommended_next_action,priority,status,source_conversation_id,created_at,updated_at&status=eq.active&order=priority.desc,created_at.desc&limit=30",
+                {method:"GET",headers:authHeaders()}
+            );
+            const decisions=await decisionsResponse.json().catch(function(){return [];});
+            if(!decisionsResponse.ok){
+                throw new Error(
+                    decisions && (decisions.message || decisions.error || decisions.hint)
+                        ? String(decisions.message || decisions.error || decisions.hint)
+                        : "Unable to load active InnerMe decisions."
+                );
+            }
+
+            const plansResponse=await fetch(
+                SUPABASE_URL+
+                    "/rest/v1/innerme_execution_plans?select=id,plan_key,decision_id,title,objective,rationale,evidence,success_metric,completion_criteria,expected_outcome,duration_days,target_date,effort,urgency,confidence,risk,status,source_conversation_id,approved_by,approved_at,created_at,updated_at&order=created_at.desc&limit=50",
+                {method:"GET",headers:authHeaders()}
+            );
+            const plans=await plansResponse.json().catch(function(){return [];});
+            if(!plansResponse.ok){
+                throw new Error(
+                    plans && (plans.message || plans.error || plans.hint)
+                        ? String(plans.message || plans.error || plans.hint)
+                        : "Unable to load InnerMe execution plans."
+                );
+            }
+
+            const allPlans=Array.isArray(plans)?plans:[];
+            const planIds=allPlans.map(function(item){return String(item && item.id || "").trim();}).filter(Boolean);
+            let steps=[];
+
+            if(planIds.length){
+                const stepsResponse=await fetch(
+                    SUPABASE_URL+
+                        "/rest/v1/innerme_execution_steps?select=id,plan_id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes,created_at,updated_at&plan_id=in.("+planIds.join(",")+")&order=step_order.asc&limit=400",
+                    {method:"GET",headers:authHeaders()}
+                );
+                const stepsData=await stepsResponse.json().catch(function(){return [];});
+                if(!stepsResponse.ok){
+                    throw new Error(
+                        stepsData && (stepsData.message || stepsData.error || stepsData.hint)
+                            ? String(stepsData.message || stepsData.error || stepsData.hint)
+                            : "Unable to load execution plan steps."
+                    );
+                }
+                steps=Array.isArray(stepsData)?stepsData:[];
+            }
+
+            const stepsByPlan=new Map();
+            steps.forEach(function(step){
+                const key=String(step.plan_id||"");
+                if(!stepsByPlan.has(key)) stepsByPlan.set(key,[]);
+                stepsByPlan.get(key).push(step);
+            });
+
+            return {
+                decisions:Array.isArray(decisions)?decisions:[],
+                plans:allPlans,
+                stepsByPlan:stepsByPlan
+            };
+        }
+
+        function renderExecutionPlans(data){
+            const decisions=Array.isArray(data && data.decisions)?data.decisions:[];
+            const plans=Array.isArray(data && data.plans)?data.plans:[];
+            const stepsByPlan=data && data.stepsByPlan instanceof Map ? data.stepsByPlan : new Map();
+
+            if(!decisions.length){
+                return '<p class="sway-ai-ki-muted">No active InnerMe decisions are available. Approve a decision candidate first.</p>';
+            }
+
+            return decisions.map(function(decision){
+                const plan=plans.find(function(item){
+                    return String(item && item.decision_id || "")===String(decision.id||"") &&
+                        ["draft","approved","active"].includes(String(item && item.status || ""));
+                }) || null;
+
+                const steps=plan ? (stepsByPlan.get(String(plan.id||"")) || []) : [];
+                const status=plan ? String(plan.status||"draft") : "not planned";
+                const statusClass=status==="approved" ? "approved" : status==="active" ? "active" : status==="draft" ? "draft" : "none";
+
+                let planHtml="";
+                if(!plan){
+                    planHtml='<div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-build="'+esc(String(decision.id||""))+'">Build execution plan</button></div>';
+                }else{
+                    const criteria=Array.isArray(plan.completion_criteria)?plan.completion_criteria:[];
+                    const evidence=Array.isArray(plan.evidence)?plan.evidence:[];
+                    const stepsHtml=steps.map(function(step){
+                        return '<div class="sway-ai-ki-execution-step">' +
+                            '<div class="sway-ai-ki-execution-step-head"><strong>'+esc(String(step.step_order||""))+'. '+esc(step.title||"Execution step")+'</strong><span>'+esc(step.status||"planned")+'</span></div>' +
+                            '<p>'+esc(step.action||"")+'</p>' +
+                            '<div class="sway-ai-ki-execution-step-meta"><span>Owner: '+esc(step.owner_role||"Swayphics admin")+'</span><span>Due: '+(step.due_offset_days==null?"Not specified":"Day "+esc(step.due_offset_days))+'</span><span>Risk: '+esc(step.risk_level||"low")+'</span>' +
+                            (step.depends_on_step_order ? '<span>After step '+esc(step.depends_on_step_order)+'</span>' : '') +
+                            '</div>' +
+                            (step.success_signal ? '<div class="sway-ai-ki-execution-step-detail"><span>Success signal</span><strong>'+esc(step.success_signal)+'</strong></div>' : '') +
+                            (step.verification_method ? '<div class="sway-ai-ki-execution-step-detail"><span>Verification</span><strong>'+esc(step.verification_method)+'</strong></div>' : '') +
+                        '</div>';
+                    }).join("");
+
+                    const criteriaHtml=criteria.length
+                        ? '<div class="sway-ai-ki-execution-detail"><span>Completion criteria</span><ul>'+criteria.map(function(item){return '<li>'+esc(item)+'</li>';}).join("")+'</ul></div>'
+                        : "";
+                    const evidenceHtml=evidence.length
+                        ? '<div class="sway-ai-ki-execution-detail"><span>Plan evidence</span><div class="sway-ai-ki-execution-evidence">'+evidence.slice(0,8).map(function(ref){return '<span>'+esc(ref.source||"workspace")+' · '+esc(ref.type||"record")+' · '+esc(ref.id||"")+' · '+esc(ref.why||"")+'</span>';}).join("")+'</div></div>'
+                        : "";
+
+                    const reviewActions=status==="draft"
+                        ? '<div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-approve="'+esc(String(plan.id||""))+'">Approve plan</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-cancel="'+esc(String(plan.id||""))+'">Cancel draft</button></div>'
+                        : '<div class="sway-ai-ki-execution-note">'+(status==="approved" ? "Approved and ready for the controlled action layer in a later InnerMe phase. No workspace action has been executed." : "Execution plan is active. No external action is performed by Phase 9.")+'</div>';
+
+                    planHtml=
+                        '<div class="sway-ai-ki-execution-plan">' +
+                            '<div class="sway-ai-ki-execution-plan-head"><div><strong>'+esc(plan.title||"Execution plan")+'</strong><span>'+esc(status)+'</span></div><em class="sway-ai-ki-execution-badge sway-ai-ki-execution-'+statusClass+'">'+esc(status)+'</em></div>' +
+                            '<div class="sway-ai-ki-execution-grid"><div><span>Objective</span><strong>'+esc(plan.objective||"")+'</strong></div><div><span>Success metric</span><strong>'+esc(plan.success_metric||"Not specified")+'</strong></div><div><span>Expected outcome</span><strong>'+esc(plan.expected_outcome||"Not specified")+'</strong></div><div><span>Duration</span><strong>'+esc(plan.duration_days==null?"Not specified":String(plan.duration_days)+" days")+'</strong></div></div>' +
+                            (plan.rationale ? '<div class="sway-ai-ki-execution-detail"><span>Rationale</span><strong>'+esc(plan.rationale)+'</strong></div>' : '') +
+                            (plan.risk ? '<div class="sway-ai-ki-execution-detail"><span>Risk</span><strong>'+esc(plan.risk)+'</strong></div>' : '') +
+                            criteriaHtml +
+                            '<div class="sway-ai-ki-execution-detail"><span>Steps</span><div class="sway-ai-ki-execution-steps">'+(stepsHtml || '<p class="sway-ai-ki-muted">No steps recorded.</p>')+'</div></div>' +
+                            evidenceHtml +
+                            reviewActions +
+                        '</div>';
+                }
+
+                return '<article class="sway-ai-ki-execution-item">' +
+                    '<div class="sway-ai-ki-execution-head"><div><strong>'+esc(decision.title||"Active decision")+'</strong><span>'+esc(decision.urgency||"normal")+' · P'+esc(decision.priority||50)+' · '+esc(decision.confidence||"medium")+'</span></div><em>'+esc(status)+'</em></div>' +
+                    '<p class="sway-ai-ki-execution-decision">'+esc(decision.decision||"")+'</p>' +
+                    '<div class="sway-ai-ki-execution-decision-meta"><span>Next action: '+esc(decision.recommended_next_action||"Review the approved decision.")+'</span><span>Effort: '+esc(decision.effort||"medium")+'</span></div>' +
+                    planHtml +
+                '</article>';
+            }).join("");
+        }
+
+        async function refreshExecutionPlans(showLoading=true){
+            if(showLoading) executionResults.innerHTML='<p class="sway-ai-ki-muted">Loading active decisions and execution plans…</p>';
+            try{
+                const data=await loadExecutionPlans();
+                const planCount=data.plans.filter(function(item){return ["draft","approved","active"].includes(String(item && item.status||""));}).length;
+                executionSummary.innerHTML='<div class="sway-ai-ki-execution-summary-grid"><div><span>Active decisions</span><strong>'+esc(data.decisions.length)+'</strong></div><div><span>Open plans</span><strong>'+esc(planCount)+'</strong></div><div><span>Plan status</span><strong>Approval gated</strong></div><div><span>External actions</span><strong>None</strong></div></div>';
+                executionResults.innerHTML=renderExecutionPlans(data);
+                executionResults.__swayExecutionData=data;
+                return data;
+            }catch(error){
+                executionSummary.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Execution intelligence failed to load.")+'</p>';
+                executionResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Execution intelligence failed to load.")+'</p>';
+                executionResults.__swayExecutionData=null;
+                return null;
+            }
+        }
+
+        if(executionPanel){
+            executionPanel.addEventListener("toggle",function(){
+                if(executionPanel.open) refreshExecutionPlans();
+            });
+        }
+
+        if(executionRefresh){
+            executionRefresh.addEventListener("click",function(event){
+                event.preventDefault(); event.stopPropagation();
+                refreshExecutionPlans();
+            });
+        }
+
+        executionResults.addEventListener("click",async function(event){
+            const build=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-build]") : null;
+            const approve=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-approve]") : null;
+            const cancel=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-cancel]") : null;
+            const target=build||approve||cancel;
+            if(!target) return;
+            event.preventDefault(); event.stopPropagation();
+
+            if(build){
+                const decisionId=String(build.dataset.swayAiKiExecutionBuild||"").trim();
+                if(!decisionId || !window.confirm("Build a governed execution plan for this approved decision?")) return;
+                build.disabled=true;
+                build.textContent="Building…";
+                executionSummary.innerHTML='<p class="sway-ai-ki-muted">InnerMe is turning the approved decision into an evidence-linked execution plan…</p>';
+                try{
+                    const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                        method:"POST",
+                        headers:authHeaders(),
+                        body:JSON.stringify({action:"generate_execution_plan",decision_id:decisionId})
+                    });
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok){
+                        throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Execution plan generation failed.");
+                    }
+                    await refreshExecutionPlans(false);
+                    window.alert(data.created ? "Draft execution plan created. Review it before approving." : "An existing execution plan is already attached to this decision.");
+                }catch(error){
+                    build.disabled=false;
+                    build.textContent="Build execution plan";
+                    window.alert(error.message||"Execution plan generation failed.");
+                }
+                return;
+            }
+
+            const planId=String(
+                approve?.dataset.swayAiKiExecutionApprove ||
+                cancel?.dataset.swayAiKiExecutionCancel ||
+                ""
+            ).trim();
+            const review=approve ? "approved" : "cancelled";
+            if(!planId) return;
+
+            const confirmation=approve
+                ? "Approve this execution plan? Phase 9 will mark the plan ready, but it will not execute any workspace or external action."
+                : "Cancel this execution plan draft?";
+
+            if(!window.confirm(confirmation)) return;
+
+            target.disabled=true;
+            target.textContent=approve ? "Approving…" : "Cancelling…";
+
+            try{
+                const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/review_innerme_execution_plan",{
+                    method:"POST",
+                    headers:authHeaders(),
+                    body:JSON.stringify({p_plan_id:planId,p_decision:review})
+                });
+                const data=await response.json().catch(function(){return null;});
+                if(!response.ok){
+                    throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Execution plan review failed.");
+                }
+                await refreshExecutionPlans();
+                window.alert(approve ? "Execution plan approved and marked ready for controlled execution." : "Execution plan draft cancelled.");
+            }catch(error){
+                target.disabled=false;
+                target.textContent=approve ? "Approve plan" : "Cancel draft";
+                window.alert(error.message||"Execution plan review failed.");
             }
         });
 
