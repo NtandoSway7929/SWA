@@ -217,9 +217,11 @@ begin
         v_count := v_count + 1;
     end loop;
 
+    v_count := v_count + coalesce(public.generate_innerme_operational_incidents(), 0);
+
     return v_count;
 end;
-$$;
+$;
 
 revoke all on function public.generate_innerme_proactive_notifications() from public;
 revoke all on function public.generate_innerme_proactive_notifications() from anon;
