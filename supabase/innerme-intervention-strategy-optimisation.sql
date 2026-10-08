@@ -31,6 +31,9 @@ on public.innerme_intervention_strategy_profiles(confidence, adjustment_score de
 
 alter table public.innerme_intervention_strategy_profiles enable row level security;
 
+drop policy if exists "InnerMe intervention strategy profiles admins can read"
+on public.innerme_intervention_strategy_profiles;
+
 drop policy if exists "InnerMe intervention strategy profiles admins can manage"
 on public.innerme_intervention_strategy_profiles;
 create policy "InnerMe intervention strategy profiles admins can manage"
