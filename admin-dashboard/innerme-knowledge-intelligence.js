@@ -946,6 +946,15 @@
                 '<div class="sway-ai-ki-experiments-summary"><p class="sway-ai-ki-muted">No experiments loaded.</p></div>' +
                 '<div class="sway-ai-ki-experiments-results"><p class="sway-ai-ki-muted">Open this section to load experiments.</p></div>' +
             '</details>' +
+            '<details class="sway-ai-ki-strategic" data-sway-ai-ki-strategic-panel>' +
+                '<summary>Strategic intelligence</summary>' +
+                '<div class="sway-ai-ki-strategic-controls">' +
+                    '<span>Cross-domain analysis of sales, clients, delivery, operations, communications, finance and InnerMe intelligence. Reviews are advisory drafts until explicitly reviewed.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-strategic-refresh>Generate strategic review</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-strategic-summary"><p class="sway-ai-ki-muted">No strategic reviews loaded.</p></div>' +
+                '<div class="sway-ai-ki-strategic-results"><p class="sway-ai-ki-muted">Generate or open a strategic review.</p></div>' +
+            '</details>' +
             '<details class="sway-ai-ki-closed-loop" data-sway-ai-ki-closed-loop-panel>' +
                 '<summary>Closed-loop learning</summary>' +
                 '<div class="sway-ai-ki-closed-loop-controls">' +
@@ -1623,6 +1632,136 @@
             }
         });
 
+
+
+        const strategicPanel=details.querySelector("[data-sway-ai-ki-strategic-panel]");
+        const strategicRefresh=details.querySelector("[data-sway-ai-ki-strategic-refresh]");
+        const strategicSummary=details.querySelector(".sway-ai-ki-strategic-summary");
+        const strategicResults=details.querySelector(".sway-ai-ki-strategic-results");
+
+        async function loadStrategicReviews(){
+            const reviewsResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_strategic_reviews?select=id,review_key,scope,period_start,period_end,status,strategic_posture,executive_summary,strengths,constraints,risks,opportunities,cross_domain_signals,metrics_snapshot,evidence,recommendation_count,model,reviewed_at,created_at,updated_at&order=updated_at.desc&limit=20",{method:"GET",headers:authHeaders()});
+            const reviews=await reviewsResponse.json().catch(function(){return [];});
+            if(!reviewsResponse.ok) throw new Error(reviews&&(reviews.message||reviews.error||reviews.hint)?String(reviews.message||reviews.error||reviews.hint):"Unable to load strategic reviews.");
+
+            const ids=(Array.isArray(reviews)?reviews:[]).map(function(item){return String(item.id||"");}).filter(Boolean);
+            let recommendations=[];
+            if(ids.length){
+                const recResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_strategic_recommendations?select=id,review_id,recommendation_key,rank,title,recommendation,rationale,domains,evidence,impact,effort,urgency,confidence,decision_type,status,decision_candidate_id,approved_at,promoted_at,created_at,updated_at&review_id=in.("+ids.join(",")+")&order=rank.asc&limit=100",{method:"GET",headers:authHeaders()});
+                const recData=await recResponse.json().catch(function(){return [];});
+                if(!recResponse.ok) throw new Error(recData&&(recData.message||recData.error||recData.hint)?String(recData.message||recData.error||recData.hint):"Unable to load strategic recommendations.");
+                recommendations=Array.isArray(recData)?recData:[];
+            }
+            return {reviews:Array.isArray(reviews)?reviews:[],recommendations:recommendations};
+        }
+
+        function renderStrategicReviews(data){
+            const reviews=Array.isArray(data&&data.reviews)?data.reviews:[];
+            const recommendations=Array.isArray(data&&data.recommendations)?data.recommendations:[];
+            const latest=reviews[0]||null;
+            const approved=recommendations.filter(function(item){return String(item.status||"")==="approved";}).length;
+            const promoted=recommendations.filter(function(item){return String(item.status||"")==="promoted";}).length;
+            const candidateCount=recommendations.filter(function(item){return String(item.status||"")==="candidate";}).length;
+
+            strategicSummary.innerHTML='<div class="sway-ai-ki-strategic-summary-grid"><div><span>Reviews</span><strong>'+esc(reviews.length)+'</strong></div><div><span>Recommendations</span><strong>'+esc(recommendations.length)+'</strong></div><div><span>Awaiting review</span><strong>'+esc(candidateCount)+'</strong></div><div><span>Approved</span><strong>'+esc(approved)+'</strong></div><div><span>Promoted to decisions</span><strong>'+esc(promoted)+'</strong></div></div>';
+
+            if(!latest) return '<p class="sway-ai-ki-muted">No strategic review exists yet.</p>';
+
+            const m=latest.metrics_snapshot&&typeof latest.metrics_snapshot==="object"?latest.metrics_snapshot:{};
+            const reviewActions=String(latest.status||"")==="draft"
+              ? '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-strategic-review="'+esc(String(latest.id||""))+'">Mark review reviewed</button>'
+              : '';
+
+            const recs=recommendations.filter(function(item){return String(item.review_id||"")===String(latest.id||"");}).sort(function(a,b){return Number(a.rank||99)-Number(b.rank||99);});
+            const recHtml=recs.map(function(rec){
+                let actions="";
+                if(String(rec.status||"")==="candidate"){
+                    actions='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-strategic-rec="approved" data-id="'+esc(String(rec.id||""))+'">Approve</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-strategic-rec="rejected" data-id="'+esc(String(rec.id||""))+'">Reject</button>';
+                }else if(String(rec.status||"")==="approved"){
+                    actions='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-strategic-promote="'+esc(String(rec.id||""))+'">Promote to decision</button>';
+                }else if(String(rec.status||"")==="promoted"){
+                    actions='<span class="sway-ai-ki-strategic-note">Promoted into the Decision Intelligence pipeline. Normal decision approval remains required.</span>';
+                }
+                const domains=Array.isArray(rec.domains)?rec.domains.join(" · "):"strategic";
+                const evidence=Array.isArray(rec.evidence)?rec.evidence.slice(0,4).join(" · "):"";
+                return '<article class="sway-ai-ki-strategic-rec"><div class="sway-ai-ki-strategic-rec-head"><div><strong>#'+esc(String(rec.rank||""))+' '+esc(rec.title||"Recommendation")+'</strong><span>'+esc(domains)+'</span></div><em>'+esc(rec.status||"candidate")+'</em></div><p>'+esc(rec.recommendation||"")+'</p><div class="sway-ai-ki-strategic-grid"><div><span>Impact</span><strong>'+esc(rec.impact||"medium")+'</strong></div><div><span>Effort</span><strong>'+esc(rec.effort||"medium")+'</strong></div><div><span>Urgency</span><strong>'+esc(rec.urgency||"normal")+'</strong></div><div><span>Confidence</span><strong>'+esc(rec.confidence||"medium")+'</strong></div></div><p><b>Rationale:</b> '+esc(rec.rationale||"")+'</p>'+(evidence?'<div class="sway-ai-ki-strategic-evidence">'+esc(evidence)+'</div>':'')+'<div class="sway-ai-ki-strategic-actions">'+actions+'</div></article>';
+            }).join("");
+
+            return '<article class="sway-ai-ki-strategic-review"><div class="sway-ai-ki-strategic-review-head"><div><strong>'+esc(latest.strategic_posture||"Strategic review")+'</strong><span>'+esc(latest.status||"draft")+' · '+esc(String(latest.period_start||""))+' to '+esc(String(latest.period_end||""))+'</span></div></div><p class="sway-ai-ki-strategic-executive">'+esc(latest.executive_summary||"")+'</p><div class="sway-ai-ki-strategic-domains"><div><span>Pipeline</span><strong>'+esc(m.leads?.estimated_pipeline_value??0)+' estimated · '+esc(m.leads?.open??0)+' open leads</strong></div><div><span>Delivery</span><strong>'+esc(m.projects?.total??0)+' projects · '+esc(m.tasks?.open??0)+' open tasks</strong></div><div><span>Cash</span><strong>'+esc(m.invoices?.outstanding??0)+' outstanding</strong></div><div><span>Communications</span><strong>'+esc(m.communications?.inbound??0)+' inbound · '+esc(m.communications?.outbound??0)+' outbound</strong></div></div>'+(latest.risks?'<p><b>Risks:</b> '+esc(latest.risks)+'</p>':'')+(latest.opportunities?'<p><b>Opportunities:</b> '+esc(latest.opportunities)+'</p>':'')+reviewActions+'<div class="sway-ai-ki-strategic-recommendations"><h4>Ranked recommendations</h4>'+recHtml+'</div></article>';
+        }
+
+        async function refreshStrategicReviews(showLoading=true){
+            if(showLoading) strategicResults.innerHTML='<p class="sway-ai-ki-muted">Loading strategic intelligence…</p>';
+            try{
+                const data=await loadStrategicReviews();
+                strategicResults.innerHTML=renderStrategicReviews(data);
+                strategicResults.__swayStrategicData=data;
+                return data;
+            }catch(error){
+                strategicSummary.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Strategic intelligence failed to load.")+'</p>';
+                strategicResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Strategic intelligence failed to load.")+'</p>';
+                return null;
+            }
+        }
+
+        if(strategicPanel) strategicPanel.addEventListener("toggle",function(){if(strategicPanel.open) refreshStrategicReviews();});
+        if(strategicRefresh) strategicRefresh.addEventListener("click",async function(event){
+            event.preventDefault();event.stopPropagation();
+            if(!window.confirm("Generate a new cross-domain strategic review from the current Swayphics workspace? No workspace records or actions will be changed.")) return;
+            strategicRefresh.disabled=true;strategicRefresh.textContent="Generating…";
+            try{
+                const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{method:"POST",headers:authHeaders(),body:JSON.stringify({action:"generate_strategic_intelligence"})});
+                const data=await response.json().catch(function(){return null;});
+                if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Strategic review generation failed.");
+                await refreshStrategicReviews(false);
+            }catch(error){window.alert(error.message||"Strategic review generation failed.");}
+            finally{strategicRefresh.disabled=false;strategicRefresh.textContent="Generate strategic review";}
+        });
+
+        strategicResults.addEventListener("click",async function(event){
+            const review=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-strategic-review]"):null;
+            const rec=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-strategic-rec]"):null;
+            const promote=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-strategic-promote]"):null;
+            const target=review||rec||promote;
+            if(!target) return;
+            event.preventDefault();event.stopPropagation();
+
+            try{
+                if(review){
+                    const id=String(review.dataset.swayAiKiStrategicReview||"").trim();
+                    if(!id||!window.confirm("Mark this strategic review as reviewed?")) return;
+                    review.disabled=true;review.textContent="Saving…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/review_innerme_strategic_review",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_review_id:id,p_status:"reviewed"})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Strategic review update failed.");
+                    await refreshStrategicReviews(false);return;
+                }
+
+                if(rec){
+                    const id=String(rec.dataset.id||"").trim();
+                    const status=String(rec.dataset.swayAiKiStrategicRec||"").trim();
+                    if(!id||!["approved","rejected"].includes(status)||!window.confirm(status==="approved"?"Approve this strategic recommendation?":"Reject this strategic recommendation?")) return;
+                    rec.disabled=true;rec.textContent=status==="approved"?"Approving…":"Rejecting…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/review_innerme_strategic_recommendation",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_recommendation_id:id,p_status:status})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Strategic recommendation review failed.");
+                    await refreshStrategicReviews(false);return;
+                }
+
+                if(promote){
+                    const id=String(promote.dataset.swayAiKiStrategicPromote||"").trim();
+                    if(!id||!window.confirm("Promote this approved strategic recommendation into Decision Intelligence? It will create a decision candidate only. No action will execute.")) return;
+                    promote.disabled=true;promote.textContent="Promoting…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/promote_innerme_strategic_recommendation",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_recommendation_id:id})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Strategic recommendation promotion failed.");
+                    await refreshStrategicReviews(false);return;
+                }
+            }catch(error){
+                target.disabled=false;
+                window.alert(error.message||"Strategic intelligence action failed.");
+            }
+        });
 
         const closedLoopPanel=details.querySelector("[data-sway-ai-ki-closed-loop-panel]");
         const closedLoopRefresh=details.querySelector("[data-sway-ai-ki-closed-loop-refresh]");
@@ -2482,6 +2621,47 @@
         "body.sway-dark-mode .sway-ai-ki-eval-fail{background:rgba(190,52,52,.14);color:#FFB0B0}" +
         "body.sway-dark-mode .sway-ai-ki-eval-item details{border-top-color:rgba(119,193,252,.1)}" +
         "@media(max-width:680px){.sway-ai-ki-eval-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-eval-head{display:grid;gap:6px}.sway-ai-ki-eval-head em{width:fit-content}}" +
+        ".sway-ai-ki-strategic{width:100%;margin:4px 0}" +
+        ".sway-ai-ki-strategic>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
+        ".sway-ai-ki-strategic>summary::-webkit-details-marker{display:none}" +
+        ".sway-ai-ki-strategic>summary:after{content:'›';transform:rotate(90deg);transition:transform .16s ease}" +
+        ".sway-ai-ki-strategic[open]>summary:after{transform:rotate(-90deg)}" +
+        ".sway-ai-ki-strategic-controls{display:grid;gap:8px;padding:6px 10px 10px}" +
+        ".sway-ai-ki-strategic-controls>span{font-size:11px;line-height:1.45;opacity:.68}" +
+        ".sway-ai-ki-strategic-summary,.sway-ai-ki-strategic-results{display:grid;gap:9px;padding:0 10px 10px}" +
+        ".sway-ai-ki-strategic-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}" +
+        ".sway-ai-ki-strategic-summary-grid>div{display:grid;gap:3px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-strategic-summary-grid span,.sway-ai-ki-strategic-grid span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-strategic-summary-grid strong{font-size:11px}" +
+        ".sway-ai-ki-strategic-review{display:grid;gap:10px;padding:11px;border:1px solid rgba(1,82,244,.1);border-radius:12px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-strategic-review-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-strategic-review-head>div{display:grid;gap:3px}" +
+        ".sway-ai-ki-strategic-review-head strong{font-size:11px}" +
+        ".sway-ai-ki-strategic-review-head span{font-size:9px;opacity:.58}" +
+        ".sway-ai-ki-strategic-executive{margin:0;font-size:10px;line-height:1.55;white-space:pre-wrap}" +
+        ".sway-ai-ki-strategic-domains{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}" +
+        ".sway-ai-ki-strategic-domains>div{display:grid;gap:3px;padding:8px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-strategic-domains span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-strategic-domains strong{font-size:9px;line-height:1.4}" +
+        ".sway-ai-ki-strategic-review>p{font-size:10px;line-height:1.5}" +
+        ".sway-ai-ki-strategic-recommendations{display:grid;gap:8px}" +
+        ".sway-ai-ki-strategic-recommendations h4{margin:0;font-size:10px}" +
+        ".sway-ai-ki-strategic-rec{display:grid;gap:8px;padding:9px;border:1px solid rgba(1,82,244,.09);border-radius:10px;background:rgba(1,82,244,.018)}" +
+        ".sway-ai-ki-strategic-rec-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-strategic-rec-head>div{display:grid;gap:3px}" +
+        ".sway-ai-ki-strategic-rec-head strong{font-size:10px}" +
+        ".sway-ai-ki-strategic-rec-head span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-strategic-rec-head em{padding:4px 6px;border-radius:999px;background:rgba(1,82,244,.08);color:#0152F4;font-size:8px;font-style:normal;font-weight:800;white-space:nowrap}" +
+        ".sway-ai-ki-strategic-rec p{margin:0;font-size:9px;line-height:1.5;white-space:pre-wrap}" +
+        ".sway-ai-ki-strategic-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}" +
+        ".sway-ai-ki-strategic-grid>div{display:grid;gap:3px;padding-top:6px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-strategic-grid strong{font-size:9px}" +
+        ".sway-ai-ki-strategic-evidence,.sway-ai-ki-strategic-note{font-size:8px;line-height:1.45;opacity:.6}" +
+        ".sway-ai-ki-strategic-actions{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap}" +
+        "body.sway-dark-mode .sway-ai-ki-strategic-summary-grid>div,body.sway-dark-mode .sway-ai-ki-strategic-review,body.sway-dark-mode .sway-ai-ki-strategic-rec{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-strategic-rec-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
+        "@media(max-width:900px){.sway-ai-ki-strategic-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.sway-ai-ki-strategic-domains{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-strategic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}" +
+        "@media(max-width:680px){.sway-ai-ki-strategic-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-strategic-domains,.sway-ai-ki-strategic-grid{grid-template-columns:1fr}.sway-ai-ki-strategic-rec-head{display:grid;gap:6px}.sway-ai-ki-strategic-rec-head em{width:fit-content}}" +
         ".sway-ai-ki-closed-loop{width:100%;margin:4px 0}" +
         ".sway-ai-ki-closed-loop>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
         ".sway-ai-ki-closed-loop>summary::-webkit-details-marker{display:none}" +
