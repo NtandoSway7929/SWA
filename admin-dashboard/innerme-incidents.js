@@ -80,6 +80,55 @@
         return Array.isArray(data) ? data : [];
     }
 
+    async function refreshIntelligence() {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/rpc/refresh_innerme_incident_intelligence",
+            {
+                method: "POST",
+                headers: headers(),
+                body: "{}"
+            }
+        );
+        const data = await response.json().catch(function () {
+            return null;
+        });
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Incident intelligence refresh failed."
+            );
+        }
+        return Number(data || 0);
+    }
+
+    async function loadIntelligence() {
+        const response = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_incident_intelligence" +
+                "?select=incident_id,priority_score,priority_band,impact_score,urgency_score,dependency_score,dominant_risk,primary_dependency,decision_required,recommended_first_review,reasoning,evidence,updated_at" +
+                "&order=priority_score.desc&limit=100",
+            {
+                method: "GET",
+                headers: headers()
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return [];
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to load incident intelligence."
+            );
+        }
+
+        return Array.isArray(data) ? data : [];
+    }
+
     async function loadEvents() {
         const response = await fetch(
             SUPABASE_URL +
@@ -196,7 +245,7 @@
         }).join("");
     }
 
-    function render(panel, incidents, events, generated) {
+    function render(panel, incidents, events, intelligence, generated) {
         const active = incidents.filter(function (item) {
             return ["open", "acknowledged"].includes(String(item.status));
         });
@@ -218,11 +267,24 @@
             eventMap.get(key).push(event);
         });
 
+        const intelligenceMap = new Map();
+        intelligence.forEach(function (item) {
+            intelligenceMap.set(String(item.incident_id || ""), item);
+        });
+
+        const intelligenceCounts = intelligence.reduce(function (result, item) {
+            const band = String(item.priority_band || "low");
+            result.total += 1;
+            result[band] = (result[band] || 0) + 1;
+            return result;
+        }, { total: 0, critical: 0, high: 0, medium: 0, low: 0 });
+
         const summary = panel.querySelector("[data-im-incident-summary]");
         summary.innerHTML =
             '<div><span>Active</span><strong>' + esc(counts.active) + '</strong></div>' +
             '<div><span>Critical</span><strong>' + esc(counts.critical || 0) + '</strong></div>' +
             '<div><span>High</span><strong>' + esc(counts.high || 0) + '</strong></div>' +
+            '<div><span>Intelligent</span><strong>' + esc(intelligenceCounts.total) + '</strong></div>' +
             '<div><span>Total</span><strong>' + esc(counts.total) + '</strong></div>';
 
         const results = panel.querySelector("[data-im-incidents]");
@@ -230,6 +292,11 @@
             const aActive = ["open", "acknowledged"].includes(String(a.status));
             const bActive = ["open", "acknowledged"].includes(String(b.status));
             if (aActive !== bActive) return aActive ? -1 : 1;
+            const aInfo = intelligenceMap.get(String(a.id)) || {};
+            const bInfo = intelligenceMap.get(String(b.id)) || {};
+            const aScore = Number(aInfo.priority_score || 0);
+            const bScore = Number(bInfo.priority_score || 0);
+            if (aScore !== bScore) return bScore - aScore;
             return new Date(b.last_detected_at || b.updated_at || 0) - new Date(a.last_detected_at || a.updated_at || 0);
         });
 
@@ -244,7 +311,24 @@
                 ordered.map(function (incident) {
                 const status = String(incident.status || "open");
                 const isActive = ["open", "acknowledged"].includes(status);
+                const info = intelligenceMap.get(String(incident.id)) || null;
                 const eventHistory = eventMap.get(String(incident.id)) || [];
+                const intelligenceHtml = info
+                    ? '<div class="sway-ai-incident-intelligence">' +
+                        '<div class="sway-ai-incident-intelligence-head">' +
+                            '<strong>' + esc(String(info.priority_score || 0) + '/100') + '</strong>' +
+                            '<span>' + esc(info.priority_band || "low") + ' priority · ' + esc(info.dominant_risk || "Operational continuity") + '</span>' +
+                        '</div>' +
+                        '<div class="sway-ai-incident-score-grid">' +
+                            '<div><span>Impact</span><strong>' + esc(info.impact_score || 0) + '</strong></div>' +
+                            '<div><span>Urgency</span><strong>' + esc(info.urgency_score || 0) + '</strong></div>' +
+                            '<div><span>Dependency</span><strong>' + esc(info.dependency_score || 0) + '</strong></div>' +
+                        '</div>' +
+                        '<p><strong>Primary dependency:</strong> ' + esc(info.primary_dependency || "") + '</p>' +
+                        '<p><strong>First review:</strong> ' + esc(info.recommended_first_review || "") + '</p>' +
+                        '<p><strong>Decision required:</strong> ' + esc(info.decision_required || "") + '</p>' +
+                      '</div>'
+                    : '<div class="sway-ai-incident-intelligence sway-ai-incidents-muted">No intelligence assessment is currently available.</div>';
                 const acknowledgementAction =
                     status === "open"
                         ? '<button type="button" class="sway-ai-knowledge-test-button" data-im-incident-action="acknowledged" data-im-incident-id="' + esc(incident.id) + '">Acknowledge</button>'
@@ -267,6 +351,7 @@
                         '</div>' +
                         '<h4>' + esc(incident.title || "Operational incident") + '</h4>' +
                         '<p>' + esc(incident.summary || "") + '</p>' +
+                        intelligenceHtml +
                         '<div class="sway-ai-incident-reason"><strong>Why this is correlated</strong><p>' + esc(incident.correlation_reason || "") + '</p></div>' +
                         '<div class="sway-ai-incident-reason"><strong>Recommended response</strong><p>' + esc(incident.recommended_response || "") + '</p></div>' +
                         '<details class="sway-ai-incident-detail">' +
@@ -294,7 +379,7 @@
         const generatedLabel = panel.querySelector("[data-im-incident-generated]");
         generatedLabel.textContent =
             generated > 0
-                ? generated + " new or changed incident signal(s) processed."
+                ? generated + " new, changed or newly prioritised incident signal(s) processed."
                 : "No new or changed incident signals detected.";
     }
 
@@ -322,7 +407,7 @@
             ".sway-ai-incident-pill.critical,.sway-ai-incident-pill.high{background:rgba(190,52,52,.12);color:#B42323}" +
             ".sway-ai-incident-pill.medium{background:rgba(247,201,120,.14);color:#9A6700}" +
             ".sway-ai-incident-pill.low{background:rgba(1,82,244,.08);color:#0152F4}" +
-            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}" +
+            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}body.sway-dark-mode .sway-ai-incident-intelligence{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}@media(max-width:700px){.sway-ai-incident-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
             ".sway-ai-incident-reason{display:grid;gap:2px}.sway-ai-incident-reason strong{font-size:8px;text-transform:uppercase;letter-spacing:.04em;opacity:.58}" +
             ".sway-ai-incident-reason p{margin:0;font-size:9px;line-height:1.45}" +
             ".sway-ai-incident-detail{border-top:1px solid rgba(1,82,244,.08);padding-top:6px}.sway-ai-incident-detail>summary{font-size:8px;cursor:pointer;opacity:.72}" +
@@ -373,9 +458,11 @@
             refreshButton.textContent = "Correlating…";
             try {
                 const generated = await correlate();
+                const intelligenceGenerated = await refreshIntelligence();
                 const incidents = await loadIncidents();
                 const events = await loadEvents();
-                render(panel, incidents, events, generated);
+                const intelligence = await loadIntelligence();
+                render(panel, incidents, events, intelligence, generated + intelligenceGenerated);
             } catch (error) {
                 panel.querySelector("[data-im-incidents]").innerHTML =
                     '<p class="sway-ai-ki-error">' + esc(error.message || "Incident correlation failed.") + "</p>";
