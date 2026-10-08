@@ -1258,10 +1258,29 @@
                 stepsByPlan.get(key).push(step);
             });
 
+            let actionProposals=[];
+            if(planIds.length){
+                const actionResponse=await fetch(
+                    SUPABASE_URL+
+                        "/rest/v1/innerme_action_proposals?select=id,proposal_key,plan_id,step_id,action_type,title,purpose,payload,evidence,requires_confirmation,status,approved_at,executed_by,executed_at,execution_result,error_message,created_at,updated_at&plan_id=in.("+planIds.join(",")+")&order=created_at.desc&limit=200",
+                    {method:"GET",headers:authHeaders()}
+                );
+                const actionData=await actionResponse.json().catch(function(){return [];});
+                if(!actionResponse.ok){
+                    throw new Error(
+                        actionData && (actionData.message || actionData.error || actionData.hint)
+                            ? String(actionData.message || actionData.error || actionData.hint)
+                            : "Unable to load controlled action proposals."
+                    );
+                }
+                actionProposals=Array.isArray(actionData)?actionData:[];
+            }
+
             return {
                 decisions:Array.isArray(decisions)?decisions:[],
                 plans:allPlans,
-                stepsByPlan:stepsByPlan
+                stepsByPlan:stepsByPlan,
+                actionProposals:actionProposals
             };
         }
 
@@ -1309,9 +1328,61 @@
                         ? '<div class="sway-ai-ki-execution-detail"><span>Plan evidence</span><div class="sway-ai-ki-execution-evidence">'+evidence.slice(0,8).map(function(ref){return '<span>'+esc(ref.source||"workspace")+' · '+esc(ref.type||"record")+' · '+esc(ref.id||"")+' · '+esc(ref.why||"")+'</span>';}).join("")+'</div></div>'
                         : "";
 
+                    const planActions=(Array.isArray(data && data.actionProposals)?data.actionProposals:[]).filter(function(item){
+                        return String(item && item.plan_id || "")===String(plan.id||"");
+                    });
+
+                    const proposalStatusLabel=function(value){
+                        return String(value||"proposed").replace(/_/g," ");
+                    };
+
+                    const renderActionPayload=function(item){
+                        const payload=item && item.payload && typeof item.payload==="object" ? item.payload : {};
+                        if(item.action_type==="send_email"){
+                            return '<div class="sway-ai-ki-execution-action-payload">' +
+                                '<span>Recipient</span><strong>'+esc(payload.contact_type||"contact")+' · '+esc(payload.contact_id||"")+'</strong>' +
+                                '<span>Subject</span><strong>'+esc(payload.subject||"")+'</strong>' +
+                                '<span>Message</span><p>'+esc(payload.message||"")+'</p>' +
+                            '</div>';
+                        }
+                        return '<div class="sway-ai-ki-execution-action-payload">' +
+                            '<span>Task</span><strong>'+esc(payload.title||item.title||"")+'</strong>' +
+                            '<span>Priority</span><strong>'+esc(payload.priority||"medium")+'</strong>' +
+                            '<span>Due</span><strong>'+esc(payload.due_offset_days==null?"Not specified":"Day "+payload.due_offset_days)+'</strong>' +
+                            (payload.client_id ? '<span>Client</span><strong>'+esc(payload.client_id)+'</strong>' : "") +
+                            (payload.project_id ? '<span>Project</span><strong>'+esc(payload.project_id)+'</strong>' : "") +
+                            (payload.lead_id ? '<span>Lead</span><strong>'+esc(payload.lead_id)+'</strong>' : "") +
+                            '<span>Description</span><p>'+esc(payload.description||"")+'</p>' +
+                        '</div>';
+                    };
+
+                    const actionsHtml=planActions.length
+                        ? '<div class="sway-ai-ki-execution-detail"><span>Controlled actions</span><div class="sway-ai-ki-execution-actions-list">'+
+                            planActions.map(function(item){
+                                const actionStatus=String(item.status||"proposed");
+                                let actionButtons="";
+                                if(actionStatus==="proposed"){
+                                    actionButtons='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-approve="'+esc(String(item.id||""))+'">Approve action</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-reject="'+esc(String(item.id||""))+'">Reject</button>';
+                                }else if(actionStatus==="approved"){
+                                    actionButtons='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-execute="'+esc(String(item.id||""))+'">Execute action</button>';
+                                }
+                                return '<article class="sway-ai-ki-execution-action">' +
+                                    '<div class="sway-ai-ki-execution-action-head"><div><strong>'+esc(item.title||"Controlled action")+'</strong><span>'+esc(item.action_type||"action")+' · '+esc(proposalStatusLabel(actionStatus))+'</span></div><em>'+esc(proposalStatusLabel(actionStatus))+'</em></div>' +
+                                    (item.purpose ? '<p>'+esc(item.purpose)+'</p>' : "") +
+                                    renderActionPayload(item) +
+                                    (item.error_message ? '<div class="sway-ai-ki-execution-action-error">'+esc(item.error_message)+'</div>' : "") +
+                                    (item.executed_at ? '<div class="sway-ai-ki-execution-action-result">Executed '+esc(new Date(item.executed_at).toLocaleString())+'</div>' : "") +
+                                    '<div class="sway-ai-ki-execution-actions">'+actionButtons+'</div>' +
+                                '</article>';
+                            }).join("")+
+                        '</div>'
+                        : (status==="approved" || status==="active"
+                            ? '<div class="sway-ai-ki-execution-detail"><span>Controlled actions</span><div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-prepare="'+esc(String(plan.id||""))+'">Prepare controlled actions</button></div><strong>No action proposals prepared yet.</strong></div>'
+                            : "");
+
                     const reviewActions=status==="draft"
                         ? '<div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-approve="'+esc(String(plan.id||""))+'">Approve plan</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-cancel="'+esc(String(plan.id||""))+'">Cancel draft</button></div>'
-                        : '<div class="sway-ai-ki-execution-note">'+(status==="approved" ? "Approved and ready for the controlled action layer in a later InnerMe phase. No workspace action has been executed." : "Execution plan is active. No external action is performed by Phase 9.")+'</div>';
+                        : '<div class="sway-ai-ki-execution-note">'+(status==="approved" ? "Approved. Controlled actions still require individual approval and explicit execution." : "Execution plan is active. Each controlled action remains auditable and separately gated.")+'</div>';
 
                     planHtml=
                         '<div class="sway-ai-ki-execution-plan">' +
@@ -1322,6 +1393,7 @@
                             criteriaHtml +
                             '<div class="sway-ai-ki-execution-detail"><span>Steps</span><div class="sway-ai-ki-execution-steps">'+(stepsHtml || '<p class="sway-ai-ki-muted">No steps recorded.</p>')+'</div></div>' +
                             evidenceHtml +
+                            actionsHtml +
                             reviewActions +
                         '</div>';
                 }
@@ -1340,7 +1412,8 @@
             try{
                 const data=await loadExecutionPlans();
                 const planCount=data.plans.filter(function(item){return ["draft","approved","active"].includes(String(item && item.status||""));}).length;
-                executionSummary.innerHTML='<div class="sway-ai-ki-execution-summary-grid"><div><span>Active decisions</span><strong>'+esc(data.decisions.length)+'</strong></div><div><span>Open plans</span><strong>'+esc(planCount)+'</strong></div><div><span>Plan status</span><strong>Approval gated</strong></div><div><span>External actions</span><strong>None</strong></div></div>';
+                const actionCount=data.actionProposals.filter(function(item){return ["proposed","approved","executing"].includes(String(item && item.status||""));}).length;
+                executionSummary.innerHTML='<div class="sway-ai-ki-execution-summary-grid"><div><span>Active decisions</span><strong>'+esc(data.decisions.length)+'</strong></div><div><span>Open plans</span><strong>'+esc(planCount)+'</strong></div><div><span>Pending actions</span><strong>'+esc(actionCount)+'</strong></div><div><span>External execution</span><strong>Explicit only</strong></div></div>';
                 executionResults.innerHTML=renderExecutionPlans(data);
                 executionResults.__swayExecutionData=data;
                 return data;
@@ -1372,6 +1445,94 @@
             const target=build||approve||cancel;
             if(!target) return;
             event.preventDefault(); event.stopPropagation();
+
+            const prepare=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-prepare]") : null;
+            const actionApprove=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-approve]") : null;
+            const actionReject=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-reject]") : null;
+            const actionExecute=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-execute]") : null;
+
+            if(prepare){
+                const targetPlanId=String(prepare.dataset.swayAiKiActionPrepare||"").trim();
+                if(!targetPlanId || !window.confirm("Prepare controlled action proposals for this approved plan? No action will be executed.")) return;
+                prepare.disabled=true;
+                prepare.textContent="Preparing…";
+                try{
+                    const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                        method:"POST",
+                        headers:authHeaders(),
+                        body:JSON.stringify({action:"propose_execution_actions",plan_id:targetPlanId})
+                    });
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok){
+                        throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Controlled action proposal generation failed.");
+                    }
+                    await refreshExecutionPlans(false);
+                    window.alert(String(data.new_proposals||0)+" controlled action proposal(s) prepared. Review each one before approval.");
+                }catch(error){
+                    prepare.disabled=false;
+                    prepare.textContent="Prepare controlled actions";
+                    window.alert(error.message||"Controlled action proposal generation failed.");
+                }
+                return;
+            }
+
+            if(actionApprove || actionReject){
+                const proposalId=String(
+                    (actionApprove && actionApprove.dataset.swayAiKiActionApprove) ||
+                    (actionReject && actionReject.dataset.swayAiKiActionReject) ||
+                    ""
+                ).trim();
+                if(!proposalId) return;
+                const review=actionApprove ? "approved" : "rejected";
+                if(!window.confirm(actionApprove ? "Approve this controlled action proposal? It will still require explicit execution." : "Reject this controlled action proposal?")) return;
+
+                const target=actionApprove||actionReject;
+                target.disabled=true;
+                target.textContent=actionApprove ? "Approving…" : "Rejecting…";
+                try{
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/review_innerme_action_proposal",{
+                        method:"POST",
+                        headers:authHeaders(),
+                        body:JSON.stringify({p_proposal_id:proposalId,p_decision:review})
+                    });
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok){
+                        throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Controlled action review failed.");
+                    }
+                    await refreshExecutionPlans();
+                }catch(error){
+                    target.disabled=false;
+                    target.textContent=actionApprove ? "Approve action" : "Reject";
+                    window.alert(error.message||"Controlled action review failed.");
+                }
+                return;
+            }
+
+            if(actionExecute){
+                const proposalId=String(actionExecute.dataset.swayAiKiActionExecute||"").trim();
+                if(!proposalId) return;
+                if(!window.confirm("Execute this approved InnerMe action now? This may create a task or send a client-facing email.")) return;
+                actionExecute.disabled=true;
+                actionExecute.textContent="Executing…";
+                try{
+                    const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                        method:"POST",
+                        headers:authHeaders(),
+                        body:JSON.stringify({action:"execute_innerme_action",proposal_id:proposalId})
+                    });
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok){
+                        throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Controlled action execution failed.");
+                    }
+                    await refreshExecutionPlans();
+                    window.alert(data.action_type==="send_email" ? "Approved email action executed and recorded." : "Approved task action executed and recorded.");
+                }catch(error){
+                    actionExecute.disabled=false;
+                    actionExecute.textContent="Execute action";
+                    window.alert(error.message||"Controlled action execution failed.");
+                }
+                return;
+            }
 
             if(build){
                 const decisionId=String(build.dataset.swayAiKiExecutionBuild||"").trim();
@@ -1900,6 +2061,24 @@
         "body.sway-dark-mode .sway-ai-ki-execution-grid>div,body.sway-dark-mode .sway-ai-ki-execution-detail,body.sway-dark-mode .sway-ai-ki-execution-step-detail{border-top-color:rgba(119,193,252,.1)}" +
         "body.sway-dark-mode .sway-ai-ki-execution-step,body.sway-dark-mode .sway-ai-ki-execution-evidence span,body.sway-dark-mode .sway-ai-ki-execution-note{background:rgba(119,193,252,.055)}" +
         "@media(max-width:680px){.sway-ai-ki-execution-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-execution-head,.sway-ai-ki-execution-plan-head{display:grid;gap:6px}.sway-ai-ki-execution-grid{grid-template-columns:1fr}}" +
+        ".sway-ai-ki-execution-actions-list{display:grid;gap:7px}" +
+        ".sway-ai-ki-execution-action{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-execution-action-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}" +
+        ".sway-ai-ki-execution-action-head>div{display:grid;gap:2px;min-width:0}" +
+        ".sway-ai-ki-execution-action-head strong{font-size:9px;line-height:1.35}" +
+        ".sway-ai-ki-execution-action-head span{font-size:7px;opacity:.6}" +
+        ".sway-ai-ki-execution-action-head em{padding:3px 5px;border-radius:999px;background:rgba(1,82,244,.08);color:#0152F4;font-size:7px;font-style:normal;font-weight:800;white-space:nowrap}" +
+        ".sway-ai-ki-execution-action>p{margin:0;font-size:8px;line-height:1.4;opacity:.75}" +
+        ".sway-ai-ki-execution-action-payload{display:grid;gap:2px;padding-top:5px;border-top:1px solid rgba(1,82,244,.07)}" +
+        ".sway-ai-ki-execution-action-payload span{font-size:7px;opacity:.55}" +
+        ".sway-ai-ki-execution-action-payload strong{font-size:8px;line-height:1.35}" +
+        ".sway-ai-ki-execution-action-payload p{margin:0;font-size:8px;line-height:1.4;white-space:pre-wrap}" +
+        ".sway-ai-ki-execution-action-error{font-size:8px;line-height:1.4;padding:6px;border-radius:7px;background:rgba(220,53,69,.07);color:#b42318}" +
+        ".sway-ai-ki-execution-action-result{font-size:7px;line-height:1.4;opacity:.62}" +
+        "body.sway-dark-mode .sway-ai-ki-execution-action{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-execution-action-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
+        "body.sway-dark-mode .sway-ai-ki-execution-action-payload{border-top-color:rgba(119,193,252,.1)}" +
+        "body.sway-dark-mode .sway-ai-ki-execution-action-error{background:rgba(190,52,52,.14);color:#FFB0B0}" +
         ".sway-ai-ki-evaluation{width:100%;margin:4px 0}" +
         ".sway-ai-ki-evaluation>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
         ".sway-ai-ki-evaluation>summary::-webkit-details-marker{display:none}" +
