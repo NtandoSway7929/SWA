@@ -218,6 +218,7 @@ begin
     end loop;
 
     v_count := v_count + coalesce(public.generate_innerme_operational_incidents(), 0);
+    v_count := v_count + coalesce(public.refresh_innerme_incident_intelligence(), 0);
 
     return v_count;
 end;
