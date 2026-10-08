@@ -3505,7 +3505,7 @@ Deno.serve(async (req) => {
 
   const message = String(body.message || "").trim();
   const actionNeedsMessage =
-    !["briefing", "draft_followup", "decision_intelligence"].includes(action);
+    !["briefing", "draft_followup", "decision_intelligence", "generate_execution_plan"].includes(action);
 
   if (actionNeedsMessage && !message) {
     return json({ error: "A message is required." }, 400, origin);
@@ -5879,6 +5879,496 @@ Deno.serve(async (req) => {
       approval_required:true,
       live_decisions_changed:false,
     },200,origin);
+  }
+
+  /*
+   * PHASE 9 · INNERME EXECUTION INTELLIGENCE
+   * Convert an approved active decision into a governed execution plan.
+   * This action creates only a draft plan. It does not mutate workspace
+   * records, send communications, create tasks, or perform external actions.
+   */
+  if (action === "generate_execution_plan") {
+    const decisionId = String(
+      body.decision_id || body.p_decision_id || "",
+    ).trim();
+
+    if (!decisionId) {
+      return json(
+        { error: "A decision_id is required to generate an execution plan." },
+        400,
+        origin,
+      );
+    }
+
+    const { data: decision, error: decisionError } = await authSupabase
+      .from("innerme_decisions")
+      .select(
+        "id,title,decision,context,rationale,evidence,expected_impact,effort,urgency,confidence,recommended_next_action,priority,status,source_conversation_id,created_at,updated_at",
+      )
+      .eq("id", decisionId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (decisionError) {
+      return json(
+        {
+          error: "InnerMe could not load the approved decision.",
+          detail: decisionError.message,
+        },
+        500,
+        origin,
+      );
+    }
+
+    if (!decision) {
+      return json(
+        { error: "Only an active InnerMe decision can receive an execution plan." },
+        400,
+        origin,
+      );
+    }
+
+    const { data: existingPlan, error: existingPlanError } = await authSupabase
+      .from("innerme_execution_plans")
+      .select(
+        "id,plan_key,decision_id,title,objective,rationale,evidence,success_metric,completion_criteria,expected_outcome,duration_days,target_date,effort,urgency,confidence,risk,status,source_conversation_id,approved_by,approved_at,created_at,updated_at",
+      )
+      .eq("decision_id", decisionId)
+      .in("status", ["draft", "approved", "active"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPlanError) {
+      return json(
+        {
+          error: "InnerMe could not check for an existing execution plan.",
+          detail: existingPlanError.message,
+        },
+        500,
+        origin,
+      );
+    }
+
+    if (existingPlan) {
+      const { data: existingSteps, error: existingStepsError } =
+        await authSupabase
+          .from("innerme_execution_steps")
+          .select(
+            "id,plan_id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes,created_at,updated_at",
+          )
+          .eq("plan_id", existingPlan.id)
+          .order("step_order", { ascending: true });
+
+      if (existingStepsError) {
+        return json(
+          {
+            error: "The existing InnerMe execution plan loaded, but its steps could not be read.",
+            detail: existingStepsError.message,
+          },
+          500,
+          origin,
+        );
+      }
+
+      return json(
+        {
+          ok: true,
+          plan: existingPlan,
+          steps: Array.isArray(existingSteps) ? existingSteps : [],
+          created: false,
+          approval_required: existingPlan.status === "draft",
+          live_workspace_changed: false,
+        },
+        200,
+        origin,
+      );
+    }
+
+    const workspace = {
+      leads: compactRows(safeContext.leads || [], 40),
+      followups: compactRows(safeContext.followups || [], 60),
+      quotes: compactRows(safeContext.quotes || [], 40),
+      invoices: compactRows(safeContext.invoices || [], 60),
+      enquiries: compactRows(safeContext.enquiries || [], 40),
+      communications: compactRows(safeContext.communications || [], 60),
+      email_messages: compactRows(safeContext.email_messages || [], 60),
+      tasks: compactRows(safeContext.tasks || [], 50),
+      clients: compactRows(safeContext.clients || [], 40),
+      projects: compactRows(safeContext.projects || [], 40),
+      payments: compactRows(safeContext.payments || [], 40),
+      active_experiments: compactRows(
+        safeContext.innerme_business_brain?.active_experiments || [],
+        20,
+      ),
+      existing_decisions: compactRows(
+        safeContext.innerme_business_brain?.decisions || [],
+        20,
+      ),
+      existing_insights: compactRows(
+        safeContext.innerme_business_brain?.insights || [],
+        20,
+      ),
+    };
+
+    const knowledge = innermeKnowledgeMatches.map((item: any) => ({
+      id: String(item?.id || ""),
+      title: cleanForModel(item?.title || "", 160),
+      statement: cleanForModel(item?.statement || "", 900),
+      evidence_level: cleanForModel(item?.evidence_level || "", 40),
+      constraints: cleanForModel(item?.constraints || "", 500),
+      application: cleanForModel(item?.application || "", 500),
+      similarity: Number(Number(item?.similarity || 0).toFixed(3)),
+    })).filter((item: any) => item.id);
+
+    const decisionEvidence = Array.isArray(decision.evidence)
+      ? decision.evidence.slice(0, 8)
+      : [];
+
+    const prompt = [
+      "You are InnerMe Execution Intelligence for Swayphics.",
+      "Turn ONE ACTIVE INNERME DECISION into a concrete, governed execution plan.",
+      "This is planning only. Do not claim any action has happened.",
+      "The plan must be executable by a Swayphics admin using the current workspace.",
+      "Prefer 3 to 8 ordered steps. Each step must describe one real action, its purpose, owner, relative timing, dependency, success signal, verification method, and risk level.",
+      "Do not invent customer intent, names, amounts, dates, causes, market facts, availability, or results.",
+      "Do not assume a task, email, quote, invoice, lead update, payment, or other workspace mutation has happened.",
+      "Do not recommend changing Swayphics prices unless the approved decision itself explicitly requires pricing analysis.",
+      "Use exact workspace record IDs when citing evidence. Verified knowledge may guide interpretation, but it cannot create workspace facts.",
+      "Do not create a plan that duplicates an existing active or approved plan. None exists for this decision in the current request.",
+      "Use relative timing with due_offset_days rather than inventing calendar dates.",
+      "Return JSON only in this exact shape:",
+      '{"plan":{"plan_key":"decision-id","title":"...","objective":"...","rationale":"...","evidence":[{"source":"workspace|knowledge","type":"lead|follow_up|quote|invoice|enquiry|communication|email|task|client|project|payment|decision|insight|knowledge","id":"...","why":"..."}],"success_metric":"...","completion_criteria":["..."],"expected_outcome":"...","duration_days":7,"effort":"low|medium|high","urgency":"critical|high|normal|low","confidence":"high|medium|low","risk":"..."},"steps":[{"step_order":1,"title":"...","action":"...","purpose":"...","owner_role":"Swayphics admin","due_offset_days":0,"depends_on_step_order":null,"success_signal":"...","verification_method":"...","risk_level":"low|medium|high","notes":"..."}]}',
+      "plan_key must equal the active decision ID.",
+      "duration_days must be an integer from 0 to 365.",
+      "due_offset_days must be an integer from 0 to 365.",
+      "The first step should be the highest-confidence immediate move. Later steps should depend on earlier steps when appropriate.",
+      "CURRENT ACTIVE DECISION:",
+      JSON.stringify(decision),
+      "DECISION EVIDENCE CARRIED FROM PHASE 8:",
+      JSON.stringify(decisionEvidence),
+      "CURRENT SWAYPHICS WORKSPACE:",
+      JSON.stringify(workspace),
+      "VERIFIED INNERME KNOWLEDGE:",
+      JSON.stringify(knowledge),
+    ].join("\n\n");
+
+    async function requestExecutionPlan(model: string) {
+      return await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":generateContent",
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": geminiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              maxOutputTokens: 2600,
+              responseMimeType: "application/json",
+            },
+          }),
+        },
+      );
+    }
+
+    let response = await requestExecutionPlan(PRIMARY_MODEL);
+    let model = PRIMARY_MODEL;
+
+    if (
+      (response.status === 503 || response.status === 429) &&
+      PRIMARY_MODEL !== FALLBACK_MODEL
+    ) {
+      model = FALLBACK_MODEL;
+      response = await requestExecutionPlan(FALLBACK_MODEL);
+    }
+
+    if (!response.ok) {
+      return json(
+        {
+          error: "InnerMe could not generate the execution plan.",
+          provider_status: response.status,
+          provider_model: model,
+        },
+        502,
+        origin,
+      );
+    }
+
+    const result = await response.json();
+    const raw =
+      result?.candidates?.[0]?.content?.parts
+        ?.map((part: any) => part?.text || "")
+        .join("") || "";
+
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(raw || "{}");
+    } catch {
+      parsed = {};
+    }
+
+    const planInput = parsed?.plan || {};
+    const stepInputs = Array.isArray(parsed?.steps)
+      ? parsed.steps.slice(0, 8)
+      : [];
+
+    const cleanPlanTitle = cleanForModel(planInput?.title || "", 180);
+    const cleanObjective = cleanForModel(planInput?.objective || "", 900);
+
+    if (!cleanPlanTitle || !cleanObjective || stepInputs.length < 3) {
+      return json(
+        {
+          error: "InnerMe generated an incomplete execution plan. No draft was saved.",
+          provider_model: model,
+        },
+        422,
+        origin,
+      );
+    }
+
+    const workspaceAvailable = new Set<string>();
+    for (const [type, rows] of Object.entries(workspace)) {
+      if (!Array.isArray(rows)) continue;
+      for (const row of rows as any[]) {
+        const id = String(row?.id || "").trim();
+        if (id) workspaceAvailable.add(type + ":" + id);
+      }
+    }
+
+    const knowledgeAvailable = new Set(
+      knowledge.map((item: any) => String(item.id || "")),
+    );
+
+    const allowedEvidenceTypes = new Set([
+      "lead",
+      "follow_up",
+      "quote",
+      "invoice",
+      "enquiry",
+      "communication",
+      "email",
+      "task",
+      "client",
+      "project",
+      "payment",
+      "decision",
+      "insight",
+      "knowledge",
+    ]);
+
+    const evidence = Array.isArray(planInput?.evidence)
+      ? planInput.evidence
+          .map((item: any) => ({
+            source:
+              item?.source === "knowledge" ? "knowledge" : "workspace",
+            type: String(item?.type || "").trim(),
+            id: String(item?.id || "").trim(),
+            why: cleanForModel(item?.why || "", 260),
+          }))
+          .filter(function (item: any) {
+            if (!allowedEvidenceTypes.has(item.type) || !item.id || !item.why) {
+              return false;
+            }
+
+            if (item.source === "knowledge") {
+              return item.type === "knowledge" && knowledgeAvailable.has(item.id);
+            }
+
+            return workspaceAvailable.has(item.type + ":" + item.id);
+          })
+          .slice(0, 8)
+      : [];
+
+    const decisionEvidenceExists = evidence.some(function (item: any) {
+      return (
+        item.source === "workspace" &&
+        item.type === "decision" &&
+        item.id === decisionId
+      );
+    });
+
+    if (!decisionEvidenceExists) {
+      evidence.unshift({
+        source: "workspace",
+        type: "decision",
+        id: decisionId,
+        why: "This execution plan is governed by the approved InnerMe decision.",
+      });
+    }
+
+    const steps: any[] = [];
+
+    for (let index = 0; index < stepInputs.length; index += 1) {
+      const item = stepInputs[index] || {};
+      const stepOrder = index + 1;
+      const title = cleanForModel(item?.title || "", 160);
+      const actionText = cleanForModel(item?.action || "", 900);
+
+      if (!title || !actionText) continue;
+
+      const dueOffsetRaw = Number(item?.due_offset_days);
+      const dueOffset =
+        Number.isFinite(dueOffsetRaw)
+          ? Math.max(0, Math.min(Math.round(dueOffsetRaw), 365))
+          : null;
+
+      const dependencyRaw = Number(item?.depends_on_step_order);
+      const dependency =
+        Number.isFinite(dependencyRaw) &&
+        Math.round(dependencyRaw) >= 1 &&
+        Math.round(dependencyRaw) < stepOrder
+          ? Math.round(dependencyRaw)
+          : null;
+
+      const riskLevel = ["low", "medium", "high"].includes(
+        String(item?.risk_level || "").trim(),
+      )
+        ? String(item.risk_level).trim()
+        : "low";
+
+      steps.push({
+        step_order: stepOrder,
+        title,
+        action: actionText,
+        purpose: cleanForModel(item?.purpose || "", 500) || null,
+        owner_role:
+          cleanForModel(item?.owner_role || "", 100) || "Swayphics admin",
+        due_offset_days: dueOffset,
+        depends_on_step_order: dependency,
+        success_signal: cleanForModel(item?.success_signal || "", 500) || null,
+        verification_method:
+          cleanForModel(item?.verification_method || "", 500) || null,
+        risk_level: riskLevel,
+        notes: cleanForModel(item?.notes || "", 500) || null,
+      });
+    }
+
+    if (steps.length < 3) {
+      return json(
+        {
+          error: "InnerMe could not produce enough concrete execution steps. No draft was saved.",
+          provider_model: model,
+        },
+        422,
+        origin,
+      );
+    }
+
+    const durationRaw = Number(planInput?.duration_days);
+    const durationDays =
+      Number.isFinite(durationRaw)
+        ? Math.max(0, Math.min(Math.round(durationRaw), 365))
+        : null;
+
+    const completedCriteria = Array.isArray(planInput?.completion_criteria)
+      ? planInput.completion_criteria
+          .map((item: any) => cleanForModel(item, 260))
+          .filter(Boolean)
+          .slice(0, 8)
+      : [];
+
+    const effort = ["low", "medium", "high"].includes(
+      String(planInput?.effort || "").trim(),
+    )
+      ? String(planInput.effort).trim()
+      : "medium";
+
+    const urgency = ["critical", "high", "normal", "low"].includes(
+      String(planInput?.urgency || "").trim(),
+    )
+      ? String(planInput.urgency).trim()
+      : String(decision.urgency || "normal");
+
+    const confidence = ["high", "medium", "low"].includes(
+      String(planInput?.confidence || "").trim(),
+    )
+      ? String(planInput.confidence).trim()
+      : String(decision.confidence || "medium");
+
+    const planPayload = {
+      plan_key: decisionId,
+      decision_id: decisionId,
+      title: cleanPlanTitle,
+      objective: cleanObjective,
+      rationale: cleanForModel(planInput?.rationale || "", 1000) || null,
+      evidence,
+      success_metric:
+        cleanForModel(planInput?.success_metric || "", 700) || null,
+      completion_criteria: completedCriteria,
+      expected_outcome:
+        cleanForModel(planInput?.expected_outcome || "", 700) || null,
+      duration_days: durationDays,
+      target_date: null,
+      effort,
+      urgency,
+      confidence,
+      risk: cleanForModel(planInput?.risk || "", 700) || null,
+      status: "draft",
+      source_conversation_id:
+        cleanForModel(body.chat_id || "", 120) || "phase9_execution_intelligence",
+    };
+
+    const { data: savedPlan, error: saveError } = await authSupabase.rpc(
+      "create_innerme_execution_plan",
+      {
+        p_plan: planPayload,
+        p_steps: steps,
+      },
+    );
+
+    if (saveError || !savedPlan) {
+      return json(
+        {
+          error: "InnerMe generated the plan but could not save the governed draft.",
+          detail: saveError?.message || "Unknown database error.",
+        },
+        500,
+        origin,
+      );
+    }
+
+    const { data: savedSteps, error: savedStepsError } = await authSupabase
+      .from("innerme_execution_steps")
+      .select(
+        "id,plan_id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes,created_at,updated_at",
+      )
+      .eq("plan_id", savedPlan.id)
+      .order("step_order", { ascending: true });
+
+    if (savedStepsError) {
+      return json(
+        {
+          ok: true,
+          plan: savedPlan,
+          steps: [],
+          created: true,
+          approval_required: true,
+          live_workspace_changed: false,
+          warning: "The draft plan was saved, but its steps could not be read back.",
+          provider_model: model,
+        },
+        200,
+        origin,
+      );
+    }
+
+    return json(
+      {
+        ok: true,
+        plan: savedPlan,
+        steps: Array.isArray(savedSteps) ? savedSteps : [],
+        created: true,
+        approval_required: true,
+        live_workspace_changed: false,
+        provider_model: model,
+      },
+      200,
+      origin,
+    );
   }
 
   const systemPrompt = `You are InnerMe, the private internal operations assistant for Swayphics.
