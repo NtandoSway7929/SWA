@@ -917,6 +917,16 @@
                 '<div class="sway-ai-ki-gaps-analysis"><p class="sway-ai-ki-muted">Not analysed yet.</p></div>' +
                 '<div class="sway-ai-ki-gaps-results"><p class="sway-ai-ki-muted">Open this section to load acquisition candidates.</p></div>' +
             '</details>' +
+            '<details class="sway-ai-ki-decisions" data-sway-ai-ki-decisions-panel>' +
+                '<summary>Decision intelligence</summary>' +
+                '<div class="sway-ai-ki-decisions-controls">' +
+                    '<span>Ranks the most useful business decisions from current workspace evidence and governed knowledge. Recommendations remain candidates until you approve them.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-decisions-run>Find decisions</button>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-decisions-refresh>Refresh candidates</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-decisions-summary"><p class="sway-ai-ki-muted">No decision analysis run yet.</p></div>' +
+                '<div class="sway-ai-ki-decisions-results"><p class="sway-ai-ki-muted">Open this section to load decision candidates.</p></div>' +
+            '</details>' +
             '<details class="sway-ai-ki-evaluation" data-sway-ai-ki-evaluation-panel>' +
                 '<summary>Evaluation &amp; benchmarking</summary>' +
                 '<div class="sway-ai-ki-evaluation-controls">' +
@@ -1054,6 +1064,124 @@
                 approveTarget ? "approved" : "dismissed",
                 gapsResults
             );
+        });
+
+        const decisionsPanel=details.querySelector("[data-sway-ai-ki-decisions-panel]");
+        const decisionsRun=details.querySelector("[data-sway-ai-ki-decisions-run]");
+        const decisionsRefresh=details.querySelector("[data-sway-ai-ki-decisions-refresh]");
+        const decisionsSummary=details.querySelector(".sway-ai-ki-decisions-summary");
+        const decisionsResults=details.querySelector(".sway-ai-ki-decisions-results");
+
+        async function loadDecisionCandidates() {
+            const response=await fetch(
+                SUPABASE_URL+"/rest/v1/innerme_decision_candidates?select=id,title,decision,context,rationale,evidence,expected_impact,effort,urgency,confidence,recommended_next_action,priority,status,source_conversation_id,created_at,updated_at&status=eq.candidate&order=priority.desc,created_at.desc&limit=30",
+                {method:"GET",headers:authHeaders()}
+            );
+            const data=await response.json().catch(function(){return [];});
+            if(!response.ok){
+                throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Unable to load decision candidates.");
+            }
+            return Array.isArray(data)?data:[];
+        }
+
+        function renderDecisionCandidates(items) {
+            if(!items.length){
+                return '<p class="sway-ai-ki-muted">No decision candidates are waiting for review.</p>';
+            }
+            return items.map(function(item){
+                const evidence=Array.isArray(item.evidence)?item.evidence:[];
+                const evidenceHtml=evidence.slice(0,6).map(function(ref){
+                    return '<span>'+esc(ref.type||"record")+' · '+esc(ref.id||"")+' · '+esc(ref.why||"")+'</span>';
+                }).join("");
+                return '<article class="sway-ai-ki-decision-item">' +
+                    '<div class="sway-ai-ki-decision-head"><div><strong>'+esc(item.title||"Decision candidate")+'</strong><span>'+esc(item.urgency||"normal")+' · P'+esc(item.priority||50)+' · '+esc(item.confidence||"medium")+'</span></div><em>'+esc(item.status||"candidate")+'</em></div>' +
+                    '<p class="sway-ai-ki-decision-main">'+esc(item.decision||"")+'</p>' +
+                    '<div class="sway-ai-ki-decision-grid"><div><span>Context</span><strong>'+esc(item.context||"Current workspace evidence supports review of this decision.")+'</strong></div><div><span>Rationale</span><strong>'+esc(item.rationale||"")+'</strong></div><div><span>Expected impact</span><strong>'+esc(item.expected_impact||"Not specified")+'</strong></div><div><span>Next action</span><strong>'+esc(item.recommended_next_action||"Review the evidence and decide.")+'</strong></div></div>' +
+                    '<div class="sway-ai-ki-decision-meta"><span>Effort: '+esc(item.effort||"medium")+'</span><span>Urgency: '+esc(item.urgency||"normal")+'</span><span>Confidence: '+esc(item.confidence||"medium")+'</span></div>' +
+                    (evidenceHtml ? '<div class="sway-ai-ki-decision-evidence"><span>Evidence</span>'+evidenceHtml+'</div>' : "") +
+                    '<div class="sway-ai-ki-gap-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-decision-approve="'+esc(String(item.id||""))+'">Approve decision</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-decision-dismiss="'+esc(String(item.id||""))+'">Dismiss</button></div>' +
+                '</article>';
+            }).join("");
+        }
+
+        async function refreshDecisionCandidates() {
+            decisionsResults.innerHTML='<p class="sway-ai-ki-muted">Loading decision candidates…</p>';
+            try{
+                const items=await loadDecisionCandidates();
+                decisionsResults.innerHTML=renderDecisionCandidates(items);
+                decisionsResults.__swayDecisionItems=items;
+            }catch(error){
+                decisionsResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Decision candidates failed to load.")+'</p>';
+                decisionsResults.__swayDecisionItems=[];
+            }
+        }
+
+        if(decisionsPanel){
+            decisionsPanel.addEventListener("toggle",function(){
+                if(decisionsPanel.open) refreshDecisionCandidates();
+            });
+        }
+
+        if(decisionsRefresh){
+            decisionsRefresh.addEventListener("click",function(event){
+                event.preventDefault(); event.stopPropagation();
+                refreshDecisionCandidates();
+            });
+        }
+
+        if(decisionsRun){
+            decisionsRun.addEventListener("click",async function(event){
+                event.preventDefault(); event.stopPropagation();
+                if(decisionsRun.disabled) return;
+                decisionsRun.disabled=true;
+                decisionsRun.textContent="Analysing…";
+                decisionsSummary.innerHTML='<p class="sway-ai-ki-muted">Combining current workspace evidence with verified knowledge…</p>';
+                try{
+                    const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                        method:"POST",headers:authHeaders(),
+                        body:JSON.stringify({action:"decision_intelligence",message:"What are the most important business decisions Swayphics should consider right now?"})
+                    });
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Decision analysis failed.");
+                    decisionsSummary.innerHTML='<div class="sway-ai-ki-decision-summary-grid"><div><span>New candidates</span><strong>'+esc(data.new_candidates||0)+'</strong></div><div><span>Provider</span><strong>'+esc(data.provider_model||"unknown")+'</strong></div><div><span>Approval</span><strong>Required</strong></div><div><span>Live decisions changed</span><strong>No</strong></div></div>';
+                    await refreshDecisionCandidates();
+                }catch(error){
+                    decisionsSummary.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Decision analysis failed.")+'</p>';
+                }finally{
+                    decisionsRun.disabled=false;
+                    decisionsRun.textContent="Find decisions";
+                }
+            });
+        }
+
+        decisionsResults.addEventListener("click",async function(event){
+            const approve=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-decision-approve]") : null;
+            const dismiss=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-decision-dismiss]") : null;
+            const target=approve||dismiss;
+            if(!target) return;
+            event.preventDefault(); event.stopPropagation();
+
+            const id=target.dataset.swayAiKiDecisionApprove || target.dataset.swayAiKiDecisionDismiss || "";
+            const decision=approve ? "approved" : "dismissed";
+            if(!id || !window.confirm(approve ? "Approve this decision into InnerMe's active business brain?" : "Dismiss this decision candidate?")) return;
+
+            target.disabled=true;
+            target.textContent=approve ? "Approving…" : "Dismissing…";
+            try{
+                const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/review_innerme_decision_candidate",{
+                    method:"POST",
+                    headers:authHeaders(),
+                    body:JSON.stringify({p_candidate_id:id,p_decision:decision})
+                });
+                const data=await response.json().catch(function(){return null;});
+                if(!response.ok) throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Decision review failed.");
+                await refreshDecisionCandidates();
+                window.alert(approve ? "Decision approved and added to InnerMe's active business brain." : "Decision candidate dismissed.");
+            }catch(error){
+                target.disabled=false;
+                target.textContent=approve ? "Approve decision" : "Dismiss";
+                window.alert(error.message||"Decision review failed.");
+            }
         });
 
         const evaluationPanel = details.querySelector("[data-sway-ai-ki-evaluation-panel]");
@@ -1443,6 +1571,38 @@
         "body.sway-dark-mode .sway-ai-ki-eval-neutral{color:#9FD5FF!important}" +
         "body.sway-dark-mode .sway-ai-ki-eval-history{border-color:rgba(119,193,252,.1);background:rgba(119,193,252,.025)}" +
         "body.sway-dark-mode .sway-ai-ki-eval-flags span{background:rgba(190,52,52,.14);color:#FFB0B0}" +
+        ".sway-ai-ki-decisions{width:100%;margin:4px 0}" +
+        ".sway-ai-ki-decisions>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
+        ".sway-ai-ki-decisions>summary::-webkit-details-marker{display:none}" +
+        ".sway-ai-ki-decisions>summary:after{content:'›';transform:rotate(90deg);transition:transform .16s ease}" +
+        ".sway-ai-ki-decisions[open]>summary:after{transform:rotate(-90deg)}" +
+        ".sway-ai-ki-decisions-controls{display:grid;gap:8px;padding:6px 10px 10px}" +
+        ".sway-ai-ki-decisions-controls>span{font-size:11px;line-height:1.45;opacity:.68}" +
+        ".sway-ai-ki-decisions-summary,.sway-ai-ki-decisions-results{display:grid;gap:9px;padding:0 10px 10px}" +
+        ".sway-ai-ki-decision-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}" +
+        ".sway-ai-ki-decision-summary-grid>div{display:grid;gap:3px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-decision-summary-grid span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-decision-summary-grid strong{font-size:11px}" +
+        ".sway-ai-ki-decision-item{display:grid;gap:8px;padding:11px;border:1px solid rgba(1,82,244,.1);border-radius:12px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-decision-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-decision-head>div{display:grid;gap:3px;min-width:0}" +
+        ".sway-ai-ki-decision-head strong{font-size:11px;line-height:1.35}" +
+        ".sway-ai-ki-decision-head span{font-size:8px;opacity:.6;text-transform:capitalize}" +
+        ".sway-ai-ki-decision-head em{padding:4px 6px;border-radius:999px;background:rgba(1,82,244,.08);color:#0152F4;font-size:8px;font-style:normal;font-weight:800}" +
+        ".sway-ai-ki-decision-main{margin:0;font-size:10px;line-height:1.55;font-weight:650}" +
+        ".sway-ai-ki-decision-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}" +
+        ".sway-ai-ki-decision-grid>div{display:grid;gap:3px;padding-top:7px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-decision-grid span,.sway-ai-ki-decision-evidence>span{font-size:8px;opacity:.55}" +
+        ".sway-ai-ki-decision-grid strong{font-size:9px;font-weight:600;line-height:1.4}" +
+        ".sway-ai-ki-decision-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:8px;opacity:.65}" +
+        ".sway-ai-ki-decision-evidence{display:grid;gap:5px;padding-top:7px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-decision-evidence>span:first-child{font-size:8px}" +
+        ".sway-ai-ki-decision-evidence>span:not(:first-child){font-size:8px;line-height:1.4;padding:5px 6px;border-radius:7px;background:rgba(1,82,244,.045);overflow-wrap:anywhere}" +
+        "body.sway-dark-mode .sway-ai-ki-decision-summary-grid>div,body.sway-dark-mode .sway-ai-ki-decision-item{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-decision-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
+        "body.sway-dark-mode .sway-ai-ki-decision-grid>div,body.sway-dark-mode .sway-ai-ki-decision-evidence{border-top-color:rgba(119,193,252,.1)}" +
+        "body.sway-dark-mode .sway-ai-ki-decision-evidence>span:not(:first-child){background:rgba(119,193,252,.055)}" +
+        "@media(max-width:680px){.sway-ai-ki-decision-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-decision-head{display:grid;gap:6px}.sway-ai-ki-decision-grid{grid-template-columns:1fr}}"
         ".sway-ai-ki-evaluation{width:100%;margin:4px 0}" +
         ".sway-ai-ki-evaluation>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
         ".sway-ai-ki-evaluation>summary::-webkit-details-marker{display:none}" +
