@@ -1099,7 +1099,8 @@ Deno.serve(async (req) => {
   if (
     !geminiKey &&
     action !== "embed_knowledge" &&
-    action !== "search_knowledge"
+    action !== "search_knowledge" &&
+    action !== "execute_innerme_action"
   ) {
     return json({
       error:
@@ -3505,7 +3506,7 @@ Deno.serve(async (req) => {
 
   const message = String(body.message || "").trim();
   const actionNeedsMessage =
-    !["briefing", "draft_followup", "decision_intelligence", "generate_execution_plan"].includes(action);
+    !["briefing", "draft_followup", "decision_intelligence", "generate_execution_plan", "propose_execution_actions", "execute_innerme_action"].includes(action);
 
   if (actionNeedsMessage && !message) {
     return json({ error: "A message is required." }, 400, origin);
@@ -6369,6 +6370,812 @@ Deno.serve(async (req) => {
       200,
       origin,
     );
+  }
+
+
+  /*
+   * PHASE 10 · CONTROLLED ACTION AUTOMATION
+   * Prepare concrete workspace/external mutations as approval-gated proposals.
+   * Only an explicitly approved proposal may be executed, and each executor
+   * revalidates the current record before mutating anything.
+   */
+  if (action === "propose_execution_actions") {
+    const planId = String(body.plan_id || body.p_plan_id || "").trim();
+
+    if (!planId) {
+      return json(
+        { error: "A plan_id is required to prepare controlled actions." },
+        400,
+        origin,
+      );
+    }
+
+    const { data: plan, error: planError } = await authSupabase
+      .from("innerme_execution_plans")
+      .select(
+        "id,decision_id,title,objective,rationale,evidence,success_metric,completion_criteria,expected_outcome,duration_days,effort,urgency,confidence,risk,status,source_conversation_id",
+      )
+      .eq("id", planId)
+      .in("status", ["approved", "active"])
+      .maybeSingle();
+
+    if (planError || !plan) {
+      return json(
+        {
+          error: "Controlled actions require an approved or active execution plan.",
+          detail: planError?.message || null,
+        },
+        400,
+        origin,
+      );
+    }
+
+    const { data: steps, error: stepsError } = await authSupabase
+      .from("innerme_execution_steps")
+      .select(
+        "id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes",
+      )
+      .eq("plan_id", planId)
+      .in("status", ["approved", "in_progress"])
+      .order("step_order", { ascending: true });
+
+    if (stepsError) {
+      return json(
+        {
+          error: "InnerMe could not load the execution steps.",
+          detail: stepsError.message,
+        },
+        500,
+        origin,
+      );
+    }
+
+    const stepRows = Array.isArray(steps) ? steps : [];
+    if (!stepRows.length) {
+      return json(
+        { error: "The execution plan has no approved steps available for controlled actions." },
+        400,
+        origin,
+      );
+    }
+
+    const existing = await authSupabase
+      .from("innerme_action_proposals")
+      .select("id,step_id,action_type,status,title")
+      .eq("plan_id", planId)
+      .in("status", ["proposed", "approved", "executing", "executed"])
+      .limit(100);
+
+    if (existing.error) {
+      return json(
+        {
+          error: "InnerMe could not check existing controlled action proposals.",
+          detail: existing.error.message,
+        },
+        500,
+        origin,
+      );
+    }
+
+    const existingKeySet = new Set(
+      (existing.data || []).map(function (item: any) {
+        return String(item?.step_id || "") + ":" + String(item?.action_type || "");
+      }),
+    );
+
+    const contacts = [
+      ...(Array.isArray(safeContext.leads) ? safeContext.leads : []).map(
+        (item: any) => ({
+          type: "lead",
+          id: String(item?.id || ""),
+          business_name: cleanForModel(item?.business_name || "", 160),
+          contact_name: cleanForModel(item?.contact_name || "", 160),
+          email: cleanForModel(item?.email || "", 200),
+          phone: cleanForModel(item?.phone || "", 80),
+          status: cleanForModel(item?.status || "", 80),
+        }),
+      ),
+      ...(Array.isArray(safeContext.clients) ? safeContext.clients : []).map(
+        (item: any) => ({
+          type: "client",
+          id: String(item?.id || ""),
+          business_name: cleanForModel(item?.business_name || "", 160),
+          contact_name: cleanForModel(item?.contact_name || "", 160),
+          email: cleanForModel(item?.email || "", 200),
+          phone: cleanForModel(item?.phone || "", 80),
+          status: cleanForModel(item?.status || "", 80),
+        }),
+      ),
+    ].filter(function (item) {
+      return Boolean(item.id);
+    });
+
+    const workspace = {
+      leads: compactRows(safeContext.leads || [], 40),
+      clients: compactRows(safeContext.clients || [], 40),
+      projects: compactRows(safeContext.projects || [], 40),
+      tasks: compactRows(safeContext.tasks || [], 50),
+      followups: compactRows(safeContext.followups || [], 60),
+      quotes: compactRows(safeContext.quotes || [], 40),
+      invoices: compactRows(safeContext.invoices || [], 60),
+      enquiries: compactRows(safeContext.enquiries || [], 40),
+    };
+
+    const prompt = [
+      "You are InnerMe Controlled Action Planner for Swayphics.",
+      "Convert approved execution steps into concrete action proposals.",
+      "Only use these action types: create_task or send_email.",
+      "A proposal is not an executed action. It must be reviewed and explicitly executed later.",
+      "Prefer one action proposal per step and do not create more than one proposal for a step.",
+      "Only propose an action when the step genuinely requires a workspace or client-facing mutation.",
+      "Use current workspace data first. Never invent recipient identities, email addresses, amounts, dates, causes or outcomes.",
+      "For send_email, identify an exact lead or client record by id. Do not supply a guessed recipient email.",
+      "For create_task, include exact client_id, project_id or lead_id only when that record is actually supplied.",
+      "Use due_offset_days for task timing rather than inventing a calendar date.",
+      "Return JSON only:",
+      '{"actions":[{"step_order":1,"action_type":"create_task|send_email","title":"...","purpose":"...","payload":{},"evidence":[{"source":"workspace|knowledge","type":"lead|client|project|task|follow_up|quote|invoice|enquiry|decision|knowledge","id":"...","why":"..."}],"requires_confirmation":true}]}',
+      "create_task payload shape: {\"title\":\"...\",\"description\":\"...\",\"priority\":\"low|medium|high\",\"due_offset_days\":0,\"client_id\":\"uuid|null\",\"project_id\":\"uuid|null\",\"lead_id\":\"uuid|null\"}.",
+      "send_email payload shape: {\"contact_type\":\"lead|client\",\"contact_id\":\"uuid\",\"subject\":\"...\",\"message\":\"...\",\"proposal_type\":\"improv-website|no-website|not-website-related\"}.",
+      "Only return proposals that can be grounded in the supplied plan steps and workspace records.",
+      "CURRENT EXECUTION PLAN:",
+      JSON.stringify(plan),
+      "EXECUTION STEPS:",
+      JSON.stringify(stepRows),
+      "CONTACT DIRECTORY:",
+      JSON.stringify(contacts),
+      "CURRENT WORKSPACE:",
+      JSON.stringify(workspace),
+      "VERIFIED KNOWLEDGE:",
+      JSON.stringify(
+        innermeKnowledgeMatches.map(function (item: any) {
+          return {
+            id: String(item?.id || ""),
+            title: cleanForModel(item?.title || "", 160),
+            statement: cleanForModel(item?.statement || "", 900),
+            evidence_level: cleanForModel(item?.evidence_level || "", 40),
+          };
+        }),
+      ),
+    ].join("\n\n");
+
+    async function requestActionProposals(model: string) {
+      return await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":generateContent",
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": geminiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              maxOutputTokens: 2200,
+              responseMimeType: "application/json",
+            },
+          }),
+        },
+      );
+    }
+
+    let response = await requestActionProposals(PRIMARY_MODEL);
+    let model = PRIMARY_MODEL;
+
+    if (
+      (response.status === 503 || response.status === 429) &&
+      PRIMARY_MODEL !== FALLBACK_MODEL
+    ) {
+      model = FALLBACK_MODEL;
+      response = await requestActionProposals(FALLBACK_MODEL);
+    }
+
+    if (!response.ok) {
+      return json(
+        {
+          error: "InnerMe could not prepare controlled action proposals.",
+          provider_status: response.status,
+          provider_model: model,
+        },
+        502,
+        origin,
+      );
+    }
+
+    const result = await response.json();
+    const raw =
+      result?.candidates?.[0]?.content?.parts
+        ?.map((part: any) => part?.text || "")
+        .join("") || "";
+
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(raw || "{}");
+    } catch {
+      parsed = {};
+    }
+
+    const contactMap = new Map(
+      contacts.map(function (item: any) {
+        return [item.type + ":" + item.id, item];
+      }),
+    );
+
+    const workspaceIds = new Set<string>();
+    for (const [type, rows] of Object.entries(workspace)) {
+      if (!Array.isArray(rows)) continue;
+      for (const row of rows as any[]) {
+        const id = String(row?.id || "").trim();
+        if (id) workspaceIds.add(type + ":" + id);
+      }
+    }
+
+    const created: any[] = [];
+
+    for (
+      const item of (Array.isArray(parsed?.actions) ? parsed.actions : []).slice(
+        0,
+        Math.min(stepRows.length, 8),
+      )
+    ) {
+      const stepOrder = Number(item?.step_order);
+      if (!Number.isInteger(stepOrder) || stepOrder < 1) continue;
+
+      const step = stepRows.find(function (entry: any) {
+        return Number(entry?.step_order) === stepOrder;
+      });
+      if (!step) continue;
+
+      const actionType = String(item?.action_type || "").trim();
+      if (!["create_task", "send_email"].includes(actionType)) continue;
+      if (existingKeySet.has(String(step.id) + ":" + actionType)) continue;
+
+      const title = cleanForModel(item?.title || "", 180);
+      if (!title) continue;
+
+      const payload = item?.payload && typeof item.payload === "object"
+        ? item.payload
+        : {};
+
+      let normalizedPayload: any = {};
+
+      if (actionType === "create_task") {
+        const priority =
+          ["low", "medium", "high"].includes(String(payload?.priority || "").trim())
+            ? String(payload.priority).trim()
+            : "medium";
+
+        const dueOffsetRaw = Number(payload?.due_offset_days);
+        const dueOffset =
+          Number.isFinite(dueOffsetRaw)
+            ? Math.max(0, Math.min(Math.round(dueOffsetRaw), 365))
+            : Number.isFinite(Number(step?.due_offset_days))
+              ? Math.max(0, Math.min(Math.round(Number(step.due_offset_days)), 365))
+              : null;
+
+        const clientId = String(payload?.client_id || "").trim();
+        const projectId = String(payload?.project_id || "").trim();
+        const leadId = String(payload?.lead_id || "").trim();
+
+        if (clientId && !workspaceIds.has("clients:" + clientId)) continue;
+        if (projectId && !workspaceIds.has("projects:" + projectId)) continue;
+        if (leadId && !workspaceIds.has("leads:" + leadId)) continue;
+
+        normalizedPayload = {
+          title: cleanForModel(payload?.title || step.title || title, 180),
+          description: cleanForModel(payload?.description || step.action || step.purpose || "", 1000) || null,
+          priority,
+          due_offset_days: dueOffset,
+          client_id: clientId || null,
+          project_id: projectId || null,
+          lead_id: leadId || null,
+        };
+      } else {
+        const contactType =
+          String(payload?.contact_type || "").trim() === "client"
+            ? "client"
+            : String(payload?.contact_type || "").trim() === "lead"
+              ? "lead"
+              : "";
+        const contactId = String(payload?.contact_id || "").trim();
+        const contact = contactMap.get(contactType + ":" + contactId);
+        if (!contact || !contact.email) continue;
+
+        const subject = cleanForModel(payload?.subject || title, 180);
+        const messageText = cleanForModel(payload?.message || "", 5000);
+        if (!subject || messageText.length < 10) continue;
+
+        const proposalType =
+          ["improv-website", "no-website", "not-website-related"].includes(
+            String(payload?.proposal_type || "").trim(),
+          )
+            ? String(payload.proposal_type).trim()
+            : "not-website-related";
+
+        normalizedPayload = {
+          contact_type: contactType,
+          contact_id: contactId,
+          subject,
+          message: messageText,
+          proposal_type: proposalType,
+        };
+      }
+
+      const evidence = Array.isArray(item?.evidence)
+        ? item.evidence
+            .map(function (entry: any) {
+              return {
+                source:
+                  entry?.source === "knowledge" ? "knowledge" : "workspace",
+                type: String(entry?.type || "").trim(),
+                id: String(entry?.id || "").trim(),
+                why: cleanForModel(entry?.why || "", 260),
+              };
+            })
+            .filter(function (entry: any) {
+              if (!entry.id || !entry.why) return false;
+              if (entry.source === "knowledge") {
+                return (
+                  entry.type === "knowledge" &&
+                  innermeKnowledgeMatches.some(
+                    (item: any) => String(item?.id || "") === entry.id,
+                  )
+                );
+              }
+              return workspaceIds.has(entry.type + ":" + entry.id);
+            })
+            .slice(0, 6)
+        : [];
+
+      evidence.unshift({
+        source: "workspace",
+        type: "decision",
+        id: String(plan.decision_id),
+        why: "This controlled action is governed by the approved InnerMe decision behind the execution plan.",
+      });
+
+      const proposalKey = await sha256(
+        String(plan.id) + "|" + String(step.id) + "|" + actionType,
+      );
+
+      const proposal = {
+        proposal_key: proposalKey,
+        plan_id: plan.id,
+        step_id: step.id,
+        action_type: actionType,
+        title,
+        purpose: cleanForModel(
+          item?.purpose || step.purpose || step.action || "",
+          700,
+        ) || null,
+        payload: normalizedPayload,
+        evidence,
+        requires_confirmation: true,
+        status: "proposed",
+        created_by: userData.user.id,
+      };
+
+      const { data, error } = await authSupabase
+        .from("innerme_action_proposals")
+        .insert(proposal)
+        .select(
+          "id,proposal_key,plan_id,step_id,action_type,title,purpose,payload,evidence,requires_confirmation,status,created_at,updated_at",
+        )
+        .single();
+
+      if (!error && data) {
+        created.push(data);
+        existingKeySet.add(String(step.id) + ":" + actionType);
+      }
+    }
+
+    return json(
+      {
+        ok: true,
+        plan_id: plan.id,
+        proposals: created,
+        new_proposals: created.length,
+        approval_required: true,
+        execution_requires_explicit_confirmation: true,
+        workspace_changed: false,
+        provider_model: model,
+      },
+      200,
+      origin,
+    );
+  }
+
+  if (action === "execute_innerme_action") {
+    const proposalId = String(
+      body.proposal_id || body.p_proposal_id || "",
+    ).trim();
+
+    if (!proposalId) {
+      return json(
+        { error: "A proposal_id is required to execute a controlled action." },
+        400,
+        origin,
+      );
+    }
+
+    const { data: proposal, error: proposalError } = await authSupabase
+      .from("innerme_action_proposals")
+      .select(
+        "id,proposal_key,plan_id,step_id,action_type,title,purpose,payload,evidence,requires_confirmation,status,created_by,reviewed_by,approved_at,executed_by,executed_at,execution_result,error_message,created_at,updated_at",
+      )
+      .eq("id", proposalId)
+      .maybeSingle();
+
+    if (proposalError || !proposal) {
+      return json(
+        {
+          error: "The InnerMe controlled action proposal could not be found.",
+          detail: proposalError?.message || null,
+        },
+        404,
+        origin,
+      );
+    }
+
+    if (proposal.status !== "approved") {
+      return json(
+        { error: "Only explicitly approved InnerMe actions can be executed." },
+        400,
+        origin,
+      );
+    }
+
+    if (!["create_task", "send_email"].includes(String(proposal.action_type))) {
+      return json(
+        { error: "This action type is not enabled for controlled execution." },
+        400,
+        origin,
+      );
+    }
+
+    const { data: plan, error: planError } = await authSupabase
+      .from("innerme_execution_plans")
+      .select("id,status")
+      .eq("id", proposal.plan_id)
+      .in("status", ["approved", "active"])
+      .maybeSingle();
+
+    if (planError || !plan) {
+      return json(
+        {
+          error: "The action's execution plan is no longer approved or active.",
+          detail: planError?.message || null,
+        },
+        400,
+        origin,
+      );
+    }
+
+    const { data: step, error: stepError } = await authSupabase
+      .from("innerme_execution_steps")
+      .select("id,status,linked_task_id")
+      .eq("id", proposal.step_id)
+      .eq("plan_id", proposal.plan_id)
+      .maybeSingle();
+
+    if (stepError || !step) {
+      return json(
+        {
+          error: "The action's execution step is no longer available.",
+          detail: stepError?.message || null,
+        },
+        400,
+        origin,
+      );
+    }
+
+    const { data: executionLog, error: logError } =
+      await authSupabase
+        .from("innerme_action_execution_logs")
+        .insert({
+          proposal_id: proposal.id,
+          action_type: proposal.action_type,
+          request_payload: proposal.payload || {},
+          executed_by: userData.user.id,
+          status: "started",
+        })
+        .select("id,proposal_id,action_type,status,started_at,executed_by")
+        .single();
+
+    if (logError || !executionLog) {
+      return json(
+        {
+          error: "InnerMe could not create the action execution audit record.",
+          detail: logError?.message || null,
+        },
+        500,
+        origin,
+      );
+    }
+
+    const locked = await authSupabase
+      .from("innerme_action_proposals")
+      .update({
+        status: "executing",
+        error_message: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", proposal.id)
+      .eq("status", "approved")
+      .select("id")
+      .maybeSingle();
+
+    if (locked.error || !locked.data) {
+      await authSupabase
+        .from("innerme_action_execution_logs")
+        .update({
+          status: "failed",
+          error_message: "The proposal was no longer approved for execution.",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", executionLog.id);
+
+      return json(
+        { error: "The controlled action was already claimed or is no longer approved." },
+        409,
+        origin,
+      );
+    }
+
+    try {
+      let resultPayload: any = {};
+
+      if (proposal.action_type === "create_task") {
+        const payload = proposal.payload || {};
+        const dueOffsetRaw = Number(payload?.due_offset_days);
+        const dueDate =
+          Number.isFinite(dueOffsetRaw) && dueOffsetRaw >= 0
+            ? new Date(
+                Date.now() +
+                  Math.min(Math.round(dueOffsetRaw), 365) *
+                    24 *
+                    60 *
+                    60 *
+                    1000,
+              )
+                .toISOString()
+                .slice(0, 10)
+            : null;
+
+        const clientId = payload?.client_id ? String(payload.client_id).trim() : null;
+        const projectId = payload?.project_id ? String(payload.project_id).trim() : null;
+        const leadId = payload?.lead_id ? String(payload.lead_id).trim() : null;
+
+        if (clientId) {
+          const check = await authSupabase
+            .from("clients")
+            .select("id")
+            .eq("id", clientId)
+            .maybeSingle();
+          if (check.error || !check.data) throw new Error("The linked client no longer exists.");
+        }
+
+        if (projectId) {
+          const check = await authSupabase
+            .from("client_projects")
+            .select("id")
+            .eq("id", projectId)
+            .maybeSingle();
+          if (check.error || !check.data) throw new Error("The linked project no longer exists.");
+        }
+
+        if (leadId) {
+          const check = await authSupabase
+            .from("leads")
+            .select("id")
+            .eq("id", leadId)
+            .maybeSingle();
+          if (check.error || !check.data) throw new Error("The linked lead no longer exists.");
+        }
+
+        const { data: task, error: taskError } = await authSupabase
+          .from("tasks")
+          .insert({
+            title: cleanForModel(payload?.title || proposal.title, 180),
+            description:
+              cleanForModel(payload?.description || proposal.purpose || "", 1200) ||
+              null,
+            assigned_to: userData.user.id,
+            client_id: clientId,
+            project_id: projectId,
+            lead_id: leadId,
+            priority: ["low", "medium", "high"].includes(
+              String(payload?.priority || "").trim(),
+            )
+              ? String(payload.priority).trim()
+              : "medium",
+            status: "todo",
+            due_date: dueDate,
+          })
+          .select(
+            "id,title,description,assigned_to,client_id,project_id,lead_id,priority,status,due_date,created_at,updated_at",
+          )
+          .single();
+
+        if (taskError || !task) {
+          throw new Error(
+            taskError?.message || "The controlled task action could not be created.",
+          );
+        }
+
+        await authSupabase
+          .from("innerme_execution_steps")
+          .update({
+            linked_task_id: task.id,
+            status: "in_progress",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", proposal.step_id)
+          .in("status", ["approved", "in_progress"]);
+
+        resultPayload = {
+          kind: "task_created",
+          task_id: task.id,
+          title: task.title,
+          due_date: task.due_date,
+        };
+      } else {
+        const payload = proposal.payload || {};
+        const contactType =
+          String(payload?.contact_type || "").trim() === "client"
+            ? "client"
+            : String(payload?.contact_type || "").trim() === "lead"
+              ? "lead"
+              : null;
+        const contactId = String(payload?.contact_id || "").trim();
+
+        if (!contactType || !contactId) {
+          throw new Error("The controlled email action has no valid lead/client target.");
+        }
+
+        const contactTable = contactType === "client" ? "clients" : "leads";
+        const contactCheck = await authSupabase
+          .from(contactTable)
+          .select("id,business_name,contact_name,email")
+          .eq("id", contactId)
+          .maybeSingle();
+
+        if (contactCheck.error || !contactCheck.data) {
+          throw new Error("The selected email recipient no longer exists.");
+        }
+
+        const recipientEmail = String(contactCheck.data.email || "").trim();
+        if (!recipientEmail) {
+          throw new Error("The selected email recipient no longer has an email address.");
+        }
+
+        const sendResponse = await fetch(
+          supabaseUrl + "/functions/v1/send-email",
+          {
+            method: "POST",
+            headers: {
+              apikey: publicApiKey,
+              Authorization: "Bearer " + accessToken,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contact_type: contactType,
+              contact_id: contactId,
+              recipient_email: recipientEmail,
+              subject: cleanForModel(payload?.subject || proposal.title, 180),
+              message: cleanForModel(payload?.message || "", 6000),
+              proposal_type: [
+                "improv-website",
+                "no-website",
+                "not-website-related",
+              ].includes(String(payload?.proposal_type || "").trim())
+                ? String(payload.proposal_type).trim()
+                : "not-website-related",
+            }),
+          },
+        );
+
+        const sendData = await sendResponse.json().catch(function () {
+          return null;
+        });
+
+        if (!sendResponse.ok) {
+          throw new Error(
+            sendData && (sendData.message || sendData.error || sendData.hint)
+              ? String(sendData.message || sendData.error || sendData.hint)
+              : "The email action was rejected by the mail service.",
+          );
+        }
+
+        await authSupabase
+          .from("innerme_execution_steps")
+          .update({
+            status: "in_progress",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", proposal.step_id)
+          .in("status", ["approved", "in_progress"]);
+
+        resultPayload = {
+          kind: "email_sent",
+          email_id: sendData?.email_id || null,
+          recipient: recipientEmail,
+          contact_type: contactType,
+          contact_id: contactId,
+        };
+      }
+
+      await authSupabase
+        .from("innerme_action_proposals")
+        .update({
+          status: "executed",
+          executed_by: userData.user.id,
+          executed_at: new Date().toISOString(),
+          execution_result: resultPayload,
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", proposal.id)
+        .eq("status", "executing");
+
+      await authSupabase
+        .from("innerme_action_execution_logs")
+        .update({
+          status: "succeeded",
+          response_payload: resultPayload,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", executionLog.id);
+
+      return json(
+        {
+          ok: true,
+          proposal_id: proposal.id,
+          action_type: proposal.action_type,
+          status: "executed",
+          result: resultPayload,
+          workspace_changed: proposal.action_type === "create_task",
+          external_action_performed: proposal.action_type === "send_email",
+        },
+        200,
+        origin,
+      );
+    } catch (error) {
+      const messageText =
+        error instanceof Error
+          ? error.message.slice(0, 1200)
+          : String(error).slice(0, 1200);
+
+      await authSupabase
+        .from("innerme_action_proposals")
+        .update({
+          status: "failed",
+          error_message: messageText,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", proposal.id)
+        .eq("status", "executing");
+
+      await authSupabase
+        .from("innerme_action_execution_logs")
+        .update({
+          status: "failed",
+          error_message: messageText,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", executionLog.id);
+
+      return json(
+        {
+          error: "The controlled InnerMe action failed before completion.",
+          detail: messageText,
+          proposal_id: proposal.id,
+        },
+        500,
+        origin,
+      );
+    }
   }
 
   const systemPrompt = `You are InnerMe, the private internal operations assistant for Swayphics.
