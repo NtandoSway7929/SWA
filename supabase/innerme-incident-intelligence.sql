@@ -287,3 +287,53 @@ revoke all on function public.refresh_innerme_incident_intelligence() from anon;
 grant execute on function public.refresh_innerme_incident_intelligence() to authenticated;
 
 notify pgrst, 'reload schema';
+
+
+
+create or replace function public.run_innerme_incident_intelligence()
+returns integer
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+    v_count integer := 0;
+begin
+    if current_user <> 'postgres' and not public.is_swayphics_admin() then
+        raise exception 'Swayphics admin access required.';
+    end if;
+
+    v_count := v_count + coalesce(public.generate_innerme_operational_incidents(), 0);
+    v_count := v_count + coalesce(public.refresh_innerme_incident_intelligence(), 0);
+
+    return v_count;
+end;
+$$;
+
+revoke all on function public.run_innerme_incident_intelligence() from public;
+revoke all on function public.run_innerme_incident_intelligence() from anon;
+grant execute on function public.run_innerme_incident_intelligence() to authenticated;
+
+-- Create the 15-minute intelligence sweep. The DO block keeps this idempotent.
+do $$
+declare
+    v_jobid bigint;
+begin
+    select jobid into v_jobid
+    from cron.job
+    where jobname='innerme-incident-intelligence'
+    limit 1;
+
+    if v_jobid is not null then
+        perform cron.unschedule(v_jobid);
+    end if;
+end;
+$$;
+
+select cron.schedule(
+    'innerme-incident-intelligence',
+    '*/15 * * * *',
+    'select public.run_innerme_incident_intelligence();'
+);
+
+notify pgrst, 'reload schema';
