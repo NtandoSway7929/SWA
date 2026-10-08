@@ -623,3 +623,26 @@ begin
     return v_count;
 end;
 $function$
+
+
+revoke all on function public.refresh_innerme_agent_coordination() from public;
+revoke all on function public.refresh_innerme_agent_coordination() from anon;
+grant execute on function public.refresh_innerme_agent_coordination() to authenticated;
+
+revoke all on function public.review_innerme_agent_coordination_run(uuid,text) from public;
+revoke all on function public.review_innerme_agent_coordination_run(uuid,text) from anon;
+grant execute on function public.review_innerme_agent_coordination_run(uuid,text) to authenticated;
+
+revoke all on function public.review_innerme_agent_coordination_handoff(uuid,text) from public;
+revoke all on function public.review_innerme_agent_coordination_handoff(uuid,text) from anon;
+grant execute on function public.review_innerme_agent_coordination_handoff(uuid,text) to authenticated;
+
+revoke all on function public.review_innerme_agent_coordination_conflict(uuid,text) from public;
+revoke all on function public.review_innerme_agent_coordination_conflict(uuid,text) from anon;
+grant execute on function public.review_innerme_agent_coordination_conflict(uuid,text) to authenticated;
+
+revoke all on function public.run_innerme_incident_intelligence() from public;
+revoke all on function public.run_innerme_incident_intelligence() from anon;
+grant execute on function public.run_innerme_incident_intelligence() to authenticated;
+
+notify pgrst,'reload schema';
