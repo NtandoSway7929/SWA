@@ -899,7 +899,18 @@
                                 return '<div class="sway-ai-incident-intervention-option">' +
                                     '<div class="sway-ai-incident-hypothesis-head"><strong>#' + esc(option.sequence_rank || "") + ' · ' + esc(option.recommendation_status || "deferred") + '</strong><span>' + esc(String(option.selection_score || 0) + '/100 · reduce ' + String(option.expected_priority_reduction || 0)) + '</span></div>' +
                                     '<p>' + esc(option.action_statement || "") + '</p>' +
-                                    '<small>' + esc((option.conflict_status || "none") + ' · risk ' + String(option.risk_score || 0) + ' · reversible ' + String(option.reversibility_score || 0)) + '</small>' +
+                                    '<small>' + esc(
+                                        (option.conflict_status || "none") +
+                                        ' · risk ' + String(option.risk_score || 0) +
+                                        ' · reversible ' + String(option.reversibility_score || 0) +
+                                        ' · adaptive ' + (
+                                            (option.evidence && option.evidence.selection_components &&
+                                                option.evidence.selection_components.adaptive_adjustment != null)
+                                                ? ((Number(option.evidence.selection_components.adaptive_adjustment) > 0 ? "+" : "") +
+                                                   String(option.evidence.selection_components.adaptive_adjustment))
+                                                : "0"
+                                        )
+                                    ) + '</small>' +
                                 '</div>';
                             }).join("") +
                         '</div>' +
@@ -1016,7 +1027,8 @@
             ".sway-ai-incident-pill.critical,.sway-ai-incident-pill.high{background:rgba(190,52,52,.12);color:#B42323}" +
             ".sway-ai-incident-pill.medium{background:rgba(247,201,120,.14);color:#9A6700}" +
             ".sway-ai-incident-pill.low{background:rgba(1,82,244,.08);color:#0152F4}" +
-            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-outcome{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.10);border-radius:9px;background:rgba(1,82,244,.022)}
+            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intervention-option small{font-size:7px;opacity:.65}
+.sway-ai-incident-outcome{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.10);border-radius:9px;background:rgba(1,82,244,.022)}
 .sway-ai-incident-outcome p{margin:0;font-size:8px;line-height:1.4}.sway-ai-incident-outcome small{font-size:7px;opacity:.62}
 body.sway-dark-mode .sway-ai-incident-outcome{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}
 .sway-ai-incident-execution{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.12);border-radius:9px;background:rgba(1,82,244,.03)}
