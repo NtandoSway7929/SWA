@@ -1,0 +1,100 @@
+-- InnerMe Phase 6: Evaluation & Benchmarking
+-- Fixed benchmark cases and stored evaluation runs/results.
+-- Benchmarking never mutates live knowledge or business workspace records.
+
+create table if not exists public.innerme_evaluation_cases (
+  id uuid primary key default gen_random_uuid(),
+  case_key text not null unique,
+  title text not null,
+  category text not null,
+  prompt text not null,
+  expected_behavior text not null,
+  expected_knowledge_ids jsonb not null default '[]'::jsonb,
+  required_signals jsonb not null default '[]'::jsonb,
+  forbidden_signals jsonb not null default '[]'::jsonb,
+  rubric text not null,
+  severity text not null default 'standard',
+  status text not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.innerme_evaluation_runs (
+  id uuid primary key default gen_random_uuid(),
+  trigger text not null default 'manual',
+  provider_model text,
+  total_cases integer not null default 0,
+  passed_cases integer not null default 0,
+  failed_cases integer not null default 0,
+  pass_rate numeric(5,2) not null default 0,
+  average_score numeric(5,2) not null default 0,
+  started_at timestamptz not null default now(),
+  completed_at timestamptz,
+  status text not null default 'running',
+  created_by uuid references auth.users(id) on delete restrict,
+  summary jsonb not null default '{}'::jsonb
+);
+
+create table if not exists public.innerme_evaluation_results (
+  id uuid primary key default gen_random_uuid(),
+  run_id uuid not null references public.innerme_evaluation_runs(id) on delete cascade,
+  case_id uuid not null references public.innerme_evaluation_cases(id) on delete restrict,
+  prompt text not null,
+  answer text,
+  retrieval_matches jsonb not null default '[]'::jsonb,
+  attributed_knowledge jsonb not null default '{}'::jsonb,
+  dimension_scores jsonb not null default '{}'::jsonb,
+  score numeric(5,2) not null default 0,
+  passed boolean not null default false,
+  judge_rationale text,
+  provider_model text,
+  created_at timestamptz not null default now(),
+  unique (run_id, case_id)
+);
+
+alter table public.innerme_evaluation_cases enable row level security;
+alter table public.innerme_evaluation_runs enable row level security;
+alter table public.innerme_evaluation_results enable row level security;
+
+-- Existing project already contains the seeded benchmark cases.
+-- Keep case seeding in the live migration history that created this system.
+
+revoke all on table public.innerme_evaluation_cases, public.innerme_evaluation_runs, public.innerme_evaluation_results from anon;
+grant select, insert, update, delete on public.innerme_evaluation_cases to authenticated;
+grant select, insert, update on public.innerme_evaluation_runs to authenticated;
+grant select, insert on public.innerme_evaluation_results to authenticated;
+grant all on public.innerme_evaluation_cases, public.innerme_evaluation_runs, public.innerme_evaluation_results to service_role;
+
+drop policy if exists "innerme evaluation cases admins can select" on public.innerme_evaluation_cases;
+create policy "innerme evaluation cases admins can select" on public.innerme_evaluation_cases
+for select to authenticated using ((select public.is_swayphics_admin()));
+
+drop policy if exists "innerme evaluation cases admins can manage" on public.innerme_evaluation_cases;
+create policy "innerme evaluation cases admins can manage" on public.innerme_evaluation_cases
+for all to authenticated using ((select public.is_swayphics_admin()))
+with check ((select public.is_swayphics_admin()));
+
+drop policy if exists "innerme evaluation runs admins can select" on public.innerme_evaluation_runs;
+create policy "innerme evaluation runs admins can select" on public.innerme_evaluation_runs
+for select to authenticated using ((select public.is_swayphics_admin()));
+
+drop policy if exists "innerme evaluation runs admins can insert" on public.innerme_evaluation_runs;
+create policy "innerme evaluation runs admins can insert" on public.innerme_evaluation_runs
+for insert to authenticated with check ((select public.is_swayphics_admin()));
+
+drop policy if exists "innerme evaluation runs admins can update" on public.innerme_evaluation_runs;
+create policy "innerme evaluation runs admins can update" on public.innerme_evaluation_runs
+for update to authenticated using ((select public.is_swayphics_admin()))
+with check ((select public.is_swayphics_admin()));
+
+drop policy if exists "innerme evaluation results admins can select" on public.innerme_evaluation_results;
+create policy "innerme evaluation results admins can select" on public.innerme_evaluation_results
+for select to authenticated using ((select public.is_swayphics_admin()));
+
+drop policy if exists "innerme evaluation results admins can insert" on public.innerme_evaluation_results;
+create policy "innerme evaluation results admins can insert" on public.innerme_evaluation_results
+for insert to authenticated with check ((select public.is_swayphics_admin()));
+
+create index if not exists innerme_eval_cases_status_idx on public.innerme_evaluation_cases(status, severity);
+create index if not exists innerme_eval_runs_started_idx on public.innerme_evaluation_runs(started_at desc);
+create index if not exists innerme_eval_results_run_idx on public.innerme_evaluation_results(run_id, passed, score desc);
