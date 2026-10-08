@@ -7166,6 +7166,32 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Phase 30: run the execution-stage safety gate before audit-log creation,
+    // task insertion, email delivery, or any other workspace side effect.
+    const { data: policyGate, error: policyGateError } = await authSupabase.rpc(
+      "evaluate_innerme_action_policy",
+      {
+        p_proposal_id: proposal.id,
+        p_stage: "execution",
+      },
+    );
+
+    if (
+      policyGateError ||
+      !policyGate ||
+      String(policyGate.decision || "") !== "ready"
+    ) {
+      return json(
+        {
+          error: "InnerMe blocked this action because its execution safety gate did not pass.",
+          detail: policyGateError?.message || null,
+          policy_gate: policyGate || null,
+        },
+        409,
+        origin,
+      );
+    }
+
     const { data: plan, error: planError } = await authSupabase
       .from("innerme_execution_plans")
       .select("id,status")
