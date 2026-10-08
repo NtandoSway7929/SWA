@@ -212,6 +212,8 @@ Deno.serve(async (req) => {
     acquisition_task_id?: string;
     source_excerpt?: string;
     benchmark_limit?: number | string;
+    learning_source_type?: string;
+    learning_source_id?: string;
   } = {};
   try {
     body = await req.json();
@@ -7176,6 +7178,376 @@ Deno.serve(async (req) => {
         origin,
       );
     }
+  }
+
+
+  /*
+   * PHASE 13 · CLOSED-LOOP LEARNING
+   * Convert a reviewed outcome or experiment result into a governed
+   * learning candidate. The candidate must be reviewed and applied
+   * separately; no live knowledge is changed here.
+   */
+  if (action === "generate_closed_loop_learning_candidate") {
+    const sourceType = String(body.learning_source_type || "").trim();
+    const sourceId = String(body.learning_source_id || "").trim();
+
+    if (!["outcome","experiment"].includes(sourceType) || !sourceId) {
+      return json({ error: "A valid outcome or experiment source is required." }, 400, origin);
+    }
+
+    let sourceRecord: any = null;
+    let sourceEvidence: any[] = [];
+    let sourceLabel = "";
+
+    if (sourceType === "outcome") {
+      const { data, error } = await authSupabase
+        .from("innerme_outcomes")
+        .select("id,title,objective,success_metric,expected_outcome,status,attribution,result_summary,assessment_notes,evidence,latest_snapshot,verified_at")
+        .eq("id", sourceId)
+        .maybeSingle();
+
+      if (error || !data) {
+        return json(
+          { error: "The selected outcome could not be found.", detail: error?.message || null },
+          404,
+          origin,
+        );
+      }
+
+      if (
+        !["achieved","partially_achieved","not_achieved","inconclusive"].includes(
+          String(data.status || ""),
+        ) ||
+        !data.verified_at
+      ) {
+        return json(
+          { error: "Only a reviewed outcome can feed the closed-loop learning pipeline." },
+          400,
+          origin,
+        );
+      }
+
+      sourceRecord = data;
+      sourceEvidence = Array.isArray(data.evidence) ? data.evidence : [];
+      sourceLabel = String(data.title || "Reviewed outcome");
+    } else {
+      const { data, error } = await authSupabase
+        .from("innerme_experiments")
+        .select("id,name,hypothesis,action,objective,intervention,comparison_condition,baseline,target,success_metric,guardrail_metric,guardrail_rule,measurement_method,test_window_days,status,result,learning,evidence,confidence,reviewed_at,decision_after_review")
+        .eq("id", sourceId)
+        .maybeSingle();
+
+      if (error || !data) {
+        return json(
+          { error: "The selected experiment could not be found.", detail: error?.message || null },
+          404,
+          origin,
+        );
+      }
+
+      if (
+        !["completed","inconclusive","abandoned"].includes(String(data.status || "")) ||
+        !data.reviewed_at ||
+        !String(data.learning || data.result || "").trim()
+      ) {
+        return json(
+          { error: "Only a reviewed experiment with recorded result or learning can feed the closed-loop learning pipeline." },
+          400,
+          origin,
+        );
+      }
+
+      sourceRecord = data;
+      sourceEvidence = Array.isArray(data.evidence) ? data.evidence : [];
+      sourceLabel = String(data.name || "Reviewed experiment");
+    }
+
+    const { data: existingCandidate } = await authSupabase
+      .from("innerme_learning_candidates")
+      .select("id,feedback_id,candidate_key,source_type,source_id,title,domain,knowledge_type,statement,application,constraints,do_not_use_when,rationale,confidence,status,target_knowledge_id,requires_verification,requires_regression,created_at,updated_at")
+      .eq("source_type", sourceType)
+      .eq("source_id", sourceId)
+      .maybeSingle();
+
+    if (existingCandidate) {
+      return json(
+        { ok: true, candidate: existingCandidate, existing: true, live_knowledge_changed: false },
+        200,
+        origin,
+      );
+    }
+
+    const { data: knowledgeRows, error: knowledgeError } = await authSupabase
+      .from("innerme_knowledge")
+      .select("id,title,domain,knowledge_type,statement,application,constraints,do_not_use_when,confidence,evidence_level")
+      .eq("status", "active")
+      .eq("verification_status", "verified")
+      .eq("embedding_status", "ready")
+      .order("priority", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(80);
+
+    if (knowledgeError) {
+      return json(
+        {
+          error: "InnerMe could not load the verified knowledge available for learning alignment.",
+          detail: knowledgeError.message,
+        },
+        500,
+        origin,
+      );
+    }
+
+    const knowledgeCandidates = (Array.isArray(knowledgeRows) ? knowledgeRows : [])
+      .map(function (item: any) {
+        return {
+          id: String(item?.id || ""),
+          title: cleanForModel(item?.title || "", 180),
+          domain: cleanForModel(item?.domain || "", 80),
+          knowledge_type: cleanForModel(item?.knowledge_type || "", 80),
+          statement: cleanForModel(item?.statement || "", 700),
+          application: cleanForModel(item?.application || "", 500),
+          evidence_level: cleanForModel(item?.evidence_level || "", 40),
+        };
+      })
+      .filter(function (item: any) {
+        return Boolean(item.id);
+      });
+
+    const sourceLearning =
+      sourceType === "experiment"
+        ? cleanForModel(
+            sourceRecord.learning || sourceRecord.result || "",
+            3500,
+          )
+        : cleanForModel(
+            sourceRecord.result_summary || sourceRecord.assessment_notes || "",
+            3500,
+          );
+
+    if (!sourceLearning) {
+      return json(
+        { error: "The selected source contains no usable learning signal." },
+        400,
+        origin,
+      );
+    }
+
+    const prompt = [
+      "You are InnerMe Closed-Loop Learning Planner for Swayphics.",
+      "Turn a reviewed internal outcome or experiment result into one durable, reusable knowledge candidate.",
+      "This is a candidate only. It must never become live knowledge automatically.",
+      "Prefer amending an existing verified knowledge record when the reviewed learning clearly refines or qualifies an existing principle.",
+      "Only choose a target_knowledge_id from the supplied verified knowledge list.",
+      "Do not invent facts, causes, statistics, customer details, prices, or outcomes.",
+      "Do not treat correlation as causation. Preserve uncertainty in constraints or do_not_use_when.",
+      "Do not convert a one-off result into a universal rule unless the evidence supports that generalization.",
+      "Return JSON only in this exact shape:",
+      '{"target_knowledge_id":"...","title":"...","domain":"...","knowledge_type":"...","statement":"...","application":"...","constraints":"...","do_not_use_when":"...","rationale":"...","confidence":"low|medium|high"}',
+      "target_knowledge_id must be one of the supplied IDs.",
+      "The statement must be an atomic reusable rule or principle, not a narrative of the source event.",
+      "SOURCE TYPE:",
+      sourceType,
+      "SOURCE RECORD:",
+      JSON.stringify(sourceRecord),
+      "SOURCE LEARNING SIGNAL:",
+      sourceLearning,
+      "SOURCE EVIDENCE:",
+      JSON.stringify(sourceEvidence),
+      "VERIFIED KNOWLEDGE CANDIDATES:",
+      JSON.stringify(knowledgeCandidates),
+    ].join("\n\n");
+
+    async function requestLearningDraft(model: string) {
+      return await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":generateContent",
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": geminiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              maxOutputTokens: 900,
+              responseMimeType: "application/json",
+            },
+          }),
+        },
+      );
+    }
+
+    let response = await requestLearningDraft(PRIMARY_MODEL);
+    let model = PRIMARY_MODEL;
+
+    if (
+      (response.status === 503 || response.status === 429) &&
+      PRIMARY_MODEL !== FALLBACK_MODEL
+    ) {
+      model = FALLBACK_MODEL;
+      response = await requestLearningDraft(FALLBACK_MODEL);
+    }
+
+    if (!response.ok) {
+      return json(
+        {
+          error: "InnerMe could not draft the closed-loop learning candidate.",
+          provider_status: response.status,
+          provider_model: model,
+        },
+        502,
+        origin,
+      );
+    }
+
+    const result = await response.json();
+    const raw =
+      result?.candidates?.[0]?.content?.parts
+        ?.filter((part: any) => typeof part?.text === "string")
+        ?.map((part: any) => part.text)
+        ?.join("") || "";
+
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(raw || "{}");
+    } catch {
+      parsed = {};
+    }
+
+    const allowedIds = new Set(
+      knowledgeCandidates.map(function (item: any) {
+        return item.id;
+      }),
+    );
+
+    const targetKnowledgeId = String(
+      parsed?.target_knowledge_id || "",
+    ).trim();
+
+    if (!targetKnowledgeId || !allowedIds.has(targetKnowledgeId)) {
+      return json(
+        {
+          ok: true,
+          candidate: null,
+          reason:
+            "No valid existing knowledge target was selected. Route this learning signal through knowledge acquisition instead of creating an unverified live knowledge record.",
+          provider_model: model,
+          live_knowledge_changed: false,
+        },
+        200,
+        origin,
+      );
+    }
+
+    const title = cleanForModel(parsed?.title || sourceLabel, 180);
+    const domain = cleanForModel(parsed?.domain || "", 80);
+    const knowledgeType = cleanForModel(
+      parsed?.knowledge_type || "internal_learning",
+      80,
+    );
+    const statement = cleanForModel(parsed?.statement || "", 1000);
+    const application = cleanForModel(parsed?.application || "", 900);
+    const constraints = cleanForModel(parsed?.constraints || "", 900);
+    const doNotUse = cleanForModel(parsed?.do_not_use_when || "", 900);
+    const rationale = cleanForModel(
+      parsed?.rationale || sourceLearning,
+      1400,
+    );
+    const confidence = ["low", "medium", "high"].includes(
+      String(parsed?.confidence || "").trim(),
+    )
+      ? String(parsed.confidence).trim()
+      : "medium";
+
+    if (!title || !domain || !knowledgeType || !statement) {
+      return json(
+        {
+          error: "The generated closed-loop learning candidate was incomplete.",
+          provider_model: model,
+        },
+        422,
+        origin,
+      );
+    }
+
+    const candidate = {
+      feedback_id: null,
+      candidate_key: "loop:" + sourceType + ":" + sourceId,
+      source_type: sourceType,
+      source_id: sourceId,
+      source_label: sourceLabel,
+      source_evidence: sourceEvidence,
+      requires_verification: true,
+      requires_regression: true,
+      created_by: userData.user.id,
+      candidate_type: "amend_existing",
+      target_knowledge_id: targetKnowledgeId,
+      title,
+      domain,
+      knowledge_type: knowledgeType,
+      statement,
+      application: application || null,
+      constraints: constraints || null,
+      do_not_use_when: doNotUse || null,
+      rationale,
+      confidence,
+      status: "candidate",
+    };
+
+    const { data, error } = await authSupabase
+      .from("innerme_learning_candidates")
+      .insert(candidate)
+      .select("id,feedback_id,candidate_key,source_type,source_id,source_label,source_evidence,requires_verification,requires_regression,candidate_type,target_knowledge_id,title,domain,knowledge_type,statement,application,constraints,do_not_use_when,rationale,confidence,status,created_at,updated_at")
+      .single();
+
+    if (error || !data) {
+      return json(
+        {
+          error: "The closed-loop learning candidate could not be stored.",
+          detail: error?.message || null,
+        },
+        500,
+        origin,
+      );
+    }
+
+    await authSupabase.from("innerme_learning_loop_events").insert({
+      event_key:
+        "candidate-created:" +
+        data.id +
+        ":" +
+        crypto.randomUUID(),
+      event_type: "candidate_created",
+      candidate_id: data.id,
+      source_type: sourceType,
+      source_id: sourceId,
+      knowledge_id: targetKnowledgeId,
+      evaluation_required: true,
+      verification_required: true,
+      metadata: {
+        provider_model: model,
+        source_label: sourceLabel,
+        learning_signal: sourceLearning.slice(0, 2000),
+      },
+      created_by: userData.user.id,
+    });
+
+    return json(
+      {
+        ok: true,
+        candidate: data,
+        existing: false,
+        live_knowledge_changed: false,
+        verification_required: true,
+        regression_required: true,
+        provider_model: model,
+      },
+      200,
+      origin,
+    );
   }
 
   const systemPrompt = `You are InnerMe, the private internal operations assistant for Swayphics.
