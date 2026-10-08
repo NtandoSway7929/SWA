@@ -849,6 +849,39 @@
         "body.sway-dark-mode .sway-ai-ki-verification-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
         "body.sway-dark-mode .sway-ai-ki-verification-source{border-top-color:rgba(119,193,252,.1)}" +
         "body.sway-dark-mode .sway-ai-ki-verification-source a{color:#9FD5FF}" +
+        ".sway-ai-ki-gaps{width:100%;margin:4px 0}" +
+        ".sway-ai-ki-gaps>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
+        ".sway-ai-ki-gaps>summary::-webkit-details-marker{display:none}" +
+        ".sway-ai-ki-gaps>summary:after{content:'›';transform:rotate(90deg);transition:transform .16s ease}" +
+        ".sway-ai-ki-gaps[open]>summary:after{transform:rotate(-90deg)}" +
+        ".sway-ai-ki-gaps-controls{display:grid;gap:8px;padding:6px 10px 10px}" +
+        ".sway-ai-ki-gaps-controls>span{font-size:11px;line-height:1.45;opacity:.68}" +
+        ".sway-ai-ki-gaps-analysis,.sway-ai-ki-gaps-results{display:grid;gap:9px;padding:0 10px 10px}" +
+        ".sway-ai-ki-gap-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}" +
+        ".sway-ai-ki-gap-summary>div{display:grid;gap:3px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-gap-summary span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-gap-summary strong{font-size:11px}" +
+        ".sway-ai-ki-gap-item{display:grid;gap:8px;padding:10px;border:1px solid rgba(1,82,244,.1);border-radius:12px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-gap-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-gap-head>div{display:grid;gap:3px;min-width:0}" +
+        ".sway-ai-ki-gap-head strong{font-size:11px;line-height:1.35}" +
+        ".sway-ai-ki-gap-head span{font-size:9px;opacity:.58}" +
+        ".sway-ai-ki-gap-head em{padding:4px 6px;border-radius:999px;background:rgba(1,82,244,.08);color:#0152F4;font-size:8px;font-style:normal;font-weight:800;white-space:nowrap}" +
+        ".sway-ai-ki-gap-statement{margin:0;font-size:10px;line-height:1.5;white-space:pre-wrap}" +
+        ".sway-ai-ki-gap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}" +
+        ".sway-ai-ki-gap-grid>div{display:grid;gap:3px;padding-top:7px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-gap-grid span,.sway-ai-ki-gap-examples>span{font-size:8px;opacity:.55}" +
+        ".sway-ai-ki-gap-grid strong{font-size:9px;font-weight:600;line-height:1.4}" +
+        ".sway-ai-ki-gap-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:8px;line-height:1.35;opacity:.62}" +
+        ".sway-ai-ki-gap-examples{display:grid;gap:5px;padding-top:7px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-gap-examples code{font-size:8px;line-height:1.4;padding:5px 6px;border-radius:7px;background:rgba(1,82,244,.045);white-space:normal;overflow-wrap:anywhere}" +
+        ".sway-ai-ki-gap-actions{display:flex;justify-content:flex-end;align-items:center;gap:6px;flex-wrap:wrap;padding-top:2px}" +
+        ".sway-ai-ki-gap-approved-note{font-size:8px;opacity:.65;line-height:1.4}" +
+        "body.sway-dark-mode .sway-ai-ki-gap-summary>div,body.sway-dark-mode .sway-ai-ki-gap-item{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-gap-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
+        "body.sway-dark-mode .sway-ai-ki-gap-grid>div,body.sway-dark-mode .sway-ai-ki-gap-examples{border-top-color:rgba(119,193,252,.1)}" +
+        "body.sway-dark-mode .sway-ai-ki-gap-examples code{background:rgba(119,193,252,.055)}" +
+        "@media(max-width:680px){.sway-ai-ki-gap-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-gap-head{display:grid;gap:6px}.sway-ai-ki-gap-head em{width:fit-content}.sway-ai-ki-gap-grid{grid-template-columns:1fr}}";
         "@media(max-width:680px){.sway-ai-ki-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-verification-head{display:grid;gap:6px}.sway-ai-ki-verification-head em{width:fit-content}}";
     document.head.appendChild(style);
 
