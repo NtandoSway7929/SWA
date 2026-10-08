@@ -1189,13 +1189,7 @@ body.sway-dark-mode .sway-ai-incident-intervention-selection{border-color:rgba(1
             refreshButton.disabled = true;
             refreshButton.textContent = "Analysing…";
             try {
-                const generated = await correlate();
-                const intelligenceGenerated = await refreshIntelligence();
-                const analysisGenerated = await refreshRootAnalysis();
-                const hypothesisGenerated = await refreshHypothesisTests();
-                const counterfactualGenerated = await refreshCounterfactuals();
-                const interventionGenerated = await refreshInterventionSelection();
-                const coordinationGenerated = await refreshAgentCoordination();
+                const generated = await refreshFullIntelligence();
                 const incidents = await loadIncidents();
                 const events = await loadEvents();
                 const intelligence = await loadIntelligence();
