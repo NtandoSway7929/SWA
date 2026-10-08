@@ -3505,7 +3505,7 @@ Deno.serve(async (req) => {
 
   const message = String(body.message || "").trim();
   const actionNeedsMessage =
-    !["briefing", "draft_followup"].includes(action);
+    !["briefing", "draft_followup", "decision_intelligence"].includes(action);
 
   if (actionNeedsMessage && !message) {
     return json({ error: "A message is required." }, 400, origin);
@@ -5587,6 +5587,170 @@ Deno.serve(async (req) => {
       200,
       origin,
     );
+  }
+
+  /*
+   * PHASE 8 · INNERME DECISION INTELLIGENCE
+   */
+  if (action === "decision_intelligence") {
+    const question = cleanForModel(
+      body.message ||
+        "What are the most important business decisions Swayphics should consider right now?",
+      1600,
+    );
+
+    const existing = await authSupabase
+      .from("innerme_decision_candidates")
+      .select("title,decision")
+      .eq("status","candidate")
+      .limit(30);
+
+    const workspace = {
+      leads: compactRows(safeContext.leads || [], 40),
+      followups: compactRows(safeContext.followups || [], 60),
+      quotes: compactRows(safeContext.quotes || [], 40),
+      invoices: compactRows(safeContext.invoices || [], 60),
+      enquiries: compactRows(safeContext.enquiries || [], 40),
+      communications: compactRows(safeContext.communications || [], 60),
+      email_messages: compactRows(safeContext.email_messages || [], 60),
+      tasks: compactRows(safeContext.tasks || [], 40),
+      clients: compactRows(safeContext.clients || [], 40),
+      projects: compactRows(safeContext.projects || [], 40),
+      payments: compactRows(safeContext.payments || [], 40),
+      active_experiments: compactRows(safeContext.innerme_business_brain?.active_experiments || [], 20),
+      existing_decisions: compactRows(safeContext.innerme_business_brain?.decisions || [], 20),
+      existing_insights: compactRows(safeContext.innerme_business_brain?.insights || [], 20),
+    };
+
+    const knowledge = innermeKnowledgeMatches.map((item: any) => ({
+      id: String(item?.id || ""),
+      title: cleanForModel(item?.title || "", 160),
+      statement: cleanForModel(item?.statement || "", 800),
+      evidence_level: cleanForModel(item?.evidence_level || "", 40),
+      constraints: cleanForModel(item?.constraints || "", 400),
+      similarity: Number(Number(item?.similarity || 0).toFixed(3)),
+    }));
+
+    const prompt = [
+      "You are InnerMe Decision Intelligence for Swayphics.",
+      "Generate up to 5 ranked decision candidates from CURRENT workspace evidence.",
+      "A decision is a choice the admin can make, not an observation or generic task.",
+      "Use workspace data first. Verified knowledge may interpret the data but may not create workspace facts.",
+      "Every decision must cite at least one supplied workspace record by exact type and ID.",
+      "Do not invent names, amounts, dates, causes, customer intent, market facts or expected revenue.",
+      "Do not recommend changing Swayphics prices unless explicitly requested.",
+      "Prefer high-impact, actionable, measurable and reversible decisions.",
+      "Do not duplicate existing candidates or active decisions.",
+      "Return JSON only:",
+      '{"decisions":[{"title":"...","decision":"...","context":"...","rationale":"...","evidence":[{"type":"lead|follow_up|quote|invoice|enquiry|communication|email|task|client|project|payment|experiment|decision|insight","id":"...","why":"..."}],"expected_impact":"...","effort":"low|medium|high","urgency":"critical|high|normal|low","confidence":"high|medium|low","recommended_next_action":"...","priority":1}]}',
+      "Priority is 1-100. Return at most 5.",
+      "CURRENT ADMIN QUESTION:",
+      question,
+      "CURRENT WORKSPACE:",
+      JSON.stringify(workspace),
+      "VERIFIED KNOWLEDGE:",
+      JSON.stringify(knowledge),
+      "EXISTING CANDIDATES:",
+      JSON.stringify(existing.data || []),
+    ].join("
+
+");
+
+    async function request(model: string) {
+      return await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":generateContent",
+        {
+          method:"POST",
+          headers:{"x-goog-api-key":geminiKey,"Content-Type":"application/json"},
+          body:JSON.stringify({
+            contents:[{role:"user",parts:[{text:prompt}]}],
+            generationConfig:{maxOutputTokens:1800,responseMimeType:"application/json"},
+          }),
+        },
+      );
+    }
+
+    let response=await request(PRIMARY_MODEL);
+    let model=PRIMARY_MODEL;
+    if((response.status===503 || response.status===429) && PRIMARY_MODEL!==FALLBACK_MODEL){
+      model=FALLBACK_MODEL;
+      response=await request(FALLBACK_MODEL);
+    }
+    if(!response.ok) return json({error:"InnerMe could not generate decision recommendations.",provider_status:response.status},502,origin);
+
+    const result=await response.json();
+    const raw=result?.candidates?.[0]?.content?.parts?.map((part:any)=>part?.text || "").join("") || "";
+    let parsed:any={};
+    try{parsed=JSON.parse(raw||"{}");}catch{parsed={};}
+
+    const allowedTypes=new Set(["lead","follow_up","quote","invoice","enquiry","communication","email","task","client","project","payment","experiment","decision","insight"]);
+    const allowedUrgency=new Set(["critical","high","normal","low"]);
+    const allowedConfidence=new Set(["high","medium","low"]);
+    const allowedEffort=new Set(["low","medium","high"]);
+    const available=new Set<string>();
+
+    for(const [type,rows] of Object.entries(workspace)){
+      if(!Array.isArray(rows)) continue;
+      for(const row of rows as any[]){
+        const id=String(row?.id || "").trim();
+        if(id) available.add(type+":"+id);
+      }
+    }
+
+    const existingTitles=new Set((existing.data || []).map((x:any)=>String(x?.title || "").toLowerCase().trim()));
+    const saved:any[]=[];
+
+    for(const item of (Array.isArray(parsed?.decisions)?parsed.decisions:[]).slice(0,5)){
+      const title=cleanForModel(item?.title || "",180);
+      const decisionText=cleanForModel(item?.decision || "",700);
+      if(!title || !decisionText || existingTitles.has(title.toLowerCase())) continue;
+
+      const evidence=Array.isArray(item?.evidence)
+        ? item.evidence.map((e:any)=>({
+            type:String(e?.type || "").trim(),
+            id:String(e?.id || "").trim(),
+            why:cleanForModel(e?.why || "",260),
+          })).filter((e:any)=>allowedTypes.has(e.type) && e.id && available.has(e.type+":"+e.id) && e.why).slice(0,6)
+        : [];
+      if(!evidence.length) continue;
+
+      const priorityRaw=Number(item?.priority);
+      const row={
+        candidate_key:"",
+        title,
+        decision:decisionText,
+        context:cleanForModel(item?.context || "",900) || null,
+        rationale:cleanForModel(item?.rationale || "",1000) || null,
+        evidence,
+        expected_impact:cleanForModel(item?.expected_impact || "",700) || null,
+        effort:allowedEffort.has(String(item?.effort || "").trim()) ? String(item.effort).trim() : "medium",
+        urgency:allowedUrgency.has(String(item?.urgency || "").trim()) ? String(item.urgency).trim() : "normal",
+        confidence:allowedConfidence.has(String(item?.confidence || "").trim()) ? String(item.confidence).trim() : "medium",
+        recommended_next_action:cleanForModel(item?.recommended_next_action || "",700) || null,
+        priority:Number.isFinite(priorityRaw) ? Math.max(1,Math.min(Math.round(priorityRaw),100)) : 50,
+        source_conversation_id:cleanForModel(body.chat_id || "",120) || "phase8_decision_intelligence",
+        status:"candidate",
+        created_by:userData.user.id,
+      };
+      row.candidate_key=await sha256(title.toLowerCase()+"|"+decisionText.toLowerCase());
+
+      const {data,error}=await authSupabase.from("innerme_decision_candidates").insert(row).select("id,title,decision,context,rationale,evidence,expected_impact,effort,urgency,confidence,recommended_next_action,priority,status,source_conversation_id,created_at,updated_at").single();
+      if(!error && data){
+        saved.push(data);
+        existingTitles.add(title.toLowerCase());
+      }
+    }
+
+    return json({
+      ok:true,
+      decisions:saved,
+      new_candidates:saved.length,
+      provider_model:model,
+      approval_required:true,
+      live_decisions_changed:false,
+    },200,origin);
   }
 
   /*
