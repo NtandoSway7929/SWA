@@ -5782,9 +5782,7 @@ Deno.serve(async (req) => {
       JSON.stringify(knowledge),
       "EXISTING CANDIDATES:",
       JSON.stringify(existing.data || []),
-    ].join("
-
-");
+    ].join("\n\n");
 
     async function request(model: string) {
       return await fetch(
