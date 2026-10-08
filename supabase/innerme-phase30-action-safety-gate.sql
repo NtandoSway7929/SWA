@@ -254,7 +254,7 @@ begin
     end if;
 
     if v_proposal.action_type='create_task' then
-        v_passed := nullif(trim(coalesce(v_proposal.payload->>'title',v_proposal.title,'')),'') is not null;
+        v_passed := coalesce(nullif(trim(v_proposal.payload->>'title'),''),nullif(trim(v_proposal.title),'')) is not null;
         v_checks := v_checks || jsonb_build_array(jsonb_build_object(
             'key','task_title','passed',v_passed,
             'detail',case when v_passed then 'Task title is present.' else 'A task title is required.' end
@@ -605,8 +605,7 @@ begin
 end;
 $function$;
 
-revoke all on function public.guard_innerme_action_policy_status_transition() from public, anon;
-grant execute on function public.guard_innerme_action_policy_status_transition() to authenticated;
+revoke all on function public.guard_innerme_action_policy_status_transition() from public, anon, authenticated;
 
 drop trigger if exists guard_innerme_action_policy_status_transition
 on public.innerme_action_proposals;
