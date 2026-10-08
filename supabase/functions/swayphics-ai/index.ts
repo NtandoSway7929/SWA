@@ -2597,7 +2597,7 @@ Deno.serve(async (req) => {
       query = authSupabase
         .from("innerme_knowledge")
         .select("id, slug, embedding_text")
-        .eq("status", "active")
+        .in("status", ["active", "draft"])
         .in("id", knowledgeIds)
         .limit(25);
     }
