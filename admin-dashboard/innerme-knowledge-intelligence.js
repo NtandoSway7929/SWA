@@ -657,6 +657,82 @@
             }
         });
 
+        const gapsPanel = details.querySelector("[data-sway-ai-ki-gaps-panel]");
+        const gapsAnalysis = details.querySelector(".sway-ai-ki-gaps-analysis");
+        const gapsResults = details.querySelector(".sway-ai-ki-gaps-results");
+        const gapsRun = details.querySelector("[data-sway-ai-ki-gaps-run]");
+        const gapsRefresh = details.querySelector("[data-sway-ai-ki-gaps-refresh]");
+
+        async function refreshKnowledgeGapQueue() {
+            gapsResults.innerHTML='<p class="sway-ai-ki-muted">Loading knowledge-acquisition candidates…</p>';
+            try {
+                const items=await loadKnowledgeGapQueue();
+                gapsResults.innerHTML=renderKnowledgeGapQueue(items);
+                gapsResults.__swayGapItems=items;
+            } catch(error) {
+                gapsResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message || "Knowledge-gap queue failed to load.")+'</p>';
+                gapsResults.__swayGapItems=[];
+            }
+        }
+
+        if(gapsPanel){
+            gapsPanel.addEventListener("toggle",function(){
+                if(gapsPanel.open) refreshKnowledgeGapQueue();
+            });
+        }
+
+        if(gapsRun){
+            gapsRun.addEventListener("click",async function(event){
+                event.preventDefault();
+                event.stopPropagation();
+                if(gapsRun.disabled) return;
+                gapsRun.disabled=true;
+                gapsRun.textContent="Analysing…";
+                gapsAnalysis.innerHTML='<p class="sway-ai-ki-muted">Checking corrections, weak retrievals and current coverage…</p>';
+                try{
+                    const report=await analyseKnowledgeGaps();
+                    const signals=report && report.signals ? report.signals : {};
+                    const status=String(report && report.status || "unknown");
+                    gapsAnalysis.innerHTML='<div class="sway-ai-ki-gap-summary">' +
+                        '<div><span>Engine status</span><strong>'+esc(status.replace(/_/g," "))+'</strong></div>' +
+                        '<div><span>Corrections</span><strong>'+esc(signals.corrections || 0)+'</strong></div>' +
+                        '<div><span>Weak retrievals</span><strong>'+esc(signals.weak_retrievals || 0)+'</strong></div>' +
+                        '<div><span>Actionable evidence</span><strong>'+esc(signals.actionable_evidence_records || 0)+'</strong></div>' +
+                    '</div><p class="'+(status==="insufficient_evidence" ? "sway-ai-ki-muted" : "sway-ai-ki-good")+'">'+
+                        esc(report.message || (report.new_candidates ? String(report.new_candidates)+" new acquisition target"+(report.new_candidates===1 ? "" : "s")+" generated." : "No new acquisition targets were generated."))+
+                    '</p>';
+                    await refreshKnowledgeGapQueue();
+                }catch(error){
+                    gapsAnalysis.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message || "Knowledge-gap analysis failed.")+'</p>';
+                }finally{
+                    gapsRun.disabled=false;
+                    gapsRun.textContent="Analyse knowledge gaps";
+                }
+            });
+        }
+
+        if(gapsRefresh){
+            gapsRefresh.addEventListener("click",function(event){
+                event.preventDefault();
+                event.stopPropagation();
+                refreshKnowledgeGapQueue();
+            });
+        }
+
+        gapsResults.addEventListener("click",function(event){
+            const approveTarget=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-gap-approve]") : null;
+            const dismissTarget=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-gap-dismiss]") : null;
+            const target=approveTarget || dismissTarget;
+            if(!target) return;
+            event.preventDefault();
+            event.stopPropagation();
+            reviewKnowledgeGap(
+                target.dataset.swayAiKiGapApprove || target.dataset.swayAiKiGapDismiss || "",
+                approveTarget ? "approved" : "dismissed",
+                gapsResults
+            );
+        });
+
         const verificationPanel = details.querySelector("[data-sway-ai-ki-verification-panel]");
         const verificationResults = details.querySelector(".sway-ai-ki-verification-results");
         const verificationRefresh = details.querySelector("[data-sway-ai-ki-verify-refresh]");
