@@ -57,6 +57,352 @@
         return data;
     }
 
+    function authHeaders() {
+        return {
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            Authorization: "Bearer " + token(),
+            "Content-Type": "application/json"
+        };
+    }
+
+    async function loadVerificationQueue() {
+        const accessToken = token();
+        if (!accessToken) {
+            throw new Error("Admin session is unavailable. Please sign in again.");
+        }
+
+        const knowledgeResponse = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_knowledge?select=id,slug,title,domain,knowledge_type,statement,application,constraints,do_not_use_when,evidence_level,confidence,jurisdiction,priority,source_id,verification_status,verification_method,verification_notes,last_verified_at,review_after,embedding_status,updated_at&status=eq.active&verification_status=neq.verified&order=updated_at.desc&limit=50",
+            {
+                method: "GET",
+                headers: authHeaders()
+            }
+        );
+
+        const knowledgeData = await knowledgeResponse.json().catch(function () {
+            return null;
+        });
+
+        if (!knowledgeResponse.ok) {
+            throw new Error(
+                knowledgeData && (knowledgeData.message || knowledgeData.error || knowledgeData.hint)
+                    ? String(knowledgeData.message || knowledgeData.error || knowledgeData.hint)
+                    : "Unable to load InnerMe verification queue."
+            );
+        }
+
+        const sourceResponse = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_knowledge_sources?select=id,name,publisher,source_type,authority_level,status,verification_status,url&status=eq.active&order=authority_level.asc,name.asc&limit=50",
+            {
+                method: "GET",
+                headers: authHeaders()
+            }
+        );
+
+        const sourceData = await sourceResponse.json().catch(function () {
+            return [];
+        });
+
+        if (!sourceResponse.ok) {
+            throw new Error(
+                sourceData && (sourceData.message || sourceData.error || sourceData.hint)
+                    ? String(sourceData.message || sourceData.error || sourceData.hint)
+                    : "Unable to load InnerMe knowledge sources."
+            );
+        }
+
+        const sources = new Map();
+        (Array.isArray(sourceData) ? sourceData : []).forEach(function (source) {
+            sources.set(String(source.id || ""), source);
+        });
+
+        return (Array.isArray(knowledgeData) ? knowledgeData : []).map(function (item) {
+            return Object.assign({}, item, {
+                source_record: sources.get(String(item.source_id || "")) || null
+            });
+        });
+    }
+
+    function verificationMethodFor(source) {
+        const type = String(source && source.source_type || "").trim();
+
+        if (type === "primary_authority") {
+            return "official_source_confirmation";
+        }
+
+        if (type === "established_framework") {
+            return "source_recheck";
+        }
+
+        if (type === "practitioner") {
+            return "practitioner_source_recheck";
+        }
+
+        if (type === "internal") {
+            return "internal_review";
+        }
+
+        return "manual_review";
+    }
+
+    function verificationMethodLabel(method) {
+        const labels = {
+            official_source_confirmation: "Official source confirmation",
+            source_recheck: "Source re-check",
+            practitioner_source_recheck: "Practitioner source re-check",
+            internal_review: "Internal review",
+            manual_review: "Manual review"
+        };
+
+        return labels[method] || "Manual review";
+    }
+
+    function renderVerificationQueue(items) {
+        if (!items.length) {
+            return '<p class="sway-ai-ki-good">No active InnerMe knowledge records are currently waiting for source verification.</p>';
+        }
+
+        return items.map(function (item) {
+            const source = item.source_record || {};
+            const method = verificationMethodFor(source);
+            const sourceUrl = String(source.url || item.verified_source_url || "").trim();
+            const safeHttpUrl = /^https?:\\/\\//i.test(sourceUrl);
+            const status = String(item.verification_status || "unverified");
+
+            return (
+                '<article class="sway-ai-ki-verification-item">' +
+                    '<div class="sway-ai-ki-verification-head">' +
+                        '<div>' +
+                            '<strong>' + esc(item.title || "Untitled knowledge") + '</strong>' +
+                            '<span>' + esc(item.domain || "Unclassified") + ' · ' + esc(item.knowledge_type || "knowledge") + '</span>' +
+                        '</div>' +
+                        '<em>' + esc(status.replace(/_/g, " ")) + '</em>' +
+                    '</div>' +
+                    '<p class="sway-ai-ki-verification-statement">' +
+                        esc(item.statement || "") +
+                    '</p>' +
+                    '<div class="sway-ai-ki-verification-source">' +
+                        '<strong>' + esc(source.name || "Source record unavailable") + '</strong>' +
+                        (
+                            source.publisher
+                                ? '<span>' + esc(source.publisher) + '</span>'
+                                : ""
+                        ) +
+                        (
+                            source.url
+                                ? (
+                                    safeHttpUrl
+                                        ? '<a href="' + esc(sourceUrl) + '" target="_blank" rel="noopener noreferrer">Open source ↗</a>'
+                                        : '<span>' + esc(sourceUrl) + '</span>'
+                                  )
+                                : '<span>No source URL recorded</span>'
+                        ) +
+                    '</div>' +
+                    '<div class="sway-ai-ki-verification-meta">' +
+                        '<span>Evidence: ' + esc(item.evidence_level || "unknown") + '</span>' +
+                        '<span>Verification method: ' + esc(verificationMethodLabel(method)) + '</span>' +
+                        '<span>Excluded from retrieval until verified and indexed</span>' +
+                    '</div>' +
+                    '<div class="sway-ai-ki-verification-actions">' +
+                        '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-verify="' +
+                            esc(String(item.id || "")) +
+                        '">Verify &amp; re-index</button>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
+    }
+
+    async function verifyAndReindex(knowledgeId, items) {
+        const id = String(knowledgeId || "").trim();
+        if (!id) {
+            return;
+        }
+
+        const item = (items || []).find(function (entry) {
+            return String(entry && entry.id || "") === id;
+        });
+
+        if (!item) {
+            return;
+        }
+
+        const source = item.source_record || {};
+        const sourceUrl = String(source.url || item.verified_source_url || "").trim();
+        const method = verificationMethodFor(source);
+
+        const confirmed = window.confirm(
+            "Confirm that you checked this knowledge record against the listed source and that the statement is supported by that source.\n\n" +
+            String(item.title || "InnerMe knowledge")
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        const button = document.querySelector(
+            '[data-sway-ai-ki-verify="' + CSS.escape(id) + '"]'
+        );
+
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Verifying…";
+        }
+
+        try {
+            const verificationNotes =
+                "Verified by a Swayphics admin against the listed source on " +
+                new Date().toISOString().slice(0, 10) +
+                ". Source: " +
+                (source.name || sourceUrl || "recorded source") +
+                ".";
+
+            const verifyResponse = await fetch(
+                SUPABASE_URL + "/rest/v1/rpc/verify_innerme_knowledge",
+                {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        p_knowledge_id: id,
+                        p_verification_method: method,
+                        p_verification_notes: verificationNotes,
+                        p_verified_source_url: sourceUrl || null
+                    })
+                }
+            );
+
+            const verifyData = await verifyResponse.json().catch(function () {
+                return null;
+            });
+
+            if (!verifyResponse.ok) {
+                throw new Error(
+                    verifyData && (verifyData.message || verifyData.error || verifyData.hint)
+                        ? String(verifyData.message || verifyData.error || verifyData.hint)
+                        : "InnerMe knowledge verification failed."
+                );
+            }
+
+            if (button) {
+                button.textContent = "Indexing…";
+            }
+
+            const embedResponse = await fetch(
+                SUPABASE_URL + "/functions/v1/swayphics-ai",
+                {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        action: "embed_knowledge",
+                        knowledge_ids: [id]
+                    })
+                }
+            );
+
+            const embedData = await embedResponse.json().catch(function () {
+                return null;
+            });
+
+            if (!embedResponse.ok) {
+                throw new Error(
+                    embedData && (embedData.message || embedData.error || embedData.hint)
+                        ? String(embedData.message || embedData.error || embedData.hint)
+                        : "The verified InnerMe knowledge could not be re-indexed."
+                );
+            }
+
+            const statusResponse = await fetch(
+                SUPABASE_URL +
+                    "/rest/v1/innerme_knowledge?id=eq." +
+                    encodeURIComponent(id) +
+                    "&select=id,verification_status,embedding_status,embedded_at,review_after&limit=1",
+                {
+                    method: "GET",
+                    headers: authHeaders()
+                }
+            );
+
+            const statusData = await statusResponse.json().catch(function () {
+                return [];
+            });
+
+            const row = Array.isArray(statusData) ? statusData[0] : null;
+
+            if (!row || row.verification_status !== "verified") {
+                throw new Error("Verification completed, but the record did not return as verified.");
+            }
+
+            const retrievalResponse = await fetch(
+                SUPABASE_URL + "/functions/v1/swayphics-ai",
+                {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        action: "search_knowledge",
+                        query:
+                            String(item.title || "") +
+                            "\n" +
+                            String(item.statement || ""),
+                        match_threshold: 0,
+                        match_count: 20
+                    })
+                }
+            );
+
+            const retrievalData = await retrievalResponse.json().catch(function () {
+                return null;
+            });
+
+            const retrievalMatches =
+                retrievalData && Array.isArray(retrievalData.matches)
+                    ? retrievalData.matches
+                    : [];
+
+            const retrieved =
+                retrievalMatches.some(function (match) {
+                    return String(match && match.id || "") === id;
+                });
+
+            if (!row.embedded_at || row.embedding_status !== "ready") {
+                window.alert(
+                    "Source verified. The record is not yet indexed as ready, so InnerMe will continue excluding it from retrieval until indexing completes."
+                );
+            } else if (!retrieved) {
+                window.alert(
+                    "Source verified and indexed successfully. The retrieval smoke test did not return this record in its top results, so review retrieval relevance before relying on it."
+                );
+            } else {
+                window.alert(
+                    "Source verified, re-indexed and confirmed retrievable by the knowledge search."
+                );
+            }
+
+            const details = document.getElementById(PANEL_ID);
+            if (details) {
+                const results = details.querySelector(".sway-ai-ki-verification-results");
+                if (results) {
+                    const refreshed = await loadVerificationQueue();
+                    results.innerHTML = renderVerificationQueue(refreshed);
+                    results.dataset.items = JSON.stringify(refreshed.map(function (entry) {
+                        return entry.id;
+                    }));
+                    results.__swayVerificationItems = refreshed;
+                }
+            }
+        } catch (error) {
+            if (button) {
+                button.disabled = false;
+                button.textContent = "Verify & re-index";
+            }
+
+            window.alert(
+                error.message || "InnerMe source verification failed."
+            );
+        }
+    }
+
     function render(report) {
         const summary = report && report.summary ? report.summary : {};
         const domains = Array.isArray(report && report.coverage_by_domain)
@@ -166,6 +512,16 @@
                 '<span>Checks knowledge coverage, freshness, semantic overlap, possible conflicts and retrieval evidence.</span>' +
                 '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-run>Analyse knowledge health</button>' +
             '</div>' +
+            '<details class="sway-ai-ki-verification" data-sway-ai-ki-verification-panel>' +
+                '<summary>Source verification</summary>' +
+                '<div class="sway-ai-ki-verification-controls">' +
+                    '<span>Applied or unverified knowledge stays out of retrieval until its source is checked and the record is re-indexed.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-verify-refresh>Refresh verification queue</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-verification-results">' +
+                    '<p class="sway-ai-ki-muted">Open this section to load records waiting for verification.</p>' +
+                '</div>' +
+            '</details>' +
             '<div class="sway-ai-ki-results">' +
                 '<p class="sway-ai-ki-muted">Not analysed yet.</p>' +
             '</div>';
@@ -200,6 +556,68 @@
                 button.textContent = "Analyse knowledge health";
             }
         });
+
+        const verificationPanel = details.querySelector("[data-sway-ai-ki-verification-panel]");
+        const verificationResults = details.querySelector(".sway-ai-ki-verification-results");
+        const verificationRefresh = details.querySelector("[data-sway-ai-ki-verify-refresh]");
+
+        async function refreshVerificationQueue() {
+            verificationResults.innerHTML =
+                '<p class="sway-ai-ki-muted">Loading records waiting for verification…</p>';
+
+            try {
+                const items = await loadVerificationQueue();
+                verificationResults.innerHTML = renderVerificationQueue(items);
+                verificationResults.__swayVerificationItems = items;
+            } catch (error) {
+                verificationResults.innerHTML =
+                    '<p class="sway-ai-ki-error">' +
+                        esc(error.message || "Verification queue failed to load.") +
+                    '</p>';
+                verificationResults.__swayVerificationItems = [];
+            }
+        }
+
+        if (verificationPanel) {
+            verificationPanel.addEventListener("toggle", function () {
+                if (verificationPanel.open) {
+                    refreshVerificationQueue();
+                }
+            });
+        }
+
+        if (verificationRefresh) {
+            verificationRefresh.addEventListener("click", function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                refreshVerificationQueue();
+            });
+        }
+
+        verificationResults.addEventListener("click", function (event) {
+            const target =
+                event.target &&
+                event.target.closest
+                    ? event.target.closest("[data-sway-ai-ki-verify]")
+                    : null;
+
+            if (!target) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const items =
+                Array.isArray(verificationResults.__swayVerificationItems)
+                    ? verificationResults.__swayVerificationItems
+                    : [];
+
+            verifyAndReindex(
+                target.dataset.swayAiKiVerify || "",
+                items
+            );
+        });
     }
 
     const style = document.createElement("style");
@@ -230,7 +648,32 @@
         "body.sway-dark-mode .sway-ai-ki-metric,body.sway-dark-mode .sway-ai-ki-section{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
         "body.sway-dark-mode .sway-ai-ki-good{color:#8bd3a8}" +
         "body.sway-dark-mode .sway-ai-ki-error{color:#ffb4ab}" +
-        "@media(max-width:680px){.sway-ai-ki-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}";
+        ".sway-ai-ki-verification{width:100%;margin:4px 0}" +
+        ".sway-ai-ki-verification>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
+        ".sway-ai-ki-verification>summary::-webkit-details-marker{display:none}" +
+        ".sway-ai-ki-verification>summary:after{content:'›';transform:rotate(90deg);transition:transform .16s ease}" +
+        ".sway-ai-ki-verification[open]>summary:after{transform:rotate(-90deg)}" +
+        ".sway-ai-ki-verification-controls{display:grid;gap:8px;padding:6px 10px 10px}" +
+        ".sway-ai-ki-verification-controls>span{font-size:11px;line-height:1.45;opacity:.68}" +
+        ".sway-ai-ki-verification-results{display:grid;gap:9px;padding:0 10px 10px}" +
+        ".sway-ai-ki-verification-item{display:grid;gap:8px;padding:10px;border:1px solid rgba(1,82,244,.1);border-radius:12px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-verification-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-verification-head>div{display:grid;gap:3px;min-width:0}" +
+        ".sway-ai-ki-verification-head strong{font-size:11px;line-height:1.35}" +
+        ".sway-ai-ki-verification-head span{font-size:9px;opacity:.58}" +
+        ".sway-ai-ki-verification-head em{padding:4px 6px;border-radius:999px;background:rgba(1,82,244,.08);color:#0152F4;font-size:8px;font-style:normal;font-weight:800;white-space:nowrap}" +
+        ".sway-ai-ki-verification-statement{margin:0;font-size:10px;line-height:1.5;white-space:pre-wrap}" +
+        ".sway-ai-ki-verification-source{display:grid;gap:2px;padding-top:7px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-verification-source strong{font-size:10px}" +
+        ".sway-ai-ki-verification-source span,.sway-ai-ki-verification-source a{font-size:9px;overflow-wrap:anywhere}" +
+        ".sway-ai-ki-verification-source a{color:#0152F4;text-decoration:none;font-weight:700}" +
+        ".sway-ai-ki-verification-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:8px;line-height:1.35;opacity:.62}" +
+        ".sway-ai-ki-verification-actions{display:flex;justify-content:flex-end;padding-top:2px}" +
+        "body.sway-dark-mode .sway-ai-ki-verification-item{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-verification-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
+        "body.sway-dark-mode .sway-ai-ki-verification-source{border-top-color:rgba(119,193,252,.1)}" +
+        "body.sway-dark-mode .sway-ai-ki-verification-source a{color:#9FD5FF}" +
+        "@media(max-width:680px){.sway-ai-ki-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-verification-head{display:grid;gap:6px}.sway-ai-ki-verification-head em{width:fit-content}}";
     document.head.appendChild(style);
 
     const observer = new MutationObserver(function () {
