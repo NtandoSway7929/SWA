@@ -1137,6 +1137,332 @@ Deno.serve(async (req) => {
     return json({ error: "You are not an active Swayphics admin." }, 403, origin);
   }
 
+
+  /*
+   * PHASE 14 · STRATEGIC INTELLIGENCE
+   * Cross-domain synthesis across the operational workspace plus prior
+   * InnerMe intelligence. The output is advisory and is stored as draft
+   * recommendations until explicitly reviewed.
+   */
+  if (action === "generate_strategic_intelligence") {
+    const [
+      leadsQuery,
+      clientsQuery,
+      projectsQuery,
+      tasksQuery,
+      quotesQuery,
+      invoicesQuery,
+      paymentsQuery,
+      emailsQuery,
+      decisionsQuery,
+      outcomesQuery,
+      experimentsQuery,
+    ] = await Promise.all([
+      authSupabase
+        .from("leads")
+        .select("id,business_name,service_interest,source,status,estimated_value,next_follow_up,last_contacted_at,created_at,updated_at")
+        .order("updated_at",{ascending:false})
+        .limit(60),
+      authSupabase
+        .from("clients")
+        .select("id,business_name,status,created_at,updated_at")
+        .order("updated_at",{ascending:false})
+        .limit(40),
+      authSupabase
+        .from("client_projects")
+        .select("id,name,service,status,value,payment_status,due_date,estimated_cost,created_at,updated_at")
+        .order("updated_at",{ascending:false})
+        .limit(60),
+      authSupabase
+        .from("tasks")
+        .select("id,title,priority,status,due_date,created_at,completed_at")
+        .order("updated_at",{ascending:false})
+        .limit(80),
+      authSupabase
+        .from("quotes")
+        .select("id,title,amount,status,valid_until,created_at,updated_at")
+        .order("updated_at",{ascending:false})
+        .limit(60),
+      authSupabase
+        .from("invoices")
+        .select("id,total,amount_paid,amount_outstanding,status,due_date,created_at,updated_at")
+        .eq("archived",false)
+        .order("updated_at",{ascending:false})
+        .limit(60),
+      authSupabase
+        .from("payments")
+        .select("id,amount,status,due_date,paid_at,created_at,updated_at")
+        .order("updated_at",{ascending:false})
+        .limit(80),
+      authSupabase
+        .from("email_messages")
+        .select("id,direction,mailbox,from_name,from_email,to_email,subject,received_at,lead_id,client_id,thread_id")
+        .order("received_at",{ascending:false})
+        .limit(60),
+      authSupabase
+        .from("innerme_decisions")
+        .select("id,title,decision,status,expected_impact,effort,urgency,confidence,created_at,updated_at")
+        .order("updated_at",{ascending:false})
+        .limit(40),
+      authSupabase
+        .from("innerme_outcomes")
+        .select("id,title,status,attribution,result_summary,verified_at,updated_at")
+        .order("updated_at",{ascending:false})
+        .limit(40),
+      authSupabase
+        .from("innerme_experiments")
+        .select("id,name,status,result,learning,confidence,reviewed_at,updated_at")
+        .order("updated_at",{ascending:false})
+        .limit(40),
+    ]);
+
+    const failures = [
+      ["leads",leadsQuery.error],
+      ["clients",clientsQuery.error],
+      ["projects",projectsQuery.error],
+      ["tasks",tasksQuery.error],
+      ["quotes",quotesQuery.error],
+      ["invoices",invoicesQuery.error],
+      ["payments",paymentsQuery.error],
+      ["emails",emailsQuery.error],
+      ["decisions",decisionsQuery.error],
+      ["outcomes",outcomesQuery.error],
+      ["experiments",experimentsQuery.error],
+    ].filter(function(item){return Boolean(item[1]);});
+
+    if (failures.length) {
+      return json(
+        {
+          error:"InnerMe could not assemble the complete strategic workspace snapshot.",
+          query_failures:failures.map(function(item){return {domain:item[0],error:item[1]?.message||"Unknown query failure"};}),
+        },
+        500,
+        origin,
+      );
+    }
+
+    const leads=Array.isArray(leadsQuery.data)?leadsQuery.data:[];
+    const clients=Array.isArray(clientsQuery.data)?clientsQuery.data:[];
+    const projects=Array.isArray(projectsQuery.data)?projectsQuery.data:[];
+    const tasks=Array.isArray(tasksQuery.data)?tasksQuery.data:[];
+    const quotes=Array.isArray(quotesQuery.data)?quotesQuery.data:[];
+    const invoices=Array.isArray(invoicesQuery.data)?invoicesQuery.data:[];
+    const payments=Array.isArray(paymentsQuery.data)?paymentsQuery.data:[];
+    const emails=Array.isArray(emailsQuery.data)?emailsQuery.data:[];
+    const decisions=Array.isArray(decisionsQuery.data)?decisionsQuery.data:[];
+    const outcomes=Array.isArray(outcomesQuery.data)?outcomesQuery.data:[];
+    const experiments=Array.isArray(experimentsQuery.data)?experimentsQuery.data:[];
+
+    const sum=function(rows:any[],key:string){
+      return Number(rows.reduce(function(total:number,row:any){return total+Number(row?.[key]||0);},0).toFixed(2));
+    };
+    const groupCounts=function(rows:any[],key:string){
+      const out:any={};
+      rows.forEach(function(row:any){
+        const value=String(row?.[key]||"unknown");
+        out[value]=(out[value]||0)+1;
+      });
+      return out;
+    };
+
+    const openLeads=leads.filter(function(row:any){return !["won","lost","converted"].includes(String(row?.status||"").toLowerCase());});
+    const overdueFollowUps=leads.filter(function(row:any){
+      const d=String(row?.next_follow_up||"");
+      return d && d < new Date().toISOString().slice(0,10) && !["won","lost","converted"].includes(String(row?.status||"").toLowerCase());
+    });
+    const openTasks=tasks.filter(function(row:any){return !["done","completed","cancelled"].includes(String(row?.status||"").toLowerCase());});
+    const overdueTasks=tasks.filter(function(row:any){
+      const d=String(row?.due_date||"");
+      return d && d < new Date().toISOString().slice(0,10) && !["done","completed","cancelled"].includes(String(row?.status||"").toLowerCase());
+    });
+
+    const metrics={
+      leads:{total:leads.length,open:openLeads.length,statuses:groupCounts(leads,"status"),estimated_pipeline_value:sum(leads,"estimated_value"),overdue_followups:overdueFollowUps.length},
+      clients:{total:clients.length,statuses:groupCounts(clients,"status")},
+      projects:{total:projects.length,statuses:groupCounts(projects,"status"),value:sum(projects,"value"),estimated_cost:sum(projects,"estimated_cost")},
+      tasks:{total:tasks.length,open:openTasks.length,statuses:groupCounts(tasks,"status"),overdue:overdueTasks.length},
+      quotes:{total:quotes.length,statuses:groupCounts(quotes,"status"),value:sum(quotes,"amount")},
+      invoices:{total:invoices.length,statuses:groupCounts(invoices,"status"),total:sum(invoices,"total"),paid:sum(invoices,"amount_paid"),outstanding:sum(invoices,"amount_outstanding")},
+      payments:{total:payments.length,statuses:groupCounts(payments,"status"),value:sum(payments,"amount"),paid_value:sum(payments.filter(function(row:any){return String(row?.status||"").toLowerCase()==="paid";}),"amount")},
+      communications:{total:emails.length,inbound:emails.filter(function(row:any){return row?.direction==="inbound";}).length,outbound:emails.filter(function(row:any){return row?.direction==="outbound";}).length,linked_to_leads:emails.filter(function(row:any){return Boolean(row?.lead_id);}).length,linked_to_clients:emails.filter(function(row:any){return Boolean(row?.client_id);}).length},
+      intelligence:{decisions:decisions.length,outcomes:outcomes.length,reviewed_outcomes:outcomes.filter(function(row:any){return Boolean(row?.verified_at);}).length,experiments:experiments.length,reviewed_experiments:experiments.filter(function(row:any){return Boolean(row?.reviewed_at);}).length},
+    };
+
+    const snapshot={
+      generated_at:new Date().toISOString(),
+      metrics:metrics,
+      leads:compactRows(leads,60),
+      clients:compactRows(clients,40),
+      projects:compactRows(projects,60),
+      tasks:compactRows(tasks,80),
+      quotes:compactRows(quotes,60),
+      invoices:compactRows(invoices,60),
+      payments:compactRows(payments,80),
+      emails:compactRows(emails,60),
+      decisions:compactRows(decisions,40),
+      outcomes:compactRows(outcomes,40),
+      experiments:compactRows(experiments,40),
+    };
+
+    const prompt=[
+      "You are InnerMe Strategic Intelligence for Swayphics.",
+      "Perform a cross-domain strategic assessment using ONLY the supplied Swayphics workspace snapshot.",
+      "Do not invent facts or fill missing domains with assumptions. Explicitly identify missing data.",
+      "Connect sales, client delivery, operations, communications, finance and prior InnerMe decision/outcome/experiment signals where evidence supports the connection.",
+      "Distinguish facts from inference. Treat causation as unproven unless the data directly supports it.",
+      "Do not recommend external actions that InnerMe has not been asked or permitted to execute.",
+      "Produce 3 to 7 strategic recommendations, ranked by practical priority. Each recommendation must be materially different.",
+      "Every recommendation must cite evidence using compact source labels and record IDs from the supplied snapshot when applicable.",
+      "Return JSON only with this shape:",
+      '{"strategic_posture":"...","executive_summary":"...","strengths":["..."],"constraints":["..."],"risks":["..."],"opportunities":["..."],"cross_domain_signals":[{"signal":"...","evidence":["..."],"confidence":"low|medium|high"}],"recommendations":[{"rank":1,"title":"...","recommendation":"...","rationale":"...","domains":["sales"],"evidence":["leads:<id>"],"impact":"high|medium|low","effort":"high|medium|low","urgency":"critical|high|normal|low","confidence":"high|medium|low","decision_type":"strategic"}]}',
+      "Recommendations must be advisory only. They will be stored as candidates and require explicit admin review before becoming decision candidates.",
+      "WORKSPACE SNAPSHOT:",
+      JSON.stringify(snapshot),
+    ].join("\n\n");
+
+    async function requestStrategic(model:string){
+      return await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/"+
+          encodeURIComponent(model)+":generateContent",
+        {
+          method:"POST",
+          headers:{"x-goog-api-key":geminiKey,"Content-Type":"application/json"},
+          body:JSON.stringify({
+            contents:[{role:"user",parts:[{text:prompt}]}],
+            generationConfig:{maxOutputTokens:2600,responseMimeType:"application/json"}
+          })
+        }
+      );
+    }
+
+    let response=await requestStrategic(PRIMARY_MODEL);
+    let model=PRIMARY_MODEL;
+    if((response.status===503||response.status===429)&&PRIMARY_MODEL!==FALLBACK_MODEL){
+      model=FALLBACK_MODEL;
+      response=await requestStrategic(FALLBACK_MODEL);
+    }
+    if(!response.ok){
+      return json({error:"InnerMe could not generate the strategic assessment.",provider_status:response.status,provider_model:model},502,origin);
+    }
+
+    const result=await response.json();
+    const raw=result?.candidates?.[0]?.content?.parts
+      ?.filter((part:any)=>typeof part?.text==="string")
+      ?.map((part:any)=>part.text)?.join("")||"";
+
+    let parsed:any={};
+    try{parsed=JSON.parse(raw||"{}");}catch{parsed={};}
+
+    const executiveSummary=cleanForModel(parsed?.executive_summary||"",5000);
+    if(!executiveSummary){
+      return json({error:"The strategic assessment did not return an executive summary.",provider_model:model},422,origin);
+    }
+
+    const now=new Date();
+    const reviewKey="strategic:"+now.toISOString();
+    const cleanList=function(value:any,max:number){
+      return Array.isArray(value)?value.map(function(item:any){return cleanForModel(item,max);}).filter(Boolean).slice(0,12):[];
+    };
+    const signals=Array.isArray(parsed?.cross_domain_signals)?parsed.cross_domain_signals.slice(0,12).map(function(item:any){
+      return {
+        signal:cleanForModel(item?.signal||"",500),
+        evidence:cleanList(item?.evidence,180),
+        confidence:["high","medium","low"].includes(String(item?.confidence||"").trim())?String(item.confidence).trim():"medium",
+      };
+    }).filter(function(item:any){return Boolean(item.signal);}):[];
+
+    const reviewRow={
+      review_key:reviewKey,
+      scope:"swayphics_business",
+      period_start:String(snapshot.generated_at).slice(0,10),
+      period_end:String(snapshot.generated_at).slice(0,10),
+      status:"draft",
+      strategic_posture:cleanForModel(parsed?.strategic_posture||"",1500),
+      executive_summary:executiveSummary,
+      strengths:cleanList(parsed?.strengths,700).join("\n"),
+      constraints:cleanList(parsed?.constraints,700).join("\n"),
+      risks:cleanList(parsed?.risks,700).join("\n"),
+      opportunities:cleanList(parsed?.opportunities,700).join("\n"),
+      cross_domain_signals:signals,
+      metrics_snapshot:metrics,
+      evidence:[
+        {source:"leads",count:leads.length},
+        {source:"clients",count:clients.length},
+        {source:"client_projects",count:projects.length},
+        {source:"tasks",count:tasks.length},
+        {source:"quotes",count:quotes.length},
+        {source:"invoices",count:invoices.length},
+        {source:"payments",count:payments.length},
+        {source:"email_messages",count:emails.length},
+        {source:"innerme_decisions",count:decisions.length},
+        {source:"innerme_outcomes",count:outcomes.length},
+        {source:"innerme_experiments",count:experiments.length},
+      ],
+      recommendation_count:0,
+      model:model,
+      created_by:userData.user.id,
+    };
+
+    const {data:review,error:reviewError}=await authSupabase
+      .from("innerme_strategic_reviews")
+      .insert(reviewRow)
+      .select("*")
+      .single();
+
+    if(reviewError||!review){
+      return json({error:"The strategic review could not be stored.",detail:reviewError?.message||null},500,origin);
+    }
+
+    const allowedImpact=["high","medium","low"];
+    const allowedEffort=["high","medium","low"];
+    const allowedUrgency=["critical","high","normal","low"];
+    const allowedConfidence=["high","medium","low"];
+    const recommendations=Array.isArray(parsed?.recommendations)?parsed.recommendations.slice(0,7):[];
+    const rows=recommendations.map(function(item:any,index:number){
+      return {
+        review_id:review.id,
+        recommendation_key:"strategic-rec:"+review.id+":"+String(index+1),
+        rank:Math.max(1,Math.min(25,Number(item?.rank||index+1))),
+        title:cleanForModel(item?.title||"Strategic recommendation "+String(index+1),220),
+        recommendation:cleanForModel(item?.recommendation||"",1800),
+        rationale:cleanForModel(item?.rationale||"",1800),
+        domains:cleanList(item?.domains,80),
+        evidence:cleanList(item?.evidence,240),
+        impact:allowedImpact.includes(String(item?.impact||"").trim())?String(item.impact).trim():"medium",
+        effort:allowedEffort.includes(String(item?.effort||"").trim())?String(item.effort).trim():"medium",
+        urgency:allowedUrgency.includes(String(item?.urgency||"").trim())?String(item.urgency).trim():"normal",
+        confidence:allowedConfidence.includes(String(item?.confidence||"").trim())?String(item.confidence).trim():"medium",
+        decision_type:cleanForModel(item?.decision_type||"strategic",60),
+        status:"candidate",
+        created_by:userData.user.id,
+      };
+    }).filter(function(row:any){return Boolean(row.title&&row.recommendation&&row.rationale);});
+
+    if(rows.length){
+      const {error:recError}=await authSupabase
+        .from("innerme_strategic_recommendations")
+        .insert(rows);
+      if(recError){
+        await authSupabase.from("innerme_strategic_reviews").delete().eq("id",review.id);
+        return json({error:"The strategic recommendations could not be stored.",detail:recError.message},500,origin);
+      }
+      await authSupabase.from("innerme_strategic_reviews")
+        .update({recommendation_count:rows.length,updated_at:new Date().toISOString()})
+        .eq("id",review.id);
+    }
+
+    return json({
+      ok:true,
+      review_id:review.id,
+      status:"draft",
+      recommendation_count:rows.length,
+      metrics,
+      provider_model:model,
+      live_workspace_changed:false,
+      approval_required:true,
+    },200,origin);
+  }
+
   /*
    * PHASE 6 · INNERME EVALUATION & BENCHMARKING
    * Runs a fixed, versioned set of knowledge cases and records:
