@@ -98,3 +98,40 @@ for insert to authenticated with check ((select public.is_swayphics_admin()));
 create index if not exists innerme_eval_cases_status_idx on public.innerme_evaluation_cases(status, severity);
 create index if not exists innerme_eval_runs_started_idx on public.innerme_evaluation_runs(started_at desc);
 create index if not exists innerme_eval_results_run_idx on public.innerme_evaluation_results(run_id, passed, score desc);
+
+
+-- Phase 7 regression-control additions
+alter table public.innerme_evaluation_runs
+  add column if not exists benchmark_version integer not null default 1,
+  add column if not exists knowledge_snapshot_hash text,
+  add column if not exists baseline_run_id uuid references public.innerme_evaluation_runs(id) on delete set null,
+  add column if not exists delta_average_score numeric(6,2),
+  add column if not exists delta_pass_rate numeric(6,2),
+  add column if not exists regression_status text not null default 'baseline',
+  add column if not exists critical_failures integer not null default 0,
+  add column if not exists regression_summary jsonb not null default '{}'::jsonb;
+
+alter table public.innerme_evaluation_runs
+  drop constraint if exists innerme_evaluation_runs_regression_status_check;
+alter table public.innerme_evaluation_runs
+  add constraint innerme_evaluation_runs_regression_status_check
+  check (regression_status in ('baseline','stable','improved','regressed','inconclusive'));
+
+alter table public.innerme_evaluation_results
+  add column if not exists case_key text,
+  add column if not exists severity text,
+  add column if not exists failure_flags jsonb not null default '[]'::jsonb,
+  add column if not exists regressed_from_previous boolean not null default false;
+
+alter table public.innerme_evaluation_results
+  drop constraint if exists innerme_evaluation_results_severity_check;
+alter table public.innerme_evaluation_results
+  add constraint innerme_evaluation_results_severity_check
+  check (severity is null or severity in ('critical','high','standard'));
+
+create index if not exists innerme_eval_runs_version_started_idx
+  on public.innerme_evaluation_runs (benchmark_version, started_at desc);
+create index if not exists innerme_eval_runs_regression_idx
+  on public.innerme_evaluation_runs (regression_status, started_at desc);
+create index if not exists innerme_eval_results_case_run_idx
+  on public.innerme_evaluation_results (case_id, run_id, passed);
