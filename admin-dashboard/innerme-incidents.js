@@ -812,6 +812,7 @@
             '<div><span>Critical</span><strong>' + esc(counts.critical || 0) + '</strong></div>' +
             '<div><span>High</span><strong>' + esc(counts.high || 0) + '</strong></div>' +
             '<div><span>Intelligent</span><strong>' + esc(intelligenceCounts.total) + '</strong></div>' +
+            '<div><span>Coordinated</span><strong>' + esc(coordinationRuns.length) + '</strong></div>' +
             '<div><span>Total</span><strong>' + esc(counts.total) + '</strong></div>';
 
         const results = panel.querySelector("[data-im-incidents]");
