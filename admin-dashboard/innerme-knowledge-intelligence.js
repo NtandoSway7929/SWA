@@ -917,6 +917,14 @@
                 '<div class="sway-ai-ki-gaps-analysis"><p class="sway-ai-ki-muted">Not analysed yet.</p></div>' +
                 '<div class="sway-ai-ki-gaps-results"><p class="sway-ai-ki-muted">Open this section to load acquisition candidates.</p></div>' +
             '</details>' +
+            '<details class="sway-ai-ki-acquisition" data-sway-ai-ki-acquisition-panel>' +
+                '<summary>Acquisition tasks</summary>' +
+                '<div class="sway-ai-ki-acquisition-controls">' +
+                    '<span>Turns approved knowledge gaps into source-backed draft records. Every task stays gated by source verification, knowledge verification, indexing and explicit publication.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-acq-refresh>Refresh acquisition tasks</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-acquisition-results"><p class="sway-ai-ki-muted">Open this section to load acquisition tasks.</p></div>' +
+            '</details>'
             '<details class="sway-ai-ki-verification" data-sway-ai-ki-verification-panel>' +
                 '<summary>Source verification</summary>' +
                 '<div class="sway-ai-ki-verification-controls">' +
@@ -1038,6 +1046,62 @@
             );
         });
 
+        const acquisitionPanel = details.querySelector("[data-sway-ai-ki-acquisition-panel]");
+        const acquisitionResults = details.querySelector(".sway-ai-ki-acquisition-results");
+        const acquisitionRefresh = details.querySelector("[data-sway-ai-ki-acq-refresh]");
+
+        async function refreshAcquisitionTasks() {
+            acquisitionResults.innerHTML='<p class="sway-ai-ki-muted">Loading acquisition tasks…</p>';
+            try {
+                const items=await loadAcquisitionTasks();
+                acquisitionResults.innerHTML=renderAcquisitionQueue(items);
+                acquisitionResults.__swayAcquisitionItems=items;
+            } catch(error) {
+                acquisitionResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message || "Acquisition tasks failed to load.")+'</p>';
+                acquisitionResults.__swayAcquisitionItems=[];
+            }
+        }
+
+        if(acquisitionPanel){
+            acquisitionPanel.addEventListener("toggle",function(){
+                if(acquisitionPanel.open) refreshAcquisitionTasks();
+            });
+        }
+
+        if(acquisitionRefresh){
+            acquisitionRefresh.addEventListener("click",function(event){
+                event.preventDefault();
+                event.stopPropagation();
+                refreshAcquisitionTasks();
+            });
+        }
+
+        acquisitionResults.addEventListener("submit",function(event){
+            const form=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-acquisition-form]") : null;
+            if(!form) return;
+            event.preventDefault();
+            event.stopPropagation();
+            saveAcquisitionSource(form.dataset.swayAiKiAcquisitionForm || "",form);
+        });
+
+        acquisitionResults.addEventListener("click",function(event){
+            const draftTarget=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-acq-draft]") : null;
+            const publishTarget=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-acq-publish]") : null;
+
+            if(draftTarget){
+                event.preventDefault();
+                event.stopPropagation();
+                generateAcquisitionDraft(draftTarget.dataset.swayAiKiAcqDraft || "",acquisitionResults);
+                return;
+            }
+
+            if(publishTarget){
+                event.preventDefault();
+                event.stopPropagation();
+                verifyIndexAndPublish(publishTarget.dataset.swayAiKiAcqPublish || "",acquisitionResults);
+            }
+        });
+
         const verificationPanel = details.querySelector("[data-sway-ai-ki-verification-panel]");
         const verificationResults = details.querySelector(".sway-ai-ki-verification-results");
         const verificationRefresh = details.querySelector("[data-sway-ai-ki-verify-refresh]");
@@ -1154,6 +1218,35 @@
         "body.sway-dark-mode .sway-ai-ki-verification-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
         "body.sway-dark-mode .sway-ai-ki-verification-source{border-top-color:rgba(119,193,252,.1)}" +
         "body.sway-dark-mode .sway-ai-ki-verification-source a{color:#9FD5FF}" +
+        ".sway-ai-ki-acquisition{width:100%;margin:4px 0}" +
+        ".sway-ai-ki-acquisition>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
+        ".sway-ai-ki-acquisition>summary::-webkit-details-marker{display:none}" +
+        ".sway-ai-ki-acquisition>summary:after{content:'›';transform:rotate(90deg);transition:transform .16s ease}" +
+        ".sway-ai-ki-acquisition[open]>summary:after{transform:rotate(-90deg)}" +
+        ".sway-ai-ki-acquisition-controls{display:grid;gap:8px;padding:6px 10px 10px}" +
+        ".sway-ai-ki-acquisition-controls>span{font-size:11px;line-height:1.45;opacity:.68}" +
+        ".sway-ai-ki-acquisition-results{display:grid;gap:9px;padding:0 10px 10px}" +
+        ".sway-ai-ki-acquisition-item{display:grid;gap:9px;padding:11px;border:1px solid rgba(1,82,244,.1);border-radius:12px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-acquisition-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-acquisition-head>div{display:grid;gap:3px;min-width:0}" +
+        ".sway-ai-ki-acquisition-head strong{font-size:11px;line-height:1.35}" +
+        ".sway-ai-ki-acquisition-head span{font-size:9px;opacity:.58}" +
+        ".sway-ai-ki-acquisition-head em{padding:4px 6px;border-radius:999px;background:rgba(1,82,244,.08);color:#0152F4;font-size:8px;font-style:normal;font-weight:800;white-space:nowrap}" +
+        ".sway-ai-ki-acquisition-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:8px;line-height:1.35;opacity:.62}" +
+        ".sway-ai-ki-acquisition-form{display:grid;gap:9px;padding-top:5px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-acquisition-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}" +
+        ".sway-ai-ki-acquisition-form label{display:grid;gap:4px}" +
+        ".sway-ai-ki-acquisition-form label>span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-acquisition-form input,.sway-ai-ki-acquisition-form select,.sway-ai-ki-acquisition-form textarea{width:100%;box-sizing:border-box;border:1px solid rgba(1,82,244,.12);border-radius:8px;padding:7px 8px;font:inherit;font-size:10px;background:rgba(255,255,255,.7);color:inherit;outline:none}" +
+        ".sway-ai-ki-acquisition-form textarea{min-height:92px;resize:vertical;line-height:1.45}" +
+        ".sway-ai-ki-acquisition-form input:focus,.sway-ai-ki-acquisition-form select:focus,.sway-ai-ki-acquisition-form textarea:focus{border-color:rgba(1,82,244,.42);box-shadow:0 0 0 2px rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-acquisition-wide{grid-column:1 / -1}" +
+        ".sway-ai-ki-acquisition-draft{display:grid;gap:8px;padding-top:8px;border-top:1px solid rgba(1,82,244,.08)}" +
+        "body.sway-dark-mode .sway-ai-ki-acquisition-item{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-acquisition-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
+        "body.sway-dark-mode .sway-ai-ki-acquisition-form,body.sway-dark-mode .sway-ai-ki-acquisition-draft{border-top-color:rgba(119,193,252,.1)}" +
+        "body.sway-dark-mode .sway-ai-ki-acquisition-form input,body.sway-dark-mode .sway-ai-ki-acquisition-form select,body.sway-dark-mode .sway-ai-ki-acquisition-form textarea{border-color:rgba(119,193,252,.14);background:#101A2C;color:#F3F7FC}" +
+        "@media(max-width:680px){.sway-ai-ki-acquisition-head{display:grid;gap:6px}.sway-ai-ki-acquisition-head em{width:fit-content}.sway-ai-ki-acquisition-form-grid{grid-template-columns:1fr}.sway-ai-ki-acquisition-wide{grid-column:auto}}"
         ".sway-ai-ki-gaps{width:100%;margin:4px 0}" +
         ".sway-ai-ki-gaps>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
         ".sway-ai-ki-gaps>summary::-webkit-details-marker{display:none}" +
