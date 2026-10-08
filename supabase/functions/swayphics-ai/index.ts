@@ -3905,6 +3905,7 @@ Deno.serve(async (req) => {
     innermeInsights,
     innermePreferences,
     innermeAgents,
+    predictiveForecasts,
   ] = await Promise.all([
     workspaceSupabase.from("tasks").select("*").order("created_at", { ascending: false }).limit(60),
     workspaceSupabase.from("leads").select("*").order("created_at", { ascending: false }).limit(60),
@@ -3925,6 +3926,7 @@ Deno.serve(async (req) => {
     workspaceSupabase.from("innerme_insights").select("id,title,insight,evidence,confidence,category,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(50),
     workspaceSupabase.from("innerme_preferences").select("id,category,preference_key,value,source,updated_at").order("updated_at",{ascending:false}).limit(100),
     workspaceSupabase.from("innerme_agents").select("id,slug,name,purpose,inputs,outputs,definition_of_done,trust_stage,permissions,status,instructions,updated_at").eq("status","active").order("name",{ascending:true}).limit(30),
+    workspaceSupabase.from("innerme_predictive_forecasts").select("id,forecast_key,forecast_type,horizon_days,forecast_date,status,confidence,unit,baseline_value,projected_value,delta_value,direction,metric_label,statement,assumptions,evidence,evidence_window_start,evidence_window_end,horizon_start,horizon_end,verification_status,actual_value,forecast_error,verified_at,updated_at").eq("forecast_date",new Date().toISOString().slice(0,10)).order("horizon_days",{ascending:true}).limit(30),
   ]);
 
   const queryResults = {
@@ -3947,6 +3949,7 @@ Deno.serve(async (req) => {
     innermeInsights,
     innermePreferences,
     innermeAgents,
+    predictiveForecasts,
   };
 
   const queryFailures = Object.entries(queryResults)
@@ -3984,6 +3987,7 @@ Deno.serve(async (req) => {
       insights: compactRows(innermeInsights.data || [], 50),
       preferences: compactRows(innermePreferences.data || [], 100),
       agents: compactRows(innermeAgents.data || [], 30),
+      predictive_business_intelligence: compactRows(predictiveForecasts.data || [], 30),
     },
   };
 
