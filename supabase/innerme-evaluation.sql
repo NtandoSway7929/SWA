@@ -135,3 +135,10 @@ create index if not exists innerme_eval_runs_regression_idx
   on public.innerme_evaluation_runs (regression_status, started_at desc);
 create index if not exists innerme_eval_results_case_run_idx
   on public.innerme_evaluation_results (case_id, run_id, passed);
+
+-- Partial benchmark runs are explicitly marked inconclusive.
+alter table public.innerme_evaluation_runs
+  drop constraint if exists innerme_evaluation_runs_status_check;
+alter table public.innerme_evaluation_runs
+  add constraint innerme_evaluation_runs_status_check
+  check (status in ('running','completed','failed','inconclusive'));
