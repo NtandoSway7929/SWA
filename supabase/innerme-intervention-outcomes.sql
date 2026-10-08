@@ -49,7 +49,16 @@ on public.innerme_intervention_outcomes(outcome_measurement_status,measurement_d
 create index if not exists idx_innerme_intervention_outcomes_attribution
 on public.innerme_intervention_outcomes(attribution,outcome_status,updated_at desc);
 
+create index if not exists idx_innerme_intervention_outcomes_dependency
+on public.innerme_intervention_outcomes(dependency_id);
+
+create index if not exists idx_innerme_intervention_outcomes_learning_candidate
+on public.innerme_intervention_outcomes(learning_candidate_id);
+
 alter table public.innerme_intervention_outcomes enable row level security;
+
+drop policy if exists "InnerMe intervention outcomes admins can read"
+on public.innerme_intervention_outcomes;
 
 drop policy if exists "InnerMe intervention outcomes admins can manage"
 on public.innerme_intervention_outcomes;
