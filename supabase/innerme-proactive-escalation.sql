@@ -222,7 +222,7 @@ begin
 
     return v_count;
 end;
-$;
+$$;
 
 revoke all on function public.generate_innerme_proactive_notifications() from public;
 revoke all on function public.generate_innerme_proactive_notifications() from anon;
