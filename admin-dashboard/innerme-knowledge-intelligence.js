@@ -937,6 +937,15 @@
                 '<div class="sway-ai-ki-execution-summary"><p class="sway-ai-ki-muted">No execution plans loaded.</p></div>' +
                 '<div class="sway-ai-ki-execution-results"><p class="sway-ai-ki-muted">Open this section to load approved decisions.</p></div>' +
             '</details>' +
+            '<details class="sway-ai-ki-experiments" data-sway-ai-ki-experiments-panel>' +
+                '<summary>Experimentation &amp; optimization</summary>' +
+                '<div class="sway-ai-ki-experiments-controls">' +
+                    '<span>Design, approve and evaluate controlled experiments. InnerMe does not automatically start experiments or change business decisions.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-experiments-refresh>Refresh experiments</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-experiments-summary"><p class="sway-ai-ki-muted">No experiments loaded.</p></div>' +
+                '<div class="sway-ai-ki-experiments-results"><p class="sway-ai-ki-muted">Open this section to load experiments.</p></div>' +
+            '</details>' +
             '<details class="sway-ai-ki-outcomes" data-sway-ai-ki-outcomes-panel>' +
                 '<summary>Outcome intelligence</summary>' +
                 '<div class="sway-ai-ki-outcomes-controls">' +
@@ -1720,6 +1729,85 @@
             }
         });
 
+        const experimentsPanel=details.querySelector("[data-sway-ai-ki-experiments-panel]");
+        const experimentsRefresh=details.querySelector("[data-sway-ai-ki-experiments-refresh]");
+        const experimentsSummary=details.querySelector(".sway-ai-ki-experiments-summary");
+        const experimentsResults=details.querySelector(".sway-ai-ki-experiments-results");
+
+        async function loadExperiments(){
+            const response=await fetch(SUPABASE_URL+"/rest/v1/innerme_experiments?select=id,name,hypothesis,action,success_metric,status,review_date,result,learning,objective,intervention,comparison_condition,baseline,target,guardrail_metric,guardrail_rule,measurement_method,test_window_days,design,evidence,confidence,decision_id,plan_id,outcome_id,approved_at,started_at,reviewed_at,decision_after_review,created_at,updated_at&order=updated_at.desc&limit=100",{method:"GET",headers:authHeaders()});
+            const data=await response.json().catch(function(){return [];});
+            if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Unable to load InnerMe experiments.");
+            const experiments=Array.isArray(data)?data:[];
+            const ids=experiments.map(function(e){return String(e.id||"");}).filter(Boolean);
+            let observations=[];
+            if(ids.length){
+                const obsResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_experiment_observations?select=id,experiment_id,metric_name,label,value,evidence,source_table,source_id,attribution,verification_status,interpretation,observed_at&experiment_id=in.("+ids.join(",")+")&order=observed_at.desc&limit=500",{method:"GET",headers:authHeaders()});
+                const obsData=await obsResponse.json().catch(function(){return [];});
+                if(!obsResponse.ok) throw new Error(obsData&&(obsData.message||obsData.error||obsData.hint)?String(obsData.message||obsData.error||obsData.hint):"Unable to load experiment observations.");
+                observations=Array.isArray(obsData)?obsData:[];
+            }
+            return {experiments:experiments,observations:observations};
+        }
+
+        function renderExperiments(data){
+            const experiments=Array.isArray(data&&data.experiments)?data.experiments:[];
+            const observations=Array.isArray(data&&data.observations)?data.observations:[];
+            const counts={idea:0,proposed:0,approved:0,running:0,completed:0,paused:0,abandoned:0,inconclusive:0};
+            experiments.forEach(function(e){if(Object.prototype.hasOwnProperty.call(counts,String(e.status))) counts[String(e.status)]++;});
+            experimentsSummary.innerHTML='<div class="sway-ai-ki-experiments-summary-grid"><div><span>Ideas</span><strong>'+esc(counts.idea)+'</strong></div><div><span>Proposed</span><strong>'+esc(counts.proposed)+'</strong></div><div><span>Approved</span><strong>'+esc(counts.approved)+'</strong></div><div><span>Running</span><strong>'+esc(counts.running)+'</strong></div><div><span>Completed</span><strong>'+esc(counts.completed)+'</strong></div><div><span>Inconclusive</span><strong>'+esc(counts.inconclusive)+'</strong></div></div>';
+            if(!experiments.length) return '<p class="sway-ai-ki-muted">No experiments exist yet. Phase 12 is ready for real experiments, but no synthetic records were created.</p>';
+            return experiments.map(function(e){
+                const obs=observations.filter(function(o){return String(o.experiment_id||"")===String(e.id||"");});
+                const canApprove=["idea","proposed"].includes(String(e.status||""));
+                const canStart=String(e.status||"")==="approved";
+                const canPause=String(e.status||"")==="running";
+                const canReview=["running","paused","approved"].includes(String(e.status||""));
+                const buttons=(canApprove?'<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-experiment-action="approved" data-id="'+esc(String(e.id||""))+'">Approve</button>': '')+(canStart?'<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-experiment-action="running" data-id="'+esc(String(e.id||""))+'">Start</button>':'')+(canPause?'<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-experiment-action="paused" data-id="'+esc(String(e.id||""))+'">Pause</button>':'')+(canReview?'<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-experiment-review="'+esc(String(e.id||""))+'">Review</button>':'');
+                const obsHtml=obs.slice(0,6).map(function(o){return '<div class="sway-ai-ki-experiment-observation"><span>'+esc(o.metric_name||"metric")+'</span><strong>'+esc(o.label||"Observation")+'</strong><em>'+esc(o.attribution||"uncertain")+'</em></div>';}).join("");
+                return '<article class="sway-ai-ki-experiment-item"><div class="sway-ai-ki-experiment-head"><div><strong>'+esc(e.name||"Experiment")+'</strong><span>'+esc(e.status||"")+' · confidence: '+esc(e.confidence||"medium")+'</span></div><em>'+esc(e.status||"")+'</em></div><p><b>Hypothesis:</b> '+esc(e.hypothesis||"Not specified")+'</p><div class="sway-ai-ki-experiment-grid"><div><span>Intervention</span><strong>'+esc(e.intervention||e.action||"Not specified")+'</strong></div><div><span>Success metric</span><strong>'+esc(e.success_metric||"Not specified")+'</strong></div><div><span>Target</span><strong>'+esc(e.target||"Not specified")+'</strong></div><div><span>Guardrail</span><strong>'+esc(e.guardrail_metric||"Not specified")+'</strong></div></div>'+(e.result?'<p><b>Result:</b> '+esc(e.result)+'</p>':'')+(e.learning?'<p><b>Learning:</b> '+esc(e.learning)+'</p>':'')+(obsHtml?'<div class="sway-ai-ki-experiment-observations">'+obsHtml+'</div>':'')+'<div class="sway-ai-ki-experiment-actions">'+buttons+'</div></article>';
+            }).join("");
+        }
+
+        async function refreshExperiments(showLoading=true){
+            if(showLoading) experimentsResults.innerHTML='<p class="sway-ai-ki-muted">Loading experiments…</p>';
+            try{const data=await loadExperiments();experimentsResults.innerHTML=renderExperiments(data);experimentsResults.__swayExperimentData=data;return data;}catch(error){experimentsSummary.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Experimentation failed to load.")+'</p>';experimentsResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Experimentation failed to load.")+'</p>';return null;}
+        }
+
+        if(experimentsPanel) experimentsPanel.addEventListener("toggle",function(){if(experimentsPanel.open) refreshExperiments();});
+        if(experimentsRefresh) experimentsRefresh.addEventListener("click",function(event){event.preventDefault();event.stopPropagation();refreshExperiments();});
+        experimentsResults.addEventListener("click",async function(event){
+            const action=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-experiment-action]"):null;
+            const review=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-experiment-review]"):null;
+            if(!action&&!review) return;
+            event.preventDefault();event.stopPropagation();
+            const id=String((action||review).dataset.id||(review&&review.dataset.swayAiKiExperimentReview)||"").trim();
+            try{
+                if(action){
+                    const status=String(action.dataset.swayAiKiExperimentAction||"");
+                    if(!id||!["approved","running","paused"].includes(status)) return;
+                    if(!window.confirm(status==="approved"?"Approve this experiment design?":status==="running"?"Start this approved experiment?":"Pause this running experiment?")) return;
+                    action.disabled=true;action.textContent=status==="running"?"Starting…":status==="paused"?"Pausing…":"Approving…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/review_innerme_experiment",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_experiment_id:id,p_status:status,p_result:null,p_learning:null,p_decision_after_review:null})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Experiment status update failed.");
+                    await refreshExperiments(false);return;
+                }
+                if(review){
+                    const status=window.prompt("Review status: completed, paused, abandoned, or inconclusive","completed");
+                    if(!status||!["completed","paused","abandoned","inconclusive"].includes(status.trim())) return;
+                    const result=window.prompt("Observed result / evidence summary","");
+                    const learning=window.prompt("Learning captured from this experiment","");
+                    const decision=window.prompt("Decision after review: keep, change, stop, or inconclusive","inconclusive");
+                    review.disabled=true;review.textContent="Saving…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/review_innerme_experiment",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_experiment_id:id,p_status:status.trim(),p_result:result||null,p_learning:learning||null,p_decision_after_review:decision||null})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Experiment review failed.");
+                    await refreshExperiments(false);
+                }
+            }catch(error){(action||review).disabled=false;window.alert(error.message||"Experiment action failed.");}
+        });
+
         const evaluationPanel = details.querySelector("[data-sway-ai-ki-evaluation-panel]");
         const evaluationSummary = details.querySelector(".sway-ai-ki-evaluation-summary");
         const evaluationResults = details.querySelector(".sway-ai-ki-evaluation-results");
@@ -2235,6 +2323,38 @@
         "body.sway-dark-mode .sway-ai-ki-eval-fail{background:rgba(190,52,52,.14);color:#FFB0B0}" +
         "body.sway-dark-mode .sway-ai-ki-eval-item details{border-top-color:rgba(119,193,252,.1)}" +
         "@media(max-width:680px){.sway-ai-ki-eval-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-eval-head{display:grid;gap:6px}.sway-ai-ki-eval-head em{width:fit-content}}" +
+        ".sway-ai-ki-experiments{width:100%;margin:4px 0}" +
+        ".sway-ai-ki-experiments>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
+        ".sway-ai-ki-experiments>summary::-webkit-details-marker{display:none}" +
+        ".sway-ai-ki-experiments>summary:after{content:'›';transform:rotate(90deg);transition:transform .16s ease}" +
+        ".sway-ai-ki-experiments[open]>summary:after{transform:rotate(-90deg)}" +
+        ".sway-ai-ki-experiments-controls{display:grid;gap:8px;padding:6px 10px 10px}" +
+        ".sway-ai-ki-experiments-controls>span{font-size:11px;line-height:1.45;opacity:.68}" +
+        ".sway-ai-ki-experiments-summary,.sway-ai-ki-experiments-results{display:grid;gap:9px;padding:0 10px 10px}" +
+        ".sway-ai-ki-experiments-summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}" +
+        ".sway-ai-ki-experiments-summary-grid>div{display:grid;gap:3px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-experiments-summary-grid span,.sway-ai-ki-experiment-grid span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-experiments-summary-grid strong{font-size:11px}" +
+        ".sway-ai-ki-experiment-item{display:grid;gap:9px;padding:11px;border:1px solid rgba(1,82,244,.1);border-radius:12px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-experiment-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-experiment-head>div{display:grid;gap:3px;min-width:0}" +
+        ".sway-ai-ki-experiment-head strong{font-size:11px;line-height:1.35}" +
+        ".sway-ai-ki-experiment-head span{font-size:9px;opacity:.58}" +
+        ".sway-ai-ki-experiment-head em{padding:4px 6px;border-radius:999px;background:rgba(1,82,244,.08);color:#0152F4;font-size:8px;font-style:normal;font-weight:800;white-space:nowrap}" +
+        ".sway-ai-ki-experiment-item>p{margin:0;font-size:10px;line-height:1.5}" +
+        ".sway-ai-ki-experiment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}" +
+        ".sway-ai-ki-experiment-grid>div{display:grid;gap:3px;padding-top:7px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-experiment-grid strong{font-size:9px;font-weight:600;line-height:1.4}" +
+        ".sway-ai-ki-experiment-observations{display:grid;gap:5px}" +
+        ".sway-ai-ki-experiment-observation{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:7px;align-items:center;padding:6px 7px;border-radius:8px;background:rgba(1,82,244,.035);font-size:8px}" +
+        ".sway-ai-ki-experiment-observation span,.sway-ai-ki-experiment-observation em{opacity:.58;font-style:normal}" +
+        ".sway-ai-ki-experiment-actions{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap}" +
+        "body.sway-dark-mode .sway-ai-ki-experiments-summary-grid>div,body.sway-dark-mode .sway-ai-ki-experiment-item{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-experiment-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
+        "body.sway-dark-mode .sway-ai-ki-experiment-grid>div{border-top-color:rgba(119,193,252,.1)}" +
+        "body.sway-dark-mode .sway-ai-ki-experiment-observation{background:rgba(119,193,252,.055)}" +
+        "@media(max-width:900px){.sway-ai-ki-experiments-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
+        "@media(max-width:680px){.sway-ai-ki-experiments-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-experiment-head{display:grid;gap:6px}.sway-ai-ki-experiment-head em{width:fit-content}.sway-ai-ki-experiment-grid{grid-template-columns:1fr}}" +
         ".sway-ai-ki-outcomes{width:100%;margin:4px 0}" +
         ".sway-ai-ki-outcomes>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
         ".sway-ai-ki-outcomes>summary::-webkit-details-marker{display:none}" +
