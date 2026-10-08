@@ -937,6 +937,15 @@
                 '<div class="sway-ai-ki-execution-summary"><p class="sway-ai-ki-muted">No execution plans loaded.</p></div>' +
                 '<div class="sway-ai-ki-execution-results"><p class="sway-ai-ki-muted">Open this section to load approved decisions.</p></div>' +
             '</details>' +
+            '<details class="sway-ai-ki-outcomes" data-sway-ai-ki-outcomes-panel>' +
+                '<summary>Outcome intelligence</summary>' +
+                '<div class="sway-ai-ki-outcomes-controls">' +
+                    '<span>Measures what happened after controlled InnerMe actions. Execution is verified separately from business success, and final outcome judgements require explicit admin review.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-outcomes-refresh>Refresh outcomes</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-outcomes-summary"><p class="sway-ai-ki-muted">No outcome reviews loaded.</p></div>' +
+                '<div class="sway-ai-ki-outcomes-results"><p class="sway-ai-ki-muted">Open this section to load outcome reviews.</p></div>' +
+            '</details>' +
             '<details class="sway-ai-ki-evaluation" data-sway-ai-ki-evaluation-panel>' +
                 '<summary>Evaluation &amp; benchmarking</summary>' +
                 '<div class="sway-ai-ki-evaluation-controls">' +
@@ -1596,6 +1605,121 @@
             }
         });
 
+        const outcomesPanel=details.querySelector("[data-sway-ai-ki-outcomes-panel]");
+        const outcomesRefresh=details.querySelector("[data-sway-ai-ki-outcomes-refresh]");
+        const outcomesSummary=details.querySelector(".sway-ai-ki-outcomes-summary");
+        const outcomesResults=details.querySelector(".sway-ai-ki-outcomes-results");
+
+        async function loadOutcomeReviews(){
+            const plansResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_execution_plans?select=id,decision_id,title,objective,success_metric,expected_outcome,status,updated_at&status=in.(approved,active,completed,blocked,cancelled)&order=updated_at.desc&limit=50",{method:"GET",headers:authHeaders()});
+            const plans=await plansResponse.json().catch(function(){return [];});
+            if(!plansResponse.ok) throw new Error(plans && (plans.message||plans.error||plans.hint) ? String(plans.message||plans.error||plans.hint) : "Unable to load execution plans for outcome review.");
+            const outcomesResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_outcomes?select=id,outcome_key,decision_id,plan_id,title,objective,success_metric,expected_outcome,status,attribution,measurement_method,result_summary,baseline_snapshot,latest_snapshot,evidence,assessment_notes,measurement_due_at,last_measured_at,verified_at,created_at,updated_at&order=updated_at.desc&limit=100",{method:"GET",headers:authHeaders()});
+            const outcomes=await outcomesResponse.json().catch(function(){return [];});
+            if(!outcomesResponse.ok) throw new Error(outcomes && (outcomes.message||outcomes.error||outcomes.hint) ? String(outcomes.message||outcomes.error||outcomes.hint) : "Unable to load InnerMe outcomes.");
+            const rows=Array.isArray(outcomes)?outcomes:[];
+            const planIds=(Array.isArray(plans)?plans:[]).map(function(p){return String(p.id||"");}).filter(Boolean);
+            let observations=[];
+            if(planIds.length){
+                const outcomeIds=rows.map(function(o){return String(o.id||"");}).filter(Boolean);
+                if(outcomeIds.length){
+                    const obsResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_outcome_observations?select=id,outcome_id,observation_type,label,value,evidence,source_table,source_id,attribution,verification_status,measured_at&outcome_id=in.("+outcomeIds.join(",")+")&order=measured_at.desc&limit=300",{method:"GET",headers:authHeaders()});
+                    const obsData=await obsResponse.json().catch(function(){return [];});
+                    if(!obsResponse.ok) throw new Error(obsData && (obsData.message||obsData.error||obsData.hint) ? String(obsData.message||obsData.error||obsData.hint) : "Unable to load outcome observations.");
+                    observations=Array.isArray(obsData)?obsData:[];
+                }
+            }
+            return {plans:Array.isArray(plans)?plans:[],outcomes:rows,observations:observations};
+        }
+
+        function renderOutcomeReviews(data){
+            const plans=Array.isArray(data&&data.plans)?data.plans:[];
+            const outcomes=Array.isArray(data&&data.outcomes)?data.outcomes:[];
+            const observations=Array.isArray(data&&data.observations)?data.observations:[];
+            const byPlan=new Map(outcomes.map(function(o){return [String(o.plan_id||""),o];}));
+            const counts={awaiting_signal:0,measuring:0,achieved:0,partially_achieved:0,not_achieved:0,inconclusive:0,blocked:0};
+            outcomes.forEach(function(o){if(Object.prototype.hasOwnProperty.call(counts,String(o.status))) counts[String(o.status)]++;});
+            outcomesSummary.innerHTML='<div class="sway-ai-ki-outcomes-summary-grid"><div><span>Plans</span><strong>'+esc(plans.length)+'</strong></div><div><span>Awaiting signal</span><strong>'+esc(counts.awaiting_signal)+'</strong></div><div><span>Measuring</span><strong>'+esc(counts.measuring)+'</strong></div><div><span>Reviewed</span><strong>'+esc(outcomes.filter(function(o){return ["achieved","partially_achieved","not_achieved","inconclusive"].includes(String(o.status));}).length)+'</strong></div></div>';
+            if(!plans.length){return '<p class="sway-ai-ki-muted">No execution plans are available for outcome measurement yet.</p>';}
+            return plans.map(function(plan){
+                const outcome=byPlan.get(String(plan.id||""))||null;
+                if(!outcome){
+                    return '<article class="sway-ai-ki-outcome-item"><div class="sway-ai-ki-outcome-head"><div><strong>'+esc(plan.title||"Execution plan")+'</strong><span>'+esc(plan.status||"")+'</span></div><em>Not measured</em></div><p>'+esc(plan.objective||"")+'</p><div class="sway-ai-ki-outcome-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-outcome-prepare="'+esc(String(plan.id||""))+'">Start outcome review</button></div></article>';
+                }
+                const obs=observations.filter(function(o){return String(o.outcome_id||"")===String(outcome.id||"");});
+                const snap=outcome.latest_snapshot && typeof outcome.latest_snapshot==="object" ? outcome.latest_snapshot : {};
+                const reviewable=["awaiting_signal","measuring","blocked"].includes(String(outcome.status||""));
+                const reviewActions=reviewable ? '<div class="sway-ai-ki-outcome-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-outcome-measure="'+esc(String(outcome.id||""))+'">Measure now</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-outcome-review="'+esc(String(outcome.id||""))+'">Review outcome</button></div>' : '';
+                const obsHtml=obs.slice(0,8).map(function(o){return '<div class="sway-ai-ki-outcome-observation"><span>'+esc(o.observation_type||"signal")+'</span><strong>'+esc(o.label||"Observation")+'</strong><em>'+esc(o.attribution||"uncertain")+'</em></div>';}).join("");
+                return '<article class="sway-ai-ki-outcome-item"><div class="sway-ai-ki-outcome-head"><div><strong>'+esc(outcome.title||"Outcome review")+'</strong><span>Status: '+esc(outcome.status||"")+' · Attribution: '+esc(outcome.attribution||"uncertain")+'</span></div><em>'+esc(outcome.status||"")+'</em></div><div class="sway-ai-ki-outcome-grid"><div><span>Success metric</span><strong>'+esc(outcome.success_metric||"Not specified")+'</strong></div><div><span>Latest verified signals</span><strong>'+esc(String(snap.verified_actions||0))+' actions · '+esc(String(snap.email_replies_received||0))+' replies · '+esc(String(snap.completed_tasks||0))+' completed tasks</strong></div></div>'+(outcome.result_summary?'<p class="sway-ai-ki-outcome-summary-text">'+esc(outcome.result_summary)+'</p>':'')+(obsHtml?'<div class="sway-ai-ki-outcome-observations">'+obsHtml+'</div>':'')+reviewActions+'</article>';
+            }).join("");
+        }
+
+        async function refreshOutcomeReviews(showLoading=true){
+            if(showLoading) outcomesResults.innerHTML='<p class="sway-ai-ki-muted">Loading outcome reviews…</p>';
+            try{
+                const data=await loadOutcomeReviews();
+                outcomesResults.innerHTML=renderOutcomeReviews(data);
+                outcomesResults.__swayOutcomeData=data;
+                return data;
+            }catch(error){
+                outcomesSummary.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Outcome intelligence failed to load.")+'</p>';
+                outcomesResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Outcome intelligence failed to load.")+'</p>';
+                return null;
+            }
+        }
+
+        if(outcomesPanel) outcomesPanel.addEventListener("toggle",function(){if(outcomesPanel.open) refreshOutcomeReviews();});
+        if(outcomesRefresh) outcomesRefresh.addEventListener("click",function(event){event.preventDefault();event.stopPropagation();refreshOutcomeReviews();});
+
+        outcomesResults.addEventListener("click",async function(event){
+            const prepare=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-outcome-prepare]"):null;
+            const measure=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-outcome-measure]"):null;
+            const review=event.target&&event.target.closest?event.target.closest("[data-sway-ai-ki-outcome-review]"):null;
+            const target=prepare||measure||review;
+            if(!target) return;
+            event.preventDefault(); event.stopPropagation();
+            try{
+                if(prepare){
+                    const planId=String(prepare.dataset.swayAiKiOutcomePrepare||"").trim();
+                    if(!planId||!window.confirm("Start outcome measurement for this execution plan?")) return;
+                    prepare.disabled=true; prepare.textContent="Starting…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/prepare_innerme_outcome_review",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_plan_id:planId})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Outcome review preparation failed.");
+                    await refreshOutcomeReviews(false);
+                    return;
+                }
+                if(measure){
+                    const outcomeId=String(measure.dataset.swayAiKiOutcomeMeasure||"").trim();
+                    if(!outcomeId) return;
+                    measure.disabled=true; measure.textContent="Measuring…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/measure_innerme_outcome",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_outcome_id:outcomeId})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Outcome measurement failed.");
+                    await refreshOutcomeReviews(false);
+                    return;
+                }
+                if(review){
+                    const outcomeId=String(review.dataset.swayAiKiOutcomeReview||"").trim();
+                    if(!outcomeId) return;
+                    const status=window.prompt("Outcome status: achieved, partially_achieved, not_achieved, or inconclusive","inconclusive");
+                    if(!status||!["achieved","partially_achieved","not_achieved","inconclusive"].includes(status.trim())) return;
+                    const attribution=window.prompt("Attribution: direct, partial, uncertain, or none","uncertain");
+                    if(!attribution||!["direct","partial","uncertain","none"].includes(attribution.trim())) return;
+                    const summary=window.prompt("Brief evidence-based outcome summary","");
+                    review.disabled=true; review.textContent="Saving…";
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/review_innerme_outcome",{method:"POST",headers:authHeaders(),body:JSON.stringify({p_outcome_id:outcomeId,p_status:status.trim(),p_attribution:attribution.trim(),p_summary:summary||null})});
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Outcome review failed.");
+                    await refreshOutcomeReviews(false);
+                }
+            }catch(error){
+                target.disabled=false;
+                window.alert(error.message||"Outcome intelligence action failed.");
+            }
+        });
+
         const evaluationPanel = details.querySelector("[data-sway-ai-ki-evaluation-panel]");
         const evaluationSummary = details.querySelector(".sway-ai-ki-evaluation-summary");
         const evaluationResults = details.querySelector(".sway-ai-ki-evaluation-results");
@@ -2111,6 +2235,38 @@
         "body.sway-dark-mode .sway-ai-ki-eval-fail{background:rgba(190,52,52,.14);color:#FFB0B0}" +
         "body.sway-dark-mode .sway-ai-ki-eval-item details{border-top-color:rgba(119,193,252,.1)}" +
         "@media(max-width:680px){.sway-ai-ki-eval-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-eval-head{display:grid;gap:6px}.sway-ai-ki-eval-head em{width:fit-content}}" +
+        ".sway-ai-ki-outcomes{width:100%;margin:4px 0}" +
+        ".sway-ai-ki-outcomes>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
+        ".sway-ai-ki-outcomes>summary::-webkit-details-marker{display:none}" +
+        ".sway-ai-ki-outcomes>summary:after{content:'›';transform:rotate(90deg);transition:transform .16s ease}" +
+        ".sway-ai-ki-outcomes[open]>summary:after{transform:rotate(-90deg)}" +
+        ".sway-ai-ki-outcomes-controls{display:grid;gap:8px;padding:6px 10px 10px}" +
+        ".sway-ai-ki-outcomes-controls>span{font-size:11px;line-height:1.45;opacity:.68}" +
+        ".sway-ai-ki-outcomes-summary,.sway-ai-ki-outcomes-results{display:grid;gap:9px;padding:0 10px 10px}" +
+        ".sway-ai-ki-outcomes-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}" +
+        ".sway-ai-ki-outcomes-summary-grid>div{display:grid;gap:3px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-outcomes-summary-grid span,.sway-ai-ki-outcome-grid span{font-size:8px;opacity:.58}" +
+        ".sway-ai-ki-outcomes-summary-grid strong{font-size:11px}" +
+        ".sway-ai-ki-outcome-item{display:grid;gap:9px;padding:11px;border:1px solid rgba(1,82,244,.1);border-radius:12px;background:rgba(1,82,244,.025)}" +
+        ".sway-ai-ki-outcome-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}" +
+        ".sway-ai-ki-outcome-head>div{display:grid;gap:3px;min-width:0}" +
+        ".sway-ai-ki-outcome-head strong{font-size:11px;line-height:1.35}" +
+        ".sway-ai-ki-outcome-head span{font-size:9px;opacity:.58}" +
+        ".sway-ai-ki-outcome-head em{padding:4px 6px;border-radius:999px;background:rgba(1,82,244,.08);color:#0152F4;font-size:8px;font-style:normal;font-weight:800;white-space:nowrap}" +
+        ".sway-ai-ki-outcome-item>p{margin:0;font-size:10px;line-height:1.5}" +
+        ".sway-ai-ki-outcome-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}" +
+        ".sway-ai-ki-outcome-grid>div{display:grid;gap:3px;padding-top:7px;border-top:1px solid rgba(1,82,244,.08)}" +
+        ".sway-ai-ki-outcome-grid strong{font-size:9px;font-weight:600;line-height:1.4}" +
+        ".sway-ai-ki-outcome-summary-text{white-space:pre-wrap}" +
+        ".sway-ai-ki-outcome-observations{display:grid;gap:5px}" +
+        ".sway-ai-ki-outcome-observation{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:7px;align-items:center;padding:6px 7px;border-radius:8px;background:rgba(1,82,244,.035);font-size:8px}" +
+        ".sway-ai-ki-outcome-observation span,.sway-ai-ki-outcome-observation em{opacity:.58;font-style:normal}" +
+        ".sway-ai-ki-outcome-actions{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap}" +
+        "body.sway-dark-mode .sway-ai-ki-outcomes-summary-grid>div,body.sway-dark-mode .sway-ai-ki-outcome-item{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
+        "body.sway-dark-mode .sway-ai-ki-outcome-head em{background:rgba(119,193,252,.1);color:#78C3FF}" +
+        "body.sway-dark-mode .sway-ai-ki-outcome-grid>div{border-top-color:rgba(119,193,252,.1)}" +
+        "body.sway-dark-mode .sway-ai-ki-outcome-observation{background:rgba(119,193,252,.055)}" +
+        "@media(max-width:680px){.sway-ai-ki-outcomes-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-outcome-head{display:grid;gap:6px}.sway-ai-ki-outcome-head em{width:fit-content}.sway-ai-ki-outcome-grid{grid-template-columns:1fr}}" +
         ".sway-ai-ki-acquisition{width:100%;margin:4px 0}" +
         ".sway-ai-ki-acquisition>summary{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:11px;cursor:pointer;list-style:none}" +
         ".sway-ai-ki-acquisition>summary::-webkit-details-marker{display:none}" +
