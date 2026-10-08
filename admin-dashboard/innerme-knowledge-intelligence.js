@@ -602,6 +602,16 @@
                 '<span>Checks knowledge coverage, freshness, semantic overlap, possible conflicts and retrieval evidence.</span>' +
                 '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-run>Analyse knowledge health</button>' +
             '</div>' +
+            '<details class="sway-ai-ki-gaps" data-sway-ai-ki-gaps-panel>' +
+                '<summary>Knowledge gaps</summary>' +
+                '<div class="sway-ai-ki-gaps-controls">' +
+                    '<span>Finds evidence-backed topics InnerMe should acquire next. Proposals stay outside live knowledge until a verified source is acquired.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-gaps-run>Analyse knowledge gaps</button>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-gaps-refresh>Refresh gap queue</button>' +
+                '</div>' +
+                '<div class="sway-ai-ki-gaps-analysis"><p class="sway-ai-ki-muted">Not analysed yet.</p></div>' +
+                '<div class="sway-ai-ki-gaps-results"><p class="sway-ai-ki-muted">Open this section to load acquisition candidates.</p></div>' +
+            '</details>' +
             '<details class="sway-ai-ki-verification" data-sway-ai-ki-verification-panel>' +
                 '<summary>Source verification</summary>' +
                 '<div class="sway-ai-ki-verification-controls">' +
