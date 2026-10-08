@@ -156,6 +156,58 @@
         return Array.isArray(data) ? data : [];
     }
 
+    async function loadHypothesisTests() {
+        const response = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_incident_hypothesis_tests" +
+                "?select=incident_id,dependency_id,support_score,contradiction_score,temporal_score,persistence_score,recurrence_score,validation_status,hypothesis,evidence,alternative_explanations,next_test,updated_at" +
+                "&order=support_score.desc&limit=500",
+            {
+                method: "GET",
+                headers: headers()
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return [];
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to load incident hypothesis tests."
+            );
+        }
+
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function refreshHypothesisTests() {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/rpc/refresh_innerme_incident_hypothesis_tests",
+            {
+                method: "POST",
+                headers: headers(),
+                body: "{}"
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return null;
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Hypothesis testing refresh failed."
+            );
+        }
+
+        return Number(data || 0);
+    }
+
     async function loadDependencies() {
         const response = await fetch(
             SUPABASE_URL +
@@ -324,7 +376,7 @@
         }).join("");
     }
 
-    function render(panel, incidents, events, intelligence, analyses, dependencies, generated) {
+    function render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, generated) {
         const active = incidents.filter(function (item) {
             return ["open", "acknowledged"].includes(String(item.status));
         });
@@ -370,6 +422,13 @@
             dependencyMap.get(key).push(item);
         });
 
+        const hypothesisMap = new Map();
+        hypotheses.forEach(function (item) {
+            const key = String(item.incident_id || "");
+            if (!hypothesisMap.has(key)) hypothesisMap.set(key, []);
+            hypothesisMap.get(key).push(item);
+        });
+
         const summary = panel.querySelector("[data-im-incident-summary]");
         summary.innerHTML =
             '<div><span>Active</span><strong>' + esc(counts.active) + '</strong></div>' +
@@ -405,6 +464,7 @@
                 const info = intelligenceMap.get(String(incident.id)) || null;
                 const analysis = analysisMap.get(String(incident.id)) || null;
                 const graph = dependencyMap.get(String(incident.id)) || [];
+                const hypotheses = hypothesisMap.get(String(incident.id)) || [];
                 const eventHistory = eventMap.get(String(incident.id)) || [];
                 const dependencyHtml = graph.length
                     ? '<div class="sway-ai-incident-dependencies">' +
@@ -413,6 +473,18 @@
                             return '<div class="sway-ai-incident-dependency-row">' +
                                 '<span><strong>#' + esc(dependency.dependency_rank) + '</strong> ' + esc(dependency.label || dependency.relationship || "Dependency") + '</span>' +
                                 '<small>' + esc(String(dependency.dependency_score || 0) + '/100 · ' + (dependency.is_unresolved ? "unresolved" : "resolved")) + '</small>' +
+                            '</div>';
+                        }).join("") +
+                      '</div>'
+                    : '';
+                const hypothesisHtml = hypotheses.length
+                    ? '<div class="sway-ai-incident-hypotheses">' +
+                        '<div class="sway-ai-incident-intelligence-head"><strong>Hypothesis validation</strong><span>' + esc(String(hypotheses.length)) + ' test(s)</span></div>' +
+                        hypotheses.slice(0, 4).map(function (test) {
+                            return '<div class="sway-ai-incident-hypothesis-row">' +
+                                '<div class="sway-ai-incident-hypothesis-head"><strong>' + esc(test.validation_status || "inconclusive") + '</strong><span>' + esc(String(test.support_score || 0) + '/100 support · ' + String(test.contradiction_score || 0) + '/100 contradiction') + '</span></div>' +
+                                '<p>' + esc(test.hypothesis || "") + '</p>' +
+                                '<small>Next test: ' + esc(test.next_test || "") + '</small>' +
                             '</div>';
                         }).join("") +
                       '</div>'
@@ -466,6 +538,7 @@
                         '<p>' + esc(incident.summary || "") + '</p>' +
                         intelligenceHtml +
                         analysisHtml +
+                        hypothesisHtml +
                         dependencyHtml +
                         '<div class="sway-ai-incident-reason"><strong>Why this is correlated</strong><p>' + esc(incident.correlation_reason || "") + '</p></div>' +
                         '<div class="sway-ai-incident-reason"><strong>Recommended response</strong><p>' + esc(incident.recommended_response || "") + '</p></div>' +
@@ -522,7 +595,7 @@
             ".sway-ai-incident-pill.critical,.sway-ai-incident-pill.high{background:rgba(190,52,52,.12);color:#B42323}" +
             ".sway-ai-incident-pill.medium{background:rgba(247,201,120,.14);color:#9A6700}" +
             ".sway-ai-incident-pill.low{background:rgba(1,82,244,.08);color:#0152F4}" +
-            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-dependency-row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-dependency-row:first-of-type{border-top:0}.sway-ai-incident-dependency-row span{font-size:8px;line-height:1.4}.sway-ai-incident-dependency-row small{font-size:7px;opacity:.55;white-space:nowrap}body.sway-dark-mode .sway-ai-incident-root-analysis,body.sway-dark-mode .sway-ai-incident-dependencies{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}body.sway-dark-mode .sway-ai-incident-intelligence{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}@media(max-width:700px){.sway-ai-incident-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
+            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-hypotheses{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-hypothesis-row{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-hypothesis-row:first-of-type{border-top:0}.sway-ai-incident-hypothesis-head{display:flex;justify-content:space-between;gap:8px}.sway-ai-incident-hypothesis-head strong{font-size:8px;text-transform:capitalize}.sway-ai-incident-hypothesis-head span,.sway-ai-incident-hypothesis-row small{font-size:7px;opacity:.6}.sway-ai-incident-hypothesis-row p{margin:3px 0;font-size:8px;line-height:1.4}body.sway-dark-mode .sway-ai-incident-hypotheses{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}.sway-ai-incident-dependency-row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}.sway-ai-incident-dependency-row:first-of-type{border-top:0}.sway-ai-incident-dependency-row span{font-size:8px;line-height:1.4}.sway-ai-incident-dependency-row small{font-size:7px;opacity:.55;white-space:nowrap}body.sway-dark-mode .sway-ai-incident-root-analysis,body.sway-dark-mode .sway-ai-incident-dependencies{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}body.sway-dark-mode .sway-ai-incident-intelligence{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}@media(max-width:700px){.sway-ai-incident-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}" +
             ".sway-ai-incident-reason{display:grid;gap:2px}.sway-ai-incident-reason strong{font-size:8px;text-transform:uppercase;letter-spacing:.04em;opacity:.58}" +
             ".sway-ai-incident-reason p{margin:0;font-size:9px;line-height:1.45}" +
             ".sway-ai-incident-detail{border-top:1px solid rgba(1,82,244,.08);padding-top:6px}.sway-ai-incident-detail>summary{font-size:8px;cursor:pointer;opacity:.72}" +
@@ -578,9 +651,15 @@
                 const incidents = await loadIncidents();
                 const events = await loadEvents();
                 const intelligence = await loadIntelligence();
+                const analysisGenerated = await refreshRootAnalysis();
+                const hypothesisGenerated = await refreshHypothesisTests();
+                const incidents = await loadIncidents();
+                const events = await loadEvents();
+                const intelligence = await loadIntelligence();
                 const analyses = await loadRootAnalysis();
                 const dependencies = await loadDependencies();
-                render(panel, incidents, events, intelligence, analyses, dependencies, generated + intelligenceGenerated + analysisGenerated);
+                const hypotheses = await loadHypothesisTests();
+                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated);
             } catch (error) {
                 panel.querySelector("[data-im-incidents]").innerHTML =
                     '<p class="sway-ai-ki-error">' + esc(error.message || "Incident correlation failed.") + "</p>";
