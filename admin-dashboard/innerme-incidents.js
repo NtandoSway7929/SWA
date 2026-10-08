@@ -226,23 +226,35 @@
             '<div><span>Total</span><strong>' + esc(counts.total) + '</strong></div>';
 
         const results = panel.querySelector("[data-im-incidents]");
-        if (!active.length) {
+        const ordered = incidents.slice().sort(function (a, b) {
+            const aActive = ["open", "acknowledged"].includes(String(a.status));
+            const bActive = ["open", "acknowledged"].includes(String(b.status));
+            if (aActive !== bActive) return aActive ? -1 : 1;
+            return new Date(b.last_detected_at || b.updated_at || 0) - new Date(a.last_detected_at || a.updated_at || 0);
+        });
+
+        if (!ordered.length) {
             results.innerHTML =
-                '<p class="sway-ai-ki-good">No active operational incidents. Individual exception monitoring remains separate and unchanged.</p>';
+                '<p class="sway-ai-ki-good">No operational incidents have been recorded. Individual exception monitoring remains separate and unchanged.</p>';
         } else {
-            results.innerHTML = active.map(function (incident) {
+            results.innerHTML =
+                (active.length
+                    ? '<div class="sway-ai-incident-group-title">Active incidents</div>'
+                    : '') +
+                ordered.map(function (incident) {
                 const status = String(incident.status || "open");
+                const isActive = ["open", "acknowledged"].includes(status);
                 const eventHistory = eventMap.get(String(incident.id)) || [];
                 const acknowledgementAction =
                     status === "open"
                         ? '<button type="button" class="sway-ai-knowledge-test-button" data-im-incident-action="acknowledged" data-im-incident-id="' + esc(incident.id) + '">Acknowledge</button>'
                         : "";
                 const resolveAction =
-                    status !== "resolved"
+                    isActive
                         ? '<button type="button" class="sway-ai-knowledge-test-button" data-im-incident-action="resolved" data-im-incident-id="' + esc(incident.id) + '">Resolve</button>'
                         : "";
                 const reopenAction =
-                    ["resolved", "ignored"].includes(status)
+                    !isActive
                         ? '<button type="button" class="sway-ai-knowledge-test-button" data-im-incident-action="open" data-im-incident-id="' + esc(incident.id) + '">Reopen</button>'
                         : "";
 
@@ -271,7 +283,12 @@
                         '</div>' +
                     '</article>'
                 );
-            }).join("");
+            }).join("") +
+                (incidents.some(function (item) {
+                    return ["resolved", "ignored"].includes(String(item.status));
+                })
+                    ? '<div class="sway-ai-incident-group-title sway-ai-incident-history-title">Recent incident history</div>'
+                    : '');
         }
 
         const generatedLabel = panel.querySelector("[data-im-incident-generated]");
@@ -296,7 +313,7 @@
             ".sway-ai-incident-summary>div{display:grid;gap:3px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
             ".sway-ai-incident-summary span{font-size:8px;opacity:.58}.sway-ai-incident-summary strong{font-size:12px}" +
             ".sway-ai-incident-generated{margin:0;padding:0 10px 9px;font-size:9px;opacity:.58}" +
-            ".sway-ai-incidents-list{display:grid;gap:8px;padding:0 10px 10px}" +
+            ".sway-ai-incidents-list{display:grid;gap:8px;padding:0 10px 10px}.sway-ai-incident-group-title{padding:3px 0 1px;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;opacity:.55}.sway-ai-incident-history-title{margin-top:5px}" +
             ".sway-ai-incident-card{display:grid;gap:6px;padding:10px;border:1px solid rgba(1,82,244,.09);border-radius:10px;background:rgba(1,82,244,.018)}" +
             ".sway-ai-incident-head{display:flex;align-items:center;justify-content:space-between;gap:8px}" +
             ".sway-ai-incident-head>div{display:flex;align-items:center;gap:7px;min-width:0}" +
