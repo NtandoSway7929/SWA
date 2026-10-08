@@ -1119,6 +1119,11 @@
             ".sway-ai-incident-pill.medium{background:rgba(247,201,120,.14);color:#9A6700}" +
             ".sway-ai-incident-pill.low{background:rgba(1,82,244,.08);color:#0152F4}" +
             ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intervention-option small{font-size:7px;opacity:.65}
+.sway-ai-incident-coordination{display:grid;gap:6px;margin-top:6px;padding:8px;border:1px solid rgba(1,82,244,.10);border-radius:9px;background:rgba(1,82,244,.018)}
+.sway-ai-incident-agent-list{display:grid;gap:5px}
+.sway-ai-incident-agent-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}
+.sway-ai-incident-agent-row>div{display:grid;gap:2px}.sway-ai-incident-agent-row strong{font-size:8px;text-transform:capitalize}.sway-ai-incident-agent-row span,.sway-ai-incident-agent-row small{font-size:7px;opacity:.62}
+body.sway-dark-mode .sway-ai-incident-coordination{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.025)}
 .sway-ai-incident-outcome{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.10);border-radius:9px;background:rgba(1,82,244,.022)}
 .sway-ai-incident-outcome p{margin:0;font-size:8px;line-height:1.4}.sway-ai-incident-outcome small{font-size:7px;opacity:.62}
 body.sway-dark-mode .sway-ai-incident-outcome{border-color:rgba(119,193,252,.12);background:rgba(119,193,252,.035)}
@@ -1188,6 +1193,7 @@ body.sway-dark-mode .sway-ai-incident-intervention-selection{border-color:rgba(1
                 const hypothesisGenerated = await refreshHypothesisTests();
                 const counterfactualGenerated = await refreshCounterfactuals();
                 const interventionGenerated = await refreshInterventionSelection();
+                const coordinationGenerated = await refreshAgentCoordination();
                 const incidents = await loadIncidents();
                 const events = await loadEvents();
                 const intelligence = await loadIntelligence();
@@ -1199,7 +1205,11 @@ body.sway-dark-mode .sway-ai-incident-intervention-selection{border-color:rgba(1
                 const interventionOptions = await loadInterventionOptions();
                 const executions = await loadInterventionExecutions();
                 const outcomes = await loadInterventionOutcomes();
-                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, executions, outcomes, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated + counterfactualGenerated + interventionGenerated);
+                const coordinationRuns = await loadAgentCoordinationRuns();
+                const coordinationAssignments = await loadAgentCoordinationAssignments();
+                const coordinationHandoffs = await loadAgentCoordinationHandoffs();
+                const agents = await loadInnerMeAgents();
+                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, executions, outcomes, coordinationRuns, coordinationAssignments, coordinationHandoffs, agents, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated + counterfactualGenerated + interventionGenerated + coordinationGenerated);
             } catch (error) {
                 panel.querySelector("[data-im-incidents]").innerHTML =
                     '<p class="sway-ai-ki-error">' + esc(error.message || "Incident correlation failed.") + "</p>";
