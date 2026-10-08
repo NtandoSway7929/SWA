@@ -643,14 +643,10 @@
 
         async function refresh() {
             refreshButton.disabled = true;
-            refreshButton.textContent = "Correlating…";
+            refreshButton.textContent = "Analysing…";
             try {
                 const generated = await correlate();
                 const intelligenceGenerated = await refreshIntelligence();
-                const analysisGenerated = await refreshRootAnalysis();
-                const incidents = await loadIncidents();
-                const events = await loadEvents();
-                const intelligence = await loadIntelligence();
                 const analysisGenerated = await refreshRootAnalysis();
                 const hypothesisGenerated = await refreshHypothesisTests();
                 const incidents = await loadIncidents();
