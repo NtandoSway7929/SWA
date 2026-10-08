@@ -54,6 +54,7 @@
         return Number(data || 0);
     }
 
+    // Phase 29 uses the central intelligence runner for calibration-aware refreshes.
     async function loadIncidents() {
         const response = await fetch(
             SUPABASE_URL +
