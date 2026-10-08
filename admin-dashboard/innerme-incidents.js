@@ -1328,3 +1328,12 @@ body.sway-dark-mode .sway-ai-incident-intervention-selection{border-color:rgba(1
         boot();
     }
 })();
+
+/* Phase 29 dashboard extension: load the isolated trust-governance panel. */
+(function loadInnerMeTrustGovernance() {
+    if (document.querySelector('script[data-im-trust-calibration]')) return;
+    var script = document.createElement("script");
+    script.src = "innerme-trust-calibration.js?v=20261008-29a";
+    script.setAttribute("data-im-trust-calibration", "");
+    document.head.appendChild(script);
+})();
