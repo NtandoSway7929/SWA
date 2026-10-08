@@ -394,7 +394,7 @@
             ".sway-ai-incidents>summary::-webkit-details-marker{display:none}" +
             ".sway-ai-incidents-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 10px 10px}" +
             ".sway-ai-incidents-top>span{font-size:11px;line-height:1.45;opacity:.68;max-width:760px}" +
-            ".sway-ai-incident-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding:0 10px 8px}" +
+            ".sway-ai-incident-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;padding:0 10px 8px}" +
             ".sway-ai-incident-summary>div{display:grid;gap:3px;padding:8px;border:1px solid rgba(1,82,244,.09);border-radius:9px;background:rgba(1,82,244,.025)}" +
             ".sway-ai-incident-summary span{font-size:8px;opacity:.58}.sway-ai-incident-summary strong{font-size:12px}" +
             ".sway-ai-incident-generated{margin:0;padding:0 10px 9px;font-size:9px;opacity:.58}" +
