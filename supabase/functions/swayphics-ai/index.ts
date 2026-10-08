@@ -19,6 +19,7 @@ async function sha256(value: string) {
 
 const PRIMARY_MODEL = "gemini-3.8-flash";
 const FALLBACK_MODEL = "gemini-3.5-flash-lite";
+const INNERME_BENCHMARK_VERSION = 1;
 
 function json(
   data: unknown,
