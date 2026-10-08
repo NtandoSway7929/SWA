@@ -1312,11 +1312,33 @@
                 actionProposals=Array.isArray(actionData)?actionData:[];
             }
 
+            let policyReviews=[];
+            const policyProposalIds=actionProposals
+                .map(function(item){return String(item && item.id || "").trim();})
+                .filter(function(id){return /^[0-9a-f-]{36}$/i.test(id);});
+            if(policyProposalIds.length){
+                const policyResponse=await fetch(
+                    SUPABASE_URL+
+                        "/rest/v1/innerme_action_policy_reviews?select=id,proposal_id,gate_stage,decision,risk_level,checks,blockers,proposal_fingerprint,created_at&proposal_id=in.("+policyProposalIds.join(",")+")&order=created_at.desc,id.desc&limit=500",
+                    {method:"GET",headers:authHeaders()}
+                );
+                const policyData=await policyResponse.json().catch(function(){return [];});
+                if(!policyResponse.ok){
+                    throw new Error(
+                        policyData && (policyData.message || policyData.error || policyData.hint)
+                            ? String(policyData.message || policyData.error || policyData.hint)
+                            : "Unable to load InnerMe action safety reviews."
+                    );
+                }
+                policyReviews=Array.isArray(policyData)?policyData:[];
+            }
+
             return {
                 decisions:Array.isArray(decisions)?decisions:[],
                 plans:allPlans,
                 stepsByPlan:stepsByPlan,
-                actionProposals:actionProposals
+                actionProposals:actionProposals,
+                policyReviews:policyReviews
             };
         }
 
@@ -1393,18 +1415,35 @@
                     };
 
                     const actionsHtml=planActions.length
-                        ? '<div class="sway-ai-ki-execution-detail"><span>Controlled actions</span><div class="sway-ai-ki-execution-actions-list">'+
+                        ? '<div class="sway-ai-ki-execution-detail"><span>Controlled actions · safety-gated</span><div class="sway-ai-ki-execution-actions-list">'+
                             planActions.map(function(item){
                                 const actionStatus=String(item.status||"proposed");
-                                let actionButtons="";
+                                const proposalId=String(item.id||"");
+                                const policyReviews=Array.isArray(data && data.policyReviews)?data.policyReviews:[];
+                                const latestApprovalGate=policyReviews.find(function(review){
+                                    return String(review && review.proposal_id || "")===proposalId &&
+                                        String(review && review.gate_stage || "")==="approval";
+                                }) || null;
+                                const gateDecision=latestApprovalGate ? String(latestApprovalGate.decision||"blocked") : "not_checked";
+                                const gateLabel=gateDecision==="ready" ? "Ready" : gateDecision==="blocked" ? "Blocked" : "Not checked";
+                                const gateBlockers=latestApprovalGate && Array.isArray(latestApprovalGate.blockers) ? latestApprovalGate.blockers.slice(0,5) : [];
+                                const gateHtml='<div class="sway-ai-ki-execution-detail"><span>Safety check: '+esc(gateLabel)+'</span><p>Risk: '+esc(latestApprovalGate && latestApprovalGate.risk_level || (item.action_type==="send_email" ? "high" : "medium"))+(latestApprovalGate && latestApprovalGate.created_at ? ' · Checked '+esc(new Date(latestApprovalGate.created_at).toLocaleString()) : '')+'</p>' +
+                                    (gateBlockers.length ? '<ul>'+gateBlockers.map(function(blocker){return '<li>'+esc(blocker)+'</li>';}).join("")+'</ul>' :
+                                        gateDecision==="ready" ? '<p>Checks passed. Approval and execution are still separate steps.</p>' : '<p>Run the safety check to see whether this action can proceed.</p>') +
+                                '</div>';
+                                let actionButtons='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-check="'+esc(proposalId)+'">Run safety check</button>';
                                 if(actionStatus==="proposed"){
-                                    actionButtons='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-approve="'+esc(String(item.id||""))+'">Approve action</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-reject="'+esc(String(item.id||""))+'">Reject</button>';
-                                }else if(actionStatus==="approved"){
-                                    actionButtons='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-execute="'+esc(String(item.id||""))+'">Execute action</button>';
+                                    if(gateDecision==="ready"){
+                                        actionButtons+='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-approve="'+esc(proposalId)+'">Approve action</button>';
+                                    }
+                                    actionButtons+='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-reject="'+esc(proposalId)+'">Reject</button>';
+                                }else if(actionStatus==="approved" && gateDecision==="ready"){
+                                    actionButtons+='<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-execute="'+esc(proposalId)+'">Execute action</button>';
                                 }
                                 return '<article class="sway-ai-ki-execution-action">' +
                                     '<div class="sway-ai-ki-execution-action-head"><div><strong>'+esc(item.title||"Controlled action")+'</strong><span>'+esc(item.action_type||"action")+' · '+esc(proposalStatusLabel(actionStatus))+'</span></div><em>'+esc(proposalStatusLabel(actionStatus))+'</em></div>' +
                                     (item.purpose ? '<p>'+esc(item.purpose)+'</p>' : "") +
+                                    gateHtml +
                                     renderActionPayload(item) +
                                     (item.error_message ? '<div class="sway-ai-ki-execution-action-error">'+esc(item.error_message)+'</div>' : "") +
                                     (item.executed_at ? '<div class="sway-ai-ki-execution-action-result">Executed '+esc(new Date(item.executed_at).toLocaleString())+'</div>' : "") +
@@ -1478,14 +1517,47 @@
             const build=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-build]") : null;
             const approve=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-approve]") : null;
             const cancel=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-cancel]") : null;
-            const target=build||approve||cancel;
-            if(!target) return;
-            event.preventDefault(); event.stopPropagation();
-
             const prepare=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-prepare]") : null;
+            const actionCheck=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-check]") : null;
             const actionApprove=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-approve]") : null;
             const actionReject=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-reject]") : null;
             const actionExecute=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-execute]") : null;
+            const target=build||approve||cancel||prepare||actionCheck||actionApprove||actionReject||actionExecute;
+            if(!target) return;
+            event.preventDefault(); event.stopPropagation();
+
+            if(actionCheck){
+                const proposalId=String(actionCheck.dataset.swayAiKiActionCheck||"").trim();
+                if(!proposalId) return;
+                actionCheck.disabled=true;
+                actionCheck.textContent="Checking…";
+                try{
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/evaluate_innerme_action_policy",{
+                        method:"POST",
+                        headers:authHeaders(),
+                        body:JSON.stringify({p_proposal_id:proposalId,p_stage:"approval"})
+                    });
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok){
+                        throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "InnerMe safety check failed.");
+                    }
+                    if(!data || !["ready","blocked"].includes(String(data.decision||""))){
+                        throw new Error("InnerMe did not return a valid safety-check result.");
+                    }
+                    await refreshExecutionPlans();
+                    if(data.decision==="ready"){
+                        window.alert("Safety check passed. The action may now be reviewed or, if already approved, explicitly executed. No action was performed by this check.");
+                    }else{
+                        const blockers=Array.isArray(data.blockers)?data.blockers:[];
+                        window.alert("Safety check blocked this action."+(blockers.length ? "\n\n"+blockers.join("\n") : ""));
+                    }
+                }catch(error){
+                    actionCheck.disabled=false;
+                    actionCheck.textContent="Run safety check";
+                    window.alert(error.message||"InnerMe safety check failed.");
+                }
+                return;
+            }
 
             if(prepare){
                 const targetPlanId=String(prepare.dataset.swayAiKiActionPrepare||"").trim();
