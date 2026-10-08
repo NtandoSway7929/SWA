@@ -99,21 +99,25 @@ alter table public.innerme_agent_coordination_assignments enable row level secur
 alter table public.innerme_agent_coordination_handoffs enable row level security;
 alter table public.innerme_agent_coordination_conflicts enable row level security;
 
+drop policy if exists "InnerMe coordination runs admins can manage" on public.innerme_agent_coordination_runs;
 create policy "InnerMe coordination runs admins can manage"
 on public.innerme_agent_coordination_runs for all to authenticated
 using ((select public.is_swayphics_admin()))
 with check ((select public.is_swayphics_admin()));
 
+drop policy if exists "InnerMe coordination assignments admins can manage" on public.innerme_agent_coordination_assignments;
 create policy "InnerMe coordination assignments admins can manage"
 on public.innerme_agent_coordination_assignments for all to authenticated
 using ((select public.is_swayphics_admin()))
 with check ((select public.is_swayphics_admin()));
 
+drop policy if exists "InnerMe coordination handoffs admins can manage" on public.innerme_agent_coordination_handoffs;
 create policy "InnerMe coordination handoffs admins can manage"
 on public.innerme_agent_coordination_handoffs for all to authenticated
 using ((select public.is_swayphics_admin()))
 with check ((select public.is_swayphics_admin()));
 
+drop policy if exists "InnerMe coordination conflicts admins can manage" on public.innerme_agent_coordination_conflicts;
 create policy "InnerMe coordination conflicts admins can manage"
 on public.innerme_agent_coordination_conflicts for all to authenticated
 using ((select public.is_swayphics_admin()))
