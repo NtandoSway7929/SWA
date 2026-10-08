@@ -5,6 +5,7 @@
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
     const ACCESS_TOKEN_KEY = "swayphics_admin_access_token";
     const PANEL_ID = "sway-ai-knowledge-intelligence-bridge";
+    const INTERVENTION_FUNCTION_URL = SUPABASE_URL + "/functions/v1/innerme-interventions";
 
     function esc(value) {
         return String(value == null ? "" : value)
@@ -214,7 +215,7 @@
         const response = await fetch(
             SUPABASE_URL +
                 "/rest/v1/innerme_incident_intervention_selection" +
-                "?select=incident_id,selected_option_id,selection_status,recommended_first_action,selection_rationale,sequence,alternatives,decision_gate,confidence,updated_at" +
+                "?select=id,incident_id,selected_option_id,selection_status,recommended_first_action,selection_rationale,sequence,alternatives,decision_gate,confidence,updated_at" +
                 "&limit=100",
             {
                 method: "GET",
@@ -235,6 +236,111 @@
         }
 
         return Array.isArray(data) ? data : [];
+    }
+
+    async function loadInterventionExecutions() {
+        const response = await fetch(
+            SUPABASE_URL +
+                "/rest/v1/innerme_incident_intervention_executions" +
+                "?select=id,selection_id,option_id,incident_id,dependency_id,action_type,status,approval_required,approved_at,executed_by,execution_started_at,execution_completed_at,task_id,verification_status,verification_note,result_payload,error_message,condition_fingerprint,created_at,updated_at" +
+                "&order=created_at.desc&limit=200",
+            {
+                method: "GET",
+                headers: headers()
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return [];
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to load intervention executions."
+            );
+        }
+
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function prepareInterventionExecution(selectionId) {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/rpc/prepare_innerme_intervention_execution",
+            {
+                method: "POST",
+                headers: headers(),
+                body: JSON.stringify({ p_selection_id: selectionId })
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return null;
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Unable to prepare intervention execution."
+            );
+        }
+
+        return Array.isArray(data) ? data[0] || null : data;
+    }
+
+    async function reviewInterventionExecution(executionId, decision) {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/rpc/review_innerme_intervention_execution",
+            {
+                method: "POST",
+                headers: headers(),
+                body: JSON.stringify({
+                    p_execution_id: executionId,
+                    p_decision: decision
+                })
+            }
+        );
+
+        const data = await response.json().catch(function () {
+            return null;
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Intervention execution review failed."
+            );
+        }
+
+        return Array.isArray(data) ? data[0] || null : data;
+    }
+
+    async function callInterventionFunction(action, executionId) {
+        const response = await fetch(INTERVENTION_FUNCTION_URL, {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({
+                action: action,
+                execution_id: executionId
+            })
+        });
+
+        const data = await response.json().catch(function () {
+            return null;
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                data && (data.message || data.error || data.hint)
+                    ? String(data.message || data.error || data.hint)
+                    : "Intervention execution failed."
+            );
+        }
+
+        return data;
     }
 
     async function loadInterventionOptions() {
@@ -507,7 +613,7 @@
         }).join("");
     }
 
-    function render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, generated) {
+    function render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, executions, generated) {
         const active = incidents.filter(function (item) {
             return ["open", "acknowledged"].includes(String(item.status));
         });
@@ -579,6 +685,13 @@
             interventionOptionsMap.get(key).push(item);
         });
 
+        const executionMap = new Map();
+        executions.forEach(function (item) {
+            const key = String(item.incident_id || "");
+            if (!executionMap.has(key)) executionMap.set(key, []);
+            executionMap.get(key).push(item);
+        });
+
         const summary = panel.querySelector("[data-im-incident-summary]");
         summary.innerHTML =
             '<div><span>Active</span><strong>' + esc(counts.active) + '</strong></div>' +
@@ -618,6 +731,7 @@
                 const counterfactuals = counterfactualMap.get(String(incident.id)) || [];
                 const selection = interventionSelectionMap.get(String(incident.id)) || null;
                 const optionList = interventionOptionsMap.get(String(incident.id)) || [];
+                const executionList = executionMap.get(String(incident.id)) || [];
                 const eventHistory = eventMap.get(String(incident.id)) || [];
                 const dependencyHtml = graph.length
                     ? '<div class="sway-ai-incident-dependencies">' +
@@ -658,6 +772,38 @@
                         }).join("") +
                       '</div>'
                     : '';
+                const currentExecution = selection
+                    ? executionList.find(function (item) {
+                        return String(item.selection_id || "") === String(selection.id || "");
+                    }) || null
+                    : null;
+                const executionHtml =
+                    selection && selection.selection_status === "selected"
+                        ? '<div class="sway-ai-incident-execution">' +
+                            '<div class="sway-ai-incident-intelligence-head"><strong>Controlled execution</strong><span>' + esc(currentExecution ? (currentExecution.status || "proposed") : "not prepared") + '</span></div>' +
+                            (
+                                currentExecution
+                                    ? '<p><strong>Verification:</strong> ' + esc(currentExecution.verification_status || "pending") + ' · ' + esc(currentExecution.verification_note || "Awaiting execution.") + '</p>' +
+                                      (currentExecution.task_id ? '<p><strong>Task:</strong> ' + esc(currentExecution.task_id) + '</p>' : '') +
+                                      (currentExecution.error_message ? '<p><strong>Error:</strong> ' + esc(currentExecution.error_message) + '</p>' : '') +
+                                      (
+                                          currentExecution.status === "proposed"
+                                              ? '<div class="sway-ai-incident-execution-actions">' +
+                                                  '<button type="button" class="sway-ai-knowledge-test-button" data-im-execution-action="approve" data-im-execution-id="' + esc(currentExecution.id) + '">Approve execution</button>' +
+                                                  '<button type="button" class="sway-ai-knowledge-test-button" data-im-execution-action="cancel" data-im-execution-id="' + esc(currentExecution.id) + '">Cancel</button>' +
+                                                '</div>'
+                                              : currentExecution.status === "approved"
+                                                  ? '<button type="button" class="sway-ai-knowledge-test-button" data-im-execution-action="execute" data-im-execution-id="' + esc(currentExecution.id) + '">Execute approved intervention</button>'
+                                                  : currentExecution.status === "succeeded"
+                                                      ? '<button type="button" class="sway-ai-knowledge-test-button" data-im-execution-action="verify" data-im-execution-id="' + esc(currentExecution.id) + '">Re-verify</button>'
+                                                      : ''
+                                      )
+                                    : '<p><strong>Gate:</strong> The intervention must be prepared and explicitly approved before execution.</p>' +
+                                      '<button type="button" class="sway-ai-knowledge-test-button" data-im-execution-action="prepare" data-im-selection-id="' + esc(selection.id || "") + '">Prepare execution</button>'
+                            ) +
+                          '</div>'
+                        : '';
+
                 const interventionHtml = selection
                     ? '<div class="sway-ai-incident-intervention-selection">' +
                         '<div class="sway-ai-incident-intelligence-head"><strong>Recommended intervention order</strong><span>' + esc(selection.confidence || "low") + ' confidence · ' + esc(selection.selection_status || "do_not_intervene") + '</span></div>' +
@@ -727,6 +873,7 @@
                         hypothesisHtml +
                         counterfactualHtml +
                         interventionHtml +
+                        executionHtml +
                         dependencyHtml +
                         '<div class="sway-ai-incident-reason"><strong>Why this is correlated</strong><p>' + esc(incident.correlation_reason || "") + '</p></div>' +
                         '<div class="sway-ai-incident-reason"><strong>Recommended response</strong><p>' + esc(incident.recommended_response || "") + '</p></div>' +
@@ -783,7 +930,10 @@
             ".sway-ai-incident-pill.critical,.sway-ai-incident-pill.high{background:rgba(190,52,52,.12);color:#B42323}" +
             ".sway-ai-incident-pill.medium{background:rgba(247,201,120,.14);color:#9A6700}" +
             ".sway-ai-incident-pill.low{background:rgba(1,82,244,.08);color:#0152F4}" +
-            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intervention-selection{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.11);border-radius:9px;background:rgba(1,82,244,.026)}
+            ".sway-ai-incident-card h4{margin:0;font-size:11px}.sway-ai-incident-card>p{margin:0;font-size:9px;line-height:1.48}.sway-ai-incident-intelligence{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.02)}.sway-ai-incident-intelligence-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.sway-ai-incident-intelligence-head strong{font-size:13px}.sway-ai-incident-intelligence-head span{font-size:8px;opacity:.62}.sway-ai-incident-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sway-ai-incident-score-grid>div{display:grid;gap:2px}.sway-ai-incident-score-grid span{font-size:7px;opacity:.55;text-transform:uppercase;letter-spacing:.04em}.sway-ai-incident-score-grid strong{font-size:10px}.sway-ai-incident-intelligence p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-intelligence p strong{font-weight:700}.sway-ai-incident-root-analysis,.sway-ai-incident-dependencies{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.08);border-radius:9px;background:rgba(1,82,244,.018)}.sway-ai-incident-root-analysis p{margin:0;font-size:8px;line-height:1.45}.sway-ai-incident-execution{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.12);border-radius:9px;background:rgba(1,82,244,.03)}
+.sway-ai-incident-execution p{margin:0;font-size:8px;line-height:1.4}.sway-ai-incident-execution-actions{display:flex;gap:6px;flex-wrap:wrap}
+body.sway-dark-mode .sway-ai-incident-execution{border-color:rgba(119,193,252,.13);background:rgba(119,193,252,.04)}
+.sway-ai-incident-intervention-selection{display:grid;gap:6px;padding:8px;border:1px solid rgba(1,82,244,.11);border-radius:9px;background:rgba(1,82,244,.026)}
 .sway-ai-incident-intervention-sequence{display:grid;gap:5px}
 .sway-ai-incident-intervention-option{padding:5px 0;border-top:1px solid rgba(1,82,244,.06)}
 .sway-ai-incident-intervention-option:first-child{border-top:0}
@@ -855,7 +1005,8 @@ body.sway-dark-mode .sway-ai-incident-intervention-selection{border-color:rgba(1
                 const counterfactuals = await loadCounterfactuals();
                 const selections = await loadInterventionSelections();
                 const interventionOptions = await loadInterventionOptions();
-                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated + counterfactualGenerated + interventionGenerated);
+                const executions = await loadInterventionExecutions();
+                render(panel, incidents, events, intelligence, analyses, dependencies, hypotheses, counterfactuals, selections, interventionOptions, executions, generated + intelligenceGenerated + analysisGenerated + hypothesisGenerated + counterfactualGenerated + interventionGenerated);
             } catch (error) {
                 panel.querySelector("[data-im-incidents]").innerHTML =
                     '<p class="sway-ai-ki-error">' + esc(error.message || "Incident correlation failed.") + "</p>";
@@ -866,6 +1017,41 @@ body.sway-dark-mode .sway-ai-incident-intervention-selection{border-color:rgba(1
         }
 
         panel.addEventListener("click", async function (event) {
+            const executionButton = event.target.closest("[data-im-execution-action]");
+            if (executionButton) {
+                const action = String(executionButton.getAttribute("data-im-execution-action") || "");
+                const executionId = String(executionButton.getAttribute("data-im-execution-id") || "");
+                const selectionId = String(executionButton.getAttribute("data-im-selection-id") || "");
+
+                executionButton.disabled = true;
+                try {
+                    if (action === "prepare") {
+                        await prepareInterventionExecution(selectionId);
+                    } else if (action === "approve") {
+                        if (!window.confirm("Approve this InnerMe intervention for controlled task creation?")) {
+                            executionButton.disabled = false;
+                            return;
+                        }
+                        await reviewInterventionExecution(executionId, "approved");
+                    } else if (action === "cancel") {
+                        await reviewInterventionExecution(executionId, "cancelled");
+                    } else if (action === "execute") {
+                        if (!window.confirm("Execute the approved intervention? This will create one controlled workspace task and verify the result.")) {
+                            executionButton.disabled = false;
+                            return;
+                        }
+                        await callInterventionFunction("execute", executionId);
+                    } else if (action === "verify") {
+                        await callInterventionFunction("verify", executionId);
+                    }
+                    await refresh();
+                } catch (error) {
+                    window.alert(error.message || "Controlled intervention operation failed.");
+                    executionButton.disabled = false;
+                }
+                return;
+            }
+
             const button = event.target.closest("[data-im-incident-action]");
             if (!button) return;
 
