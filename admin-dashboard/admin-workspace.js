@@ -24828,22 +24828,6 @@ function simpleBars(items, color) {
                         '</div>'
                         : ""
                 ) +
-                '<div class="sway-ai-pulse-orb" aria-hidden="true">' +
-                    '<svg class="sway-ai-pulse-orb-svg" viewBox="0 0 120 120" role="presentation">' +
-                        '<defs>' +
-                            '<filter id="sway-ai-energy-distortion" x="-35%" y="-35%" width="170%" height="170%">' +
-                                '<feTurbulence type="fractalNoise" baseFrequency="0.025 0.085" numOctaves="2" seed="7" result="noise">' +
-                                    '<animate attributeName="baseFrequency" dur="8s" values="0.020 0.070;0.035 0.110;0.018 0.080;0.028 0.095;0.020 0.070" repeatCount="indefinite" />' +
-                                '</feTurbulence>' +
-                                '<feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G">' +
-                                    '<animate attributeName="scale" dur="5.5s" values="5;9;6;10;5" repeatCount="indefinite" />' +
-                                '</feDisplacementMap>' +
-                            '</filter>' +
-                        '</defs>' +
-                        '<circle class="sway-ai-pulse-orb-energy sway-ai-pulse-orb-energy-back" cx="60" cy="60" r="43" fill="transparent" stroke="#002096" stroke-width="2.4" filter="url(#sway-ai-energy-distortion)" />' +
-                        '<circle class="sway-ai-pulse-orb-energy sway-ai-pulse-orb-energy-front" cx="60" cy="60" r="39" fill="transparent" stroke="#2C91FC" stroke-width="1.8" filter="url(#sway-ai-energy-distortion)" />' +
-                    '</svg>' +
-                '</div>' +
                 '<div class="sway-ai-v2-command-strip">' +
                     '<span class="sway-ai-v2-command-label">Quick commands</span>' +
                     '<div class="sway-ai-v2-command-list">' +
