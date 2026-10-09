@@ -12057,7 +12057,9 @@ function simpleBars(items, color) {
     function renderLeads() {
         const visibleLeads =
             state.leads.filter(function (item) {
-                return item.status !== "follow-up";
+                return !["follow-up", "not interested"].includes(
+                    String(item.status || "").toLowerCase()
+                );
             });
 
         const rows =
@@ -12131,9 +12133,25 @@ function simpleBars(items, color) {
                                         '<button type="button" class="sway-row-action" data-draft-lead-proposal="' +
                                             esc(item.id) +
                                         '">Draft proposal</button>' +
-                                        "" +
                                         (
-                                            !["won", "lost"].includes(item.status)
+                                            !["won", "lost", "not interested"].includes(
+                                                String(item.status || "").toLowerCase()
+                                            )
+                                                ? '<button type="button" class="sway-row-action" data-mark-lead-not-interested="' +
+                                                  esc(item.id) +
+                                                  '">Not Interested</button>'
+                                                : (
+                                                    String(item.status || "").toLowerCase() === "not interested"
+                                                        ? '<button type="button" class="sway-row-action" data-reactivate-lead="' +
+                                                          esc(item.id) +
+                                                          '">Return to active pipeline</button>'
+                                                        : ""
+                                                )
+                                        ) +
+                                        (
+                                            !["won", "lost", "not interested"].includes(
+                                                String(item.status || "").toLowerCase()
+                                            )
                                                 ? '<button type="button" class="sway-row-action" data-convert-lead="' +
                                                   esc(item.id) +
                                                   '">Convert to client</button>'
@@ -22871,6 +22889,75 @@ function simpleBars(items, color) {
         renderView();
     }
 
+    async function markLeadNotInterested(id) {
+        const lead = state.leads.find(function (item) {
+            return String(item.id) === String(id);
+        });
+
+        if (!lead || ["won", "lost"].includes(String(lead.status || "").toLowerCase())) {
+            return;
+        }
+
+        const confirmed = await swayConfirm(
+            "Mark " + (lead.business_name || "this lead") +
+            " as Not Interested? The lead will leave the active pipeline and a re-engagement follow-up will be scheduled for six months from now."
+        );
+        if (!confirmed) return;
+
+        const followUpDate = await api(
+            "/rest/v1/rpc/mark_swayphics_lead_not_interested",
+            {
+                method: "POST",
+                headers: headers({ "Prefer": "return=representation" }),
+                body: JSON.stringify({ p_lead_id: id })
+            }
+        );
+
+        await logActivity(
+            "Marked lead Not Interested; long-term follow-up scheduled for " +
+                String(followUpDate || "approximately six months from now"),
+            "leads",
+            id
+        );
+
+        await refreshData();
+        renderShell();
+        renderView();
+    }
+
+    async function reactivateLead(id) {
+        const lead = state.leads.find(function (item) {
+            return String(item.id) === String(id);
+        });
+        if (!lead || String(lead.status || "").toLowerCase() !== "not interested") {
+            return;
+        }
+
+        const confirmed = await swayConfirm(
+            "Return " + (lead.business_name || "this lead") +
+            " to the active pipeline? The existing long-term reminder will be retained in the follow-up history."
+        );
+        if (!confirmed) return;
+
+        await api(
+            "/rest/v1/leads?id=eq." + encodeURIComponent(id),
+            {
+                method: "PATCH",
+                headers: headers({ "Prefer": "return=minimal" }),
+                body: JSON.stringify({
+                    status: "contacted",
+                    next_follow_up: null,
+                    updated_at: new Date().toISOString()
+                })
+            }
+        );
+
+        await logActivity("Returned Not Interested lead to active pipeline", "leads", id);
+        await refreshData();
+        renderShell();
+        renderView();
+    }
+
     async function convertLead(id) {
         const lead =
             state.leads.find(function (item) {
@@ -26715,6 +26802,41 @@ function simpleBars(items, color) {
                         );
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-mark-lead-not-interested]")
+            .forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    if (button.disabled) return;
+                    button.disabled = true;
+                    const originalText = button.textContent;
+                    button.textContent = "Saving...";
+                    try {
+                        await markLeadNotInterested(button.dataset.markLeadNotInterested);
+                    } catch (error) {
+                        swayAlert(error.message || "Unable to update this lead.");
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = originalText;
+                    }
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-reactivate-lead]")
+            .forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    if (button.disabled) return;
+                    button.disabled = true;
+                    try {
+                        await reactivateLead(button.dataset.reactivateLead);
+                    } catch (error) {
+                        swayAlert(error.message || "Unable to return this lead to the active pipeline.");
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
             });
 
         workspace
