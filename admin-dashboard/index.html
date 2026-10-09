@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="admin-workspace.css?v=20261008-innerme-nav-polish-2">
+    <link rel="stylesheet" href="admin-workspace.css?v=20261008-innerme-nav-polish-3">
 
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#002096">
@@ -14567,7 +14567,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=20261008-innerme-nav-polish-5"></script>
+<script src="admin-workspace.js?v=20261008-innerme-nav-polish-6"></script>
 <script src="innerme-knowledge-intelligence.js?v=20261008-innerme-nav-polish-2"></script>
 <script src="innerme-predictive-intelligence.js?v=20261008-innerme-nav-polish-2"></script>
 <script src="innerme-autonomy.js?v=20261008-innerme-nav-polish-2"></script>
@@ -16790,11 +16790,46 @@ portfolioForm.addEventListener(
     margin: 0 0 8px;
     padding: 0 2px 8px;
 }
-#sway-admin-workspace .sway-innerme-intelligence-intro > div {
+#sway-admin-workspace .sway-innerme-intelligence-copy {
+    display: grid;
+    gap: 11px;
     min-width: 0;
     max-width: 820px;
 }
-#sway-admin-workspace .sway-innerme-intelligence-intro p {
+#sway-admin-workspace .sway-innerme-intelligence-intro p.sway-innerme-intelligence-lead {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    font-weight: 650;
+    color: #26364D;
+}
+#sway-admin-workspace .sway-innerme-capability-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+#sway-admin-workspace .sway-innerme-capability-list li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #526174;
+}
+#sway-admin-workspace .sway-innerme-capability-list li::before {
+    content: "";
+    flex: 0 0 5px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #0152F4;
+}
+#sway-admin-workspace .sway-innerme-intelligence-intro p:not(.sway-innerme-intelligence-lead) {
     margin: 0;
     font-size: 13px;
     line-height: 1.65;
@@ -16896,8 +16931,12 @@ body.sway-dark-mode #sway-admin-workspace .sway-ai-v2-briefing-actions,
 body.sway-dark-mode #sway-admin-workspace .sway-ai-v2-briefing-revenue {
     color: #EAF2FC;
 }
-body.sway-dark-mode #sway-admin-workspace .sway-innerme-intelligence-intro p {
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-intelligence-intro p,
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-capability-list li {
     color: #A9B8CC;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-intelligence-intro p.sway-innerme-intelligence-lead {
+    color: #EAF2FC;
 }
 body.sway-dark-mode #sway-admin-workspace .sway-innerme-module-stack > details,
 body.sway-dark-mode #sway-admin-workspace .sway-innerme-module-stack > #sway-ai-knowledge-intelligence-bridge,
