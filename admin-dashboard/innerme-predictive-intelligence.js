@@ -256,6 +256,7 @@
         await refresh();
     }
 
+    window.addEventListener("swayphics:workspace-view-rendered", boot);
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", boot, { once: true });
     } else {
