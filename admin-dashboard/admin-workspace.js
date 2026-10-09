@@ -10033,10 +10033,10 @@ function simpleBars(items, color) {
             );
 
             const preserveInnerMeLiveDom =
-                state.currentView === "swayphics-ai" &&
+                isInnerMeView(state.currentView) &&
                 Boolean(
                     workspace.querySelector(
-                        ".sway-ai-panel"
+                        "[data-innerme-workspace]"
                     )
                 );
 
