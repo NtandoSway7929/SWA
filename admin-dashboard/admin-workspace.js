@@ -24247,6 +24247,16 @@ function simpleBars(items, color) {
                         return;
                     }
 
+                    /*
+                     * Action Centre and Revenue Intelligence live outside Chat.
+                     * Switch to Chat first so the answer is visible immediately.
+                     */
+                    if (state.currentView !== "swayphics-ai") {
+                        state.currentView = "swayphics-ai";
+                        persistWorkspaceView("swayphics-ai");
+                        applyInnerMeSubview("swayphics-ai");
+                    }
+
                     const morePanel =
                         workspace.querySelector(
                             "#sway-ai-more-panel"
