@@ -2899,6 +2899,36 @@
         "@media(max-width:680px){.sway-ai-ki-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-verification-head{display:grid;gap:6px}.sway-ai-ki-verification-head em{width:fit-content}}";
     document.head.appendChild(style);
 
+    document.addEventListener("click", function (event) {
+        const launcher = event.target && typeof event.target.closest === "function"
+            ? event.target.closest("[data-sway-ai-ki-eval-launch]")
+            : null;
+        if (!launcher) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        ensurePanel();
+
+        const details = document.getElementById(PANEL_ID);
+        const evaluationPanel = details
+            ? details.querySelector("[data-sway-ai-ki-evaluation-panel]")
+            : null;
+        const runButton = details
+            ? details.querySelector("[data-sway-ai-ki-eval-run]")
+            : null;
+
+        if (!details || !evaluationPanel || !runButton) {
+            window.alert("Benchmark controls are not ready yet. Refresh the dashboard and try again.");
+            return;
+        }
+
+        details.open = true;
+        evaluationPanel.open = true;
+        evaluationPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+        runButton.click();
+    });
+
     const observer = new MutationObserver(function () {
         if (
             document.getElementById("sway-ai-intelligence-mount") ||
