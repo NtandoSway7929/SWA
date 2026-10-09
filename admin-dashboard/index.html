@@ -14567,8 +14567,8 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=20261008-innerme-nav-polish-6"></script>
-<script src="innerme-knowledge-intelligence.js?v=20261008-innerme-nav-polish-2"></script>
+<script src="admin-workspace.js?v=20261008-innerme-nav-polish-7"></script>
+<script src="innerme-knowledge-intelligence.js?v=20261008-innerme-nav-polish-3"></script>
 <script src="innerme-predictive-intelligence.js?v=20261008-innerme-nav-polish-2"></script>
 <script src="innerme-autonomy.js?v=20261008-innerme-nav-polish-2"></script>
 <script src="innerme-monitoring.js?v=20261008-innerme-nav-polish-2"></script>
@@ -17200,6 +17200,47 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-capability-list li {
     }
     #sway-admin-workspace .sway-innerme-intelligence-intro #sway-ai-build-knowledge-index {
         width: 100% !important;
+    }
+}
+
+/* Visible entry point for InnerMe evaluation and benchmarking. */
+#sway-admin-workspace .sway-innerme-intelligence-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    min-width: 0;
+}
+#sway-admin-workspace .sway-innerme-intelligence-actions > button {
+    min-height: 42px;
+    max-width: 100%;
+    margin: 0;
+    white-space: normal;
+}
+#sway-admin-workspace .sway-innerme-intelligence-actions .sway-innerme-benchmark-launch {
+    background: #002096 !important;
+    border-color: #002096 !important;
+    color: #FFFFFF !important;
+}
+#sway-admin-workspace .sway-innerme-intelligence-actions .sway-innerme-benchmark-launch:hover {
+    background: #0031C5 !important;
+    border-color: #0031C5 !important;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-intelligence-actions .sway-innerme-benchmark-launch {
+    background: #2C91FC !important;
+    border-color: #2C91FC !important;
+    color: #FFFFFF !important;
+}
+@media (max-width: 700px) {
+    #sway-admin-workspace .sway-innerme-intelligence-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+    }
+    #sway-admin-workspace .sway-innerme-intelligence-actions > button {
+        width: 100% !important;
+        justify-self: stretch !important;
     }
 }
 
