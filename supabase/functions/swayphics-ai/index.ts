@@ -1559,7 +1559,7 @@ Deno.serve(async (req) => {
     const requestedRunId = String(body.benchmark_run_id || "").trim();
     let runningRunQuery = authSupabase
       .from("innerme_evaluation_runs")
-      .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash,created_by")
+      .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash,created_by,provider_model")
       .eq("created_by", userData.user.id)
       .eq("benchmark_version", INNERME_BENCHMARK_VERSION)
       .in("status", ["running", "inconclusive"]);
@@ -1601,7 +1601,7 @@ Deno.serve(async (req) => {
             regression_status: baselineRun ? "inconclusive" : "baseline",
             status: "running",
           })
-          .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash,created_by")
+          .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash,created_by,provider_model")
           .single();
 
       if (runError || !createdRun) {
@@ -1672,6 +1672,29 @@ Deno.serve(async (req) => {
       return Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) : fallback;
     }
 
+    let preferredBenchmarkModel =
+      String(run.provider_model || PRIMARY_MODEL) === FALLBACK_MODEL
+        ? FALLBACK_MODEL
+        : PRIMARY_MODEL;
+
+    async function waitForProviderRetry(response: Response, attempt: number) {
+      const retryAfterHeader = response.headers.get("retry-after") || "";
+      const retryAfterSeconds = Number(retryAfterHeader);
+      let delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+        ? retryAfterSeconds * 1000
+        : 1800 * (attempt + 1);
+
+      if (!Number.isFinite(retryAfterSeconds) && retryAfterHeader) {
+        const retryAt = Date.parse(retryAfterHeader);
+        if (Number.isFinite(retryAt)) delayMs = Math.max(0, retryAt - Date.now());
+      }
+
+      // Each request evaluates one case; bounded backoff keeps it resumable.
+      await new Promise(function(resolve) {
+        setTimeout(resolve, Math.max(900, Math.min(delayMs, 8000)));
+      });
+    }
+
     async function requestModel(
       promptText: string,
       systemText: string,
@@ -1703,19 +1726,40 @@ Deno.serve(async (req) => {
         );
       }
 
-      let response = await call(PRIMARY_MODEL);
-      let model = PRIMARY_MODEL;
-      if (
-        (response.status === 503 || response.status === 429) &&
-        PRIMARY_MODEL !== FALLBACK_MODEL
-      ) {
-        model = FALLBACK_MODEL;
-        response = await call(FALLBACK_MODEL);
+      let model = preferredBenchmarkModel;
+      let response = await call(model);
+
+      if (response.status === 429 || response.status === 503) {
+        await waitForProviderRetry(response, 0);
+
+        const alternateModel = model === PRIMARY_MODEL
+          ? FALLBACK_MODEL
+          : PRIMARY_MODEL;
+        model = alternateModel;
+        preferredBenchmarkModel = alternateModel;
+        response = await call(alternateModel);
+
+        if (response.status === 429 || response.status === 503) {
+          await waitForProviderRetry(response, 1);
+          response = await call(alternateModel);
+        }
+
+        if (response.ok) {
+          preferredBenchmarkModel = model;
+        } else if (response.status === 429 || response.status === 503) {
+          throw new Error(
+            "Provider rate limit persisted after retry (HTTP " +
+            String(response.status) +
+            "). This case remains retryable; wait briefly, then resume the benchmark.",
+          );
+        }
       }
+
       if (!response.ok) {
         throw new Error("Provider returned HTTP " + String(response.status) + ".");
       }
 
+      preferredBenchmarkModel = model;
       const result = await response.json();
       const textValue =
         result?.candidates?.[0]?.content?.parts
@@ -1917,6 +1961,11 @@ Deno.serve(async (req) => {
 
         const answerResult = await requestModel(answerPrompt, answerSystem, 700);
         const answer = cleanForModel(answerResult.text, 5000);
+
+        // Space the answer and independent judging requests to reduce 429s.
+        await new Promise(function(resolve) {
+          setTimeout(resolve, 2200);
+        });
 
         const judgePrompt = [
           "BENCHMARK CASE:",
@@ -2158,7 +2207,7 @@ Deno.serve(async (req) => {
           failed_cases: partialFailedCases,
           average_score: partialAverageScore,
           pass_rate: partialPassRate,
-          provider_model: PRIMARY_MODEL,
+          provider_model: preferredBenchmarkModel,
           status: partialStatus,
           completed_at: currentCaseExecutionFailed ? new Date().toISOString() : null,
           regression_status: partialRegressionStatus,
@@ -2288,7 +2337,7 @@ Deno.serve(async (req) => {
     await authSupabase
       .from("innerme_evaluation_runs")
       .update({
-        provider_model: PRIMARY_MODEL,
+        provider_model: preferredBenchmarkModel,
         total_cases: benchmarkCases.length,
         passed_cases: passedCases,
         failed_cases: Math.max(0, benchmarkCases.length - passedCases),
