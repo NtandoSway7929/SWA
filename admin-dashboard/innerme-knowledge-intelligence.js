@@ -978,7 +978,7 @@
             '<details class="sway-ai-ki-evaluation" data-sway-ai-ki-evaluation-panel>' +
                 '<summary>Evaluation &amp; benchmarking</summary>' +
                 '<div class="sway-ai-ki-evaluation-controls">' +
-                    '<span>Runs fixed InnerMe test cases against verified knowledge. Cases run one at a time so progress is saved between requests and can resume safely after a resource limit.</span>' +
+                    '<span>Runs fixed InnerMe test cases against verified knowledge. Cases are paced to reduce provider rate limits. Provider errors remain retryable and are excluded from the score.</span>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-run>Run benchmark</button>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-refresh>Refresh results</button>' +
                 '</div>' +
@@ -2219,7 +2219,7 @@
 
             const resultsResponse=await fetch(
                 SUPABASE_URL +
-                    "/rest/v1/innerme_evaluation_results?select=id,run_id,case_id,case_key,severity,prompt,answer,retrieval_matches,attributed_knowledge,dimension_scores,score,passed,judge_rationale,provider_model,created_at&run_id=eq."+encodeURIComponent(latest.id)+"&order=score.asc",
+                    "/rest/v1/innerme_evaluation_results?select=id,run_id,case_id,case_key,severity,prompt,answer,retrieval_matches,attributed_knowledge,dimension_scores,score,passed,failure_flags,judge_rationale,provider_model,created_at&run_id=eq."+encodeURIComponent(latest.id)+"&order=score.asc",
                 { method:"GET", headers:authHeaders() }
             );
             const results=await resultsResponse.json().catch(function(){return [];});
@@ -2258,25 +2258,45 @@
                 return;
             }
 
-            const regressionStatus=String(latest.regression_status || "baseline");
+            const executionErrors=results.filter(function(result){
+                return Array.isArray(result.failure_flags) && result.failure_flags.includes("execution_error");
+            });
+            const scoredResults=results.filter(function(result){
+                return !(Array.isArray(result.failure_flags) && result.failure_flags.includes("execution_error"));
+            });
+            const scoredCount=scoredResults.length;
+            const scoredPassed=scoredResults.filter(function(result){return result.passed===true;}).length;
+            const scoredAverage=scoredCount
+                ? scoredResults.reduce(function(total,result){return total+Number(result.score||0);},0)/scoredCount
+                : null;
+            const scoredPassRate=scoredCount ? (scoredPassed/scoredCount)*100 : null;
+            const hasExecutionErrors=executionErrors.length>0;
+            const regressionStatus=(hasExecutionErrors || latest.status==="inconclusive")
+                ? "inconclusive"
+                : String(latest.regression_status || "baseline");
             const regressionClass=
                 regressionStatus==="regressed" ? "sway-ai-ki-eval-regressed" :
                 regressionStatus==="improved" ? "sway-ai-ki-eval-improved" :
                 "sway-ai-ki-eval-neutral";
 
-            const deltaScore=Number(latest.delta_average_score);
-            const deltaPass=Number(latest.delta_pass_rate);
+            const deltaScore=hasExecutionErrors ? NaN : Number(latest.delta_average_score);
+            const deltaPass=hasExecutionErrors ? NaN : Number(latest.delta_pass_rate);
 
             evaluationSummary.innerHTML=
                 '<div class="sway-ai-ki-eval-summary-grid">' +
-                    '<div><span>Average score</span><strong>'+esc(Number(latest.average_score || 0).toFixed(2))+'/100</strong></div>' +
-                    '<div><span>Pass rate</span><strong>'+esc(Number(latest.pass_rate || 0).toFixed(2))+'%</strong></div>' +
-                    '<div><span>Passed</span><strong>'+esc(latest.passed_cases || 0)+' / '+esc(latest.total_cases || 0)+'</strong></div>' +
+                    '<div><span>Average score</span><strong>'+esc(scoredAverage===null ? "Not scored" : scoredAverage.toFixed(2)+'/100')+'</strong></div>' +
+                    '<div><span>Pass rate</span><strong>'+esc(scoredPassRate===null ? "Not scored" : scoredPassRate.toFixed(2)+'%')+'</strong></div>' +
+                    '<div><span>Passed</span><strong>'+esc(scoredPassed)+' / '+esc(latest.total_cases || 0)+'</strong></div>' +
                     '<div><span>Regression status</span><strong class="'+regressionClass+'">'+esc(regressionLabel(regressionStatus))+'</strong></div>' +
                 '</div>' +
                 '<div class="sway-ai-ki-eval-baseline">' +
-                    '<span>Baseline delta: score '+esc(Number.isFinite(deltaScore) ? (deltaScore>0?"+":"")+deltaScore.toFixed(2) : "Not available")+
-                    ' · pass rate '+esc(Number.isFinite(deltaPass) ? (deltaPass>0?"+":"")+deltaPass.toFixed(2)+"%" : "Not available")+
+                    '<span>Scored '+esc(scoredCount)+' / '+esc(latest.total_cases || 0)+' cases. '+
+                    (hasExecutionErrors
+                        ? esc(executionErrors.length)+' provider error(s) need retry and are excluded from averages.'
+                        : 'All recorded cases were scored.') +
+                    '</span>' +
+                    '<span>Baseline delta: score '+esc(Number.isFinite(deltaScore) ? (deltaScore>0?"+":"")+deltaScore.toFixed(2) : "Not assessed")+
+                    ' · pass rate '+esc(Number.isFinite(deltaPass) ? (deltaPass>0?"+":"")+deltaPass.toFixed(2)+"%" : "Not assessed")+
                     ' · critical failures '+esc(latest.critical_failures || 0)+'</span>' +
                     '<span>Latest run: '+esc(formatEvalDate(latest.completed_at || latest.started_at))+'</span>' +
                 '</div>' +
@@ -2297,22 +2317,25 @@
                 results.map(function(result){
                     const dims=result.dimension_scores || {};
                     const recall=Number(dims.retrieval_recall || 0);
-                    const status=result.passed===true ? "PASS" : "FAIL";
-                    const className=result.passed===true ? "sway-ai-ki-eval-pass" : "sway-ai-ki-eval-fail";
+                    const flags=Array.isArray(result.failure_flags) ? result.failure_flags : [];
+                    const executionError=flags.includes("execution_error");
+                    const status=executionError ? "RETRY" : result.passed===true ? "PASS" : "FAIL";
+                    const className=executionError ? "sway-ai-ki-eval-retry" : result.passed===true ? "sway-ai-ki-eval-pass" : "sway-ai-ki-eval-fail";
                     const definition=result.case_definition || {};
                     const title=definition.title || result.case_key || "Benchmark case";
-                    const flags=Array.isArray(result.failure_flags) ? result.failure_flags : [];
                     return '<article class="sway-ai-ki-eval-item">' +
-                        '<div class="sway-ai-ki-eval-head"><div><strong>'+esc(title)+'</strong><span>'+esc(result.case_key || "")+' · '+esc(result.severity || definition.severity || "standard")+' · '+esc(Number(result.score || 0).toFixed(0))+'/100</span></div><em class="'+className+'">'+esc(status)+'</em></div>' +
+                        '<div class="sway-ai-ki-eval-head"><div><strong>'+esc(title)+'</strong><span>'+esc(result.case_key || "")+' · '+esc(result.severity || definition.severity || "standard")+' · '+esc(executionError ? "Not scored" : Number(result.score || 0).toFixed(0)+'/100')+'</span></div><em class="'+className+'">'+esc(status)+'</em></div>' +
                         '<p><strong>Question:</strong> '+esc(result.prompt || "")+'</p>' +
-                        '<p><strong>Retrieval recall:</strong> '+esc(recall)+'%</p>' +
-                        '<div class="sway-ai-ki-eval-dims">' +
-                            '<span>Correctness '+esc(dims.correctness || 0)+'</span>' +
-                            '<span>Grounding '+esc(dims.grounding || 0)+'</span>' +
-                            '<span>Relevance '+esc(dims.relevance || 0)+'</span>' +
-                            '<span>Safety '+esc(dims.safety || 0)+'</span>' +
-                            '<span>Completeness '+esc(dims.completeness || 0)+'</span>' +
-                        '</div>' +
+                        '<p><strong>Retrieval recall:</strong> '+esc(executionError ? "Unavailable because execution failed" : recall+'%')+'</p>' +
+                        (executionError
+                            ? '<p class="sway-ai-ki-error">No answer was scored because the provider request failed. This case does not count as a test failure and can be retried.</p>'
+                            : '<div class="sway-ai-ki-eval-dims">' +
+                                '<span>Correctness '+esc(dims.correctness || 0)+'</span>' +
+                                '<span>Grounding '+esc(dims.grounding || 0)+'</span>' +
+                                '<span>Relevance '+esc(dims.relevance || 0)+'</span>' +
+                                '<span>Safety '+esc(dims.safety || 0)+'</span>' +
+                                '<span>Completeness '+esc(dims.completeness || 0)+'</span>' +
+                            '</div>') +
                         (flags.length ? '<div class="sway-ai-ki-eval-flags">'+flags.map(function(flag){return '<span>'+esc(String(flag).replace(/_/g," "))+'</span>';}).join("")+'</div>' : "") +
                         '<details><summary>View answer &amp; judge rationale</summary>' +
                             '<div class="sway-ai-ki-eval-answer"><strong>InnerMe answer</strong><p>'+esc(result.answer || "No answer recorded.")+'</p><strong>Judge rationale</strong><p>'+esc(result.judge_rationale || "No rationale recorded.")+'</p></div>' +
@@ -2399,6 +2422,8 @@
                         const nextCase=String(data.next_case_key || "");
                         evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">Benchmark progress: '+completed+' of '+total+' cases saved.</p>';
                         evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Evaluating '+(nextCase ? esc(nextCase.replace(/_/g," ")) : "the next case")+'. Each case runs separately to preserve progress and avoid compute limits.</p>';
+                        evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Next case: '+(nextCase ? esc(nextCase.replace(/_/g," ")) : "pending case")+'. Waiting briefly to respect provider request limits…</p>';
+                        await new Promise(function(resolve){window.setTimeout(resolve,4500);});
                         data=await sendWithRetry(runId);
                         runId=String(data.run_id || runId);
                     }
@@ -2417,11 +2442,13 @@
                         );
                     }else if(data.status==="inconclusive"){
                         window.alert(
-                            "Benchmark finished with an inconclusive result. " +
-                            String(data.completed_cases || 0) +
+                            "Benchmark paused as inconclusive. " +
+                            String(data.scored_cases || data.completed_cases || 0) +
                             "/" +
                             String(data.total_cases || 0) +
-                            " cases were saved. Review the case-level errors and rationales below."
+                            " cases were scored; " +
+                            String(data.execution_error_cases || 0) +
+                            " could not be evaluated because of provider errors. They were not counted as test failures. Click Run benchmark again to retry unresolved cases."
                         );
                     }else{
                         throw new Error("Benchmark ended with status: "+String(data.status || "unknown")+".");
@@ -2737,6 +2764,7 @@
         ".sway-ai-ki-eval-head em{padding:4px 6px;border-radius:999px;font-size:8px;font-style:normal;font-weight:800}" +
         ".sway-ai-ki-eval-pass{background:rgba(34,197,94,.1);color:#157347}" +
         ".sway-ai-ki-eval-fail{background:rgba(220,53,69,.1);color:#b42318}" +
+        ".sway-ai-ki-eval-retry{background:rgba(100,116,139,.12);color:#526174}" +
         ".sway-ai-ki-eval-item>p{margin:0;font-size:9px;line-height:1.45}" +
         ".sway-ai-ki-eval-dims{display:flex;flex-wrap:wrap;gap:5px;font-size:8px;line-height:1.35;opacity:.7}" +
         ".sway-ai-ki-eval-item details{border-top:1px solid rgba(1,82,244,.08);padding-top:6px}" +
@@ -2747,6 +2775,7 @@
         "body.sway-dark-mode .sway-ai-ki-eval-summary-grid>div,body.sway-dark-mode .sway-ai-ki-eval-item{border-color:rgba(119,193,252,.11);background:rgba(119,193,252,.025)}" +
         "body.sway-dark-mode .sway-ai-ki-eval-pass{background:rgba(34,197,94,.14);color:#91E8B0}" +
         "body.sway-dark-mode .sway-ai-ki-eval-fail{background:rgba(190,52,52,.14);color:#FFB0B0}" +
+        "body.sway-dark-mode .sway-ai-ki-eval-retry{background:rgba(148,163,184,.16);color:#D1D9E6}" +
         "body.sway-dark-mode .sway-ai-ki-eval-item details{border-top-color:rgba(119,193,252,.1)}" +
         "@media(max-width:680px){.sway-ai-ki-eval-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-ai-ki-eval-head{display:grid;gap:6px}.sway-ai-ki-eval-head em{width:fit-content}}" +
         ".sway-ai-ki-strategic{width:100%;margin:4px 0}" +
