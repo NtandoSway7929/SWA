@@ -14567,7 +14567,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=20261008-innerme-nav-polish-2"></script>
+<script src="admin-workspace.js?v=20261008-innerme-nav-polish-3"></script>
 <script src="innerme-knowledge-intelligence.js?v=20261008-innerme-nav-polish-1"></script>
 <script src="innerme-predictive-intelligence.js?v=20261008-innerme-nav-polish-1"></script>
 <script src="innerme-autonomy.js?v=20261008-innerme-nav-polish-1"></script>
@@ -16963,6 +16963,69 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-module-stack > [data-swa
         animation-iteration-count: 1 !important;
     }
 }
+
+/* Chat readability: comfortable message width, line length and tap targets. */
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message {
+    max-width: min(900px, 88%);
+    padding: 16px 18px;
+    border-radius: 16px;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content,
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content * {
+    font-size: 14px !important;
+    line-height: 1.75 !important;
+    overflow-wrap: anywhere;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content h1,
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content h2,
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content h3,
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content .sway-ai-answer-title,
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content .sway-ai-answer-heading {
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+    margin: 16px 0 8px;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content p {
+    margin: 0 0 10px;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content p:last-child {
+    margin-bottom: 0;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-label {
+    font-size: 11px;
+    line-height: 1.4;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-meta {
+    flex-wrap: wrap;
+    align-items: center;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-time,
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-copy {
+    font-size: 11px;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-note {
+    font-size: 11px;
+    line-height: 1.6;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content,
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content * {
+    color: #34445D !important;
+}
+@media (max-width: 700px) {
+    #sway-admin-workspace .sway-innerme-chat-view .sway-ai-message {
+        max-width: 96%;
+        padding: 13px 14px;
+    }
+    #sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content,
+    #sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content * {
+        font-size: 14px !important;
+        line-height: 1.7 !important;
+    }
+}
+
 </style>
 
 </body>
