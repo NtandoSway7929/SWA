@@ -1562,7 +1562,7 @@ Deno.serve(async (req) => {
       .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash,created_by")
       .eq("created_by", userData.user.id)
       .eq("benchmark_version", INNERME_BENCHMARK_VERSION)
-      .eq("status", "running");
+      .in("status", ["running", "inconclusive"]);
 
     if (requestedRunId) {
       runningRunQuery = runningRunQuery.eq("id", requestedRunId);
@@ -1631,6 +1631,7 @@ Deno.serve(async (req) => {
       score: number;
     }>();
     const failures: Array<{ case_key: string; error: string }> = [];
+    let currentCaseExecutionFailed = false;
 
     function numericScoreForSavedResult(value: unknown) {
       const raw = Number(value);
@@ -1639,7 +1640,16 @@ Deno.serve(async (req) => {
 
     (Array.isArray(savedCaseRows) ? savedCaseRows : []).forEach(function(result: any) {
       const caseId = String(result?.case_id || "");
-      if (!caseId || savedCaseIds.has(caseId)) return;
+      if (!caseId) return;
+      const flags = Array.isArray(result?.failure_flags) ? result.failure_flags : [];
+      if (flags.includes("execution_error")) {
+        failures.push({
+          case_key: String(result?.case_key || ""),
+          error: String(result?.judge_rationale || "Case execution failed."),
+        });
+        return;
+      }
+      if (savedCaseIds.has(caseId)) return;
       savedCaseIds.add(caseId);
       currentCaseResults.set(caseId, {
         case_key: String(result?.case_key || ""),
@@ -1647,13 +1657,6 @@ Deno.serve(async (req) => {
         passed: result?.passed === true,
         score: numericScoreForSavedResult(result?.score),
       });
-      const flags = Array.isArray(result?.failure_flags) ? result.failure_flags : [];
-      if (flags.includes("execution_error")) {
-        failures.push({
-          case_key: String(result?.case_key || ""),
-          error: String(result?.judge_rationale || "Case execution failed."),
-        });
-      }
     });
 
     let passedCases = Array.from(currentCaseResults.values()).filter(function(result) {
@@ -1830,6 +1833,21 @@ Deno.serve(async (req) => {
 
     for (const item of (nextCase ? [nextCase] : [])) {
       try {
+        /*
+         * A prior provider-error record is retryable, not a scored test.
+         * Remove only that error row before writing the replacement result.
+         */
+        const { error: staleErrorDeleteError } = await authSupabase
+          .from("innerme_evaluation_results")
+          .delete()
+          .eq("run_id", runId)
+          .eq("case_id", item.id)
+          .contains("failure_flags", ["execution_error"]);
+
+        if (staleErrorDeleteError) {
+          throw new Error("Unable to prepare this benchmark case for retry: " + staleErrorDeleteError.message);
+        }
+
         const queryText = cleanForModel(item.prompt, 1200);
         const embeddingModel = new Supabase.ai.Session("gte-small");
         const rawEmbedding = await embeddingModel.run(queryText, {
@@ -2018,9 +2036,8 @@ Deno.serve(async (req) => {
             ? error.message.slice(0, 500)
             : String(error).slice(0, 500);
 
-        const failedCaseId = String(item.id || "");
-        const priorBaselineResult = baselineResults.get(failedCaseId);
-        const failureFlags = ["execution_error", "benchmark_fail"];
+        currentCaseExecutionFailed = true;
+        const failureFlags = ["execution_error"];
         const { error: failureRecordError } = await authSupabase
           .from("innerme_evaluation_results")
           .insert({
@@ -2047,7 +2064,7 @@ Deno.serve(async (req) => {
             case_key: String(item.case_key || ""),
             severity: String(item.severity || "standard"),
             failure_flags: failureFlags,
-            regressed_from_previous: priorBaselineResult?.passed === true,
+            regressed_from_previous: false,
             judge_rationale: "Execution error: " + errorMessage,
             provider_model: "execution-error",
           });
@@ -2057,19 +2074,10 @@ Deno.serve(async (req) => {
           return json({ error: "A benchmark case failed and its failure record could not be saved." }, 500, origin);
         }
 
-        savedCaseIds.add(failedCaseId);
-        currentCaseResults.set(failedCaseId, {
-          case_key: String(item.case_key || ""),
-          severity: String(item.severity || "standard"),
-          passed: false,
-          score: 0,
-        });
-
         failures.push({
           case_key: String(item.case_key || ""),
           error: errorMessage,
         });
-        completedCases += 1;
       }
     }
 
@@ -2093,19 +2101,20 @@ Deno.serve(async (req) => {
     currentCaseResults.clear();
     failures.splice(0, failures.length);
     persistedByCase.forEach(function(result: any, caseId: string) {
-      currentCaseResults.set(caseId, {
-        case_key: String(result?.case_key || ""),
-        severity: String(result?.severity || "standard"),
-        passed: result?.passed === true,
-        score: numericScoreForSavedResult(result?.score),
-      });
       const flags = Array.isArray(result?.failure_flags) ? result.failure_flags : [];
       if (flags.includes("execution_error")) {
         failures.push({
           case_key: String(result?.case_key || ""),
           error: String(result?.judge_rationale || "Case execution failed."),
         });
+        return;
       }
+      currentCaseResults.set(caseId, {
+        case_key: String(result?.case_key || ""),
+        severity: String(result?.severity || "standard"),
+        passed: result?.passed === true,
+        score: numericScoreForSavedResult(result?.score),
+      });
     });
 
     completedCases = currentCaseResults.size;
@@ -2117,14 +2126,51 @@ Deno.serve(async (req) => {
     }, 0);
 
     if (completedCases < benchmarkCases.length) {
-      await authSupabase
+      const partialAverageScore = completedCases
+        ? Number((scoreTotal / completedCases).toFixed(2))
+        : 0;
+      const partialPassRate = completedCases
+        ? Number(((passedCases / completedCases) * 100).toFixed(2))
+        : 0;
+      const partialFailedCases = Math.max(0, completedCases - passedCases);
+      const partialStatus = currentCaseExecutionFailed ? "inconclusive" : "running";
+      const partialRegressionStatus = failures.length ? "inconclusive" : "baseline";
+      const partialSummary = {
+        completed_cases: completedCases,
+        scored_cases: completedCases,
+        configured_cases: benchmarkCases.length,
+        passed_cases: passedCases,
+        failed_cases: partialFailedCases,
+        execution_error_cases: failures.length,
+        average_score: partialAverageScore,
+        pass_rate: partialPassRate,
+        failures,
+        baseline_run_id: run.baseline_run_id || null,
+        benchmark_version: INNERME_BENCHMARK_VERSION,
+        regression_status: partialRegressionStatus,
+      };
+
+      const { error: partialUpdateError } = await authSupabase
         .from("innerme_evaluation_runs")
         .update({
+          total_cases: benchmarkCases.length,
           passed_cases: passedCases,
-          failed_cases: Math.max(0, completedCases - passedCases),
+          failed_cases: partialFailedCases,
+          average_score: partialAverageScore,
+          pass_rate: partialPassRate,
           provider_model: PRIMARY_MODEL,
+          status: partialStatus,
+          completed_at: currentCaseExecutionFailed ? new Date().toISOString() : null,
+          regression_status: partialRegressionStatus,
+          summary: partialSummary,
+          regression_summary: partialSummary,
         })
         .eq("id", runId);
+
+      if (partialUpdateError) {
+        console.error("InnerMe benchmark partial progress update error:", partialUpdateError.message);
+        return json({ error: "InnerMe could not save the current benchmark progress." }, 500, origin);
+      }
 
       const nextPendingCase = benchmarkCases.find(function(item: any) {
         return !currentCaseResults.has(String(item?.id || ""));
@@ -2133,16 +2179,20 @@ Deno.serve(async (req) => {
       return json({
         ok: true,
         run_id: runId,
-        status: "running",
+        status: partialStatus,
         total_cases: benchmarkCases.length,
         completed_cases: completedCases,
+        scored_cases: completedCases,
+        execution_error_cases: failures.length,
         passed_cases: passedCases,
-        failed_cases: Math.max(0, completedCases - passedCases),
+        failed_cases: partialFailedCases,
+        average_score: partialAverageScore,
+        pass_rate: partialPassRate,
+        regression_status: partialRegressionStatus,
         next_case_key: nextPendingCase ? String(nextPendingCase.case_key || "") : "",
         live_knowledge_changed: false,
         evaluation_only: true,
       }, 200, origin);
-    }
 
     const completedAt = new Date().toISOString();
     const averageScore = completedCases
