@@ -102,9 +102,19 @@
             icon: "grid",
             items: [
                 ["overview", "Overview"],
-                ["swayphics-ai", "InnerMe"],
                 ["insights", "Insights"],
                 ["reminders", "Automated reminders"]
+            ]
+        },
+        {
+            id: "innerme",
+            label: "InnerMe",
+            icon: "sparkles",
+            items: [
+                ["swayphics-ai", "Chat"],
+                ["innerme-actions", "Action Centre"],
+                ["innerme-revenue", "Revenue Intelligence"],
+                ["innerme-intelligence", "Intelligence & Governance"]
             ]
         },
         {
@@ -418,6 +428,8 @@
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M3.7 12h16.6"></path><path d="M12 3.5c2.2 2.3 3.3 5.1 3.3 8.5s-1.1 6.2-3.3 8.5c-2.2-2.3-3.3-5.1-3.3-8.5S9.8 5.8 12 3.5z"></path></svg>',
             share:
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.5" cy="12" r="2.5"></circle><circle cx="17.5" cy="5.5" r="2.5"></circle><circle cx="17.5" cy="18.5" r="2.5"></circle><path d="M8.7 10.8l6.5-3.8"></path><path d="M8.7 13.2l6.5 3.8"></path></svg>',
+            sparkles:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l1.65 6.1L19.8 10.5l-6.15 1.65L12 18.3l-1.65-6.15L4.2 10.5l6.15-1.6L12 2.8z"></path><path d="M19 15.8l.8 2.35 2.2.85-2.2.8L19 22l-.8-2.2-2.2-.8 2.2-.85L19 15.8z"></path><path d="M4.2 2.8l.65 1.9 1.85.7-1.85.7-.65 1.9-.7-1.9-1.8-.7 1.8-.7.7-1.9z"></path></svg>',
             settings:
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.8l1.2 1.9 2.3.5 2 .2.7 2.2-.9 2.1 1.1 2 2 .9-.7 2.2-2.1.2-1.7 1.6.1 2.1-2 1.1-1.8-1.1-2.1.1-1.1 2-2.2-.7-.2-2.1-1.7-1.7-2.1-.2-.9-2.1 2-1.1 1-2-.9-2.1.7-2.2 2-.2 2.1.5L12 3.8z"></path><circle cx="12" cy="12" r="2.8"></circle></svg>'
         };
@@ -4308,8 +4320,20 @@
                 "Your operational picture at a glance."
             ],
             "swayphics-ai": [
-                "InnerMe",
-                "Your internal business assistant. Ask about the live Swayphics workspace and get answers based on your current data."
+                "Chat",
+                "Talk to InnerMe about Swayphics, your records, decisions and next steps."
+            ],
+            "innerme-actions": [
+                "Action Centre",
+                "A focused, evidence-led queue of practical next moves for the workspace."
+            ],
+            "innerme-revenue": [
+                "Revenue Intelligence",
+                "See the pipeline, pending decisions, outstanding cash and strongest open opportunities."
+            ],
+            "innerme-intelligence": [
+                "Intelligence & Governance",
+                "Review InnerMe knowledge, planning, evaluation, monitoring, safety controls and trust governance."
             ],
             insights: [
                 "Insights",
@@ -4418,6 +4442,77 @@
         };
 
         return meta[view] || meta.overview;
+    }
+
+    function isInnerMeView(view) {
+        return [
+            "swayphics-ai",
+            "innerme-actions",
+            "innerme-revenue",
+            "innerme-intelligence"
+        ].includes(String(view || ""));
+    }
+
+    function innerMeSectionForView(view) {
+        const sections = {
+            "swayphics-ai": "chat",
+            "innerme-actions": "actions",
+            "innerme-revenue": "revenue",
+            "innerme-intelligence": "intelligence"
+        };
+        return sections[String(view || "")] || "chat";
+    }
+
+    function applyInnerMeSubview(view) {
+        const main = document.getElementById("sway-workspace-main");
+        if (
+            !isInnerMeView(view) ||
+            !main ||
+            !main.querySelector("[data-innerme-workspace]")
+        ) {
+            return false;
+        }
+
+        const activeSection = innerMeSectionForView(view);
+        main.classList.add("sway-innerme-active");
+        main.classList.toggle("sway-innerme-chat-active", view === "swayphics-ai");
+        main.dataset.innermeActiveView = String(view);
+
+        main.querySelectorAll("[data-innerme-section]").forEach(function (section) {
+            const active = section.dataset.innermeSection === activeSection;
+            section.hidden = !active;
+            section.setAttribute("aria-hidden", String(!active));
+        });
+
+        const meta = viewMeta(view);
+        const title = main.querySelector(".sway-workspace-heading-copy h2");
+        const description = main.querySelector(".sway-workspace-heading-copy p");
+        if (title) title.textContent = meta[0];
+        if (description) description.textContent = meta[1];
+
+        workspace.querySelectorAll("[data-view]").forEach(function (button) {
+            button.classList.toggle("active", button.dataset.view === view);
+        });
+
+        workspace.querySelectorAll("[data-nav-group]").forEach(function (group) {
+            if (group.dataset.navGroup !== "innerme") return;
+            group.classList.add("open");
+            group.classList.remove("collapsed");
+            const toggle = group.querySelector("[data-nav-group-toggle]");
+            if (toggle) toggle.setAttribute("aria-expanded", "true");
+        });
+
+        try {
+            const saved = JSON.parse(
+                localStorage.getItem("swayphics_admin_nav_groups") || "{}"
+            );
+            saved.innerme = true;
+            localStorage.setItem("swayphics_admin_nav_groups", JSON.stringify(saved));
+        } catch (error) {
+            /* Navigation persistence is an enhancement, not a blocker. */
+        }
+
+        return true;
     }
 
     function navButton(item) {
@@ -6480,6 +6575,21 @@ function renderShell() {
                     function () {
                         const view =
                             button.dataset.view;
+
+                        if (
+                            isInnerMeView(view) &&
+                            isInnerMeView(state.currentView) &&
+                            workspace.querySelector("[data-innerme-workspace]")
+                        ) {
+                            state.currentView = view;
+                            persistWorkspaceView(view);
+                            applyInnerMeSubview(view);
+
+                            if (window.innerWidth <= MOBILE_SIDEBAR_BREAKPOINT) {
+                                setMobileSidebarOpen(false);
+                            }
+                            return;
+                        }
 
                         state.currentView =
                             view;
@@ -23648,13 +23758,23 @@ function simpleBars(items, color) {
         };
     }
 
-    function renderAIWorkspaceBriefing() {
+    function renderAIWorkspaceBriefing(mode) {
+        const displayMode = mode || "all";
+        const briefingId = displayMode === "all"
+            ? "sway-ai-briefing"
+            : "sway-ai-briefing-" + displayMode;
+        const briefingDataAttribute = displayMode === "all"
+            ? ""
+            : ' data-innerme-briefing="' + esc(displayMode) + '"';
+
         if (state.aiBriefingLoading) {
             return (
-                '<section class="sway-ai-v2-briefing is-loading" id="sway-ai-briefing">' +
+                '<section class="sway-ai-v2-briefing is-loading" id="' + esc(briefingId) + '"' + briefingDataAttribute + '>' +
                     '<div class="sway-ai-v2-briefing-top">' +
                         '<div>' +
-                            '<span class="sway-ai-v2-kicker">INNERME V2 · TODAY</span>' +
+                            '<span class="sway-ai-v2-kicker">' +
+                                esc(displayMode === "revenue" ? "REVENUE INTELLIGENCE" : displayMode === "actions" ? "ACTION CENTRE" : "INNERME V2 · TODAY") +
+                            '</span>' +
                             '<strong>Preparing your workspace brief</strong>' +
                         '</div>' +
                         '<span class="sway-ai-v2-live">LIVE DATA</span>' +
@@ -23669,10 +23789,12 @@ function simpleBars(items, color) {
 
         if (state.aiBriefingError) {
             return (
-                '<section class="sway-ai-v2-briefing is-error" id="sway-ai-briefing">' +
+                '<section class="sway-ai-v2-briefing is-error" id="' + esc(briefingId) + '"' + briefingDataAttribute + '>' +
                     '<div class="sway-ai-v2-briefing-top">' +
                         '<div>' +
-                            '<span class="sway-ai-v2-kicker">INNERME V2 · TODAY</span>' +
+                            '<span class="sway-ai-v2-kicker">' +
+                                esc(displayMode === "revenue" ? "REVENUE INTELLIGENCE" : displayMode === "actions" ? "ACTION CENTRE" : "INNERME V2 · TODAY") +
+                            '</span>' +
                             '<strong>Briefing unavailable</strong>' +
                         '</div>' +
                         '<button type="button" class="sway-ai-v2-refresh" data-ai-refresh-briefing>Retry</button>' +
@@ -23957,44 +24079,71 @@ function simpleBars(items, color) {
                     '</div>'
                 );
 
+        const topHtml =
+            '<div class="sway-ai-v2-briefing-top">' +
+                '<div>' +
+                    '<span class="sway-ai-v2-kicker">' +
+                        esc(displayMode === "actions" ? "INNERME · ACTION CENTRE" : "INNERME V2 · TODAY") +
+                    '</span>' +
+                    '<strong>' +
+                        esc(briefing.headline || (displayMode === "actions" ? "Your next moves" : "Here is what matters today.")) +
+                    '</strong>' +
+                    '<p>' +
+                        esc(briefing.summary || "I have checked the current workspace signals.") +
+                    '</p>' +
+                '</div>' +
+                '<button type="button" class="sway-ai-v2-refresh" data-ai-refresh-briefing aria-label="Refresh workspace brief">Refresh</button>' +
+            '</div>';
+
+        const metricsHtml =
+            '<div class="sway-ai-v2-metrics">' +
+                metric(
+                    "Pipeline",
+                    "R" +
+                    Math.round(
+                        Number(metrics.open_pipeline_value_zar || 0)
+                    ).toLocaleString("en-ZA")
+                ) +
+                metric(
+                    "Active leads",
+                    String(metrics.active_leads || 0)
+                ) +
+                metric(
+                    "Follow-ups",
+                    String(
+                        Number(metrics.overdue_followups || 0) +
+                        Number(metrics.due_today || 0)
+                    )
+                ) +
+                metric(
+                    "New enquiries",
+                    String(metrics.new_enquiries || 0)
+                ) +
+            '</div>';
+
+        if (displayMode === "actions") {
+            return (
+                '<section class="sway-ai-v2-briefing sway-ai-v2-briefing-actions" id="' + esc(briefingId) + '"' + briefingDataAttribute + '>' +
+                    topHtml +
+                    metricsHtml +
+                    changeRadarHtml +
+                    priorityHtml +
+                '</section>'
+            );
+        }
+
+        if (displayMode === "revenue") {
+            return (
+                '<section class="sway-ai-v2-briefing sway-ai-v2-briefing-revenue" id="' + esc(briefingId) + '"' + briefingDataAttribute + '>' +
+                    revenueHtml +
+                '</section>'
+            );
+        }
+
         return (
-            '<section class="sway-ai-v2-briefing" id="sway-ai-briefing">' +
-                '<div class="sway-ai-v2-briefing-top">' +
-                    '<div>' +
-                        '<span class="sway-ai-v2-kicker">INNERME V2 · TODAY</span>' +
-                        '<strong>' +
-                            esc(briefing.headline || "Here is what matters today.") +
-                        '</strong>' +
-                        '<p>' +
-                            esc(briefing.summary || "I have checked the current workspace signals.") +
-                        '</p>' +
-                    '</div>' +
-                    '<button type="button" class="sway-ai-v2-refresh" data-ai-refresh-briefing aria-label="Refresh workspace brief">Refresh</button>' +
-                '</div>' +
-                '<div class="sway-ai-v2-metrics">' +
-                    metric(
-                        "Pipeline",
-                        "R" +
-                        Math.round(
-                            Number(metrics.open_pipeline_value_zar || 0)
-                        ).toLocaleString("en-ZA")
-                    ) +
-                    metric(
-                        "Active leads",
-                        String(metrics.active_leads || 0)
-                    ) +
-                    metric(
-                        "Follow-ups",
-                        String(
-                            Number(metrics.overdue_followups || 0) +
-                            Number(metrics.due_today || 0)
-                        )
-                    ) +
-                    metric(
-                        "New enquiries",
-                        String(metrics.new_enquiries || 0)
-                    ) +
-                '</div>' +
+            '<section class="sway-ai-v2-briefing" id="' + esc(briefingId) + '"' + briefingDataAttribute + '>' +
+                topHtml +
+                metricsHtml +
                 revenueHtml +
                 changeRadarHtml +
                 priorityHtml +
@@ -24002,8 +24151,19 @@ function simpleBars(items, color) {
         );
     }
 
+    function refreshInnerMeBriefingPanels() {
+        workspace.querySelectorAll("[data-innerme-briefing]").forEach(function (node) {
+            const mode = String(node.dataset.innermeBriefing || "");
+            if (!mode) return;
+            node.outerHTML = renderAIWorkspaceBriefing(mode);
+        });
+        bindAIActionCentre();
+        bindAIQuickPromptActions();
+        bindAIBriefingActions();
+    }
+
     async function loadAIWorkspaceBriefing(force) {
-        if (state.currentView !== "swayphics-ai") {
+        if (!isInnerMeView(state.currentView)) {
             return;
         }
 
@@ -24026,13 +24186,7 @@ function simpleBars(items, color) {
         state.aiBriefingLoading = true;
         state.aiBriefingError = "";
 
-        const container =
-            document.getElementById("sway-ai-briefing");
-
-        if (container) {
-            container.outerHTML =
-                renderAIWorkspaceBriefing();
-        }
+        refreshInnerMeBriefingPanels();
 
         try {
             const result = await api(
@@ -24063,19 +24217,12 @@ function simpleBars(items, color) {
         } finally {
             state.aiBriefingLoading = false;
 
-            const live =
-                document.getElementById("sway-ai-briefing");
-
             if (
-                live &&
-                state.currentView === "swayphics-ai"
+                isInnerMeView(state.currentView) &&
+                workspace.querySelector("[data-innerme-briefing]")
             ) {
-                live.outerHTML =
-                    renderAIWorkspaceBriefing();
+                refreshInnerMeBriefingPanels();
             }
-
-            bindAIQuickPromptActions();
-            bindAIBriefingActions();
         }
     }
 
@@ -24518,11 +24665,11 @@ function simpleBars(items, color) {
                     }
 
                     const briefing =
-                        document.getElementById("sway-ai-briefing");
+                        document.getElementById("sway-ai-briefing-actions");
 
                     if (briefing) {
                         briefing.outerHTML =
-                            renderAIWorkspaceBriefing();
+                            renderAIWorkspaceBriefing("actions");
                     }
 
                     bindAIActionCentre();
@@ -24630,15 +24777,6 @@ function simpleBars(items, color) {
                             '<span aria-hidden="true">＋</span>' +
                             '<span>New chat</span>' +
                         '</button>' +
-                        '<button type="button" class="sway-ai-more-item" id="sway-ai-build-knowledge-index">' +
-                            '<span aria-hidden="true">◇</span>' +
-                            '<span data-ai-knowledge-index-label>Build Knowledge Index</span>' +
-                        '</button>' +
-                        '<details class="sway-ai-learning-review">' +
-                            '<summary>Learning review <span class="sway-ai-learning-review-count" data-ai-learning-review-count>0</span></summary>' +
-                            '<div class="sway-ai-learning-review-controls">' +
-                                '<span>Review corrections before anything is added to InnerMe knowledge.</span>' +
-                                '<button type="button" class="sway-ai-learning-review-refresh" id="sway-ai-learning-review-refresh">Refresh review queue</button>' +
                             '</div>' +
                             '<div class="sway-ai-learning-review-results" id="sway-ai-learning-review-results">' +
                                 '<div class="sway-ai-learning-review-status">Open this section to load the review queue.</div>' +
@@ -24661,6 +24799,10 @@ function simpleBars(items, color) {
                     '</div>' +
                 '</div>'
             ) +
+            '<div class="sway-innerme-workspace" data-innerme-workspace>' +
+            '<section class="sway-innerme-subview sway-innerme-chat-view" data-innerme-section="chat"' +
+                (state.currentView === "swayphics-ai" ? "" : ' hidden aria-hidden="true"') +
+            '>' +
             '<section class="sway-ai-panel sway-panel">' +
                 '<div class="sway-ai-history-panel" id="sway-ai-history-panel" hidden>' +
                     '<div class="sway-ai-history-head">' +
@@ -24695,7 +24837,6 @@ function simpleBars(items, color) {
                         '</div>'
                         : ""
                 ) +
-                renderAIWorkspaceBriefing() +
                 '<div class="sway-ai-pulse-orb" aria-hidden="true">' +
                     '<svg class="sway-ai-pulse-orb-svg" viewBox="0 0 120 120" role="presentation">' +
                         '<defs>' +
@@ -24732,8 +24873,58 @@ function simpleBars(items, color) {
                         '</button>' +
                     '</div>' +
                 '</form>' +
-                '<small class="sway-ai-note">InnerMe V2 can analyse, brief and draft from your live workspace. Nothing is sent or changed automatically. Explicit workspace actions remain in your control. Enter to send · Shift+Enter for a new line.</small>' +
-            '</section>'
+                '<small class="sway-ai-note">InnerMe can analyse Swayphics workspace data and help you think through the next step. Nothing is sent or changed automatically. Enter to send · Shift+Enter for a new line.</small>' +
+            '</section>' +
+            '</section>' +
+            '<section class="sway-innerme-subview sway-innerme-actions-view" data-innerme-section="actions"' +
+                (state.currentView === "innerme-actions" ? "" : ' hidden aria-hidden="true"') +
+            '>' +
+                renderAIWorkspaceBriefing("actions") +
+            '</section>' +
+            '<section class="sway-innerme-subview sway-innerme-revenue-view" data-innerme-section="revenue"' +
+                (state.currentView === "innerme-revenue" ? "" : ' hidden aria-hidden="true"') +
+            '>' +
+                renderAIWorkspaceBriefing("revenue") +
+            '</section>' +
+            '<section class="sway-innerme-subview sway-innerme-intelligence-view" data-innerme-section="intelligence"' +
+                (state.currentView === "innerme-intelligence" ? "" : ' hidden aria-hidden="true"') +
+            '>' +
+                '<div class="sway-innerme-intelligence-intro">' +
+                    '<div>' +
+                        '<span class="sway-ai-v2-kicker">INNERME SYSTEMS</span>' +
+                        '<h3>Intelligence &amp; Governance</h3>' +
+                        '<p>Knowledge quality, planning, evaluation, forecasting, monitoring, controlled actions and trust reviews live here, separate from chat.</p>' +
+                    '</div>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" id="sway-ai-build-knowledge-index"><span data-ai-knowledge-index-label>Build Knowledge Index</span></button>' +
+                '</div>' +
+                '<div id="sway-ai-intelligence-mount" class="sway-innerme-module-stack">' +
+                    '<details class="sway-ai-learning-review">' +
+                        '<summary>Learning review <span class="sway-ai-learning-review-count" data-ai-learning-review-count>0</span></summary>' +
+                        '<div class="sway-ai-learning-review-controls">' +
+                            '<span>Review corrections before anything is added to InnerMe knowledge.</span>' +
+                            '<button type="button" class="sway-ai-learning-review-refresh" id="sway-ai-learning-review-refresh">Refresh review queue</button>' +
+                        '</div>' +
+                        '<div class="sway-ai-learning-review-results" id="sway-ai-learning-review-results">' +
+                            '<div class="sway-ai-learning-review-status">Open this section to load the review queue.</div>' +
+                        '</div>' +
+                    '</details>' +
+                    '<details class="sway-ai-knowledge-test">' +
+                        '<summary>Knowledge Retrieval Test</summary>' +
+                        '<div class="sway-ai-knowledge-test-controls">' +
+                            '<span>Runs controlled semantic-search checks without changing InnerMe answers.</span>' +
+                            '<button type="button" class="sway-ai-knowledge-test-button" id="sway-ai-run-knowledge-retrieval-test">Run retrieval test</button>' +
+                        '</div>' +
+                        '<div class="sway-ai-knowledge-test-results" id="sway-ai-knowledge-retrieval-results">' +
+                            '<div class="sway-ai-knowledge-test-status">Not run yet.</div>' +
+                        '</div>' +
+                    '</details>' +
+                    '<details class="sway-ai-more-insights">' +
+                        '<summary>Workspace insights</summary>' +
+                        renderAIWorkspaceInsights() +
+                    '</details>' +
+                '</div>' +
+            '</section>' +
+            '</div>'
         );
     }
 
@@ -25058,8 +25249,8 @@ function simpleBars(items, color) {
          * otherwise active messages/input state can be detached.
          */
         if (
-            state.currentView === "swayphics-ai" &&
-            main.querySelector(".sway-ai-panel") &&
+            isInnerMeView(state.currentView) &&
+            main.querySelector("[data-innerme-workspace]") &&
             forceInnerMeRender !== true
         ) {
             bindViewActions();
@@ -25084,7 +25275,7 @@ function simpleBars(items, color) {
                     renderOverview();
             }
 
-            if (state.currentView === "swayphics-ai") {
+            if (isInnerMeView(state.currentView)) {
                 main.innerHTML =
                     renderSwayphicsAI();
             }
@@ -25237,8 +25428,15 @@ function simpleBars(items, color) {
 
             bindViewActions();
 
-            if (state.currentView === "swayphics-ai") {
+            if (isInnerMeView(state.currentView)) {
+                applyInnerMeSubview(state.currentView);
+                window.dispatchEvent(new CustomEvent("swayphics:workspace-view-rendered", {
+                    detail: { view: state.currentView }
+                }));
                 loadAIWorkspaceBriefing(false);
+            } else {
+                main.classList.remove("sway-innerme-active", "sway-innerme-chat-active");
+                delete main.dataset.innermeActiveView;
             }
         } catch (error) {
             main.innerHTML =
