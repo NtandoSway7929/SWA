@@ -2311,7 +2311,27 @@
                 '<div class="sway-ai-ki-eval-history"><strong>Recent runs</strong>' +
                     history.map(function(run){
                         const status=String(run.regression_status || "baseline");
-                        return '<div><span>'+esc(formatEvalDate(run.completed_at || run.started_at))+'</span><span>'+esc(Number(run.average_score || 0).toFixed(1))+'/100 · '+esc(Number(run.pass_rate || 0).toFixed(1))+'% · '+esc(regressionLabel(status))+'</span></div>';
+                        const summary=run.summary && typeof run.summary==="object" ? run.summary : {};
+                        const failures=Array.isArray(summary.failures) ? summary.failures : [];
+                        const providerErrors=failures.filter(function(failure){
+                            const reason=String(failure && (failure.error || failure.reason) || "").toLowerCase();
+                            return reason.includes("execution error") || reason.includes("provider returned http") || failure && failure.execution_error===true;
+                        }).length;
+                        let resultLabel;
+                        if(String(run.status || "")==="inconclusive"){
+                            if(summary.invalid_judge_output===true){
+                                resultLabel="Inconclusive · invalid judge output";
+                            }else{
+                                const total=Number(run.total_cases || summary.configured_cases || 0);
+                                const scored=Math.max(0,total-providerErrors);
+                                resultLabel="Inconclusive · "+scored+"/"+total+" scored";
+                            }
+                        }else if(String(run.status || "")==="running"){
+                            resultLabel="Running · "+String(summary.completed_cases || 0)+"/"+String(run.total_cases || 0);
+                        }else{
+                            resultLabel=Number(run.average_score || 0).toFixed(1)+"/100 · "+Number(run.pass_rate || 0).toFixed(1)+"% · "+regressionLabel(status);
+                        }
+                        return '<div><span>'+esc(formatEvalDate(run.completed_at || run.started_at))+'</span><span>'+esc(resultLabel)+'</span></div>';
                     }).join("") +
                 '</div>' +
                 results.map(function(result){
@@ -2416,14 +2436,26 @@
 
                     let data=await sendWithRetry("");
                     let runId=String(data.run_id || "");
-                    while(data.status==="running"){
+                    let providerResumeAttempts=0;
+                    while(
+                        data.status==="running" ||
+                        (data.status==="inconclusive" && Number(data.execution_error_cases || 0)>0 && providerResumeAttempts<2)
+                    ){
                         const completed=Number(data.completed_cases || 0);
                         const total=Number(data.total_cases || 0);
                         const nextCase=String(data.next_case_key || "");
-                        evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">Benchmark progress: '+completed+' of '+total+' cases saved.</p>';
-                        evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Evaluating '+(nextCase ? esc(nextCase.replace(/_/g," ")) : "the next case")+'. Each case runs separately to preserve progress and avoid compute limits.</p>';
-                        evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Next case: '+(nextCase ? esc(nextCase.replace(/_/g," ")) : "pending case")+'. Waiting briefly to respect provider request limits…</p>';
-                        await new Promise(function(resolve){window.setTimeout(resolve,4500);});
+                        if(data.status==="inconclusive"){
+                            providerResumeAttempts+=1;
+                            const cooldownMs=providerResumeAttempts===1 ? 10000 : 20000;
+                            evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">A provider rate limit interrupted one case. Saved scores are safe. Automatic retry '+providerResumeAttempts+'/2 after a cooldown.</p>';
+                            evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Retrying '+(nextCase ? esc(nextCase.replace(/_/g," ")) : "the unresolved case")+' after the provider cooldown. This is an execution error, not a scored answer failure.</p>';
+                            await new Promise(function(resolve){window.setTimeout(resolve,cooldownMs);});
+                        }else{
+                            providerResumeAttempts=0;
+                            evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">Benchmark progress: '+completed+' of '+total+' cases scored or resolved.</p>';
+                            evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Next case: '+(nextCase ? esc(nextCase.replace(/_/g," ")) : "pending case")+'. Waiting briefly to respect provider request limits…</p>';
+                            await new Promise(function(resolve){window.setTimeout(resolve,4500);});
+                        }
                         data=await sendWithRetry(runId);
                         runId=String(data.run_id || runId);
                     }
