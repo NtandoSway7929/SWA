@@ -24890,7 +24890,10 @@ function simpleBars(items, color) {
                             '<li>Action safety &amp; trust</li>' +
                         '</ul>' +
                     '</div>' +
-                    '<button type="button" class="sway-ai-knowledge-test-button" id="sway-ai-build-knowledge-index"><span data-ai-knowledge-index-label>Build Knowledge Index</span></button>' +
+                    '<div class="sway-innerme-intelligence-actions">' +
+                        '<button type="button" class="sway-ai-knowledge-test-button" id="sway-ai-build-knowledge-index"><span data-ai-knowledge-index-label>Build Knowledge Index</span></button>' +
+                        '<button type="button" class="sway-ai-knowledge-test-button sway-innerme-benchmark-launch" data-sway-ai-ki-eval-launch>Run benchmark</button>' +
+                    '</div>' +
                 '</div>' +
                 '<div id="sway-ai-intelligence-mount" class="sway-innerme-module-stack">' +
                     '<details class="sway-ai-learning-review">' +
