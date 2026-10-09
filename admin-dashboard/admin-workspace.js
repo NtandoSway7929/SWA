@@ -4333,7 +4333,7 @@
             ],
             "innerme-intelligence": [
                 "Intelligence & Governance",
-                "Review InnerMe knowledge, planning, evaluation, monitoring, safety controls and trust governance."
+                "Manage the systems that keep InnerMe informed, evaluated and governed."
             ],
             insights: [
                 "Insights",
@@ -24881,8 +24881,14 @@ function simpleBars(items, color) {
                 (state.currentView === "innerme-intelligence" ? "" : ' hidden aria-hidden="true"') +
             '>' +
                 '<div class="sway-innerme-intelligence-intro">' +
-                    '<div>' +
-                        '<p>Review knowledge quality, planning, evaluation, forecasts, monitoring, controlled actions and trust from one place.</p>' +
+                    '<div class="sway-innerme-intelligence-copy">' +
+                        '<p class="sway-innerme-intelligence-lead">Manage InnerMe’s core systems in one workspace.</p>' +
+                        '<ul class="sway-innerme-capability-list" aria-label="InnerMe system areas">' +
+                            '<li>Knowledge &amp; learning</li>' +
+                            '<li>Planning &amp; evaluation</li>' +
+                            '<li>Forecasting &amp; monitoring</li>' +
+                            '<li>Action safety &amp; trust</li>' +
+                        '</ul>' +
                     '</div>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" id="sway-ai-build-knowledge-index"><span data-ai-knowledge-index-label>Build Knowledge Index</span></button>' +
                 '</div>' +
