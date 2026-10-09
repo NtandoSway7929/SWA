@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="admin-workspace.css?v=20261008-innerme-nav-polish-3">
+    <link rel="stylesheet" href="admin-workspace.css?v=20261008-innerme-nav-polish-4">
 
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#002096">
@@ -17062,6 +17062,144 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-messa
     #sway-admin-workspace .sway-innerme-chat-view .sway-ai-message-content * {
         font-size: 14px !important;
         line-height: 1.7 !important;
+    }
+}
+
+
+/* Final layout correction: keep the Intelligence & Governance copy fully in view. */
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active:not(.sway-innerme-chat-active) .sway-workspace-heading {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active:not(.sway-innerme-chat-active) .sway-workspace-heading-copy {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active:not(.sway-innerme-chat-active) .sway-workspace-heading-copy p {
+    display: block !important;
+    width: 100% !important;
+    max-width: 900px !important;
+    margin: 10px 0 0 !important;
+    padding: 0 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    overflow-wrap: anywhere !important;
+    text-align: left !important;
+    text-indent: 0 !important;
+    line-height: 1.65 !important;
+    box-sizing: border-box !important;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active:not(.sway-innerme-chat-active) .sway-workspace-heading-actions {
+    display: none !important;
+}
+#sway-admin-workspace .sway-innerme-intelligence-view {
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+}
+#sway-admin-workspace .sway-innerme-intelligence-intro {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: start !important;
+    justify-items: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 18px !important;
+    padding: 0 !important;
+    gap: 16px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+}
+#sway-admin-workspace .sway-innerme-intelligence-copy {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 13px !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+}
+#sway-admin-workspace .sway-innerme-intelligence-intro p.sway-innerme-intelligence-lead {
+    display: block !important;
+    width: 100% !important;
+    max-width: 900px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    overflow-wrap: anywhere !important;
+    text-align: left !important;
+    text-indent: 0 !important;
+    line-height: 1.65 !important;
+    box-sizing: border-box !important;
+}
+#sway-admin-workspace .sway-innerme-capability-list {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 10px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+#sway-admin-workspace .sway-innerme-capability-list li {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    margin: 0 !important;
+    padding: 10px 12px !important;
+    border: 1px solid rgba(0, 32, 150, .10) !important;
+    border-radius: 12px !important;
+    background: rgba(1, 82, 244, .025) !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    overflow-wrap: anywhere !important;
+    text-align: left !important;
+    line-height: 1.45 !important;
+    box-sizing: border-box !important;
+}
+#sway-admin-workspace .sway-innerme-capability-list li::before {
+    flex: 0 0 5px !important;
+}
+#sway-admin-workspace .sway-innerme-intelligence-intro #sway-ai-build-knowledge-index {
+    justify-self: start !important;
+    width: auto !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-capability-list li {
+    border-color: rgba(119, 193, 252, .16) !important;
+    background: rgba(119, 193, 252, .04) !important;
+    color: #A9B8CC !important;
+}
+@media (max-width: 1050px) {
+    #sway-admin-workspace .sway-innerme-capability-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+@media (max-width: 700px) {
+    #sway-admin-workspace .sway-innerme-capability-list {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+    #sway-admin-workspace .sway-innerme-capability-list li {
+        min-height: 42px !important;
+    }
+    #sway-admin-workspace .sway-innerme-intelligence-intro #sway-ai-build-knowledge-index {
+        width: 100% !important;
     }
 }
 
