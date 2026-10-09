@@ -24777,25 +24777,6 @@ function simpleBars(items, color) {
                             '<span aria-hidden="true">＋</span>' +
                             '<span>New chat</span>' +
                         '</button>' +
-                            '</div>' +
-                            '<div class="sway-ai-learning-review-results" id="sway-ai-learning-review-results">' +
-                                '<div class="sway-ai-learning-review-status">Open this section to load the review queue.</div>' +
-                            '</div>' +
-                        '</details>' +
-                        '<details class="sway-ai-knowledge-test">' +
-                            '<summary>Knowledge Retrieval Test</summary>' +
-                            '<div class="sway-ai-knowledge-test-controls">' +
-                                '<span>Runs 3 controlled semantic-search checks without changing InnerMe answers.</span>' +
-                                '<button type="button" class="sway-ai-knowledge-test-button" id="sway-ai-run-knowledge-retrieval-test">Run retrieval test</button>' +
-                            '</div>' +
-                            '<div class="sway-ai-knowledge-test-results" id="sway-ai-knowledge-retrieval-results">' +
-                                '<div class="sway-ai-knowledge-test-status">Not run yet.</div>' +
-                            '</div>' +
-                        '</details>' +
-                        '<details class="sway-ai-more-insights">' +
-                            '<summary>Workspace insights</summary>' +
-                            renderAIWorkspaceInsights() +
-                        '</details>' +
                     '</div>' +
                 '</div>'
             ) +
