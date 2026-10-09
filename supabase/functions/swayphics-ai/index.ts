@@ -1878,19 +1878,10 @@ Deno.serve(async (req) => {
     for (const item of (nextCase ? [nextCase] : [])) {
       try {
         /*
-         * A prior provider-error record is retryable, not a scored test.
-         * Remove only that error row before writing the replacement result.
+         * Keep a previous execution-error row until this retry scores successfully.
+         * The scored-result upsert below replaces only retryable error rows, so a
+         * provider failure cannot leave the case without a record or create a duplicate.
          */
-        const { error: staleErrorDeleteError } = await authSupabase
-          .from("innerme_evaluation_results")
-          .delete()
-          .eq("run_id", runId)
-          .eq("case_id", item.id)
-          .contains("failure_flags", ["execution_error"]);
-
-        if (staleErrorDeleteError) {
-          throw new Error("Unable to prepare this benchmark case for retry: " + staleErrorDeleteError.message);
-        }
 
         const queryText = cleanForModel(item.prompt, 1200);
         const embeddingModel = new Supabase.ai.Session("gte-small");
@@ -2028,7 +2019,7 @@ Deno.serve(async (req) => {
         const { error: resultError } =
           await authSupabase
             .from("innerme_evaluation_results")
-            .insert({
+            .upsert({
               run_id: runId,
               case_id: item.id,
               prompt: item.prompt,
@@ -2062,7 +2053,7 @@ Deno.serve(async (req) => {
                   700,
                 ),
               provider_model: answerResult.model + " / judge:" + judgeResult.model,
-            });
+            }, { onConflict: "run_id,case_id" });
 
         if (resultError) {
           throw new Error(resultError.message || "Evaluation result could not be stored.");
@@ -2087,40 +2078,113 @@ Deno.serve(async (req) => {
 
         currentCaseExecutionFailed = true;
         const failureFlags = ["execution_error"];
-        const { error: failureRecordError } = await authSupabase
-          .from("innerme_evaluation_results")
-          .insert({
-            run_id: runId,
-            case_id: item.id,
-            prompt: String(item.prompt || ""),
-            answer: "",
-            retrieval_matches: [],
-            attributed_knowledge: {
-              expected_ids: Array.isArray(item.expected_knowledge_ids) ? item.expected_knowledge_ids : [],
-              retrieved_expected_ids: [],
-              retrieval_recall: 0,
-            },
-            dimension_scores: {
-              retrieval_recall: 0,
-              correctness: 0,
-              grounding: 0,
-              relevance: 0,
-              safety: 0,
-              completeness: 0,
-            },
-            score: 0,
-            passed: false,
+        const failureRecord = {
+          run_id: runId,
+          case_id: item.id,
+          prompt: String(item.prompt || ""),
+          answer: "",
+          retrieval_matches: [],
+          attributed_knowledge: {
+            expected_ids: Array.isArray(item.expected_knowledge_ids) ? item.expected_knowledge_ids : [],
+            retrieved_expected_ids: [],
+            retrieval_recall: 0,
+          },
+          dimension_scores: {
+            retrieval_recall: 0,
+            correctness: 0,
+            grounding: 0,
+            relevance: 0,
+            safety: 0,
+            completeness: 0,
+          },
+          score: 0,
+          passed: false,
+          case_key: String(item.case_key || ""),
+          severity: String(item.severity || "standard"),
+          failure_flags: failureFlags,
+          regressed_from_previous: false,
+          judge_rationale: "Execution error: " + errorMessage,
+          provider_model: "execution-error",
+        };
+
+        /*
+         * A network error can occur after a result has already committed.
+         * Inspect the existing row before recording failure, so we never replace
+         * a valid scored result with a synthetic zero-score execution error.
+         */
+        const { data: existingCaseResult, error: existingCaseResultError } =
+          await authSupabase
+            .from("innerme_evaluation_results")
+            .select("id,failure_flags")
+            .eq("run_id", runId)
+            .eq("case_id", item.id)
+            .maybeSingle();
+
+        if (existingCaseResultError) {
+          console.error(
+            "InnerMe benchmark failure-record lookup error:",
+            existingCaseResultError.message,
+            "Original case error:",
+            errorMessage,
+          );
+          return json({
+            error: "A benchmark case failed, and InnerMe could not check whether its result was already saved.",
             case_key: String(item.case_key || ""),
-            severity: String(item.severity || "standard"),
-            failure_flags: failureFlags,
-            regressed_from_previous: false,
-            judge_rationale: "Execution error: " + errorMessage,
-            provider_model: "execution-error",
-          });
+            case_error: errorMessage,
+            storage_error: existingCaseResultError.message,
+          }, 500, origin);
+        }
+
+        const existingFlags = Array.isArray(existingCaseResult?.failure_flags)
+          ? existingCaseResult.failure_flags
+          : [];
+
+        if (existingCaseResult && !existingFlags.includes("execution_error")) {
+          console.warn(
+            "InnerMe benchmark preserved an already-saved scored result after a later request error.",
+            String(item.case_key || ""),
+            errorMessage,
+          );
+          currentCaseExecutionFailed = false;
+          continue;
+        }
+
+        let failureRecordError: { message: string } | null = null;
+
+        if (existingCaseResult) {
+          const { data: updatedFailureRows, error: updateFailureError } =
+            await authSupabase
+              .from("innerme_evaluation_results")
+              .update(failureRecord)
+              .eq("run_id", runId)
+              .eq("case_id", item.id)
+              .contains("failure_flags", ["execution_error"])
+              .select("id");
+
+          failureRecordError = updateFailureError;
+          if (!failureRecordError && (!Array.isArray(updatedFailureRows) || !updatedFailureRows.length)) {
+            failureRecordError = { message: "The existing retryable execution-error record was not updated." };
+          }
+        } else {
+          const { error: insertFailureError } = await authSupabase
+            .from("innerme_evaluation_results")
+            .insert(failureRecord);
+          failureRecordError = insertFailureError;
+        }
 
         if (failureRecordError) {
-          console.error("InnerMe benchmark failure record insert error:", failureRecordError.message);
-          return json({ error: "A benchmark case failed and its failure record could not be saved." }, 500, origin);
+          console.error(
+            "InnerMe benchmark failure record write error:",
+            failureRecordError.message,
+            "Original case error:",
+            errorMessage,
+          );
+          return json({
+            error: "A benchmark case failed, and its failure record could not be saved.",
+            case_key: String(item.case_key || ""),
+            case_error: errorMessage,
+            storage_error: failureRecordError.message,
+          }, 500, origin);
         }
 
         failures.push({
