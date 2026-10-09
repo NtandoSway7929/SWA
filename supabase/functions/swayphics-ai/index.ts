@@ -2193,6 +2193,7 @@ Deno.serve(async (req) => {
         live_knowledge_changed: false,
         evaluation_only: true,
       }, 200, origin);
+    }
 
     const completedAt = new Date().toISOString();
     const averageScore = completedCases
