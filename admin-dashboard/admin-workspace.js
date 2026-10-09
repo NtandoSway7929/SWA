@@ -24882,9 +24882,7 @@ function simpleBars(items, color) {
             '>' +
                 '<div class="sway-innerme-intelligence-intro">' +
                     '<div>' +
-                        '<span class="sway-ai-v2-kicker">INNERME SYSTEMS</span>' +
-                        '<h3>Intelligence &amp; Governance</h3>' +
-                        '<p>Knowledge quality, planning, evaluation, forecasting, monitoring, controlled actions and trust reviews live here, separate from chat.</p>' +
+                        '<p>Review knowledge quality, planning, evaluation, forecasts, monitoring, controlled actions and trust from one place.</p>' +
                     '</div>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" id="sway-ai-build-knowledge-index"><span data-ai-knowledge-index-label>Build Knowledge Index</span></button>' +
                 '</div>' +
