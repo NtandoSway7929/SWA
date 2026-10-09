@@ -895,8 +895,10 @@
     function ensurePanel() {
         if (document.getElementById(PANEL_ID)) return;
 
+        const intelligenceMount = document.getElementById("sway-ai-intelligence-mount");
         const morePanel = document.getElementById("sway-ai-more-panel");
-        if (!morePanel) return;
+        const targetPanel = intelligenceMount || morePanel;
+        if (!targetPanel) return;
 
         const details = document.createElement("details");
         details.id = PANEL_ID;
@@ -1005,11 +1007,15 @@
                 '<p class="sway-ai-ki-muted">Not analysed yet.</p>' +
             '</div>';
 
-        const retrievalTest = morePanel.querySelector(".sway-ai-knowledge-test");
-        if (retrievalTest) {
-            morePanel.insertBefore(details, retrievalTest);
+        if (intelligenceMount) {
+            intelligenceMount.appendChild(details);
         } else {
-            morePanel.appendChild(details);
+            const retrievalTest = morePanel.querySelector(".sway-ai-knowledge-test");
+            if (retrievalTest) {
+                morePanel.insertBefore(details, retrievalTest);
+            } else {
+                morePanel.appendChild(details);
+            }
         }
 
         const button = details.querySelector("[data-sway-ai-ki-run]");
@@ -2894,9 +2900,15 @@
     document.head.appendChild(style);
 
     const observer = new MutationObserver(function () {
-        if (document.getElementById("sway-ai-more-panel")) ensurePanel();
+        if (
+            document.getElementById("sway-ai-intelligence-mount") ||
+            document.getElementById("sway-ai-more-panel")
+        ) {
+            ensurePanel();
+        }
     });
 
     observer.observe(document.body, {childList: true, subtree: true});
+    window.addEventListener("swayphics:workspace-view-rendered", ensurePanel);
     ensurePanel();
 })();
