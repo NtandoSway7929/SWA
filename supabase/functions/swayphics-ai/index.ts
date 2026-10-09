@@ -1571,7 +1571,7 @@ Deno.serve(async (req) => {
           regression_status: baselineRun ? "inconclusive" : "baseline",
           status: "running",
         })
-        .select("id,created_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash")
+        .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash")
         .single();
 
     if (runError || !run) {
