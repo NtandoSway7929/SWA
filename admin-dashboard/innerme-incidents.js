@@ -1334,7 +1334,7 @@
 (function loadInnerMeTrustGovernance() {
     if (document.querySelector('script[data-im-trust-calibration]')) return;
     var script = document.createElement("script");
-    script.src = "innerme-trust-calibration.js?v=20261008-29a";
+    script.src = "innerme-trust-calibration.js?v=20261008-innerme-nav-polish-1";
     script.setAttribute("data-im-trust-calibration", "");
     document.head.appendChild(script);
 })();
