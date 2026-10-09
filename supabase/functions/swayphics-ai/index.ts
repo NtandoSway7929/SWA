@@ -212,6 +212,7 @@ Deno.serve(async (req) => {
     acquisition_task_id?: string;
     source_excerpt?: string;
     benchmark_limit?: number | string;
+    benchmark_run_id?: string;
     learning_source_type?: string;
     learning_source_id?: string;
   } = {};
@@ -1555,41 +1556,113 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { data: run, error: runError } =
-      await authSupabase
-        .from("innerme_evaluation_runs")
-        .insert({
-          trigger: "manual",
-          created_by: userData.user.id,
-          total_cases: benchmarkCases.length,
-          benchmark_version: INNERME_BENCHMARK_VERSION,
-          knowledge_snapshot_hash: knowledgeSnapshotHash,
-          baseline_run_id:
-            baselineRun && Number(baselineRun.total_cases || 0) === benchmarkCases.length
-              ? baselineRun.id
-              : null,
-          regression_status: baselineRun ? "inconclusive" : "baseline",
-          status: "running",
-        })
-        .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash")
-        .single();
+    const requestedRunId = String(body.benchmark_run_id || "").trim();
+    let runningRunQuery = authSupabase
+      .from("innerme_evaluation_runs")
+      .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash,created_by")
+      .eq("created_by", userData.user.id)
+      .eq("benchmark_version", INNERME_BENCHMARK_VERSION)
+      .eq("status", "running");
 
-    if (runError || !run) {
-      console.error("InnerMe evaluation run creation error:", runError?.message || "No run row returned.");
-      return json({ error: "InnerMe could not start the evaluation run." }, 500, origin);
+    if (requestedRunId) {
+      runningRunQuery = runningRunQuery.eq("id", requestedRunId);
+    }
+
+    const { data: existingRun, error: existingRunError } = await runningRunQuery
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingRunError) {
+      console.error("InnerMe evaluation resume query error:", existingRunError.message);
+      return json({ error: "InnerMe could not resume the evaluation run." }, 500, origin);
+    }
+
+    if (requestedRunId && !existingRun) {
+      return json({ error: "The requested benchmark run is not active or is not accessible to this administrator." }, 409, origin);
+    }
+
+    let run: any = existingRun || null;
+
+    if (!run) {
+      const { data: createdRun, error: runError } =
+        await authSupabase
+          .from("innerme_evaluation_runs")
+          .insert({
+            trigger: "manual",
+            created_by: userData.user.id,
+            total_cases: benchmarkCases.length,
+            benchmark_version: INNERME_BENCHMARK_VERSION,
+            knowledge_snapshot_hash: knowledgeSnapshotHash,
+            baseline_run_id:
+              baselineRun && Number(baselineRun.total_cases || 0) === benchmarkCases.length
+                ? baselineRun.id
+                : null,
+            regression_status: baselineRun ? "inconclusive" : "baseline",
+            status: "running",
+          })
+          .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash,created_by")
+          .single();
+
+      if (runError || !createdRun) {
+        console.error("InnerMe evaluation run creation error:", runError?.message || "No run row returned.");
+        return json({ error: "InnerMe could not start the evaluation run." }, 500, origin);
+      }
+      run = createdRun;
     }
 
     const runId = String(run.id);
-    let passedCases = 0;
-    let scoreTotal = 0;
-    let completedCases = 0;
-    const failures: Array<{ case_key: string; error: string }> = [];
+    const { data: savedCaseRows, error: savedCaseRowsError } =
+      await authSupabase
+        .from("innerme_evaluation_results")
+        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale")
+        .eq("run_id", runId);
+
+    if (savedCaseRowsError) {
+      console.error("InnerMe evaluation progress query error:", savedCaseRowsError.message);
+      return json({ error: "InnerMe could not read the saved benchmark progress." }, 500, origin);
+    }
+
+    const savedCaseIds = new Set<string>();
     const currentCaseResults = new Map<string, {
       case_key: string;
       severity: string;
       passed: boolean;
       score: number;
     }>();
+    const failures: Array<{ case_key: string; error: string }> = [];
+
+    function numericScoreForSavedResult(value: unknown) {
+      const raw = Number(value);
+      return Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) : 0;
+    }
+
+    (Array.isArray(savedCaseRows) ? savedCaseRows : []).forEach(function(result: any) {
+      const caseId = String(result?.case_id || "");
+      if (!caseId || savedCaseIds.has(caseId)) return;
+      savedCaseIds.add(caseId);
+      currentCaseResults.set(caseId, {
+        case_key: String(result?.case_key || ""),
+        severity: String(result?.severity || "standard"),
+        passed: result?.passed === true,
+        score: numericScoreForSavedResult(result?.score),
+      });
+      const flags = Array.isArray(result?.failure_flags) ? result.failure_flags : [];
+      if (flags.includes("execution_error")) {
+        failures.push({
+          case_key: String(result?.case_key || ""),
+          error: String(result?.judge_rationale || "Case execution failed."),
+        });
+      }
+    });
+
+    let passedCases = Array.from(currentCaseResults.values()).filter(function(result) {
+      return result.passed;
+    }).length;
+    let scoreTotal = Array.from(currentCaseResults.values()).reduce(function(total, result) {
+      return total + result.score;
+    }, 0);
+    let completedCases = currentCaseResults.size;
 
     function numericScore(value: unknown, fallback = 0) {
       const raw = Number(value);
@@ -1676,7 +1749,11 @@ Deno.serve(async (req) => {
       "Keep rationale under 700 characters.",
     ].join("\n");
 
-    for (const item of benchmarkCases) {
+    const nextCase = benchmarkCases.find(function(item: any) {
+      return !savedCaseIds.has(String(item?.id || ""));
+    });
+
+    for (const item of (nextCase ? [nextCase] : [])) {
       try {
         const queryText = cleanForModel(item.prompt, 1200);
         const embeddingModel = new Supabase.ai.Session("gte-small");
@@ -1855,6 +1932,7 @@ Deno.serve(async (req) => {
           throw new Error(resultError.message || "Evaluation result could not be stored.");
         }
 
+        savedCaseIds.add(String(item.id || ""));
         currentCaseResults.set(String(item.id || ""), {
           case_key: String(item.case_key || ""),
           severity: String(item.severity || "standard"),
@@ -1871,7 +1949,47 @@ Deno.serve(async (req) => {
             ? error.message.slice(0, 500)
             : String(error).slice(0, 500);
 
-        currentCaseResults.set(String(item.id || ""), {
+        const failedCaseId = String(item.id || "");
+        const priorBaselineResult = baselineResults.get(failedCaseId);
+        const failureFlags = ["execution_error", "benchmark_fail"];
+        const { error: failureRecordError } = await authSupabase
+          .from("innerme_evaluation_results")
+          .insert({
+            run_id: runId,
+            case_id: item.id,
+            prompt: String(item.prompt || ""),
+            answer: "",
+            retrieval_matches: [],
+            attributed_knowledge: {
+              expected_ids: Array.isArray(item.expected_knowledge_ids) ? item.expected_knowledge_ids : [],
+              retrieved_expected_ids: [],
+              retrieval_recall: 0,
+            },
+            dimension_scores: {
+              retrieval_recall: 0,
+              correctness: 0,
+              grounding: 0,
+              relevance: 0,
+              safety: 0,
+              completeness: 0,
+            },
+            score: 0,
+            passed: false,
+            case_key: String(item.case_key || ""),
+            severity: String(item.severity || "standard"),
+            failure_flags: failureFlags,
+            regressed_from_previous: priorBaselineResult?.passed === true,
+            judge_rationale: "Execution error: " + errorMessage,
+            provider_model: "execution-error",
+          });
+
+        if (failureRecordError) {
+          console.error("InnerMe benchmark failure record insert error:", failureRecordError.message);
+          return json({ error: "A benchmark case failed and its failure record could not be saved." }, 500, origin);
+        }
+
+        savedCaseIds.add(failedCaseId);
+        currentCaseResults.set(failedCaseId, {
           case_key: String(item.case_key || ""),
           severity: String(item.severity || "standard"),
           passed: false,
@@ -1882,7 +2000,79 @@ Deno.serve(async (req) => {
           case_key: String(item.case_key || ""),
           error: errorMessage,
         });
+        completedCases += 1;
       }
+    }
+
+    const { data: persistedResultRows, error: persistedResultRowsError } =
+      await authSupabase
+        .from("innerme_evaluation_results")
+        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale")
+        .eq("run_id", runId);
+
+    if (persistedResultRowsError) {
+      console.error("InnerMe benchmark result aggregation error:", persistedResultRowsError.message);
+      return json({ error: "InnerMe could not aggregate the saved benchmark results." }, 500, origin);
+    }
+
+    const persistedByCase = new Map<string, any>();
+    (Array.isArray(persistedResultRows) ? persistedResultRows : []).forEach(function(result: any) {
+      const caseId = String(result?.case_id || "");
+      if (caseId && !persistedByCase.has(caseId)) persistedByCase.set(caseId, result);
+    });
+
+    currentCaseResults.clear();
+    failures.splice(0, failures.length);
+    persistedByCase.forEach(function(result: any, caseId: string) {
+      currentCaseResults.set(caseId, {
+        case_key: String(result?.case_key || ""),
+        severity: String(result?.severity || "standard"),
+        passed: result?.passed === true,
+        score: numericScoreForSavedResult(result?.score),
+      });
+      const flags = Array.isArray(result?.failure_flags) ? result.failure_flags : [];
+      if (flags.includes("execution_error")) {
+        failures.push({
+          case_key: String(result?.case_key || ""),
+          error: String(result?.judge_rationale || "Case execution failed."),
+        });
+      }
+    });
+
+    completedCases = currentCaseResults.size;
+    passedCases = Array.from(currentCaseResults.values()).filter(function(result) {
+      return result.passed;
+    }).length;
+    scoreTotal = Array.from(currentCaseResults.values()).reduce(function(total, result) {
+      return total + result.score;
+    }, 0);
+
+    if (completedCases < benchmarkCases.length) {
+      await authSupabase
+        .from("innerme_evaluation_runs")
+        .update({
+          passed_cases: passedCases,
+          failed_cases: Math.max(0, completedCases - passedCases),
+          provider_model: PRIMARY_MODEL,
+        })
+        .eq("id", runId);
+
+      const nextPendingCase = benchmarkCases.find(function(item: any) {
+        return !currentCaseResults.has(String(item?.id || ""));
+      });
+
+      return json({
+        ok: true,
+        run_id: runId,
+        status: "running",
+        total_cases: benchmarkCases.length,
+        completed_cases: completedCases,
+        passed_cases: passedCases,
+        failed_cases: Math.max(0, completedCases - passedCases),
+        next_case_key: nextPendingCase ? String(nextPendingCase.case_key || "") : "",
+        live_knowledge_changed: false,
+        evaluation_only: true,
+      }, 200, origin);
     }
 
     const completedAt = new Date().toISOString();
