@@ -978,7 +978,7 @@
             '<details class="sway-ai-ki-evaluation" data-sway-ai-ki-evaluation-panel>' +
                 '<summary>Evaluation &amp; benchmarking</summary>' +
                 '<div class="sway-ai-ki-evaluation-controls">' +
-                    '<span>Runs fixed InnerMe test cases against verified knowledge and records retrieval recall, answer quality, grounding, safety and pass/fail outcomes.</span>' +
+                    '<span>Runs fixed InnerMe test cases against verified knowledge. Cases run one at a time so progress is saved between requests and can resume safely after a resource limit.</span>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-run>Run benchmark</button>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-refresh>Refresh results</button>' +
                 '</div>' +
@@ -2357,27 +2357,77 @@
                 evaluationResults.innerHTML='<p class="sway-ai-ki-muted">InnerMe is being evaluated case by case.</p>';
 
                 try{
-                    const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
-                        method:"POST",
-                        headers:authHeaders(),
-                        body:JSON.stringify({action:"run_innerme_benchmark",benchmark_limit:12})
-                    });
-                    const data=await response.json().catch(function(){return null;});
-                    if(!response.ok){
-                        throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Benchmark execution failed.");
+                    async function sendBenchmarkRequest(runId){
+                        const payload={action:"run_innerme_benchmark",benchmark_limit:12};
+                        if(runId) payload.benchmark_run_id=runId;
+                        const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                            method:"POST",
+                            headers:authHeaders(),
+                            body:JSON.stringify(payload)
+                        });
+                        const data=await response.json().catch(function(){return null;});
+                        if(!response.ok){
+                            throw new Error(data && (data.message || data.error || data.hint) ? String(data.message || data.error || data.hint) : "Benchmark request failed (HTTP "+response.status+").");
+                        }
+                        if(!data || !data.run_id || !data.status){
+                            throw new Error("InnerMe returned an incomplete benchmark progress response.");
+                        }
+                        return data;
                     }
+
+                    async function sendWithRetry(runId){
+                        let lastError=null;
+                        for(let attempt=0;attempt<2;attempt++){
+                            try{
+                                return await sendBenchmarkRequest(runId);
+                            }catch(error){
+                                lastError=error;
+                                if(attempt===0){
+                                    evaluationResults.innerHTML='<p class="sway-ai-ki-muted">The benchmark request was interrupted. Retrying safely; saved case results will be retained.</p>';
+                                    await new Promise(function(resolve){window.setTimeout(resolve,900);});
+                                }
+                            }
+                        }
+                        throw lastError || new Error("Benchmark request failed.");
+                    }
+
+                    let data=await sendWithRetry("");
+                    let runId=String(data.run_id || "");
+                    while(data.status==="running"){
+                        const completed=Number(data.completed_cases || 0);
+                        const total=Number(data.total_cases || 0);
+                        const nextCase=String(data.next_case_key || "");
+                        evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">Benchmark progress: '+completed+' of '+total+' cases saved.</p>';
+                        evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Evaluating '+(nextCase ? esc(nextCase.replace(/_/g," ")) : "the next case")+'. Each case runs separately to preserve progress and avoid compute limits.</p>';
+                        data=await sendWithRetry(runId);
+                        runId=String(data.run_id || runId);
+                    }
+
                     await refreshEvaluation();
-                    window.alert(
-                        "Benchmark complete: " +
-                        String(data.passed_cases || 0) +
-                        "/" +
-                        String(data.completed_cases || data.total_cases || 0) +
-                        " cases passed, average score " +
-                        String(data.average_score || 0) +
-                        "/100."
-                    );
+                    if(data.status==="completed"){
+                        window.alert(
+                            "Benchmark complete: " +
+                            String(data.passed_cases || 0) +
+                            "/" +
+                            String(data.total_cases || data.completed_cases || 0) +
+                            " cases passed, average score " +
+                            String(data.average_score || 0) +
+                            "/100. Regression status: " +
+                            String(data.regression_status || "not assessed") + "."
+                        );
+                    }else if(data.status==="inconclusive"){
+                        window.alert(
+                            "Benchmark finished with an inconclusive result. " +
+                            String(data.completed_cases || 0) +
+                            "/" +
+                            String(data.total_cases || 0) +
+                            " cases were saved. Review the case-level errors and rationales below."
+                        );
+                    }else{
+                        throw new Error("Benchmark ended with status: "+String(data.status || "unknown")+".");
+                    }
                 }catch(error){
-                    evaluationResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message || "Benchmark execution failed.")+'</p>';
+                    evaluationResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message || "Benchmark execution failed.")+'<br>Any saved case results have been kept. Click Run benchmark again to resume the active run.</p>';
                 }finally{
                     evaluationRun.disabled=false;
                     evaluationRun.textContent="Run benchmark";
