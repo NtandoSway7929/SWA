@@ -19,7 +19,7 @@ async function sha256(value: string) {
 
 const PRIMARY_MODEL = "gemini-3.8-flash";
 const FALLBACK_MODEL = "gemini-3.5-flash-lite";
-const INNERME_BENCHMARK_VERSION = 4;
+const INNERME_BENCHMARK_VERSION = 5;
 
 function json(
   data: unknown,
@@ -41,6 +41,26 @@ function compactRows(rows: unknown[], limit = 60) {
 
 function cleanForModel(value: unknown, max = 3000) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+function buildKnowledgeRetrievalQueries(value: unknown, max = 1200): string[] {
+  const query = cleanForModel(value, max);
+  if (!query) return [];
+
+  const queries = [query];
+  const lower = query.toLowerCase();
+  const hasOperationalLanguage =
+    /\b(bottleneck|bottlenecks|capacity|throughput|backlog|backlogs|workflow|production|packaging|fulfilment|fulfillment|delayed|delays|waiting|stuck|constraint|constraints)\b/.test(lower);
+
+  if (hasOperationalLanguage) {
+    queries.push(
+      "Operations diagnosis: identify the limiting process, resource, or capacity constraint. " +
+      "Look for bottlenecks, production delays, work queues, backlogs, packaging delays, " +
+      "limited staffing, workflow throughput, and fulfilment capacity before increasing demand.",
+    );
+  }
+
+  return Array.from(new Set(queries.map((item) => cleanForModel(item, max)).filter(Boolean)));
 }
 
 type PublicDiagnosticTopic =
@@ -1883,32 +1903,51 @@ Deno.serve(async (req) => {
          * provider failure cannot leave the case without a record or create a duplicate.
          */
 
-        const queryText = cleanForModel(item.prompt, 1200);
+        const retrievalQueryTexts = buildKnowledgeRetrievalQueries(item.prompt);
         const embeddingModel = new Supabase.ai.Session("gte-small");
-        const rawEmbedding = await embeddingModel.run(queryText, {
-          mean_pool: true,
-          normalize: true,
-        });
-        const embedding = Array.from(rawEmbedding as Iterable<number>);
+        const matchesByKnowledgeId = new Map<string, any>();
 
-        if (embedding.length !== 384) {
-          throw new Error("Expected 384 query-embedding dimensions.");
-        }
-
-        const { data: matches, error: retrievalError } =
-          await authSupabase.rpc("match_innerme_knowledge", {
-            query_embedding: embedding,
-            match_threshold: 0.45,
-            // A wider candidate pool reduces false retrieval gaps for relevant
-            // verified records that rank just below the first six matches.
-            match_count: 10,
+        for (const queryText of retrievalQueryTexts) {
+          const rawEmbedding = await embeddingModel.run(queryText, {
+            mean_pool: true,
+            normalize: true,
           });
+          const embedding = Array.from(rawEmbedding as Iterable<number>);
 
-        if (retrievalError) {
-          throw new Error(retrievalError.message || "Knowledge retrieval failed.");
+          if (embedding.length !== 384) {
+            throw new Error("Expected 384 query-embedding dimensions.");
+          }
+
+          const { data: matches, error: retrievalError } =
+            await authSupabase.rpc("match_innerme_knowledge", {
+              query_embedding: embedding,
+              match_threshold: 0.45,
+              // Retrieve a candidate set for each distinct query and merge by best similarity.
+              match_count: 10,
+            });
+
+          if (retrievalError) {
+            throw new Error(retrievalError.message || "Knowledge retrieval failed.");
+          }
+
+          (Array.isArray(matches) ? matches : []).forEach(function(match: any) {
+            const id = String(match?.id || "").trim();
+            if (!id) return;
+            const previous = matchesByKnowledgeId.get(id);
+            if (
+              !previous ||
+              Number(match?.similarity || 0) > Number(previous?.similarity || 0)
+            ) {
+              matchesByKnowledgeId.set(id, match);
+            }
+          });
         }
 
-        const retrievalMatches = Array.isArray(matches) ? matches.slice(0, 10) : [];
+        const retrievalMatches = Array.from(matchesByKnowledgeId.values())
+          .sort(function(a: any, b: any) {
+            return Number(b?.similarity || 0) - Number(a?.similarity || 0);
+          })
+          .slice(0, 12);
         const expectedIds = Array.isArray(item.expected_knowledge_ids)
           ? item.expected_knowledge_ids.map((id: any) => String(id || "").trim()).filter(Boolean)
           : [];
@@ -6385,7 +6424,7 @@ Deno.serve(async (req) => {
       1200,
     );
     const directQuestionQuery = cleanForModel(message, 1200);
-    const retrievalQueries = Array.from(
+    const baseRetrievalQueries = Array.from(
       new Set(
         [
           directQuestionQuery,
@@ -6393,6 +6432,13 @@ Deno.serve(async (req) => {
             ? contextualRetrievalQuery
             : "",
         ].filter(Boolean),
+      ),
+    );
+    const retrievalQueries = Array.from(
+      new Set(
+        baseRetrievalQueries.flatMap((query) =>
+          buildKnowledgeRetrievalQueries(query),
+        ),
       ),
     );
 
@@ -6427,7 +6473,7 @@ Deno.serve(async (req) => {
             {
               query_embedding: knowledgeEmbedding,
               match_threshold: 0.55,
-              match_count: 8,
+              match_count: 10,
             },
           );
 
@@ -6456,7 +6502,7 @@ Deno.serve(async (req) => {
         .sort(function(a: any, b: any) {
           return Number(b?.similarity || 0) - Number(a?.similarity || 0);
         })
-        .slice(0, 8);
+        .slice(0, 10);
     }
   } catch (error) {
     innermeKnowledgeRetrievalError =
