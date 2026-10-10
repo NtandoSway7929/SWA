@@ -2258,7 +2258,7 @@
 
             if(!latest){
                 evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">No benchmark run has been completed yet.</p>';
-                evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Run the benchmark to establish the first InnerMe baseline.</p>';
+                evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Run the paired benchmark to compare both models on the same fixed cases.</p>';
                 return;
             }
 
@@ -2295,8 +2295,8 @@
                 '</div>' +
                 (primaryMetrics && fallbackMetrics ?
                     '<div class="sway-ai-ki-eval-summary-grid">' +
-                        '<div><span>Primary · judged by fallback</span><strong>'+esc(Number(primaryMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(primaryMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
-                        '<div><span>Fallback · judged by primary</span><strong>'+esc(Number(fallbackMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(fallbackMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
+                        '<div><span>gemini-3.8-flash · judged by gemini-3.5-flash-lite</span><strong>'+esc(Number(primaryMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(primaryMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
+                        '<div><span>gemini-3.5-flash-lite · judged by gemini-3.8-flash</span><strong>'+esc(Number(fallbackMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(fallbackMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
                         '<div><span>Paired protocol</span><strong>Cross-judged</strong></div>' +
                     '</div>' : '') +
                 '<div class="sway-ai-ki-eval-baseline">' +
