@@ -978,8 +978,8 @@
             '<details class="sway-ai-ki-evaluation" data-sway-ai-ki-evaluation-panel>' +
                 '<summary>Evaluation &amp; benchmarking</summary>' +
                 '<div class="sway-ai-ki-evaluation-controls">' +
-                    '<span>Runs fixed InnerMe test cases against verified knowledge. Cases are paced to reduce provider rate limits. Provider errors remain retryable and are excluded from the score.</span>' +
-                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-run>Run benchmark</button>' +
+                    '<span>Runs the same 30 fixed cases against both configured models. Each answer is scored by the opposite model, and a case passes only when both tracks pass. Provider errors remain retryable and are kept separate from answer-quality failures.</span>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-run>Run paired benchmark</button>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-refresh>Refresh results</button>' +
                 '</div>' +
                 '<div class="sway-ai-ki-evaluation-summary"><p class="sway-ai-ki-muted">No benchmark results loaded.</p></div>' +
@@ -2251,6 +2251,10 @@
             const latest=data.latest;
             const results=data.results || [];
             const history=data.history || [];
+            const summaryData=latest && latest.summary && typeof latest.summary==="object" ? latest.summary : {};
+            const modelMetrics=summaryData.model_metrics && typeof summaryData.model_metrics==="object" ? summaryData.model_metrics : null;
+            const primaryMetrics=modelMetrics && modelMetrics.primary_model ? modelMetrics.primary_model : null;
+            const fallbackMetrics=modelMetrics && modelMetrics.fallback_model ? modelMetrics.fallback_model : null;
 
             if(!latest){
                 evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">No benchmark run has been completed yet.</p>';
@@ -2289,6 +2293,12 @@
                     '<div><span>Passed</span><strong>'+esc(scoredPassed)+' / '+esc(latest.total_cases || 0)+'</strong></div>' +
                     '<div><span>Regression status</span><strong class="'+regressionClass+'">'+esc(regressionLabel(regressionStatus))+'</strong></div>' +
                 '</div>' +
+                (primaryMetrics && fallbackMetrics ?
+                    '<div class="sway-ai-ki-eval-summary-grid">' +
+                        '<div><span>Primary · judged by fallback</span><strong>'+esc(Number(primaryMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(primaryMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
+                        '<div><span>Fallback · judged by primary</span><strong>'+esc(Number(fallbackMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(fallbackMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
+                        '<div><span>Paired protocol</span><strong>Cross-judged</strong></div>' +
+                    '</div>' : '') +
                 '<div class="sway-ai-ki-eval-baseline">' +
                     '<span>Scored '+esc(scoredCount)+' / '+esc(latest.total_cases || 0)+' cases. '+
                     (hasExecutionErrors
@@ -2336,6 +2346,8 @@
                 '</div>' +
                 results.map(function(result){
                     const dims=result.dimension_scores || {};
+                    const primaryModel=dims.primary_model && typeof dims.primary_model==="object" ? dims.primary_model : null;
+                    const fallbackModel=dims.fallback_model && typeof dims.fallback_model==="object" ? dims.fallback_model : null;
                     const recall=Number(dims.retrieval_recall || 0);
                     const flags=Array.isArray(result.failure_flags) ? result.failure_flags : [];
                     const executionError=flags.includes("execution_error");
@@ -2356,9 +2368,21 @@
                                 '<span>Safety '+esc(dims.safety || 0)+'</span>' +
                                 '<span>Completeness '+esc(dims.completeness || 0)+'</span>' +
                             '</div>') +
+                        (primaryModel && fallbackModel && !executionError ?
+                            '<div class="sway-ai-ki-eval-dims">' +
+                                '<span>Primary '+esc(Number(primaryModel.score || 0).toFixed(0))+'/100 · '+esc(primaryModel.passed===true ? "PASS" : "FAIL")+'</span>' +
+                                '<span>Fallback '+esc(Number(fallbackModel.score || 0).toFixed(0))+'/100 · '+esc(fallbackModel.passed===true ? "PASS" : "FAIL")+'</span>' +
+                                '<span>Score gap '+esc(Number(dims.model_score_gap || 0).toFixed(0))+'</span>' +
+                            '</div>' : '') +
                         (flags.length ? '<div class="sway-ai-ki-eval-flags">'+flags.map(function(flag){return '<span>'+esc(String(flag).replace(/_/g," "))+'</span>';}).join("")+'</div>' : "") +
                         '<details><summary>View answer &amp; judge rationale</summary>' +
-                            '<div class="sway-ai-ki-eval-answer"><strong>InnerMe answer</strong><p>'+esc(result.answer || "No answer recorded.")+'</p><strong>Judge rationale</strong><p>'+esc(result.judge_rationale || "No rationale recorded.")+'</p></div>' +
+                            '<div class="sway-ai-ki-eval-answer">' +
+                                '<strong>Primary answer (judged by fallback)</strong><p>'+esc(result.answer || (primaryModel && primaryModel.answer) || "No primary answer recorded.")+'</p>' +
+                                (fallbackModel ? '<strong>Fallback answer (judged by primary)</strong><p>'+esc(fallbackModel.answer || "No fallback answer recorded.")+'</p>' : '') +
+                                '<strong>Primary-answer judge rationale</strong><p>'+esc(primaryModel && primaryModel.rationale || "No primary-answer rationale recorded.")+'</p>' +
+                                (fallbackModel ? '<strong>Fallback-answer judge rationale</strong><p>'+esc(fallbackModel.rationale || "No fallback-answer rationale recorded.")+'</p>' : '') +
+                                '<strong>Combined judge record</strong><p>'+esc(result.judge_rationale || "No rationale recorded.")+'</p>' +
+                            '</div>' +
                         '</details>' +
                     '</article>';
                 }).join("");
@@ -2395,7 +2419,7 @@
                 if(evaluationRun.disabled) return;
 
                 evaluationRun.disabled=true;
-                evaluationRun.textContent="Running…";
+                evaluationRun.textContent="Running paired benchmark…";
                 evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">Running the fixed benchmark cases…</p>';
                 evaluationResults.innerHTML='<p class="sway-ai-ki-muted">InnerMe is being evaluated case by case.</p>';
 
@@ -2489,7 +2513,7 @@
                     evaluationResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message || "Benchmark execution failed.")+'<br>Any saved case results have been kept. Click Run benchmark again to resume the active run.</p>';
                 }finally{
                     evaluationRun.disabled=false;
-                    evaluationRun.textContent="Run benchmark";
+                    evaluationRun.textContent="Run paired benchmark";
                 }
             });
         }
