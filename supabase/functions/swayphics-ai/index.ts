@@ -19,7 +19,7 @@ async function sha256(value: string) {
 
 const PRIMARY_MODEL = "gemini-3.8-flash";
 const FALLBACK_MODEL = "gemini-3.5-flash-lite";
-const INNERME_BENCHMARK_VERSION = 6;
+const INNERME_BENCHMARK_VERSION = 7;
 
 function json(
   data: unknown,
@@ -1491,6 +1491,7 @@ Deno.serve(async (req) => {
    * Evaluation never changes live knowledge or business data.
    */
   if (body.action === "run_innerme_benchmark") {
+    const benchmarkProviderLabel = "paired-cross-judge: " + PRIMARY_MODEL + " | " + FALLBACK_MODEL;
     const limitRaw = Number(body.benchmark_limit);
     const caseLimit = Number.isFinite(limitRaw)
       ? Math.max(1, Math.min(Math.round(limitRaw), 30))
@@ -1549,6 +1550,7 @@ Deno.serve(async (req) => {
           "id,average_score,pass_rate,total_cases,benchmark_version,knowledge_snapshot_hash,status,completed_at",
         )
         .eq("benchmark_version", INNERME_BENCHMARK_VERSION)
+        .eq("provider_model", benchmarkProviderLabel)
         .eq("status", "completed")
         .order("completed_at", { ascending: false })
         .limit(1)
@@ -1582,7 +1584,8 @@ Deno.serve(async (req) => {
       .select("id,started_at,total_cases,status,benchmark_version,baseline_run_id,knowledge_snapshot_hash,created_by,provider_model")
       .eq("created_by", userData.user.id)
       .eq("benchmark_version", INNERME_BENCHMARK_VERSION)
-      .in("status", ["running", "inconclusive"]);
+      .in("status", ["running", "inconclusive"])
+      .eq("provider_model", benchmarkProviderLabel);
 
     if (requestedRunId) {
       runningRunQuery = runningRunQuery.eq("id", requestedRunId);
@@ -1611,6 +1614,7 @@ Deno.serve(async (req) => {
           .insert({
             trigger: "manual",
             created_by: userData.user.id,
+            provider_model: benchmarkProviderLabel,
             total_cases: benchmarkCases.length,
             benchmark_version: INNERME_BENCHMARK_VERSION,
             knowledge_snapshot_hash: knowledgeSnapshotHash,
@@ -1635,7 +1639,7 @@ Deno.serve(async (req) => {
     const { data: savedCaseRows, error: savedCaseRowsError } =
       await authSupabase
         .from("innerme_evaluation_results")
-        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale")
+        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores")
         .eq("run_id", runId);
 
     if (savedCaseRowsError) {
@@ -1649,6 +1653,10 @@ Deno.serve(async (req) => {
       severity: string;
       passed: boolean;
       score: number;
+      primary_score?: number;
+      primary_passed?: boolean;
+      fallback_score?: number;
+      fallback_passed?: boolean;
     }>();
     const failures: Array<{ case_key: string; error: string }> = [];
     let currentCaseExecutionFailed = false;
@@ -1671,13 +1679,41 @@ Deno.serve(async (req) => {
       }
       if (savedCaseIds.has(caseId)) return;
       savedCaseIds.add(caseId);
+      const dimensions = result?.dimension_scores && typeof result.dimension_scores === "object" ? result.dimension_scores : {};
+      const primaryMetrics = dimensions.primary_model && typeof dimensions.primary_model === "object" ? dimensions.primary_model : {};
+      const fallbackMetrics = dimensions.fallback_model && typeof dimensions.fallback_model === "object" ? dimensions.fallback_model : {};
       currentCaseResults.set(caseId, {
         case_key: String(result?.case_key || ""),
         severity: String(result?.severity || "standard"),
         passed: result?.passed === true,
         score: numericScoreForSavedResult(result?.score),
+        primary_score: typeof primaryMetrics.score === "number" ? numericScoreForSavedResult(primaryMetrics.score) : undefined,
+        primary_passed: primaryMetrics.passed === true,
+        fallback_score: typeof fallbackMetrics.score === "number" ? numericScoreForSavedResult(fallbackMetrics.score) : undefined,
+        fallback_passed: fallbackMetrics.passed === true,
       });
     });
+
+    function getPairedModelMetrics() {
+      const rows = Array.from(currentCaseResults.values());
+      const primaryRows = rows.filter(function(row) { return typeof row.primary_score === "number"; });
+      const fallbackRows = rows.filter(function(row) { return typeof row.fallback_score === "number"; });
+      function summarize(rows: any[], scoreKey: string, passedKey: string) {
+        const passed = rows.filter(function(row: any) { return row[passedKey] === true; }).length;
+        const totalScore = rows.reduce(function(total: number, row: any) { return total + Number(row[scoreKey] || 0); }, 0);
+        return {
+          completed_cases: rows.length,
+          passed_cases: passed,
+          failed_cases: rows.length - passed,
+          average_score: rows.length ? Number((totalScore / rows.length).toFixed(2)) : 0,
+          pass_rate: rows.length ? Number(((passed / rows.length) * 100).toFixed(2)) : 0,
+        };
+      }
+      return {
+        primary_model: Object.assign({ model: PRIMARY_MODEL, judged_by: FALLBACK_MODEL }, summarize(primaryRows, "primary_score", "primary_passed")),
+        fallback_model: Object.assign({ model: FALLBACK_MODEL, judged_by: PRIMARY_MODEL }, summarize(fallbackRows, "fallback_score", "fallback_passed")),
+      };
+    }
 
     let passedCases = Array.from(currentCaseResults.values()).filter(function(result) {
       return result.passed;
@@ -1692,10 +1728,6 @@ Deno.serve(async (req) => {
       return Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) : fallback;
     }
 
-    let preferredBenchmarkModel =
-      String(run.provider_model || PRIMARY_MODEL) === FALLBACK_MODEL
-        ? FALLBACK_MODEL
-        : PRIMARY_MODEL;
 
     async function waitForProviderRetry(response: Response, attempt: number) {
       const retryAfterHeader = response.headers.get("retry-after") || "";
@@ -1709,19 +1741,24 @@ Deno.serve(async (req) => {
         if (Number.isFinite(retryAt)) delayMs = Math.max(0, retryAt - Date.now());
       }
 
-      // Each request evaluates one case; bounded backoff keeps it resumable.
       await new Promise(function(resolve) {
         setTimeout(resolve, Math.max(900, Math.min(delayMs, 8000)));
       });
     }
 
+    /*
+     * Version 7 pins every request to its assigned model. On 429/503, retry
+     * that same model rather than silently switching tracks and corrupting the
+     * paired comparison.
+     */
     async function requestModel(
       promptText: string,
       systemText: string,
       maxTokens: number,
+      model: string,
       jsonMode = false,
     ) {
-      async function call(model: string) {
+      async function call() {
         return await fetch(
           "https://generativelanguage.googleapis.com/v1beta/models/" +
             encodeURIComponent(model) +
@@ -1746,40 +1783,24 @@ Deno.serve(async (req) => {
         );
       }
 
-      let model = preferredBenchmarkModel;
-      let response = await call(model);
+      let response = await call();
+      for (let attempt = 0; attempt < 2 && (response.status === 429 || response.status === 503); attempt += 1) {
+        await waitForProviderRetry(response, attempt);
+        response = await call();
+      }
 
       if (response.status === 429 || response.status === 503) {
-        await waitForProviderRetry(response, 0);
-
-        const alternateModel = model === PRIMARY_MODEL
-          ? FALLBACK_MODEL
-          : PRIMARY_MODEL;
-        model = alternateModel;
-        preferredBenchmarkModel = alternateModel;
-        response = await call(alternateModel);
-
-        if (response.status === 429 || response.status === 503) {
-          await waitForProviderRetry(response, 1);
-          response = await call(alternateModel);
-        }
-
-        if (response.ok) {
-          preferredBenchmarkModel = model;
-        } else if (response.status === 429 || response.status === 503) {
-          throw new Error(
-            "Provider rate limit persisted after retry (HTTP " +
-            String(response.status) +
-            "). This case remains retryable; wait briefly, then resume the benchmark.",
-          );
-        }
+        throw new Error(
+          "Pinned benchmark model " + model +
+          " remained rate-limited after retries (HTTP " + String(response.status) +
+          "). This case remains retryable; resume the benchmark without switching models.",
+        );
       }
 
       if (!response.ok) {
-        throw new Error("Provider returned HTTP " + String(response.status) + ".");
+        throw new Error("Pinned benchmark model " + model + " returned HTTP " + String(response.status) + ".");
       }
 
-      preferredBenchmarkModel = model;
       const result = await response.json();
       const textValue =
         result?.candidates?.[0]?.content?.parts
@@ -1789,7 +1810,7 @@ Deno.serve(async (req) => {
         "";
 
       if (!textValue.trim()) {
-        throw new Error("Provider returned an empty response.");
+        throw new Error("Pinned benchmark model " + model + " returned an empty response.");
       }
 
       return { text: textValue.trim(), model };
@@ -1991,53 +2012,102 @@ Deno.serve(async (req) => {
           JSON.stringify(evidence),
         ].join("\n\n");
 
-        const answerResult = await requestModel(answerPrompt, answerSystem, 700);
-        const answer = cleanForModel(answerResult.text, 5000);
 
-        // Space the answer and independent judging requests to reduce 429s.
-        await new Promise(function(resolve) {
-          setTimeout(resolve, 2200);
-        });
-
-        const judgePrompt = [
-          "BENCHMARK CASE:",
-          JSON.stringify({
-            title: item.title,
-            prompt: item.prompt,
-            expected_behavior: item.expected_behavior,
-            required_signals: item.required_signals,
-            forbidden_signals: item.forbidden_signals,
-            rubric: item.rubric,
-            severity: item.severity,
-          }),
-          "RETRIEVAL RECALL:",
-          String(retrievalRecall),
-          "RETRIEVED EVIDENCE:",
-          JSON.stringify(evidence),
-          "INNERME ANSWER:",
-          answer,
-        ].join("\n\n");
-
-        const judgeResult = await requestModel(judgePrompt, judgeSystem, 700, true);
-        const parsedJudge = parseJudgeResponse(judgeResult.text);
-
-        const correctness = numericScore(parsedJudge?.correctness);
-        const grounding = numericScore(parsedJudge?.grounding);
-        const relevance = numericScore(parsedJudge?.relevance);
-        const safety = numericScore(parsedJudge?.safety);
-        const completeness = numericScore(parsedJudge?.completeness);
-        const score = numericScore(
-          parsedJudge?.score,
-          Math.round(
-            (correctness + grounding + relevance + safety + completeness) / 5,
-          ),
+        const primaryAnswerResult = await requestModel(
+          answerPrompt, answerSystem, 700, PRIMARY_MODEL,
         );
-        // A high-quality answer cannot pass if its required verified evidence
-        // was not retrieved. Treat expected-knowledge recall as a hard gate.
-        const passed =
-          parsedJudge?.passed === true &&
-          score >= 80 &&
+        const primaryAnswer = cleanForModel(primaryAnswerResult.text, 5000);
+
+        await new Promise(function(resolve) { setTimeout(resolve, 1200); });
+
+        const fallbackAnswerResult = await requestModel(
+          answerPrompt, answerSystem, 700, FALLBACK_MODEL,
+        );
+        const fallbackAnswer = cleanForModel(fallbackAnswerResult.text, 5000);
+
+        const buildJudgePrompt = function(answer: string, answerModel: string) {
+          return [
+            "BENCHMARK CASE:",
+            JSON.stringify({
+              title: item.title,
+              prompt: item.prompt,
+              expected_behavior: item.expected_behavior,
+              required_signals: item.required_signals,
+              forbidden_signals: item.forbidden_signals,
+              rubric: item.rubric,
+              severity: item.severity,
+            }),
+            "RETRIEVAL RECALL:",
+            String(retrievalRecall),
+            "RETRIEVED EVIDENCE:",
+            JSON.stringify(evidence),
+            "ANSWER MODEL UNDER REVIEW:",
+            answerModel,
+            "INNERME ANSWER:",
+            answer,
+          ].join("\n\n");
+        };
+
+        // Cross-judging: the primary answer is judged by the fallback model.
+        const primaryJudgePrompt = buildJudgePrompt(primaryAnswer, PRIMARY_MODEL);
+        await new Promise(function(resolve) { setTimeout(resolve, 1200); });
+        const primaryJudgeResult = await requestModel(
+          primaryJudgePrompt, judgeSystem, 700, FALLBACK_MODEL, true,
+        );
+        const parsedPrimaryJudge = parseJudgeResponse(primaryJudgeResult.text);
+
+        // The fallback answer is judged by the primary model, so neither answer
+        // is scored solely by the model that generated it.
+        const fallbackJudgePrompt = buildJudgePrompt(fallbackAnswer, FALLBACK_MODEL);
+        await new Promise(function(resolve) { setTimeout(resolve, 1200); });
+        const fallbackJudgeResult = await requestModel(
+          fallbackJudgePrompt, judgeSystem, 700, PRIMARY_MODEL, true,
+        );
+        const parsedFallbackJudge = parseJudgeResponse(fallbackJudgeResult.text);
+
+        const primaryCorrectness = numericScore(parsedPrimaryJudge?.correctness);
+        const primaryGrounding = numericScore(parsedPrimaryJudge?.grounding);
+        const primaryRelevance = numericScore(parsedPrimaryJudge?.relevance);
+        const primarySafety = numericScore(parsedPrimaryJudge?.safety);
+        const primaryCompleteness = numericScore(parsedPrimaryJudge?.completeness);
+        const primaryScore = numericScore(parsedPrimaryJudge?.score);
+        const primaryModelPassed =
+          parsedPrimaryJudge?.passed === true &&
+          primaryScore >= 80 &&
+          primaryCorrectness >= 80 &&
+          primaryGrounding >= 80 &&
+          primaryRelevance >= 80 &&
+          primarySafety >= 80 &&
+          primaryCompleteness >= 80 &&
           retrievalRecall >= 100;
+
+        const fallbackCorrectness = numericScore(parsedFallbackJudge?.correctness);
+        const fallbackGrounding = numericScore(parsedFallbackJudge?.grounding);
+        const fallbackRelevance = numericScore(parsedFallbackJudge?.relevance);
+        const fallbackSafety = numericScore(parsedFallbackJudge?.safety);
+        const fallbackCompleteness = numericScore(parsedFallbackJudge?.completeness);
+        const fallbackScore = numericScore(parsedFallbackJudge?.score);
+        const fallbackModelPassed =
+          parsedFallbackJudge?.passed === true &&
+          fallbackScore >= 80 &&
+          fallbackCorrectness >= 80 &&
+          fallbackGrounding >= 80 &&
+          fallbackRelevance >= 80 &&
+          fallbackSafety >= 80 &&
+          fallbackCompleteness >= 80 &&
+          retrievalRecall >= 100;
+
+        const averagePairScore = function(primary: number, fallback: number) {
+          return numericScore(Number(((primary + fallback) / 2).toFixed(2)));
+        };
+        const correctness = averagePairScore(primaryCorrectness, fallbackCorrectness);
+        const grounding = averagePairScore(primaryGrounding, fallbackGrounding);
+        const relevance = averagePairScore(primaryRelevance, fallbackRelevance);
+        const safety = averagePairScore(primarySafety, fallbackSafety);
+        const completeness = averagePairScore(primaryCompleteness, fallbackCompleteness);
+        const score = averagePairScore(primaryScore, fallbackScore);
+        // The paired case passes only when both models pass under cross-judging.
+        const passed = primaryModelPassed && fallbackModelPassed;
 
         const baselineResult = baselineResults.get(String(item.id || ""));
         const regressedFromPrevious =
@@ -2045,6 +2115,10 @@ Deno.serve(async (req) => {
 
         const failureFlags: string[] = [];
         if (!passed) failureFlags.push("benchmark_fail");
+        if (!primaryModelPassed) failureFlags.push("primary_model_fail");
+        if (!fallbackModelPassed) failureFlags.push("fallback_model_fail");
+        if (primaryModelPassed !== fallbackModelPassed) failureFlags.push("model_disagreement");
+        if (Math.abs(primaryScore - fallbackScore) >= 15) failureFlags.push("model_score_gap");
         if (retrievalRecall < 100) failureFlags.push("retrieval_gap");
         if (correctness < 80) failureFlags.push("correctness_gap");
         if (grounding < 80) failureFlags.push("grounding_gap");
@@ -2066,7 +2140,7 @@ Deno.serve(async (req) => {
               run_id: runId,
               case_id: item.id,
               prompt: item.prompt,
-              answer,
+              answer: primaryAnswer,
               retrieval_matches: retrievalMatches.map(function (match: any) {
                 return {
                   id: match?.id || null,
@@ -2083,6 +2157,35 @@ Deno.serve(async (req) => {
                 relevance,
                 safety,
                 completeness,
+                primary_model: {
+                  model: PRIMARY_MODEL,
+                  judge_model: FALLBACK_MODEL,
+                  answer: primaryAnswer,
+                  score: primaryScore,
+                  passed: primaryModelPassed,
+                  judge_passed: parsedPrimaryJudge?.passed === true,
+                  correctness: primaryCorrectness,
+                  grounding: primaryGrounding,
+                  relevance: primaryRelevance,
+                  safety: primarySafety,
+                  completeness: primaryCompleteness,
+                  rationale: cleanForModel(parsedPrimaryJudge?.rationale || "", 700),
+                },
+                fallback_model: {
+                  model: FALLBACK_MODEL,
+                  judge_model: PRIMARY_MODEL,
+                  answer: fallbackAnswer,
+                  score: fallbackScore,
+                  passed: fallbackModelPassed,
+                  judge_passed: parsedFallbackJudge?.passed === true,
+                  correctness: fallbackCorrectness,
+                  grounding: fallbackGrounding,
+                  relevance: fallbackRelevance,
+                  safety: fallbackSafety,
+                  completeness: fallbackCompleteness,
+                  rationale: cleanForModel(parsedFallbackJudge?.rationale || "", 700),
+                },
+                model_score_gap: Number(Math.abs(primaryScore - fallbackScore).toFixed(2)),
               },
               score,
               passed,
@@ -2090,12 +2193,14 @@ Deno.serve(async (req) => {
               severity: String(item.severity || "standard"),
               failure_flags: failureFlags,
               regressed_from_previous: regressedFromPrevious,
-              judge_rationale:
-                cleanForModel(
-                  parsedJudge?.rationale || "Judge did not return a rationale.",
-                  700,
-                ),
-              provider_model: answerResult.model + " / judge:" + judgeResult.model,
+              judge_rationale: cleanForModel(
+                "Primary answer reviewed by " + FALLBACK_MODEL + ": " +
+                String(parsedPrimaryJudge?.rationale || "No rationale returned.") +
+                " | Fallback answer reviewed by " + PRIMARY_MODEL + ": " +
+                String(parsedFallbackJudge?.rationale || "No rationale returned."),
+                700,
+              ),
+              provider_model: benchmarkProviderLabel,
             }, { onConflict: "run_id,case_id" });
 
         if (resultError) {
@@ -2108,6 +2213,10 @@ Deno.serve(async (req) => {
           severity: String(item.severity || "standard"),
           passed,
           score,
+          primary_score: primaryScore,
+          primary_passed: primaryModelPassed,
+          fallback_score: fallbackScore,
+          fallback_passed: fallbackModelPassed,
         });
 
         scoreTotal += score;
@@ -2240,7 +2349,7 @@ Deno.serve(async (req) => {
     const { data: persistedResultRows, error: persistedResultRowsError } =
       await authSupabase
         .from("innerme_evaluation_results")
-        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale")
+        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores")
         .eq("run_id", runId);
 
     if (persistedResultRowsError) {
@@ -2265,11 +2374,18 @@ Deno.serve(async (req) => {
         });
         return;
       }
+      const dimensions = result?.dimension_scores && typeof result.dimension_scores === "object" ? result.dimension_scores : {};
+      const primaryMetrics = dimensions.primary_model && typeof dimensions.primary_model === "object" ? dimensions.primary_model : {};
+      const fallbackMetrics = dimensions.fallback_model && typeof dimensions.fallback_model === "object" ? dimensions.fallback_model : {};
       currentCaseResults.set(caseId, {
         case_key: String(result?.case_key || ""),
         severity: String(result?.severity || "standard"),
         passed: result?.passed === true,
         score: numericScoreForSavedResult(result?.score),
+        primary_score: typeof primaryMetrics.score === "number" ? numericScoreForSavedResult(primaryMetrics.score) : undefined,
+        primary_passed: primaryMetrics.passed === true,
+        fallback_score: typeof fallbackMetrics.score === "number" ? numericScoreForSavedResult(fallbackMetrics.score) : undefined,
+        fallback_passed: fallbackMetrics.passed === true,
       });
     });
 
@@ -2303,6 +2419,8 @@ Deno.serve(async (req) => {
         failures,
         baseline_run_id: run.baseline_run_id || null,
         benchmark_version: INNERME_BENCHMARK_VERSION,
+        model_protocol: "Primary and fallback answers are cross-judged by the opposite model.",
+        model_metrics: getPairedModelMetrics(),
         regression_status: partialRegressionStatus,
       };
 
@@ -2314,7 +2432,7 @@ Deno.serve(async (req) => {
           failed_cases: partialFailedCases,
           average_score: partialAverageScore,
           pass_rate: partialPassRate,
-          provider_model: preferredBenchmarkModel,
+          provider_model: benchmarkProviderLabel,
           status: partialStatus,
           completed_at: currentCaseExecutionFailed ? new Date().toISOString() : null,
           regression_status: partialRegressionStatus,
@@ -2432,6 +2550,8 @@ Deno.serve(async (req) => {
           ? baselineRun.id
           : null,
       benchmark_version: INNERME_BENCHMARK_VERSION,
+      model_protocol: "Primary and fallback answers are cross-judged by the opposite model.",
+      model_metrics: getPairedModelMetrics(),
       knowledge_snapshot_changed:
         Boolean(baselineRun && baselineRun.knowledge_snapshot_hash !== knowledgeSnapshotHash),
       delta_average_score: deltaAverageScore,
@@ -2444,7 +2564,7 @@ Deno.serve(async (req) => {
     await authSupabase
       .from("innerme_evaluation_runs")
       .update({
-        provider_model: preferredBenchmarkModel,
+        provider_model: benchmarkProviderLabel,
         total_cases: benchmarkCases.length,
         passed_cases: passedCases,
         failed_cases: Math.max(0, benchmarkCases.length - passedCases),
