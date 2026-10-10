@@ -2480,9 +2480,16 @@
                         const total=Number(data.total_cases || 0);
                         const nextCase=String(data.next_case_key || "");
                         if(data.status==="inconclusive"){
+                            const requestedRetrySeconds=Math.max(0,Math.ceil(Number(data.retry_after_seconds)||0));
+                            if(requestedRetrySeconds>120){
+                                providerResumeAttempts=2;
+                                evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">The provider requested a cooldown of '+requestedRetrySeconds+' seconds. Automatic retries are paused because the wait exceeds two minutes.</p>';
+                                evaluationResults.innerHTML='<p class="sway-ai-ki-muted">No answer-quality failure was recorded. Click Run paired benchmark again after the provider cooldown; the same run and unresolved case will be resumed.</p>';
+                                break;
+                            }
                             providerResumeAttempts+=1;
-                            const cooldownMs=providerResumeAttempts===1 ? 10000 : 20000;
-                            evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">A provider rate limit interrupted one case. Saved scores are safe. Automatic retry '+providerResumeAttempts+'/2 after a cooldown.</p>';
+                            const cooldownMs=requestedRetrySeconds>0 ? (requestedRetrySeconds+2)*1000 : (providerResumeAttempts===1 ? 10000 : 20000);
+                            evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">A provider rate limit interrupted one case. Saved scores are safe. Automatic retry '+providerResumeAttempts+'/2 after '+Math.ceil(cooldownMs/1000)+' seconds.</p>';
                             evaluationResults.innerHTML='<p class="sway-ai-ki-muted">Retrying '+(nextCase ? esc(nextCase.replace(/_/g," ")) : "the unresolved case")+' after the provider cooldown. This is an execution error, not a scored answer failure.</p>';
                             await new Promise(function(resolve){window.setTimeout(resolve,cooldownMs);});
                         }else{
