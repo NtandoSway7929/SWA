@@ -1491,7 +1491,7 @@ Deno.serve(async (req) => {
    * Evaluation never changes live knowledge or business data.
    */
   if (body.action === "run_innerme_benchmark") {
-    const benchmarkProviderLabel = "paired-cross-judge: " + PRIMARY_MODEL + " | " + FALLBACK_MODEL;
+    const benchmarkProviderLabel = "paired-dual-judge: " + PRIMARY_MODEL + " + " + FALLBACK_MODEL;
     const limitRaw = Number(body.benchmark_limit);
     const caseLimit = Number.isFinite(limitRaw)
       ? Math.max(1, Math.min(Math.round(limitRaw), 30))
@@ -1710,8 +1710,8 @@ Deno.serve(async (req) => {
         };
       }
       return {
-        primary_model: Object.assign({ model: PRIMARY_MODEL, judged_by: FALLBACK_MODEL }, summarize(primaryRows, "primary_score", "primary_passed")),
-        fallback_model: Object.assign({ model: FALLBACK_MODEL, judged_by: PRIMARY_MODEL }, summarize(fallbackRows, "fallback_score", "fallback_passed")),
+        primary_model: Object.assign({ model: PRIMARY_MODEL, judged_by: PRIMARY_MODEL + " + " + FALLBACK_MODEL }, summarize(primaryRows, "primary_score", "primary_passed")),
+        fallback_model: Object.assign({ model: FALLBACK_MODEL, judged_by: PRIMARY_MODEL + " + " + FALLBACK_MODEL }, summarize(fallbackRows, "fallback_score", "fallback_passed")),
       };
     }
 
@@ -2025,7 +2025,10 @@ Deno.serve(async (req) => {
         );
         const fallbackAnswer = cleanForModel(fallbackAnswerResult.text, 5000);
 
-        const buildJudgePrompt = function(answer: string, answerModel: string) {
+
+        // The judges receive a blind candidate answer and the same rubric/evidence.
+        // They are not told which answer model generated the candidate.
+        const buildJudgePrompt = function(answer: string) {
           return [
             "BENCHMARK CASE:",
             JSON.stringify({
@@ -2041,29 +2044,78 @@ Deno.serve(async (req) => {
             String(retrievalRecall),
             "RETRIEVED EVIDENCE:",
             JSON.stringify(evidence),
-            "ANSWER MODEL UNDER REVIEW:",
-            answerModel,
-            "INNERME ANSWER:",
+            "BLIND CANDIDATE ANSWER:",
             answer,
           ].join("\n\n");
         };
 
-        // Cross-judging: the primary answer is judged by the fallback model.
-        const primaryJudgePrompt = buildJudgePrompt(primaryAnswer, PRIMARY_MODEL);
-        await new Promise(function(resolve) { setTimeout(resolve, 1200); });
-        const primaryJudgeResult = await requestModel(
-          primaryJudgePrompt, judgeSystem, 700, FALLBACK_MODEL, true,
-        );
-        const parsedPrimaryJudge = parseJudgeResponse(primaryJudgeResult.text);
+        const evaluateCandidateWithBothJudges = async function(answer: string) {
+          const prompt = buildJudgePrompt(answer);
+          const primaryJudgeResult = await requestModel(
+            prompt, judgeSystem, 700, PRIMARY_MODEL, true,
+          );
+          const parsedPrimaryRater = parseJudgeResponse(primaryJudgeResult.text);
 
-        // The fallback answer is judged by the primary model, so neither answer
-        // is scored solely by the model that generated it.
-        const fallbackJudgePrompt = buildJudgePrompt(fallbackAnswer, FALLBACK_MODEL);
+          await new Promise(function(resolve) { setTimeout(resolve, 1200); });
+
+          const fallbackJudgeResult = await requestModel(
+            prompt, judgeSystem, 700, FALLBACK_MODEL, true,
+          );
+          const parsedFallbackRater = parseJudgeResponse(fallbackJudgeResult.text);
+
+          const mean = function(key: string) {
+            return numericScore(Number((
+              (Number(parsedPrimaryRater[key]) + Number(parsedFallbackRater[key])) / 2
+            ).toFixed(2)));
+          };
+
+          return {
+            correctness: mean("correctness"),
+            grounding: mean("grounding"),
+            relevance: mean("relevance"),
+            safety: mean("safety"),
+            completeness: mean("completeness"),
+            score: mean("score"),
+            passed: parsedPrimaryRater.passed === true && parsedFallbackRater.passed === true,
+            rationale: cleanForModel(
+              PRIMARY_MODEL + " judge: " + String(parsedPrimaryRater.rationale || "") +
+              " | " + FALLBACK_MODEL + " judge: " + String(parsedFallbackRater.rationale || ""),
+              700,
+            ),
+            judge_scores: {
+              primary: {
+                model: PRIMARY_MODEL,
+                correctness: numericScore(parsedPrimaryRater.correctness),
+                grounding: numericScore(parsedPrimaryRater.grounding),
+                relevance: numericScore(parsedPrimaryRater.relevance),
+                safety: numericScore(parsedPrimaryRater.safety),
+                completeness: numericScore(parsedPrimaryRater.completeness),
+                score: numericScore(parsedPrimaryRater.score),
+                passed: parsedPrimaryRater.passed === true,
+                rationale: cleanForModel(parsedPrimaryRater.rationale || "", 700),
+              },
+              fallback: {
+                model: FALLBACK_MODEL,
+                correctness: numericScore(parsedFallbackRater.correctness),
+                grounding: numericScore(parsedFallbackRater.grounding),
+                relevance: numericScore(parsedFallbackRater.relevance),
+                safety: numericScore(parsedFallbackRater.safety),
+                completeness: numericScore(parsedFallbackRater.completeness),
+                score: numericScore(parsedFallbackRater.score),
+                passed: parsedFallbackRater.passed === true,
+                rationale: cleanForModel(parsedFallbackRater.rationale || "", 700),
+              },
+            },
+          };
+        };
+
+        // Identical two-judge panel scores both answers. This controls for a
+        // judge being stricter or more lenient than the other model.
         await new Promise(function(resolve) { setTimeout(resolve, 1200); });
-        const fallbackJudgeResult = await requestModel(
-          fallbackJudgePrompt, judgeSystem, 700, PRIMARY_MODEL, true,
-        );
-        const parsedFallbackJudge = parseJudgeResponse(fallbackJudgeResult.text);
+        const parsedPrimaryJudge = await evaluateCandidateWithBothJudges(primaryAnswer);
+
+        await new Promise(function(resolve) { setTimeout(resolve, 1200); });
+        const parsedFallbackJudge = await evaluateCandidateWithBothJudges(fallbackAnswer);
 
         const primaryCorrectness = numericScore(parsedPrimaryJudge?.correctness);
         const primaryGrounding = numericScore(parsedPrimaryJudge?.grounding);
@@ -2170,6 +2222,7 @@ Deno.serve(async (req) => {
                   safety: primarySafety,
                   completeness: primaryCompleteness,
                   rationale: cleanForModel(parsedPrimaryJudge?.rationale || "", 700),
+                  judge_scores: parsedPrimaryJudge?.judge_scores || {},
                 },
                 fallback_model: {
                   model: FALLBACK_MODEL,
@@ -2184,6 +2237,7 @@ Deno.serve(async (req) => {
                   safety: fallbackSafety,
                   completeness: fallbackCompleteness,
                   rationale: cleanForModel(parsedFallbackJudge?.rationale || "", 700),
+                  judge_scores: parsedFallbackJudge?.judge_scores || {},
                 },
                 model_score_gap: Number(Math.abs(primaryScore - fallbackScore).toFixed(2)),
               },
@@ -2194,9 +2248,9 @@ Deno.serve(async (req) => {
               failure_flags: failureFlags,
               regressed_from_previous: regressedFromPrevious,
               judge_rationale: cleanForModel(
-                "Primary answer reviewed by " + FALLBACK_MODEL + ": " +
+                "Primary-model answer scored by both judges: " +
                 String(parsedPrimaryJudge?.rationale || "No rationale returned.") +
-                " | Fallback answer reviewed by " + PRIMARY_MODEL + ": " +
+                " | Fallback-model answer scored by both judges: " +
                 String(parsedFallbackJudge?.rationale || "No rationale returned."),
                 700,
               ),
@@ -2419,7 +2473,7 @@ Deno.serve(async (req) => {
         failures,
         baseline_run_id: run.baseline_run_id || null,
         benchmark_version: INNERME_BENCHMARK_VERSION,
-        model_protocol: "Primary and fallback answers are cross-judged by the opposite model.",
+        model_protocol: "Both blind candidate answers are scored by the same primary and fallback judge panel.",
         model_metrics: getPairedModelMetrics(),
         regression_status: partialRegressionStatus,
       };
@@ -2550,7 +2604,7 @@ Deno.serve(async (req) => {
           ? baselineRun.id
           : null,
       benchmark_version: INNERME_BENCHMARK_VERSION,
-      model_protocol: "Primary and fallback answers are cross-judged by the opposite model.",
+      model_protocol: "Both blind candidate answers are scored by the same primary and fallback judge panel.",
       model_metrics: getPairedModelMetrics(),
       knowledge_snapshot_changed:
         Boolean(baselineRun && baselineRun.knowledge_snapshot_hash !== knowledgeSnapshotHash),
