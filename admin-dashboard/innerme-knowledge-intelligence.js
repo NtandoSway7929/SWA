@@ -2401,7 +2401,7 @@
 
                 try{
                     async function sendBenchmarkRequest(runId){
-                        const payload={action:"run_innerme_benchmark",benchmark_limit:12};
+                        const payload={action:"run_innerme_benchmark",benchmark_limit:24};
                         if(runId) payload.benchmark_run_id=runId;
                         const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
                             method:"POST",
