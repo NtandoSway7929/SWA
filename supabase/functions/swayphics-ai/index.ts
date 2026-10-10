@@ -19,7 +19,7 @@ async function sha256(value: string) {
 
 const PRIMARY_MODEL = "gemini-3.8-flash";
 const FALLBACK_MODEL = "gemini-3.5-flash-lite";
-const INNERME_BENCHMARK_VERSION = 5;
+const INNERME_BENCHMARK_VERSION = 6;
 
 function json(
   data: unknown,
@@ -1493,8 +1493,8 @@ Deno.serve(async (req) => {
   if (body.action === "run_innerme_benchmark") {
     const limitRaw = Number(body.benchmark_limit);
     const caseLimit = Number.isFinite(limitRaw)
-      ? Math.max(1, Math.min(Math.round(limitRaw), 24))
-      : 24;
+      ? Math.max(1, Math.min(Math.round(limitRaw), 30))
+      : 30;
 
     const { data: cases, error: casesError } =
       await authSupabase
