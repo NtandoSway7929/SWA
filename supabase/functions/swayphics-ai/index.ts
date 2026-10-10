@@ -1753,7 +1753,7 @@ Deno.serve(async (req) => {
             detail?.["@type"] === "type.googleapis.com/google.rpc.RetryInfo" &&
             typeof detail?.retryDelay === "string"
           ) {
-            const match = detail.retryDelay.trim().match(/^(\\d+(?:\\.\\d+)?)s$/);
+            const match = detail.retryDelay.trim().match(/^(\d+(?:\.\d+)?)s$/);
             if (match) return Math.ceil(Number(match[1]) * 1000);
           }
         }
@@ -2562,7 +2562,7 @@ Deno.serve(async (req) => {
         regression_status: partialRegressionStatus,
         next_case_key: nextPendingCase ? String(nextPendingCase.case_key || "") : "",
         retry_after_seconds: failures.reduce(function(maximum, failure) {
-          const match = String(failure.error || "").match(/RETRY_AFTER_SECONDS=(\\d+)/);
+          const match = String(failure.error || "").match(/RETRY_AFTER_SECONDS=(\d+)/);
           return match ? Math.max(maximum, Number(match[1]) || 0) : maximum;
         }, 0) || null,
         live_knowledge_changed: false,
