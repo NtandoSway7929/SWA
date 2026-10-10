@@ -19,7 +19,7 @@ async function sha256(value: string) {
 
 const PRIMARY_MODEL = "gemini-3.8-flash";
 const FALLBACK_MODEL = "gemini-3.5-flash-lite";
-const INNERME_BENCHMARK_VERSION = 2;
+const INNERME_BENCHMARK_VERSION = 3;
 
 function json(
   data: unknown,
@@ -1899,14 +1899,16 @@ Deno.serve(async (req) => {
           await authSupabase.rpc("match_innerme_knowledge", {
             query_embedding: embedding,
             match_threshold: 0.45,
-            match_count: 6,
+            // A wider candidate pool reduces false retrieval gaps for relevant
+            // verified records that rank just below the first six matches.
+            match_count: 10,
           });
 
         if (retrievalError) {
           throw new Error(retrievalError.message || "Knowledge retrieval failed.");
         }
 
-        const retrievalMatches = Array.isArray(matches) ? matches.slice(0, 6) : [];
+        const retrievalMatches = Array.isArray(matches) ? matches.slice(0, 10) : [];
         const expectedIds = Array.isArray(item.expected_knowledge_ids)
           ? item.expected_knowledge_ids.map((id: any) => String(id || "").trim()).filter(Boolean)
           : [];
@@ -1991,10 +1993,12 @@ Deno.serve(async (req) => {
             (correctness + grounding + relevance + safety + completeness) / 5,
           ),
         );
+        // A high-quality answer cannot pass if its required verified evidence
+        // was not retrieved. Treat expected-knowledge recall as a hard gate.
         const passed =
           parsedJudge?.passed === true &&
           score >= 80 &&
-          retrievalRecall >= (item.severity === "critical" ? 50 : 0);
+          retrievalRecall >= 100;
 
         const baselineResult = baselineResults.get(String(item.id || ""));
         const regressedFromPrevious =
@@ -6361,7 +6365,7 @@ Deno.serve(async (req) => {
       safeContext.focused_record?.record?.title ||
       "";
 
-    const retrievalQuery = cleanForModel(
+    const contextualRetrievalQuery = cleanForModel(
       [
         "CURRENT ADMIN QUESTION:",
         message,
@@ -6380,49 +6384,79 @@ Deno.serve(async (req) => {
         .join("\n"),
       1200,
     );
+    const directQuestionQuery = cleanForModel(message, 1200);
+    const retrievalQueries = Array.from(
+      new Set(
+        [
+          directQuestionQuery,
+          conversationHistory.length || focusedRecordName
+            ? contextualRetrievalQuery
+            : "",
+        ].filter(Boolean),
+      ),
+    );
 
-    if (retrievalQuery) {
+    if (retrievalQueries.length) {
       const knowledgeModel = new Supabase.ai.Session("gte-small");
-      const rawKnowledgeEmbedding = await knowledgeModel.run(
-        retrievalQuery,
-        {
-          mean_pool: true,
-          normalize: true,
-        },
-      );
+      const matchesById = new Map<string, any>();
 
-      const knowledgeEmbedding = Array.from(
-        rawKnowledgeEmbedding as Iterable<number>,
-      );
-
-      if (knowledgeEmbedding.length !== 384) {
-        throw new Error(
-          "Expected 384 knowledge-query embedding dimensions; received " +
-            String(knowledgeEmbedding.length) +
-            ".",
-        );
-      }
-
-      const { data: matches, error: retrievalError } =
-        await authSupabase.rpc(
-          "match_innerme_knowledge",
+      for (const retrievalQuery of retrievalQueries) {
+        const rawKnowledgeEmbedding = await knowledgeModel.run(
+          retrievalQuery,
           {
-            query_embedding: knowledgeEmbedding,
-            match_threshold: 0.55,
-            match_count: 6,
+            mean_pool: true,
+            normalize: true,
           },
         );
 
-      if (retrievalError) {
-        throw new Error(
-          retrievalError.message ||
-            "The verified knowledge retrieval query failed.",
+        const knowledgeEmbedding = Array.from(
+          rawKnowledgeEmbedding as Iterable<number>,
         );
+
+        if (knowledgeEmbedding.length !== 384) {
+          throw new Error(
+            "Expected 384 knowledge-query embedding dimensions; received " +
+              String(knowledgeEmbedding.length) +
+              ".",
+          );
+        }
+
+        const { data: matches, error: retrievalError } =
+          await authSupabase.rpc(
+            "match_innerme_knowledge",
+            {
+              query_embedding: knowledgeEmbedding,
+              match_threshold: 0.55,
+              match_count: 8,
+            },
+          );
+
+        if (retrievalError) {
+          throw new Error(
+            retrievalError.message ||
+              "The verified knowledge retrieval query failed.",
+          );
+        }
+
+        (Array.isArray(matches) ? matches : []).forEach(function(match: any) {
+          const id = String(match?.id || "").trim();
+          if (!id) return;
+
+          const previous = matchesById.get(id);
+          if (
+            !previous ||
+            Number(match?.similarity || 0) > Number(previous?.similarity || 0)
+          ) {
+            matchesById.set(id, match);
+          }
+        });
       }
 
-      innermeKnowledgeMatches = Array.isArray(matches)
-        ? matches.slice(0, 6)
-        : [];
+      innermeKnowledgeMatches = Array.from(matchesById.values())
+        .sort(function(a: any, b: any) {
+          return Number(b?.similarity || 0) - Number(a?.similarity || 0);
+        })
+        .slice(0, 8);
     }
   } catch (error) {
     innermeKnowledgeRetrievalError =
