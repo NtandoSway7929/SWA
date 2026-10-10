@@ -978,7 +978,7 @@
             '<details class="sway-ai-ki-evaluation" data-sway-ai-ki-evaluation-panel>' +
                 '<summary>Evaluation &amp; benchmarking</summary>' +
                 '<div class="sway-ai-ki-evaluation-controls">' +
-                    '<span>Runs the same 30 fixed cases against both configured models. Each answer is scored by the opposite model, and a case passes only when both tracks pass. Provider errors remain retryable and are kept separate from answer-quality failures.</span>' +
+                    '<span>Runs the same 30 fixed cases against both configured models. Both answers are blindly scored by the same two-model judge panel, and a case passes only when both answers pass under both judges. Provider errors remain retryable and are kept separate from answer-quality failures.</span>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-run>Run paired benchmark</button>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-refresh>Refresh results</button>' +
                 '</div>' +
@@ -2295,9 +2295,9 @@
                 '</div>' +
                 (primaryMetrics && fallbackMetrics ?
                     '<div class="sway-ai-ki-eval-summary-grid">' +
-                        '<div><span>gemini-3.8-flash · judged by gemini-3.5-flash-lite</span><strong>'+esc(Number(primaryMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(primaryMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
-                        '<div><span>gemini-3.5-flash-lite · judged by gemini-3.8-flash</span><strong>'+esc(Number(fallbackMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(fallbackMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
-                        '<div><span>Paired protocol</span><strong>Cross-judged</strong></div>' +
+                        '<div><span>gemini-3.8-flash · scored by both judges</span><strong>'+esc(Number(primaryMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(primaryMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
+                        '<div><span>gemini-3.5-flash-lite · scored by both judges</span><strong>'+esc(Number(fallbackMetrics.average_score || 0).toFixed(2)+'/100 · '+Number(fallbackMetrics.pass_rate || 0).toFixed(1)+'%')+'</strong></div>' +
+                        '<div><span>Paired protocol</span><strong>Blind dual-judge</strong></div>' +
                     '</div>' : '') +
                 '<div class="sway-ai-ki-eval-baseline">' +
                     '<span>Scored '+esc(scoredCount)+' / '+esc(latest.total_cases || 0)+' cases. '+
@@ -2377,8 +2377,8 @@
                         (flags.length ? '<div class="sway-ai-ki-eval-flags">'+flags.map(function(flag){return '<span>'+esc(String(flag).replace(/_/g," "))+'</span>';}).join("")+'</div>' : "") +
                         '<details><summary>View answer &amp; judge rationale</summary>' +
                             '<div class="sway-ai-ki-eval-answer">' +
-                                '<strong>Primary answer (judged by fallback)</strong><p>'+esc(result.answer || (primaryModel && primaryModel.answer) || "No primary answer recorded.")+'</p>' +
-                                (fallbackModel ? '<strong>Fallback answer (judged by primary)</strong><p>'+esc(fallbackModel.answer || "No fallback answer recorded.")+'</p>' : '') +
+                                '<strong>Primary answer (blind-scored by both judges)</strong><p>'+esc(result.answer || (primaryModel && primaryModel.answer) || "No primary answer recorded.")+'</p>' +
+                                (fallbackModel ? '<strong>Fallback answer (blind-scored by both judges)</strong><p>'+esc(fallbackModel.answer || "No fallback answer recorded.")+'</p>' : '') +
                                 '<strong>Primary-answer judge rationale</strong><p>'+esc(primaryModel && primaryModel.rationale || "No primary-answer rationale recorded.")+'</p>' +
                                 (fallbackModel ? '<strong>Fallback-answer judge rationale</strong><p>'+esc(fallbackModel.rationale || "No fallback-answer rationale recorded.")+'</p>' : '') +
                                 '<strong>Combined judge record</strong><p>'+esc(result.judge_rationale || "No rationale recorded.")+'</p>' +
