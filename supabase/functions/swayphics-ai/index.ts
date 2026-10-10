@@ -2362,9 +2362,12 @@ Deno.serve(async (req) => {
             await authSupabase
               .from("innerme_evaluation_results")
               .update(failureRecord)
+              // The row ID was fetched for this exact run and case.
+              // Avoid JSONB .contains here: PostgREST serializes that filter
+              // as cs.{execution_error}, which PostgreSQL rejects for jsonb.
+              .eq("id", existingCaseResult.id)
               .eq("run_id", runId)
               .eq("case_id", item.id)
-              .contains("failure_flags", ["execution_error"])
               .select("id");
 
           failureRecordError = updateFailureError;
