@@ -1729,21 +1729,53 @@ Deno.serve(async (req) => {
     }
 
 
-    async function waitForProviderRetry(response: Response, attempt: number) {
+    async function providerRetryDelayMs(response: Response): Promise<number | null> {
       const retryAfterHeader = response.headers.get("retry-after") || "";
-      const retryAfterSeconds = Number(retryAfterHeader);
-      let delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
-        ? retryAfterSeconds * 1000
-        : 1800 * (attempt + 1);
-
-      if (!Number.isFinite(retryAfterSeconds) && retryAfterHeader) {
+      if (retryAfterHeader) {
+        const retryAfterSeconds = Number(retryAfterHeader);
+        if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+          return Math.ceil(retryAfterSeconds * 1000);
+        }
         const retryAt = Date.parse(retryAfterHeader);
-        if (Number.isFinite(retryAt)) delayMs = Math.max(0, retryAt - Date.now());
+        if (Number.isFinite(retryAt)) return Math.max(0, retryAt - Date.now());
       }
+
+      // Gemini often sends its cooldown in google.rpc.RetryInfo rather than
+      // the HTTP Retry-After header. Read a clone so the original response
+      // body remains available for the normal error path.
+      try {
+        const payload = await response.clone().json();
+        const details = Array.isArray(payload?.error?.details)
+          ? payload.error.details
+          : [];
+        for (const detail of details) {
+          if (
+            detail?.["@type"] === "type.googleapis.com/google.rpc.RetryInfo" &&
+            typeof detail?.retryDelay === "string"
+          ) {
+            const match = detail.retryDelay.trim().match(/^(\\d+(?:\\.\\d+)?)s$/);
+            if (match) return Math.ceil(Number(match[1]) * 1000);
+          }
+        }
+      } catch {
+        // Some proxies return non-JSON errors. Use bounded exponential backoff.
+      }
+      return null;
+    }
+
+    async function waitForProviderRetry(response: Response, attempt: number): Promise<number> {
+      const providerDelayMs = await providerRetryDelayMs(response);
+      const delayMs = providerDelayMs ?? 1800 * (attempt + 1);
+
+      // Do not hold an Edge Function invocation open beyond eight seconds for
+      // a provider-requested cooldown. Return the recommended delay so the
+      // client can resume the same run after the provider's window.
+      if (providerDelayMs !== null && providerDelayMs > 8000) return providerDelayMs;
 
       await new Promise(function(resolve) {
         setTimeout(resolve, Math.max(900, Math.min(delayMs, 8000)));
       });
+      return delayMs;
     }
 
     /*
@@ -1785,15 +1817,23 @@ Deno.serve(async (req) => {
 
       let response = await call();
       for (let attempt = 0; attempt < 2 && (response.status === 429 || response.status === 503); attempt += 1) {
-        await waitForProviderRetry(response, attempt);
+        const retryDelayMs = await waitForProviderRetry(response, attempt);
+        if (retryDelayMs > 8000) break;
         response = await call();
       }
 
       if (response.status === 429 || response.status === 503) {
+        const retryDelayMs = await providerRetryDelayMs(response);
+        const retryAfterSeconds = retryDelayMs !== null
+          ? Math.max(1, Math.ceil(retryDelayMs / 1000))
+          : 0;
         throw new Error(
           "Pinned benchmark model " + model +
-          " remained rate-limited after retries (HTTP " + String(response.status) +
-          "). This case remains retryable; resume the benchmark without switching models.",
+          " remained rate-limited after retries (HTTP " + String(response.status) + ")." +
+          (retryAfterSeconds
+            ? " Provider cooldown: retry after about " + String(retryAfterSeconds) +
+              " seconds. RETRY_AFTER_SECONDS=" + String(retryAfterSeconds) + "."
+            : " This case remains retryable; resume the benchmark without switching models."),
         );
       }
 
@@ -2521,6 +2561,10 @@ Deno.serve(async (req) => {
         pass_rate: partialPassRate,
         regression_status: partialRegressionStatus,
         next_case_key: nextPendingCase ? String(nextPendingCase.case_key || "") : "",
+        retry_after_seconds: failures.reduce(function(maximum, failure) {
+          const match = String(failure.error || "").match(/RETRY_AFTER_SECONDS=(\\d+)/);
+          return match ? Math.max(maximum, Number(match[1]) || 0) : maximum;
+        }, 0) || null,
         live_knowledge_changed: false,
         evaluation_only: true,
       }, 200, origin);
