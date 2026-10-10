@@ -2247,6 +2247,14 @@
             return labels[String(status || "")] || "Unknown";
         }
 
+        function renderJudgeBreakdown(scores) {
+            if(!scores || typeof scores!=="object") return "";
+            return Object.keys(scores).map(function(key){
+                const judge=scores[key] && typeof scores[key]==="object" ? scores[key] : {};
+                return '<p><strong>'+esc(judge.model || key)+': '+esc(Number(judge.score || 0).toFixed(0))+'/100 · '+esc(judge.passed===true ? "PASS" : "FAIL")+'</strong> '+esc(judge.rationale || "No rationale recorded.")+'</p>';
+            }).join("");
+        }
+
         function renderEvaluation(data) {
             const latest=data.latest;
             const results=data.results || [];
@@ -2348,6 +2356,8 @@
                     const dims=result.dimension_scores || {};
                     const primaryModel=dims.primary_model && typeof dims.primary_model==="object" ? dims.primary_model : null;
                     const fallbackModel=dims.fallback_model && typeof dims.fallback_model==="object" ? dims.fallback_model : null;
+                    const primaryJudgeScores=primaryModel && primaryModel.judge_scores && typeof primaryModel.judge_scores==="object" ? primaryModel.judge_scores : null;
+                    const fallbackJudgeScores=fallbackModel && fallbackModel.judge_scores && typeof fallbackModel.judge_scores==="object" ? fallbackModel.judge_scores : null;
                     const recall=Number(dims.retrieval_recall || 0);
                     const flags=Array.isArray(result.failure_flags) ? result.failure_flags : [];
                     const executionError=flags.includes("execution_error");
@@ -2379,8 +2389,9 @@
                             '<div class="sway-ai-ki-eval-answer">' +
                                 '<strong>Primary answer (blind-scored by both judges)</strong><p>'+esc(result.answer || (primaryModel && primaryModel.answer) || "No primary answer recorded.")+'</p>' +
                                 (fallbackModel ? '<strong>Fallback answer (blind-scored by both judges)</strong><p>'+esc(fallbackModel.answer || "No fallback answer recorded.")+'</p>' : '') +
-                                '<strong>Primary-answer judge rationale</strong><p>'+esc(primaryModel && primaryModel.rationale || "No primary-answer rationale recorded.")+'</p>' +
-                                (fallbackModel ? '<strong>Fallback-answer judge rationale</strong><p>'+esc(fallbackModel.rationale || "No fallback-answer rationale recorded.")+'</p>' : '') +
+                                '<strong>Primary-answer judge breakdown</strong>' +
+                                (primaryJudgeScores ? renderJudgeBreakdown(primaryJudgeScores) : '<p>'+esc(primaryModel && primaryModel.rationale || "No primary-answer rationale recorded.")+'</p>') +
+                                (fallbackModel ? '<strong>Fallback-answer judge breakdown</strong>' + (fallbackJudgeScores ? renderJudgeBreakdown(fallbackJudgeScores) : '<p>'+esc(fallbackModel.rationale || "No fallback-answer rationale recorded.")+'</p>') : '') +
                                 '<strong>Combined judge record</strong><p>'+esc(result.judge_rationale || "No rationale recorded.")+'</p>' +
                             '</div>' +
                         '</details>' +
