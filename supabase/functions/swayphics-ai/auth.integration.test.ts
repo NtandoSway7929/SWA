@@ -107,6 +107,12 @@ async function invoke(
       return jsonResponse(200, []);
     }
 
+    // The handler preloads workspace records before dispatching the requested
+    // action. Return empty results for those read-only GETs.
+    if (requestUrl.pathname.startsWith("/rest/v1/") && method === "GET") {
+      return jsonResponse(200, []);
+    }
+
     return jsonResponse(500, {
       message: "Unexpected request in non-mutating auth test.",
       path: requestUrl.pathname,
@@ -169,12 +175,23 @@ Deno.test("InnerMe authenticated action guard rejects unsafe requests before sid
       "Missing-proposal message",
     );
 
-    const expected = [
-      { path: "/auth/v1/user", method: "GET" },
-      { path: "/rest/v1/rpc/is_swayphics_admin", method: "POST" },
-      { path: "/rest/v1/innerme_action_proposals", method: "GET" },
-    ];
-    assertEqual(JSON.stringify(result.requests), JSON.stringify(expected), "Read-only request sequence");
+    assertEqual(result.requests[0].path, "/auth/v1/user", "Auth lookup path");
+    assertEqual(result.requests[1].path, "/rest/v1/rpc/is_swayphics_admin", "Admin-gate RPC path");
+    assertEqual(result.requests[1].method, "POST", "Admin-gate RPC method");
+    assert(
+      result.requests.some((request) =>
+        request.path === "/rest/v1/innerme_action_proposals" && request.method === "GET"
+      ),
+      "The handler must read the requested proposal before returning 404.",
+    );
+
+    assert(
+      result.requests.every((request) =>
+        request.method === "GET" ||
+        (request.method === "POST" && request.path === "/rest/v1/rpc/is_swayphics_admin")
+      ),
+      "Only GET reads and the read-only admin RPC are allowed in this path.",
+    );
     assert(
       !result.requests.some((request) =>
         request.path.includes("innerme_action_execution_logs") ||
