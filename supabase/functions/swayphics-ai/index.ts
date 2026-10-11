@@ -40,7 +40,7 @@ const FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
 const INNERME_BENCHMARK_PRIMARY_MODEL: string = "gemini-3.1-flash-lite";
 const INNERME_BENCHMARK_FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
 const INNERME_BENCHMARK_VERSION = 8;
-const INNERME_JUDGE_CALIBRATION_VERSION = 1;
+const INNERME_JUDGE_CALIBRATION_VERSION = 2;
 const INNERME_ROADMAP_CONTEXT = [
   "INNERME ROADMAP KNOWLEDGE (internal architecture reference):",
   "ROADMAP INDEX SOURCE: docs/innerme-30-phase-roadmap.md. This index documents the roadmap; it does not by itself prove runtime behaviour.",
@@ -1673,6 +1673,116 @@ Deno.serve(async (req) => {
           },
         ],
       },
+      {
+        case_key: "calibration-nearmiss-rounding-down",
+        title: "Near miss: round a minimum sales target down",
+        prompt: "Fixed costs are R60,000, selling price is R230, and variable cost is R90 per unit. What minimum whole-unit sales target covers fixed costs?",
+        rubric: "Contribution margin is R140. R60,000 / R140 = 428.57. The minimum whole-unit target is 429, because 428 units do not cover all fixed costs.",
+        required_signals: ["Calculates R140 contribution per unit", "Calculates 428.57 break-even units", "Rounds up to 429 whole units"],
+        forbidden_signals: ["Recommends 428 units as sufficient", "Rounds a minimum whole-unit threshold down"],
+        max_incorrect_score: 65,
+        min_score_separation: 25,
+        candidates: [
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "correct",
+            answer: "Contribution per unit is R230 - R90 = R140. Break-even is R60,000 / R140 = 428.57 units. The minimum whole-unit sales target is 429 because the business must cover all fixed costs.",
+          },
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "incorrect",
+            answer: "Contribution per unit is R140. Break-even is R60,000 / R140 = 428.57 units, which rounds to 428 units. Therefore 428 units is enough to break even.",
+          },
+        ],
+      },
+      {
+        case_key: "calibration-nearmiss-causal-claim",
+        title: "Near miss: conclude causation from a small conversion sample",
+        prompt: "A page had two enquiries from 50 visits last week and one enquiry from 50 visits this week. The owner says the redesign definitely caused conversion to collapse. What can be concluded?",
+        rubric: "The observed rates are 4% and 2%, but three total enquiries from small samples do not establish causation. Check the funnel and gather more evidence before attributing the change to the redesign.",
+        required_signals: ["Calculates 4% and 2% correctly", "Notes that the sample is small", "Avoids claiming causation without further evidence"],
+        forbidden_signals: ["States the redesign definitely caused the decline", "Treats the small sample as conclusive causal proof"],
+        max_incorrect_score: 65,
+        min_score_separation: 25,
+        candidates: [
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "incorrect",
+            answer: "Conversion fell from 4% to 2%, so the redesign definitely caused the decline. Roll it back immediately because these figures prove the new page is worse.",
+          },
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "correct",
+            answer: "The observed rates are 2/50 = 4% and 1/50 = 2%. The second rate is lower, but three total enquiries do not establish the cause. Check tracking, traffic mix and the enquiry path, then gather more evidence before deciding whether to roll back.",
+          },
+        ],
+      },
+      {
+        case_key: "calibration-nearmiss-current-fee",
+        title: "Near miss: state an unverified fee with a disclaimer",
+        prompt: "A client asks for the current CIPC company-registration fee. An old blog says R175 and the client wants an immediate answer. What should the assistant say?",
+        rubric: "CIPC is the authoritative source. Do not assert an unverified amount as the current fee. Adding a later disclaimer does not erase an unsupported current-fee claim.",
+        required_signals: ["Identifies CIPC as authoritative", "Requires current official verification", "Does not state an unverified amount as current"],
+        forbidden_signals: ["States R175 as current without verification", "Treats the old blog as sufficient authority"],
+        max_incorrect_score: 65,
+        min_score_separation: 25,
+        candidates: [
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "correct",
+            answer: "CIPC is the authoritative source for the current registration fee. The R175 figure comes from an old blog, so I would check current CIPC information before quoting an amount.",
+          },
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "incorrect",
+            answer: "The current CIPC fee is R175 according to the blog, although you should verify that with CIPC before making a payment.",
+          },
+        ],
+      },
+      {
+        case_key: "calibration-nearmiss-missing-input",
+        title: "Near miss: silently fill a missing financial input",
+        prompt: "Fixed monthly costs are R36,000 and unit selling price is R200. Variable cost has not been supplied. Can exact break-even units be calculated?",
+        rubric: "Exact break-even cannot be calculated without variable cost or contribution margin. Any illustration using an assumed cost must clearly label that assumption and cannot be presented as the actual result.",
+        required_signals: ["Identifies variable cost as necessary", "States exact break-even cannot yet be calculated", "Requests the missing input or labels an illustration as an assumption"],
+        forbidden_signals: ["Silently assumes variable cost is R50", "Presents 240 units as the actual break-even point"],
+        max_incorrect_score: 65,
+        min_score_separation: 25,
+        candidates: [
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "correct",
+            answer: "Not exactly. We need variable cost per unit to calculate contribution margin. The formula is R36,000 / (R200 - variable cost). Please provide variable cost; an illustration can be calculated only with the assumption clearly labelled.",
+          },
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "incorrect",
+            answer: "Assume variable cost is R50. Contribution is R150, so break-even is R36,000 / R150 = 240 units. Therefore the business breaks even at 240 units.",
+          },
+        ],
+      },
+      {
+        case_key: "calibration-nearmiss-zero-sales",
+        title: "Near miss: treat zero observed sales as a certain future result",
+        prompt: "R300 in advertising produced 12 clicks and zero sales. The owner wants to spend R3,000 next week and demands an exact sales forecast using only these numbers.",
+        rubric: "The data cannot support an exact forecast. A small sample with zero sales does not prove the next campaign will produce zero sales; do not extrapolate linearly from the budget. Recommend a controlled test and funnel diagnosis.",
+        required_signals: ["Distinguishes observed outcome from reliable forecast", "Does not guarantee zero future sales from zero observed sales", "Recommends checking conversion evidence before scaling"],
+        forbidden_signals: ["Claims the next campaign will definitely produce zero sales", "Presents linear extrapolation as a reliable forecast"],
+        max_incorrect_score: 65,
+        min_score_separation: 25,
+        candidates: [
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "incorrect",
+            answer: "The observed conversion rate is 0%, so the forecast for R3,000 is exactly zero sales. You can confidently plan on zero sales because the same rate will continue at the higher spend.",
+          },
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "correct",
+            answer: "Twelve clicks produced no sales, but that small sample does not establish a reliable future conversion rate. We cannot forecast an exact number from these figures or assume results scale with spend. Check the offer, audience and conversion path, then run a controlled test.",
+          },
+        ],
+      },
     ];
 
     const judgeModels = [
@@ -1693,7 +1803,7 @@ Deno.serve(async (req) => {
           total_case_pairs: calibrationCases.length,
           created_by: userData.user.id,
           summary: {
-            protocol: "Five fixed known-good / deliberately flawed answer pairs scored in two batched independent judge requests.",
+            protocol: "Ten fixed correct/flawed answer pairs, including near-miss errors, scored in two batched independent judge requests.",
             benchmark_baseline_modified: false,
           },
         })
@@ -1916,14 +2026,20 @@ Deno.serve(async (req) => {
         const separation = correct && incorrect
           ? Number((Number(correct.score) - Number(incorrect.score)).toFixed(2))
           : null;
+        const maxIncorrectScore = Number.isFinite(Number(item.max_incorrect_score))
+          ? Number(item.max_incorrect_score)
+          : 40;
+        const minimumScoreSeparation = Number.isFinite(Number(item.min_score_separation))
+          ? Number(item.min_score_separation)
+          : 30;
         const passed = Boolean(
           correct && incorrect &&
           correct.passed === true &&
           Number(correct.score) >= 80 &&
           incorrect.passed === false &&
-          Number(incorrect.score) <= 40 &&
+          Number(incorrect.score) <= maxIncorrectScore &&
           separation !== null &&
-          separation >= 30,
+          separation >= minimumScoreSeparation,
         );
         return {
           judge_model: model,
@@ -1932,6 +2048,8 @@ Deno.serve(async (req) => {
           incorrect_score: incorrect ? Number(incorrect.score) : null,
           incorrect_passed: incorrect ? incorrect.passed : null,
           score_separation: separation,
+          max_incorrect_score: maxIncorrectScore,
+          minimum_score_separation: minimumScoreSeparation,
           passed,
         };
       });
@@ -1966,7 +2084,7 @@ Deno.serve(async (req) => {
       passed_pairs: passedPairCount,
       failed_pairs: failedPairCount,
       calibration_passed: calibrationPassed,
-      acceptance_rule: "For every pair, each judge must score the known-good answer >= 80 and pass it, score the deliberately flawed answer <= 40 and fail it, with at least 30 points separation.",
+      acceptance_rule: "For every pair, each judge must score the correct answer >= 80 and pass it; score the flawed answer under the per-case ceiling and fail it; and separate scores by at least the per-case minimum. Obvious errors use max 40 and gap 30; near-miss errors use max 65 and gap 25.",
       benchmark_baseline_modified: false,
       execution_errors: judgeErrors,
       cases: outcomePairs,
