@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   formatInnerMeKnowledgeEvidence,
   INNERME_EVIDENCE_TRACEABILITY_RULES,
-} from "../_shared/innerme-evidence-traceability.mjs";
+} from "../swayphics-ai/innerme-evidence-traceability.mjs";
 
 function cleanForModel(value, max = 3000) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
