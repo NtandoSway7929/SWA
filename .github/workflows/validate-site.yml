@@ -19,6 +19,12 @@ jobs:
           set -e
           node --check admin-dashboard/admin-workspace.js
 
+      - name: Test InnerMe evidence traceability
+        run: |
+          set -e
+          node --check supabase/functions/_shared/innerme-evidence-traceability.mjs
+          node --test supabase/functions/tests/innerme-evidence-traceability.test.mjs
+
       - name: Validate inline JavaScript
         shell: bash
         run: |
