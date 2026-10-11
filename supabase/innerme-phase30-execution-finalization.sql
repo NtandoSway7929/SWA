@@ -25,7 +25,7 @@ BEGIN
         RAISE EXCEPTION 'Swayphics admin access required.';
     END IF;
 
-    IF p_outcome NOT IN ('succeeded', 'failed', 'uncertain') THEN
+    IF p_outcome IS NULL OR p_outcome NOT IN ('succeeded', 'failed', 'uncertain') THEN
         RAISE EXCEPTION 'Execution outcome must be succeeded, failed, or uncertain.';
     END IF;
 
@@ -244,7 +244,7 @@ BEGIN
         RAISE EXCEPTION 'Swayphics admin access required.';
     END IF;
 
-    IF p_resolution NOT IN ('succeeded', 'failed') THEN
+    IF p_resolution IS NULL OR p_resolution NOT IN ('succeeded', 'failed') THEN
         RAISE EXCEPTION 'Recovery resolution must be succeeded or failed.';
     END IF;
 
@@ -272,8 +272,14 @@ BEGIN
 
     IF v_proposal.status <> 'executing'
        OR v_log.status <> 'started'
-       OR coalesce(v_log.response_payload->>'phase', '') <> 'uncertain' THEN
-        RAISE EXCEPTION 'Only an execution marked uncertain can be resolved through the recovery workflow.';
+       OR coalesce(v_log.response_payload->>'phase', '') NOT IN ('uncertain', 'executor_result_observed') THEN
+        RAISE EXCEPTION 'Only an uncertain or result-checkpointed execution can be resolved through the recovery workflow.';
+    END IF;
+
+    IF coalesce(v_log.response_payload->>'phase', '') = 'executor_result_observed'
+       AND p_resolution = 'succeeded'
+       AND v_log.response_payload->'result' IS DISTINCT FROM coalesce(p_result_payload, '{}'::jsonb) THEN
+        RAISE EXCEPTION 'The recovery result does not match the executor result checkpoint.';
     END IF;
 
     UPDATE public.innerme_action_execution_logs
