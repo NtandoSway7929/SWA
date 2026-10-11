@@ -1714,7 +1714,7 @@ Deno.serve(async (req) => {
     const { data: savedCaseRows, error: savedCaseRowsError } =
       await authSupabase
         .from("innerme_evaluation_results")
-        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores")
+        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores,created_at,execution_error_at")
         .eq("run_id", runId);
 
     if (savedCaseRowsError) {
@@ -1733,7 +1733,7 @@ Deno.serve(async (req) => {
       fallback_score?: number;
       fallback_passed?: boolean;
     }>();
-    const failures: Array<{ case_key: string; error: string }> = [];
+    const failures: Array<{ case_key: string; error: string; created_at?: string | null; error_at?: string | null }> = [];
     let currentCaseExecutionFailed = false;
 
     function numericScoreForSavedResult(value: unknown) {
@@ -1749,6 +1749,8 @@ Deno.serve(async (req) => {
         failures.push({
           case_key: String(result?.case_key || ""),
           error: String(result?.judge_rationale || "Case execution failed."),
+          created_at: typeof result?.created_at === "string" ? result.created_at : null,
+          error_at: typeof result?.execution_error_at === "string" ? result.execution_error_at : null,
         });
         return;
       }
@@ -1770,46 +1772,51 @@ Deno.serve(async (req) => {
     });
 
     /*
-     * Respect a provider cooldown already recorded for an unresolved case.
-     * Gemini may return a daily-quota retry window (for example, ~20 hours).
-     * Use the run's last execution time as the cooldown anchor so repeated
-     * dashboard clicks cannot hammer the same pinned model before it is ready.
+     * Respect a provider cooldown recorded for an unresolved case.
+     * Anchor each retry window to that execution-error result's created_at,
+     * not the benchmark run's completed_at. The run can finish much later
+     * than the provider error was recorded, and using completed_at extends
+     * the provider's requested cooldown by that extra time.
      */
-    const savedRetryAfterSeconds = failures.reduce(function(maximum, failure) {
+    const activeProviderCooldown = failures.reduce(function(latest, failure) {
       const match = String(failure.error || "").match(/RETRY_AFTER_SECONDS=(\d+)/);
-      return match ? Math.max(maximum, Number(match[1]) || 0) : maximum;
-    }, 0);
-    const lastAttemptMs = Date.parse(String(run.completed_at || ""));
-    if (savedRetryAfterSeconds > 0 && Number.isFinite(lastAttemptMs)) {
-      const cooldownUntilMs = lastAttemptMs + savedRetryAfterSeconds * 1000;
-      const remainingSeconds = Math.ceil((cooldownUntilMs - Date.now()) / 1000);
-      if (remainingSeconds > 0) {
-        const nextUnresolvedCase = benchmarkCases.find(function(item: any) {
-          return !savedCaseIds.has(String(item?.id || ""));
-        });
-        return json({
-          ok: true,
-          run_id: runId,
-          status: "inconclusive",
-          total_cases: benchmarkCases.length,
-          completed_cases: currentCaseResults.size,
-          scored_cases: currentCaseResults.size,
-          execution_error_cases: failures.length,
-          passed_cases: Array.from(currentCaseResults.values()).filter(function(result) { return result.passed; }).length,
-          failed_cases: Array.from(currentCaseResults.values()).filter(function(result) { return !result.passed; }).length,
-          average_score: currentCaseResults.size
-            ? Number((Array.from(currentCaseResults.values()).reduce(function(total, result) { return total + result.score; }, 0) / currentCaseResults.size).toFixed(2))
-            : 0,
-          pass_rate: currentCaseResults.size
-            ? Number(((Array.from(currentCaseResults.values()).filter(function(result) { return result.passed; }).length / currentCaseResults.size) * 100).toFixed(2))
-            : 0,
-          regression_status: "inconclusive",
-          next_case_key: nextUnresolvedCase ? String(nextUnresolvedCase.case_key || "") : "",
-          retry_after_seconds: remainingSeconds,
-          live_knowledge_changed: false,
-          evaluation_only: true,
-        }, 200, origin);
-      }
+      const failureRecordedAtMs = Date.parse(String(failure.error_at || failure.created_at || ""));
+      if (!match || !Number.isFinite(failureRecordedAtMs)) return latest;
+
+      const cooldownUntilMs = failureRecordedAtMs + (Number(match[1]) || 0) * 1000;
+      return cooldownUntilMs > latest.cooldownUntilMs
+        ? { cooldownUntilMs, case_key: failure.case_key }
+        : latest;
+    }, { cooldownUntilMs: 0, case_key: "" });
+    const remainingSeconds = Math.ceil(
+      (activeProviderCooldown.cooldownUntilMs - Date.now()) / 1000,
+    );
+    if (activeProviderCooldown.case_key && remainingSeconds > 0) {
+      const nextUnresolvedCase = benchmarkCases.find(function(item: any) {
+        return !savedCaseIds.has(String(item?.id || ""));
+      });
+      return json({
+        ok: true,
+        run_id: runId,
+        status: "inconclusive",
+        total_cases: benchmarkCases.length,
+        completed_cases: currentCaseResults.size,
+        scored_cases: currentCaseResults.size,
+        execution_error_cases: failures.length,
+        passed_cases: Array.from(currentCaseResults.values()).filter(function(result) { return result.passed; }).length,
+        failed_cases: Array.from(currentCaseResults.values()).filter(function(result) { return !result.passed; }).length,
+        average_score: currentCaseResults.size
+          ? Number((Array.from(currentCaseResults.values()).reduce(function(total, result) { return total + result.score; }, 0) / currentCaseResults.size).toFixed(2))
+          : 0,
+        pass_rate: currentCaseResults.size
+          ? Number(((Array.from(currentCaseResults.values()).filter(function(result) { return result.passed; }).length / currentCaseResults.size) * 100).toFixed(2))
+          : 0,
+        regression_status: "inconclusive",
+        next_case_key: nextUnresolvedCase ? String(nextUnresolvedCase.case_key || "") : "",
+        retry_after_seconds: remainingSeconds,
+        live_knowledge_changed: false,
+        evaluation_only: true,
+      }, 200, origin);
     }
 
     function getPairedModelMetrics() {
@@ -2410,6 +2417,7 @@ Deno.serve(async (req) => {
               case_key: String(item.case_key || ""),
               severity: String(item.severity || "standard"),
               failure_flags: failureFlags,
+              execution_error_at: null,
               regressed_from_previous: regressedFromPrevious,
               judge_rationale: cleanForModel(
                 "Primary-model answer scored by both judges: " +
@@ -2475,6 +2483,7 @@ Deno.serve(async (req) => {
           regressed_from_previous: false,
           judge_rationale: "Execution error: " + errorMessage,
           provider_model: "execution-error",
+          execution_error_at: new Date().toISOString(),
         };
 
         /*
@@ -2570,7 +2579,7 @@ Deno.serve(async (req) => {
     const { data: persistedResultRows, error: persistedResultRowsError } =
       await authSupabase
         .from("innerme_evaluation_results")
-        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores")
+        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores,execution_error_at")
         .eq("run_id", runId);
 
     if (persistedResultRowsError) {
@@ -2592,6 +2601,7 @@ Deno.serve(async (req) => {
         failures.push({
           case_key: String(result?.case_key || ""),
           error: String(result?.judge_rationale || "Case execution failed."),
+          error_at: typeof result?.execution_error_at === "string" ? result.execution_error_at : null,
         });
         return;
       }
