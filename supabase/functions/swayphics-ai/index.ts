@@ -20,6 +20,47 @@ async function sha256(value: string) {
 const PRIMARY_MODEL = "gemini-3.8-flash";
 const FALLBACK_MODEL = "gemini-3.5-flash-lite";
 const INNERME_BENCHMARK_VERSION = 7;
+const INNERME_ROADMAP_CONTEXT = [
+  "INNERME ROADMAP KNOWLEDGE (internal architecture reference):",
+  "- Use this catalog when the admin asks about InnerMe phases, roadmap, architecture, dependencies, progress, or capabilities.",
+  "- Distinguish code artifacts from verified runtime behaviour. A migration or source file proves an artifact exists, not that every production path has passed tests.",
+  "- Never invent scope for phases marked undocumented. Phase number alone does not establish strict dependency or completion order.",
+  "PHASES:",
+  "1 Knowledge Foundation: structured knowledge with source metadata, evidence level, jurisdiction, verification status, review windows and embedding state.",
+  "2 Semantic Knowledge Retrieval: gte-small query embeddings and match_innerme_knowledge vector retrieval; relevant evidence is supplied to internal chat.",
+  "3 Learning Governance: feedback and corrections are reviewed; model-generated candidates do not become authoritative knowledge automatically.",
+  "4 Knowledge Reasoning and Evidence Governance: knowledge-system extensions. Identified subphases include 4C verified knowledge reasoning, 4E knowledge intelligence/evidence attribution, 4F feedback loop and 4G controlled learning candidates. Exact titles for 4A, 4B and 4D are not established by this catalog.",
+  "5 Knowledge Expansion Engine: identify and prioritise knowledge gaps and evidence-backed acquisition targets. 5B adds controlled source acquisition; external material is not silently published into live knowledge.",
+  "6 Evaluation and Benchmarking: fixed cases and persisted case-level results; provider/execution errors must remain distinct from answer-quality failures.",
+  "7 Benchmark Regression Control: versioned benchmark baselines and regression checks; inconclusive provider errors are not passes or answer failures.",
+  "8 Decision Intelligence: create evidence/workspace-grounded decision candidates for administrator review.",
+  "9 Execution Intelligence: convert approved decisions into governed execution plans; planning alone does not execute steps.",
+  "10 Controlled Action Automation: approved plans can create proposals; execution requires explicit approval and applicable policy/audit controls.",
+  "11 Phase title/scope is not verified in the current source mapping. Do not infer or invent it; consult the authoritative roadmap history or phase-specific artifact.",
+  "12 Phase title/scope is not verified in the current source mapping. Do not infer or invent it; consult the authoritative roadmap history or phase-specific artifact.",
+  "13 Closed-Loop Learning: reviewed experiments/outcomes may create governed learning candidates; live knowledge is not changed automatically.",
+  "14 Strategic Intelligence: cross-domain strategic reviews and governed recommendations; candidates require review before promotion.",
+  "15 Phase title/scope is not verified in the current source mapping. Do not infer or invent it; consult the authoritative roadmap history or phase-specific artifact.",
+  "16 Phase title/scope is not verified in the current source mapping. Do not infer or invent it; consult the authoritative roadmap history or phase-specific artifact.",
+  "17 Proactive Escalation: deterministic exception monitoring and notifications; not a blanket grant for autonomous business mutation.",
+  "18 Operational Incident Correlation: group related monitoring exceptions into auditable incidents.",
+  "19 Deterministic Incident Intelligence: reproducible impact, urgency, dependency and priority signals for triage, not guarantees.",
+  "20 Dependency and Leading-Factor Analysis: trace incident relationships; dependency evidence alone does not prove causation.",
+  "21 Causal Validation and Hypothesis Testing: evidence-backed incident hypotheses are evaluated but must not be stated as proven causation without support.",
+  "22 Counterfactual and Intervention Analysis: advisory analysis of possible effects, not observed outcomes.",
+  "23 Intervention Selection and Sequencing: compare options and recommend an evidence-backed order; selection does not execute an intervention.",
+  "24 Controlled Intervention Execution and Verification: only the selected recommendation is prepared; approval and execution are separate events followed by verification.",
+  "25 Outcome Verification and Intervention Learning: verify business outcomes; successful execution is not automatically business success.",
+  "26 Adaptive Strategy and Optimisation: historical measured outcomes influence future intervention ranking within bounded limits; they do not guarantee future results.",
+  "27 Multi-Agent Coordination: governed specialist assignments, team plans and handoffs; coordination does not grant permissions or silently execute actions.",
+  "28 Predictive Business Intelligence: evidence-aware forecasts are uncertain projections, not promises.",
+  "29 Autonomous Governance and Trust Calibration: auditable, evidence-calibrated and administrator-governed trust; trust scores do not grant permissions. Phase 29 also includes private-RPC/governance hardening artifacts.",
+  "30 Pre-Execution Action Safety Gate: an audited policy check before controlled actions are approved/executed; it does not execute actions or grant permissions.",
+  "CROSS-PHASE KNOWLEDGE PATH: sources and verification -> embeddings/retrieval -> evidence in answers -> attribution/feedback -> reviewed learning candidates.",
+  "CROSS-PHASE DECISION PATH: workspace/evidence -> decision candidate -> admin review -> execution plan -> action proposal -> policy/safety check -> explicit approval -> controlled execution -> audit/outcome verification.",
+  "CROSS-PHASE INCIDENT PATH: deterministic monitoring -> escalation/correlation/scoring -> dependency and hypothesis analysis -> counterfactuals -> intervention sequencing -> separately approved execution -> outcome verification -> bounded learning/optimisation.",
+  "Safety boundary: recommendations are not approvals, plans are not execution, predictions are not promises, correlation is not causation, and generated learning is not authoritative until reviewed."
+].join("\n");
 
 function json(
   data: unknown,
@@ -8673,11 +8714,29 @@ Deno.serve(async (req) => {
     );
   }
 
+  const roadmapIntentText = cleanForModel(
+    [
+      message,
+      ...conversationHistory.slice(-4).map(function (item) {
+        return item.content;
+      }),
+    ].join("\n"),
+    3000,
+  );
+  const innermeRoadmapContext =
+    /\b(?:phase(?:s)?\b|roadmap\b|architecture\b|capabilit(?:y|ies)\b|implementation map\b|development stages\b)/i.test(
+      roadmapIntentText,
+    )
+      ? INNERME_ROADMAP_CONTEXT
+      : "";
+
   const systemPrompt = `You are InnerMe, the private internal operations assistant for Swayphics.
 
 Your job is to help an authenticated Swayphics admin understand the current business workspace and turn that understanding into practical business progress.
 
 ${innermeKnowledgeContext}
+
+${innermeRoadmapContext}
 
 OPERATING MANDATE:
 - Think like an internal growth operator for Swayphics, not merely a reporting assistant.
