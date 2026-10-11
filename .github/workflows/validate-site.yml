@@ -22,7 +22,7 @@ jobs:
       - name: Test InnerMe evidence traceability
         run: |
           set -e
-          node --check supabase/functions/_shared/innerme-evidence-traceability.mjs
+          node --check supabase/functions/swayphics-ai/innerme-evidence-traceability.mjs
           node --test supabase/functions/tests/innerme-evidence-traceability.test.mjs
 
       - name: Validate inline JavaScript
