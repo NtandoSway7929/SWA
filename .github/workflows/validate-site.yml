@@ -95,3 +95,19 @@ jobs:
 
           print("Inline JavaScript validation passed.")
           PY
+
+  edge-function-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+          cache: true
+
+      - name: Type-check InnerMe Edge Function
+        run: deno check --no-lock supabase/functions/swayphics-ai/index.ts
