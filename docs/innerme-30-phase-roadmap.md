@@ -8,6 +8,8 @@
 
 - Distinguish implemented code, intended behaviour, verified runtime behaviour, and planned work. A source file or SQL migration is evidence that an implementation artifact exists, not proof that every path works in production.
 - Do not claim a phase is complete merely because a migration or code comment exists. Cite runtime tests, benchmark results, or persisted state when asked whether it works.
+- **Runtime-test evidence rule:** This catalog does not include phase-specific runtime test reports. Unless the current conversation or tool evidence identifies a named test, its result, and the phase it validates, do not label behaviour as runtime-tested. State that runtime verification is not established by available evidence.
+- **Dependency evidence rule:** Phase numbering or conceptual compatibility does not establish dependency or execution order. Only state a dependency when an explicit code path, schema relationship, migration note, or authoritative architecture document supports it. Otherwise label it conceptual or unverified. In particular, do not infer that Phase 27 feeds Phase 28.
 - Do not invent titles or responsibilities for phases whose source mapping is absent below.
 - Preserve explicit safety boundaries: proposals and recommendations are not executed merely because they were generated; approvals, verification, permissions, and audit trails remain meaningful.
 - InnerMe Lite is the public service-guidance assistant and is separate from this private internal InnerMe roadmap.
