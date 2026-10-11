@@ -143,7 +143,7 @@ create or replace function public.generate_innerme_proactive_notifications()
 returns integer
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
     v_count integer := 0;
@@ -358,5 +358,8 @@ begin
     return v_count;
 end;
 $$;
+
+-- This routine is scheduler/internal-only, not a client-facing RPC.
+revoke all privileges on function public.generate_innerme_proactive_notifications() from public, anon, authenticated;
 
 commit;
