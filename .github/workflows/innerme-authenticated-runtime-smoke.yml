@@ -2,6 +2,10 @@ name: InnerMe Authenticated Runtime Smoke Test
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/innerme-authenticated-runtime-smoke.yml"
 
 permissions:
   contents: read
