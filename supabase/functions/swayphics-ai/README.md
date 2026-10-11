@@ -1,27 +1,32 @@
 # swayphics-ai Edge Function
 
-This directory contains the `swayphics-ai` Edge Function source retrieved from the active Swayphics production Supabase deployment, version 90, on 2026-10-11, plus repository-only static type-check corrections made after that retrieval.
-
-**Important:** production has not been redeployed from this repository-only revision. The checked-in `index.ts` therefore is not byte-for-byte identical to the currently active production entry point. The helper module `innerme-evidence-traceability.mjs` matches the helper retrieved from production.
+**Production status (2026-10-11):** Supabase reports `swayphics-ai` version **91** as ACTIVE. The checked-in `index.ts` and `innerme-evidence-traceability.mjs` were fetched back from production after deployment and both matched the source on GitHub `main` exactly.
 
 ## Source provenance
 
-- Entry point: `index.ts`
-- Local module dependency: `innerme-evidence-traceability.mjs`
-- Production function slug: `swayphics-ai`
+- Function: `swayphics-ai`
 - Production project ref: `sqifhribgsqfaxgtobsa`
-- Deployment bundle SHA-256 reported by Supabase for the retrieved production v90 bundle: `852e470ccec1e2b1eb47eac05f268f40124b5b269c6ff097c8a4664965bcc2cd`
+- Current production version: `91`
+- Current bundle SHA-256 reported by Supabase: `384a6a5a1fbf9c6efae99e9cfc8ca286a2e1c0b4291f591763ca7b07d292f43a`
+- Previous production version: `90`
+- Previous bundle SHA-256: `852e470ccec1e2b1eb47eac05f268f40124b5b269c6ff097c8a4664965bcc2cd`
+- Known-good v90 source commit: [`9f3dc55f360a1dda054c36d4770f32ed906b09a1`](https://github.com/NtandoSway7929/SWA/commit/9f3dc55f360a1dda054c36d4770f32ed906b09a1)
 
-The bundle hash identifies the retrieved deployment bundle before the repository-only type-check corrections. It is not asserted to be a hash of either source file individually.
+## Validation record
 
-## Validation
+- Deno type-check: passed before v91 deployment.
+- Isolated test project function v1: ACTIVE.
+- Test and production GET health checks: passed before v91 deployment.
+- Unauthenticated controlled-action requests against test and production v90 were rejected with HTTP 401 and `Authentication is required.`.
+- Phase 30 database suite: 24/24 synthetic scenarios passed.
+- Post-v91 GitHub Actions validation is required to confirm Deno type-check, both health checks, and both authentication-boundary checks against the current deployments.
 
-The repository workflow `.github/workflows/validate-innerme-function.yml` runs `deno check --no-lock` on the entry point. A successful static type check does not establish live runtime behaviour or prove that deployment is safe.
+## Runtime and gateway notes
 
-## Deployment cautions
+The production gateway remains configured with `verify_jwt=false`; the function performs its own bearer-token validation and Swayphics-admin authorization checks. Preserve this setting unless the authentication design is intentionally changed and tested.
 
-- This source change and its static corrections have not been deployed to production.
-- Review the full diff and run a controlled runtime smoke test before deploying.
-- The deployed gateway currently uses `verify_jwt=false`; the handler validates the bearer token and Swayphics-admin authorization internally. Preserve this configuration unless the authentication architecture is deliberately changed and tested.
-- Keep credentials in Supabase Edge Function secrets, never in source files or commits.
-- Do not introduce automatic production deployment until environment protection and human approval gates have been reviewed.
+A health GET and a rejected unauthenticated POST do not prove a valid authenticated request can complete the full action workflow. No real task or email was used in these tests. Keep credentials in Supabase Edge Function secrets, not in source files or commits.
+
+## Recovery reference
+
+The known-good v90 source files are preserved in the linked GitHub commit above. A function rollback is separate from the Phase 30 database migrations; do not reverse database migrations as part of an Edge Function-only recovery.
