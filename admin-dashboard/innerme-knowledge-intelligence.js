@@ -2425,7 +2425,7 @@
             const cases=Array.isArray(summary.cases) ? summary.cases : [];
             const complete=run.status==="completed";
             const passed=run.calibration_passed===true;
-            const statusText=!complete ? "Inconclusive: one or both judge responses could not be evaluated." : (passed ? "Calibration passed: both judges separated all five correct answers from their flawed counterparts." : "Calibration completed, but one or more judge checks did not meet the acceptance criteria.");
+            const statusText=!complete ? "Inconclusive: one or both judge responses could not be evaluated." : (passed ? "Calibration passed: both judges separated all correct answers from their flawed counterparts." : "Calibration completed, but one or more judge checks did not meet the acceptance criteria.");
             calibrationSummary.innerHTML=
                 '<p><strong>Judge calibration V'+esc(String(run.calibration_version||"1"))+'</strong> · '+esc(String(run.passed_pairs||0))+'/'+esc(String(run.total_case_pairs||0))+' pairs passed · '+esc(String(run.provider_model||""))+'</p>'+
                 '<p class="'+(!complete?'sway-ai-ki-error':(passed?'sway-ai-ki-muted':'sway-ai-ki-error'))+'">'+esc(statusText)+'</p>'+
@@ -2499,7 +2499,7 @@
                 if(calibrationRunButton.disabled) return;
                 calibrationRunButton.disabled=true;
                 calibrationRunButton.textContent="Calibrating judges…";
-                calibrationSummary.innerHTML='<p class="sway-ai-ki-muted">Scoring five fixed correct/flawed answer pairs with two independent judges. This uses two batched model requests and does not alter benchmark scores.</p>';
+                calibrationSummary.innerHTML='<p class="sway-ai-ki-muted">Scoring ten fixed correct/flawed answer pairs, including subtle near-miss errors, with two independent judges. This uses two batched model requests and does not alter benchmark scores.</p>';
                 calibrationResults.innerHTML='<p class="sway-ai-ki-muted">Calibration in progress…</p>';
                 try{
                     const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
