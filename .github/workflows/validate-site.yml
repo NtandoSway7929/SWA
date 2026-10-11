@@ -19,6 +19,12 @@ jobs:
           set -e
           node --check admin-dashboard/admin-workspace.js
 
+      - name: Test InnerMe evidence traceability
+        run: |
+          set -e
+          node --check supabase/functions/swayphics-ai/innerme-evidence-traceability.mjs
+          node --test supabase/functions/tests/innerme-evidence-traceability.test.mjs
+
       - name: Validate inline JavaScript
         shell: bash
         run: |
@@ -89,3 +95,73 @@ jobs:
 
           print("Inline JavaScript validation passed.")
           PY
+
+  edge-function-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+          cache: true
+
+      - name: Compare Deno diagnostics with base branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}"
+          git show "FETCH_HEAD:supabase/functions/swayphics-ai/index.ts" > supabase/functions/swayphics-ai/index.baseline.ts
+
+          if deno check --no-lock supabase/functions/swayphics-ai/index.ts > /tmp/innerme-deno-current.log 2>&1; then
+            current_status=0
+          else
+            current_status=$?
+          fi
+
+          if deno check --no-lock supabase/functions/swayphics-ai/index.baseline.ts > /tmp/innerme-deno-baseline.log 2>&1; then
+            baseline_status=0
+          else
+            baseline_status=$?
+          fi
+
+          rm -f supabase/functions/swayphics-ai/index.baseline.ts
+
+          python3 - <<'PY'
+          import collections
+          import pathlib
+          import re
+          import sys
+
+          ansi = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+          diagnostic = re.compile(r"TS(\d+)\s+\[ERROR\]:\s*(.*)")
+
+          def read_diagnostics(path):
+              output = ansi.sub("", pathlib.Path(path).read_text(encoding="utf-8", errors="replace"))
+              return collections.Counter(
+                  (code, message.strip())
+                  for code, message in diagnostic.findall(output)
+              )
+
+          baseline = read_diagnostics("/tmp/innerme-deno-baseline.log")
+          current = read_diagnostics("/tmp/innerme-deno-current.log")
+          introduced = current - baseline
+
+          print(f"Base-branch TypeScript diagnostics: {sum(baseline.values())}")
+          print(f"PR-branch TypeScript diagnostics: {sum(current.values())}")
+
+          if introduced:
+              print("New TypeScript diagnostics introduced by this branch:")
+              for (code, message), count in introduced.items():
+                  print(f"  {count}x TS{code}: {message}")
+              sys.exit(1)
+
+          print("No additional TypeScript diagnostic codes/messages compared with the base branch.")
+          if baseline:
+              print("Existing base-branch type errors remain. This is a regression comparison, not a claim that the Edge Function is type-clean.")
+          PY
+
+          echo "Current deno check exit code: ${current_status}; base branch exit code: ${baseline_status}"
