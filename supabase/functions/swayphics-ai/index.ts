@@ -3,7 +3,7 @@ import { corsHeaders as supabaseCorsHeaders } from "npm:@supabase/supabase-js@2/
 import {
   formatInnerMeKnowledgeEvidence,
   INNERME_EVIDENCE_TRACEABILITY_RULES,
-} from "../_shared/innerme-evidence-traceability.mjs";
+} from "./innerme-evidence-traceability.mjs";
 
 function corsHeaders(_origin = "") {
   return {
