@@ -35,6 +35,23 @@ jobs:
       - name: Type-check checked-in Edge Function source
         run: deno check --no-lock supabase/functions/swayphics-ai/index.ts
 
+      - name: Non-mutating isolated test health GET
+        env:
+          INNERME_HEALTH_URL: https://ofqofhnlzbouclvvrmzd.supabase.co/functions/v1/swayphics-ai
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --max-time 20 "$INNERME_HEALTH_URL")"
+          printf '%s' "$response" | python3 -c '
+          import json
+          import sys
+
+          payload = json.load(sys.stdin)
+          if payload.get("ok") is not True or payload.get("service") != "swayphics-ai":
+              raise SystemExit(f"Unexpected isolated test health payload: {payload!r}")
+          print("Isolated test health GET passed.")
+          '
+
       - name: Non-mutating production health GET
         env:
           INNERME_HEALTH_URL: https://sqifhribgsqfaxgtobsa.supabase.co/functions/v1/swayphics-ai
