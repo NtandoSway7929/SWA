@@ -2515,6 +2515,18 @@
                             String(data.regression_status || "not assessed") + "."
                         );
                     }else if(data.status==="inconclusive"){
+                        const retryAfterSeconds=Math.max(0,Math.ceil(Number(data.retry_after_seconds)||0));
+                        let retryGuidance="Click Run paired benchmark again to retry unresolved cases.";
+                        if(retryAfterSeconds>120){
+                            const retryAfterAt=new Date(Date.now()+(retryAfterSeconds*1000));
+                            const totalMinutes=Math.ceil(retryAfterSeconds/60);
+                            const waitLabel=totalMinutes>=60
+                                ? Math.floor(totalMinutes/60)+"h "+(totalMinutes%60)+"m"
+                                : totalMinutes+" minute"+(totalMinutes===1?"":"s");
+                            retryGuidance="The provider has requested a cooldown of about "+waitLabel+". Retry after "+retryAfterAt.toLocaleString()+". The same run and its saved scores are preserved; unresolved cases will resume. Do not click Run paired benchmark again before then.";
+                            evaluationSummary.innerHTML='<p class="sway-ai-ki-muted">Provider cooldown: about '+esc(waitLabel)+'. Retry after '+esc(retryAfterAt.toLocaleString())+'. Saved scores are preserved.</p>';
+                            evaluationResults.innerHTML='<p class="sway-ai-ki-muted">No answer-quality failure was recorded for the unresolved provider error. The existing V7 run is saved. Retry after the displayed time to continue the remaining cases.</p>';
+                        }
                         window.alert(
                             "Benchmark paused as inconclusive. " +
                             String(data.scored_cases || data.completed_cases || 0) +
@@ -2522,7 +2534,8 @@
                             String(data.total_cases || 0) +
                             " cases were scored; " +
                             String(data.execution_error_cases || 0) +
-                            " could not be evaluated because of provider errors. They were not counted as test failures. Click Run benchmark again to retry unresolved cases."
+                            " could not be evaluated because of provider errors. They were not counted as test failures.\n\n" +
+                            retryGuidance
                         );
                     }else{
                         throw new Error("Benchmark ended with status: "+String(data.status || "unknown")+".");
