@@ -978,12 +978,15 @@
             '<details class="sway-ai-ki-evaluation" data-sway-ai-ki-evaluation-panel>' +
                 '<summary>Evaluation &amp; benchmarking</summary>' +
                 '<div class="sway-ai-ki-evaluation-controls">' +
-                    '<span>Runs the same 30 fixed cases against both configured models. Both answers are blindly scored by the same two-model judge panel, and a case passes only when both answers pass under both judges. Provider errors remain retryable and are kept separate from answer-quality failures.</span>' +
+                    '<span>The paired benchmark measures answer quality on 30 fixed cases. Judge calibration separately checks whether both judges reward deliberately correct answers and reject deliberately flawed ones. Calibration is isolated from benchmark scores and uses two batched model requests.</span>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-run>Run paired benchmark</button>' +
+                    '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-calibrate>Calibrate judges</button>' +
                     '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-eval-refresh>Refresh results</button>' +
                 '</div>' +
                 '<div class="sway-ai-ki-evaluation-summary"><p class="sway-ai-ki-muted">No benchmark results loaded.</p></div>' +
                 '<div class="sway-ai-ki-evaluation-results"><p class="sway-ai-ki-muted">Open this section to load benchmark results.</p></div>' +
+                '<div class="sway-ai-ki-calibration-summary"><p class="sway-ai-ki-muted">Judge calibration has not been run yet.</p></div>' +
+                '<div class="sway-ai-ki-calibration-results"><p class="sway-ai-ki-muted">Calibration runs are stored separately from the benchmark baseline.</p></div>' +
             '</details>' +
             '<details class="sway-ai-ki-acquisition" data-sway-ai-ki-acquisition-panel>' +
                 '<summary>Acquisition tasks</summary>' +
@@ -2189,6 +2192,9 @@
         const evaluationResults = details.querySelector(".sway-ai-ki-evaluation-results");
         const evaluationRun = details.querySelector("[data-sway-ai-ki-eval-run]");
         const evaluationRefresh = details.querySelector("[data-sway-ai-ki-eval-refresh]");
+        const calibrationRunButton = details.querySelector("[data-sway-ai-ki-eval-calibrate]");
+        const calibrationSummary = details.querySelector(".sway-ai-ki-calibration-summary");
+        const calibrationResults = details.querySelector(".sway-ai-ki-calibration-results");
 
         async function loadEvaluationResults() {
             const runsResponse = await fetch(
@@ -2409,9 +2415,71 @@
             }
         }
 
+        function renderCalibrationHistory(run, rows) {
+            if(!run){
+                calibrationSummary.innerHTML='<p class="sway-ai-ki-muted">Judge calibration has not been run yet.</p>';
+                calibrationResults.innerHTML='<p class="sway-ai-ki-muted">Calibration results will appear here after the first run.</p>';
+                return;
+            }
+            const summary=run.summary && typeof run.summary==="object" ? run.summary : {};
+            const cases=Array.isArray(summary.cases) ? summary.cases : [];
+            const complete=run.status==="completed";
+            const passed=run.calibration_passed===true;
+            const statusText=!complete ? "Inconclusive: one or both judge responses could not be evaluated." : (passed ? "Calibration passed: both judges separated all five correct answers from their flawed counterparts." : "Calibration completed, but one or more judge checks did not meet the acceptance criteria.");
+            calibrationSummary.innerHTML=
+                '<p><strong>Judge calibration V'+esc(String(run.calibration_version||"1"))+'</strong> · '+esc(String(run.passed_pairs||0))+'/'+esc(String(run.total_case_pairs||0))+' pairs passed · '+esc(String(run.provider_model||""))+'</p>'+
+                '<p class="'+(!complete?'sway-ai-ki-error':(passed?'sway-ai-ki-muted':'sway-ai-ki-error'))+'">'+esc(statusText)+'</p>'+
+                '<p class="sway-ai-ki-muted">The calibration has its own record and does not alter the V8 benchmark baseline.</p>';
+            if(!cases.length){
+                calibrationResults.innerHTML='<p class="sway-ai-ki-muted">No complete case-pair summary is available. Check the saved judge result records for partial progress.</p>';
+                return;
+            }
+            calibrationResults.innerHTML=cases.map(function(item){
+                const judges=Array.isArray(item.judges)?item.judges:[];
+                const pairRows=rows.filter(function(row){return String(row.calibration_case_key||"")===String(item.case_key||"");});
+                const judgeHtml=judges.map(function(judge){
+                    return '<div class="sway-ai-ki-eval-flags"><span>'+esc(String(judge.judge_model||"Judge"))+'</span><span>Correct: '+esc(judge.correct_score===null?"N/A":String(judge.correct_score))+'/100</span><span>Flawed: '+esc(judge.incorrect_score===null?"N/A":String(judge.incorrect_score))+'/100</span><span>Gap: '+esc(judge.score_separation===null?"N/A":String(judge.score_separation))+'</span><span>'+ (judge.passed?'Pass':'Fail') +'</span></div>';
+                }).join("");
+                const rationaleHtml=pairRows.map(function(row){
+                    return '<p><strong>'+esc(String(row.expected_quality||"candidate"))+' · '+esc(String(row.judge_model||""))+' · '+esc(String(row.score||0))+'/100'+(row.passed?' · pass':' · fail')+'</strong><br>'+esc(String(row.rationale||"No rationale recorded."))+'</p>';
+                }).join("");
+                return '<article class="sway-ai-ki-eval-result">'+
+                    '<div class="sway-ai-ki-eval-result-heading"><strong>'+esc(String(item.title||item.case_key||"Calibration pair"))+'</strong><span>'+(item.passed?'<span>Pair passed</span>':'<span>Pair failed</span>')+'</span></div>'+
+                    judgeHtml+
+                    '<details><summary>View judge rationales</summary><div class="sway-ai-ki-eval-answer">'+(rationaleHtml||'<p>No individual judge rationales were saved.</p>')+'</div></details>'+
+                '</article>';
+            }).join("");
+        }
+
+        async function refreshCalibrationResults() {
+            calibrationResults.innerHTML='<p class="sway-ai-ki-muted">Loading judge calibration…</p>';
+            try{
+                const response=await fetch(
+                    SUPABASE_URL+"/rest/v1/innerme_judge_calibration_runs?select=id,calibration_version,provider_model,status,total_case_pairs,passed_pairs,failed_pairs,calibration_passed,summary,created_at&order=created_at.desc&limit=1",
+                    {method:"GET",headers:authHeaders()}
+                );
+                const runs=await response.json().catch(function(){return [];});
+                if(!response.ok) throw new Error(runs&&(runs.message||runs.error||runs.hint)?String(runs.message||runs.error||runs.hint):"Unable to load judge calibration history. Apply the judge calibration migration if this feature was just deployed.");
+                const latest=Array.isArray(runs)?runs[0]:null;
+                if(!latest){renderCalibrationHistory(null,[]);return;}
+                const rowsResponse=await fetch(
+                    SUPABASE_URL+"/rest/v1/innerme_judge_calibration_results?select=calibration_case_key,candidate_key,expected_quality,judge_model,score,passed,dimension_scores,rationale,created_at&run_id=eq."+encodeURIComponent(latest.id)+"&order=calibration_case_key.asc,candidate_key.asc,judge_model.asc",
+                    {method:"GET",headers:authHeaders()}
+                );
+                const rows=await rowsResponse.json().catch(function(){return [];});
+                if(!rowsResponse.ok) throw new Error(rows&&(rows.message||rows.error||rows.hint)?String(rows.message||rows.error||rows.hint):"Unable to load individual judge scores.");
+                renderCalibrationHistory(latest,Array.isArray(rows)?rows:[]);
+            }catch(error){
+                calibrationResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Judge calibration history failed to load.")+'</p>';
+            }
+        }
+
         if(evaluationPanel){
             evaluationPanel.addEventListener("toggle",function(){
-                if(evaluationPanel.open) refreshEvaluation();
+                if(evaluationPanel.open){
+                    refreshEvaluation();
+                    refreshCalibrationResults();
+                }
             });
         }
 
@@ -2420,6 +2488,42 @@
                 event.preventDefault();
                 event.stopPropagation();
                 refreshEvaluation();
+                refreshCalibrationResults();
+            });
+        }
+
+        if(calibrationRunButton){
+            calibrationRunButton.addEventListener("click",async function(event){
+                event.preventDefault();
+                event.stopPropagation();
+                if(calibrationRunButton.disabled) return;
+                calibrationRunButton.disabled=true;
+                calibrationRunButton.textContent="Calibrating judges…";
+                calibrationSummary.innerHTML='<p class="sway-ai-ki-muted">Scoring five fixed correct/flawed answer pairs with two independent judges. This uses two batched model requests and does not alter benchmark scores.</p>';
+                calibrationResults.innerHTML='<p class="sway-ai-ki-muted">Calibration in progress…</p>';
+                try{
+                    const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
+                        method:"POST",
+                        headers:authHeaders(),
+                        body:JSON.stringify({action:"run_innerme_judge_calibration"})
+                    });
+                    const data=await response.json().catch(function(){return null;});
+                    if(!response.ok) throw new Error(data&&(data.message||data.error||data.hint)?String(data.message||data.error||data.hint):"Judge calibration request failed (HTTP "+response.status+").");
+                    if(!data||!data.run_id||!data.status) throw new Error("InnerMe returned an incomplete calibration response.");
+                    await refreshCalibrationResults();
+                    if(data.status==="inconclusive"){
+                        window.alert("Judge calibration is inconclusive because one or both provider responses could not be evaluated. No calibration pass has been claimed. The partial results are saved separately from the benchmark baseline.");
+                    }else if(data.calibration_passed===true){
+                        window.alert("Judge calibration passed: all "+String(data.total_case_pairs||0)+" answer pairs met the score-separation criteria under both judges.");
+                    }else{
+                        window.alert("Judge calibration completed, but "+String(data.failed_pairs||0)+" of "+String(data.total_case_pairs||0)+" pairs failed one or more judge-separation checks. Review the saved rationales before changing the benchmark.");
+                    }
+                }catch(error){
+                    calibrationResults.innerHTML='<p class="sway-ai-ki-error">'+esc(error.message||"Judge calibration failed.")+'</p>';
+                }finally{
+                    calibrationRunButton.disabled=false;
+                    calibrationRunButton.textContent="Calibrate judges";
+                }
             });
         }
 
