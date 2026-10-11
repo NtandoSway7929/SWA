@@ -24,7 +24,7 @@ Supabase reports bundle SHA-256 `384a6a5a1fbf9c6efae99e9cfc8ca286a2e1c0b4291f591
 
 ## Post-deployment acceptance checks
 
-The GitHub Actions workflow associated with this release documentation change should pass:
+**Result: PASS.** GitHub Actions run 11 completed successfully after production v91 was activated. Its checks covered:
 1. Deno type-check.
 2. Isolated test GET health check.
 3. Isolated test unauthenticated-action rejection.
