@@ -1714,7 +1714,7 @@ Deno.serve(async (req) => {
     const { data: savedCaseRows, error: savedCaseRowsError } =
       await authSupabase
         .from("innerme_evaluation_results")
-        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores")
+        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores,created_at")
         .eq("run_id", runId);
 
     if (savedCaseRowsError) {
@@ -1733,7 +1733,7 @@ Deno.serve(async (req) => {
       fallback_score?: number;
       fallback_passed?: boolean;
     }>();
-    const failures: Array<{ case_key: string; error: string }> = [];
+    const failures: Array<{ case_key: string; error: string; created_at?: string | null }> = [];
     let currentCaseExecutionFailed = false;
 
     function numericScoreForSavedResult(value: unknown) {
@@ -1749,6 +1749,7 @@ Deno.serve(async (req) => {
         failures.push({
           case_key: String(result?.case_key || ""),
           error: String(result?.judge_rationale || "Case execution failed."),
+          created_at: typeof result?.created_at === "string" ? result.created_at : null,
         });
         return;
       }
@@ -1770,20 +1771,26 @@ Deno.serve(async (req) => {
     });
 
     /*
-     * Respect a provider cooldown already recorded for an unresolved case.
-     * Gemini may return a daily-quota retry window (for example, ~20 hours).
-     * Use the run's last execution time as the cooldown anchor so repeated
-     * dashboard clicks cannot hammer the same pinned model before it is ready.
+     * Respect a provider cooldown recorded for an unresolved case.
+     * Anchor each retry window to that execution-error result's created_at,
+     * not the benchmark run's completed_at. The run can finish much later
+     * than the provider error was recorded, and using completed_at extends
+     * the provider's requested cooldown by that extra time.
      */
-    const savedRetryAfterSeconds = failures.reduce(function(maximum, failure) {
+    const activeProviderCooldown = failures.reduce(function(latest, failure) {
       const match = String(failure.error || "").match(/RETRY_AFTER_SECONDS=(\d+)/);
-      return match ? Math.max(maximum, Number(match[1]) || 0) : maximum;
-    }, 0);
-    const lastAttemptMs = Date.parse(String(run.completed_at || ""));
-    if (savedRetryAfterSeconds > 0 && Number.isFinite(lastAttemptMs)) {
-      const cooldownUntilMs = lastAttemptMs + savedRetryAfterSeconds * 1000;
-      const remainingSeconds = Math.ceil((cooldownUntilMs - Date.now()) / 1000);
-      if (remainingSeconds > 0) {
+      const failureRecordedAtMs = Date.parse(String(failure.created_at || ""));
+      if (!match || !Number.isFinite(failureRecordedAtMs)) return latest;
+
+      const cooldownUntilMs = failureRecordedAtMs + (Number(match[1]) || 0) * 1000;
+      return cooldownUntilMs > latest.cooldownUntilMs
+        ? { cooldownUntilMs, case_key: failure.case_key }
+        : latest;
+    }, { cooldownUntilMs: 0, case_key: "" });
+    const remainingSeconds = Math.ceil(
+      (activeProviderCooldown.cooldownUntilMs - Date.now()) / 1000,
+    );
+    if (activeProviderCooldown.case_key && remainingSeconds > 0) {
         const nextUnresolvedCase = benchmarkCases.find(function(item: any) {
           return !savedCaseIds.has(String(item?.id || ""));
         });
