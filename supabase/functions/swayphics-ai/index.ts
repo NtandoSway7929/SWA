@@ -1792,32 +1792,31 @@ Deno.serve(async (req) => {
       (activeProviderCooldown.cooldownUntilMs - Date.now()) / 1000,
     );
     if (activeProviderCooldown.case_key && remainingSeconds > 0) {
-        const nextUnresolvedCase = benchmarkCases.find(function(item: any) {
-          return !savedCaseIds.has(String(item?.id || ""));
-        });
-        return json({
-          ok: true,
-          run_id: runId,
-          status: "inconclusive",
-          total_cases: benchmarkCases.length,
-          completed_cases: currentCaseResults.size,
-          scored_cases: currentCaseResults.size,
-          execution_error_cases: failures.length,
-          passed_cases: Array.from(currentCaseResults.values()).filter(function(result) { return result.passed; }).length,
-          failed_cases: Array.from(currentCaseResults.values()).filter(function(result) { return !result.passed; }).length,
-          average_score: currentCaseResults.size
-            ? Number((Array.from(currentCaseResults.values()).reduce(function(total, result) { return total + result.score; }, 0) / currentCaseResults.size).toFixed(2))
-            : 0,
-          pass_rate: currentCaseResults.size
-            ? Number(((Array.from(currentCaseResults.values()).filter(function(result) { return result.passed; }).length / currentCaseResults.size) * 100).toFixed(2))
-            : 0,
-          regression_status: "inconclusive",
-          next_case_key: nextUnresolvedCase ? String(nextUnresolvedCase.case_key || "") : "",
-          retry_after_seconds: remainingSeconds,
-          live_knowledge_changed: false,
-          evaluation_only: true,
-        }, 200, origin);
-      }
+      const nextUnresolvedCase = benchmarkCases.find(function(item: any) {
+        return !savedCaseIds.has(String(item?.id || ""));
+      });
+      return json({
+        ok: true,
+        run_id: runId,
+        status: "inconclusive",
+        total_cases: benchmarkCases.length,
+        completed_cases: currentCaseResults.size,
+        scored_cases: currentCaseResults.size,
+        execution_error_cases: failures.length,
+        passed_cases: Array.from(currentCaseResults.values()).filter(function(result) { return result.passed; }).length,
+        failed_cases: Array.from(currentCaseResults.values()).filter(function(result) { return !result.passed; }).length,
+        average_score: currentCaseResults.size
+          ? Number((Array.from(currentCaseResults.values()).reduce(function(total, result) { return total + result.score; }, 0) / currentCaseResults.size).toFixed(2))
+          : 0,
+        pass_rate: currentCaseResults.size
+          ? Number(((Array.from(currentCaseResults.values()).filter(function(result) { return result.passed; }).length / currentCaseResults.size) * 100).toFixed(2))
+          : 0,
+        regression_status: "inconclusive",
+        next_case_key: nextUnresolvedCase ? String(nextUnresolvedCase.case_key || "") : "",
+        retry_after_seconds: remainingSeconds,
+        live_knowledge_changed: false,
+        evaluation_only: true,
+      }, 200, origin);
     }
 
     function getPairedModelMetrics() {
