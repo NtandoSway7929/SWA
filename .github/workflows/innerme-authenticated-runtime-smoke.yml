@@ -31,7 +31,7 @@ jobs:
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
-          trap 'rm -f /tmp/innerme-test-login-request.json /tmp/innerme-test-login-response.json /tmp/innerme-test-preflight.json /tmp/innerme-test-action-response.json' EXIT
+          trap 'rm -f /tmp/innerme-test-login-request.json /tmp/innerme-test-login-response.json /tmp/innerme-test-preflight.json /tmp/innerme-test-action-response.json /tmp/innerme-test-action-request.json' EXIT
 
           SUPABASE_URL="https://ofqofhnlzbouclvvrmzd.supabase.co"
           SUPABASE_PUBLISHABLE_KEY="sb_publishable_p4UqpaLvEx_93XJSWvzo6Q_loju0xzW"
@@ -88,7 +88,18 @@ jobs:
           print("Read-only preflight passed: the test proposal ID does not exist.")
           PY
 
-          status="$(curl --silent --show-error --max-time 30             -o /tmp/innerme-test-action-response.json             -w '%{http_code}'             -X POST "${SUPABASE_URL}/functions/v1/swayphics-ai"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H "Authorization: Bearer ${ACCESS_TOKEN}"             -H 'Content-Type: application/json'             --data "{\"action\":\"execute_innerme_action\",\"proposal_id\":\"'${NONEXISTENT_PROPOSAL_ID}'\"}")"
+          export NONEXISTENT_PROPOSAL_ID
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          Path("/tmp/innerme-test-action-request.json").write_text(json.dumps({
+              "action": "execute_innerme_action",
+              "proposal_id": os.environ["NONEXISTENT_PROPOSAL_ID"],
+          }), encoding="utf-8")
+          PY
+
+          status="$(curl --silent --show-error --max-time 30             -o /tmp/innerme-test-action-response.json             -w '%{http_code}'             -X POST "${SUPABASE_URL}/functions/v1/swayphics-ai"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H "Authorization: Bearer ${ACCESS_TOKEN}"             -H 'Content-Type: application/json'             --data-binary @/tmp/innerme-test-action-request.json)"
 
           if [[ "${status}" != "404" ]]; then
             echo "::error::Expected HTTP 404 for a nonexistent proposal after authentication; received HTTP ${status}."
