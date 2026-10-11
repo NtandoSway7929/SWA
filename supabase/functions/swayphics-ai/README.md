@@ -14,12 +14,14 @@
 
 ## Validation record
 
+**Post-deployment verification:** GitHub Actions run 11 passed after production v91 was activated. The checks covered Deno type-check, isolated test GET health, isolated test unauthenticated-action rejection, production unauthenticated-action rejection, and production GET health.
+
 - Deno type-check: passed before v91 deployment.
 - Isolated test project function v1: ACTIVE.
 - Test and production GET health checks: passed before v91 deployment.
 - Unauthenticated controlled-action requests against test and production v90 were rejected with HTTP 401 and `Authentication is required.`.
 - Phase 30 database suite: 24/24 synthetic scenarios passed.
-- Post-v91 GitHub Actions validation is required to confirm Deno type-check, both health checks, and both authentication-boundary checks against the current deployments.
+- Post-v91 GitHub Actions run 11 passed Deno type-check, both health checks, and both authentication-boundary checks against the current deployments.
 
 ## Runtime and gateway notes
 
