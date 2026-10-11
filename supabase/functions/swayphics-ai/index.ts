@@ -35,7 +35,11 @@ async function sha256(value: string) {
 
 const PRIMARY_MODEL: string = "gemini-3.8-flash";
 const FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
-const INNERME_BENCHMARK_VERSION = 7;
+// The benchmark uses a separate, free-tier-friendly model pair. Keep the live
+// InnerMe chat/operations model policy independent from benchmark configuration.
+const INNERME_BENCHMARK_PRIMARY_MODEL: string = "gemini-3.1-flash-lite";
+const INNERME_BENCHMARK_FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
+const INNERME_BENCHMARK_VERSION = 8;
 const INNERME_ROADMAP_CONTEXT = [
   "INNERME ROADMAP KNOWLEDGE (internal architecture reference):",
   "ROADMAP INDEX SOURCE: docs/innerme-30-phase-roadmap.md. This index documents the roadmap; it does not by itself prove runtime behaviour.",
@@ -1566,7 +1570,7 @@ Deno.serve(async (req) => {
    * Evaluation never changes live knowledge or business data.
    */
   if (body.action === "run_innerme_benchmark") {
-    const benchmarkProviderLabel = "paired-dual-judge: " + PRIMARY_MODEL + " + " + FALLBACK_MODEL;
+    const benchmarkProviderLabel = "paired-dual-judge: " + INNERME_BENCHMARK_PRIMARY_MODEL + " + " + INNERME_BENCHMARK_FALLBACK_MODEL;
     const limitRaw = Number(body.benchmark_limit);
     const caseLimit = Number.isFinite(limitRaw)
       ? Math.max(1, Math.min(Math.round(limitRaw), 30))
@@ -1835,8 +1839,8 @@ Deno.serve(async (req) => {
         };
       }
       return {
-        primary_model: Object.assign({ model: PRIMARY_MODEL, judged_by: PRIMARY_MODEL + " + " + FALLBACK_MODEL }, summarize(primaryRows, "primary_score", "primary_passed")),
-        fallback_model: Object.assign({ model: FALLBACK_MODEL, judged_by: PRIMARY_MODEL + " + " + FALLBACK_MODEL }, summarize(fallbackRows, "fallback_score", "fallback_passed")),
+        primary_model: Object.assign({ model: INNERME_BENCHMARK_PRIMARY_MODEL, judged_by: INNERME_BENCHMARK_PRIMARY_MODEL + " + " + INNERME_BENCHMARK_FALLBACK_MODEL }, summarize(primaryRows, "primary_score", "primary_passed")),
+        fallback_model: Object.assign({ model: INNERME_BENCHMARK_FALLBACK_MODEL, judged_by: INNERME_BENCHMARK_PRIMARY_MODEL + " + " + INNERME_BENCHMARK_FALLBACK_MODEL }, summarize(fallbackRows, "fallback_score", "fallback_passed")),
       };
     }
 
@@ -1904,7 +1908,29 @@ Deno.serve(async (req) => {
     }
 
     /*
-     * Version 7 pins every request to its assigned model. On 429/503, retry
+     * Pace benchmark requests independently for each model. The free tier limits
+     * requests per minute as well as per-day volume; a single case makes three
+     * calls to each model. Six-second spacing caps benchmark traffic near ten
+     * requests per minute per model, below the currently observed 15 RPM limit.
+     */
+    const lastBenchmarkRequestAtByModel = new Map<string, number>();
+    const benchmarkMinModelRequestIntervalMs = 6000;
+
+    async function paceBenchmarkModelRequest(model: string) {
+      const lastStartedAt = lastBenchmarkRequestAtByModel.get(model);
+      if (typeof lastStartedAt === "number") {
+        const waitMs = benchmarkMinModelRequestIntervalMs - (Date.now() - lastStartedAt);
+        if (waitMs > 0) {
+          await new Promise(function(resolve) {
+            setTimeout(resolve, waitMs);
+          });
+        }
+      }
+      lastBenchmarkRequestAtByModel.set(model, Date.now());
+    }
+
+    /*
+     * Version 8 pins every request to its assigned benchmark model. On 429/503, retry
      * that same model rather than silently switching tracks and corrupting the
      * paired comparison.
      */
@@ -1916,6 +1942,7 @@ Deno.serve(async (req) => {
       jsonMode = false,
     ) {
       async function call() {
+        await paceBenchmarkModelRequest(model);
         return await fetch(
           "https://generativelanguage.googleapis.com/v1beta/models/" +
             encodeURIComponent(model) +
@@ -2182,14 +2209,14 @@ Deno.serve(async (req) => {
 
 
         const primaryAnswerResult = await requestModel(
-          answerPrompt, answerSystem, 700, PRIMARY_MODEL,
+          answerPrompt, answerSystem, 700, INNERME_BENCHMARK_PRIMARY_MODEL,
         );
         const primaryAnswer = cleanForModel(primaryAnswerResult.text, 5000);
 
         await new Promise(function(resolve) { setTimeout(resolve, 1200); });
 
         const fallbackAnswerResult = await requestModel(
-          answerPrompt, answerSystem, 700, FALLBACK_MODEL,
+          answerPrompt, answerSystem, 700, INNERME_BENCHMARK_FALLBACK_MODEL,
         );
         const fallbackAnswer = cleanForModel(fallbackAnswerResult.text, 5000);
 
@@ -2220,14 +2247,14 @@ Deno.serve(async (req) => {
         const evaluateCandidateWithBothJudges = async function(answer: string) {
           const prompt = buildJudgePrompt(answer);
           const primaryJudgeResult = await requestModel(
-            prompt, judgeSystem, 700, PRIMARY_MODEL, true,
+            prompt, judgeSystem, 700, INNERME_BENCHMARK_PRIMARY_MODEL, true,
           );
           const parsedPrimaryRater = parseJudgeResponse(primaryJudgeResult.text);
 
           await new Promise(function(resolve) { setTimeout(resolve, 1200); });
 
           const fallbackJudgeResult = await requestModel(
-            prompt, judgeSystem, 700, FALLBACK_MODEL, true,
+            prompt, judgeSystem, 700, INNERME_BENCHMARK_FALLBACK_MODEL, true,
           );
           const parsedFallbackRater = parseJudgeResponse(fallbackJudgeResult.text);
 
@@ -2246,13 +2273,13 @@ Deno.serve(async (req) => {
             score: mean("score"),
             passed: parsedPrimaryRater.passed === true && parsedFallbackRater.passed === true,
             rationale: cleanForModel(
-              PRIMARY_MODEL + " judge: " + String(parsedPrimaryRater.rationale || "") +
-              " | " + FALLBACK_MODEL + " judge: " + String(parsedFallbackRater.rationale || ""),
+              INNERME_BENCHMARK_PRIMARY_MODEL + " judge: " + String(parsedPrimaryRater.rationale || "") +
+              " | " + INNERME_BENCHMARK_FALLBACK_MODEL + " judge: " + String(parsedFallbackRater.rationale || ""),
               700,
             ),
             judge_scores: {
               primary: {
-                model: PRIMARY_MODEL,
+                model: INNERME_BENCHMARK_PRIMARY_MODEL,
                 correctness: numericScore(parsedPrimaryRater.correctness),
                 grounding: numericScore(parsedPrimaryRater.grounding),
                 relevance: numericScore(parsedPrimaryRater.relevance),
@@ -2263,7 +2290,7 @@ Deno.serve(async (req) => {
                 rationale: cleanForModel(parsedPrimaryRater.rationale || "", 700),
               },
               fallback: {
-                model: FALLBACK_MODEL,
+                model: INNERME_BENCHMARK_FALLBACK_MODEL,
                 correctness: numericScore(parsedFallbackRater.correctness),
                 grounding: numericScore(parsedFallbackRater.grounding),
                 relevance: numericScore(parsedFallbackRater.relevance),
@@ -2381,8 +2408,8 @@ Deno.serve(async (req) => {
                 safety,
                 completeness,
                 primary_model: {
-                  model: PRIMARY_MODEL,
-                  judge_model: FALLBACK_MODEL,
+                  model: INNERME_BENCHMARK_PRIMARY_MODEL,
+                  judge_model: INNERME_BENCHMARK_FALLBACK_MODEL,
                   answer: primaryAnswer,
                   score: primaryScore,
                   passed: primaryModelPassed,
@@ -2396,8 +2423,8 @@ Deno.serve(async (req) => {
                   judge_scores: parsedPrimaryJudge?.judge_scores || {},
                 },
                 fallback_model: {
-                  model: FALLBACK_MODEL,
-                  judge_model: PRIMARY_MODEL,
+                  model: INNERME_BENCHMARK_FALLBACK_MODEL,
+                  judge_model: INNERME_BENCHMARK_PRIMARY_MODEL,
                   answer: fallbackAnswer,
                   score: fallbackScore,
                   passed: fallbackModelPassed,
