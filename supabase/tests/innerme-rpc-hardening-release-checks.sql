@@ -121,22 +121,20 @@ guard_check as (
       ) as passed,
       'Catalog/source assertion only; separately test a non-admin JWT against a staging database.'::text as detail
 ),
+search_path_targets(signature, check_name) as (
+    values
+      ('innerme_private.generate_admin_due_notifications_internal()', 'Private helper has an empty search_path'),
+      ('public.generate_admin_due_notifications()', 'Dashboard wrapper has an empty search_path'),
+      ('public.generate_innerme_proactive_notifications()', 'Scheduled routine has an empty search_path')
+),
 search_path_checks as (
     select
-      'Private helper has an empty search_path'::text as check_name,
-      coalesce(p.proconfig @> array['search_path=""']::text[], false) as passed,
+      t.check_name,
+      coalesce(p.oid is not null and p.proconfig @> array['search_path=""']::text[], false) as passed,
       'Empty search_path plus schema-qualified references.'::text as detail
-    from pg_catalog.pg_proc p
-    where p.oid = to_regprocedure('innerme_private.generate_admin_due_notifications_internal()')::oid
-
-    union all
-
-    select
-      'Scheduled routine has an empty search_path'::text as check_name,
-      coalesce(p.proconfig @> array['search_path=""']::text[], false) as passed,
-      'Empty search_path plus schema-qualified references.'::text as detail
-    from pg_catalog.pg_proc p
-    where p.oid = to_regprocedure('public.generate_innerme_proactive_notifications()')::oid
+    from search_path_targets t
+    left join pg_catalog.pg_proc p
+      on p.oid = to_regprocedure(t.signature)::oid
 ),
 checks as (
     select * from privilege_checks
@@ -151,4 +149,4 @@ select
   check_name,
   detail
 from checks
-order by status desc, check_name;
+order by passed asc, check_name;
