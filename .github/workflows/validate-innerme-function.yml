@@ -35,6 +35,9 @@ jobs:
       - name: Type-check checked-in Edge Function source
         run: deno check --no-lock supabase/functions/swayphics-ai/index.ts
 
+      - name: Test authenticated action guard using mocked Supabase responses
+        run: deno test --no-lock --allow-env supabase/functions/swayphics-ai/auth.integration.test.ts
+
       - name: Non-mutating isolated test health GET
         env:
           INNERME_HEALTH_URL: https://ofqofhnlzbouclvvrmzd.supabase.co/functions/v1/swayphics-ai
