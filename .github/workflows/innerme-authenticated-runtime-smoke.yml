@@ -1,0 +1,118 @@
+name: InnerMe Authenticated Runtime Smoke Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authenticated-smoke:
+    name: Verify isolated test-admin request without mutations
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require isolated test-admin credentials
+        shell: bash
+        env:
+          INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${INNERME_TEST_ADMIN_EMAIL}" || -z "${INNERME_TEST_ADMIN_PASSWORD}" ]]; then
+            echo "::error::Add INNERME_TEST_ADMIN_EMAIL and INNERME_TEST_ADMIN_PASSWORD as GitHub Actions repository secrets. Use a dedicated admin in the isolated InnerMe Test project, never a production account."
+            exit 1
+          fi
+
+      - name: Sign in to the isolated test project and call a nonexistent proposal
+        shell: bash
+        env:
+          INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          trap 'rm -f /tmp/innerme-test-login-request.json /tmp/innerme-test-login-response.json /tmp/innerme-test-preflight.json /tmp/innerme-test-action-response.json' EXIT
+
+          SUPABASE_URL="https://ofqofhnlzbouclvvrmzd.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY="sb_publishable_p4UqpaLvEx_93XJSWvzo6Q_loju0xzW"
+          NONEXISTENT_PROPOSAL_ID="00000000-0000-0000-0000-000000000000"
+
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          request = {
+              "email": os.environ["INNERME_TEST_ADMIN_EMAIL"],
+              "password": os.environ["INNERME_TEST_ADMIN_PASSWORD"],
+          }
+          Path("/tmp/innerme-test-login-request.json").write_text(
+              json.dumps(request), encoding="utf-8"
+          )
+          PY
+
+          login_status="$(curl --silent --show-error --max-time 20             -o /tmp/innerme-test-login-response.json             -w '%{http_code}'             -X POST "${SUPABASE_URL}/auth/v1/token?grant_type=password"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H 'Content-Type: application/json'             --data-binary @/tmp/innerme-test-login-request.json)"
+
+          if [[ "${login_status}" != "200" ]]; then
+            echo "::error::Test-project password sign-in failed with HTTP ${login_status}. Check that the test user exists, is confirmed, and the password secret is correct."
+            exit 1
+          fi
+
+          ACCESS_TOKEN="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/innerme-test-login-response.json").read_text(encoding="utf-8"))
+          token = payload.get("access_token")
+          if not isinstance(token, str) or not token:
+              raise SystemExit("Test-project sign-in response did not contain an access token.")
+          print(token, end="")
+          PY
+          )"
+          echo "::add-mask::${ACCESS_TOKEN}"
+
+          preflight_status="$(curl --silent --show-error --max-time 20             -o /tmp/innerme-test-preflight.json             -w '%{http_code}'             "${SUPABASE_URL}/rest/v1/innerme_action_proposals?select=id&id=eq.${NONEXISTENT_PROPOSAL_ID}"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H "Authorization: Bearer ${ACCESS_TOKEN}")"
+
+          if [[ "${preflight_status}" != "200" ]]; then
+            echo "::error::Could not verify the test proposal is absent; REST preflight returned HTTP ${preflight_status}. No action request was sent."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          rows = json.loads(Path("/tmp/innerme-test-preflight.json").read_text(encoding="utf-8"))
+          if not isinstance(rows, list) or rows:
+              raise SystemExit("The chosen proposal ID is not confirmed absent. No action request should be sent.")
+          print("Read-only preflight passed: the test proposal ID does not exist.")
+          PY
+
+          status="$(curl --silent --show-error --max-time 30             -o /tmp/innerme-test-action-response.json             -w '%{http_code}'             -X POST "${SUPABASE_URL}/functions/v1/swayphics-ai"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H "Authorization: Bearer ${ACCESS_TOKEN}"             -H 'Content-Type: application/json'             --data "{\"action\":\"execute_innerme_action\",\"proposal_id\":\"'${NONEXISTENT_PROPOSAL_ID}'\"}")"
+
+          if [[ "${status}" != "404" ]]; then
+            echo "::error::Expected HTTP 404 for a nonexistent proposal after authentication; received HTTP ${status}."
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              body = json.loads(Path("/tmp/innerme-test-action-response.json").read_text(encoding="utf-8"))
+          except Exception:
+              print("Response was not valid JSON.")
+          else:
+              print("Response error:", body.get("error", "No error field"))
+          PY
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          body = json.loads(Path("/tmp/innerme-test-action-response.json").read_text(encoding="utf-8"))
+          expected = "The InnerMe controlled action proposal could not be found."
+          if body.get("error") != expected:
+              raise SystemExit("The endpoint returned HTTP 404 but not the expected missing-proposal response.")
+          print("PASS: real test-admin session passed Auth and admin checks, then received the expected missing-proposal 404.")
+          print("The proposal was confirmed absent beforehand; the request cannot reach task creation or email delivery.")
+          PY
