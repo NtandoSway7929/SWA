@@ -52,6 +52,56 @@ jobs:
           print("Isolated test health GET passed.")
           '
 
+      - name: Verify isolated test rejects unauthenticated action requests
+        env:
+          INNERME_ACTION_URL: https://ofqofhnlzbouclvvrmzd.supabase.co/functions/v1/swayphics-ai
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --max-time 20 -o /tmp/innerme-test-auth.json -w '%{http_code}' \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            --data '{"action":"execute_innerme_action","proposal_id":"00000000-0000-0000-0000-000000000000"}' \
+            "$INNERME_ACTION_URL")"
+          if [[ "$status" != "401" ]]; then
+            cat /tmp/innerme-test-auth.json
+            echo "Expected isolated test endpoint to reject missing authentication with HTTP 401; got $status."
+            exit 1
+          fi
+          python3 -c '
+          import json
+          with open("/tmp/innerme-test-auth.json", encoding="utf-8") as handle:
+              payload = json.load(handle)
+          if payload.get("error") != "Authentication is required.":
+              raise SystemExit(f"Unexpected isolated auth rejection: {payload!r}")
+          print("Isolated test unauthorized-action guard passed.")
+          '
+
+      - name: Verify production rejects unauthenticated action requests
+        env:
+          INNERME_ACTION_URL: https://sqifhribgsqfaxgtobsa.supabase.co/functions/v1/swayphics-ai
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --max-time 20 -o /tmp/innerme-production-auth.json -w '%{http_code}' \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            --data '{"action":"execute_innerme_action","proposal_id":"00000000-0000-0000-0000-000000000000"}' \
+            "$INNERME_ACTION_URL")"
+          if [[ "$status" != "401" ]]; then
+            cat /tmp/innerme-production-auth.json
+            echo "Expected production endpoint to reject missing authentication with HTTP 401; got $status."
+            exit 1
+          fi
+          python3 -c '
+          import json
+          with open("/tmp/innerme-production-auth.json", encoding="utf-8") as handle:
+              payload = json.load(handle)
+          if payload.get("error") != "Authentication is required.":
+              raise SystemExit(f"Unexpected production auth rejection: {payload!r}")
+          print("Production unauthorized-action guard passed.")
+          '
+
       - name: Non-mutating production health GET
         env:
           INNERME_HEALTH_URL: https://sqifhribgsqfaxgtobsa.supabase.co/functions/v1/swayphics-ai
