@@ -1714,7 +1714,7 @@ Deno.serve(async (req) => {
     const { data: savedCaseRows, error: savedCaseRowsError } =
       await authSupabase
         .from("innerme_evaluation_results")
-        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores,created_at")
+        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores,created_at,execution_error_at")
         .eq("run_id", runId);
 
     if (savedCaseRowsError) {
@@ -1733,7 +1733,7 @@ Deno.serve(async (req) => {
       fallback_score?: number;
       fallback_passed?: boolean;
     }>();
-    const failures: Array<{ case_key: string; error: string; created_at?: string | null }> = [];
+    const failures: Array<{ case_key: string; error: string; created_at?: string | null; error_at?: string | null }> = [];
     let currentCaseExecutionFailed = false;
 
     function numericScoreForSavedResult(value: unknown) {
@@ -1750,6 +1750,7 @@ Deno.serve(async (req) => {
           case_key: String(result?.case_key || ""),
           error: String(result?.judge_rationale || "Case execution failed."),
           created_at: typeof result?.created_at === "string" ? result.created_at : null,
+          error_at: typeof result?.execution_error_at === "string" ? result.execution_error_at : null,
         });
         return;
       }
@@ -1779,7 +1780,7 @@ Deno.serve(async (req) => {
      */
     const activeProviderCooldown = failures.reduce(function(latest, failure) {
       const match = String(failure.error || "").match(/RETRY_AFTER_SECONDS=(\d+)/);
-      const failureRecordedAtMs = Date.parse(String(failure.created_at || ""));
+      const failureRecordedAtMs = Date.parse(String(failure.error_at || failure.created_at || ""));
       if (!match || !Number.isFinite(failureRecordedAtMs)) return latest;
 
       const cooldownUntilMs = failureRecordedAtMs + (Number(match[1]) || 0) * 1000;
@@ -2417,6 +2418,7 @@ Deno.serve(async (req) => {
               case_key: String(item.case_key || ""),
               severity: String(item.severity || "standard"),
               failure_flags: failureFlags,
+              execution_error_at: null,
               regressed_from_previous: regressedFromPrevious,
               judge_rationale: cleanForModel(
                 "Primary-model answer scored by both judges: " +
@@ -2482,6 +2484,7 @@ Deno.serve(async (req) => {
           regressed_from_previous: false,
           judge_rationale: "Execution error: " + errorMessage,
           provider_model: "execution-error",
+          execution_error_at: new Date().toISOString(),
         };
 
         /*
@@ -2577,7 +2580,7 @@ Deno.serve(async (req) => {
     const { data: persistedResultRows, error: persistedResultRowsError } =
       await authSupabase
         .from("innerme_evaluation_results")
-        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores")
+        .select("case_id,case_key,severity,score,passed,failure_flags,regressed_from_previous,judge_rationale,dimension_scores,execution_error_at")
         .eq("run_id", runId);
 
     if (persistedResultRowsError) {
@@ -2599,6 +2602,7 @@ Deno.serve(async (req) => {
         failures.push({
           case_key: String(result?.case_key || ""),
           error: String(result?.judge_rationale || "Case execution failed."),
+          error_at: typeof result?.execution_error_at === "string" ? result.execution_error_at : null,
         });
         return;
       }
