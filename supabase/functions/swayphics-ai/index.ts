@@ -59,6 +59,8 @@ const INNERME_ROADMAP_CONTEXT = [
   "28 Predictive Business Intelligence: evidence-aware forecasts are uncertain projections, not promises.",
   "29 Autonomous Governance and Trust Calibration: auditable, evidence-calibrated and administrator-governed trust; trust scores do not grant permissions. Phase 29 also includes private-RPC/governance hardening artifacts.",
   "30 Pre-Execution Action Safety Gate: an audited policy check before controlled actions are approved/executed; it does not execute actions or grant permissions.",
+  "DOCUMENTED DEPENDENCY: the Phase 30 action-safety-gate migration explicitly says it depends on Phase 10 controlled action automation and Phase 29 private-RPC hardening. This is a source-documented implementation dependency, not proof that runtime tests have passed.",
+  "DEPENDENCY BOUNDARY: the available source mapping does not establish a direct automatic dependency from Phase 27 to Phase 28, nor prove that Phases 27-30 run as a single sequential production pipeline.",
   "CROSS-PHASE KNOWLEDGE PATH: sources and verification -> embeddings/retrieval -> evidence in answers -> attribution/feedback -> reviewed learning candidates.",
   "CROSS-PHASE DECISION PATH: workspace/evidence -> decision candidate -> admin review -> execution plan -> action proposal -> policy/safety check -> explicit approval -> controlled execution -> audit/outcome verification.",
   "CROSS-PHASE INCIDENT PATH: deterministic monitoring -> escalation/correlation/scoring -> dependency and hypothesis analysis -> counterfactuals -> intervention sequencing -> separately approved execution -> outcome verification -> bounded learning/optimisation.",
