@@ -45,7 +45,7 @@
 27. **Multi-Agent Coordination** — Coordinate specialist agents through auditable assignments, plans and handoffs. Coordination must not grant permissions or silently execute actions.
 28. **Predictive Business Intelligence** — Produce evidence-aware forecasts/projections for business variables such as revenue, cash and delivery. Forecasts are uncertain projections, not promises.
 29. **Autonomous Governance and Trust Calibration** — Calibrate trust from auditable evidence and administrator-governed review. Trust scores do not grant permissions by themselves. The repository also contains Phase 29 private-RPC/governance hardening artifacts.
-30. **Pre-Execution Action Safety Gate** — Require an audited policy safety check before controlled actions are approved or executed. The gate does not itself execute actions or grant permissions; it is a control in the action lifecycle.
+30. **Pre-Execution Action Safety Gate** — Require an audited policy safety check before controlled actions are approved or executed. The gate does not itself execute actions or grant permissions; it is a control in the action lifecycle. The Phase 30 migration explicitly documents implementation dependencies on Phase 10 controlled action automation and Phase 29 private-RPC hardening. This source comment documents intended implementation dependencies, not successful runtime verification.
 
 ## Cross-phase architecture
 
@@ -58,4 +58,5 @@
 
 - The source snapshot reviewed for this index does not establish definitive titles for phases 11, 12, 15 or 16, nor exact titles for 4A, 4B and 4D. Those gaps must remain explicit until primary roadmap artifacts are found.
 - Phase labels in code may describe a subset of functionality or a follow-up hardening change. Do not assume phase numbering means strict linear dependency unless a migration, code path or roadmap explicitly establishes it.
+- One explicit dependency is documented: the Phase 30 action-safety-gate migration says it depends on Phase 10 action automation and Phase 29 private-RPC hardening. This does not establish a Phase 27-to-28 dependency or prove a sequential Phase 27-to-30 production pipeline.
 - The active knowledge table and the system prompt may both supply context. If they conflict, prefer the newer authoritative repository/runtime evidence and disclose the conflict instead of silently choosing.
