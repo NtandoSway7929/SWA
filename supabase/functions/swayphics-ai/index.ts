@@ -5,6 +5,18 @@ import {
   INNERME_EVIDENCE_TRACEABILITY_RULES,
 } from "./innerme-evidence-traceability.mjs";
 
+// Supabase Edge Runtime provides this embedding API at runtime; declare its surface for Deno checks.
+declare const Supabase: {
+  ai: {
+    Session: new (model: string) => {
+      run(
+        input: string,
+        options?: { mean_pool?: boolean; normalize?: boolean },
+      ): Promise<Iterable<number>>;
+    };
+  };
+};
+
 function corsHeaders(_origin = "") {
   return {
     ...supabaseCorsHeaders,
@@ -21,8 +33,8 @@ async function sha256(value: string) {
     .join("");
 }
 
-const PRIMARY_MODEL = "gemini-3.8-flash";
-const FALLBACK_MODEL = "gemini-3.5-flash-lite";
+const PRIMARY_MODEL: string = "gemini-3.8-flash";
+const FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
 const INNERME_BENCHMARK_VERSION = 7;
 const INNERME_ROADMAP_CONTEXT = [
   "INNERME ROADMAP KNOWLEDGE (internal architecture reference):",
@@ -286,6 +298,12 @@ Deno.serve(async (req) => {
     benchmark_run_id?: string;
     learning_source_type?: string;
     learning_source_id?: string;
+    decision_id?: string;
+    p_decision_id?: string;
+    plan_id?: string;
+    p_plan_id?: string;
+    proposal_id?: string;
+    p_proposal_id?: string;
   } = {};
   try {
     body = await req.json();
@@ -295,7 +313,7 @@ Deno.serve(async (req) => {
 
   const action = String(body.action || "").trim();
 
-  const geminiKey = Deno.env.get("GEMINI_API_KEY");
+  const geminiKey = Deno.env.get("GEMINI_API_KEY") || "";
   /*
    * PUBLIC INNERME
    * This branch intentionally executes before admin authentication.
@@ -1306,7 +1324,13 @@ Deno.serve(async (req) => {
       return json(
         {
           error:"InnerMe could not assemble the complete strategic workspace snapshot.",
-          query_failures:failures.map(function(item){return {domain:item[0],error:item[1]?.message||"Unknown query failure"};}),
+          query_failures: failures.map(function (item) {
+            const failure = item[1];
+            return {
+              domain: item[0],
+              error: typeof failure === "string" ? failure : failure?.message || "Unknown query failure",
+            };
+          }),
         },
         500,
         origin,
@@ -1354,7 +1378,7 @@ Deno.serve(async (req) => {
       projects:{total:projects.length,statuses:groupCounts(projects,"status"),value:sum(projects,"value"),estimated_cost:sum(projects,"estimated_cost")},
       tasks:{total:tasks.length,open:openTasks.length,statuses:groupCounts(tasks,"status"),overdue:overdueTasks.length},
       quotes:{total:quotes.length,statuses:groupCounts(quotes,"status"),value:sum(quotes,"amount")},
-      invoices:{total:invoices.length,statuses:groupCounts(invoices,"status"),total:sum(invoices,"total"),paid:sum(invoices,"amount_paid"),outstanding:sum(invoices,"amount_outstanding")},
+      invoices:{count:invoices.length,statuses:groupCounts(invoices,"status"),total:sum(invoices,"total"),paid:sum(invoices,"amount_paid"),outstanding:sum(invoices,"amount_outstanding")},
       payments:{total:payments.length,statuses:groupCounts(payments,"status"),value:sum(payments,"amount"),paid_value:sum(payments.filter(function(row:any){return String(row?.status||"").toLowerCase()==="paid";}),"amount")},
       communications:{total:emails.length,inbound:emails.filter(function(row:any){return row?.direction==="inbound";}).length,outbound:emails.filter(function(row:any){return row?.direction==="outbound";}).length,linked_to_leads:emails.filter(function(row:any){return Boolean(row?.lead_id);}).length,linked_to_clients:emails.filter(function(row:any){return Boolean(row?.client_id);}).length},
       intelligence:{decisions:decisions.length,outcomes:outcomes.length,reviewed_outcomes:outcomes.filter(function(row:any){return Boolean(row?.verified_at);}).length,experiments:experiments.length,reviewed_experiments:experiments.filter(function(row:any){return Boolean(row?.reviewed_at);}).length},
