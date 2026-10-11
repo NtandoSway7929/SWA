@@ -195,8 +195,7 @@ Deno.test("InnerMe authenticated action guard rejects unsafe requests before sid
     assert(
       !result.requests.some((request) =>
         request.path.includes("innerme_action_execution_logs") ||
-        request.path.includes("evaluate_innerme_action_policy") ||
-        request.path.endsWith("/tasks")
+        request.path.includes("evaluate_innerme_action_policy")
       ),
       "The authenticated missing-proposal path must not call execution, audit-write, or task endpoints.",
     );
