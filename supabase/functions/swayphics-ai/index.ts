@@ -11018,6 +11018,22 @@ Answer the admin's question directly.
         providerError = null;
       }
 
+      if (geminiResponse.headers.get("X-InnerMe-Guard") === "blocked") {
+        const guardReason =
+          typeof providerError?.code === "string"
+            ? providerError.code
+            : "zero_cost_guard";
+        console.warn("InnerMe request blocked before reaching Gemini.", guardReason);
+        return json({
+          error:
+            typeof providerError?.message === "string"
+              ? providerError.message
+              : "InnerMe stopped the request to protect the free-tier budget. No Gemini request was sent.",
+          quota_guarded: true,
+          guard_reason: guardReason,
+        }, 429, origin);
+      }
+
       await recordInnerMeProviderUsage({
         request_id: providerRequestId,
         attempt_number: geminiAttemptNumber,
