@@ -2428,7 +2428,7 @@
             const isV3=Number(run.calibration_version||0)>=3;
             const statusText=!complete ? "Inconclusive: one or both judge responses could not be evaluated." : (passed ? (isV3 ? "Calibration passed: score-band and candidate-order checks met the acceptance criteria under both judges." : "Calibration passed: both judges separated all correct answers from their flawed counterparts.") : "Calibration completed, but one or more judge checks did not meet the acceptance criteria.");
             calibrationSummary.innerHTML=
-                '<p><strong>Judge calibration V'+esc(String(run.calibration_version||"1"))+'</strong> · '+esc(String(run.passed_pairs||0))+'/'+esc(String(run.total_case_pairs||0))+' pairs passed · '+esc(String(run.provider_model||""))+'</p>'+
+                '<p><strong>Judge calibration V'+esc(String(run.calibration_version||"1"))+'</strong> · '+esc(String(run.passed_pairs||0))+'/'+esc(String(run.total_case_pairs||0))+(isV3?' cases passed · ':' pairs passed · ')+esc(String(run.provider_model||""))+'</p>'+
                 '<p class="'+(!complete?'sway-ai-ki-error':(passed?'sway-ai-ki-muted':'sway-ai-ki-error'))+'">'+esc(statusText)+'</p>'+
                 '<p class="sway-ai-ki-muted">The calibration has its own record and does not alter the V8 benchmark baseline.</p>';
             if(!cases.length){
@@ -2525,7 +2525,7 @@
                     if(data.status==="inconclusive"){
                         window.alert("Judge calibration is inconclusive because one or both provider responses could not be evaluated. No calibration pass has been claimed. The partial results are saved separately from the benchmark baseline.");
                     }else if(data.calibration_passed===true){
-                        window.alert("Judge calibration passed: all "+String(data.total_case_pairs||0)+" answer pairs met the score-separation criteria under both judges.");
+                        window.alert(Number(data.calibration_version||0)>=3 ? "Judge calibration passed: all "+String(data.total_case_pairs||0)+" calibration cases met the score-band, separation, and candidate-order criteria under both judges." : "Judge calibration passed: all "+String(data.total_case_pairs||0)+" answer pairs met the score-separation criteria under both judges.");
                     }else{
                         window.alert("Judge calibration completed, but "+String(data.failed_pairs||0)+" of "+String(data.total_case_pairs||0)+" pairs failed one or more judge-separation checks. Review the saved rationales before changing the benchmark.");
                     }
