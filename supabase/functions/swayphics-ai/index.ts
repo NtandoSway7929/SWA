@@ -450,7 +450,7 @@ async function guardedGeminiFetch(
       const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
       const lastPart = lastTurn?.parts?.[0];
       const contentText = lastPart?.text;
-      const marker = "\\n\\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\\n";
+      const marker = "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n";
       if (typeof contentText === "string") {
         const markerIndex = contentText.lastIndexOf(marker);
         if (markerIndex >= 0) {
@@ -473,7 +473,7 @@ async function guardedGeminiFetch(
       for (const part of systemParts) {
         if (typeof part?.text === "string" && part.text.length > 10000) {
           part.text = part.text.slice(0, 6500) +
-            "\\n\\n[Intermediate system-prompt detail omitted to respect the zero-cost request-size limit.]\\n\\n" +
+            "\n\n[Intermediate system-prompt detail omitted to respect the zero-cost request-size limit.]\n\n" +
             part.text.slice(-3000);
         }
       }
