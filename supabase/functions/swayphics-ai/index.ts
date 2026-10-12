@@ -2392,15 +2392,28 @@ Deno.serve(async (req) => {
 
     for (let index = 0; index < judgeModels.length; index += 1) {
       const model = judgeModels[index];
-      try {
-        judgeEvaluations[model] = await runCalibrationJudge(model);
-      } catch (error) {
-        judgeErrors[model] = error instanceof Error
-          ? error.message.slice(0, 600)
-          : String(error).slice(0, 600);
+      const maxTransientAttempts = 3;
+      for (let attempt = 1; attempt <= maxTransientAttempts; attempt += 1) {
+        try {
+          judgeEvaluations[model] = await runCalibrationJudge(model);
+          delete judgeErrors[model];
+          break;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          const transientProviderFailure = /HTTP (429|500|502|503|504)\b/.test(message) ||
+            /currently experiencing high demand|temporarily unavailable|rate limit|RESOURCE_EXHAUSTED|UNAVAILABLE/i.test(message);
+          if (transientProviderFailure && attempt < maxTransientAttempts) {
+            // Retry only transient provider failures; never turn a malformed or
+            // incomplete judge response into a pass. Keep retries bounded.
+            await new Promise(function(resolve) { setTimeout(resolve, 1800 * attempt); });
+            continue;
+          }
+          judgeErrors[model] = message.slice(0, 600);
+          break;
+        }
       }
       if (index + 1 < judgeModels.length) {
-        await new Promise(function(resolve) { setTimeout(resolve, 1400); });
+        await new Promise(function(resolve) { setTimeout(resolve, 1800); });
       }
     }
 
