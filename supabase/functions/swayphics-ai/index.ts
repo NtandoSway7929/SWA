@@ -124,8 +124,8 @@ function cleanForModel(value: unknown, max = 3000) {
 function compactContextForModel(
   value: any,
   depth = 0,
-  maxArrayItems = 6,
-  maxStringChars = 500,
+  maxArrayItems = 3,
+  maxStringChars = 220,
 ): any {
   if (value == null || typeof value === "number" || typeof value === "boolean") {
     return value;
@@ -139,7 +139,7 @@ function compactContextForModel(
   if (typeof value === "object") {
     if (depth >= 5) return "[nested context omitted]";
     const output: Record<string, any> = {};
-    for (const [key, item] of Object.entries(value).slice(0, 50)) {
+    for (const [key, item] of Object.entries(value).slice(0, 30)) {
       const fieldLimit = /(^|_)(id|status|date|at|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
         ? 180
         : maxStringChars;
