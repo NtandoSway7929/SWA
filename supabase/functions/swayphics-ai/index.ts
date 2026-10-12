@@ -117,6 +117,41 @@ function cleanForModel(value: unknown, max = 3000) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+/**
+ * Bound model-facing workspace context without changing the source workspace
+ * data or permission checks. Preserve recent records and compact bulky fields.
+ */
+function compactContextForModel(
+  value: any,
+  depth = 0,
+  maxArrayItems = 6,
+  maxStringChars = 500,
+): any {
+  if (value == null || typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") return cleanForModel(value, maxStringChars);
+  if (Array.isArray(value)) {
+    return value.slice(-maxArrayItems).map((item) =>
+      compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars)
+    );
+  }
+  if (typeof value === "object") {
+    if (depth >= 5) return "[nested context omitted]";
+    const output: Record<string, any> = {};
+    for (const [key, item] of Object.entries(value).slice(0, 50)) {
+      const fieldLimit = /(^|_)(id|status|date|at|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
+        ? 180
+        : maxStringChars;
+      output[key] = typeof item === "string"
+        ? cleanForModel(item, fieldLimit)
+        : compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars);
+    }
+    return output;
+  }
+  return String(value).slice(0, maxStringChars);
+}
+
 type InnerMeTrackedProvider = "cloudflare" | "gemini";
 type InnerMeUsageOutcome = "success" | "error";
 
@@ -6298,9 +6333,11 @@ Deno.serve(async (req) => {
    * "What about Maisha?" can refer to the preceding InnerMe exchange.
    * Workspace data remains authoritative on every turn.
    */
+  // Keep a small, recent transcript window. The current admin question is sent
+  // separately, so old turns must not crowd out current workspace evidence.
   const conversationHistory = Array.isArray(body.history)
     ? body.history
-        .slice(-12)
+        .slice(-6)
         .map(function (item: any) {
           const role =
             item?.role === "assistant"
@@ -6311,7 +6348,7 @@ Deno.serve(async (req) => {
 
           const content = cleanForModel(
             item?.content || "",
-            2000,
+            900,
           );
 
           return role && content
@@ -10753,7 +10790,7 @@ Answer the admin's question directly.
                         : "none"
                     ) +
                     "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
-                    JSON.stringify(safeContext),
+                    JSON.stringify(compactContextForModel(safeContext)),
                 },
               ],
             },
