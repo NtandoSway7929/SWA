@@ -2427,7 +2427,7 @@
             const passed=run.calibration_passed===true;
             const calibrationVersion=Number(run.calibration_version||0);
             const isV3=calibrationVersion>=3;
-            const statusText=!complete ? "Inconclusive: one or both judge responses could not be evaluated." : (passed ? (calibrationVersion>=4 ? "Calibration passed: score-band, candidate-order, and adversarial-robustness checks met the acceptance criteria under both judges." : (isV3 ? "Calibration passed: score-band and candidate-order checks met the acceptance criteria under both judges." : "Calibration passed: both judges separated all correct answers from their flawed counterparts.")) : "Calibration completed, but one or more judge checks did not meet the acceptance criteria.");
+            const statusText=!complete ? "Inconclusive: one or both judge responses could not be evaluated." : (passed ? (calibrationVersion>=5 ? "Calibration passed: score-band, candidate-order, adversarial-robustness, and dimension-level checks met the acceptance criteria under both judges." : (calibrationVersion>=4 ? "Calibration passed: score-band, candidate-order, and adversarial-robustness checks met the acceptance criteria under both judges." : (isV3 ? "Calibration passed: score-band and candidate-order checks met the acceptance criteria under both judges." : "Calibration passed: both judges separated all correct answers from their flawed counterparts."))) : "Calibration completed, but one or more judge checks did not meet the acceptance criteria.");
             calibrationSummary.innerHTML=
                 '<p><strong>Judge calibration V'+esc(String(run.calibration_version||"1"))+'</strong> · '+esc(String(run.passed_pairs||0))+'/'+esc(String(run.total_case_pairs||0))+(isV3?' cases passed · ':' pairs passed · ')+esc(String(run.provider_model||""))+'</p>'+
                 '<p class="'+(!complete?'sway-ai-ki-error':(passed?'sway-ai-ki-muted':'sway-ai-ki-error'))+'">'+esc(statusText)+'</p>'+
@@ -2441,9 +2441,12 @@
                 const pairRows=rows.filter(function(row){return String(row.calibration_case_key||"")===String(item.case_key||"");});
                 const judgeHtml=judges.map(function(judge){
                     const bandScores=judge.partial_score!==undefined&&judge.partial_score!==null;
-                    const scoreHtml=bandScores
-                        ? '<span>Complete: '+esc(judge.correct_score===null?"N/A":String(judge.correct_score))+'/100</span><span>Partial: '+esc(String(judge.partial_score))+'/100</span><span>Flawed: '+esc(judge.flawed_score===null?"N/A":String(judge.flawed_score))+'/100</span><span>Complete/partial gap: '+esc(judge.correct_partial_separation===null?"N/A":String(judge.correct_partial_separation))+'</span><span>Partial/flawed gap: '+esc(judge.partial_flawed_separation===null?"N/A":String(judge.partial_flawed_separation))+'</span>'
-                        : '<span>Correct: '+esc(judge.correct_score===null?"N/A":String(judge.correct_score))+'/100</span><span>Flawed: '+esc(judge.incorrect_score===null?"N/A":String(judge.incorrect_score))+'/100</span><span>Gap: '+esc(judge.score_separation===null?"N/A":String(judge.score_separation))+'</span>';
+                    const focusScores=typeof judge.dimension_focus==="string"&&judge.dimension_focus.length>0;
+                    const scoreHtml=focusScores
+                        ? '<span>Overall correct: '+esc(judge.correct_score===null?"N/A":String(judge.correct_score))+'/100</span><span>Overall flawed: '+esc(judge.incorrect_score===null?"N/A":String(judge.incorrect_score))+'/100</span><span>'+esc(judge.dimension_focus)+' focus: '+esc(judge.correct_focus_score===null?"N/A":String(judge.correct_focus_score))+'/100 vs '+esc(judge.incorrect_focus_score===null?"N/A":String(judge.incorrect_focus_score))+'/100</span><span>Focus check: '+(judge.dimension_focus_passed?'Pass':'Fail')+'</span>'
+                        : (bandScores
+                            ? '<span>Complete: '+esc(judge.correct_score===null?"N/A":String(judge.correct_score))+'/100</span><span>Partial: '+esc(String(judge.partial_score))+'/100</span><span>Flawed: '+esc(judge.flawed_score===null?"N/A":String(judge.flawed_score))+'/100</span><span>Complete/partial gap: '+esc(judge.correct_partial_separation===null?"N/A":String(judge.correct_partial_separation))+'</span><span>Partial/flawed gap: '+esc(judge.partial_flawed_separation===null?"N/A":String(judge.partial_flawed_separation))+'</span>'
+                            : '<span>Correct: '+esc(judge.correct_score===null?"N/A":String(judge.correct_score))+'/100</span><span>Flawed: '+esc(judge.incorrect_score===null?"N/A":String(judge.incorrect_score))+'/100</span><span>Gap: '+esc(judge.score_separation===null?"N/A":String(judge.score_separation))+'</span>');
                     const positionHtml=typeof judge.position_bias_passed==="boolean"
                         ? '<span>Order check: '+(judge.position_bias_passed?'Pass':'Fail')+(judge.position_bias_max_score_delta===null?'':' · Δ '+esc(String(judge.position_bias_max_score_delta)))+'</span>'
                         : '';
@@ -2451,10 +2454,10 @@
                 }).join("");
                 const rationaleHtml=pairRows.map(function(row){
                     const dimensions=row.dimension_scores&&typeof row.dimension_scores==="object"?row.dimension_scores:{};
-                    const qualityLabel=String(dimensions.score_band||row.expected_quality||"candidate");
+                    const qualityLabel=String(dimensions.calibration_focus ? ("focus: "+dimensions.calibration_focus) : (dimensions.score_band||row.expected_quality||"candidate"));
                     return '<p><strong>'+esc(qualityLabel)+' · '+esc(String(row.judge_model||""))+' · '+esc(String(row.score||0))+'/100'+(row.passed?' · pass':' · fail')+'</strong><br>'+esc(String(row.rationale||"No rationale recorded."))+'</p>';
                 }).join("");
-                const calibrationType=item.calibration_type==="score_band"?"Score-band test":(item.calibration_type==="position_bias"?"Candidate-order test":"Binary separation test");
+                const calibrationType=item.calibration_type==="dimension_calibration"?"Dimension calibration":(item.calibration_type==="adversarial_robustness"?"Adversarial robustness":(item.calibration_type==="score_band"?"Score-band test":(item.calibration_type==="position_bias"?"Candidate-order test":"Binary separation test")));
                 return '<article class="sway-ai-ki-eval-result">'+
                     '<div class="sway-ai-ki-eval-result-heading"><strong>'+esc(String(item.title||item.case_key||"Calibration case"))+'</strong><span>'+esc(calibrationType)+' · '+(item.passed?'<span>Passed</span>':'<span>Failed</span>')+'</span></div>'+
                     judgeHtml+
@@ -2511,7 +2514,7 @@
                 if(calibrationRunButton.disabled) return;
                 calibrationRunButton.disabled=true;
                 calibrationRunButton.textContent="Calibrating judges…";
-                calibrationSummary.innerHTML='<p class="sway-ai-ki-muted">Scoring 20 calibration cases: ten binary anchors, three score-band cases, two mirrored candidate-order cases, and five adversarial robustness cases. Two independent judges are evaluated. The V8 benchmark baseline remains unchanged.</p>';
+                calibrationSummary.innerHTML='<p class="sway-ai-ki-muted">Scoring 25 calibration cases: ten binary anchors, three score-band cases, two mirrored candidate-order cases, five adversarial robustness cases, and five dimension-focus cases. Two independent judges are evaluated. The V8 benchmark baseline remains unchanged.</p>';
                 calibrationResults.innerHTML='<p class="sway-ai-ki-muted">Calibration in progress…</p>';
                 try{
                     const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
@@ -2526,7 +2529,7 @@
                     if(data.status==="inconclusive"){
                         window.alert("Judge calibration is inconclusive because one or both provider responses could not be evaluated. No calibration pass has been claimed. The partial results are saved separately from the benchmark baseline.");
                     }else if(data.calibration_passed===true){
-                        window.alert(Number(data.calibration_version||0)>=4 ? "Judge calibration passed: all "+String(data.total_case_pairs||0)+" cases met the score-band, separation, candidate-order, and adversarial-robustness criteria under both judges." : (Number(data.calibration_version||0)>=3 ? "Judge calibration passed: all "+String(data.total_case_pairs||0)+" calibration cases met the score-band, separation, and candidate-order criteria under both judges." : "Judge calibration passed: all "+String(data.total_case_pairs||0)+" answer pairs met the score-separation criteria under both judges."));
+                        window.alert(Number(data.calibration_version||0)>=5 ? "Judge calibration passed: all "+String(data.total_case_pairs||0)+" cases met the dimension-level, score-band, separation, candidate-order, and adversarial-robustness criteria under both judges." : (Number(data.calibration_version||0)>=4 ? "Judge calibration passed: all "+String(data.total_case_pairs||0)+" cases met the score-band, separation, candidate-order, and adversarial-robustness criteria under both judges." : (Number(data.calibration_version||0)>=3 ? "Judge calibration passed: all "+String(data.total_case_pairs||0)+" calibration cases met the score-band, separation, and candidate-order criteria under both judges." : "Judge calibration passed: all "+String(data.total_case_pairs||0)+" answer pairs met the score-separation criteria under both judges.")));
                     }else{
                         window.alert("Judge calibration completed, but "+String(data.failed_pairs||0)+" of "+String(data.total_case_pairs||0)+" pairs failed one or more judge-separation checks. Review the saved rationales before changing the benchmark.");
                     }
