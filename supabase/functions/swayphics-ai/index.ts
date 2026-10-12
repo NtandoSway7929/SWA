@@ -35,6 +35,15 @@ async function sha256(value: string) {
 
 const PRIMARY_MODEL: string = "gemini-3.8-flash";
 const FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
+// Optional free-tier route for isolated, low-risk copy tasks.
+const GROQ_MODEL = Deno.env.get("GROQ_MODEL") || "llama-3.3-70b-versatile";
+function isGroqEligibleWritingRequest(value: string, history: Array<{role:"user"|"assistant";content:string}>, focusedRecord: unknown) {
+  if (focusedRecord || history.length > 0 || value.length > 1200) return false;
+  if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value)) return false;
+  if (/(?:\+?27|0)\s*\d(?:[\s()-]*\d){8,}/.test(value)) return false;
+  if (/\b(?:R\s?\d|ZAR|invoice|payment|financial|lead|client|customer record|proposal|follow-up|strategy|analyse|analyze|forecast|calculate|roadmap|workspace|private|confidential)\b/i.test(value)) return false;
+  return /\b(?:rewrite|rephrase|polish|proofread|fix the grammar|improve the wording|write a caption|caption for|social media caption|tagline|slogan|headline|short bio|product description|meta description|call to action|CTA)\b/i.test(value);
+}
 // The benchmark uses a separate, free-tier-friendly model pair. Keep the live
 // InnerMe chat/operations model policy independent from benchmark configuration.
 const INNERME_BENCHMARK_PRIMARY_MODEL: string = "gemini-3.1-flash-lite";
@@ -10441,7 +10450,42 @@ Answer the admin's question directly.
   }
 
   let activeModel = PRIMARY_MODEL;
-  let geminiResponse = await requestGemini(PRIMARY_MODEL);
+  let activeProvider = "gemini";
+  let result: any = null;
+  const groqKey = Deno.env.get("GROQ_API_KEY") || "";
+  if (groqKey && isGroqEligibleWritingRequest(message, conversationHistory, safeContext.focused_record)) {
+    try {
+      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: ["Bearer", groqKey].join(" ") },
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          messages: [
+            { role: "system", content: "You are a polished commercial copywriter for Swayphics, a South African creative and design business. Write naturally, clearly and specifically. Avoid generic AI phrasing, invented proof, fake urgency, excessive emojis and em dashes. Use a premium, human, confident tone. Return only the requested deliverable." },
+            { role: "user", content: message },
+          ],
+          max_completion_tokens: 700,
+          temperature: 0.5,
+        }),
+        signal: AbortSignal.timeout(12000),
+      });
+      if (groqResponse.ok) {
+        const payload = await groqResponse.json();
+        const text = payload?.choices?.[0]?.message?.content;
+        if (typeof text === "string" && text.trim()) {
+          activeProvider = "groq";
+          activeModel = typeof payload?.model === "string" ? payload.model : GROQ_MODEL;
+          result = { candidates: [{ content: { parts: [{ text: text.trim() }] } }] };
+        }
+      } else {
+        console.warn("Groq route unavailable; using Gemini.", groqResponse.status);
+      }
+    } catch (error) {
+      console.warn("Groq route failed; using Gemini.", error instanceof Error ? error.message : String(error));
+    }
+  }
+  if (!result) {
+    let geminiResponse = await requestGemini(PRIMARY_MODEL);
 
   /*
    * Gemini can temporarily return 503 when a model is under heavy demand.
@@ -10478,20 +10522,20 @@ Answer the admin's question directly.
       providerError = null;
     }
 
-    return json({
-      error: "The AI provider could not complete the request.",
-      provider_status: geminiResponse.status,
-      provider_code: providerError?.status || null,
-      provider_type: "gemini",
-      provider_model: activeModel,
-      provider_message:
-        typeof providerError?.message === "string"
-          ? providerError.message.slice(0, 500)
-          : null,
-    }, 502, origin);
+      return json({
+        error: "The AI provider could not complete the request.",
+        provider_status: geminiResponse.status,
+        provider_code: providerError?.status || null,
+        provider_type: "gemini",
+        provider_model: activeModel,
+        provider_message:
+          typeof providerError?.message === "string"
+            ? providerError.message.slice(0, 500)
+            : null,
+      }, 502, origin);
+    }
+    result = await geminiResponse.json();
   }
-
-  const result = await geminiResponse.json();
 
   const answer =
     result?.candidates?.[0]?.content?.parts
@@ -10516,7 +10560,7 @@ Answer the admin's question directly.
       error: "The AI provider returned an empty answer.",
       provider_status: 200,
       provider_code: blockReason,
-      provider_type: "gemini",
+      provider_type: activeProvider,
       provider_model: activeModel,
       provider_message: blockReason
         ? "Gemini did not return usable text."
