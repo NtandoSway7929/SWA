@@ -18,6 +18,7 @@ jobs:
         run: |
           set -e
           node --check admin-dashboard/admin-workspace.js
+          node --check admin-dashboard/innerme-provider-usage.js
 
       - name: Validate inline JavaScript
         shell: bash
