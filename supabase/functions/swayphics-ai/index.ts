@@ -180,31 +180,43 @@ async function recordInnerMeProviderUsage(event: InnerMeProviderUsageEvent): Pro
   const headers = new Headers({
     "Content-Type": "application/json",
     apikey: serviceKey,
-    Prefer: "return=minimal",
+    Prefer: "resolution=ignore-duplicates,return=minimal",
   });
   // Modern sb_secret_ keys are not JWTs and must not be sent as Bearer tokens.
   if (!serviceKey.startsWith("sb_secret_")) {
     headers.set("Authorization", "Bearer " + serviceKey);
   }
 
-  try {
-    const response = await fetch(
-      supabaseUrl.replace(/\/+$/, "") + "/rest/v1/innerme_provider_usage",
-      {
+  const telemetryUrl =
+    supabaseUrl.replace(/\/+$/, "") +
+    "/rest/v1/innerme_provider_usage?on_conflict=request_id,attempt_number";
+  const body = JSON.stringify(event);
+
+  // The request/attempt unique constraint makes the retry idempotent even when
+  // the server commits an insert but the acknowledgement arrives late.
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const response = await fetch(telemetryUrl, {
         method: "POST",
         headers,
-        body: JSON.stringify(event),
-        signal: AbortSignal.timeout(1500),
-      },
-    );
-    if (!response.ok) {
+        body,
+        signal: AbortSignal.timeout(2500),
+      });
+      if (response.ok) return;
+
+      const retryable = response.status >= 500 || response.status === 408 || response.status === 429;
+      if (retryable && attempt < 2) continue;
+
       console.warn("InnerMe provider telemetry insert rejected.", response.status);
+      return;
+    } catch (error) {
+      if (attempt === 2) {
+        const reason = error instanceof Error ? error.name : "unknown_error";
+        console.warn("InnerMe provider telemetry insert failed after retry.", reason);
+      }
     }
-  } catch {
-    console.warn("InnerMe provider telemetry insert failed or timed out.");
   }
 }
-
 
 
 const INNERME_APPROVED_GEMINI_MODELS = new Set<string>([
@@ -10734,6 +10746,46 @@ Answer the admin's question directly.
     );
   }
 
+  async function requestGeminiCopywritingFallback(model: string) {
+    const copywritingSystemPrompt = [
+      "You are a polished commercial copywriter for Swayphics, a South African creative and design business.",
+      "Write naturally, clearly and specifically. Use a premium, human, confident tone.",
+      "Avoid generic AI phrasing, invented proof, fake urgency, excessive emojis and em dashes.",
+      "Preserve the user's intent and facts. Do not invent results, prices, testimonials, credentials, or business-specific proof.",
+      "Return only the requested copy. Do not provide an explanation unless explicitly requested.",
+    ].join("\n");
+
+    return await guardedGeminiFetch(
+      model,
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+        encodeURIComponent(model) +
+        ":generateContent",
+      {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": geminiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: copywritingSystemPrompt }],
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: "COPYWRITING REQUEST:\n" + message }],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: 700,
+            temperature: 0.5,
+          },
+        }),
+        signal: AbortSignal.timeout(10000),
+      },
+    );
+  }
+
   let activeModel = PRIMARY_MODEL;
   let activeProvider: InnerMeTrackedProvider = "gemini";
   let result: any = null;
@@ -10814,7 +10866,7 @@ Answer the admin's question directly.
               Authorization: "Bearer " + cloudflareToken,
             },
             body: cloudflareRequestBody,
-            signal: AbortSignal.timeout(12000),
+            signal: AbortSignal.timeout(8000),
           },
         );
         cloudflareStatus = cloudflareResponse.status;
@@ -10911,13 +10963,164 @@ Answer the admin's question directly.
     }
   }
 
-  // Standalone short copy requests must never spill into a large-context Gemini call.
+  // Resilient, bounded fallback for eligible copywriting only.
+  // This uses a minimal prompt, not workspace context, and is still subject to
+  // the Gemini model allowlist, request-size cap, daily quota reservation and output cap.
   if (cloudflareWritingEligible && !result) {
-    return json({
-      error: "The free writing route is currently unavailable or at its daily limit. Gemini fallback was blocked to protect the free-tier budget. Please retry later.",
-      provider_type: "cloudflare",
-      quota_guarded: true,
-    }, 503, origin);
+    const fallbackModel = FALLBACK_MODEL;
+    const fallbackAttemptNumber = ++providerAttemptNumber;
+    const fallbackStartedAt = performance.now();
+    const fallbackReason = providerFallbackReason || "cloudflare_unavailable";
+    let fallbackResponse: Response;
+
+    try {
+      fallbackResponse = await requestGeminiCopywritingFallback(fallbackModel);
+    } catch (error) {
+      const errorCode = error instanceof Error &&
+        (error.name === "TimeoutError" || error.name === "AbortError")
+        ? "timeout"
+        : "network_error";
+      await recordInnerMeProviderUsage({
+        request_id: providerRequestId,
+        attempt_number: fallbackAttemptNumber,
+        task_category: "copywriting",
+        provider: "gemini",
+        model: fallbackModel,
+        outcome: "error",
+        http_status: null,
+        latency_ms: Math.max(0, Math.round(performance.now() - fallbackStartedAt)),
+        input_tokens: null,
+        output_tokens: null,
+        total_tokens: null,
+        error_code: errorCode,
+        fallback_reason: fallbackReason,
+      });
+      return json({
+        error: "Cloudflare could not complete the writing request, and the limited Gemini fallback also failed. Please retry later.",
+        provider_type: "gemini",
+        provider_model: fallbackModel,
+        fallback_reason: fallbackReason,
+      }, 503, origin);
+    }
+
+    if (fallbackResponse.headers.get("X-InnerMe-Guard") === "blocked") {
+      const guardText = await fallbackResponse.text();
+      let guardPayload: any = {};
+      try {
+        guardPayload = JSON.parse(guardText);
+      } catch {
+        guardPayload = {};
+      }
+      const guardReason =
+        typeof guardPayload?.error?.code === "string"
+          ? guardPayload.error.code
+          : "zero_cost_guard";
+      console.warn("InnerMe copywriting fallback blocked by zero-cost guard.", guardReason);
+      return json({
+        error:
+          typeof guardPayload?.error?.message === "string"
+            ? guardPayload.error.message
+            : "The copywriting fallback was blocked to protect the free-tier budget.",
+        provider_type: "gemini",
+        provider_model: fallbackModel,
+        quota_guarded: true,
+        guard_reason: guardReason,
+      }, 429, origin);
+    }
+
+    if (!fallbackResponse.ok) {
+      await fallbackResponse.text().catch(() => "");
+      await recordInnerMeProviderUsage({
+        request_id: providerRequestId,
+        attempt_number: fallbackAttemptNumber,
+        task_category: "copywriting",
+        provider: "gemini",
+        model: fallbackModel,
+        outcome: "error",
+        http_status: fallbackResponse.status,
+        latency_ms: Math.max(0, Math.round(performance.now() - fallbackStartedAt)),
+        input_tokens: null,
+        output_tokens: null,
+        total_tokens: null,
+        error_code: "http_" + fallbackResponse.status,
+        fallback_reason: fallbackReason,
+      });
+      return json({
+        error: "Cloudflare and the limited Gemini writing fallback are currently unavailable. Please retry later.",
+        provider_type: "gemini",
+        provider_model: fallbackModel,
+        provider_status: fallbackResponse.status,
+        fallback_reason: fallbackReason,
+      }, 503, origin);
+    }
+
+    let fallbackPayload: any;
+    try {
+      fallbackPayload = await fallbackResponse.json();
+    } catch {
+      await recordInnerMeProviderUsage({
+        request_id: providerRequestId,
+        attempt_number: fallbackAttemptNumber,
+        task_category: "copywriting",
+        provider: "gemini",
+        model: fallbackModel,
+        outcome: "error",
+        http_status: fallbackResponse.status,
+        latency_ms: Math.max(0, Math.round(performance.now() - fallbackStartedAt)),
+        input_tokens: null,
+        output_tokens: null,
+        total_tokens: null,
+        error_code: "invalid_json_response",
+        fallback_reason: fallbackReason,
+      });
+      return json({
+        error: "The writing fallback returned an invalid response. Please retry later.",
+        provider_type: "gemini",
+        provider_model: fallbackModel,
+      }, 502, origin);
+    }
+
+    const fallbackText = fallbackPayload?.candidates?.[0]?.content?.parts
+      ?.filter((part: any) => typeof part?.text === "string")
+      ?.map((part: any) => part.text)
+      ?.join("\n")
+      ?.trim() || "";
+
+    if (!fallbackText) {
+      await recordInnerMeProviderUsage({
+        request_id: providerRequestId,
+        attempt_number: fallbackAttemptNumber,
+        task_category: "copywriting",
+        provider: "gemini",
+        model: fallbackModel,
+        outcome: "error",
+        http_status: fallbackResponse.status,
+        latency_ms: Math.max(0, Math.round(performance.now() - fallbackStartedAt)),
+        ...readProviderTokenMetrics(fallbackPayload, "gemini"),
+        error_code: "empty_response",
+        fallback_reason: fallbackReason,
+      });
+      return json({
+        error: "The writing fallback returned no usable text. Please retry later.",
+        provider_type: "gemini",
+        provider_model: fallbackModel,
+      }, 502, origin);
+    }
+
+    activeProvider = "gemini";
+    activeModel = fallbackModel;
+    result = fallbackPayload;
+    pendingGeminiUsage = {
+      attemptNumber: fallbackAttemptNumber,
+      fallbackReason,
+      httpStatus: fallbackResponse.status,
+      payload: fallbackPayload,
+      latencyMs: Math.max(0, Math.round(performance.now() - fallbackStartedAt)),
+    };
+    console.info("InnerMe provider success: Gemini minimal-context writing fallback.", {
+      model: fallbackModel,
+      fallback_reason: fallbackReason,
+    });
   }
 
   if (!result) {
