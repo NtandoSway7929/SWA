@@ -10455,7 +10455,7 @@ Answer the admin's question directly.
   let result: any = null;
   const cloudflareToken = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
   const cloudflareAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") || "";
-const cloudflareWritingEligible = isCloudflareEligibleWritingRequest(
+  const cloudflareWritingEligible = isCloudflareEligibleWritingRequest(
     message,
     conversationHistory,
     safeContext.focused_record,
@@ -10472,7 +10472,6 @@ const cloudflareWritingEligible = isCloudflareEligibleWritingRequest(
     console.info(
       "InnerMe provider routing: Cloudflare Workers AI selected for an eligible writing request.",
     );
-  if (cloudflareWritingEligible && cloudflareCredentialsConfigured) {
     try {
       const cloudflareResponse = await fetch(
         "https://api.cloudflare.com/client/v4/accounts/" +
@@ -10501,18 +10500,17 @@ const cloudflareWritingEligible = isCloudflareEligibleWritingRequest(
       );
       if (cloudflareResponse.ok) {
         const payload = await cloudflareResponse.json();
-        const text = payload?.choices?.[0]?.message?.content;
-        if (typeof text === "string" && text.trim()) {
+        const generatedText = payload?.choices?.[0]?.message?.content;
+        if (typeof generatedText === "string" && generatedText.trim()) {
           activeProvider = "cloudflare";
           activeModel = typeof payload?.model === "string" ? payload.model : CLOUDFLARE_MODEL;
-          result = { candidates: [{ content: { parts: [{ text: text.trim() }] } }] };
+          result = { candidates: [{ content: { parts: [{ text: generatedText.trim() }] } }] };
           console.info("InnerMe provider success: Cloudflare Workers AI.", {
             model: activeModel,
           });
-         else {
+        } else {
           console.warn("Cloudflare Workers AI returned no usable text; falling back to Gemini.");
         }
-
       } else {
         console.warn("Cloudflare Workers AI route unavailable; using Gemini.", cloudflareResponse.status);
       }
