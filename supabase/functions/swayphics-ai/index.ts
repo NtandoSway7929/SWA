@@ -121,6 +121,90 @@ function cleanForModel(value: unknown, max = 3000) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+type InnerMeTrackedProvider = "cloudflare" | "gemini";
+type InnerMeUsageOutcome = "success" | "error";
+
+type InnerMeProviderUsageEvent = {
+  request_id: string;
+  attempt_number: number;
+  task_category: "copywriting" | "assistant_chat";
+  provider: InnerMeTrackedProvider;
+  model: string;
+  outcome: InnerMeUsageOutcome;
+  http_status: number | null;
+  latency_ms: number;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  total_tokens: number | null;
+  error_code: string | null;
+  fallback_reason: string | null;
+};
+
+function providerTokenCount(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : null;
+}
+
+function readProviderTokenMetrics(
+  payload: any,
+  provider: InnerMeTrackedProvider,
+) {
+  const usage = provider === "cloudflare"
+    ? payload?.usage
+    : payload?.usageMetadata;
+  return {
+    input_tokens: providerTokenCount(usage?.prompt_tokens ?? usage?.promptTokenCount),
+    output_tokens: providerTokenCount(usage?.completion_tokens ?? usage?.candidatesTokenCount),
+    total_tokens: providerTokenCount(usage?.total_tokens ?? usage?.totalTokenCount),
+  };
+}
+
+/**
+ * Best-effort server-side telemetry. Only provider/routing metadata and token
+ * counts are persisted. Prompts, answers, business records, and secrets are
+ * deliberately excluded; telemetry failures never fail the user's AI request.
+ */
+async function recordInnerMeProviderUsage(event: InnerMeProviderUsageEvent): Promise<void> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const serviceKey =
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+    Deno.env.get("SUPABASE_SECRET_KEY") ||
+    "";
+
+  if (!supabaseUrl || !serviceKey) {
+    console.warn("InnerMe provider telemetry skipped: server credentials are unavailable.");
+    return;
+  }
+
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    apikey: serviceKey,
+    Prefer: "return=minimal",
+  });
+  // Modern sb_secret_ keys are not JWTs and must not be sent as Bearer tokens.
+  if (!serviceKey.startsWith("sb_secret_")) {
+    headers.set("Authorization", "Bearer " + serviceKey);
+  }
+
+  try {
+    const response = await fetch(
+      supabaseUrl.replace(/\/+$/, "") + "/rest/v1/innerme_provider_usage",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(event),
+        signal: AbortSignal.timeout(1500),
+      },
+    );
+    if (!response.ok) {
+      console.warn("InnerMe provider telemetry insert rejected.", response.status);
+    }
+  } catch {
+    console.warn("InnerMe provider telemetry insert failed or timed out.");
+  }
+}
+
 function buildKnowledgeRetrievalQueries(value: unknown, max = 1200): string[] {
   const query = cleanForModel(value, max);
   if (!query) return [];
@@ -10451,7 +10535,7 @@ Answer the admin's question directly.
   }
 
   let activeModel = PRIMARY_MODEL;
-  let activeProvider = "gemini";
+  let activeProvider: InnerMeTrackedProvider = "gemini";
   let result: any = null;
   const cloudflareToken = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
   const cloudflareAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") || "";
@@ -10461,6 +10545,20 @@ Answer the admin's question directly.
     safeContext.focused_record,
   );
   const cloudflareCredentialsConfigured = Boolean(cloudflareToken && cloudflareAccountId);
+  const providerRequestId = crypto.randomUUID();
+  const providerTaskCategory = cloudflareWritingEligible ? "copywriting" : "assistant_chat";
+  let providerAttemptNumber = 0;
+  let providerFallbackReason: string | null =
+    cloudflareWritingEligible && !cloudflareCredentialsConfigured
+      ? "cloudflare_credentials_missing"
+      : null;
+  let pendingGeminiUsage: {
+    attemptNumber: number;
+    fallbackReason: string | null;
+    httpStatus: number;
+    payload: any;
+    latencyMs: number;
+  } | null = null;
 
   if (cloudflareWritingEligible && !cloudflareCredentialsConfigured) {
     console.warn(
@@ -10472,6 +10570,11 @@ Answer the admin's question directly.
     console.info(
       "InnerMe provider routing: Cloudflare Workers AI selected for an eligible writing request.",
     );
+    const attemptNumber = ++providerAttemptNumber;
+    const attemptStartedAt = performance.now();
+    let cloudflareStatus: number | null = null;
+    let cloudflareAttemptRecorded = false;
+
     try {
       const cloudflareResponse = await fetch(
         "https://api.cloudflare.com/client/v4/accounts/" +
@@ -10498,67 +10601,218 @@ Answer the admin's question directly.
           signal: AbortSignal.timeout(12000),
         },
       );
+      cloudflareStatus = cloudflareResponse.status;
+
       if (cloudflareResponse.ok) {
         const payload = await cloudflareResponse.json();
         const generatedText = payload?.choices?.[0]?.message?.content;
+        const latencyMs = Math.max(0, Math.round(performance.now() - attemptStartedAt));
+
         if (typeof generatedText === "string" && generatedText.trim()) {
           activeProvider = "cloudflare";
           activeModel = typeof payload?.model === "string" ? payload.model : CLOUDFLARE_MODEL;
           result = { candidates: [{ content: { parts: [{ text: generatedText.trim() }] } }] };
+          await recordInnerMeProviderUsage({
+            request_id: providerRequestId,
+            attempt_number: attemptNumber,
+            task_category: providerTaskCategory,
+            provider: "cloudflare",
+            model: activeModel,
+            outcome: "success",
+            http_status: cloudflareResponse.status,
+            latency_ms: latencyMs,
+            ...readProviderTokenMetrics(payload, "cloudflare"),
+            error_code: null,
+            fallback_reason: null,
+          });
+          cloudflareAttemptRecorded = true;
           console.info("InnerMe provider success: Cloudflare Workers AI.", {
             model: activeModel,
           });
         } else {
+          providerFallbackReason = "cloudflare_empty_response";
+          await recordInnerMeProviderUsage({
+            request_id: providerRequestId,
+            attempt_number: attemptNumber,
+            task_category: providerTaskCategory,
+            provider: "cloudflare",
+            model: CLOUDFLARE_MODEL,
+            outcome: "error",
+            http_status: cloudflareResponse.status,
+            latency_ms: latencyMs,
+            ...readProviderTokenMetrics(payload, "cloudflare"),
+            error_code: "empty_response",
+            fallback_reason: null,
+          });
+          cloudflareAttemptRecorded = true;
           console.warn("Cloudflare Workers AI returned no usable text; falling back to Gemini.");
         }
       } else {
+        providerFallbackReason = "cloudflare_http_" + cloudflareResponse.status;
+        // Consume the provider error response without persisting its body.
+        await cloudflareResponse.text().catch(() => "");
+        await recordInnerMeProviderUsage({
+          request_id: providerRequestId,
+          attempt_number: attemptNumber,
+          task_category: providerTaskCategory,
+          provider: "cloudflare",
+          model: CLOUDFLARE_MODEL,
+          outcome: "error",
+          http_status: cloudflareResponse.status,
+          latency_ms: Math.max(0, Math.round(performance.now() - attemptStartedAt)),
+          input_tokens: null,
+          output_tokens: null,
+          total_tokens: null,
+          error_code: "http_" + cloudflareResponse.status,
+          fallback_reason: null,
+        });
+        cloudflareAttemptRecorded = true;
         console.warn("Cloudflare Workers AI route unavailable; using Gemini.", cloudflareResponse.status);
       }
     } catch (error) {
+      const isTimeout = error instanceof Error &&
+        (error.name === "TimeoutError" || error.name === "AbortError");
+      const errorCode = isTimeout ? "timeout" : "network_or_response_error";
+      providerFallbackReason = "cloudflare_" + errorCode;
+      if (!cloudflareAttemptRecorded) {
+        await recordInnerMeProviderUsage({
+          request_id: providerRequestId,
+          attempt_number: attemptNumber,
+          task_category: providerTaskCategory,
+          provider: "cloudflare",
+          model: CLOUDFLARE_MODEL,
+          outcome: "error",
+          http_status: cloudflareStatus,
+          latency_ms: Math.max(0, Math.round(performance.now() - attemptStartedAt)),
+          input_tokens: null,
+          output_tokens: null,
+          total_tokens: null,
+          error_code: errorCode,
+          fallback_reason: null,
+        });
+      }
       console.warn(
         "Cloudflare Workers AI route failed; using Gemini.",
-        error instanceof Error ? error.message : String(error),
+        errorCode,
       );
     }
   }
+
   if (!result) {
-    let geminiResponse = await requestGemini(PRIMARY_MODEL);
-
-  /*
-   * Gemini can temporarily return 503 when a model is under heavy demand.
-   * Use the lighter free-tier model as an automatic fallback so InnerMe
-   * remains usable without requiring a paid API account.
-   */
-  if (
-    (geminiResponse.status === 503 ||
-      geminiResponse.status === 429) &&
-    PRIMARY_MODEL !== FALLBACK_MODEL
-  ) {
-    console.warn(
-      "Gemini InnerMe primary model unavailable; trying fallback model.",
-      geminiResponse.status,
-    );
-
-    activeModel = FALLBACK_MODEL;
-    geminiResponse = await requestGemini(FALLBACK_MODEL);
-  }
-
-  if (!geminiResponse.ok) {
-    const errorText = await geminiResponse.text();
-
-    console.error(
-      "Gemini InnerMe error:",
-      errorText.slice(0, 2000),
-    );
-
-    let providerError: any = null;
+    let geminiAttemptNumber = ++providerAttemptNumber;
+    let geminiAttemptStartedAt = performance.now();
+    let geminiAttemptFallbackReason = providerFallbackReason;
+    let geminiResponse: Response;
 
     try {
-      providerError = JSON.parse(errorText)?.error || null;
-    } catch {
-      providerError = null;
+      geminiResponse = await requestGemini(PRIMARY_MODEL);
+    } catch (error) {
+      const errorCode = error instanceof Error &&
+        (error.name === "TimeoutError" || error.name === "AbortError")
+        ? "timeout"
+        : "network_error";
+      await recordInnerMeProviderUsage({
+        request_id: providerRequestId,
+        attempt_number: geminiAttemptNumber,
+        task_category: providerTaskCategory,
+        provider: "gemini",
+        model: PRIMARY_MODEL,
+        outcome: "error",
+        http_status: null,
+        latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+        input_tokens: null,
+        output_tokens: null,
+        total_tokens: null,
+        error_code: errorCode,
+        fallback_reason: geminiAttemptFallbackReason,
+      });
+      throw error;
     }
 
+    if (
+      (geminiResponse.status === 503 || geminiResponse.status === 429) &&
+      PRIMARY_MODEL !== FALLBACK_MODEL
+    ) {
+      const primaryStatus = geminiResponse.status;
+      await geminiResponse.text().catch(() => "");
+      await recordInnerMeProviderUsage({
+        request_id: providerRequestId,
+        attempt_number: geminiAttemptNumber,
+        task_category: providerTaskCategory,
+        provider: "gemini",
+        model: PRIMARY_MODEL,
+        outcome: "error",
+        http_status: primaryStatus,
+        latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+        input_tokens: null,
+        output_tokens: null,
+        total_tokens: null,
+        error_code: primaryStatus === 429 ? "rate_limited" : "provider_unavailable",
+        fallback_reason: geminiAttemptFallbackReason,
+      });
+
+      console.warn(
+        "Gemini InnerMe primary model unavailable; trying fallback model.",
+        primaryStatus,
+      );
+      activeModel = FALLBACK_MODEL;
+      geminiAttemptNumber = ++providerAttemptNumber;
+      geminiAttemptStartedAt = performance.now();
+      geminiAttemptFallbackReason = "gemini_primary_http_" + primaryStatus;
+
+      try {
+        geminiResponse = await requestGemini(FALLBACK_MODEL);
+      } catch (error) {
+        const errorCode = error instanceof Error &&
+          (error.name === "TimeoutError" || error.name === "AbortError")
+          ? "timeout"
+          : "network_error";
+        await recordInnerMeProviderUsage({
+          request_id: providerRequestId,
+          attempt_number: geminiAttemptNumber,
+          task_category: providerTaskCategory,
+          provider: "gemini",
+          model: FALLBACK_MODEL,
+          outcome: "error",
+          http_status: null,
+          latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+          input_tokens: null,
+          output_tokens: null,
+          total_tokens: null,
+          error_code: errorCode,
+          fallback_reason: geminiAttemptFallbackReason,
+        });
+        throw error;
+      }
+    }
+
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text();
+      let providerError: any = null;
+
+      try {
+        providerError = JSON.parse(errorText)?.error || null;
+      } catch {
+        providerError = null;
+      }
+
+      await recordInnerMeProviderUsage({
+        request_id: providerRequestId,
+        attempt_number: geminiAttemptNumber,
+        task_category: providerTaskCategory,
+        provider: "gemini",
+        model: activeModel,
+        outcome: "error",
+        http_status: geminiResponse.status,
+        latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+        input_tokens: null,
+        output_tokens: null,
+        total_tokens: null,
+        error_code: "http_" + geminiResponse.status,
+        fallback_reason: geminiAttemptFallbackReason,
+      });
+
+      console.error("Gemini InnerMe error:", "http_" + geminiResponse.status);
       return json({
         error: "The AI provider could not complete the request.",
         provider_status: geminiResponse.status,
@@ -10571,7 +10825,37 @@ Answer the admin's question directly.
             : null,
       }, 502, origin);
     }
-    result = await geminiResponse.json();
+
+    let geminiPayload: any;
+    try {
+      geminiPayload = await geminiResponse.json();
+    } catch {
+      await recordInnerMeProviderUsage({
+        request_id: providerRequestId,
+        attempt_number: geminiAttemptNumber,
+        task_category: providerTaskCategory,
+        provider: "gemini",
+        model: activeModel,
+        outcome: "error",
+        http_status: geminiResponse.status,
+        latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+        input_tokens: null,
+        output_tokens: null,
+        total_tokens: null,
+        error_code: "invalid_json_response",
+        fallback_reason: geminiAttemptFallbackReason,
+      });
+      throw new Error("The Gemini provider returned an invalid JSON response.");
+    }
+
+    pendingGeminiUsage = {
+      attemptNumber: geminiAttemptNumber,
+      fallbackReason: geminiAttemptFallbackReason,
+      httpStatus: geminiResponse.status,
+      payload: geminiPayload,
+      latencyMs: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+    };
+    result = geminiPayload;
   }
 
   const answer =
@@ -10583,6 +10867,22 @@ Answer the admin's question directly.
     "";
 
   if (!answer) {
+    if (pendingGeminiUsage) {
+      await recordInnerMeProviderUsage({
+        request_id: providerRequestId,
+        attempt_number: pendingGeminiUsage.attemptNumber,
+        task_category: providerTaskCategory,
+        provider: "gemini",
+        model: activeModel,
+        outcome: "error",
+        http_status: pendingGeminiUsage.httpStatus,
+        latency_ms: pendingGeminiUsage.latencyMs,
+        ...readProviderTokenMetrics(pendingGeminiUsage.payload, "gemini"),
+        error_code: "empty_response",
+        fallback_reason: pendingGeminiUsage.fallbackReason,
+      });
+      pendingGeminiUsage = null;
+    }
     const blockReason =
       result?.promptFeedback?.blockReason ||
       result?.candidates?.[0]?.finishReason ||
@@ -10605,6 +10905,23 @@ Answer the admin's question directly.
     }, 502, origin);
   }
 
+
+  if (pendingGeminiUsage) {
+    await recordInnerMeProviderUsage({
+      request_id: providerRequestId,
+      attempt_number: pendingGeminiUsage.attemptNumber,
+      task_category: providerTaskCategory,
+      provider: "gemini",
+      model: activeModel,
+      outcome: "success",
+      http_status: pendingGeminiUsage.httpStatus,
+      latency_ms: pendingGeminiUsage.latencyMs,
+      ...readProviderTokenMetrics(pendingGeminiUsage.payload, "gemini"),
+      error_code: null,
+      fallback_reason: pendingGeminiUsage.fallbackReason,
+    });
+    pendingGeminiUsage = null;
+  }
 
   const cleanAnswer = String(answer)
     .replace(/\\([#*_[\]()>+.!-])/g, "$1")
