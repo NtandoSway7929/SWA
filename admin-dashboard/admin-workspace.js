@@ -114,7 +114,8 @@
                 ["swayphics-ai", "Chat"],
                 ["innerme-actions", "Action Centre"],
                 ["innerme-revenue", "Revenue Intelligence"],
-                ["innerme-intelligence", "Intelligence & Governance"]
+                ["innerme-intelligence", "Intelligence & Governance"],
+                ["innerme-provider-usage", "Provider Usage"]
             ]
         },
         {
@@ -4335,6 +4336,10 @@
                 "Intelligence & Governance",
                 "Manage the systems that keep InnerMe informed, evaluated and governed."
             ],
+            "innerme-provider-usage": [
+                "Provider Usage",
+                "Monitor provider reliability, latency, fallbacks and daily request reservations."
+            ],
             insights: [
                 "Insights",
                 "Live financial, sales and delivery intelligence."
@@ -4449,7 +4454,8 @@
             "swayphics-ai",
             "innerme-actions",
             "innerme-revenue",
-            "innerme-intelligence"
+            "innerme-intelligence",
+            "innerme-provider-usage"
         ].includes(String(view || ""));
     }
 
@@ -4458,7 +4464,8 @@
             "swayphics-ai": "chat",
             "innerme-actions": "actions",
             "innerme-revenue": "revenue",
-            "innerme-intelligence": "intelligence"
+            "innerme-intelligence": "intelligence",
+            "innerme-provider-usage": "provider-usage"
         };
         return sections[String(view || "")] || "chat";
     }
@@ -24947,6 +24954,40 @@ function simpleBars(items, color) {
                 (state.currentView === "innerme-revenue" ? "" : ' hidden aria-hidden="true"') +
             '>' +
                 renderAIWorkspaceBriefing("revenue") +
+            '</section>' +
+            '<section class="sway-innerme-subview sway-innerme-provider-usage-view" data-innerme-section="provider-usage"' +
+                (state.currentView === "innerme-provider-usage" ? "" : ' hidden aria-hidden="true"') +
+            '>' +
+                '<div class="sway-provider-usage-panel" id="sway-innerme-provider-usage" aria-labelledby="sway-provider-usage-title">' +
+                    '<div class="sway-provider-usage-header">' +
+                        '<div>' +
+                            '<span class="sway-provider-usage-eyebrow">INNERME / OBSERVABILITY</span>' +
+                            '<h3 id="sway-provider-usage-title">AI provider health</h3>' +
+                            '<p>Last 24 hours of recorded provider attempts, plus today\'s UTC request reservations. No prompts or answers are shown.</p>' +
+                        '</div>' +
+                        '<button type="button" class="sway-ai-knowledge-test-button" data-provider-usage-refresh>Refresh data</button>' +
+                    '</div>' +
+                    '<p class="sway-provider-usage-status" data-provider-usage-status role="status" aria-live="polite">Loading provider telemetry…</p>' +
+                    '<div class="sway-provider-usage-metrics" data-provider-usage-metrics></div>' +
+                    '<div class="sway-provider-usage-columns">' +
+                        '<section class="sway-provider-usage-subpanel" aria-labelledby="sway-provider-usage-breakdown-title">' +
+                            '<h4 id="sway-provider-usage-breakdown-title">By provider</h4>' +
+                            '<div data-provider-usage-breakdown><p>Waiting for telemetry.</p></div>' +
+                        '</section>' +
+                        '<section class="sway-provider-usage-subpanel" aria-labelledby="sway-provider-usage-quota-title">' +
+                            '<h4 id="sway-provider-usage-quota-title">Daily request reservations (UTC)</h4>' +
+                            '<div data-provider-usage-quota><p>Waiting for quota counters.</p></div>' +
+                        '</section>' +
+                    '</div>' +
+                    '<section class="sway-provider-usage-subpanel sway-provider-usage-recent" aria-labelledby="sway-provider-usage-recent-title">' +
+                        '<div class="sway-provider-usage-recent-header"><h4 id="sway-provider-usage-recent-title">Recent attempts</h4><span>Maximum 20 · Last 24 hours</span></div>' +
+                        '<div class="sway-provider-usage-table-wrap">' +
+                            '<table><thead><tr><th>Time</th><th>Provider / model</th><th>Outcome</th><th>Latency</th><th>HTTP</th><th>Note</th></tr></thead>' +
+                            '<tbody data-provider-usage-recent><tr><td colspan="6">Waiting for telemetry.</td></tr></tbody></table>' +
+                        '</div>' +
+                    '</section>' +
+                    '<p class="sway-provider-usage-footnote">Quota values are application-enforced request reservations, not provider billing statements. Token totals are reported only when the provider returns usage metadata.</p>' +
+                '</div>' +
             '</section>' +
             '<section class="sway-innerme-subview sway-innerme-intelligence-view" data-innerme-section="intelligence"' +
                 (state.currentView === "innerme-intelligence" ? "" : ' hidden aria-hidden="true"') +
