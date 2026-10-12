@@ -2425,7 +2425,8 @@
             const cases=Array.isArray(summary.cases) ? summary.cases : [];
             const complete=run.status==="completed";
             const passed=run.calibration_passed===true;
-            const statusText=!complete ? "Inconclusive: one or both judge responses could not be evaluated." : (passed ? "Calibration passed: both judges separated all correct answers from their flawed counterparts." : "Calibration completed, but one or more judge checks did not meet the acceptance criteria.");
+            const isV3=Number(run.calibration_version||0)>=3;
+            const statusText=!complete ? "Inconclusive: one or both judge responses could not be evaluated." : (passed ? (isV3 ? "Calibration passed: score-band and candidate-order checks met the acceptance criteria under both judges." : "Calibration passed: both judges separated all correct answers from their flawed counterparts.") : "Calibration completed, but one or more judge checks did not meet the acceptance criteria.");
             calibrationSummary.innerHTML=
                 '<p><strong>Judge calibration V'+esc(String(run.calibration_version||"1"))+'</strong> · '+esc(String(run.passed_pairs||0))+'/'+esc(String(run.total_case_pairs||0))+' pairs passed · '+esc(String(run.provider_model||""))+'</p>'+
                 '<p class="'+(!complete?'sway-ai-ki-error':(passed?'sway-ai-ki-muted':'sway-ai-ki-error'))+'">'+esc(statusText)+'</p>'+
@@ -2438,13 +2439,23 @@
                 const judges=Array.isArray(item.judges)?item.judges:[];
                 const pairRows=rows.filter(function(row){return String(row.calibration_case_key||"")===String(item.case_key||"");});
                 const judgeHtml=judges.map(function(judge){
-                    return '<div class="sway-ai-ki-eval-flags"><span>'+esc(String(judge.judge_model||"Judge"))+'</span><span>Correct: '+esc(judge.correct_score===null?"N/A":String(judge.correct_score))+'/100</span><span>Flawed: '+esc(judge.incorrect_score===null?"N/A":String(judge.incorrect_score))+'/100</span><span>Gap: '+esc(judge.score_separation===null?"N/A":String(judge.score_separation))+'</span><span>'+ (judge.passed?'Pass':'Fail') +'</span></div>';
+                    const bandScores=judge.partial_score!==undefined&&judge.partial_score!==null;
+                    const scoreHtml=bandScores
+                        ? '<span>Complete: '+esc(judge.correct_score===null?"N/A":String(judge.correct_score))+'/100</span><span>Partial: '+esc(String(judge.partial_score))+'/100</span><span>Flawed: '+esc(judge.flawed_score===null?"N/A":String(judge.flawed_score))+'/100</span><span>Complete/partial gap: '+esc(judge.correct_partial_separation===null?"N/A":String(judge.correct_partial_separation))+'</span><span>Partial/flawed gap: '+esc(judge.partial_flawed_separation===null?"N/A":String(judge.partial_flawed_separation))+'</span>'
+                        : '<span>Correct: '+esc(judge.correct_score===null?"N/A":String(judge.correct_score))+'/100</span><span>Flawed: '+esc(judge.incorrect_score===null?"N/A":String(judge.incorrect_score))+'/100</span><span>Gap: '+esc(judge.score_separation===null?"N/A":String(judge.score_separation))+'</span>';
+                    const positionHtml=typeof judge.position_bias_passed==="boolean"
+                        ? '<span>Order check: '+(judge.position_bias_passed?'Pass':'Fail')+(judge.position_bias_max_score_delta===null?'':' · Δ '+esc(String(judge.position_bias_max_score_delta)))+'</span>'
+                        : '';
+                    return '<div class="sway-ai-ki-eval-flags"><span>'+esc(String(judge.judge_model||"Judge"))+'</span>'+scoreHtml+positionHtml+'<span>'+ (judge.passed?'Pass':'Fail') +'</span></div>';
                 }).join("");
                 const rationaleHtml=pairRows.map(function(row){
-                    return '<p><strong>'+esc(String(row.expected_quality||"candidate"))+' · '+esc(String(row.judge_model||""))+' · '+esc(String(row.score||0))+'/100'+(row.passed?' · pass':' · fail')+'</strong><br>'+esc(String(row.rationale||"No rationale recorded."))+'</p>';
+                    const dimensions=row.dimension_scores&&typeof row.dimension_scores==="object"?row.dimension_scores:{};
+                    const qualityLabel=String(dimensions.score_band||row.expected_quality||"candidate");
+                    return '<p><strong>'+esc(qualityLabel)+' · '+esc(String(row.judge_model||""))+' · '+esc(String(row.score||0))+'/100'+(row.passed?' · pass':' · fail')+'</strong><br>'+esc(String(row.rationale||"No rationale recorded."))+'</p>';
                 }).join("");
+                const calibrationType=item.calibration_type==="score_band"?"Score-band test":(item.calibration_type==="position_bias"?"Candidate-order test":"Binary separation test");
                 return '<article class="sway-ai-ki-eval-result">'+
-                    '<div class="sway-ai-ki-eval-result-heading"><strong>'+esc(String(item.title||item.case_key||"Calibration pair"))+'</strong><span>'+(item.passed?'<span>Pair passed</span>':'<span>Pair failed</span>')+'</span></div>'+
+                    '<div class="sway-ai-ki-eval-result-heading"><strong>'+esc(String(item.title||item.case_key||"Calibration case"))+'</strong><span>'+esc(calibrationType)+' · '+(item.passed?'<span>Passed</span>':'<span>Failed</span>')+'</span></div>'+
                     judgeHtml+
                     '<details><summary>View judge rationales</summary><div class="sway-ai-ki-eval-answer">'+(rationaleHtml||'<p>No individual judge rationales were saved.</p>')+'</div></details>'+
                 '</article>';
@@ -2499,7 +2510,7 @@
                 if(calibrationRunButton.disabled) return;
                 calibrationRunButton.disabled=true;
                 calibrationRunButton.textContent="Calibrating judges…";
-                calibrationSummary.innerHTML='<p class="sway-ai-ki-muted">Scoring ten fixed correct/flawed answer pairs, including subtle near-miss errors, with two independent judges. This uses two batched model requests and does not alter benchmark scores.</p>';
+                calibrationSummary.innerHTML='<p class="sway-ai-ki-muted">Scoring 15 calibration cases: ten binary anchors, three complete/partial/flawed score-band cases, and a mirrored candidate-order probe. Two independent judges are evaluated. The V8 benchmark baseline remains unchanged.</p>';
                 calibrationResults.innerHTML='<p class="sway-ai-ki-muted">Calibration in progress…</p>';
                 try{
                     const response=await fetch(SUPABASE_URL+"/functions/v1/swayphics-ai",{
