@@ -35,9 +35,10 @@ async function sha256(value: string) {
 
 const PRIMARY_MODEL: string = "gemini-3.8-flash";
 const FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
-// Optional free-tier route for isolated, low-risk copy tasks.
-const GROQ_MODEL = Deno.env.get("GROQ_MODEL") || "llama-3.3-70b-versatile";
-function isGroqEligibleWritingRequest(value: string, history: Array<{role:"user"|"assistant";content:string}>, focusedRecord: unknown) {
+// Optional Cloudflare Workers AI route for isolated, low-risk copy tasks.
+// Keep this on a model available within the Workers Free daily allocation.
+const CLOUDFLARE_MODEL = Deno.env.get("CLOUDFLARE_MODEL") || "@cf/meta/llama-3.1-8b-instruct-fp8";
+function isCloudflareEligibleWritingRequest(value: string, history: Array<{role:"user"|"assistant";content:string}>, focusedRecord: unknown) {
   if (focusedRecord || history.length > 0 || value.length > 1200) return false;
   if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value)) return false;
   if (/(?:\+?27|0)\s*\d(?:[\s()-]*\d){8,}/.test(value)) return false;
@@ -10452,36 +10453,55 @@ Answer the admin's question directly.
   let activeModel = PRIMARY_MODEL;
   let activeProvider = "gemini";
   let result: any = null;
-  const groqKey = Deno.env.get("GROQ_API_KEY") || "";
-  if (groqKey && isGroqEligibleWritingRequest(message, conversationHistory, safeContext.focused_record)) {
+  const cloudflareToken = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
+  const cloudflareAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") || "";
+  if (
+    cloudflareToken &&
+    cloudflareAccountId &&
+    isCloudflareEligibleWritingRequest(message, conversationHistory, safeContext.focused_record)
+  ) {
     try {
-      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: ["Bearer", groqKey].join(" ") },
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          messages: [
-            { role: "system", content: "You are a polished commercial copywriter for Swayphics, a South African creative and design business. Write naturally, clearly and specifically. Avoid generic AI phrasing, invented proof, fake urgency, excessive emojis and em dashes. Use a premium, human, confident tone. Return only the requested deliverable." },
-            { role: "user", content: message },
-          ],
-          max_completion_tokens: 700,
-          temperature: 0.5,
-        }),
-        signal: AbortSignal.timeout(12000),
-      });
-      if (groqResponse.ok) {
-        const payload = await groqResponse.json();
+      const cloudflareResponse = await fetch(
+        "https://api.cloudflare.com/client/v4/accounts/" +
+          encodeURIComponent(cloudflareAccountId) +
+          "/ai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + cloudflareToken,
+          },
+          body: JSON.stringify({
+            model: CLOUDFLARE_MODEL,
+            messages: [
+              {
+                role: "system",
+                content: "You are a polished commercial copywriter for Swayphics, a South African creative and design business. Write naturally, clearly and specifically. Avoid generic AI phrasing, invented proof, fake urgency, excessive emojis and em dashes. Use a premium, human, confident tone. Return only the requested deliverable.",
+              },
+              { role: "user", content: message },
+            ],
+            max_tokens: 700,
+            temperature: 0.5,
+          }),
+          signal: AbortSignal.timeout(12000),
+        },
+      );
+      if (cloudflareResponse.ok) {
+        const payload = await cloudflareResponse.json();
         const text = payload?.choices?.[0]?.message?.content;
         if (typeof text === "string" && text.trim()) {
-          activeProvider = "groq";
-          activeModel = typeof payload?.model === "string" ? payload.model : GROQ_MODEL;
+          activeProvider = "cloudflare";
+          activeModel = typeof payload?.model === "string" ? payload.model : CLOUDFLARE_MODEL;
           result = { candidates: [{ content: { parts: [{ text: text.trim() }] } }] };
         }
       } else {
-        console.warn("Groq route unavailable; using Gemini.", groqResponse.status);
+        console.warn("Cloudflare Workers AI route unavailable; using Gemini.", cloudflareResponse.status);
       }
     } catch (error) {
-      console.warn("Groq route failed; using Gemini.", error instanceof Error ? error.message : String(error));
+      console.warn(
+        "Cloudflare Workers AI route failed; using Gemini.",
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
   if (!result) {
