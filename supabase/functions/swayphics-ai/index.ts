@@ -1878,7 +1878,31 @@ Deno.serve(async (req) => {
    * separately and never count as ordinary benchmark cases.
    */
   if (action === "run_innerme_judge_calibration") {
-    const calibrationCases: Array<Record<string, any>> = [
+    type InnerMeCalibrationCandidate = {
+      candidate_key: string;
+      expected_quality: string;
+      answer: string;
+      score_band?: string;
+      [key: string]: any;
+    };
+    type InnerMeCalibrationCase = {
+      case_key: string;
+      title: string;
+      candidates: InnerMeCalibrationCandidate[];
+      [key: string]: any;
+    };
+    type InnerMeCalibrationJudgeOutcome = Record<string, any>;
+    type InnerMeCalibrationOutcomePair = {
+      case_key: string;
+      title: string;
+      calibration_type: string;
+      order_invariance_group: string | null;
+      semantic_consistency_group: string | null;
+      passed: boolean;
+      judges: InnerMeCalibrationJudgeOutcome[];
+      [key: string]: any;
+    };
+    const calibrationCases: InnerMeCalibrationCase[] = [
       {
         case_key: "calibration-break-even-rounding",
         title: "Break-even arithmetic and whole-unit rounding",
@@ -2754,7 +2778,7 @@ Deno.serve(async (req) => {
       return Array.isArray(judgeEvaluations[model]) &&
         judgeEvaluations[model].length === candidateIndex.size;
     });
-    const outcomePairs: Array<Record<string, any>> = calibrationCases.map(function(item) {
+    const outcomePairs: InnerMeCalibrationOutcomePair[] = calibrationCases.map(function(item) {
       const modelOutcomes = judgeModels.map(function(model) {
         const rows = judgeEvaluations[model] || [];
         const findScore = function(candidate: any) {
