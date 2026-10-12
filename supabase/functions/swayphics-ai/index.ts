@@ -37,7 +37,7 @@ const PRIMARY_MODEL: string = "gemini-3.8-flash";
 const FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
 // Optional Cloudflare Workers AI route for isolated, low-risk copy tasks.
 // Keep this on a model available within the Workers Free daily allocation.
-const CLOUDFLARE_MODEL = Deno.env.get("CLOUDFLARE_MODEL") || "@cf/meta/llama-3.1-8b-instruct-fp8";
+const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8"; // Fixed free-allocation model allowlist.
 function isCloudflareEligibleWritingRequest(value: string, history: Array<{role:"user"|"assistant";content:string}>, focusedRecord: unknown) {
   if (focusedRecord || history.length > 0 || value.length > 1200) return false;
   if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value)) return false;
@@ -205,6 +205,206 @@ async function recordInnerMeProviderUsage(event: InnerMeProviderUsageEvent): Pro
   }
 }
 
+
+
+const INNERME_APPROVED_GEMINI_MODELS = new Set<string>([
+  "gemini-3.8-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+]);
+const INNERME_MAX_GEMINI_REQUEST_BYTES = 24000;
+const INNERME_MAX_GEMINI_OUTPUT_TOKENS = 2048;
+
+type InnerMeQuotaReservation = {
+  allowed: boolean;
+  used: number;
+  daily_limit: number;
+  reason: string | null;
+};
+
+function innerMeGuardBlockedResponse(status: number, reason: string, message: string): Response {
+  return new Response(JSON.stringify({
+    error: {
+      status: "INNERME_ZERO_COST_GUARD",
+      code: reason,
+      message,
+    },
+  }), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "X-InnerMe-Guard": "blocked",
+    },
+  });
+}
+
+async function reserveInnerMeProviderQuota(
+  provider: "cloudflare" | "gemini",
+  model: string,
+  requestBytes: number,
+): Promise<InnerMeQuotaReservation> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const serverKey =
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+    Deno.env.get("SUPABASE_SECRET_KEY") ||
+    "";
+
+  if (!supabaseUrl || !serverKey) {
+    return {
+      allowed: false,
+      used: 0,
+      daily_limit: 0,
+      reason: "quota_guard_credentials_unavailable",
+    };
+  }
+
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    apikey: serverKey,
+    Prefer: "return=minimal",
+  });
+  // New sb_secret_ keys are API keys, not JWTs; only legacy service-role keys use Bearer auth.
+  if (!serverKey.startsWith("sb_secret_")) {
+    headers.set("Authorization", "Bearer " + serverKey);
+  }
+
+  try {
+    const response = await fetch(
+      supabaseUrl.replace(/\/+$/, "") + "/rest/v1/rpc/innerme_reserve_provider_quota",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          p_provider: provider,
+          p_model: model,
+          p_request_bytes: requestBytes,
+        }),
+        signal: AbortSignal.timeout(1500),
+      },
+    );
+
+    if (!response.ok) {
+      await response.text().catch(() => "");
+      return {
+        allowed: false,
+        used: 0,
+        daily_limit: 0,
+        reason: "quota_guard_unavailable",
+      };
+    }
+
+    const payload = await response.json();
+    if (typeof payload?.allowed !== "boolean") {
+      return {
+        allowed: false,
+        used: 0,
+        daily_limit: 0,
+        reason: "quota_guard_invalid_response",
+      };
+    }
+
+    return {
+      allowed: payload.allowed,
+      used: Number.isSafeInteger(payload.used) ? payload.used : 0,
+      daily_limit: Number.isSafeInteger(payload.daily_limit) ? payload.daily_limit : 0,
+      reason: typeof payload.reason === "string" ? payload.reason : null,
+    };
+  } catch {
+    return {
+      allowed: false,
+      used: 0,
+      daily_limit: 0,
+      reason: "quota_guard_unavailable",
+    };
+  }
+}
+
+/**
+ * Every Gemini generateContent request in this Edge Function passes through
+ * this gate. Unapproved models, oversized serialized prompts, missing budget
+ * infrastructure, and exhausted daily request budgets fail closed.
+ */
+async function guardedGeminiFetch(
+  model: string,
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  if (!INNERME_APPROVED_GEMINI_MODELS.has(model)) {
+    return innerMeGuardBlockedResponse(
+      403,
+      "model_not_approved",
+      "This Gemini model is not on InnerMe's approved free-tier model list.",
+    );
+  }
+
+  if (typeof init?.body !== "string") {
+    return innerMeGuardBlockedResponse(
+      403,
+      "request_body_not_inspectable",
+      "InnerMe blocked this request because it could not verify the request size and output limit.",
+    );
+  }
+
+  let parsedBody: any;
+  try {
+    parsedBody = JSON.parse(init.body);
+  } catch {
+    return innerMeGuardBlockedResponse(
+      403,
+      "invalid_request_body",
+      "InnerMe blocked a malformed provider request before sending it.",
+    );
+  }
+
+  if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
+    return innerMeGuardBlockedResponse(
+      403,
+      "invalid_request_body",
+      "InnerMe blocked a malformed provider request before sending it.",
+    );
+  }
+
+  const generationConfig =
+    parsedBody.generationConfig && typeof parsedBody.generationConfig === "object"
+      ? parsedBody.generationConfig
+      : {};
+  const requestedOutputLimit = generationConfig.maxOutputTokens;
+  generationConfig.maxOutputTokens =
+    typeof requestedOutputLimit === "number" && Number.isFinite(requestedOutputLimit) && requestedOutputLimit > 0
+      ? Math.min(Math.floor(requestedOutputLimit), INNERME_MAX_GEMINI_OUTPUT_TOKENS)
+      : INNERME_MAX_GEMINI_OUTPUT_TOKENS;
+  parsedBody.generationConfig = generationConfig;
+
+  const safeBody = JSON.stringify(parsedBody);
+  const requestBytes = new TextEncoder().encode(safeBody).byteLength;
+
+  if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES) {
+    return innerMeGuardBlockedResponse(
+      413,
+      "request_too_large",
+      "InnerMe blocked this request because its context exceeds the zero-cost request-size limit. Narrow the request or its context and try again.",
+    );
+  }
+
+  const reservation = await reserveInnerMeProviderQuota("gemini", model, requestBytes);
+  if (!reservation.allowed) {
+    console.warn("InnerMe Gemini request blocked by zero-cost guard.", {
+      reason: reservation.reason || "quota_blocked",
+      used: reservation.used,
+      daily_limit: reservation.daily_limit,
+    });
+    return innerMeGuardBlockedResponse(
+      403,
+      reservation.reason || "daily_quota_reached",
+      "InnerMe stopped this request to protect the free-tier usage limit. No Gemini request was sent.",
+    );
+  }
+
+  return await fetch(input, {
+    ...init,
+    body: safeBody,
+  });
+}
 function buildKnowledgeRetrievalQueries(value: unknown, max = 1200): string[] {
   const query = cleanForModel(value, max);
   if (!query) return [];
@@ -842,7 +1042,7 @@ Deno.serve(async (req) => {
       model: string,
       repairDirective = "",
     ) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -1516,7 +1716,7 @@ Deno.serve(async (req) => {
     ].join("\n\n");
 
     async function requestStrategic(model:string){
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/"+
           encodeURIComponent(model)+":generateContent",
         {
@@ -3312,7 +3512,7 @@ Deno.serve(async (req) => {
     ) {
       async function call() {
         await paceBenchmarkModelRequest(model);
-        return await fetch(
+        return await guardedGeminiFetch(model, 
           "https://generativelanguage.googleapis.com/v1beta/models/" +
             encodeURIComponent(model) +
             ":generateContent",
@@ -4461,7 +4661,7 @@ Deno.serve(async (req) => {
     ].join("\n\n");
 
     async function requestLearningCandidate(model: string) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -4918,7 +5118,7 @@ Deno.serve(async (req) => {
     ].join("\\n\\n");
 
     async function requestKnowledgeGaps(model: string) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -5316,7 +5516,7 @@ Deno.serve(async (req) => {
     ].join("\n\n");
 
     async function requestKnowledgeDraft(model: string) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -5938,7 +6138,7 @@ Deno.serve(async (req) => {
       assessmentText;
 
     async function requestProposal(model: string) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -7795,7 +7995,7 @@ Deno.serve(async (req) => {
       ].join("\n");
 
       async function requestBriefing(model: string) {
-        return await fetch(
+        return await guardedGeminiFetch(model, 
           "https://generativelanguage.googleapis.com/v1beta/models/" +
             encodeURIComponent(model) +
             ":generateContent",
@@ -8018,7 +8218,7 @@ Deno.serve(async (req) => {
     ].join("\n");
 
     async function requestDraft(model: string) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -8359,7 +8559,7 @@ Deno.serve(async (req) => {
     ].join("\n\n");
 
     async function request(model: string) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -8628,7 +8828,7 @@ Deno.serve(async (req) => {
     ].join("\n\n");
 
     async function requestExecutionPlan(model: string) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -9112,7 +9312,7 @@ Deno.serve(async (req) => {
     ].join("\n\n");
 
     async function requestActionProposals(model: string) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -10040,7 +10240,7 @@ Deno.serve(async (req) => {
     ].join("\n\n");
 
     async function requestLearningDraft(model: string) {
-      return await fetch(
+      return await guardedGeminiFetch(model, 
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
           ":generateContent",
@@ -10464,7 +10664,7 @@ Answer the admin's question directly.
 - Do not use Markdown heading markers, bold markers, code fences, or escaped Markdown characters.`;
 
   async function requestGemini(model: string) {
-    return await fetch(
+    return await guardedGeminiFetch(model, 
       "https://generativelanguage.googleapis.com/v1beta/models/" +
         encodeURIComponent(model) +
         ":generateContent",
@@ -10570,67 +10770,102 @@ Answer the admin's question directly.
     console.info(
       "InnerMe provider routing: Cloudflare Workers AI selected for an eligible writing request.",
     );
-    const attemptNumber = ++providerAttemptNumber;
-    const attemptStartedAt = performance.now();
-    let cloudflareStatus: number | null = null;
-    let cloudflareAttemptRecorded = false;
-
-    try {
-      const cloudflareResponse = await fetch(
-        "https://api.cloudflare.com/client/v4/accounts/" +
-          encodeURIComponent(cloudflareAccountId) +
-          "/ai/v1/chat/completions",
+    const cloudflareRequestBody = JSON.stringify({
+      model: CLOUDFLARE_MODEL,
+      messages: [
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + cloudflareToken,
-          },
-          body: JSON.stringify({
-            model: CLOUDFLARE_MODEL,
-            messages: [
-              {
-                role: "system",
-                content: "You are a polished commercial copywriter for Swayphics, a South African creative and design business. Write naturally, clearly and specifically. Avoid generic AI phrasing, invented proof, fake urgency, excessive emojis and em dashes. Use a premium, human, confident tone. Return only the requested deliverable.",
-              },
-              { role: "user", content: message },
-            ],
-            max_tokens: 700,
-            temperature: 0.5,
-          }),
-          signal: AbortSignal.timeout(12000),
+          role: "system",
+          content: "You are a polished commercial copywriter for Swayphics, a South African creative and design business. Write naturally, clearly and specifically. Avoid generic AI phrasing, invented proof, fake urgency, excessive emojis and em dashes. Use a premium, human, confident tone. Return only the requested deliverable.",
         },
-      );
-      cloudflareStatus = cloudflareResponse.status;
+        { role: "user", content: message },
+      ],
+      max_tokens: 700,
+      temperature: 0.5,
+    });
+    const cloudflareRequestBytes = new TextEncoder().encode(cloudflareRequestBody).byteLength;
+    const cloudflareReservation = await reserveInnerMeProviderQuota(
+      "cloudflare",
+      CLOUDFLARE_MODEL,
+      cloudflareRequestBytes,
+    );
 
-      if (cloudflareResponse.ok) {
-        const payload = await cloudflareResponse.json();
-        const generatedText = payload?.choices?.[0]?.message?.content;
-        const latencyMs = Math.max(0, Math.round(performance.now() - attemptStartedAt));
+    if (!cloudflareReservation.allowed) {
+      providerFallbackReason = "cloudflare_" + (cloudflareReservation.reason || "quota_blocked");
+      console.warn("InnerMe Cloudflare request blocked by zero-cost guard.", {
+        reason: cloudflareReservation.reason || "quota_blocked",
+        used: cloudflareReservation.used,
+        daily_limit: cloudflareReservation.daily_limit,
+      });
+    } else {
+      const attemptNumber = ++providerAttemptNumber;
+      const attemptStartedAt = performance.now();
+      let cloudflareStatus: number | null = null;
+      let cloudflareAttemptRecorded = false;
 
-        if (typeof generatedText === "string" && generatedText.trim()) {
-          activeProvider = "cloudflare";
-          activeModel = typeof payload?.model === "string" ? payload.model : CLOUDFLARE_MODEL;
-          result = { candidates: [{ content: { parts: [{ text: generatedText.trim() }] } }] };
-          await recordInnerMeProviderUsage({
-            request_id: providerRequestId,
-            attempt_number: attemptNumber,
-            task_category: providerTaskCategory,
-            provider: "cloudflare",
-            model: activeModel,
-            outcome: "success",
-            http_status: cloudflareResponse.status,
-            latency_ms: latencyMs,
-            ...readProviderTokenMetrics(payload, "cloudflare"),
-            error_code: null,
-            fallback_reason: null,
-          });
-          cloudflareAttemptRecorded = true;
-          console.info("InnerMe provider success: Cloudflare Workers AI.", {
-            model: activeModel,
-          });
+      try {
+        const cloudflareResponse = await fetch(
+          "https://api.cloudflare.com/client/v4/accounts/" +
+            encodeURIComponent(cloudflareAccountId) +
+            "/ai/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + cloudflareToken,
+            },
+            body: cloudflareRequestBody,
+            signal: AbortSignal.timeout(12000),
+          },
+        );
+        cloudflareStatus = cloudflareResponse.status;
+
+        if (cloudflareResponse.ok) {
+          const payload = await cloudflareResponse.json();
+          const generatedText = payload?.choices?.[0]?.message?.content;
+          const latencyMs = Math.max(0, Math.round(performance.now() - attemptStartedAt));
+
+          if (typeof generatedText === "string" && generatedText.trim()) {
+            activeProvider = "cloudflare";
+            activeModel = typeof payload?.model === "string" ? payload.model : CLOUDFLARE_MODEL;
+            result = { candidates: [{ content: { parts: [{ text: generatedText.trim() }] } }] };
+            await recordInnerMeProviderUsage({
+              request_id: providerRequestId,
+              attempt_number: attemptNumber,
+              task_category: providerTaskCategory,
+              provider: "cloudflare",
+              model: activeModel,
+              outcome: "success",
+              http_status: cloudflareResponse.status,
+              latency_ms: latencyMs,
+              ...readProviderTokenMetrics(payload, "cloudflare"),
+              error_code: null,
+              fallback_reason: null,
+            });
+            cloudflareAttemptRecorded = true;
+            console.info("InnerMe provider success: Cloudflare Workers AI.", {
+              model: activeModel,
+            });
+          } else {
+            providerFallbackReason = "cloudflare_empty_response";
+            await recordInnerMeProviderUsage({
+              request_id: providerRequestId,
+              attempt_number: attemptNumber,
+              task_category: providerTaskCategory,
+              provider: "cloudflare",
+              model: CLOUDFLARE_MODEL,
+              outcome: "error",
+              http_status: cloudflareResponse.status,
+              latency_ms: latencyMs,
+              ...readProviderTokenMetrics(payload, "cloudflare"),
+              error_code: "empty_response",
+              fallback_reason: null,
+            });
+            cloudflareAttemptRecorded = true;
+            console.warn("Cloudflare Workers AI returned no usable text.");
+          }
         } else {
-          providerFallbackReason = "cloudflare_empty_response";
+          providerFallbackReason = "cloudflare_http_" + cloudflareResponse.status;
+          await cloudflareResponse.text().catch(() => "");
           await recordInnerMeProviderUsage({
             request_id: providerRequestId,
             attempt_number: attemptNumber,
@@ -10639,63 +10874,50 @@ Answer the admin's question directly.
             model: CLOUDFLARE_MODEL,
             outcome: "error",
             http_status: cloudflareResponse.status,
-            latency_ms: latencyMs,
-            ...readProviderTokenMetrics(payload, "cloudflare"),
-            error_code: "empty_response",
+            latency_ms: Math.max(0, Math.round(performance.now() - attemptStartedAt)),
+            input_tokens: null,
+            output_tokens: null,
+            total_tokens: null,
+            error_code: "http_" + cloudflareResponse.status,
             fallback_reason: null,
           });
           cloudflareAttemptRecorded = true;
-          console.warn("Cloudflare Workers AI returned no usable text; falling back to Gemini.");
+          console.warn("Cloudflare Workers AI returned an error.", cloudflareResponse.status);
         }
-      } else {
-        providerFallbackReason = "cloudflare_http_" + cloudflareResponse.status;
-        // Consume the provider error response without persisting its body.
-        await cloudflareResponse.text().catch(() => "");
-        await recordInnerMeProviderUsage({
-          request_id: providerRequestId,
-          attempt_number: attemptNumber,
-          task_category: providerTaskCategory,
-          provider: "cloudflare",
-          model: CLOUDFLARE_MODEL,
-          outcome: "error",
-          http_status: cloudflareResponse.status,
-          latency_ms: Math.max(0, Math.round(performance.now() - attemptStartedAt)),
-          input_tokens: null,
-          output_tokens: null,
-          total_tokens: null,
-          error_code: "http_" + cloudflareResponse.status,
-          fallback_reason: null,
-        });
-        cloudflareAttemptRecorded = true;
-        console.warn("Cloudflare Workers AI route unavailable; using Gemini.", cloudflareResponse.status);
+      } catch (error) {
+        const isTimeout = error instanceof Error &&
+          (error.name === "TimeoutError" || error.name === "AbortError");
+        const errorCode = isTimeout ? "timeout" : "network_or_response_error";
+        providerFallbackReason = "cloudflare_" + errorCode;
+        if (!cloudflareAttemptRecorded) {
+          await recordInnerMeProviderUsage({
+            request_id: providerRequestId,
+            attempt_number: attemptNumber,
+            task_category: providerTaskCategory,
+            provider: "cloudflare",
+            model: CLOUDFLARE_MODEL,
+            outcome: "error",
+            http_status: cloudflareStatus,
+            latency_ms: Math.max(0, Math.round(performance.now() - attemptStartedAt)),
+            input_tokens: null,
+            output_tokens: null,
+            total_tokens: null,
+            error_code: errorCode,
+            fallback_reason: null,
+          });
+        }
+        console.warn("Cloudflare Workers AI request failed.", errorCode);
       }
-    } catch (error) {
-      const isTimeout = error instanceof Error &&
-        (error.name === "TimeoutError" || error.name === "AbortError");
-      const errorCode = isTimeout ? "timeout" : "network_or_response_error";
-      providerFallbackReason = "cloudflare_" + errorCode;
-      if (!cloudflareAttemptRecorded) {
-        await recordInnerMeProviderUsage({
-          request_id: providerRequestId,
-          attempt_number: attemptNumber,
-          task_category: providerTaskCategory,
-          provider: "cloudflare",
-          model: CLOUDFLARE_MODEL,
-          outcome: "error",
-          http_status: cloudflareStatus,
-          latency_ms: Math.max(0, Math.round(performance.now() - attemptStartedAt)),
-          input_tokens: null,
-          output_tokens: null,
-          total_tokens: null,
-          error_code: errorCode,
-          fallback_reason: null,
-        });
-      }
-      console.warn(
-        "Cloudflare Workers AI route failed; using Gemini.",
-        errorCode,
-      );
     }
+  }
+
+  // Standalone short copy requests must never spill into a large-context Gemini call.
+  if (cloudflareWritingEligible && !result) {
+    return json({
+      error: "The free writing route is currently unavailable or at its daily limit. Gemini fallback was blocked to protect the free-tier budget. Please retry later.",
+      provider_type: "cloudflare",
+      quota_guarded: true,
+    }, 503, origin);
   }
 
   if (!result) {
@@ -10991,7 +11213,7 @@ Answer the admin's question directly.
       ].join("\n\n");
 
       async function requestKnowledgeAttribution(model: string) {
-        return await fetch(
+        return await guardedGeminiFetch(model, 
           "https://generativelanguage.googleapis.com/v1beta/models/" +
             encodeURIComponent(model) +
             ":generateContent",
