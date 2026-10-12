@@ -24968,6 +24968,7 @@ function simpleBars(items, color) {
                         '<button type="button" class="sway-ai-knowledge-test-button" data-provider-usage-refresh>Refresh data</button>' +
                     '</div>' +
                     '<p class="sway-provider-usage-status" data-provider-usage-status role="status" aria-live="polite">Loading provider telemetry…</p>' +
+                    '<section class="sway-provider-usage-signals" data-provider-usage-signals aria-label="Provider health signals"><p class="sway-provider-usage-empty">Waiting for telemetry signals.</p></section>' +
                     '<div class="sway-provider-usage-metrics" data-provider-usage-metrics></div>' +
                     '<div class="sway-provider-usage-columns">' +
                         '<section class="sway-provider-usage-subpanel" aria-labelledby="sway-provider-usage-breakdown-title">' +
