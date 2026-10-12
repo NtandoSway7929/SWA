@@ -126,6 +126,8 @@ function compactContextForModel(
   depth = 0,
   maxArrayItems = 3,
   maxStringChars = 220,
+  maxObjectKeys = 30,
+  maxDepth = 5,
 ): any {
   if (value == null || typeof value === "number" || typeof value === "boolean") {
     return value;
@@ -133,19 +135,19 @@ function compactContextForModel(
   if (typeof value === "string") return cleanForModel(value, maxStringChars);
   if (Array.isArray(value)) {
     return value.slice(-maxArrayItems).map((item) =>
-      compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars)
+      compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars, maxObjectKeys, maxDepth)
     );
   }
   if (typeof value === "object") {
-    if (depth >= 5) return "[nested context omitted]";
+    if (depth >= maxDepth) return "[nested context omitted]";
     const output: Record<string, any> = {};
-    for (const [key, item] of Object.entries(value).slice(0, 30)) {
+    for (const [key, item] of Object.entries(value).slice(0, maxObjectKeys)) {
       const fieldLimit = /(^|_)(id|status|date|at|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
-        ? 180
+        ? Math.min(180, maxStringChars)
         : maxStringChars;
       output[key] = typeof item === "string"
         ? cleanForModel(item, fieldLimit)
-        : compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars);
+        : compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars, maxObjectKeys, maxDepth);
     }
     return output;
   }
@@ -418,8 +420,68 @@ async function guardedGeminiFetch(
       : INNERME_MAX_GEMINI_OUTPUT_TOKENS;
   parsedBody.generationConfig = generationConfig;
 
+  // Reduce optional context before enforcing the hard zero-cost request cap.
+  // This preserves the current question and keeps the final size guard intact.
+  const measureRequest = () =>
+    new TextEncoder().encode(JSON.stringify(parsedBody)).byteLength;
+  let requestBytes = measureRequest();
+
+  if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES) {
+    if (Array.isArray(parsedBody.contents) && parsedBody.contents.length > 1) {
+      parsedBody.contents = [parsedBody.contents[parsedBody.contents.length - 1]];
+      requestBytes = measureRequest();
+    }
+
+    const systemParts = parsedBody.systemInstruction?.parts;
+    if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES && Array.isArray(systemParts)) {
+      for (const part of systemParts) {
+        if (typeof part?.text === "string" && INNERME_ROADMAP_CONTEXT) {
+          part.text = part.text.replace(
+            INNERME_ROADMAP_CONTEXT,
+            "[Roadmap detail omitted to fit the zero-cost request limit. Use only roadmap evidence still present in the request.]",
+          );
+        }
+      }
+      requestBytes = measureRequest();
+    }
+
+    // Workspace JSON is appended to the final user message by requestGemini.
+    if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES && Array.isArray(parsedBody.contents)) {
+      const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
+      const lastPart = lastTurn?.parts?.[0];
+      const contentText = lastPart?.text;
+      const marker = "\\n\\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\\n";
+      if (typeof contentText === "string") {
+        const markerIndex = contentText.lastIndexOf(marker);
+        if (markerIndex >= 0) {
+          const jsonStart = markerIndex + marker.length;
+          try {
+            const workspace = JSON.parse(contentText.slice(jsonStart));
+            const compactWorkspace = compactContextForModel(workspace, 0, 1, 90, 12, 3);
+            lastPart.text = contentText.slice(0, jsonStart) + JSON.stringify(compactWorkspace);
+          } catch {
+            // Keep the existing message intact if the workspace suffix is not valid JSON.
+          }
+        }
+      }
+      requestBytes = measureRequest();
+    }
+
+    // Keep the start and end of the system contract, which contain identity,
+    // answer discipline and final operating constraints, while dropping bulky middle sections.
+    if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES && Array.isArray(systemParts)) {
+      for (const part of systemParts) {
+        if (typeof part?.text === "string" && part.text.length > 10000) {
+          part.text = part.text.slice(0, 6500) +
+            "\\n\\n[Intermediate system-prompt detail omitted to respect the zero-cost request-size limit.]\\n\\n" +
+            part.text.slice(-3000);
+        }
+      }
+      requestBytes = measureRequest();
+    }
+  }
+
   const safeBody = JSON.stringify(parsedBody);
-  const requestBytes = new TextEncoder().encode(safeBody).byteLength;
 
   if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES) {
     return innerMeGuardBlockedResponse(
