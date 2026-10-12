@@ -10455,11 +10455,24 @@ Answer the admin's question directly.
   let result: any = null;
   const cloudflareToken = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
   const cloudflareAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") || "";
-  if (
-    cloudflareToken &&
-    cloudflareAccountId &&
-    isCloudflareEligibleWritingRequest(message, conversationHistory, safeContext.focused_record)
-  ) {
+const cloudflareWritingEligible = isCloudflareEligibleWritingRequest(
+    message,
+    conversationHistory,
+    safeContext.focused_record,
+  );
+  const cloudflareCredentialsConfigured = Boolean(cloudflareToken && cloudflareAccountId);
+
+  if (cloudflareWritingEligible && !cloudflareCredentialsConfigured) {
+    console.warn(
+      "Cloudflare Workers AI route skipped: required credentials are not configured.",
+    );
+  }
+
+  if (cloudflareWritingEligible && cloudflareCredentialsConfigured) {
+    console.info(
+      "InnerMe provider routing: Cloudflare Workers AI selected for an eligible writing request.",
+    );
+  if (cloudflareWritingEligible && cloudflareCredentialsConfigured) {
     try {
       const cloudflareResponse = await fetch(
         "https://api.cloudflare.com/client/v4/accounts/" +
@@ -10493,7 +10506,13 @@ Answer the admin's question directly.
           activeProvider = "cloudflare";
           activeModel = typeof payload?.model === "string" ? payload.model : CLOUDFLARE_MODEL;
           result = { candidates: [{ content: { parts: [{ text: text.trim() }] } }] };
+          console.info("InnerMe provider success: Cloudflare Workers AI.", {
+            model: activeModel,
+          });
+         else {
+          console.warn("Cloudflare Workers AI returned no usable text; falling back to Gemini.");
         }
+
       } else {
         console.warn("Cloudflare Workers AI route unavailable; using Gemini.", cloudflareResponse.status);
       }
