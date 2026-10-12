@@ -4,6 +4,10 @@ import {
   formatInnerMeKnowledgeEvidence,
   INNERME_EVIDENCE_TRACEABILITY_RULES,
 } from "./innerme-evidence-traceability.mjs";
+import {
+  CLOUDFLARE_MODEL,
+  isCloudflareEligibleWritingRequest,
+} from "./innerme-provider-routing.mjs";
 
 // Supabase Edge Runtime provides this embedding API at runtime; declare its surface for Deno checks.
 declare const Supabase: {
@@ -37,14 +41,6 @@ const PRIMARY_MODEL: string = "gemini-3.8-flash";
 const FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
 // Optional Cloudflare Workers AI route for isolated, low-risk copy tasks.
 // Keep this on a model available within the Workers Free daily allocation.
-const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8"; // Fixed free-allocation model allowlist.
-function isCloudflareEligibleWritingRequest(value: string, history: Array<{role:"user"|"assistant";content:string}>, focusedRecord: unknown) {
-  if (focusedRecord || history.length > 0 || value.length > 1200) return false;
-  if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value)) return false;
-  if (/(?:\+?27|0)\s*\d(?:[\s()-]*\d){8,}/.test(value)) return false;
-  if (/\b(?:R\s?\d|ZAR|invoice|payment|financial|lead|client|customer record|proposal|follow-up|strategy|analyse|analyze|forecast|calculate|roadmap|workspace|private|confidential)\b/i.test(value)) return false;
-  return /\b(?:rewrite|rephrase|polish|proofread|fix the grammar|improve the wording|write a caption|caption for|social media caption|tagline|slogan|headline|short bio|product description|meta description|call to action|CTA)\b/i.test(value);
-}
 // The benchmark uses a separate, free-tier-friendly model pair. Keep the live
 // InnerMe chat/operations model policy independent from benchmark configuration.
 const INNERME_BENCHMARK_PRIMARY_MODEL: string = "gemini-3.1-flash-lite";
