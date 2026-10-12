@@ -9265,3 +9265,25 @@ body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-outcome{backgroun
 @media(max-width:820px){#sway-admin-workspace .sway-provider-usage-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#sway-admin-workspace .sway-provider-usage-columns{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:560px){#sway-admin-workspace .sway-provider-usage-header{flex-direction:column;align-items:stretch}#sway-admin-workspace .sway-provider-usage-header button{width:100%}#sway-admin-workspace .sway-provider-usage-metric{padding:12px}}
 
+
+
+/* Provider health signals: deterministic, threshold-based and API-call-free. */
+#sway-admin-workspace .sway-provider-usage-signals{display:grid;gap:8px;min-width:0}
+#sway-admin-workspace .sway-provider-usage-signal{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:start;gap:12px;padding:12px 14px;border:1px solid var(--border,rgba(0,32,150,.1));border-radius:12px;background:rgba(120,145,180,.035)}
+#sway-admin-workspace .sway-provider-usage-signal-label{display:inline-flex;justify-content:center;align-items:center;max-width:96px;padding:5px 7px;border-radius:7px;background:rgba(86,98,122,.10);color:var(--text-muted,#56627A);font-size:9px;font-weight:800;letter-spacing:.02em;text-align:center}
+#sway-admin-workspace .sway-provider-usage-signal strong{display:block;color:var(--sway-dark,#081533);font-size:11px;line-height:1.45}
+#sway-admin-workspace .sway-provider-usage-signal p{margin:4px 0 0;color:var(--text-muted,#56627A);font-size:10px;line-height:1.55}
+#sway-admin-workspace .sway-provider-usage-signal.critical{border-color:rgba(190,45,45,.25);background:rgba(190,45,45,.045)}
+#sway-admin-workspace .sway-provider-usage-signal.critical .sway-provider-usage-signal-label{background:rgba(190,45,45,.11);color:#a52727}
+#sway-admin-workspace .sway-provider-usage-signal.warning{border-color:rgba(183,117,12,.23);background:rgba(183,117,12,.04)}
+#sway-admin-workspace .sway-provider-usage-signal.warning .sway-provider-usage-signal-label{background:rgba(183,117,12,.12);color:#875400}
+#sway-admin-workspace .sway-provider-usage-signal.info .sway-provider-usage-signal-label{background:rgba(1,82,244,.08);color:var(--sway-deep,#002096)}
+#sway-admin-workspace .sway-provider-usage-signal.good .sway-provider-usage-signal-label{background:rgba(18,128,74,.10);color:#147244}
+body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal{background:#101A2C;border-color:rgba(119,193,252,.12)}
+body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal strong{color:#EAF1FD}
+body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal.critical{background:rgba(220,76,76,.09);border-color:rgba(220,76,76,.24)}
+body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal.critical .sway-provider-usage-signal-label{background:rgba(220,76,76,.16);color:#FFB3B3}
+body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal.warning .sway-provider-usage-signal-label{background:rgba(226,169,65,.16);color:#F1CB85}
+body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal.info .sway-provider-usage-signal-label{background:rgba(119,193,252,.12);color:#9EC9FF}
+body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal.good .sway-provider-usage-signal-label{background:rgba(36,168,112,.13);color:#8BE0B7}
+@media(max-width:560px){#sway-admin-workspace .sway-provider-usage-signal{grid-template-columns:minmax(0,1fr);gap:7px}#sway-admin-workspace .sway-provider-usage-signal-label{justify-self:start}}
