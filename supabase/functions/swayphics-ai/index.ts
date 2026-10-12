@@ -40,7 +40,7 @@ const FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
 const INNERME_BENCHMARK_PRIMARY_MODEL: string = "gemini-3.1-flash-lite";
 const INNERME_BENCHMARK_FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
 const INNERME_BENCHMARK_VERSION = 8;
-const INNERME_JUDGE_CALIBRATION_VERSION = 2;
+const INNERME_JUDGE_CALIBRATION_VERSION = 3;
 const INNERME_ROADMAP_CONTEXT = [
   "INNERME ROADMAP KNOWLEDGE (internal architecture reference):",
   "ROADMAP INDEX SOURCE: docs/innerme-30-phase-roadmap.md. This index documents the roadmap; it does not by itself prove runtime behaviour.",
@@ -1783,6 +1783,151 @@ Deno.serve(async (req) => {
           },
         ],
       },
+
+      {
+        case_key: "calibration-v3-score-band-financial",
+        title: "Score bands: correct calculation with incomplete explanation",
+        prompt: "Fixed costs are R60,000, selling price is R230, and variable cost is R90 per unit. Calculate the minimum whole-unit break-even target and explain why the target must be rounded to a whole unit.",
+        rubric: "A complete answer calculates contribution of R140, break-even of 428.57 units, and a minimum target of 429 whole units. It should explain that 428 units generate only R59,920 contribution, below the R60,000 fixed costs. A partly useful answer may calculate 429 correctly but omit the requested explanation. A fundamentally wrong answer uses selling price rather than contribution.",
+        required_signals: ["Calculates R140 contribution margin", "Calculates 428.57 break-even units", "Identifies 429 as the minimum whole-unit target", "Explains why 428 units is insufficient"],
+        forbidden_signals: ["Uses selling price instead of contribution margin", "States 428 units is sufficient", "Claims 428.57 is a whole-unit sales target"],
+        score_band_calibration: true,
+        partial_min_score: 25,
+        partial_max_score: 79,
+        max_flawed_score: 40,
+        min_correct_partial_separation: 5,
+        min_partial_flawed_separation: 10,
+        candidates: [
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "correct",
+            score_band: "correct",
+            answer: "Contribution per unit is R230 - R90 = R140. Break-even is R60,000 / R140 = 428.57 units, so the minimum whole-unit target is 429. At 428 units, contribution is 428 × R140 = R59,920, which does not cover R60,000 fixed costs."
+          },
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "incorrect",
+            score_band: "partial",
+            answer: "Contribution per unit is R230 - R90 = R140. Break-even is R60,000 / R140 = 428.57 units, so plan for about 429 units."
+          },
+          {
+            candidate_key: "candidate-c",
+            expected_quality: "incorrect",
+            score_band: "flawed",
+            answer: "Break-even is fixed costs divided by selling price: R60,000 / R230 = about 261 units. Variable cost does not affect the break-even sales target."
+          }
+        ]
+      },
+      {
+        case_key: "calibration-v3-score-band-conversion",
+        title: "Score bands: correct conversion rate with a vague diagnosis",
+        prompt: "A business website had 200 visits and 8 enquiry-form submissions. The owner asks for the enquiry conversion rate and the first evidence-based next step.",
+        rubric: "The enquiry conversion rate is 8 / 200 = 4%. A complete answer calculates this and recommends checking tracking, traffic quality, offer clarity, and form friction before selecting a fix. A partly useful answer calculates 4% but gives only a vague recommendation. A fundamentally flawed answer miscalculates the rate or recommends buying more traffic before diagnosis.",
+        required_signals: ["Calculates enquiry conversion as 4%", "Suggests at least one concrete funnel or tracking check", "Avoids assuming the cause from the rate alone"],
+        forbidden_signals: ["States the rate is 8% or another incorrect percentage", "Claims the rate alone proves the cause", "Recommends more traffic before diagnosing the enquiry path"],
+        score_band_calibration: true,
+        partial_min_score: 25,
+        partial_max_score: 79,
+        max_flawed_score: 40,
+        min_correct_partial_separation: 5,
+        min_partial_flawed_separation: 10,
+        candidates: [
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "correct",
+            score_band: "correct",
+            answer: "Enquiry conversion is 8 / 200 × 100 = 4%. Before choosing a fix, verify analytics and form tracking, inspect traffic sources and offer clarity, and test the enquiry form for friction. The rate alone does not establish the cause."
+          },
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "incorrect",
+            score_band: "partial",
+            answer: "Enquiry conversion is 8 / 200 × 100 = 4%. The next step is to improve the website copy and call to action."
+          },
+          {
+            candidate_key: "candidate-c",
+            expected_quality: "incorrect",
+            score_band: "flawed",
+            answer: "Eight enquiries from 200 visits means an 8% conversion rate. Buy more traffic immediately because more visitors will solve the low enquiry volume."
+          }
+        ]
+      },
+      {
+        case_key: "calibration-v3-score-band-forecast",
+        title: "Score bands: cautious forecast with incomplete operational advice",
+        prompt: "R300 in advertising produced 12 clicks and zero sales. The owner wants to spend R3,000 next week and demands an exact sales forecast using only these numbers.",
+        rubric: "A complete answer refuses to invent an exact forecast, rejects guaranteed linear scaling, and recommends checking audience, offer and conversion path before scaling. A partly useful answer correctly declines to guarantee sales but gives only a generic next step or suggests scaling without first diagnosing the funnel. A fundamentally flawed answer guarantees a sales count or states zero sales are certain in the future.",
+        required_signals: ["Does not make an exact or guaranteed sales forecast", "Distinguishes observed results from future outcomes", "Recommends a concrete diagnostic step before scaling"],
+        forbidden_signals: ["Guarantees a specific sales count", "Assumes results scale linearly with spend", "Treats zero observed sales as proof of zero future sales"],
+        score_band_calibration: true,
+        partial_min_score: 25,
+        partial_max_score: 79,
+        max_flawed_score: 40,
+        min_correct_partial_separation: 5,
+        min_partial_flawed_separation: 10,
+        candidates: [
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "correct",
+            score_band: "correct",
+            answer: "These figures do not support a reliable exact forecast: 12 clicks produced no sales, and future performance may differ. Do not assume a tenfold budget will produce tenfold results. Check audience fit, offer clarity, tracking and the enquiry or checkout path, then run a controlled test before scaling."
+          },
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "incorrect",
+            score_band: "partial",
+            answer: "The sample is too small to promise an exact sales count, and the next campaign may perform differently. Increase the budget cautiously and monitor results."
+          },
+          {
+            candidate_key: "candidate-c",
+            expected_quality: "incorrect",
+            score_band: "flawed",
+            answer: "Zero sales from 12 clicks proves the next campaign will also make zero sales. Spending ten times more will therefore still produce exactly zero sales."
+          }
+        ]
+      },
+      {
+        case_key: "calibration-v3-position-probe-a",
+        title: "Position probe: interpret a small conversion sample",
+        order_invariance_group: "calibration-v3-position-probe",
+        prompt: "A page had two enquiries from 50 visits last week and one enquiry from 50 visits this week. The owner says a redesign definitely caused conversion to collapse. What can be concluded?",
+        rubric: "Observed rates are 4% and 2%, but three total enquiries from small samples do not establish causation. Check tracking, traffic mix and the enquiry path, then gather more evidence before attributing the change to the redesign.",
+        required_signals: ["Calculates 4% and 2% correctly", "Notes the small sample", "Avoids claiming causation without further evidence"],
+        forbidden_signals: ["Claims the redesign definitely caused the decline", "Treats the small sample as conclusive causal proof"],
+        candidates: [
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "correct",
+            answer: "The observed rates are 2/50 = 4% and 1/50 = 2%. The rate is lower, but three total enquiries do not establish the cause. Check tracking, traffic mix and the enquiry path, then gather more evidence before deciding whether to roll back."
+          },
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "incorrect",
+            answer: "Conversion fell from 4% to 2%, so the redesign definitely caused the decline. Roll it back immediately because these figures prove the new page is worse."
+          }
+        ]
+      },
+      {
+        case_key: "calibration-v3-position-probe-b",
+        title: "Position probe: interpret a small conversion sample",
+        order_invariance_group: "calibration-v3-position-probe",
+        prompt: "A page had two enquiries from 50 visits last week and one enquiry from 50 visits this week. The owner says a redesign definitely caused conversion to collapse. What can be concluded?",
+        rubric: "Observed rates are 4% and 2%, but three total enquiries from small samples do not establish causation. Check tracking, traffic mix and the enquiry path, then gather more evidence before attributing the change to the redesign.",
+        required_signals: ["Calculates 4% and 2% correctly", "Notes the small sample", "Avoids claiming causation without further evidence"],
+        forbidden_signals: ["Claims the redesign definitely caused the decline", "Treats the small sample as conclusive causal proof"],
+        candidates: [
+          {
+            candidate_key: "candidate-b",
+            expected_quality: "incorrect",
+            answer: "Conversion fell from 4% to 2%, so the redesign definitely caused the decline. Roll it back immediately because these figures prove the new page is worse."
+          },
+          {
+            candidate_key: "candidate-a",
+            expected_quality: "correct",
+            answer: "The observed rates are 2/50 = 4% and 1/50 = 2%. The rate is lower, but three total enquiries do not establish the cause. Check tracking, traffic mix and the enquiry path, then gather more evidence before deciding whether to roll back."
+          }
+        ]
+      },
     ];
 
     const judgeModels = [
@@ -1803,7 +1948,7 @@ Deno.serve(async (req) => {
           total_case_pairs: calibrationCases.length,
           created_by: userData.user.id,
           summary: {
-            protocol: "Ten fixed correct/flawed answer pairs, including near-miss errors, scored in two batched independent judge requests.",
+            protocol: "Ten binary anchor cases, three three-level score-band cases, and a mirrored candidate-order probe. Two independent judge requests are used; this calibration never changes the V8 answer-quality baseline.",
             benchmark_baseline_modified: false,
           },
         })
@@ -1827,6 +1972,7 @@ Deno.serve(async (req) => {
           title: item.title,
           candidate_key: candidate.candidate_key,
           expected_quality: candidate.expected_quality,
+          score_band: candidate.score_band || null,
           answer: candidate.answer,
         });
         return {
@@ -1849,6 +1995,9 @@ Deno.serve(async (req) => {
       "You are an independent quality judge calibrating a business-assistant evaluation system.",
       "For each candidate answer, score only against the supplied question, rubric, required signals and forbidden signals.",
       "Candidate IDs are opaque. Do not assume the first candidate is better or infer intended quality from IDs.",
+      "Score by content, not list position. When mirrored cases contain the same answers in reversed order, score the same answer comparably.",
+      "When a case contains three candidates, distinguish a complete answer, a partly useful but materially incomplete answer, and a fundamentally flawed answer. Do not mechanically assign every incomplete answer 0 or every correct answer 100.",
+      "For a partly useful answer, choose a proportionate middle score (normally 25-79) and passed=false. For a fundamentally flawed answer with a major factual or reasoning error, score at most 40 and passed=false. A complete answer should still score at least 80 and passed=true.",
       "A fluent answer that violates a central required or forbidden signal must receive a low score and passed=false.",
       "An accurate, grounded, complete answer that satisfies the rubric should score at least 80 and passed=true.",
       "Return JSON only with exactly one top-level key named evaluations.",
@@ -1880,7 +2029,7 @@ Deno.serve(async (req) => {
             systemInstruction: { parts: [{ text: calibrationJudgeSystem }] },
             contents: [{ role: "user", parts: [{ text: calibrationJudgePrompt }] }],
             generationConfig: {
-              maxOutputTokens: 4500,
+              maxOutputTokens: 7200,
               responseMimeType: "application/json",
             },
           }),
@@ -1951,6 +2100,7 @@ Deno.serve(async (req) => {
             relevance: evaluation.relevance,
             safety: evaluation.safety,
             completeness: evaluation.completeness,
+            score_band: candidate.score_band || null,
           },
           rationale: String(evaluation.rationale).slice(0, 700),
         };
@@ -2003,26 +2153,77 @@ Deno.serve(async (req) => {
     const outcomePairs = calibrationCases.map(function(item) {
       const modelOutcomes = judgeModels.map(function(model) {
         const rows = judgeEvaluations[model] || [];
+        const findScore = function(candidate: any) {
+          if (!candidate) return null;
+          return rows.find(function(row) {
+            return row.calibration_case_key === item.case_key &&
+              row.candidate_key === candidate.candidate_key;
+          }) || null;
+        };
         const correctCandidate = item.candidates.find(function(candidate) {
           return candidate.expected_quality === "correct";
         });
+
+        if (item.score_band_calibration) {
+          const partialCandidate = item.candidates.find(function(candidate) {
+            return candidate.score_band === "partial";
+          });
+          const flawedCandidate = item.candidates.find(function(candidate) {
+            return candidate.score_band === "flawed";
+          });
+          const correct = findScore(correctCandidate);
+          const partial = findScore(partialCandidate);
+          const flawed = findScore(flawedCandidate);
+          const correctScore = correct ? Number(correct.score) : null;
+          const partialScore = partial ? Number(partial.score) : null;
+          const flawedScore = flawed ? Number(flawed.score) : null;
+          const correctPartialSeparation =
+            correctScore !== null && partialScore !== null
+              ? Number((correctScore - partialScore).toFixed(2))
+              : null;
+          const partialFlawedSeparation =
+            partialScore !== null && flawedScore !== null
+              ? Number((partialScore - flawedScore).toFixed(2))
+              : null;
+          const partialMin = Number(item.partial_min_score ?? 25);
+          const partialMax = Number(item.partial_max_score ?? 79);
+          const maxFlawed = Number(item.max_flawed_score ?? 40);
+          const minCorrectPartialGap = Number(item.min_correct_partial_separation ?? 5);
+          const minPartialFlawedGap = Number(item.min_partial_flawed_separation ?? 10);
+          const passed = Boolean(
+            correct && partial && flawed &&
+            correct.passed === true && correctScore !== null && correctScore >= 80 &&
+            partial.passed === false && partialScore !== null &&
+              partialScore >= partialMin && partialScore <= partialMax &&
+            flawed.passed === false && flawedScore !== null && flawedScore <= maxFlawed &&
+            correctPartialSeparation !== null &&
+              correctPartialSeparation >= minCorrectPartialGap &&
+            partialFlawedSeparation !== null &&
+              partialFlawedSeparation >= minPartialFlawedGap
+          );
+          return {
+            judge_model: model,
+            correct_score: correctScore,
+            correct_passed: correct ? correct.passed : null,
+            partial_score: partialScore,
+            partial_passed: partial ? partial.passed : null,
+            flawed_score: flawedScore,
+            flawed_passed: flawed ? flawed.passed : null,
+            partial_score_range: { min: partialMin, max: partialMax },
+            max_flawed_score: maxFlawed,
+            correct_partial_separation: correctPartialSeparation,
+            partial_flawed_separation: partialFlawedSeparation,
+            minimum_correct_partial_separation: minCorrectPartialGap,
+            minimum_partial_flawed_separation: minPartialFlawedGap,
+            passed,
+          };
+        }
+
         const incorrectCandidate = item.candidates.find(function(candidate) {
           return candidate.expected_quality === "incorrect";
         });
-        const correctKey = correctCandidate
-          ? item.case_key + ":" + correctCandidate.candidate_key
-          : "";
-        const incorrectKey = incorrectCandidate
-          ? item.case_key + ":" + incorrectCandidate.candidate_key
-          : "";
-        const correct = rows.find(function(row) {
-          return row.calibration_case_key === item.case_key &&
-            row.candidate_key === (correctCandidate?.candidate_key || "");
-        });
-        const incorrect = rows.find(function(row) {
-          return row.calibration_case_key === item.case_key &&
-            row.candidate_key === (incorrectCandidate?.candidate_key || "");
-        });
+        const correct = findScore(correctCandidate);
+        const incorrect = findScore(incorrectCandidate);
         const separation = correct && incorrect
           ? Number((Number(correct.score) - Number(incorrect.score)).toFixed(2))
           : null;
@@ -2039,7 +2240,7 @@ Deno.serve(async (req) => {
           incorrect.passed === false &&
           Number(incorrect.score) <= maxIncorrectScore &&
           separation !== null &&
-          separation >= minimumScoreSeparation,
+          separation >= minimumScoreSeparation
         );
         return {
           judge_model: model,
@@ -2056,13 +2257,100 @@ Deno.serve(async (req) => {
       return {
         case_key: item.case_key,
         title: item.title,
+        calibration_type: item.score_band_calibration
+          ? "score_band"
+          : item.order_invariance_group
+            ? "position_bias"
+            : "binary",
+        order_invariance_group: item.order_invariance_group || null,
         passed: modelOutcomes.every(function(outcome) { return outcome.passed; }),
         judges: modelOutcomes,
       };
     });
 
+    const positionBiasChecks: Array<Record<string, any>> = [];
+    const positionGroups = Array.from(new Set(
+      calibrationCases
+        .map(function(item) { return item.order_invariance_group; })
+        .filter(function(value) { return Boolean(value); })
+    )) as string[];
+
+    positionGroups.forEach(function(groupKey) {
+      const variants = calibrationCases.filter(function(item) {
+        return item.order_invariance_group === groupKey;
+      });
+      const commonCandidateKeys = variants.length > 1
+        ? variants[0].candidates.map(function(candidate) { return candidate.candidate_key; })
+        : [];
+      const judgeChecks = judgeModels.map(function(model) {
+        const rows = judgeEvaluations[model] || [];
+        const candidateDeltas = commonCandidateKeys.map(function(candidateKey) {
+          const scores = variants.map(function(variant) {
+            const row = rows.find(function(item) {
+              return item.calibration_case_key === variant.case_key &&
+                item.candidate_key === candidateKey;
+            });
+            return row ? Number(row.score) : null;
+          });
+          const validScores = scores.filter(function(value): value is number {
+            return value !== null && Number.isFinite(value);
+          });
+          const delta = validScores.length === variants.length
+            ? Number((Math.max.apply(null, validScores) - Math.min.apply(null, validScores)).toFixed(2))
+            : null;
+          return { candidate_key: candidateKey, scores, max_score_delta: delta };
+        });
+        const maxScoreDelta = candidateDeltas.length &&
+          candidateDeltas.every(function(item) { return item.max_score_delta !== null; })
+          ? Math.max.apply(null, candidateDeltas.map(function(item) { return Number(item.max_score_delta); }))
+          : null;
+        return {
+          judge_model: model,
+          candidate_deltas: candidateDeltas,
+          max_score_delta: maxScoreDelta,
+          maximum_allowed_score_delta: 10,
+          passed: variants.length >= 2 && maxScoreDelta !== null && maxScoreDelta <= 10,
+        };
+      });
+      const groupPassed = judgeChecks.every(function(item) { return item.passed; });
+      positionBiasChecks.push({
+        group_key: groupKey,
+        variant_case_keys: variants.map(function(item) { return item.case_key; }),
+        judges: judgeChecks,
+        passed: groupPassed,
+      });
+
+      variants.forEach(function(variant) {
+        const pair = outcomePairs.find(function(item) { return item.case_key === variant.case_key; });
+        if (!pair) return;
+        pair.position_bias_check = {
+          group_key: groupKey,
+          passed: groupPassed,
+          judges: judgeChecks.map(function(item) {
+            return {
+              judge_model: item.judge_model,
+              max_score_delta: item.max_score_delta,
+              maximum_allowed_score_delta: item.maximum_allowed_score_delta,
+              passed: item.passed,
+            };
+          }),
+        };
+        pair.judges.forEach(function(judge: any) {
+          const check = judgeChecks.find(function(item) { return item.judge_model === judge.judge_model; });
+          judge.position_bias_passed = check ? check.passed : false;
+          judge.position_bias_max_score_delta = check ? check.max_score_delta : null;
+        });
+        pair.passed = pair.passed && groupPassed;
+      });
+    });
+
     const scoredPairCount = outcomePairs.filter(function(pair) {
       return pair.judges.every(function(judge) {
+        if (pair.calibration_type === "score_band") {
+          return judge.correct_score !== null &&
+            judge.partial_score !== null &&
+            judge.flawed_score !== null;
+        }
         return judge.correct_score !== null && judge.incorrect_score !== null;
       });
     }).length;
@@ -2078,13 +2366,17 @@ Deno.serve(async (req) => {
     const summary = {
       calibration_version: INNERME_JUDGE_CALIBRATION_VERSION,
       case_pairs: calibrationCases.length,
-      candidates_per_pair: 2,
+      candidates_per_pair: null,
+      total_candidate_answers: candidateIndex.size,
+      candidate_count_by_case: calibrationCases.map(function(item) { return { case_key: item.case_key, candidate_count: item.candidates.length }; }),
+      score_band_case_count: calibrationCases.filter(function(item) { return item.score_band_calibration; }).length,
+      position_bias_checks: positionBiasChecks,
       judges: judgeModels,
       scored_pair_count: scoredPairCount,
       passed_pairs: passedPairCount,
       failed_pairs: failedPairCount,
       calibration_passed: calibrationPassed,
-      acceptance_rule: "For every pair, each judge must score the correct answer >= 80 and pass it; score the flawed answer under the per-case ceiling and fail it; and separate scores by at least the per-case minimum. Obvious errors use max 40 and gap 30; near-miss errors use max 65 and gap 25.",
+      acceptance_rule: "Binary anchors require correct >= 80/pass and flawed <= the case ceiling/fail with the minimum score gap. Score-band cases require a complete answer >= 80/pass, a partly useful answer in its configured middle band/fail, a seriously flawed answer <= 40/fail, and ordered score separation. Mirrored candidate-order cases require each judge to keep each identical answer within 10 score points across order variants.",
       benchmark_baseline_modified: false,
       execution_errors: judgeErrors,
       cases: outcomePairs,
@@ -2116,6 +2408,8 @@ Deno.serve(async (req) => {
       passed_pairs: passedPairCount,
       failed_pairs: failedPairCount,
       calibration_passed: complete ? calibrationPassed : null,
+      total_candidate_answers: candidateIndex.size,
+      position_bias_checks: positionBiasChecks,
       provider_model: calibrationProviderLabel,
       cases: outcomePairs,
       execution_errors: judgeErrors,
