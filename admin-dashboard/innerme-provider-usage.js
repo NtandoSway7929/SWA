@@ -51,8 +51,117 @@
       '</small></article>';
   }
 
+  function renderProviderSignals(data) {
+    const summary = data.summary || {};
+    const providers = Array.isArray(data.providers) ? data.providers : [];
+    const quota = data.daily_quota || {};
+    const attempts = Math.max(0, Number(summary.attempts) || 0);
+    const failures = Math.max(0, Number(summary.failures) || 0);
+    const fallbackEvents = Math.max(0, Number(summary.fallbacks) || 0);
+    const signals = [];
+
+    if (attempts === 0) {
+      signals.push({
+        state: "info",
+        title: "No provider attempts recorded",
+        detail: "There is not enough recent telemetry to assess provider reliability yet."
+      });
+    }
+
+    if (fallbackEvents > 0) {
+      signals.push({
+        state: fallbackEvents >= 3 ? "warning" : "info",
+        title: number(fallbackEvents) + " fallback-related attempt" + (fallbackEvents === 1 ? "" : "s") + " recorded",
+        detail: fallbackEvents >= 3
+          ? "Fallbacks are recurring. Review recent attempts and the primary provider's timeout or error pattern."
+          : "At least one request used a fallback path. Check whether this becomes a recurring pattern."
+      });
+    }
+
+    if (failures > fallbackEvents) {
+      signals.push({
+        state: failures - fallbackEvents >= 3 ? "critical" : "warning",
+        title: number(failures - fallbackEvents) + " failure" + (failures - fallbackEvents === 1 ? "" : "s") + " not matched by a fallback event",
+        detail: "Inspect the recent attempts table for provider errors that may not have recovered automatically."
+      });
+    }
+
+    providers.forEach(function (provider) {
+      const title = provider.provider === "cloudflare" ? "Cloudflare Workers AI" : "Google Gemini";
+      const providerAttempts = Math.max(0, Number(provider.attempts) || 0);
+      const successRate = Number(provider.success_rate_pct);
+      const timeouts = Math.max(0, Number(provider.timeouts) || 0);
+
+      if (providerAttempts >= 5 && Number.isFinite(successRate) && successRate < 80) {
+        signals.push({
+          state: "critical",
+          title: title + " success rate is below 80%",
+          detail: number(providerAttempts) + " attempts in the last 24 hours; inspect the recent attempts before changing provider settings."
+        });
+      } else if (providerAttempts >= 5 && Number.isFinite(successRate) && successRate < 90) {
+        signals.push({
+          state: "warning",
+          title: title + " success rate is below 90%",
+          detail: number(providerAttempts) + " attempts in the last 24 hours. Continue monitoring before making changes."
+        });
+      }
+
+      if (timeouts >= 3) {
+        signals.push({
+          state: "warning",
+          title: "Recurring timeout signals for " + title,
+          detail: number(timeouts) + " timeout errors were recorded in the 24-hour window."
+        });
+      }
+    });
+
+    ["cloudflare", "gemini"].forEach(function (key) {
+      const provider = quota[key] || {};
+      const reserved = Math.max(0, Number(provider.reserved) || 0);
+      const limit = Math.max(0, Number(provider.limit) || 0);
+      if (!limit) return;
+      const ratio = reserved / limit * 100;
+      const title = key === "cloudflare" ? "Cloudflare" : "Gemini";
+      if (ratio >= 95) {
+        signals.push({
+          state: "critical",
+          title: title + " request reservation is at or above 95% of its daily cap",
+          detail: number(reserved) + " of " + number(limit) + " reservations used (UTC). Further requests may be blocked by the application guard."
+        });
+      } else if (ratio >= 80) {
+        signals.push({
+          state: "warning",
+          title: title + " request reservation is at or above 80% of its daily cap",
+          detail: number(reserved) + " of " + number(limit) + " reservations used (UTC). Avoid unnecessary retests."
+        });
+      }
+    });
+
+    if (!signals.length) {
+      signals.push({
+        state: "good",
+        title: "No monitoring thresholds crossed",
+        detail: "No repeated-failure, timeout, or high-quota signals were detected in the available telemetry."
+      });
+    }
+
+    const rank = { critical: 0, warning: 1, info: 2, good: 3 };
+    signals.sort(function (a, b) { return rank[a.state] - rank[b.state]; });
+    return signals.map(function (signal) {
+      const label = signal.state === "critical" ? "Action needed" :
+        signal.state === "warning" ? "Watch" :
+        signal.state === "good" ? "Clear" : "Info";
+      return '<article class="sway-provider-usage-signal ' + escapeHtml(signal.state) + '">' +
+        '<span class="sway-provider-usage-signal-label">' + escapeHtml(label) + '</span>' +
+        '<div><strong>' + escapeHtml(signal.title) + '</strong><p>' +
+        escapeHtml(signal.detail) + '</p></div></article>';
+    }).join("");
+  }
+
   function renderSummary(panel, data) {
     const summary = data.summary || {};
+    const signalsPanel = panel.querySelector("[data-provider-usage-signals]");
+    if (signalsPanel) signalsPanel.innerHTML = renderProviderSignals(data);
     const metrics = panel.querySelector("[data-provider-usage-metrics]");
     metrics.innerHTML = [
       metric("Provider attempts", number(summary.attempts), "Last 24 hours"),
