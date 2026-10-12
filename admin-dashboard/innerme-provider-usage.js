@@ -81,7 +81,7 @@
     if (failures > fallbackEvents) {
       signals.push({
         state: failures - fallbackEvents >= 3 ? "critical" : "warning",
-        title: number(failures - fallbackEvents) + " failure" + (failures - fallbackEvents === 1 ? "" : "s") + " not matched by a fallback event",
+        title: "More failed attempts than fallback-related attempts",
         detail: "Inspect the recent attempts table for provider errors that may not have recovered automatically."
       });
     }
