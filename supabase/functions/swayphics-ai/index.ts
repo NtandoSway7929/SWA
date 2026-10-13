@@ -10861,6 +10861,8 @@ Answer the admin's question directly.
             maxOutputTokens: 1800,
           },
         }),
+        // Bound each provider attempt so failover cannot hang the chat request.
+        signal: AbortSignal.timeout(8000),
       },
     );
   }
@@ -11247,6 +11249,7 @@ Answer the admin's question directly.
     let geminiAttemptStartedAt = performance.now();
     let geminiAttemptFallbackReason = providerFallbackReason;
     let geminiResponse: Response;
+    let primaryFallbackAttempted = false;
 
     try {
       geminiResponse = await requestGemini(PRIMARY_MODEL);
@@ -11270,10 +11273,48 @@ Answer the admin's question directly.
         error_code: errorCode,
         fallback_reason: geminiAttemptFallbackReason,
       });
-      throw error;
+
+      // A timeout or transport failure on the primary is also eligible for one
+      // guarded fallback attempt. Never retry the same model in a loop.
+      console.warn("InnerMe Gemini primary request failed; trying one fallback.", errorCode);
+      activeModel = FALLBACK_MODEL;
+      geminiAttemptNumber = ++providerAttemptNumber;
+      geminiAttemptStartedAt = performance.now();
+      geminiAttemptFallbackReason = "gemini_primary_" + errorCode;
+      primaryFallbackAttempted = true;
+
+      try {
+        geminiResponse = await requestGemini(FALLBACK_MODEL);
+      } catch (fallbackError) {
+        const fallbackErrorCode = fallbackError instanceof Error &&
+          (fallbackError.name === "TimeoutError" || fallbackError.name === "AbortError")
+          ? "timeout"
+          : "network_error";
+        await recordInnerMeProviderUsage({
+          request_id: providerRequestId,
+          attempt_number: geminiAttemptNumber,
+          task_category: providerTaskCategory,
+          provider: "gemini",
+          model: FALLBACK_MODEL,
+          outcome: "error",
+          http_status: null,
+          latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+          input_tokens: null,
+          output_tokens: null,
+          total_tokens: null,
+          error_code: fallbackErrorCode,
+          fallback_reason: geminiAttemptFallbackReason,
+        });
+        console.error("InnerMe Gemini fallback request failed.", fallbackErrorCode);
+        return json({
+          error: "InnerMe is temporarily unable to reach its AI providers. Your request was not completed. Please try again shortly.",
+          retryable: true,
+        }, 503, origin);
+      }
     }
 
     if (
+      !primaryFallbackAttempted &&
       (geminiResponse.status === 503 || geminiResponse.status === 429) &&
       PRIMARY_MODEL !== FALLBACK_MODEL
     ) {
@@ -11326,7 +11367,11 @@ Answer the admin's question directly.
           error_code: errorCode,
           fallback_reason: geminiAttemptFallbackReason,
         });
-        throw error;
+        console.error("InnerMe Gemini fallback request failed.", errorCode);
+        return json({
+          error: "InnerMe is temporarily unable to reach its AI providers. Your request was not completed. Please try again shortly.",
+          retryable: true,
+        }, 503, origin);
       }
     }
 
@@ -11372,18 +11417,15 @@ Answer the admin's question directly.
         fallback_reason: geminiAttemptFallbackReason,
       });
 
-      console.error("Gemini InnerMe error:", "http_" + geminiResponse.status);
-      return json({
-        error: "The AI provider could not complete the request.",
-        provider_status: geminiResponse.status,
+      console.error("InnerMe Gemini provider unavailable.", {
+        status: geminiResponse.status,
+        model: activeModel,
         provider_code: providerError?.status || null,
-        provider_type: "gemini",
-        provider_model: activeModel,
-        provider_message:
-          typeof providerError?.message === "string"
-            ? providerError.message.slice(0, 500)
-            : null,
-      }, 502, origin);
+      });
+      return json({
+        error: "InnerMe is temporarily unable to reach its AI providers. Your request was not completed. Please try again shortly.",
+        retryable: true,
+      }, 503, origin);
     }
 
     let geminiPayload: any;
