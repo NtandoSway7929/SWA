@@ -10966,7 +10966,18 @@ Answer the admin's question directly.
       }).sort((a, b) => b.score - a.score);
       selected[key] = ranked.slice(0, 3).map(({row}) => bounded(row));
     }
-    if (safeContext.focused_record && /\b(?:this|that|it|record|selected|focused)\b/i.test(message)) {
+    const focusedRecordLabel = cleanForModel(
+      safeContext.focused_record?.record?.business_name ||
+        safeContext.focused_record?.record?.name ||
+        safeContext.focused_record?.record?.title ||
+        safeContext.focused_record?.record?.subject ||
+        "",
+      180,
+    ).toLowerCase();
+    const explicitlyRefersToFocusedRecord =
+      /\b(?:this|that|it|record|selected|focused)\b/i.test(message) ||
+      (focusedRecordLabel.length > 2 && q.includes(focusedRecordLabel));
+    if (safeContext.focused_record && explicitlyRefersToFocusedRecord) {
       selected.focused_record = bounded(safeContext.focused_record);
     }
     if (/\b(?:decision|playbook|experiment|insight|forecast|preference|agent|strategy|roadmap|phase)\b/i.test(message)) {
