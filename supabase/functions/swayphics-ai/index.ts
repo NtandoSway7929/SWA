@@ -117,6 +117,43 @@ function cleanForModel(value: unknown, max = 3000) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+/**
+ * Bound model-facing workspace context without changing the source workspace
+ * data or permission checks. Preserve recent records and compact bulky fields.
+ */
+function compactContextForModel(
+  value: any,
+  depth = 0,
+  maxArrayItems = 3,
+  maxStringChars = 220,
+  maxObjectKeys = 30,
+  maxDepth = 5,
+): any {
+  if (value == null || typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") return cleanForModel(value, maxStringChars);
+  if (Array.isArray(value)) {
+    return value.slice(-maxArrayItems).map((item) =>
+      compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars, maxObjectKeys, maxDepth)
+    );
+  }
+  if (typeof value === "object") {
+    if (depth >= maxDepth) return "[nested context omitted]";
+    const output: Record<string, any> = {};
+    for (const [key, item] of Object.entries(value).slice(0, maxObjectKeys)) {
+      const fieldLimit = /(^|_)(id|status|date|at|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
+        ? Math.min(180, maxStringChars)
+        : maxStringChars;
+      output[key] = typeof item === "string"
+        ? cleanForModel(item, fieldLimit)
+        : compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars, maxObjectKeys, maxDepth);
+    }
+    return output;
+  }
+  return String(value).slice(0, maxStringChars);
+}
+
 type InnerMeTrackedProvider = "cloudflare" | "gemini";
 type InnerMeUsageOutcome = "success" | "error";
 
@@ -383,8 +420,68 @@ async function guardedGeminiFetch(
       : INNERME_MAX_GEMINI_OUTPUT_TOKENS;
   parsedBody.generationConfig = generationConfig;
 
+  // Reduce optional context before enforcing the hard zero-cost request cap.
+  // This preserves the current question and keeps the final size guard intact.
+  const measureRequest = () =>
+    new TextEncoder().encode(JSON.stringify(parsedBody)).byteLength;
+  let requestBytes = measureRequest();
+
+  if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES) {
+    if (Array.isArray(parsedBody.contents) && parsedBody.contents.length > 1) {
+      parsedBody.contents = [parsedBody.contents[parsedBody.contents.length - 1]];
+      requestBytes = measureRequest();
+    }
+
+    const systemParts = parsedBody.systemInstruction?.parts;
+    if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES && Array.isArray(systemParts)) {
+      for (const part of systemParts) {
+        if (typeof part?.text === "string" && INNERME_ROADMAP_CONTEXT) {
+          part.text = part.text.replace(
+            INNERME_ROADMAP_CONTEXT,
+            "[Roadmap detail omitted to fit the zero-cost request limit. Use only roadmap evidence still present in the request.]",
+          );
+        }
+      }
+      requestBytes = measureRequest();
+    }
+
+    // Workspace JSON is appended to the final user message by requestGemini.
+    if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES && Array.isArray(parsedBody.contents)) {
+      const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
+      const lastPart = lastTurn?.parts?.[0];
+      const contentText = lastPart?.text;
+      const marker = "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n";
+      if (typeof contentText === "string") {
+        const markerIndex = contentText.lastIndexOf(marker);
+        if (markerIndex >= 0) {
+          const jsonStart = markerIndex + marker.length;
+          try {
+            const workspace = JSON.parse(contentText.slice(jsonStart));
+            const compactWorkspace = compactContextForModel(workspace, 0, 1, 90, 12, 3);
+            lastPart.text = contentText.slice(0, jsonStart) + JSON.stringify(compactWorkspace);
+          } catch {
+            // Keep the existing message intact if the workspace suffix is not valid JSON.
+          }
+        }
+      }
+      requestBytes = measureRequest();
+    }
+
+    // Keep the start and end of the system contract, which contain identity,
+    // answer discipline and final operating constraints, while dropping bulky middle sections.
+    if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES && Array.isArray(systemParts)) {
+      for (const part of systemParts) {
+        if (typeof part?.text === "string" && part.text.length > 10000) {
+          part.text = part.text.slice(0, 6500) +
+            "\n\n[Intermediate system-prompt detail omitted to respect the zero-cost request-size limit.]\n\n" +
+            part.text.slice(-3000);
+        }
+      }
+      requestBytes = measureRequest();
+    }
+  }
+
   const safeBody = JSON.stringify(parsedBody);
-  const requestBytes = new TextEncoder().encode(safeBody).byteLength;
 
   if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES) {
     return innerMeGuardBlockedResponse(
@@ -6298,9 +6395,11 @@ Deno.serve(async (req) => {
    * "What about Maisha?" can refer to the preceding InnerMe exchange.
    * Workspace data remains authoritative on every turn.
    */
+  // Keep a small, recent transcript window. The current admin question is sent
+  // separately, so old turns must not crowd out current workspace evidence.
   const conversationHistory = Array.isArray(body.history)
     ? body.history
-        .slice(-12)
+        .slice(-6)
         .map(function (item: any) {
           const role =
             item?.role === "assistant"
@@ -6311,7 +6410,7 @@ Deno.serve(async (req) => {
 
           const content = cleanForModel(
             item?.content || "",
-            2000,
+            900,
           );
 
           return role && content
@@ -10753,7 +10852,7 @@ Answer the admin's question directly.
                         : "none"
                     ) +
                     "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
-                    JSON.stringify(safeContext),
+                    JSON.stringify(compactContextForModel(safeContext)),
                 },
               ],
             },
@@ -10762,6 +10861,8 @@ Answer the admin's question directly.
             maxOutputTokens: 1800,
           },
         }),
+        // Bound each provider attempt so failover cannot hang the chat request.
+        signal: AbortSignal.timeout(8000),
       },
     );
   }
@@ -11148,6 +11249,7 @@ Answer the admin's question directly.
     let geminiAttemptStartedAt = performance.now();
     let geminiAttemptFallbackReason = providerFallbackReason;
     let geminiResponse: Response;
+    let primaryFallbackAttempted = false;
 
     try {
       geminiResponse = await requestGemini(PRIMARY_MODEL);
@@ -11171,10 +11273,48 @@ Answer the admin's question directly.
         error_code: errorCode,
         fallback_reason: geminiAttemptFallbackReason,
       });
-      throw error;
+
+      // A timeout or transport failure on the primary is also eligible for one
+      // guarded fallback attempt. Never retry the same model in a loop.
+      console.warn("InnerMe Gemini primary request failed; trying one fallback.", errorCode);
+      activeModel = FALLBACK_MODEL;
+      geminiAttemptNumber = ++providerAttemptNumber;
+      geminiAttemptStartedAt = performance.now();
+      geminiAttemptFallbackReason = "gemini_primary_" + errorCode;
+      primaryFallbackAttempted = true;
+
+      try {
+        geminiResponse = await requestGemini(FALLBACK_MODEL);
+      } catch (fallbackError) {
+        const fallbackErrorCode = fallbackError instanceof Error &&
+          (fallbackError.name === "TimeoutError" || fallbackError.name === "AbortError")
+          ? "timeout"
+          : "network_error";
+        await recordInnerMeProviderUsage({
+          request_id: providerRequestId,
+          attempt_number: geminiAttemptNumber,
+          task_category: providerTaskCategory,
+          provider: "gemini",
+          model: FALLBACK_MODEL,
+          outcome: "error",
+          http_status: null,
+          latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+          input_tokens: null,
+          output_tokens: null,
+          total_tokens: null,
+          error_code: fallbackErrorCode,
+          fallback_reason: geminiAttemptFallbackReason,
+        });
+        console.error("InnerMe Gemini fallback request failed.", fallbackErrorCode);
+        return json({
+          error: "InnerMe is temporarily unable to reach its AI providers. Your request was not completed. Please try again shortly.",
+          retryable: true,
+        }, 503, origin);
+      }
     }
 
     if (
+      !primaryFallbackAttempted &&
       (geminiResponse.status === 503 || geminiResponse.status === 429) &&
       PRIMARY_MODEL !== FALLBACK_MODEL
     ) {
@@ -11227,7 +11367,11 @@ Answer the admin's question directly.
           error_code: errorCode,
           fallback_reason: geminiAttemptFallbackReason,
         });
-        throw error;
+        console.error("InnerMe Gemini fallback request failed.", errorCode);
+        return json({
+          error: "InnerMe is temporarily unable to reach its AI providers. Your request was not completed. Please try again shortly.",
+          retryable: true,
+        }, 503, origin);
       }
     }
 
@@ -11273,18 +11417,15 @@ Answer the admin's question directly.
         fallback_reason: geminiAttemptFallbackReason,
       });
 
-      console.error("Gemini InnerMe error:", "http_" + geminiResponse.status);
-      return json({
-        error: "The AI provider could not complete the request.",
-        provider_status: geminiResponse.status,
+      console.error("InnerMe Gemini provider unavailable.", {
+        status: geminiResponse.status,
+        model: activeModel,
         provider_code: providerError?.status || null,
-        provider_type: "gemini",
-        provider_model: activeModel,
-        provider_message:
-          typeof providerError?.message === "string"
-            ? providerError.message.slice(0, 500)
-            : null,
-      }, 502, origin);
+      });
+      return json({
+        error: "InnerMe is temporarily unable to reach its AI providers. Your request was not completed. Please try again shortly.",
+        retryable: true,
+      }, 503, origin);
     }
 
     let geminiPayload: any;
