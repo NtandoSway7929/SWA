@@ -449,6 +449,38 @@ async function guardedGeminiFetch(
       }
       requestBytes = measureRequest();
     }
+
+    // Try progressively smaller field budgets before returning a request-size error.
+    // Core record identities, dates, counts, and the current admin question are retained.
+    if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES && Array.isArray(parsedBody.contents)) {
+      for (const maxStringChars of [42, 28]) {
+        const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
+        const lastPart = lastTurn?.parts?.[0];
+        const contentText = lastPart?.text;
+        const marker = "\\n\\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\\n";
+        if (typeof contentText !== "string") break;
+        const markerIndex = contentText.lastIndexOf(marker);
+        if (markerIndex < 0) break;
+        const jsonStart = markerIndex + marker.length;
+        try {
+          const workspace = JSON.parse(contentText.slice(jsonStart));
+          const compactWorkspace = compactInnerMeContextForModel(workspace, {
+            maxArrayItems: 1,
+            maxStringChars,
+            maxObjectKeys: 18,
+            maxDepth: 3,
+            aggressive: true,
+            ultraCompact: true,
+          });
+          lastPart.text = contentText.slice(0, jsonStart) + JSON.stringify(compactWorkspace);
+          requestBytes = measureRequest();
+          if (requestBytes <= INNERME_MAX_GEMINI_REQUEST_BYTES) break;
+        } catch {
+          // Preserve the last valid request representation and let the final size guard decide.
+          break;
+        }
+      }
+    }
   }
 
   const safeBody = JSON.stringify(parsedBody);
