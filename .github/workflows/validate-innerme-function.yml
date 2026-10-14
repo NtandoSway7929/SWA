@@ -110,37 +110,36 @@ jobs:
           print("Production unauthorized-action guard passed at the gateway or application layer.")
           '
 
-      - name: Non-mutating production health GET
+      - name: Verify production endpoint reachability and health behavior
         env:
           INNERME_HEALTH_URL: https://sqifhribgsqfaxgtobsa.supabase.co/functions/v1/swayphics-ai
         shell: bash
         run: |
           set -euo pipefail
           status="$(curl --silent --show-error --max-time 20 -o /tmp/innerme-production-health.json -w '%{http_code}' "$INNERME_HEALTH_URL")"
-          if [[ "$status" == "200" ]]; then
-            python3 -c '
-            import json
-            with open("/tmp/innerme-production-health.json", encoding="utf-8") as handle:
-                payload = json.load(handle)
-            if payload.get("ok") is not True or payload.get("service") != "swayphics-ai":
-                raise SystemExit(f"Unexpected health payload: {payload!r}")
-            print("Production health GET passed.")
-            '
-          elif [[ "$status" == "401" ]]; then
-            python3 -c '
-            import json
-            with open("/tmp/innerme-production-health.json", encoding="utf-8") as handle:
-                payload = json.load(handle)
-            gateway_rejection = (
-                payload.get("code") == "UNAUTHORIZED_NO_AUTH_HEADER"
-                and payload.get("message") == "Missing authorization header"
-            )
-            if not gateway_rejection:
-                raise SystemExit(f"Unexpected production health rejection: {payload!r}")
-            print("Production gateway is reachable; JWT enforcement prevents anonymous health checks.")
-            '
-          else
+          if [[ "$status" != "200" && "$status" != "401" ]]; then
             cat /tmp/innerme-production-health.json
             echo "Expected production health GET to return 200 or the expected JWT gateway rejection (401); got $status."
             exit 1
           fi
+          export INNERME_HEALTH_STATUS="$status"
+          python3 - <<'PY'
+          import json
+          import os
+
+          with open("/tmp/innerme-production-health.json", encoding="utf-8") as handle:
+              payload = json.load(handle)
+
+          status = os.environ["INNERME_HEALTH_STATUS"]
+          if status == "200":
+              if payload.get("ok") is not True or payload.get("service") != "swayphics-ai":
+                  raise SystemExit(f"Unexpected health payload: {payload!r}")
+              print("Production health GET passed.")
+          else:
+              if (
+                  payload.get("code") != "UNAUTHORIZED_NO_AUTH_HEADER"
+                  or payload.get("message") != "Missing authorization header"
+              ):
+                  raise SystemExit(f"Unexpected production health rejection: {payload!r}")
+              print("Production gateway is reachable; JWT enforcement prevents anonymous health checks.")
+          PY
