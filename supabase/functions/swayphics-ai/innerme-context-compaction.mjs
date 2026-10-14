@@ -46,7 +46,7 @@ const RECENT_AGGRESSIVE_LIMITS = Object.freeze({
 });
 
 function cleanString(value, maxChars) {
-  return String(value ?? "").replace(/\\s+/g, " ").trim().slice(0, maxChars);
+  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxChars);
 }
 
 function collectionLimit(key, fallback, aggressive) {
@@ -96,8 +96,10 @@ export function compactInnerMeContextForModel(value, options = {}) {
     if (typeof current === "object") {
       if (depth >= maxDepth) return "[nested context omitted]";
       const entries = Object.entries(current);
+      // Preserve root-level collection counts and record collections.
+      // Only nested record objects use the object-key budget.
       const boundedEntries = depth === 0
-        ? entries.slice(0, Math.max(maxObjectKeys, 18))
+        ? entries
         : entries.slice(0, maxObjectKeys);
       const output = {};
       for (const [key, item] of boundedEntries) {
