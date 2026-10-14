@@ -127,6 +127,86 @@ Deno.test("ultra-compaction keeps workspace context under the 24 KB provider req
       message: "Gibberish and sample text ".repeat(25),
       created_at: "2026-09-01T10:00:00.000Z",
     })),
+    clients: Array.from({ length: 50 }, (_, index) => ({
+      id: "60000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      business_name: "Client Business " + index,
+      contact_name: "Contact " + index,
+      status: "active",
+      source_lead_id: "00000000-0000-0000-0000-" + String(index % 19).padStart(12, "0"),
+      created_at: "2026-09-01T10:00:00.000Z",
+      updated_at: "2026-10-01T10:00:00.000Z",
+    })),
+    projects: Array.from({ length: 50 }, (_, index) => ({
+      id: "70000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      client_id: "60000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      name: "Client Website Project " + index,
+      service: "Website design",
+      description: "Project description ".repeat(60),
+      status: "in progress",
+      value: 3950,
+      due_date: "2026-10-20",
+      payment_status: "unpaid",
+      created_at: "2026-09-01T10:00:00.000Z",
+      completed_at: null,
+    })),
+    tasks: Array.from({ length: 50 }, (_, index) => ({
+      id: "80000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      title: "Urgent delivery task " + index,
+      description: "Task description ".repeat(60),
+      status: "open",
+      priority: "high",
+      due_date: "2026-10-15",
+      lead_id: "00000000-0000-0000-0000-" + String(index % 19).padStart(12, "0"),
+      client_id: null,
+      project_id: "70000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      created_at: "2026-09-01T10:00:00.000Z",
+      completed_at: null,
+    })),
+    quotes: Array.from({ length: 50 }, (_, index) => ({
+      id: "90000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      quote_number: "Q-" + index,
+      title: "Website proposal " + index,
+      lead_id: "00000000-0000-0000-0000-" + String(index % 19).padStart(12, "0"),
+      client_id: null,
+      amount: 3950,
+      status: "sent",
+      valid_until: "2026-10-20",
+      created_at: "2026-10-01T10:00:00.000Z",
+    })),
+    payments: Array.from({ length: 50 }, (_, index) => ({
+      id: "a0000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      invoice_id: "b0000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      client_id: "60000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      amount: 3950,
+      status: "pending",
+      paid_at: null,
+      created_at: "2026-10-01T10:00:00.000Z",
+    })),
+    invoices: Array.from({ length: 50 }, (_, index) => ({
+      id: "b0000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      invoice_number: "INV-" + index,
+      client_id: "60000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      project_id: "70000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      issue_date: "2026-10-01",
+      due_date: "2026-10-15",
+      status: "unpaid",
+      total: 3950,
+      amount_paid: 0,
+      amount_outstanding: 3950,
+      created_at: "2026-10-01T10:00:00.000Z",
+      archived: false,
+    })),
+    portal_requests: Array.from({ length: 50 }, (_, index) => ({
+      id: "c0000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      client_id: "60000000-0000-0000-0000-" + String(index).padStart(12, "0"),
+      request_type: "revision",
+      status: "open",
+      created_at: "2026-10-01T10:00:00.000Z",
+      updated_at: "2026-10-01T10:00:00.000Z",
+      due_date: "2026-10-15",
+      subject: "Project revision " + index,
+      description: "Client revision detail ".repeat(60),
+    })),
     communications: Array.from({ length: 100 }, (_, index) => ({
       id: "30000000-0000-0000-0000-" + String(index).padStart(12, "0"),
       message: "Communication history ".repeat(100),
@@ -169,11 +249,16 @@ Deno.test("ultra-compaction keeps workspace context under the 24 KB provider req
   const requestBytes = new TextEncoder().encode(JSON.stringify(requestBody)).byteLength;
 
   assert(workspace.leads.length === 19, "all leads fit with compact operational fields");
-  assert(workspace.followups.length === 18, "nearest scheduled follow-up records are bounded");
+  assert(workspace.followups.length === 12, "nearest scheduled follow-up records are bounded");
   assert(workspace.leads[0].id === "00000000-0000-0000-0000-000000000000", "UUIDs must not be truncated");
   assert(workspace.followups[0].lead_id === "00000000-0000-0000-0000-000000000000", "linked UUIDs must not be truncated");
   assert(workspace.workspace_source_record_counts.followups === 27, "source count must retain all retrieved follow-ups");
-  assert(workspace.workspace_compacted_record_counts.followups === 18, "compacted count must show the sampled follow-up records");
+  assert(workspace.workspace_compacted_record_counts.followups === 12, "compacted count must show the sampled follow-up records");
+  assert(workspace.clients.length === 2 && workspace.projects.length === 2, "client and project details must be sharply bounded");
+  assert(workspace.tasks.length === 3 && workspace.quotes.length === 2, "task and quote details must be sharply bounded");
+  assert(workspace.payments.length === 2 && workspace.invoices.length === 2, "payment and invoice details must be sharply bounded");
+  assert(workspace.portal_requests.length === 1 && workspace.enquiries.length === 3, "other operational collections must be sharply bounded");
+  assert(workspace.workspace_source_record_counts.tasks === 50, "counts must remain exact even when task detail is sampled");
   assert(!("innerme_business_brain" in workspace), "oversized optional business-brain details are omitted");
   assert(contextBytes < 14000, "ultra-compacted workspace should remain bounded");
   assert(requestBytes < 24000, "request must fit under 24 KB; actual=" + requestBytes + " bytes, workspace=" + contextBytes + " bytes");
