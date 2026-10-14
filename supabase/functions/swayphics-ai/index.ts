@@ -9,6 +9,7 @@ import {
   isCloudflareEligibleWritingRequest,
 } from "./innerme-provider-routing.mjs";
 import { buildInnerMeWorkspaceContextForModel } from "./innerme-workspace-intelligence.mjs";
+import { compactInnerMeContextForModel } from "./innerme-context-compaction.mjs";
 
 // Supabase Edge Runtime provides this embedding API at runtime; declare its surface for Deno checks.
 declare const Supabase: {
@@ -122,39 +123,6 @@ function cleanForModel(value: unknown, max = 3000) {
  * Bound model-facing workspace context without changing the source workspace
  * data or permission checks. Preserve recent records and compact bulky fields.
  */
-function compactContextForModel(
-  value: any,
-  depth = 0,
-  maxArrayItems = 3,
-  maxStringChars = 220,
-  maxObjectKeys = 30,
-  maxDepth = 5,
-): any {
-  if (value == null || typeof value === "number" || typeof value === "boolean") {
-    return value;
-  }
-  if (typeof value === "string") return cleanForModel(value, maxStringChars);
-  if (Array.isArray(value)) {
-    return value.slice(-maxArrayItems).map((item) =>
-      compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars, maxObjectKeys, maxDepth)
-    );
-  }
-  if (typeof value === "object") {
-    if (depth >= maxDepth) return "[nested context omitted]";
-    const output: Record<string, any> = {};
-    for (const [key, item] of Object.entries(value).slice(0, maxObjectKeys)) {
-      const fieldLimit = /(^|_)(id|status|date|at|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
-        ? Math.min(180, maxStringChars)
-        : maxStringChars;
-      output[key] = typeof item === "string"
-        ? cleanForModel(item, fieldLimit)
-        : compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars, maxObjectKeys, maxDepth);
-    }
-    return output;
-  }
-  return String(value).slice(0, maxStringChars);
-}
-
 type InnerMeTrackedProvider = "cloudflare" | "gemini";
 type InnerMeUsageOutcome = "success" | "error";
 
@@ -459,7 +427,7 @@ async function guardedGeminiFetch(
           const jsonStart = markerIndex + marker.length;
           try {
             const workspace = JSON.parse(contentText.slice(jsonStart));
-            const compactWorkspace = compactContextForModel(workspace, 0, 1, 90, 12, 3);
+            const compactWorkspace = compactInnerMeContextForModel(workspace, { maxArrayItems: 1, maxStringChars: 60, maxObjectKeys: 24, maxDepth: 3, aggressive: true });
             lastPart.text = contentText.slice(0, jsonStart) + JSON.stringify(compactWorkspace);
           } catch {
             // Keep the existing message intact if the workspace suffix is not valid JSON.
@@ -6523,10 +6491,37 @@ Deno.serve(async (req) => {
     );
   }
 
+  const businessDateJohannesburg = (() => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Johannesburg",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const field = (type: string) => parts.find((part) => part.type === type)?.value || "";
+    return field("year") + "-" + field("month") + "-" + field("day");
+  })();
+
   const context = {
     generated_at: new Date().toISOString(),
+    business_date_johannesburg: businessDateJohannesburg,
     user_email: userData.user.email || "",
     query_failures: queryFailures,
+    workspace_source_record_counts: {
+      tasks: Array.isArray(tasks.data) ? tasks.data.length : 0,
+      leads: Array.isArray(leads.data) ? leads.data.length : 0,
+      followups: Array.isArray(followups.data) ? followups.data.length : 0,
+      clients: Array.isArray(clients.data) ? clients.data.length : 0,
+      projects: Array.isArray(projects.data) ? projects.data.length : 0,
+      quotes: Array.isArray(quotes.data) ? quotes.data.length : 0,
+      payments: Array.isArray(payments.data) ? payments.data.length : 0,
+      enquiries: Array.isArray(enquiries.data) ? enquiries.data.length : 0,
+      invoices: Array.isArray(invoices.data) ? invoices.data.length : 0,
+      portal_requests: Array.isArray(portalRequests.data) ? portalRequests.data.length : 0,
+      communications: Array.isArray(communications.data) ? communications.data.length : 0,
+      activities: Array.isArray(activities.data) ? activities.data.length : 0,
+      email_messages: Array.isArray(emailMessages.data) ? emailMessages.data.length : 0,
+    },
     tasks: compactRows(tasks.data || []),
     leads: compactRows(leads.data || []),
     followups: compactRows(followups.data || [], 100),
@@ -10815,6 +10810,25 @@ Answer the admin's question directly.
 - Do not use Markdown heading markers, bold markers, code fences, or escaped Markdown characters.`;
 
   async function requestGemini(model: string) {
+    const modelWorkspace = buildInnerMeWorkspaceContextForModel(safeContext, message);
+    const workspaceForPrompt = {
+      ...modelWorkspace,
+      workspace_model_context_record_counts: {
+        tasks: Array.isArray(modelWorkspace.tasks) ? modelWorkspace.tasks.length : 0,
+        leads: Array.isArray(modelWorkspace.leads) ? modelWorkspace.leads.length : 0,
+        followups: Array.isArray(modelWorkspace.followups) ? modelWorkspace.followups.length : 0,
+        clients: Array.isArray(modelWorkspace.clients) ? modelWorkspace.clients.length : 0,
+        projects: Array.isArray(modelWorkspace.projects) ? modelWorkspace.projects.length : 0,
+        quotes: Array.isArray(modelWorkspace.quotes) ? modelWorkspace.quotes.length : 0,
+        payments: Array.isArray(modelWorkspace.payments) ? modelWorkspace.payments.length : 0,
+        enquiries: Array.isArray(modelWorkspace.enquiries) ? modelWorkspace.enquiries.length : 0,
+        invoices: Array.isArray(modelWorkspace.invoices) ? modelWorkspace.invoices.length : 0,
+        portal_requests: Array.isArray(modelWorkspace.portal_requests) ? modelWorkspace.portal_requests.length : 0,
+        communications: Array.isArray(modelWorkspace.communications) ? modelWorkspace.communications.length : 0,
+        activities: Array.isArray(modelWorkspace.activities) ? modelWorkspace.activities.length : 0,
+        email_messages: Array.isArray(modelWorkspace.email_messages) ? modelWorkspace.email_messages.length : 0,
+      },
+    };
     return await guardedGeminiFetch(model, 
       "https://generativelanguage.googleapis.com/v1beta/models/" +
         encodeURIComponent(model) +
@@ -10871,8 +10885,10 @@ Answer the admin's question directly.
                           })
                         : "none"
                     ) +
-                    "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
-                    JSON.stringify(compactContextForModel(buildInnerMeWorkspaceContextForModel(safeContext, message))),
+                    "\n\nWORKSPACE INTEGRITY RULES:\n" +
+                    "Use workspace_model_context_record_counts for the collections actually supplied after business-context filters. workspace_source_record_counts reports rows fetched before those filters. Do not infer collection totals by counting compacted arrays. Use business_date_johannesburg to classify overdue and upcoming work. Cross-check follow-up lead_id/client_id values against the supplied lead/client IDs, and flag orphaned follow-ups, duplicates, and conflicting dates as data-quality issues. Prioritise overdue and due-soon follow-ups over speculative preparation tasks when supported by the records.\n\n" +
+                    "CURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
+                    JSON.stringify(compactInnerMeContextForModel(workspaceForPrompt)),
                 },
               ],
             },
@@ -10946,7 +10962,10 @@ Answer the admin's question directly.
     if (!cloudflareCredentialsConfigured) return null;
     const q = String(message || "").toLowerCase();
     const isBroadBusinessPlanningRequest =
-      /\b(?:today|daily|priorit(?:y|ies|ize|ise)|what should i do|next moves|next steps|recommend(?:ation|ations)?|plan my day|business growth|grow (?:the )?business|improve (?:the )?business|action plan)\b/i.test(message);
+      /\b(?:today|daily|priorit(?:y|ies|ize|ise)|what should i do|next moves|next steps|recommend(?:ation|ations)?|plan my day|business growth|grow (?:the )?business|improve (?:the )?business|action plan|highest.value moves)\b/i.test(message);
+    const planningContext = isBroadBusinessPlanningRequest
+      ? buildInnerMeWorkspaceContextForModel(safeContext, message)
+      : safeContext;
     const broadContextKeys = new Set([
       "leads", "followups", "clients", "projects", "tasks", "quotes",
       "invoices", "payments", "enquiries", "communications", "email_messages", "activities",
@@ -10985,11 +11004,9 @@ Answer the admin's question directly.
     }
     for (const [key, rule] of rules) {
       if (!rule.test(message) && !(isBroadBusinessPlanningRequest && broadContextKeys.has(key))) continue;
-      const sourceRows = Array.isArray(safeContext[key]) ? safeContext[key] as any[] : [];
-      // The business itself must not be surfaced as a sales prospect in broad daily priorities.
-      const rows = key === "leads" && isBroadBusinessPlanningRequest && !/\bswayphics\b/i.test(message)
-        ? sourceRows.filter((row) => !/^swayphics$/i.test(cleanForModel(row?.business_name, 100)))
-        : sourceRows;
+      const sourceRows = Array.isArray(planningContext[key]) ? planningContext[key] as any[] : [];
+      // Reuse the deterministic business-context filter for all broad planning prompts.
+      const rows = sourceRows;
       const ranked = rows.map((row) => {
         const raw = JSON.stringify(row).toLowerCase();
         const tokenScore = tokens.reduce((n, token) => n + (raw.includes(token) ? 1 : 0), 0);
@@ -11034,22 +11051,101 @@ Answer the admin's question directly.
       }
       return counts;
     }
-    const allFollowups = Array.isArray(safeContext.followups) ? safeContext.followups as any[] : [];
+    const allFollowups = Array.isArray(planningContext.followups) ? planningContext.followups as any[] : [];
+    const rawFollowups = Array.isArray(safeContext.followups) ? safeContext.followups as any[] : [];
+    const sourceLeads = Array.isArray(safeContext.leads) ? safeContext.leads as any[] : [];
+    const sourceClients = Array.isArray(safeContext.clients) ? safeContext.clients as any[] : [];
+    const leadIds = new Set(sourceLeads.map((row) => String(row?.id || "")).filter(Boolean));
+    const clientIds = new Set(sourceClients.map((row) => String(row?.id || "")).filter(Boolean));
     const nowMs = Date.now();
+    const pendingRawFollowups = rawFollowups.filter((row) => String(row?.status || "").toLowerCase() === "pending");
+    const orphanedPendingFollowups = pendingRawFollowups.filter((row) => {
+      const leadId = String(row?.lead_id || "");
+      const clientId = String(row?.client_id || "");
+      if (leadId && !leadIds.has(leadId)) return true;
+      if (clientId && !clientIds.has(clientId)) return true;
+      return !leadId && !clientId;
+    });
+    const duplicateGroupsByKey = new Map<string, any[]>();
+    for (const row of pendingRawFollowups) {
+      const key = [
+        String(row?.lead_id || ""),
+        String(row?.client_id || ""),
+        String(row?.scheduled_for || ""),
+        String(row?.channel || "").toLowerCase(),
+      ].join("|");
+      const rows = duplicateGroupsByKey.get(key) || [];
+      rows.push(row);
+      duplicateGroupsByKey.set(key, rows);
+    }
+    const duplicateGroups = Array.from(duplicateGroupsByKey.entries()).filter(([, rows]) => rows.length > 1);
+    const leadsById = new Map<string, any>();
+    for (const row of sourceLeads) {
+      leadsById.set(String(row?.id || ""), row);
+    }
+    const pendingByLeadId = new Map<string, any[]>();
+    for (const row of allFollowups.filter((item) => String(item?.status || "").toLowerCase() === "pending")) {
+      const leadId = String(row?.lead_id || "");
+      if (!leadId) continue;
+      const rows = pendingByLeadId.get(leadId) || [];
+      rows.push(row);
+      pendingByLeadId.set(leadId, rows);
+    }
+    const dateConflicts: any[] = [];
+    for (const lead of (Array.isArray(planningContext.leads) ? planningContext.leads as any[] : [])) {
+      const expectedDate = String(lead?.next_follow_up || "").slice(0, 10);
+      const linked = pendingByLeadId.get(String(lead?.id || "")) || [];
+      if (!expectedDate || !linked.length) continue;
+      linked.sort((a, b) => String(a?.scheduled_for || "").localeCompare(String(b?.scheduled_for || "")));
+      const actualDate = String(linked[0]?.scheduled_for || "").slice(0, 10);
+      if (actualDate && actualDate !== expectedDate) {
+        dateConflicts.push({
+          lead: String(lead?.business_name || "Unknown lead"),
+          lead_next_follow_up: expectedDate,
+          earliest_pending_followup: actualDate,
+        });
+      }
+    }
+    selected.business_date_johannesburg = planningContext.business_date_johannesburg || null;
+    selected.workspace_source_record_counts = safeContext.workspace_source_record_counts || {};
+    selected.workspace_model_context_record_counts = {
+      tasks: Array.isArray(planningContext.tasks) ? planningContext.tasks.length : 0,
+      leads: Array.isArray(planningContext.leads) ? planningContext.leads.length : 0,
+      followups: Array.isArray(planningContext.followups) ? planningContext.followups.length : 0,
+      clients: Array.isArray(planningContext.clients) ? planningContext.clients.length : 0,
+      projects: Array.isArray(planningContext.projects) ? planningContext.projects.length : 0,
+      quotes: Array.isArray(planningContext.quotes) ? planningContext.quotes.length : 0,
+      payments: Array.isArray(planningContext.payments) ? planningContext.payments.length : 0,
+      enquiries: Array.isArray(planningContext.enquiries) ? planningContext.enquiries.length : 0,
+      invoices: Array.isArray(planningContext.invoices) ? planningContext.invoices.length : 0,
+      portal_requests: Array.isArray(planningContext.portal_requests) ? planningContext.portal_requests.length : 0,
+      communications: Array.isArray(planningContext.communications) ? planningContext.communications.length : 0,
+      activities: Array.isArray(planningContext.activities) ? planningContext.activities.length : 0,
+      email_messages: Array.isArray(planningContext.email_messages) ? planningContext.email_messages.length : 0,
+    };
     selected.workspace_summary = {
-      lead_count: Array.isArray(safeContext.leads) ? safeContext.leads.length : null,
-      lead_status_counts: countByStatus(safeContext.leads),
-      client_count: Array.isArray(safeContext.clients) ? safeContext.clients.length : null,
-      project_count: Array.isArray(safeContext.projects) ? safeContext.projects.length : null,
-      task_count: Array.isArray(safeContext.tasks) ? safeContext.tasks.length : null,
-      quote_count: Array.isArray(safeContext.quotes) ? safeContext.quotes.length : null,
-      enquiry_count: Array.isArray(safeContext.enquiries) ? safeContext.enquiries.length : null,
+      lead_count: Array.isArray(planningContext.leads) ? planningContext.leads.length : null,
+      lead_status_counts: countByStatus(planningContext.leads),
+      client_count: Array.isArray(planningContext.clients) ? planningContext.clients.length : null,
+      project_count: Array.isArray(planningContext.projects) ? planningContext.projects.length : null,
+      task_count: Array.isArray(planningContext.tasks) ? planningContext.tasks.length : null,
+      quote_count: Array.isArray(planningContext.quotes) ? planningContext.quotes.length : null,
+      enquiry_count: Array.isArray(planningContext.enquiries) ? planningContext.enquiries.length : null,
       pending_followup_count: allFollowups.filter((row) => String(row?.status || "").toLowerCase() === "pending").length,
       pending_followups_due_within_7_days: allFollowups.filter((row) => {
         if (String(row?.status || "").toLowerCase() !== "pending" || !row?.scheduled_for) return false;
         const due = Date.parse(String(row.scheduled_for));
         return Number.isFinite(due) && due <= nowMs + 7 * 86400000;
       }).length,
+      orphaned_pending_followup_count: orphanedPendingFollowups.length,
+      duplicate_pending_followup_groups: duplicateGroups.length,
+      duplicate_pending_followup_examples: duplicateGroups.slice(0, 3).map(([, rows]) => ({
+        business_name: leadsById.get(String(rows[0]?.lead_id || ""))?.business_name || "Unknown linked record",
+        scheduled_for: rows[0]?.scheduled_for || null,
+        channel: rows[0]?.channel || null,
+        duplicate_count: rows.length,
+      })),
+      lead_followup_date_conflicts: dateConflicts.slice(0, 5),
     };
     const body = JSON.stringify({
       model: CLOUDFLARE_MODEL,
