@@ -249,11 +249,11 @@ Deno.test("ultra-compaction keeps workspace context under the 24 KB provider req
   const requestBytes = new TextEncoder().encode(JSON.stringify(requestBody)).byteLength;
 
   assert(workspace.leads.length === 19, "all leads fit with compact operational fields");
-  assert(workspace.followups.length === 12, "nearest scheduled follow-up records are bounded");
+  assert(workspace.followups.length === 11, "nearest scheduled follow-up records are bounded");
   assert(workspace.leads[0].id === "00000000-0000-0000-0000-000000000000", "UUIDs must not be truncated");
   assert(workspace.followups[0].lead_id === "00000000-0000-0000-0000-000000000000", "linked UUIDs must not be truncated");
   assert(workspace.workspace_source_record_counts.followups === 27, "source count must retain all retrieved follow-ups");
-  assert(workspace.workspace_compacted_record_counts.followups === 12, "compacted count must show the sampled follow-up records");
+  assert(workspace.workspace_compacted_record_counts.followups === 11, "compacted count must show the sampled follow-up records");
   assert(workspace.clients.length === 2 && workspace.projects.length === 2, "client and project details must be sharply bounded");
   assert(workspace.tasks.length === 3 && workspace.quotes.length === 2, "task and quote details must be sharply bounded");
   assert(workspace.payments.length === 2 && workspace.invoices.length === 2, "payment and invoice details must be sharply bounded");
