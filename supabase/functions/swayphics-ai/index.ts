@@ -427,7 +427,7 @@ async function guardedGeminiFetch(
           const jsonStart = markerIndex + marker.length;
           try {
             const workspace = JSON.parse(contentText.slice(jsonStart));
-            const compactWorkspace = compactInnerMeContextForModel(workspace, { maxArrayItems: 1, maxStringChars: 60, maxObjectKeys: 18, maxDepth: 3, aggressive: true });
+            const compactWorkspace = compactInnerMeContextForModel(workspace, { maxArrayItems: 1, maxStringChars: 60, maxObjectKeys: 24, maxDepth: 3, aggressive: true });
             lastPart.text = contentText.slice(0, jsonStart) + JSON.stringify(compactWorkspace);
           } catch {
             // Keep the existing message intact if the workspace suffix is not valid JSON.
@@ -10810,6 +10810,25 @@ Answer the admin's question directly.
 - Do not use Markdown heading markers, bold markers, code fences, or escaped Markdown characters.`;
 
   async function requestGemini(model: string) {
+    const modelWorkspace = buildInnerMeWorkspaceContextForModel(safeContext, message);
+    const workspaceForPrompt = {
+      ...modelWorkspace,
+      workspace_model_context_record_counts: {
+        tasks: Array.isArray(modelWorkspace.tasks) ? modelWorkspace.tasks.length : 0,
+        leads: Array.isArray(modelWorkspace.leads) ? modelWorkspace.leads.length : 0,
+        followups: Array.isArray(modelWorkspace.followups) ? modelWorkspace.followups.length : 0,
+        clients: Array.isArray(modelWorkspace.clients) ? modelWorkspace.clients.length : 0,
+        projects: Array.isArray(modelWorkspace.projects) ? modelWorkspace.projects.length : 0,
+        quotes: Array.isArray(modelWorkspace.quotes) ? modelWorkspace.quotes.length : 0,
+        payments: Array.isArray(modelWorkspace.payments) ? modelWorkspace.payments.length : 0,
+        enquiries: Array.isArray(modelWorkspace.enquiries) ? modelWorkspace.enquiries.length : 0,
+        invoices: Array.isArray(modelWorkspace.invoices) ? modelWorkspace.invoices.length : 0,
+        portal_requests: Array.isArray(modelWorkspace.portal_requests) ? modelWorkspace.portal_requests.length : 0,
+        communications: Array.isArray(modelWorkspace.communications) ? modelWorkspace.communications.length : 0,
+        activities: Array.isArray(modelWorkspace.activities) ? modelWorkspace.activities.length : 0,
+        email_messages: Array.isArray(modelWorkspace.email_messages) ? modelWorkspace.email_messages.length : 0,
+      },
+    };
     return await guardedGeminiFetch(model, 
       "https://generativelanguage.googleapis.com/v1beta/models/" +
         encodeURIComponent(model) +
@@ -10867,9 +10886,9 @@ Answer the admin's question directly.
                         : "none"
                     ) +
                     "\n\nWORKSPACE INTEGRITY RULES:\n" +
-                    "Use workspace_source_record_counts for retrieved-record counts; do not infer collection totals by counting compacted arrays. Use business_date_johannesburg to classify overdue and upcoming work. Cross-check follow-up lead_id/client_id values against the supplied lead/client IDs, and flag orphaned follow-ups, duplicates, and conflicting dates as data-quality issues. Prioritise overdue and due-soon follow-ups over speculative preparation tasks when supported by the records.\n\n" +
+                    "Use workspace_model_context_record_counts for the collections actually supplied after business-context filters. workspace_source_record_counts reports rows fetched before those filters. Do not infer collection totals by counting compacted arrays. Use business_date_johannesburg to classify overdue and upcoming work. Cross-check follow-up lead_id/client_id values against the supplied lead/client IDs, and flag orphaned follow-ups, duplicates, and conflicting dates as data-quality issues. Prioritise overdue and due-soon follow-ups over speculative preparation tasks when supported by the records.\n\n" +
                     "CURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
-                    JSON.stringify(compactInnerMeContextForModel(buildInnerMeWorkspaceContextForModel(safeContext, message))),
+                    JSON.stringify(compactInnerMeContextForModel(workspaceForPrompt)),
                 },
               ],
             },
