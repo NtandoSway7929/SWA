@@ -10962,7 +10962,10 @@ Answer the admin's question directly.
     if (!cloudflareCredentialsConfigured) return null;
     const q = String(message || "").toLowerCase();
     const isBroadBusinessPlanningRequest =
-      /\b(?:today|daily|priorit(?:y|ies|ize|ise)|what should i do|next moves|next steps|recommend(?:ation|ations)?|plan my day|business growth|grow (?:the )?business|improve (?:the )?business|action plan)\b/i.test(message);
+      /\b(?:today|daily|priorit(?:y|ies|ize|ise)|what should i do|next moves|next steps|recommend(?:ation|ations)?|plan my day|business growth|grow (?:the )?business|improve (?:the )?business|action plan|highest.value moves)\b/i.test(message);
+    const planningContext = isBroadBusinessPlanningRequest
+      ? buildInnerMeWorkspaceContextForModel(safeContext, message)
+      : safeContext;
     const broadContextKeys = new Set([
       "leads", "followups", "clients", "projects", "tasks", "quotes",
       "invoices", "payments", "enquiries", "communications", "email_messages", "activities",
@@ -11001,10 +11004,9 @@ Answer the admin's question directly.
     }
     for (const [key, rule] of rules) {
       if (!rule.test(message) && !(isBroadBusinessPlanningRequest && broadContextKeys.has(key))) continue;
-      const sourceRows = Array.isArray(safeContext[key]) ? safeContext[key] as any[] : [];
-      // The business itself must not be surfaced as a sales prospect in broad daily priorities.
-      const rows = key === "leads" && isBroadBusinessPlanningRequest && !/\bswayphics\b/i.test(message)
-        ? sourceRows.filter((row) => !/^swayphics$/i.test(cleanForModel(row?.business_name, 100)))
+      const sourceRows = Array.isArray(planningContext[key]) ? planningContext[key] as any[] : [];
+      // Reuse the deterministic business-context filter for all broad planning prompts.
+      const rows = sourceRows;
         : sourceRows;
       const ranked = rows.map((row) => {
         const raw = JSON.stringify(row).toLowerCase();
@@ -11050,22 +11052,87 @@ Answer the admin's question directly.
       }
       return counts;
     }
-    const allFollowups = Array.isArray(safeContext.followups) ? safeContext.followups as any[] : [];
+    const allFollowups = Array.isArray(planningContext.followups) ? planningContext.followups as any[] : [];
+    const rawFollowups = Array.isArray(safeContext.followups) ? safeContext.followups as any[] : [];
+    const sourceLeads = Array.isArray(safeContext.leads) ? safeContext.leads as any[] : [];
+    const sourceClients = Array.isArray(safeContext.clients) ? safeContext.clients as any[] : [];
+    const leadIds = new Set(sourceLeads.map((row) => String(row?.id || "")).filter(Boolean));
+    const clientIds = new Set(sourceClients.map((row) => String(row?.id || "")).filter(Boolean));
     const nowMs = Date.now();
+    const pendingRawFollowups = rawFollowups.filter((row) => String(row?.status || "").toLowerCase() === "pending");
+    const orphanedPendingFollowups = pendingRawFollowups.filter((row) => {
+      const leadId = String(row?.lead_id || "");
+      const clientId = String(row?.client_id || "");
+      if (leadId && !leadIds.has(leadId)) return true;
+      if (clientId && !clientIds.has(clientId)) return true;
+      return !leadId && !clientId;
+    });
+    const duplicateGroupsByKey = new Map<string, any[]>();
+    for (const row of pendingRawFollowups) {
+      const key = [
+        String(row?.lead_id || ""),
+        String(row?.client_id || ""),
+        String(row?.scheduled_for || ""),
+        String(row?.channel || "").toLowerCase(),
+      ].join("|");
+      const rows = duplicateGroupsByKey.get(key) || [];
+      rows.push(row);
+      duplicateGroupsByKey.set(key, rows);
+    }
+    const duplicateGroups = Array.from(duplicateGroupsByKey.entries()).filter(([, rows]) => rows.length > 1);
+    const leadsById = new Map(sourceLeads.map((row) => [String(row?.id || ""), row]));
+    const pendingByLeadId = new Map<string, any[]>();
+    for (const row of allFollowups.filter((item) => String(item?.status || "").toLowerCase() === "pending")) {
+      const leadId = String(row?.lead_id || "");
+      if (!leadId) continue;
+      const rows = pendingByLeadId.get(leadId) || [];
+      rows.push(row);
+      pendingByLeadId.set(leadId, rows);
+    }
+    const dateConflicts: any[] = [];
+    for (const lead of (Array.isArray(planningContext.leads) ? planningContext.leads as any[] : [])) {
+      const expectedDate = String(lead?.next_follow_up || "").slice(0, 10);
+      const linked = pendingByLeadId.get(String(lead?.id || "")) || [];
+      if (!expectedDate || !linked.length) continue;
+      linked.sort((a, b) => String(a?.scheduled_for || "").localeCompare(String(b?.scheduled_for || "")));
+      const actualDate = String(linked[0]?.scheduled_for || "").slice(0, 10);
+      if (actualDate && actualDate !== expectedDate) {
+        dateConflicts.push({
+          lead: String(lead?.business_name || "Unknown lead"),
+          lead_next_follow_up: expectedDate,
+          earliest_pending_followup: actualDate,
+        });
+      }
+    }
+    selected.business_date_johannesburg = planningContext.business_date_johannesburg || null;
+    selected.workspace_source_record_counts = safeContext.workspace_source_record_counts || {};
+    selected.workspace_model_context_record_counts = Object.fromEntries(
+      ["tasks", "leads", "followups", "clients", "projects", "quotes", "payments", "enquiries", "invoices", "portal_requests", "communications", "activities", "email_messages"]
+        .map((key) => [key, Array.isArray(planningContext[key]) ? planningContext[key].length : 0])
+    );
     selected.workspace_summary = {
-      lead_count: Array.isArray(safeContext.leads) ? safeContext.leads.length : null,
-      lead_status_counts: countByStatus(safeContext.leads),
-      client_count: Array.isArray(safeContext.clients) ? safeContext.clients.length : null,
-      project_count: Array.isArray(safeContext.projects) ? safeContext.projects.length : null,
-      task_count: Array.isArray(safeContext.tasks) ? safeContext.tasks.length : null,
-      quote_count: Array.isArray(safeContext.quotes) ? safeContext.quotes.length : null,
-      enquiry_count: Array.isArray(safeContext.enquiries) ? safeContext.enquiries.length : null,
+      lead_count: Array.isArray(planningContext.leads) ? planningContext.leads.length : null,
+      lead_status_counts: countByStatus(planningContext.leads),
+      client_count: Array.isArray(planningContext.clients) ? planningContext.clients.length : null,
+      project_count: Array.isArray(planningContext.projects) ? planningContext.projects.length : null,
+      task_count: Array.isArray(planningContext.tasks) ? planningContext.tasks.length : null,
+      quote_count: Array.isArray(planningContext.quotes) ? planningContext.quotes.length : null,
+      enquiry_count: Array.isArray(planningContext.enquiries) ? planningContext.enquiries.length : null,
       pending_followup_count: allFollowups.filter((row) => String(row?.status || "").toLowerCase() === "pending").length,
       pending_followups_due_within_7_days: allFollowups.filter((row) => {
         if (String(row?.status || "").toLowerCase() !== "pending" || !row?.scheduled_for) return false;
         const due = Date.parse(String(row.scheduled_for));
         return Number.isFinite(due) && due <= nowMs + 7 * 86400000;
       }).length,
+      orphaned_pending_followup_count: orphanedPendingFollowups.length,
+      duplicate_pending_followup_groups: duplicateGroups.length,
+      duplicate_pending_followup_examples: duplicateGroups.slice(0, 3).map(([, rows]) => ({
+        business_name: leadsById.get(String(rows[0]?.lead_id || ""))?.business_name || "Unknown linked record",
+        scheduled_for: rows[0]?.scheduled_for || null,
+        channel: rows[0]?.channel || null,
+        duplicate_count: rows.length,
+      })),
+      lead_followup_date_conflicts: dateConflicts.slice(0, 5),
     };
     const body = JSON.stringify({
       model: CLOUDFLARE_MODEL,
