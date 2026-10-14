@@ -427,7 +427,7 @@ async function guardedGeminiFetch(
           const jsonStart = markerIndex + marker.length;
           try {
             const workspace = JSON.parse(contentText.slice(jsonStart));
-            const compactWorkspace = compactInnerMeContextForModel(workspace, { maxArrayItems: 1, maxStringChars: 60, maxObjectKeys: 24, maxDepth: 3, aggressive: true });
+            const compactWorkspace = compactInnerMeContextForModel(workspace, { maxArrayItems: 1, maxStringChars: 60, maxObjectKeys: 24, maxDepth: 3, aggressive: true, ultraCompact: true });
             lastPart.text = contentText.slice(0, jsonStart) + JSON.stringify(compactWorkspace);
           } catch {
             // Keep the existing message intact if the workspace suffix is not valid JSON.
