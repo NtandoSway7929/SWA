@@ -41,7 +41,7 @@ const CRITICAL_AGGRESSIVE_LIMITS = Object.freeze({
 
 const ULTRA_CRITICAL_COLLECTION_LIMITS = Object.freeze({
   leads: 24,
-  followups: 30,
+  followups: 18,
   clients: 20,
   projects: 20,
   tasks: 24,
@@ -53,14 +53,14 @@ const ULTRA_CRITICAL_COLLECTION_LIMITS = Object.freeze({
 });
 
 const ULTRA_RECENT_COLLECTION_LIMITS = Object.freeze({
-  communications: 3,
-  activities: 3,
-  email_messages: 3,
+  communications: 1,
+  activities: 1,
+  email_messages: 1,
 });
 
 const ULTRA_RECORD_FIELDS = Object.freeze({
-  leads: ["id", "business_name", "contact_name", "service_interest", "status", "estimated_value", "next_follow_up", "last_contacted_at", "created_at", "updated_at", "converted_client_id", "source", "notes", "contacted_manually"],
-  followups: ["id", "lead_id", "client_id", "scheduled_for", "channel", "status", "note", "created_at", "completed_at"],
+  leads: ["id", "business_name", "service_interest", "status", "estimated_value", "next_follow_up", "converted_client_id"],
+  followups: ["id", "lead_id", "client_id", "scheduled_for", "channel", "status", "note"],
   clients: ["id", "business_name", "contact_name", "status", "source_lead_id", "created_at", "updated_at"],
   projects: ["id", "client_id", "name", "service", "description", "status", "value", "due_date", "payment_status", "created_at", "completed_at"],
   tasks: ["id", "title", "description", "status", "priority", "due_date", "lead_id", "client_id", "project_id", "created_at", "completed_at"],
@@ -158,9 +158,13 @@ export function compactInnerMeContextForModel(value, options = {}) {
           : null;
         if (Array.isArray(allowedFields) && !allowedFields.includes(key)) continue;
         if (!ultraCompact && depth > 0 && Object.keys(output).length >= maxObjectKeys) break;
-        const fieldLimit = /(^|_)(id|status|date|at|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
-          ? Math.min(180, maxStringChars)
-          : maxStringChars;
+        const isIdentifier = /^(?:id|.+_id)$/i.test(key);
+        const isExactDateOrTimestamp = /(?:^date$|_date$|_at$|^scheduled_for$|^next_follow_up$|^valid_until$|^due_date$|^issue_date$|^completed_at$)/i.test(key);
+        const fieldLimit = isIdentifier || isExactDateOrTimestamp
+          ? 180
+          : /(^|_)(status|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
+            ? Math.min(180, maxStringChars)
+            : maxStringChars;
         output[key] = typeof item === "string"
           ? cleanString(item, fieldLimit)
           : visit(item, depth + 1, key);
@@ -172,8 +176,18 @@ export function compactInnerMeContextForModel(value, options = {}) {
 
   const result = visit(value, 0, "");
   if (ultraCompact && result && typeof result === "object" && !Array.isArray(result)) {
+    result.workspace_compacted_record_counts = {};
+    for (const key of [
+      "tasks", "leads", "followups", "clients", "projects", "quotes",
+      "payments", "enquiries", "invoices", "portal_requests",
+      "communications", "activities", "email_messages",
+    ]) {
+      if (Array.isArray(result[key])) {
+        result.workspace_compacted_record_counts[key] = result[key].length;
+      }
+    }
     result.context_compaction_note =
-      "Emergency size-reduction mode: business records contain only selected operational fields; optional InnerMe business-brain details were omitted. Use workspace_source_record_counts and workspace_model_context_record_counts rather than inferring full workspace totals from the compacted sample.";
+      "Emergency size-reduction mode: business-critical records retain only selected operational fields; follow-ups and communication streams may be sampled to fit the provider budget; optional InnerMe business-brain details were omitted. Use workspace_source_record_counts and workspace_model_context_record_counts for counts before row compaction, workspace_compacted_record_counts for rows shown in detail, and do not treat the compacted record lists as the full workspace.";
   }
   return result;
 }
