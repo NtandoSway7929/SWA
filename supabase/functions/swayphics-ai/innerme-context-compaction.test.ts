@@ -176,6 +176,6 @@ Deno.test("ultra-compaction keeps workspace context under the 24 KB provider req
   assert(workspace.workspace_compacted_record_counts.followups === 18, "compacted count must show the sampled follow-up records");
   assert(!("innerme_business_brain" in workspace), "oversized optional business-brain details are omitted");
   assert(contextBytes < 14000, "ultra-compacted workspace should remain bounded");
-  assert(requestBytes < 24000, "compacted user request plus a trimmed system prompt must fit under 24 KB");
+  assert(requestBytes < 24000, "request must fit under 24 KB; actual=" + requestBytes + " bytes, workspace=" + contextBytes + " bytes");
   assert(typeof workspace.context_compaction_note === "string", "the answer generator must know that record details were compacted");
 });
