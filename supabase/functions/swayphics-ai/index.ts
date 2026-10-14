@@ -11007,7 +11007,6 @@ Answer the admin's question directly.
       const sourceRows = Array.isArray(planningContext[key]) ? planningContext[key] as any[] : [];
       // Reuse the deterministic business-context filter for all broad planning prompts.
       const rows = sourceRows;
-        : sourceRows;
       const ranked = rows.map((row) => {
         const raw = JSON.stringify(row).toLowerCase();
         const tokenScore = tokens.reduce((n, token) => n + (raw.includes(token) ? 1 : 0), 0);
