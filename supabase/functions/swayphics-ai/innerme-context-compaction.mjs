@@ -40,16 +40,18 @@ const CRITICAL_AGGRESSIVE_LIMITS = Object.freeze({
 });
 
 const ULTRA_CRITICAL_COLLECTION_LIMITS = Object.freeze({
+  // Preserve the complete prospect pipeline when it fits, while sharply
+  // bounding less urgent collections so the combined provider request fits.
   leads: 24,
-  followups: 18,
-  clients: 20,
-  projects: 20,
-  tasks: 24,
-  quotes: 20,
-  payments: 20,
-  enquiries: 20,
-  invoices: 20,
-  portal_requests: 20,
+  followups: 12,
+  clients: 2,
+  projects: 2,
+  tasks: 3,
+  quotes: 2,
+  payments: 2,
+  enquiries: 3,
+  invoices: 2,
+  portal_requests: 1,
 });
 
 const ULTRA_RECENT_COLLECTION_LIMITS = Object.freeze({
@@ -61,17 +63,17 @@ const ULTRA_RECENT_COLLECTION_LIMITS = Object.freeze({
 const ULTRA_RECORD_FIELDS = Object.freeze({
   leads: ["id", "business_name", "service_interest", "status", "estimated_value", "next_follow_up", "converted_client_id"],
   followups: ["id", "lead_id", "client_id", "scheduled_for", "channel", "status", "note"],
-  clients: ["id", "business_name", "contact_name", "status", "source_lead_id", "created_at", "updated_at"],
-  projects: ["id", "client_id", "name", "service", "description", "status", "value", "due_date", "payment_status", "created_at", "completed_at"],
-  tasks: ["id", "title", "description", "status", "priority", "due_date", "lead_id", "client_id", "project_id", "created_at", "completed_at"],
-  quotes: ["id", "quote_number", "title", "lead_id", "client_id", "amount", "status", "valid_until", "created_at"],
-  payments: ["id", "invoice_id", "client_id", "amount", "status", "paid_at", "created_at"],
-  enquiries: ["id", "name", "business_name", "service", "status", "created_at", "converted_lead_id", "message"],
-  invoices: ["id", "invoice_number", "client_id", "project_id", "issue_date", "due_date", "status", "total", "amount_paid", "amount_outstanding", "created_at", "archived"],
-  portal_requests: ["id", "client_id", "request_type", "status", "created_at", "updated_at", "due_date", "subject", "description"],
-  communications: ["id", "lead_id", "client_id", "channel", "direction", "subject", "message", "contacted_at", "created_at"],
-  activities: ["id", "action", "event", "entity_type", "entity_id", "description", "created_at"],
-  email_messages: ["id", "direction", "thread_id", "from_name", "from_email", "to_email", "subject", "text_body", "received_at", "is_read", "client_id", "lead_id", "created_at"],
+  clients: ["id", "business_name", "status", "source_lead_id"],
+  projects: ["id", "client_id", "name", "service", "status", "value", "due_date", "payment_status"],
+  tasks: ["id", "title", "status", "priority", "due_date", "lead_id", "client_id", "project_id"],
+  quotes: ["id", "quote_number", "title", "lead_id", "client_id", "amount", "status", "valid_until"],
+  payments: ["id", "invoice_id", "client_id", "amount", "status", "paid_at"],
+  enquiries: ["id", "name", "business_name", "service", "status", "created_at", "converted_lead_id"],
+  invoices: ["id", "invoice_number", "client_id", "project_id", "issue_date", "due_date", "status", "total", "amount_outstanding", "archived"],
+  portal_requests: ["id", "client_id", "request_type", "status", "due_date", "subject"],
+  communications: ["id", "lead_id", "client_id", "channel", "direction", "subject", "contacted_at", "created_at"],
+  activities: ["id", "action", "event", "entity_type", "entity_id", "created_at"],
+  email_messages: ["id", "direction", "thread_id", "from_name", "from_email", "to_email", "subject", "received_at", "is_read", "client_id", "lead_id", "created_at"],
   decisions: ["id", "title", "decision", "status", "rationale", "updated_at"],
   playbooks: ["id", "name", "purpose", "status", "definition_of_done", "updated_at"],
   active_experiments: ["id", "name", "hypothesis", "action", "success_metric", "status", "review_date", "result", "updated_at"],
@@ -157,7 +159,9 @@ export function compactInnerMeContextForModel(value, options = {}) {
           ? ULTRA_RECORD_FIELDS[parentKey]
           : null;
         if (Array.isArray(allowedFields) && !allowedFields.includes(key)) continue;
-        if (!ultraCompact && depth > 0 && Object.keys(output).length >= maxObjectKeys) break;
+        // Keep the key cap active in emergency mode too: non-allowlisted nested
+        // objects can otherwise bypass the byte budget even when arrays are bounded.
+        if (depth > 0 && Object.keys(output).length >= maxObjectKeys) break;
         const isIdentifier = /^(?:id|.+_id)$/i.test(key);
         const isExactDateOrTimestamp = /(?:^date$|_date$|_at$|^scheduled_for$|^next_follow_up$|^valid_until$|^due_date$|^issue_date$|^completed_at$)/i.test(key);
         const fieldLimit = isIdentifier || isExactDateOrTimestamp
