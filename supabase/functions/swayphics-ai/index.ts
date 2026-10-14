@@ -457,7 +457,7 @@ async function guardedGeminiFetch(
         const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
         const lastPart = lastTurn?.parts?.[0];
         const contentText = lastPart?.text;
-        const marker = "\\n\\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\\n";
+        const marker = "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n";
         if (typeof contentText !== "string") break;
         const markerIndex = contentText.lastIndexOf(marker);
         if (markerIndex < 0) break;
