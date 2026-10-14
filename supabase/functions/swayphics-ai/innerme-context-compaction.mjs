@@ -43,7 +43,7 @@ const ULTRA_CRITICAL_COLLECTION_LIMITS = Object.freeze({
   // Preserve the complete prospect pipeline when it fits, while sharply
   // bounding less urgent collections so the combined provider request fits.
   leads: 24,
-  followups: 12,
+  followups: 11,
   clients: 2,
   projects: 2,
   tasks: 3,
@@ -159,6 +159,9 @@ export function compactInnerMeContextForModel(value, options = {}) {
           ? ULTRA_RECORD_FIELDS[parentKey]
           : null;
         if (Array.isArray(allowedFields) && !allowedFields.includes(key)) continue;
+        // Null fields carry no decision value; omit them to save space while
+        // preserving every non-null identifier and exact date needed for joins.
+        if (ultraCompact && item == null) continue;
         // Keep the key cap active in emergency mode too: non-allowlisted nested
         // objects can otherwise bypass the byte budget even when arrays are bounded.
         if (depth > 0 && Object.keys(output).length >= maxObjectKeys) break;
