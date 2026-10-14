@@ -100,9 +100,14 @@ jobs:
           import json
           with open("/tmp/innerme-production-auth.json", encoding="utf-8") as handle:
               payload = json.load(handle)
-          if payload.get("error") != "Authentication is required.":
+          application_rejection = payload.get("error") == "Authentication is required."
+          gateway_rejection = (
+              payload.get("code") == "UNAUTHORIZED_NO_AUTH_HEADER"
+              and payload.get("message") == "Missing authorization header"
+          )
+          if not (application_rejection or gateway_rejection):
               raise SystemExit(f"Unexpected production auth rejection: {payload!r}")
-          print("Production unauthorized-action guard passed.")
+          print("Production unauthorized-action guard passed at the gateway or application layer.")
           '
 
       - name: Non-mutating production health GET
