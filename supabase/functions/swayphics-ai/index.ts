@@ -11079,7 +11079,10 @@ Answer the admin's question directly.
       duplicateGroupsByKey.set(key, rows);
     }
     const duplicateGroups = Array.from(duplicateGroupsByKey.entries()).filter(([, rows]) => rows.length > 1);
-    const leadsById = new Map(sourceLeads.map((row) => [String(row?.id || ""), row]));
+    const leadsById = new Map<string, any>();
+    for (const row of sourceLeads) {
+      leadsById.set(String(row?.id || ""), row);
+    }
     const pendingByLeadId = new Map<string, any[]>();
     for (const row of allFollowups.filter((item) => String(item?.status || "").toLowerCase() === "pending")) {
       const leadId = String(row?.lead_id || "");
@@ -11105,10 +11108,21 @@ Answer the admin's question directly.
     }
     selected.business_date_johannesburg = planningContext.business_date_johannesburg || null;
     selected.workspace_source_record_counts = safeContext.workspace_source_record_counts || {};
-    selected.workspace_model_context_record_counts = Object.fromEntries(
-      ["tasks", "leads", "followups", "clients", "projects", "quotes", "payments", "enquiries", "invoices", "portal_requests", "communications", "activities", "email_messages"]
-        .map((key) => [key, Array.isArray(planningContext[key]) ? planningContext[key].length : 0])
-    );
+    selected.workspace_model_context_record_counts = {
+      tasks: Array.isArray(planningContext.tasks) ? planningContext.tasks.length : 0,
+      leads: Array.isArray(planningContext.leads) ? planningContext.leads.length : 0,
+      followups: Array.isArray(planningContext.followups) ? planningContext.followups.length : 0,
+      clients: Array.isArray(planningContext.clients) ? planningContext.clients.length : 0,
+      projects: Array.isArray(planningContext.projects) ? planningContext.projects.length : 0,
+      quotes: Array.isArray(planningContext.quotes) ? planningContext.quotes.length : 0,
+      payments: Array.isArray(planningContext.payments) ? planningContext.payments.length : 0,
+      enquiries: Array.isArray(planningContext.enquiries) ? planningContext.enquiries.length : 0,
+      invoices: Array.isArray(planningContext.invoices) ? planningContext.invoices.length : 0,
+      portal_requests: Array.isArray(planningContext.portal_requests) ? planningContext.portal_requests.length : 0,
+      communications: Array.isArray(planningContext.communications) ? planningContext.communications.length : 0,
+      activities: Array.isArray(planningContext.activities) ? planningContext.activities.length : 0,
+      email_messages: Array.isArray(planningContext.email_messages) ? planningContext.email_messages.length : 0,
+    };
     selected.workspace_summary = {
       lead_count: Array.isArray(planningContext.leads) ? planningContext.leads.length : null,
       lead_status_counts: countByStatus(planningContext.leads),
