@@ -260,6 +260,7 @@ const INNERME_APPROVED_GEMINI_MODELS = new Set<string>([
 ]);
 const INNERME_MAX_GEMINI_REQUEST_BYTES = 24000;
 const INNERME_MAX_GEMINI_OUTPUT_TOKENS = 2048;
+const INNERME_GEMINI_REQUEST_TIMEOUT_MS = 20_000;
 
 type InnerMeQuotaReservation = {
   allowed: boolean;
@@ -506,9 +507,19 @@ async function guardedGeminiFetch(
     );
   }
 
+  // Bound provider attempts even when the caller did not supply a signal.
+  // Keep caller cancellation/shorter timeouts effective for the normal chat path.
+  const providerTimeoutSignal = AbortSignal.timeout(
+    INNERME_GEMINI_REQUEST_TIMEOUT_MS,
+  );
+  const signal = init.signal
+    ? AbortSignal.any([init.signal, providerTimeoutSignal])
+    : providerTimeoutSignal;
+
   return await fetch(input, {
     ...init,
     body: safeBody,
+    signal,
   });
 }
 function buildKnowledgeRetrievalQueries(value: unknown, max = 1200): string[] {
