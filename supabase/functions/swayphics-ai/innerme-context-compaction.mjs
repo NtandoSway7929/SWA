@@ -103,9 +103,13 @@ export function compactInnerMeContextForModel(value, options = {}) {
         : entries.slice(0, maxObjectKeys);
       const output = {};
       for (const [key, item] of boundedEntries) {
-        const fieldLimit = /(^|_)(id|status|date|at|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
-          ? Math.min(180, maxStringChars)
-          : maxStringChars;
+        const isIdentifier = /^(?:id|.+_id)$/i.test(key);
+        const isExactDateOrTimestamp = /(?:^date$|_date$|_at$|^scheduled_for$|^next_follow_up$|^valid_until$|^due_date$|^issue_date$|^completed_at$)/i.test(key);
+        const fieldLimit = isIdentifier || isExactDateOrTimestamp
+          ? 180
+          : /(^|_)(status|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
+            ? Math.min(180, maxStringChars)
+            : maxStringChars;
         output[key] = typeof item === "string"
           ? cleanString(item, fieldLimit)
           : visit(item, depth + 1, key);
