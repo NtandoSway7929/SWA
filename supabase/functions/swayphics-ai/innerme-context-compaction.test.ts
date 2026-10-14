@@ -99,13 +99,13 @@ Deno.test("ultra-compaction keeps workspace context under the 24 KB provider req
     user_email: "admin@example.invalid",
     query_failures: [],
     workspace_source_record_counts: {
-      leads: 19, followups: 27, clients: 0, projects: 0, tasks: 0,
-      quotes: 0, payments: 0, enquiries: 5, invoices: 0,
+      leads: 19, followups: 27, clients: 50, projects: 50, tasks: 50,
+      quotes: 50, payments: 50, enquiries: 5, invoices: 50, portal_requests: 50,
       communications: 100, activities: 60, email_messages: 100,
     },
     workspace_model_context_record_counts: {
-      leads: 19, followups: 27, clients: 0, projects: 0, tasks: 0,
-      quotes: 0, payments: 0, enquiries: 5, invoices: 0,
+      leads: 19, followups: 27, clients: 50, projects: 50, tasks: 50,
+      quotes: 50, payments: 50, enquiries: 5, invoices: 50, portal_requests: 50,
       communications: 100, activities: 60, email_messages: 100,
     },
     leads: Array.from({ length: 19 }, (_, index) => ({
