@@ -9,6 +9,7 @@ import {
   isCloudflareEligibleWritingRequest,
 } from "./innerme-provider-routing.mjs";
 import { buildInnerMeWorkspaceContextForModel } from "./innerme-workspace-intelligence.mjs";
+import { compactInnerMeContextForModel } from "./innerme-context-compaction.mjs";
 
 // Supabase Edge Runtime provides this embedding API at runtime; declare its surface for Deno checks.
 declare const Supabase: {
@@ -122,39 +123,6 @@ function cleanForModel(value: unknown, max = 3000) {
  * Bound model-facing workspace context without changing the source workspace
  * data or permission checks. Preserve recent records and compact bulky fields.
  */
-function compactContextForModel(
-  value: any,
-  depth = 0,
-  maxArrayItems = 3,
-  maxStringChars = 220,
-  maxObjectKeys = 30,
-  maxDepth = 5,
-): any {
-  if (value == null || typeof value === "number" || typeof value === "boolean") {
-    return value;
-  }
-  if (typeof value === "string") return cleanForModel(value, maxStringChars);
-  if (Array.isArray(value)) {
-    return value.slice(-maxArrayItems).map((item) =>
-      compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars, maxObjectKeys, maxDepth)
-    );
-  }
-  if (typeof value === "object") {
-    if (depth >= maxDepth) return "[nested context omitted]";
-    const output: Record<string, any> = {};
-    for (const [key, item] of Object.entries(value).slice(0, maxObjectKeys)) {
-      const fieldLimit = /(^|_)(id|status|date|at|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
-        ? Math.min(180, maxStringChars)
-        : maxStringChars;
-      output[key] = typeof item === "string"
-        ? cleanForModel(item, fieldLimit)
-        : compactContextForModel(item, depth + 1, maxArrayItems, maxStringChars, maxObjectKeys, maxDepth);
-    }
-    return output;
-  }
-  return String(value).slice(0, maxStringChars);
-}
-
 type InnerMeTrackedProvider = "cloudflare" | "gemini";
 type InnerMeUsageOutcome = "success" | "error";
 
@@ -459,7 +427,7 @@ async function guardedGeminiFetch(
           const jsonStart = markerIndex + marker.length;
           try {
             const workspace = JSON.parse(contentText.slice(jsonStart));
-            const compactWorkspace = compactContextForModel(workspace, 0, 1, 90, 12, 3);
+            const compactWorkspace = compactInnerMeContextForModel(workspace, { maxArrayItems: 1, maxStringChars: 60, maxObjectKeys: 18, maxDepth: 3, aggressive: true });
             lastPart.text = contentText.slice(0, jsonStart) + JSON.stringify(compactWorkspace);
           } catch {
             // Keep the existing message intact if the workspace suffix is not valid JSON.
@@ -6523,10 +6491,37 @@ Deno.serve(async (req) => {
     );
   }
 
+  const businessDateJohannesburg = (() => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Johannesburg",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const field = (type: string) => parts.find((part) => part.type === type)?.value || "";
+    return field("year") + "-" + field("month") + "-" + field("day");
+  })();
+
   const context = {
     generated_at: new Date().toISOString(),
+    business_date_johannesburg: businessDateJohannesburg,
     user_email: userData.user.email || "",
     query_failures: queryFailures,
+    workspace_source_record_counts: {
+      tasks: Array.isArray(tasks.data) ? tasks.data.length : 0,
+      leads: Array.isArray(leads.data) ? leads.data.length : 0,
+      followups: Array.isArray(followups.data) ? followups.data.length : 0,
+      clients: Array.isArray(clients.data) ? clients.data.length : 0,
+      projects: Array.isArray(projects.data) ? projects.data.length : 0,
+      quotes: Array.isArray(quotes.data) ? quotes.data.length : 0,
+      payments: Array.isArray(payments.data) ? payments.data.length : 0,
+      enquiries: Array.isArray(enquiries.data) ? enquiries.data.length : 0,
+      invoices: Array.isArray(invoices.data) ? invoices.data.length : 0,
+      portal_requests: Array.isArray(portalRequests.data) ? portalRequests.data.length : 0,
+      communications: Array.isArray(communications.data) ? communications.data.length : 0,
+      activities: Array.isArray(activities.data) ? activities.data.length : 0,
+      email_messages: Array.isArray(emailMessages.data) ? emailMessages.data.length : 0,
+    },
     tasks: compactRows(tasks.data || []),
     leads: compactRows(leads.data || []),
     followups: compactRows(followups.data || [], 100),
@@ -10871,8 +10866,10 @@ Answer the admin's question directly.
                           })
                         : "none"
                     ) +
-                    "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
-                    JSON.stringify(compactContextForModel(buildInnerMeWorkspaceContextForModel(safeContext, message))),
+                    "\n\nWORKSPACE INTEGRITY RULES:\n" +
+                    "Use workspace_source_record_counts for retrieved-record counts; do not infer collection totals by counting compacted arrays. Use business_date_johannesburg to classify overdue and upcoming work. Cross-check follow-up lead_id/client_id values against the supplied lead/client IDs, and flag orphaned follow-ups, duplicates, and conflicting dates as data-quality issues. Prioritise overdue and due-soon follow-ups over speculative preparation tasks when supported by the records.\n\n" +
+                    "CURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
+                    JSON.stringify(compactInnerMeContextForModel(buildInnerMeWorkspaceContextForModel(safeContext, message))),
                 },
               ],
             },
