@@ -8,6 +8,7 @@ import {
   CLOUDFLARE_MODEL,
   isCloudflareEligibleWritingRequest,
 } from "./innerme-provider-routing.mjs";
+import { buildInnerMeWorkspaceContextForModel } from "./innerme-workspace-intelligence.mjs";
 
 // Supabase Edge Runtime provides this embedding API at runtime; declare its surface for Deno checks.
 declare const Supabase: {
@@ -10860,7 +10861,7 @@ Answer the admin's question directly.
                         : "none"
                     ) +
                     "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
-                    JSON.stringify(compactContextForModel(safeContext)),
+                    JSON.stringify(compactContextForModel(buildInnerMeWorkspaceContextForModel(safeContext, message))),
                 },
               ],
             },
