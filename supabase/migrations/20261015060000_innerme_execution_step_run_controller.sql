@@ -20,7 +20,7 @@ set started_at=coalesce(updated_at,created_at,now()),
     attempt_count=greatest(attempt_count,1)
 where status='in_progress' and started_at is null;
 
-do $
+do $$
 begin
   if not exists (
     select 1 from pg_constraint
@@ -51,7 +51,7 @@ begin
       add constraint innerme_execution_steps_completion_evidence_object_check
       check (jsonb_typeof(completion_evidence)='object');
   end if;
-end $;
+end $$;
 
 -- Protect step status transitions even though the existing admin RLS policy
 -- permits administrators to edit rows. Only this controller may perform run
