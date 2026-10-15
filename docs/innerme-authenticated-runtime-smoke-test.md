@@ -72,9 +72,13 @@ The optional workflow **InnerMe Isolated Normal Chat Performance Benchmark** run
 
 Before running it:
 
-1. Confirm the isolated test project's Edge Function secret `GEMINI_API_KEY` belongs to a separate Google test project with billing disabled. Do not use the production key.
-2. Ensure the repository secrets `INNERME_TEST_ADMIN_EMAIL`, `INNERME_TEST_ADMIN_PASSWORD`, and `INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY` are configured for the isolated test project only.
+1. In the isolated Supabase project **Swayphics InnerMe Test**, open **Project Settings → Edge Functions → Secrets** and set `GEMINI_API_KEY` to a dedicated key from a separate Google test project. Do not copy or reuse the production key. Confirm the Google test project has billing disabled.
+2. Confirm the repository secrets `INNERME_TEST_ADMIN_EMAIL`, `INNERME_TEST_ADMIN_PASSWORD`, and `INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY` are configured for the isolated test project only.
 3. In Actions, select **InnerMe Isolated Normal Chat Performance Benchmark**, select **Run workflow**, and confirm the no-billing test-key input. This explicit confirmation is required because the workflow sends one actual provider request.
+
+The workflow first invokes the read-only health check, which reports only a boolean indicating whether the Gemini key exists. If it is missing, the run stops before sending a normal chat request. The key value is never returned by the health check.
+
+The earlier failure of run [38774493038](https://github.com/NtandoSway7929/SWA/actions/runs/38774493038) was caused by the isolated test project's missing `GEMINI_API_KEY`; the run completed Auth sign-in but the normal chat endpoint returned HTTP 503. Configure the isolated test secret before rerunning.
 
 The benchmark reports total HTTP time; server-side workspace-read, base-context, progressive-context and overall timings; workspace-read-call count; progressive context JSON bytes; and provider-attempt latency/token fields recorded for the matching request ID. The request ID links Edge Function timing headers/logs to server-only provider-usage rows.
 

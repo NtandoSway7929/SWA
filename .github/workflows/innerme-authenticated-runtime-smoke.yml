@@ -6,10 +6,12 @@ on:
     branches: ["main"]
     paths:
       - ".github/workflows/innerme-authenticated-runtime-smoke.yml"
+      - "supabase/functions/swayphics-ai/index.ts"
   push:
     branches: ["main"]
     paths:
       - ".github/workflows/innerme-authenticated-runtime-smoke.yml"
+      - "supabase/functions/swayphics-ai/index.ts"
       - "admin-dashboard/index.html"
       - "admin-dashboard/innerme-knowledge-intelligence.js"
       - "admin-dashboard/admin-workspace.css"
@@ -186,6 +188,10 @@ jobs:
           actual_groups = set(body.get("summary_metric_groups", []))
           if body.get("ok") is not True or body.get("read_only") is not True:
               raise SystemExit(f"Focused health action did not pass read-only validation: {body!r}")
+          provider_configuration = body.get("provider_configuration")
+          if not isinstance(provider_configuration, dict) or not isinstance(provider_configuration.get("gemini_key_configured"), bool):
+              raise SystemExit("Focused health action did not report a boolean Gemini-key configuration status.")
+          print("METRIC: isolated Gemini key configured=" + str(provider_configuration["gemini_key_configured"]).lower() + ".")
           if body.get("summary_source") != "database_aggregate" or body.get("summary_query_failed") is not False:
               raise SystemExit(f"Focused request did not use the database aggregate RPC: {body!r}")
           if body.get("queried_collections") != expected_collections or body.get("queried_collection_count") != 3:
