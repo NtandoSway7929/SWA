@@ -16,6 +16,9 @@ import {
   resolveInnerMeFocusedRecordDescriptor,
 } from "./innerme-context-manifest.mjs";
 import {
+  selectInnerMeActionReadySteps,
+} from "./innerme-run-controller.mjs";
+import {
   buildInnerMeExecutionContract,
   INNERME_EXECUTION_CONTRACT_VERSION,
   isInnerMeExecutionStepContractComplete,
@@ -9521,7 +9524,6 @@ Deno.serve(async (req) => {
         "id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes",
       )
       .eq("plan_id", planId)
-      .in("status", ["approved", "in_progress"])
       .order("step_order", { ascending: true });
 
     if (stepsError) {
@@ -9544,17 +9546,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    const skippedUnverifiedStepOrders = loadedStepRows
-      .filter((step: any) => !isInnerMeExecutionStepContractComplete(step))
-      .map((step: any) => Number(step?.step_order))
-      .filter((order: number) => Number.isInteger(order));
-    const stepRows = loadedStepRows.filter(isInnerMeExecutionStepContractComplete);
+    const stepReadiness = selectInnerMeActionReadySteps(loadedStepRows);
+    const skippedUnverifiedStepOrders = stepReadiness.skipped_unverified_step_orders;
+    const skippedDependencySteps = stepReadiness.skipped_dependency_steps;
+    const stepRows = stepReadiness.ready;
     if (!stepRows.length) {
+      const dependenciesUnmet = skippedDependencySteps.length > 0;
+      const allStepsAlreadyCompleteOrBlocked =
+        stepReadiness.skipped_not_actionable_step_orders.length === loadedStepRows.length;
       return json(
         {
-          error: "No approved execution step has both an observable success signal and a verification method. Update the affected steps before preparing controlled actions.",
-          code: "EXECUTION_STEP_CONTRACT_INCOMPLETE",
+          error: dependenciesUnmet
+            ? "Controlled action proposals are blocked until each prerequisite step is explicitly verified as completed."
+            : allStepsAlreadyCompleteOrBlocked
+              ? "No approved or in-progress execution step is available for new action proposals."
+              : "No eligible execution step has both an observable success signal and a verification method. Update the affected steps before preparing controlled actions.",
+          code: dependenciesUnmet
+            ? "EXECUTION_DEPENDENCY_INCOMPLETE"
+            : skippedUnverifiedStepOrders.length
+              ? "EXECUTION_STEP_CONTRACT_INCOMPLETE"
+              : "NO_ELIGIBLE_EXECUTION_STEPS",
           unverified_step_orders: skippedUnverifiedStepOrders,
+          skipped_dependency_steps: skippedDependencySteps,
           workspace_changed: false,
         },
         409,
@@ -9903,8 +9916,9 @@ Deno.serve(async (req) => {
         execution_requires_explicit_confirmation: true,
         workspace_changed: false,
         skipped_unverified_steps: skippedUnverifiedStepOrders,
-        warning: skippedUnverifiedStepOrders.length
-          ? "Some approved steps were excluded because they lack a success signal or verification method."
+        skipped_dependency_steps: skippedDependencySteps,
+        warning: skippedUnverifiedStepOrders.length || skippedDependencySteps.length
+          ? "Some steps were excluded because they lack verifiable completion criteria or their prerequisite steps are not yet completed."
           : null,
         provider_model: model,
       },
