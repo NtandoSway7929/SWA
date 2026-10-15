@@ -1658,7 +1658,8 @@ Deno.serve(async (req) => {
     !geminiKey &&
     action !== "embed_knowledge" &&
     action !== "search_knowledge" &&
-    action !== "execute_innerme_action"
+    action !== "execute_innerme_action" &&
+    action !== "innerme_workspace_read_health"
   ) {
     return json({
       error:
