@@ -7534,8 +7534,8 @@ Deno.serve(async (req) => {
     return Boolean(due) && due < businessToday;
   });
 
-  const leadById = new Map(
-    (leads.data || []).map(function (lead: any) {
+  const leadById = new Map<string, any>(
+    (leads.data || []).map(function (lead: any): [string, any] {
       return [String(lead?.id || ""), lead];
     }),
   );
