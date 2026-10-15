@@ -151,6 +151,9 @@ Deno.test("InnerMe low-cost provider routing policy", async (t) => {
       "Compare the two strategies and explain the trade-off.",
       "Audit the security and permissions for this action.",
       "Forecast revenue and verify the assumptions.",
+      "How much cash is outstanding?",
+      "Send an email to the lead.",
+      "Create a task for this follow-up.",
       "What should I prioritise to improve conversion?",
       "Explain the Phase 30 action safety gate.",
     ]) {
