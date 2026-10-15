@@ -13,7 +13,14 @@ alter table public.innerme_execution_steps
   add column if not exists blocked_reason text,
   add column if not exists last_error_code text;
 
-do $$
+-- Older action execution already moved a step to in_progress after its side
+-- effect was observed. Preserve those in-flight records as resumable legacy runs.
+update public.innerme_execution_steps
+set started_at=coalesce(updated_at,created_at,now()),
+    attempt_count=greatest(attempt_count,1)
+where status='in_progress' and started_at is null;
+
+do $
 begin
   if not exists (
     select 1 from pg_constraint
@@ -156,10 +163,7 @@ begin
     where p.step_id=v_step.id
       and (
         p.status='executing'
-        or (
-          e.status='started'
-          and coalesce(e.response_payload->>'phase','') in ('uncertain','executor_result_observed')
-        )
+        or e.status='started'
       )
   ) then
     raise exception 'An action tied to this step may have an unresolved side effect. Reconcile its execution log before resuming, completing, or blocking the step.';
