@@ -50,7 +50,7 @@ After this documentation and `.github/workflows/innerme-authenticated-runtime-sm
 2. Select **InnerMe Authenticated Runtime Smoke Test**.
 3. Select **Run workflow** on `main`.
 
-The workflow never runs on pull requests. It is manual-only, read-only apart from the Auth sign-in operation, and targets the isolated project.
+The workspace health checks are read-only and use the isolated test project. The smoke workflow can run from its documented path triggers or manually; the separate normal-chat performance benchmark is manual-only.
 
 ## Interpreting results
 
@@ -65,3 +65,24 @@ The workflow never runs on pull requests. It is manual-only, read-only apart fro
 ## Cleanup
 
 After the test, remove the user's row from `public.admin_users` or set `active = false`. Delete the Auth user if it is no longer needed. Remove the two GitHub secrets when the smoke test is no longer required. Never store production credentials in these secret names.
+
+## Normal authenticated chat performance benchmark
+
+The optional workflow **InnerMe Isolated Normal Chat Performance Benchmark** runs only when manually dispatched. It makes one small, read-only chat request against the isolated test project, then queries only that request's provider-usage telemetry. It does not touch the production project or create, update, approve, execute, or email business records. Provider telemetry is written as expected.
+
+Before running it:
+
+1. Confirm the isolated test project's Edge Function secret `GEMINI_API_KEY` belongs to a separate Google test project with billing disabled. Do not use the production key.
+2. Ensure the repository secrets `INNERME_TEST_ADMIN_EMAIL`, `INNERME_TEST_ADMIN_PASSWORD`, and `INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY` are configured for the isolated test project only.
+3. In Actions, select **InnerMe Isolated Normal Chat Performance Benchmark**, select **Run workflow**, and confirm the no-billing test-key input. This explicit confirmation is required because the workflow sends one actual provider request.
+
+The benchmark reports total HTTP time; server-side workspace-read, base-context, progressive-context and overall timings; workspace-read-call count; progressive context JSON bytes; and provider-attempt latency/token fields recorded for the matching request ID. The request ID links Edge Function timing headers/logs to server-only provider-usage rows.
+
+Interpret the measurements separately:
+
+- **HTTP total** includes network round trips to Supabase and the Edge Function.
+- **Server-Timing** separates workspace reads, base context assembly, progressive context assembly and total server time.
+- **Provider latency** measures individual model attempts recorded in `innerme_provider_usage`; fallback attempts may create multiple rows for one request.
+- **Progressive workspace JSON bytes** is the serialized context before the final provider-envelope size guard may compact it further. It is not the final prompt byte count or token count.
+
+A result from the isolated test project is a controlled diagnostic, not a production latency claim. The benchmark fails closed when credentials, the provider response, timing headers, or the correlated telemetry record are missing.
