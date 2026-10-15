@@ -36,11 +36,22 @@ Deno.test("missing dependency rows fail closed rather than being ignored", () =>
   assert(result.skipped_dependency_steps[0].dependency_status === "missing", "missing prerequisite should be explicit");
 });
 
-Deno.test("unverifiable and non-actionable steps are reported separately", () => {
+Deno.test("unverifiable, unstarted, and non-actionable steps are reported separately", () => {
   const result = selectInnerMeActionReadySteps(exampleSteps());
   assert(result.skipped_unverified_step_orders.includes(4), "missing success/verification contract must be listed");
+  assert(result.skipped_not_started_step_orders.includes(5) === false, "completed steps are not classified as merely unstarted");
   assert(result.skipped_not_actionable_step_orders.includes(1), "completed steps must not receive new action proposals");
   assert(result.skipped_not_actionable_step_orders.includes(6), "blocked steps must not receive new action proposals");
+});
+
+Deno.test("approved steps need explicit start, and unmet dependencies get their own reason", () => {
+  const result = selectInnerMeActionReadySteps([
+    { step_order: 1, status: "approved", success_signal: "Done", verification_method: "Check" },
+    { step_order: 2, status: "approved", depends_on_step_order: 1, success_signal: "Done", verification_method: "Check" },
+  ]);
+  assert(result.ready.length === 0, "approved but unstarted steps must not be actionable");
+  assert(result.skipped_not_started_step_orders.includes(1), "approved prerequisite should be listed as not started");
+  assert(result.skipped_dependency_steps.some((item) => item.step_order === 2), "dependent step should report its unmet prerequisite");
 });
 
 Deno.test("checkpoint builder constrains operator progress to compact structured fields", () => {
