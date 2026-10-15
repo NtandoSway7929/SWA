@@ -1,4 +1,9 @@
-import { buildInnerMeWorkspaceContextForModel, isBroadBusinessPlanningRequest } from "./innerme-workspace-intelligence.mjs";
+import {
+  buildInnerMeWorkspaceContextForModel,
+  isBroadBusinessPlanningRequest,
+  selectInnerMeEmailBodyIds,
+  shouldLoadInnerMeEmailBodies,
+} from "./innerme-workspace-intelligence.mjs";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
