@@ -228,3 +228,101 @@ export function buildInnerMeWorkspaceContextForModel(context, message, nowMs = D
   };
   return nextContext;
 }
+
+
+const INNERME_EMAIL_BODY_INTENT_PATTERNS = Object.freeze([
+  /\\b(?:read|summari[sz]e|quote|extract|explain|show|find|review|analyse|analyze|draft|write|compose|rewrite|translate)\\b.{0,100}\\b(?:email|emails|inbox|mailbox|message|messages|thread|reply|replies|response|responses)\\b/i,
+  /\\b(?:email|emails|message|messages|thread|reply|replies)\\b.{0,100}\\b(?:content|body|says|said|wrote|received|response|quote|text|summary)\\b/i,
+  /\\b(?:what did (?:they|he|she|the client|[a-z][a-z0-9'’-]*) say|what does (?:the|this|that|their|the latest) (?:email|message|reply|thread) say|did .{1,60}\\b(?:reply|respond|answer)|has .{1,60}\\b(?:replied|responded|answered)|latest reply|their reply)\\b/i,
+]);
+
+/**
+ * Full email bodies are expensive input and are not useful for ordinary
+ * operational questions. Fetch message content only when the admin explicitly
+ * asks about what was written, a reply, or a specific email/thread.
+ */
+export function shouldLoadInnerMeEmailBodies(message) {
+  const text = String(message || "");
+  return INNERME_EMAIL_BODY_INTENT_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Select a small, relevant set of message IDs before fetching text_body.
+ * Existing email metadata is already sorted newest-first by the caller.
+ * Explicit lead/client focus and named-record matches never fall back to
+ * unrelated mailbox content when no linked message is found.
+ */
+export function selectInnerMeEmailBodyIds({
+  message,
+  focusedRecord,
+  emailRows,
+  leads,
+  clients,
+  maxRows = 5,
+} = {}) {
+  if (!shouldLoadInnerMeEmailBodies(message)) return [];
+
+  const rows = Array.isArray(emailRows) ? emailRows : [];
+  const limit = Number.isInteger(maxRows) ? Math.max(0, Math.min(8, maxRows)) : 5;
+  if (!limit) return [];
+
+  const focusedType = String(focusedRecord?.type || "").trim().toLowerCase();
+  const focusedId = String(focusedRecord?.id || "").trim();
+  if (focusedId && ["lead", "leads"].includes(focusedType)) {
+    return rows
+      .filter((row) => String(row?.lead_id || "") === focusedId)
+      .slice(0, limit)
+      .map((row) => String(row?.id || ""))
+      .filter(Boolean);
+  }
+  if (focusedId && ["client", "clients"].includes(focusedType)) {
+    return rows
+      .filter((row) => String(row?.client_id || "") === focusedId)
+      .slice(0, limit)
+      .map((row) => String(row?.id || ""))
+      .filter(Boolean);
+  }
+  // A focused record of another type is not a reason to attach unrelated
+  // mailbox contents. A dedicated connected-record resolver can expand this
+  // safely in a later change.
+  if (focusedId) return [];
+
+  const normalizedQuery = normaliseIdentity(message);
+  const leadIds = new Set(
+    (Array.isArray(leads) ? leads : [])
+      .filter((row) => {
+        const identities = [row?.business_name, row?.contact_name, row?.name];
+        return identities.some((value) => {
+          const identity = normaliseIdentity(value);
+          return identity.length >= 5 && normalizedQuery.includes(identity);
+        });
+      })
+      .map((row) => String(row?.id || ""))
+      .filter(Boolean),
+  );
+  const clientIds = new Set(
+    (Array.isArray(clients) ? clients : [])
+      .filter((row) => {
+        const identities = [row?.business_name, row?.contact_name, row?.name];
+        return identities.some((value) => {
+          const identity = normaliseIdentity(value);
+          return identity.length >= 5 && normalizedQuery.includes(identity);
+        });
+      })
+      .map((row) => String(row?.id || ""))
+      .filter(Boolean),
+  );
+
+  const hasNamedTarget = leadIds.size > 0 || clientIds.size > 0;
+  const candidates = hasNamedTarget
+    ? rows.filter((row) =>
+        leadIds.has(String(row?.lead_id || "")) ||
+        clientIds.has(String(row?.client_id || ""))
+      )
+    : rows;
+
+  return candidates
+    .slice(0, limit)
+    .map((row) => String(row?.id || ""))
+    .filter(Boolean);
+}
