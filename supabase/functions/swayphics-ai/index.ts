@@ -21,7 +21,6 @@ import {
 import {
   buildInnerMeExecutionContract,
   INNERME_EXECUTION_CONTRACT_VERSION,
-  isInnerMeExecutionStepContractComplete,
   validateInnerMeExecutionContract,
 } from "./innerme-execution-contracts.mjs";
 
@@ -9559,8 +9558,8 @@ Deno.serve(async (req) => {
           error: dependenciesUnmet
             ? "Controlled action proposals are blocked until each prerequisite step is explicitly verified as completed."
             : allStepsAlreadyCompleteOrBlocked
-              ? "No approved or in-progress execution step is available for new action proposals."
-              : "No eligible execution step has both an observable success signal and a verification method. Update the affected steps before preparing controlled actions.",
+              ? "No execution step has been explicitly started and is eligible for new action proposals."
+              : "No eligible in-progress execution step has both an observable success signal and a verification method. Start a verified step or update its completion contract before preparing controlled actions.",
           code: dependenciesUnmet
             ? "EXECUTION_DEPENDENCY_INCOMPLETE"
             : skippedUnverifiedStepOrders.length
