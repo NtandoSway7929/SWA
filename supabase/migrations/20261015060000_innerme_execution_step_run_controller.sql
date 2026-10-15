@@ -448,8 +448,10 @@ begin
        or char_length(p_completion_evidence->>'summary')>1200 then
       raise exception 'Completion evidence requires a verification method and a summary of 20 to 1,200 characters.';
     end if;
-    if jsonb_typeof(p_completion_evidence->'evidence_refs')<>'array'
-       or jsonb_array_length(p_completion_evidence->'evidence_refs')<1
+    if jsonb_typeof(p_completion_evidence->'evidence_refs') is distinct from 'array' then
+      raise exception 'Completion evidence_refs must be an array.';
+    end if;
+    if jsonb_array_length(p_completion_evidence->'evidence_refs')<1
        or jsonb_array_length(p_completion_evidence->'evidence_refs')>12 then
       raise exception 'Completion requires between one and 12 evidence references.';
     end if;
