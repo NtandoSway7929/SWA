@@ -201,11 +201,25 @@ jobs:
           workspace_bytes = body.get("progressive_workspace_json_bytes")
           if not isinstance(workspace_bytes, int) or not 0 < workspace_bytes < 50000:
               raise SystemExit(f"Compacted workspace JSON byte count is absent or over the smoke-test budget: {body!r}")
+          request_id = body.get("request_id")
+          if not isinstance(request_id, str) or len(request_id) != 36:
+              raise SystemExit(f"Workspace health probe did not expose a valid request ID: {body!r}")
+          timing_fields = (
+              "server_elapsed_ms",
+              "workspace_retrieval_ms",
+              "workspace_context_assembly_ms",
+              "progressive_context_assembly_ms",
+          )
+          for field in timing_fields:
+              value = body.get(field)
+              if not isinstance(value, (int, float)) or value < 0:
+                  raise SystemExit(f"Workspace timing metric {field} is missing or invalid: {body!r}")
           if body.get("progressive_detail_collection_count") != 3:
               raise SystemExit(f"Expected three progressive detail collections, got {body!r}")
           print("PASS: focused finance request queried exactly clients, invoices, and payments.")
           print("PASS: selected workspace reads and the aggregate RPC completed with zero query failures.")
           print(f"METRIC: focused workspace data read calls={body['workspace_data_read_call_count']}; progressive workspace JSON={workspace_bytes} bytes.")
+          print("METRIC: request id=" + request_id + "; total=" + str(body["server_elapsed_ms"]) + " ms; workspace read=" + str(body["workspace_retrieval_ms"]) + " ms; base context=" + str(body["workspace_context_assembly_ms"]) + " ms; progressive context=" + str(body["progressive_context_assembly_ms"]) + " ms.")
           print("PASS: exactly three aggregate groups were returned; unrelated lead/task metrics were omitted.")
           print("PASS: the authenticated probe returned metadata only and did not call an LLM/provider.")
           PY
