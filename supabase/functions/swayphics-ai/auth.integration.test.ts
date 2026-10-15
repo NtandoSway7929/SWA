@@ -174,8 +174,11 @@ Deno.test("InnerMe authenticated read-only runtime probe follows focused retriev
   assertEqual(result.body.summary_source, "database_aggregate", "Aggregate source");
   assertEqual(result.body.summary_query_failed, false, "Aggregate RPC failure flag");
   assertEqual(result.body.queried_collection_count, 3, "Invoice/payment intent should use three linked domains");
+  const providerConfiguration = (result.body as Record<string, unknown>).provider_configuration as
+    | Record<string, unknown>
+    | undefined;
   assert(
-    typeof result.body.provider_configuration?.gemini_key_configured === "boolean",
+    typeof providerConfiguration?.gemini_key_configured === "boolean",
     "Authenticated health probe should expose only whether Gemini is configured, never the key.",
   );
   assert(
