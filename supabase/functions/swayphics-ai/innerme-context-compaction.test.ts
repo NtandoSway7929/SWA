@@ -1,4 +1,4 @@
-import { compactInnerMeContextForModel } from "./innerme-context-compaction.mjs";
+import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
