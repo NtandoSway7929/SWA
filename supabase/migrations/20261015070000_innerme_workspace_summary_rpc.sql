@@ -68,9 +68,9 @@ begin
         'lost', pg_catalog.count(*) filter (where status = 'lost')
       ),
       'lead_value_zar', pg_catalog.jsonb_build_object(
-        'open_pipeline', pg_catalog.round(pg_catalog.coalesce(pg_catalog.sum(pg_catalog.coalesce(estimated_value, 0)) filter (where status not in ('won', 'lost')), 0)::numeric, 2),
-        'active_excluding_follow_up', pg_catalog.round(pg_catalog.coalesce(pg_catalog.sum(pg_catalog.coalesce(estimated_value, 0)) filter (where status not in ('won', 'lost') and status <> 'follow-up'), 0)::numeric, 2),
-        'won_value', pg_catalog.round(pg_catalog.coalesce(pg_catalog.sum(pg_catalog.coalesce(estimated_value, 0)) filter (where status = 'won'), 0)::numeric, 2)
+        'open_pipeline', pg_catalog.round(coalesce(pg_catalog.sum(coalesce(estimated_value, 0)) filter (where status not in ('won', 'lost')), 0)::numeric, 2),
+        'active_excluding_follow_up', pg_catalog.round(coalesce(pg_catalog.sum(coalesce(estimated_value, 0)) filter (where status not in ('won', 'lost') and status <> 'follow-up'), 0)::numeric, 2),
+        'won_value', pg_catalog.round(coalesce(pg_catalog.sum(coalesce(estimated_value, 0)) filter (where status = 'won'), 0)::numeric, 2)
       )
     )
     into v_metrics
@@ -107,7 +107,7 @@ begin
     select pg_catalog.jsonb_build_object(
       'quote_summary', pg_catalog.jsonb_build_object(
         'open_count', pg_catalog.count(*) filter (where status in ('draft', 'sent', 'accepted')),
-        'open_value_zar', pg_catalog.round(pg_catalog.coalesce(pg_catalog.sum(amount) filter (where status in ('draft', 'sent', 'accepted')), 0)::numeric, 2)
+        'open_value_zar', pg_catalog.round(coalesce(pg_catalog.sum(amount) filter (where status in ('draft', 'sent', 'accepted')), 0)::numeric, 2)
       )
     )
     into v_metrics
@@ -119,7 +119,7 @@ begin
     select pg_catalog.jsonb_build_object(
       'invoice_summary', pg_catalog.jsonb_build_object(
         'total', pg_catalog.count(*),
-        'outstanding_value_zar', pg_catalog.round(pg_catalog.coalesce(pg_catalog.sum(pg_catalog.greatest(pg_catalog.coalesce(amount_outstanding, 0), 0)) filter (where status <> 'cancelled' and archived is not true), 0)::numeric, 2)
+        'outstanding_value_zar', pg_catalog.round(coalesce(pg_catalog.sum(greatest(coalesce(amount_outstanding, 0), 0)) filter (where status <> 'cancelled' and archived is not true), 0)::numeric, 2)
       )
     )
     into v_metrics
@@ -130,7 +130,7 @@ begin
   if 'payments' = any(p_collections) then
     select pg_catalog.jsonb_build_object(
       'payment_summary', pg_catalog.jsonb_build_object(
-        'total_paid_value_zar', pg_catalog.round(pg_catalog.coalesce(pg_catalog.sum(amount) filter (where status = 'paid'), 0)::numeric, 2)
+        'total_paid_value_zar', pg_catalog.round(coalesce(pg_catalog.sum(amount) filter (where status = 'paid'), 0)::numeric, 2)
       )
     )
     into v_metrics
