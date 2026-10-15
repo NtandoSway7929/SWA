@@ -13,8 +13,8 @@ function assert(condition: unknown, message: string): asserts condition {
 function exampleSteps() {
   return [
     { step_order: 1, status: "completed", success_signal: "Record verified", verification_method: "Re-read the record" },
-    { step_order: 2, status: "approved", depends_on_step_order: 1, success_signal: "Draft ready", verification_method: "Review the draft" },
-    { step_order: 3, status: "approved", depends_on_step_order: 2, success_signal: "Outcome recorded", verification_method: "Re-read activity" },
+    { step_order: 2, status: "in_progress", depends_on_step_order: 1, success_signal: "Draft ready", verification_method: "Review the draft" },
+    { step_order: 3, status: "in_progress", depends_on_step_order: 2, success_signal: "Outcome recorded", verification_method: "Re-read activity" },
     { step_order: 4, status: "approved", depends_on_step_order: 1, success_signal: "", verification_method: "" },
     { step_order: 5, status: "completed", depends_on_step_order: 2, success_signal: "Done", verification_method: "Check result" },
     { step_order: 6, status: "blocked", success_signal: "Done", verification_method: "Check result" },
@@ -30,7 +30,7 @@ Deno.test("action readiness waits for dependencies to be explicitly completed", 
 
 Deno.test("missing dependency rows fail closed rather than being ignored", () => {
   const result = selectInnerMeActionReadySteps([
-    { step_order: 2, status: "approved", depends_on_step_order: 1, success_signal: "Done", verification_method: "Check" },
+    { step_order: 2, status: "in_progress", depends_on_step_order: 1, success_signal: "Done", verification_method: "Check" },
   ]);
   assert(result.ready.length === 0, "missing prerequisite must not allow proposal generation");
   assert(result.skipped_dependency_steps[0].dependency_status === "missing", "missing prerequisite should be explicit");
