@@ -201,7 +201,7 @@ export function selectInnerMeActionReadySteps(steps) {
 
     // A plan step must be explicitly started through the run controller before
     // the model may prepare its controlled action proposal.
-    if (status !== "in_progress") {
+    if (status !== "in_progress" || !clean(step?.started_at)) {
       skippedNotActionable.push(order);
       continue;
     }
