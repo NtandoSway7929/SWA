@@ -141,79 +141,89 @@ CREATE INDEX IF NOT EXISTS innerme_knowledge_sources_type_idx
 CREATE INDEX IF NOT EXISTS innerme_knowledge_sources_verification_idx
   ON public.innerme_knowledge_sources (verification_status);
 
-CREATE OR REPLACE FUNCTION public.match_innerme_knowledge(
-  query_embedding extensions.vector,
-  match_threshold double precision DEFAULT 0.45,
-  match_count integer DEFAULT 8,
-  filter_domain text DEFAULT NULL,
-  filter_jurisdiction text DEFAULT NULL,
-  filter_knowledge_type text DEFAULT NULL
-)
-RETURNS TABLE(
-  id uuid,
-  slug text,
-  title text,
-  domain text,
-  knowledge_type text,
-  statement text,
-  application text,
-  constraints text,
-  do_not_use_when text,
-  evidence_level text,
-  confidence text,
-  jurisdiction text,
-  priority integer,
-  source_name text,
-  source_publisher text,
-  source_url text,
-  similarity double precision
-)
-LANGUAGE sql
-STABLE
-SET search_path TO 'public', 'extensions'
-AS $function$
-  SELECT
-    k.id,
-    k.slug,
-    k.title,
-    k.domain,
-    k.knowledge_type,
-    k.statement,
-    k.application,
-    k.constraints,
-    k.do_not_use_when,
-    k.evidence_level,
-    k.confidence,
-    k.jurisdiction,
-    k.priority,
-    s.name,
-    s.publisher,
-    s.url,
-    (1 - (k.embedding <=> query_embedding))::double precision
-  FROM public.innerme_knowledge k
-  LEFT JOIN public.innerme_knowledge_sources s ON s.id = k.source_id
-  WHERE k.status = 'active'
-    AND k.verification_status = 'verified'
-    AND k.review_after > now()
-    AND k.embedding_status = 'ready'
-    AND k.embedding IS NOT NULL
-    AND (filter_domain IS NULL OR k.domain = filter_domain)
-    AND (filter_jurisdiction IS NULL OR k.jurisdiction = filter_jurisdiction OR k.jurisdiction = 'Global')
-    AND (filter_knowledge_type IS NULL OR k.knowledge_type = filter_knowledge_type)
-    AND (1 - (k.embedding <=> query_embedding)) >= match_threshold
-  ORDER BY
-    (1 - (k.embedding <=> query_embedding)) DESC,
-    CASE k.evidence_level
-      WHEN 'authoritative' THEN 4
-      WHEN 'established' THEN 3
-      WHEN 'practitioner' THEN 2
-      WHEN 'internal' THEN 1
-      ELSE 0
-    END DESC,
-    k.priority DESC,
-    k.updated_at DESC
-  LIMIT LEAST(GREATEST(match_count, 1), 20);
-$function$;
+DO $match_function_migration$
+BEGIN
+  -- Production already has this signature. Avoid replacing its live definition;
+  -- install the exact contract only when the isolated/fresh schema lacks it.
+  IF to_regprocedure('public.match_innerme_knowledge(extensions.vector,double precision,integer,text,text,text)') IS NULL THEN
+    EXECUTE $function_definition$
+    CREATE FUNCTION public.match_innerme_knowledge(
+      query_embedding extensions.vector,
+      match_threshold double precision DEFAULT 0.45,
+      match_count integer DEFAULT 8,
+      filter_domain text DEFAULT NULL,
+      filter_jurisdiction text DEFAULT NULL,
+      filter_knowledge_type text DEFAULT NULL
+    )
+    RETURNS TABLE(
+      id uuid,
+      slug text,
+      title text,
+      domain text,
+      knowledge_type text,
+      statement text,
+      application text,
+      constraints text,
+      do_not_use_when text,
+      evidence_level text,
+      confidence text,
+      jurisdiction text,
+      priority integer,
+      source_name text,
+      source_publisher text,
+      source_url text,
+      similarity double precision
+    )
+    LANGUAGE sql
+    STABLE
+    SET search_path TO 'public', 'extensions'
+    AS $match_body$
+      SELECT
+        k.id,
+        k.slug,
+        k.title,
+        k.domain,
+        k.knowledge_type,
+        k.statement,
+        k.application,
+        k.constraints,
+        k.do_not_use_when,
+        k.evidence_level,
+        k.confidence,
+        k.jurisdiction,
+        k.priority,
+        s.name,
+        s.publisher,
+        s.url,
+        (1 - (k.embedding <=> query_embedding))::double precision
+      FROM public.innerme_knowledge k
+      LEFT JOIN public.innerme_knowledge_sources s ON s.id = k.source_id
+      WHERE k.status = 'active'
+        AND k.verification_status = 'verified'
+        AND k.review_after > now()
+        AND k.embedding_status = 'ready'
+        AND k.embedding IS NOT NULL
+        AND (filter_domain IS NULL OR k.domain = filter_domain)
+        AND (filter_jurisdiction IS NULL OR k.jurisdiction = filter_jurisdiction OR k.jurisdiction = 'Global')
+        AND (filter_knowledge_type IS NULL OR k.knowledge_type = filter_knowledge_type)
+        AND (1 - (k.embedding <=> query_embedding)) >= match_threshold
+      ORDER BY
+        (1 - (k.embedding <=> query_embedding)) DESC,
+        CASE k.evidence_level
+          WHEN 'authoritative' THEN 4
+          WHEN 'established' THEN 3
+          WHEN 'practitioner' THEN 2
+          WHEN 'internal' THEN 1
+          ELSE 0
+        END DESC,
+        k.priority DESC,
+        k.updated_at DESC
+      LIMIT LEAST(GREATEST(match_count, 1), 20);
+    $match_body$;
+    $function_definition$;
+  END IF;
+END
+$match_function_migration$;
 
 REVOKE ALL ON FUNCTION public.match_innerme_knowledge(
   extensions.vector, double precision, integer, text, text, text
@@ -221,3 +231,5 @@ REVOKE ALL ON FUNCTION public.match_innerme_knowledge(
 GRANT EXECUTE ON FUNCTION public.match_innerme_knowledge(
   extensions.vector, double precision, integer, text, text, text
 ) TO authenticated;
+
+NOTIFY pgrst, 'reload schema';
