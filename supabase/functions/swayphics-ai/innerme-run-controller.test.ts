@@ -28,6 +28,14 @@ Deno.test("action readiness waits for dependencies to be explicitly completed", 
   assert(result.skipped_dependency_steps.some((item) => item.step_order === 3 && item.depends_on_step_order === 2), "dependent step should report its unmet prerequisite");
 });
 
+Deno.test("in-progress rows without a durable start timestamp are not action-ready", () => {
+  const result = selectInnerMeActionReadySteps([
+    { step_order: 1, status: "in_progress", success_signal: "Done", verification_method: "Check result" },
+  ]);
+  assert(result.ready.length === 0, "in-progress state alone must not replace the durable start checkpoint");
+  assert(result.skipped_not_started_step_orders.includes(1), "missing start timestamp must be identified");
+});
+
 Deno.test("missing dependency rows fail closed rather than being ignored", () => {
   const result = selectInnerMeActionReadySteps([
     { step_order: 2, status: "in_progress", started_at: "2026-10-15T04:00:00Z", depends_on_step_order: 1, success_signal: "Done", verification_method: "Check" },
