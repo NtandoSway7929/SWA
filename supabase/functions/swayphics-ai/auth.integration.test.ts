@@ -174,6 +174,14 @@ Deno.test("InnerMe authenticated read-only runtime probe follows focused retriev
   assertEqual(result.body.summary_source, "database_aggregate", "Aggregate source");
   assertEqual(result.body.summary_query_failed, false, "Aggregate RPC failure flag");
   assertEqual(result.body.queried_collection_count, 3, "Invoice/payment intent should use three linked domains");
+  assertEqual(result.body.workspace_data_read_call_count, 5, "Focused request should make three domain reads, one preference read, and one aggregate RPC call");
+  assert(
+    typeof result.body.progressive_workspace_json_bytes === "number" &&
+      result.body.progressive_workspace_json_bytes > 0 &&
+      result.body.progressive_workspace_json_bytes < 50000,
+    "Compacted workspace JSON size should be measured and remain bounded in this fixture.",
+  );
+  assertEqual(result.body.progressive_detail_collection_count, 3, "Only three relevant detail collections should be expanded");
   const collections = result.body.queried_collections as string[];
   assert(
     JSON.stringify(collections) === JSON.stringify(["clients", "invoices", "payments"]),
