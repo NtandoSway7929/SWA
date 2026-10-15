@@ -55,7 +55,7 @@ function fixture() {
 }
 
 Deno.test("manifest-only questions do not expand unrelated workspace rows", () => {
-  const selected = buildInnerMeProgressiveContext(fixture(), "Explain what caching means.");
+  const selected: any = buildInnerMeProgressiveContext(fixture(), "Explain what caching means.");
   assert(selected.workspace_manifest.profile === "manifest_only", "generic question should use manifest-only profile");
   assert(!Array.isArray(selected.leads), "unrelated lead details should not be included");
   assert(selected.workspace_manifest.collections.leads.detail_loaded === false, "manifest should mark lead details as unloaded");
@@ -66,7 +66,7 @@ Deno.test("manifest-only questions do not expand unrelated workspace rows", () =
 });
 
 Deno.test("invoice questions expand invoices and their related payment/client evidence only", () => {
-  const selected = buildInnerMeProgressiveContext(fixture(), "Which invoices are overdue and what payments are outstanding?");
+  const selected: any = buildInnerMeProgressiveContext(fixture(), "Which invoices are overdue and what payments are outstanding?");
   assert(selected.workspace_manifest.profile === "topic_focused", "invoice request should be topic-focused");
   assert(Array.isArray(selected.invoices), "invoice detail should be included");
   assert(Array.isArray(selected.payments), "related payment detail should be included");
@@ -75,14 +75,14 @@ Deno.test("invoice questions expand invoices and their related payment/client ev
 });
 
 Deno.test("broad priorities expand cross-domain operational context and keep follow-up evidence", () => {
-  const selected = buildInnerMeProgressiveContext(fixture(), "What are my highest-value moves for today?");
+  const selected: any = buildInnerMeProgressiveContext(fixture(), "What are my highest-value moves for today?");
   assert(selected.workspace_manifest.profile === "broad_operations", "broad planning should use broad operations profile");
   assert(Array.isArray(selected.leads) && Array.isArray(selected.invoices), "cross-domain records should be present");
   assert(Array.isArray(selected.operational_summary.followup_attention_today.due_today), "daily priority requests retain due follow-up details");
 });
 
 Deno.test("a named record can trigger its domain even when the question omits the record type", () => {
-  const selected = buildInnerMeProgressiveContext(fixture(), "What about Maisha's Touch?");
+  const selected: any = buildInnerMeProgressiveContext(fixture(), "What about Maisha's Touch?");
   assert(Array.isArray(selected.leads), "mention of a loaded lead name should expand the lead collection");
   assert(selected.workspace_manifest.detail_collections.includes("leads"), "manifest should disclose which collection is expanded");
 });
@@ -96,7 +96,7 @@ Deno.test("explicit focused records take precedence and preserve connected conte
     record: { id: "lead-1", business_name: "Maisha's Touch", status: "contacted" },
   };
   source.connected_context = { primary_type: "lead", primary_id: "lead-1", connected: { invoices: [] } };
-  const selected = buildInnerMeProgressiveContext(source, "Did they reply?");
+  const selected: any = buildInnerMeProgressiveContext(source, "Did they reply?");
   assert(selected.workspace_manifest.profile === "focused_record", "explicit focus should override generic intent");
   assert(selected.focused_record.id === "lead-1", "focused record must remain present");
   assert(selected.connected_context.primary_id === "lead-1", "connected context must remain present");
@@ -104,10 +104,10 @@ Deno.test("explicit focused records take precedence and preserve connected conte
 });
 
 Deno.test("active playbook steps are disclosed only when the query matches the playbook", () => {
-  const general = buildInnerMeProgressiveContext(fixture(), "Explain what caching means.");
+  const general: any = buildInnerMeProgressiveContext(fixture(), "Explain what caching means.");
   assert(general.innerme_business_brain.playbook_index.length === 2, "compact playbook index should be available");
   assert(!general.innerme_business_brain.matching_playbooks, "unmatched playbook steps should not be disclosed");
-  const requested = buildInnerMeProgressiveContext(fixture(), "Use the Lead follow-up playbook.");
+  const requested: any = buildInnerMeProgressiveContext(fixture(), "Use the Lead follow-up playbook.");
   assert(Array.isArray(requested.innerme_business_brain.matching_playbooks), "matching playbook details should be disclosed on demand");
   assert(requested.innerme_business_brain.matching_playbooks[0].steps.length > 0, "selected playbook steps should survive progressive disclosure");
 });
