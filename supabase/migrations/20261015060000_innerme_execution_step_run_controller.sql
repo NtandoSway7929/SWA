@@ -51,7 +51,39 @@ begin
       add constraint innerme_execution_steps_completion_evidence_object_check
       check (jsonb_typeof(completion_evidence)='object');
   end if;
-end $$;
+end $;
+
+-- Protect step status transitions even though the existing admin RLS policy
+-- permits administrators to edit rows. Only this controller may perform run
+-- transitions; the existing plan-review path may still approve/cancel drafts.
+create or replace function public.guard_innerme_execution_step_status_change()
+returns trigger
+language plpgsql
+security invoker
+set search_path=public
+as $function$
+begin
+  if current_setting('innerme.execution_step_transition',true) is distinct from 'authorized' then
+    if tg_op='INSERT' then
+      if new.status <> 'planned' then
+        raise exception 'New execution steps must start in planned status.';
+      end if;
+    elsif new.status is distinct from old.status then
+      if old.status='planned' and new.status in ('approved','cancelled') then
+        return new;
+      end if;
+      raise exception 'Execution-step run status changes must use the governed transition RPC.';
+    end if;
+  end if;
+  return new;
+end;
+$function$;
+
+revoke all on function public.guard_innerme_execution_step_status_change() from public, anon;
+drop trigger if exists guard_innerme_execution_step_status_change on public.innerme_execution_steps;
+create trigger guard_innerme_execution_step_status_change
+  before insert or update on public.innerme_execution_steps
+  for each row execute function public.guard_innerme_execution_step_status_change();
 
 create table if not exists public.innerme_execution_step_events (
   id uuid primary key default gen_random_uuid(),
@@ -109,6 +141,10 @@ begin
   if auth.uid() is null or not public.is_swayphics_admin() then
     raise exception 'Active Swayphics admin access required.';
   end if;
+
+  -- Transaction-local capability used by the trigger above. A later request
+  -- cannot inherit it after this RPC transaction commits or rolls back.
+  perform set_config('innerme.execution_step_transition','authorized',true);
 
   if v_transition not in ('start','resume','checkpoint','complete','block') then
     raise exception 'Unsupported execution-step transition.';
