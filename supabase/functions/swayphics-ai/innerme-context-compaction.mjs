@@ -203,3 +203,84 @@ export function compactInnerMeContextForModel(value, options = {}) {
   }
   return result;
 }
+
+
+/**
+ * Compact workspace JSON to a byte budget calculated from the complete provider
+ * request envelope. Exact identities, IDs, dates, source counts and lead/follow-up
+ * records are protected for as long as possible; optional roots and secondary
+ * collection samples are reduced first. This helper never mutates source data.
+ */
+export function compactInnerMeContextToByteBudget(value, maxBytes) {
+  const budget = Number.isFinite(maxBytes) ? Math.max(0, Math.floor(maxBytes)) : 0;
+  const byteLength = (current) => new TextEncoder().encode(JSON.stringify(current)).byteLength;
+  const steps = [
+    { maxStringChars: 60, maxObjectKeys: 24 },
+    { maxStringChars: 42, maxObjectKeys: 18 },
+    { maxStringChars: 28, maxObjectKeys: 14 },
+    { maxStringChars: 16, maxObjectKeys: 12 },
+    { maxStringChars: 8, maxObjectKeys: 10 },
+    { maxStringChars: 4, maxObjectKeys: 8 },
+  ];
+  let result = null;
+  for (const step of steps) {
+    result = compactInnerMeContextForModel(value, {
+      maxArrayItems: 1,
+      maxStringChars: step.maxStringChars,
+      maxObjectKeys: step.maxObjectKeys,
+      maxDepth: 3,
+      aggressive: true,
+      ultraCompact: true,
+    });
+    if (byteLength(result) <= budget) return result;
+  }
+
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    return result;
+  }
+
+  const protectedRootKeys = new Set([
+    "generated_at", "business_date_johannesburg", "query_failures",
+    "workspace_source_record_counts", "workspace_model_context_record_counts",
+    "workspace_compacted_record_counts", "workspace_temporal_guidance",
+    "workspace_model_context_exclusion_counts", "workspace_intelligence_notes",
+    "context_compaction_note", "leads", "followups", "tasks", "clients",
+    "projects", "enquiries", "quotes", "payments", "invoices", "portal_requests",
+    "communications", "activities", "email_messages",
+  ]);
+
+  // Drop any unexpected/optional detail roots by largest serialized cost first.
+  const optionalRoots = Object.keys(result)
+    .filter((key) => !protectedRootKeys.has(key))
+    .sort((a, b) => byteLength(result[b]) - byteLength(result[a]));
+  for (const key of optionalRoots) {
+    delete result[key];
+    if (byteLength(result) <= budget) return result;
+  }
+
+  // If more room is needed, reduce secondary operational collections before
+  // the sales pipeline. Source counts remain intact so a sample is never a total.
+  const reductionOrder = [
+    "email_messages", "activities", "communications", "portal_requests",
+    "invoices", "payments", "quotes", "projects", "clients", "enquiries", "tasks",
+    "followups", "leads",
+  ];
+  for (const key of reductionOrder) {
+    if (!Array.isArray(result[key])) continue;
+    while (result[key].length > 1 && byteLength(result) > budget) {
+      result[key] = result[key].slice(0, Math.ceil(result[key].length / 2));
+      if (result.workspace_compacted_record_counts && typeof result.workspace_compacted_record_counts === "object") {
+        result.workspace_compacted_record_counts[key] = result[key].length;
+      }
+    }
+    if (byteLength(result) <= budget) return result;
+  }
+
+  // Last resort: discard explanatory notes and nonessential conflict examples,
+  // but keep deterministic timing totals and the business-date anchor.
+  if (Array.isArray(result.workspace_intelligence_notes)) result.workspace_intelligence_notes = [];
+  if (result.workspace_temporal_guidance && typeof result.workspace_temporal_guidance === "object") {
+    delete result.workspace_temporal_guidance.lead_followup_schedule_conflicts;
+  }
+  return result;
+}

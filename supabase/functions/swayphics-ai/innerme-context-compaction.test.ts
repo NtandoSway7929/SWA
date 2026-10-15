@@ -1,4 +1,4 @@
-import { compactInnerMeContextForModel } from "./innerme-context-compaction.mjs";
+import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -264,4 +264,59 @@ Deno.test("ultra-compaction keeps workspace context under the 24 KB provider req
   assert(contextBytes < 14000, "ultra-compacted workspace should remain bounded");
   assert(requestBytes < 24000, "request must fit under 24 KB; actual=" + requestBytes + " bytes, workspace=" + contextBytes + " bytes");
   assert(typeof workspace.context_compaction_note === "string", "the answer generator must know that record details were compacted");
+});
+
+
+Deno.test("final request-envelope budget compaction keeps lead identities and timing fields", () => {
+  const source = {
+    generated_at: "2026-10-15T08:00:00.000Z",
+    business_date_johannesburg: "2026-10-15",
+    workspace_source_record_counts: { leads: 19, followups: 12, tasks: 20, communications: 80 },
+    workspace_model_context_record_counts: { leads: 19, followups: 12, tasks: 20, communications: 80 },
+    workspace_temporal_guidance: {
+      business_date_johannesburg: "2026-10-15",
+      lead_followup_date_counts: { overdue: 2, due_today: 3, upcoming: 4, unscheduled_or_unknown: 10 },
+    },
+    workspace_model_context_exclusion_counts: { self_owned_leads: 1, self_or_test_enquiries: 1 },
+    leads: Array.from({ length: 19 }, (_, index) => ({
+      id: "lead-" + index,
+      business_name: "Full Legal Business Name For Prospect " + index,
+      status: "contacted",
+      estimated_value: 1500 + index,
+      effective_follow_up_date: index === 0 ? "2026-10-15" : null,
+      effective_follow_up_timing: index === 0 ? "due_today" : "unscheduled_or_unknown",
+      effective_follow_up_source: index === 0 ? "linked_pending_follow_up" : "none",
+      linked_pending_followup_count: index === 0 ? 1 : 0,
+    })),
+    followups: Array.from({ length: 12 }, (_, index) => ({
+      id: "followup-" + index,
+      lead_id: "lead-" + index,
+      status: "pending",
+      scheduled_for: "2026-10-15",
+      scheduled_timing: "due_today",
+    })),
+    tasks: Array.from({ length: 20 }, (_, index) => ({ id: "task-" + index, title: "Urgent task " + index })),
+    communications: Array.from({ length: 80 }, (_, index) => ({ id: "communication-" + index, message: "Long communication detail ".repeat(80) })),
+    connected_context: { bulky: "Detailed linked context ".repeat(5000) },
+    innerme_business_brain: { agents: Array.from({ length: 50 }, (_, index) => ({ name: "agent " + index, instructions: "instructions ".repeat(100) })) },
+  };
+  const marker = "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n";
+  const prefix = "ADMIN QUESTION:\nWhat are my highest-value moves for today?\n\nFOCUSED RECORD DIRECTIVE:\nnone\n\nWORKSPACE INTEGRITY RULES:\n" + "Operational instruction ".repeat(130);
+  const requestBody: any = {
+    systemInstruction: { parts: [{ text: "s".repeat(9500) }] },
+    contents: [{ role: "user", parts: [{ text: prefix }] }],
+    generationConfig: { maxOutputTokens: 2048 },
+  };
+  const measure = () => new TextEncoder().encode(JSON.stringify(requestBody)).byteLength;
+  const markerBytes = new TextEncoder().encode(marker).byteLength;
+  const availableWorkspaceBytes = 24000 - measure() - markerBytes;
+  const compacted = compactInnerMeContextToByteBudget(source, availableWorkspaceBytes);
+  requestBody.contents[0].parts[0].text = prefix + marker + JSON.stringify(compacted);
+  const actualBytes = measure();
+
+  assert(actualBytes <= 24000, "the final serialized request must fit the provider cap; actual=" + actualBytes);
+  assert(compacted.leads.some((lead: any) => lead.business_name === "Full Legal Business Name For Prospect 0"), "full lead names must survive final-budget compaction");
+  assert(compacted.leads.some((lead: any) => lead.effective_follow_up_timing === "due_today"), "deterministic follow-up timing must survive final-budget compaction");
+  assert(compacted.workspace_source_record_counts.leads === 19, "unfiltered source counts must survive final-budget compaction");
+  assert(source.leads.length === 19 && source.communications.length === 80, "compaction must not mutate the source workspace");
 });
