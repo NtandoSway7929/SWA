@@ -49,6 +49,8 @@ create table if not exists public.innerme_execution_plans (
   risk text,
   status text not null default 'draft',
   source_conversation_id text,
+  execution_contract_version text,
+  execution_contract_snapshot jsonb not null default '{}'::jsonb,
   created_by uuid references auth.users(id) on delete restrict,
   approved_by uuid references auth.users(id) on delete restrict,
   approved_at timestamptz,
@@ -59,6 +61,17 @@ create table if not exists public.innerme_execution_plans (
   updated_at timestamptz not null default now(),
   constraint innerme_execution_plans_evidence_check check (jsonb_typeof(evidence)='array'),
   constraint innerme_execution_plans_completion_check check (jsonb_typeof(completion_criteria)='array'),
+  constraint innerme_execution_plans_contract_snapshot_object check (jsonb_typeof(execution_contract_snapshot)='object'),
+  constraint innerme_execution_plans_contract_version_check check (
+    execution_contract_version is null or (
+      execution_contract_version='innerme-execution-contract-v1'
+      and execution_contract_snapshot->>'version'=execution_contract_version
+      and nullif(trim(execution_contract_snapshot->>'goal'),'') is not null
+      and jsonb_typeof(execution_contract_snapshot->'constraints')='array'
+      and jsonb_typeof(execution_contract_snapshot->'output_format')='object'
+      and jsonb_typeof(execution_contract_snapshot->'failure_conditions')='array'
+    )
+  ),
   constraint innerme_execution_plans_effort_check check (effort in ('low','medium','high')),
   constraint innerme_execution_plans_urgency_check check (urgency in ('critical','high','normal','low')),
   constraint innerme_execution_plans_confidence_check check (confidence in ('high','medium','low')),
@@ -262,7 +275,7 @@ begin
     plan_key, decision_id, title, objective, rationale, evidence,
     success_metric, completion_criteria, expected_outcome, duration_days,
     target_date, effort, urgency, confidence, risk, status,
-    source_conversation_id, created_by
+    source_conversation_id, execution_contract_version, execution_contract_snapshot, created_by
   )
   values (
     v_plan_key, v_decision_id, trim(p_plan->>'title'), trim(p_plan->>'objective'),
@@ -279,6 +292,8 @@ begin
     nullif(trim(coalesce(p_plan->>'risk','')),''),
     'draft',
     nullif(trim(coalesce(p_plan->>'source_conversation_id','')),''),
+    nullif(trim(coalesce(p_plan->>'execution_contract_version','')),''),
+    case when jsonb_typeof(coalesce(p_plan->'execution_contract_snapshot','{}'::jsonb))='object' then coalesce(p_plan->'execution_contract_snapshot','{}'::jsonb) else '{}'::jsonb end,
     auth.uid()
   )
   returning * into v_plan;
