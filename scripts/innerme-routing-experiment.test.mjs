@@ -4,11 +4,13 @@ import {
   EXPERIMENT_CASES,
   MAX_PROVIDER_CALLS,
   MODELS,
+  PROVIDER_TIMEOUT_MS,
   buildResultSummary,
   evaluateCase,
 } from "./innerme-routing-experiment.mjs";
 
-test("paired synthetic suite has a hard eight-request budget", () => {
+test("paired synthetic suite has a hard eight-request budget and bounded provider timeout", () => {
+  assert.equal(PROVIDER_TIMEOUT_MS, 40000);
   assert.equal(EXPERIMENT_CASES.length, 4);
   assert.equal(MODELS.length, 2);
   assert.equal(EXPERIMENT_CASES.length * MODELS.length, MAX_PROVIDER_CALLS);
@@ -22,9 +24,26 @@ test("routine arithmetic rubric recognizes the correct integer", () => {
 
 test("area rubric checks both numeric result and units", () => {
   const item = EXPERIMENT_CASES.find((row) => row.key === "routine-area-units");
-  assert.equal(evaluateCase(item, "The area is 40 cm².").passed, true);
-  assert.equal(evaluateCase(item, "The area is 40 square centimetres.").passed, true);
-  assert.equal(evaluateCase(item, "The area is 40.").passed, false);
+  for (const answer of [
+    "The area is 40 cm².",
+    "Area = 40 cm^2.",
+    "Area = 40 cm2.",
+    "The area is 40 cm squared.",
+    "The area is 40 square cm.",
+    "The area is 40 square centimetres.",
+    "The area is 40 square centimeters.",
+    "The area is 40 sq cm.",
+    "The area is 40 sq. cm.",
+  ]) {
+    assert.equal(evaluateCase(item, answer).passed, true, `Expected equivalent area units to pass: ${answer}`);
+  }
+  for (const answer of [
+    "The area is 40.",
+    "The area is 40 cm.",
+    "The area is 40 mm².",
+  ]) {
+    assert.equal(evaluateCase(item, answer).passed, false, `Expected incorrect or missing area units to fail: ${answer}`);
+  }
 });
 
 test("evidence-boundary rubric rejects source-code-only runtime claims", () => {
