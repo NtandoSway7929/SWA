@@ -11,16 +11,16 @@ on:
       - "scripts/innerme-routing-experiment.test.mjs"
       - ".github/workflows/innerme-routing-experiment.yml"
       - "docs/innerme-routing-experiment.md"
-      - "scripts/innerme-routing-experiment.mjs"
-      - "scripts/innerme-routing-experiment.test.mjs"
-      - ".github/workflows/innerme-routing-experiment.yml"
-      - "docs/innerme-routing-experiment.md"
   pull_request:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
       - "supabase/config.toml"
       - ".github/workflows/validate-innerme-function.yml"
+      - "scripts/innerme-routing-experiment.mjs"
+      - "scripts/innerme-routing-experiment.test.mjs"
+      - ".github/workflows/innerme-routing-experiment.yml"
+      - "docs/innerme-routing-experiment.md"
 
 permissions:
   contents: read
