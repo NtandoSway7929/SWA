@@ -99,6 +99,19 @@ async function invoke(
     }
 
     if (
+      requestUrl.pathname === "/rest/v1/rpc/get_innerme_workspace_summary" &&
+      method === "POST"
+    ) {
+      // Read-only, request-scoped aggregate fixture; no data is mutated.
+      return jsonResponse(200, {
+        generated_date_johannesburg: "2026-10-15",
+        timezone: "Africa/Johannesburg",
+        summary_source: "database_aggregate",
+        metric_scope: "Synthetic aggregate fixture for the authenticated action guard test.",
+      });
+    }
+
+    if (
       requestUrl.pathname === "/rest/v1/innerme_action_proposals" &&
       method === "GET"
     ) {
@@ -188,7 +201,10 @@ Deno.test("InnerMe authenticated action guard rejects unsafe requests before sid
     assert(
       result.requests.every((request) =>
         request.method === "GET" ||
-        (request.method === "POST" && request.path === "/rest/v1/rpc/is_swayphics_admin")
+        (request.method === "POST" && [
+          "/rest/v1/rpc/is_swayphics_admin",
+          "/rest/v1/rpc/get_innerme_workspace_summary",
+        ].includes(request.path))
       ),
       "Only GET reads and the read-only admin RPC are allowed in this path.",
     );

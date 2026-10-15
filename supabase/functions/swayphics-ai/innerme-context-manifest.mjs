@@ -285,6 +285,7 @@ function compactOperationalSummary(summary, includeFollowupDetails, loadedCollec
       client_summary: "clients",
       portal_request_summary: "portal_requests",
       communication_summary: "communications",
+      activity_summary: "activities",
       email_summary: "email_messages",
     };
     for (const [group, collection] of Object.entries(groupToCollection)) {
@@ -324,7 +325,15 @@ function compactOperationalSummary(summary, includeFollowupDetails, loadedCollec
       result.followup_attention_today = attention;
     }
 
-    result.metric_scope = "Metrics shown here are derived only from bounded records queried for this turn. They are not guaranteed database-wide totals; omitted metric groups were not queried.";
+    if (result.summary_source === "database_aggregate") {
+      result.metric_scope = typeof result.metric_scope === "string"
+        ? result.metric_scope
+        : "Aggregate metrics are calculated in PostgreSQL across rows visible to the authenticated Swayphics administrator under current row-level security policies. Detailed record lists remain bounded samples.";
+    } else if (loaded.size === 0) {
+      result.metric_scope = "No operational tables were queried for this turn; omitted operational metrics are unknown, not zero.";
+    } else {
+      result.metric_scope = "Metrics shown here are derived only from bounded records queried for this turn. They are not guaranteed database-wide totals; omitted metric groups were not queried.";
+    }
   }
 
   return result;
