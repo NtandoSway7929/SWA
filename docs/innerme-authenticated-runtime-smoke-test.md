@@ -7,9 +7,10 @@ This is a manual, non-mutating live smoke test against the **isolated** Supabase
 1. Signs in as a dedicated test admin using Supabase Auth.
 2. Uses that real access token to confirm that an intentionally nonexistent action-proposal ID is absent.
 3. Calls the deployed test `swayphics-ai` function with `action=execute_innerme_action` and that same missing ID.
-4. Calls the test function with `action=innerme_workspace_read_health`, which performs bounded workspace reads and the request-scoped database aggregate, then returns only the retrieval profile, metric-group names and pass/fail metadata.
-5. Calls the run-controller RPC with a confirmed-missing synthetic step ID.
-6. Passes only when the expected missing-proposal and missing-step responses occur, and the aggregate path reports `summary_source=database_aggregate` with all expected aggregate groups.
+4. Calls the test function with `action=innerme_workspace_read_health` for a finance-focused prompt. This must select only clients, invoices and payments, and return those exact aggregate groups without unrelated lead/task metrics.
+5. Calls the same health action for a broad daily-priorities prompt. This must preserve all 13 operational domains and all 14 aggregate groups.
+6. Calls the run-controller RPC with a confirmed-missing synthetic step ID.
+7. Passes only when the expected missing-proposal and missing-step responses occur, the focused request uses `summary_source=database_aggregate` with three relevant domains, and the broad request reports all expected aggregate groups.
 
 The missing proposal and step are checked before the POSTs. The health check returns before any model/provider request. The controlled-action request returns before the Phase 30 execution gate, audit-write, task-creation, or email-delivery paths. The workflow does not create a proposal, task, or email.
 
@@ -54,7 +55,8 @@ The workflow never runs on pull requests. It is manual-only, read-only apart fro
 ## Interpreting results
 
 - **PASS / HTTP 404 with the expected error:** the live test user authenticated, passed the admin check, and reached the missing-proposal branch.
-- **PASS / HTTP 200 from the workspace health check with `summary_source=database_aggregate`:** the live Edge Function completed the read-only workspace-summary path and exposed every expected aggregate group without returning underlying business records or calling an LLM/provider.
+- **PASS / HTTP 200 from the focused workspace health check:** the live Edge Function uses request-aware selection for the finance prompt and returns only the clients, invoices and payments aggregate groups.
+- **PASS / HTTP 200 from the broad workspace health check:** the live Edge Function retains all 13 operational domains and all 14 aggregate groups for daily-priorities work. Both health checks return only metadata and do not call an LLM/provider.
 - **HTTP 401 during sign-in or function invocation:** check the test user's password, confirmation status and token validity.
 - **HTTP 403 from the function:** the test user's UUID is not active in the isolated project's `public.admin_users` table, or the admin check failed.
 - **Any other result:** treat the smoke test as failed; do not interpret it as proof that action execution is safe.
