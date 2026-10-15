@@ -7809,6 +7809,29 @@ Deno.serve(async (req) => {
       summary.summary_source === "database_aggregate" &&
       !workspaceSummary?.error &&
       metricGroups.length > 0;
+    const probeContext: any = buildInnerMeProgressiveContext(safeContext, message);
+    const progressiveWorkspaceJsonBytes = new TextEncoder()
+      .encode(JSON.stringify(probeContext))
+      .byteLength;
+    const detailCollections = Array.isArray(probeContext?.workspace_manifest?.detail_collections)
+      ? probeContext.workspace_manifest.detail_collections as string[]
+      : [];
+    const progressiveDetailRecordCount = detailCollections.reduce(
+      (total: number, collection: string) => {
+        const records = probeContext?.[collection];
+        return total + (Array.isArray(records) ? records.length : 0);
+      },
+      0,
+    );
+    const exactFocusedLookupAttempted =
+      Boolean(focusedRecordLookupStatus) &&
+      focusedRecordLookupStatus?.state !== "found_in_bounded_query";
+    const workspaceDataReadCallCount =
+      workspaceQueryPlan.collections.length +
+      workspaceQueryPlan.businessBrainCollections.length +
+      (workspaceQueryPlan.collections.length > 0 ? 1 : 0) +
+      (emailBodyIds.length > 0 ? 1 : 0) +
+      (exactFocusedLookupAttempted ? 1 : 0);
 
     return json({
       ok: aggregateReady,
@@ -7819,6 +7842,10 @@ Deno.serve(async (req) => {
       queried_collection_count: workspaceQueryPlan.collections.length,
       queried_collections: workspaceQueryPlan.collections,
       queried_business_brain_collection_count: workspaceQueryPlan.businessBrainCollections.length,
+      workspace_data_read_call_count: workspaceDataReadCallCount,
+      progressive_workspace_json_bytes: progressiveWorkspaceJsonBytes,
+      progressive_detail_collection_count: detailCollections.length,
+      progressive_detail_record_count: progressiveDetailRecordCount,
       summary_source: summary.summary_source || "bounded_fallback",
       summary_metric_groups: metricGroups,
       summary_query_failed: Boolean(workspaceSummary?.error),
