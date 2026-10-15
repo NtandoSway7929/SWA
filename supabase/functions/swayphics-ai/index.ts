@@ -6510,6 +6510,12 @@ Deno.serve(async (req) => {
     loadedWorkspaceCollections.has(name) ? Promise.resolve(load()) : Promise.resolve(emptyWorkspaceQuery());
   const queryBusinessBrainCollection = (name: string, load: () => PromiseLike<any>): Promise<any> =>
     loadedBusinessBrainCollections.has(name) ? Promise.resolve(load()) : Promise.resolve(emptyWorkspaceQuery());
+  const queryWorkspaceSummary = (): Promise<any> =>
+    workspaceQueryPlan.collections.length > 0
+      ? Promise.resolve(workspaceSupabase.rpc("get_innerme_workspace_summary", {
+          p_collections: workspaceQueryPlan.collections,
+        }))
+      : Promise.resolve({ data: null, error: null });
 
   const [
     tasks,
@@ -6532,6 +6538,7 @@ Deno.serve(async (req) => {
     innermePreferences,
     innermeAgents,
     predictiveForecasts,
+    workspaceSummary,
   ] = await Promise.all([
     queryWorkspaceCollection("tasks", () => workspaceSupabase.from("tasks").select("*").order("created_at", { ascending: false }).limit(60)),
     queryWorkspaceCollection("leads", () => workspaceSupabase.from("leads").select("*").order("created_at", { ascending: false }).limit(60)),
@@ -6553,6 +6560,7 @@ Deno.serve(async (req) => {
     queryBusinessBrainCollection("preferences", () => workspaceSupabase.from("innerme_preferences").select("id,category,preference_key,value,source,updated_at").order("updated_at",{ascending:false}).limit(100)),
     queryBusinessBrainCollection("agents", () => workspaceSupabase.from("innerme_agents").select("id,slug,name,purpose,inputs,outputs,definition_of_done,trust_stage,permissions,status,instructions,updated_at").eq("status","active").order("name",{ascending:true}).limit(30)),
     queryBusinessBrainCollection("predictive_business_intelligence", () => workspaceSupabase.from("innerme_predictive_forecasts").select("id,forecast_key,forecast_type,horizon_days,forecast_date,status,confidence,unit,baseline_value,projected_value,delta_value,direction,metric_label,statement,assumptions,evidence,evidence_window_start,evidence_window_end,horizon_start,horizon_end,verification_status,actual_value,forecast_error,verified_at,updated_at").eq("forecast_date",new Date().toISOString().slice(0,10)).order("horizon_days",{ascending:true}).limit(30)),
+    queryWorkspaceSummary(),
   ]);
 
   // Bulk mailbox context carries metadata only. Email text can be long or sensitive,
@@ -6690,11 +6698,12 @@ Deno.serve(async (req) => {
     innermePreferences,
     innermeAgents,
     predictiveForecasts,
+    workspaceSummary,
   };
 
   const queryFailures = Object.entries(queryResults)
     .filter(([, result]: [string, any]) => Boolean(result?.error))
-    .map(([name]) => name)
+    .map(([name]) => name === "workspaceSummary" ? "workspace_summary" : name)
     .concat(focusedRecordLookupWarnings, emailBodyLookupWarnings);
 
   if (queryFailures.length) {
@@ -7745,6 +7754,26 @@ Deno.serve(async (req) => {
       }).length,
     },
   };
+
+  // Prefer exact database-side metrics, while preserving bounded record lists.
+  // If the RPC fails, the existing server-side calculation remains as an
+  // explicitly bounded fallback and the query failure is surfaced in context.
+  const databaseAggregate = workspaceSummary?.data;
+  if (databaseAggregate && typeof databaseAggregate === "object" && !Array.isArray(databaseAggregate)) {
+    const priorSummary = safeContext.operational_summary || {};
+    safeContext.operational_summary = {
+      ...priorSummary,
+      ...databaseAggregate,
+      ...(databaseAggregate.followup_counts
+        ? {
+            followup_counts: {
+              ...(priorSummary.followup_counts || {}),
+              ...databaseAggregate.followup_counts,
+            },
+          }
+        : {}),
+    };
+  }
 
   /*
    * INNERME V2 · PROACTIVE BRIEFING
