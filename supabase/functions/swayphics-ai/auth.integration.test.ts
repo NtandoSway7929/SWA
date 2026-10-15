@@ -58,6 +58,7 @@ async function invoke(
   scenario: Scenario | null,
   includeAuthorization = true,
   action = "execute_innerme_action",
+  message = "Run the read-only workspace runtime check.",
 ): Promise<{
   status: number;
   body: Record<string, unknown>;
@@ -103,26 +104,15 @@ async function invoke(
       requestUrl.pathname === "/rest/v1/rpc/get_innerme_workspace_summary" &&
       method === "POST"
     ) {
-      // Read-only, request-scoped aggregate fixture; no data is mutated.
+      // Match the requested finance domains, as the real RPC does.
       return jsonResponse(200, {
         generated_date_johannesburg: "2026-10-15",
         timezone: "Africa/Johannesburg",
         summary_source: "database_aggregate",
-        metric_scope: "Synthetic aggregate fixture for the authenticated action guard test.",
-        lead_counts: { total: 1 },
-        lead_value_zar: { open_pipeline: 100 },
-        followup_counts: { pending_total: 0 },
-        quote_summary: { open_count: 0 },
-        invoice_summary: { total: 0 },
-        payment_summary: { total_paid_value_zar: 0 },
-        enquiry_summary: { total: 0 },
-        task_summary: { total: 0 },
-        project_summary: { total: 0 },
-        client_summary: { total: 0 },
-        portal_request_summary: { total: 0 },
-        communication_summary: { total: 0 },
-        activity_summary: { total: 0 },
-        email_summary: { total: 0 },
+        metric_scope: "Synthetic aggregate fixture for the authenticated health probe.",
+        client_summary: { total: 1 },
+        invoice_summary: { total: 2, outstanding_value_zar: 250 },
+        payment_summary: { total_paid_value_zar: 100 },
       });
     }
 
@@ -158,7 +148,7 @@ async function invoke(
         headers,
         body: JSON.stringify({
           action,
-          message: "Run the read-only workspace runtime check.",
+          message,
           proposal_id: "00000000-0000-0000-0000-000000000000",
         }),
       }),
@@ -171,18 +161,30 @@ async function invoke(
   }
 }
 
-Deno.test("InnerMe authenticated read-only runtime probe verifies database aggregate path", async () => {
-  const result = await invoke("admin-missing-proposal", true, "innerme_workspace_read_health");
+Deno.test("InnerMe authenticated read-only runtime probe follows focused retrieval", async () => {
+  const result = await invoke(
+    "admin-missing-proposal",
+    true,
+    "innerme_workspace_read_health",
+    "Show overdue invoices and payments in a read-only runtime check.",
+  );
   assertEqual(result.status, 200, "Workspace health status");
   assertEqual(result.body.ok, true, "Workspace health result");
   assertEqual(result.body.read_only, true, "Workspace health must be read-only");
   assertEqual(result.body.summary_source, "database_aggregate", "Aggregate source");
   assertEqual(result.body.summary_query_failed, false, "Aggregate RPC failure flag");
-  assertEqual(result.body.queried_collection_count, 13, "All operational domains should be checked");
+  assertEqual(result.body.queried_collection_count, 3, "Invoice/payment intent should use three linked domains");
+  const collections = result.body.queried_collections as string[];
+  assert(
+    JSON.stringify(collections) === JSON.stringify(["clients", "invoices", "payments"]),
+    "Finance-focused retrieval should load only clients, invoices, and payments.",
+  );
   const groups = result.body.summary_metric_groups as string[];
-  for (const group of ["lead_counts", "followup_counts", "invoice_summary", "task_summary", "email_summary"]) {
+  for (const group of ["invoice_summary", "payment_summary", "client_summary"]) {
     assert(groups.includes(group), "Aggregate output must include " + group);
   }
+  assert(!groups.includes("lead_counts"), "Unrequested lead metrics must not be reported as zero or loaded.");
+  assert(!groups.includes("task_summary"), "Unrequested task metrics must not be reported as zero or loaded.");
   assert(
     result.requests.every((request) =>
       request.method === "GET" ||
