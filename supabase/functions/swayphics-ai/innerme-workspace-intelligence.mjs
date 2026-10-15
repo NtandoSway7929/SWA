@@ -314,7 +314,7 @@ export function selectInnerMeEmailBodyIds({
   );
 
   const hasKnownNamedTarget = leadIds.size > 0 || clientIds.size > 0;
-  const hasExplicitRecipientOrSubject = /\\b(?:from|for|about|regarding|with|of)\\s+[^?.!,]{2,80}/i.test(String(message || ""));
+  const hasExplicitRecipientOrSubject = /\b(?:from|for|about|regarding|with|of)\s+[^?.!,]{2,80}/i.test(String(message || ""));
   const hasNamedTarget = hasKnownNamedTarget || hasExplicitRecipientOrSubject;
   const candidates = hasNamedTarget
     ? rows.filter((row) =>
