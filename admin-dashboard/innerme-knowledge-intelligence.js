@@ -1595,6 +1595,7 @@
         }
 
         executionResults.addEventListener("click",async function(event){
+            const stepTransition=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-step-transition]") : null;
             const build=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-build]") : null;
             const approve=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-approve]") : null;
             const cancel=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-cancel]") : null;
@@ -1603,9 +1604,133 @@
             const actionApprove=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-approve]") : null;
             const actionReject=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-reject]") : null;
             const actionExecute=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-execute]") : null;
-            const target=build||approve||cancel||prepare||actionCheck||actionApprove||actionReject||actionExecute;
+            const target=stepTransition||build||approve||cancel||prepare||actionCheck||actionApprove||actionReject||actionExecute;
             if(!target) return;
             event.preventDefault(); event.stopPropagation();
+
+            if(stepTransition){
+                const stepId=String(stepTransition.dataset.swayAiKiStepId||"").trim();
+                const transition=String(stepTransition.dataset.swayAiKiStepTransition||"").trim();
+                const runData=executionResults.__swayExecutionData;
+                let stepRecord=null;
+                if(runData && runData.stepsByPlan instanceof Map){
+                    for(const planSteps of runData.stepsByPlan.values()){
+                        const match=planSteps.find(function(item){return String(item && item.id || "")===stepId;});
+                        if(match){stepRecord=match;break;}
+                    }
+                }
+                if(!stepId || !["start","resume","checkpoint","complete","block"].includes(transition) || !stepRecord){
+                    window.alert("InnerMe could not resolve the selected execution step. Refresh the panel and try again.");
+                    return;
+                }
+
+                let note="";
+                let checkpoint={};
+                let completionEvidence={};
+
+                if(transition==="start" || transition==="resume"){
+                    const promptText=transition==="start"
+                        ? "Start this step? This records run state only. It will not create a task or send an email."
+                        : "Resume this blocked step? InnerMe will refuse if any related side effect still needs reconciliation.";
+                    if(!window.confirm(promptText)) return;
+                    note=transition==="start"
+                        ? "Administrator started this step after reviewing the approved plan."
+                        : "Administrator resumed this step after reviewing the blocking condition.";
+                }else if(transition==="checkpoint"){
+                    const current=stepRecord.checkpoint && typeof stepRecord.checkpoint==="object"
+                        ? String(stepRecord.checkpoint.progress_summary||"")
+                        : "";
+                    const entered=window.prompt("Record a concise progress checkpoint. Do not paste prompts, model reasoning, secrets, or full conversation history.",current);
+                    if(entered===null) return;
+                    note=String(entered).trim();
+                    if(note.length<10 || note.length>1200){
+                        window.alert("Checkpoint summary must contain 10 to 1,200 characters.");
+                        return;
+                    }
+                    checkpoint={
+                        phase:"manual_operator_checkpoint",
+                        progress_summary:note,
+                        verified_artifact_refs:[],
+                        unresolved_items:[]
+                    };
+                }else if(transition==="complete"){
+                    const summary=window.prompt("What did you verify against this step's success signal and verification method?");
+                    if(summary===null) return;
+                    note=String(summary).trim();
+                    if(note.length<20 || note.length>1200){
+                        window.alert("Verification summary must contain 20 to 1,200 characters.");
+                        return;
+                    }
+                    const reference=window.prompt("Enter a concrete evidence reference, such as a workspace record ID, test result URL, or email/service reference.");
+                    if(reference===null) return;
+                    const referenceValue=String(reference).trim();
+                    if(referenceValue.length<3 || referenceValue.length>240){
+                        window.alert("Evidence reference must contain 3 to 240 characters.");
+                        return;
+                    }
+                    if(!window.confirm("Mark this step complete based on the evidence you entered? This does not mark the whole business outcome as achieved.")) return;
+                    completionEvidence={
+                        verified_by_human:true,
+                        verification_method:String(stepRecord.verification_method||""),
+                        summary:note,
+                        evidence_refs:[{
+                            source:"manual_attestation",
+                            id:referenceValue,
+                            why:note.slice(0,500)
+                        }]
+                    };
+                }else if(transition==="block"){
+                    const reason=window.prompt("Why must this step be blocked? Include the issue or missing prerequisite.");
+                    if(reason===null) return;
+                    note=String(reason).trim();
+                    if(note.length<20 || note.length>1200){
+                        window.alert("Blocking reason must contain 20 to 1,200 characters.");
+                        return;
+                    }
+                    if(!window.confirm("Block this step? It will require an explicit resume after the issue is reviewed.")) return;
+                }
+
+                const originalLabel=stepTransition.textContent;
+                stepTransition.disabled=true;
+                stepTransition.textContent=transition==="checkpoint" ? "Saving…" :
+                    transition==="complete" ? "Verifying…" :
+                    transition==="block" ? "Blocking…" :
+                    transition==="resume" ? "Resuming…" : "Starting…";
+                try{
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/transition_innerme_execution_step",{
+                        method:"POST",
+                        headers:authHeaders(),
+                        body:JSON.stringify({
+                            p_step_id:stepId,
+                            p_transition:transition,
+                            p_note:note,
+                            p_checkpoint:checkpoint,
+                            p_completion_evidence:completionEvidence
+                        })
+                    });
+                    const result=await response.json().catch(function(){return null;});
+                    if(!response.ok || !result || result.ok!==true){
+                        throw new Error(result && (result.message || result.error || result.hint) ? String(result.message || result.error || result.hint) : "InnerMe could not update this execution step.");
+                    }
+                    await refreshExecutionPlans(false);
+                    if(transition==="complete"){
+                        window.alert("Step completion and its verification evidence were recorded. The overall plan outcome still needs its own verification.");
+                    }else if(transition==="checkpoint"){
+                        window.alert("Progress checkpoint saved. No task or email was created or sent.");
+                    }else if(transition==="block"){
+                        window.alert("Step blocked and reason recorded.");
+                    }else if(transition==="resume"){
+                        window.alert("Step resumed. Any unresolved side effect would have blocked this transition.");
+                    }else{
+                        window.alert("Step started. This only changed run state; it did not perform an external action.");
+                    }
+                }catch(error){
+                    stepTransition.disabled=false;
+                    stepTransition.textContent=originalLabel;
+                    window.alert(error.message||"Execution-step transition failed.");
+                }
+                return;
+            }
 
             if(actionCheck){
                 const proposalId=String(actionCheck.dataset.swayAiKiActionCheck||"").trim();
