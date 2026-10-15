@@ -9548,6 +9548,7 @@ Deno.serve(async (req) => {
     const stepReadiness = selectInnerMeActionReadySteps(loadedStepRows);
     const skippedUnverifiedStepOrders = stepReadiness.skipped_unverified_step_orders;
     const skippedDependencySteps = stepReadiness.skipped_dependency_steps;
+    const skippedNotStartedStepOrders = stepReadiness.skipped_not_started_step_orders;
     const stepRows = stepReadiness.ready;
     if (!stepRows.length) {
       const dependenciesUnmet = skippedDependencySteps.length > 0;
@@ -9557,16 +9558,23 @@ Deno.serve(async (req) => {
         {
           error: dependenciesUnmet
             ? "Controlled action proposals are blocked until each prerequisite step is explicitly verified as completed."
-            : allStepsAlreadyCompleteOrBlocked
-              ? "No execution step has been explicitly started and is eligible for new action proposals."
-              : "No eligible in-progress execution step has both an observable success signal and a verification method. Start a verified step or update its completion contract before preparing controlled actions.",
+            : skippedUnverifiedStepOrders.length
+              ? "No eligible step has both an observable success signal and a verification method. Update the affected steps before preparing controlled actions."
+              : skippedNotStartedStepOrders.length
+                ? "Start an approved step through the run controller before preparing its controlled action proposals."
+                : allStepsAlreadyCompleteOrBlocked
+                  ? "No execution step is available for new controlled action proposals."
+                  : "No eligible step can receive controlled action proposals in its current state.",
           code: dependenciesUnmet
             ? "EXECUTION_DEPENDENCY_INCOMPLETE"
             : skippedUnverifiedStepOrders.length
               ? "EXECUTION_STEP_CONTRACT_INCOMPLETE"
-              : "NO_ELIGIBLE_EXECUTION_STEPS",
+              : skippedNotStartedStepOrders.length
+                ? "EXECUTION_STEP_NOT_STARTED"
+                : "NO_ELIGIBLE_EXECUTION_STEPS",
           unverified_step_orders: skippedUnverifiedStepOrders,
           skipped_dependency_steps: skippedDependencySteps,
+          skipped_not_started_step_orders: skippedNotStartedStepOrders,
           workspace_changed: false,
         },
         409,
@@ -9916,8 +9924,9 @@ Deno.serve(async (req) => {
         workspace_changed: false,
         skipped_unverified_steps: skippedUnverifiedStepOrders,
         skipped_dependency_steps: skippedDependencySteps,
-        warning: skippedUnverifiedStepOrders.length || skippedDependencySteps.length
-          ? "Some steps were excluded because they lack verifiable completion criteria or their prerequisite steps are not yet completed."
+        skipped_not_started_step_orders: skippedNotStartedStepOrders,
+        warning: skippedUnverifiedStepOrders.length || skippedDependencySteps.length || skippedNotStartedStepOrders.length
+          ? "Some steps were excluded because they have not been started, lack verifiable completion criteria, or depend on a step that is not yet completed."
           : null,
         provider_model: model,
       },
