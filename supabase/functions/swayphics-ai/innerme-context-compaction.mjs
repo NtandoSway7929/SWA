@@ -43,7 +43,7 @@ const ULTRA_CRITICAL_COLLECTION_LIMITS = Object.freeze({
   // Preserve the complete prospect pipeline when it fits, while sharply
   // bounding less urgent collections so the combined provider request fits.
   leads: 24,
-  followups: 11,
+  followups: 9,
   clients: 2,
   projects: 2,
   tasks: 3,
@@ -199,7 +199,7 @@ export function compactInnerMeContextForModel(value, options = {}) {
       }
     }
     result.context_compaction_note =
-      "Emergency size-reduction mode: business-critical records retain only selected operational fields; follow-ups and communication streams may be sampled to fit the provider budget; optional InnerMe business-brain details were omitted. Use workspace_source_record_counts and workspace_model_context_record_counts for counts before row compaction, workspace_compacted_record_counts for rows shown in detail, and do not treat the compacted record lists as the full workspace.";
+      "Emergency compaction keeps key business fields and exact names/dates, but samples some records. Source/model counts are pre-compaction counts; workspace_compacted_record_counts is the detail sample only. Optional business-brain details are omitted. Do not infer totals from sampled rows.";
   }
   return result;
 }
