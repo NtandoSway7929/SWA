@@ -65,3 +65,69 @@ Deno.test("explicit record inspection preserves distant follow-ups", () => {
   const result = buildInnerMeWorkspaceContextForModel(source, "Review the Swayphics lead");
   assert(result.followups.length === 1, "specific record inspection should preserve all follow-ups");
 });
+
+
+Deno.test("broad planning filters self/test enquiries and preserves genuine enquiries", () => {
+  const source = {
+    user_email: "admin@example.invalid",
+    business_date_johannesburg: "2026-10-15",
+    workspace_source_record_counts: { leads: 2, followups: 2, enquiries: 4 },
+    leads: [
+      { id: "internal-lead", business_name: "Swayphics", next_follow_up: "2026-10-15" },
+      { id: "external-lead", business_name: "GSS Plastering LTD.", next_follow_up: "2026-10-15" },
+    ],
+    followups: [
+      { id: "internal-followup", lead_id: "internal-lead", status: "pending", scheduled_for: "2026-10-15" },
+      { id: "external-followup", lead_id: "external-lead", status: "pending", scheduled_for: "2026-10-16" },
+    ],
+    enquiries: [
+      { id: "self-handle", name: "ntando_sway", service: "Company Registration", status: "contacted" },
+      { id: "self-email", name: "Ntando", email: "admin@example.invalid", service: "Apparel Design", status: "converted" },
+      { id: "test-name", name: "Test Submission", service: "Logo Design", status: "new" },
+      { id: "genuine", name: "Sibusisiwe Mtshali", service: "Logo Design", status: "contacted" },
+    ],
+  };
+
+  const result = buildInnerMeWorkspaceContextForModel(
+    source,
+    "What are my highest-value moves for today? Exclude test records and self-enquiries.",
+    Date.parse("2026-10-15T00:00:00Z"),
+  );
+  assert(result.enquiries.length === 1, "only the genuine external enquiry should remain");
+  assert(result.enquiries[0].id === "genuine", "the real enquiry should be preserved");
+  assert(result.leads.length === 1 && result.leads[0].id === "external-lead", "the self-owned lead should be excluded");
+  assert(result.followups.length === 1 && result.followups[0].id === "external-followup", "self-lead follow-ups should be excluded");
+  assert(result.workspace_model_context_exclusion_counts.self_or_test_enquiries === 3, "excluded enquiries should be counted");
+  assert(result.workspace_model_context_exclusion_counts.related_self_lead_followups === 1, "related follow-up exclusion should be counted");
+  assert(result.workspace_source_record_counts.enquiries === 4, "source counts should remain auditable");
+  assert(source.enquiries.length === 4 && source.followups.length === 2, "source context must not be mutated");
+});
+
+Deno.test("lead and scheduled follow-up dates get deterministic timing labels", () => {
+  const source = {
+    business_date_johannesburg: "2026-10-15",
+    leads: [
+      { id: "past", business_name: "Past Ltd", next_follow_up: "2026-10-14" },
+      { id: "today", business_name: "Today Ltd", next_follow_up: "2026-10-15" },
+      { id: "future", business_name: "Future Ltd", next_follow_up: "2026-10-16" },
+    ],
+    followups: [
+      { id: "fu-past", status: "pending", scheduled_for: "2026-10-14" },
+      { id: "fu-today", status: "pending", scheduled_for: "2026-10-15" },
+      { id: "fu-future", status: "pending", scheduled_for: "2026-10-16" },
+    ],
+  };
+  const result = buildInnerMeWorkspaceContextForModel(
+    source,
+    "What are my highest-value moves for today?",
+    Date.parse("2026-10-15T00:00:00Z"),
+  );
+  assert(result.leads[0].next_follow_up_timing === "overdue", "past date should be overdue");
+  assert(result.leads[1].next_follow_up_timing === "due_today", "same date should be due today");
+  assert(result.leads[2].next_follow_up_timing === "upcoming", "future date should be upcoming");
+  assert(result.followups[0].scheduled_timing === "overdue", "past scheduled item should be overdue");
+  assert(result.followups[1].scheduled_timing === "due_today", "same-day scheduled item should be due today");
+  assert(result.followups[2].scheduled_timing === "upcoming", "future scheduled item should be upcoming");
+  assert(result.workspace_temporal_guidance.lead_followup_date_counts.overdue === 1, "overdue count should be deterministic");
+  assert(result.workspace_temporal_guidance.scheduled_followup_record_counts.upcoming === 1, "upcoming count should be deterministic");
+});
