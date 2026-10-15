@@ -13,7 +13,7 @@ const COLLECTIONS = Object.freeze({
   },
   followups: {
     label: "Scheduled follow-ups",
-    triggers: ["follow-up", "follow up", "followups", "followups", "overdue", "due today", "due tomorrow", "reminder"],
+    triggers: ["follow-up", "follow up", "followups", "followups", "reminder"],
     identityFields: ["business_name", "title", "name"],
   },
   clients: {
@@ -135,6 +135,11 @@ function selectedCollectionsForText(text) {
   for (const [key, config] of Object.entries(COLLECTIONS)) {
     if (hasTrigger(text, config.triggers)) selected.add(key);
   }
+
+  const explicitFollowupIntent = hasTrigger(text, ["follow-up", "follow up", "followups", "reminder"]);
+  const genericScheduleIntent = hasTrigger(text, ["overdue", "due today", "due tomorrow"]);
+  const financialIntent = selected.has("invoices") || selected.has("payments");
+  if (explicitFollowupIntent || (genericScheduleIntent && !financialIntent)) selected.add("followups");
 
   // A lead or follow-up question depends on their relationship, not on a single
   // isolated table. This adds only relevant linked collections.
