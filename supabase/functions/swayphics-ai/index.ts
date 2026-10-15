@@ -1658,7 +1658,8 @@ Deno.serve(async (req) => {
     !geminiKey &&
     action !== "embed_knowledge" &&
     action !== "search_knowledge" &&
-    action !== "execute_innerme_action"
+    action !== "execute_innerme_action" &&
+    action !== "innerme_workspace_read_health"
   ) {
     return json({
       error:
@@ -7773,6 +7774,56 @@ Deno.serve(async (req) => {
           }
         : {}),
     };
+  }
+
+  // Admin-only, read-only runtime probe. This lets authenticated smoke tests
+  // verify the deployed workspace query planner and aggregate RPC without an
+  // LLM/provider request and without returning any underlying business records.
+  if (action === "innerme_workspace_read_health") {
+    const summary =
+      databaseAggregate &&
+      typeof databaseAggregate === "object" &&
+      !Array.isArray(databaseAggregate)
+        ? databaseAggregate
+        : {};
+    const knownMetricGroups = [
+      "lead_counts",
+      "lead_value_zar",
+      "followup_counts",
+      "quote_summary",
+      "invoice_summary",
+      "payment_summary",
+      "enquiry_summary",
+      "task_summary",
+      "project_summary",
+      "client_summary",
+      "portal_request_summary",
+      "communication_summary",
+      "activity_summary",
+      "email_summary",
+    ];
+    const metricGroups = knownMetricGroups.filter((key) =>
+      Object.prototype.hasOwnProperty.call(summary, key)
+    );
+    const aggregateReady =
+      summary.summary_source === "database_aggregate" &&
+      !workspaceSummary?.error &&
+      metricGroups.length > 0;
+
+    return json({
+      ok: aggregateReady,
+      read_only: true,
+      service: "swayphics-ai",
+      check: "workspace_retrieval_and_aggregate",
+      retrieval_profile: workspaceQueryPlan.profile,
+      queried_collection_count: workspaceQueryPlan.collections.length,
+      queried_collections: workspaceQueryPlan.collections,
+      queried_business_brain_collection_count: workspaceQueryPlan.businessBrainCollections.length,
+      summary_source: summary.summary_source || "bounded_fallback",
+      summary_metric_groups: metricGroups,
+      summary_query_failed: Boolean(workspaceSummary?.error),
+      workspace_query_failure_count: queryFailures.length,
+    }, aggregateReady ? 200 : 503, origin);
   }
 
   /*
