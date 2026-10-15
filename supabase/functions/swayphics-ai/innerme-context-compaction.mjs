@@ -43,7 +43,7 @@ const ULTRA_CRITICAL_COLLECTION_LIMITS = Object.freeze({
   // Preserve the complete prospect pipeline when it fits, while sharply
   // bounding less urgent collections so the combined provider request fits.
   leads: 24,
-  followups: 11,
+  followups: 9,
   clients: 2,
   projects: 2,
   tasks: 3,
@@ -167,7 +167,12 @@ export function compactInnerMeContextForModel(value, options = {}) {
         if (depth > 0 && Object.keys(output).length >= maxObjectKeys) break;
         const isIdentifier = /^(?:id|.+_id)$/i.test(key);
         const isExactDateOrTimestamp = /(?:^date$|_date$|_at$|^scheduled_for$|^next_follow_up$|^valid_until$|^due_date$|^issue_date$|^completed_at$)/i.test(key);
-        const fieldLimit = isIdentifier || isExactDateOrTimestamp
+        // Exact record labels must survive emergency mode. A 28-character
+        // content budget must not silently rename the business being discussed.
+        const isExactDisplayIdentity =
+          /(?:^|_)(?:business_name|contact_name|name|title)$/i.test(key) ||
+          /^(?:quote_number|invoice_number)$/i.test(key);
+        const fieldLimit = isIdentifier || isExactDateOrTimestamp || isExactDisplayIdentity
           ? 180
           : /(^|_)(status|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
             ? Math.min(180, maxStringChars)
@@ -194,7 +199,7 @@ export function compactInnerMeContextForModel(value, options = {}) {
       }
     }
     result.context_compaction_note =
-      "Emergency size-reduction mode: business-critical records retain only selected operational fields; follow-ups and communication streams may be sampled to fit the provider budget; optional InnerMe business-brain details were omitted. Use workspace_source_record_counts and workspace_model_context_record_counts for counts before row compaction, workspace_compacted_record_counts for rows shown in detail, and do not treat the compacted record lists as the full workspace.";
+      "Emergency compaction keeps key business fields and exact names/dates, but samples some records. Source/model counts are pre-compaction counts; workspace_compacted_record_counts is the detail sample only. Optional business-brain details are omitted. Do not infer totals from sampled rows.";
   }
   return result;
 }
