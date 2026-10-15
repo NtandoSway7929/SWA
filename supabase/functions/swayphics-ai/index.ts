@@ -9520,7 +9520,7 @@ Deno.serve(async (req) => {
     const { data: steps, error: stepsError } = await authSupabase
       .from("innerme_execution_steps")
       .select(
-        "id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes",
+        "id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,started_at,linked_task_id,notes",
       )
       .eq("plan_id", planId)
       .order("step_order", { ascending: true });
@@ -10020,7 +10020,7 @@ Deno.serve(async (req) => {
 
     const { data: step, error: stepError } = await authSupabase
       .from("innerme_execution_steps")
-      .select("id,status,linked_task_id")
+      .select("id,status,linked_task_id,started_at")
       .eq("id", proposal.step_id)
       .eq("plan_id", proposal.plan_id)
       .maybeSingle();
@@ -10032,6 +10032,18 @@ Deno.serve(async (req) => {
           detail: stepError?.message || null,
         },
         400,
+        origin,
+      );
+    }
+
+    if (String(step.status || "") !== "in_progress" || !step.started_at) {
+      return json(
+        {
+          error: "Start this execution step through the InnerMe run controller before executing its approved action.",
+          code: "EXECUTION_STEP_NOT_STARTED",
+          workspace_changed: false,
+        },
+        409,
         origin,
       );
     }
