@@ -233,6 +233,7 @@ export function buildInnerMeWorkspaceContextForModel(context, message, nowMs = D
 const INNERME_EMAIL_BODY_INTENT_PATTERNS = Object.freeze([
   /\b(?:read|summari[sz]e|quote|extract|explain|review|analyse|analyze|rewrite|translate)\b.{0,100}\b(?:email|emails|inbox|mailbox|message|messages|thread|reply|replies|response|responses)\b/i,
   /\b(?:email|emails|message|messages|thread|reply|replies)\b.{0,100}\b(?:content|body|says|said|wrote|received|response|quote|text|summary)\b/i,
+  /\b(?:emails?|messages?|threads?)\b.{0,100}\b(?:summari[sz]e|quote|extract|explain|review|analyse|analyze|translate)\b/i,
   /\b(?:what did (?:they|he|she|the client|[a-z][a-z0-9'’-]*) say|what does (?:the|this|that|their|the latest) (?:email|message|reply|thread) say|did .{1,60}\b(?:reply|respond|answer)|has .{1,60}\b(?:replied|responded|answered)|latest reply|their reply)\b/i,
 ]);
 
