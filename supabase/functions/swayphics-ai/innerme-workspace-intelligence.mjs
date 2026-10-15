@@ -124,6 +124,49 @@ export function buildInnerMeWorkspaceContextForModel(context, message, nowMs = D
     !scheduledBeyondPlanningWindow(row, nowMs, horizonMs)
   );
 
+  // Reconcile the lead's own next_follow_up field with linked active follow-up
+  // records. A blank lead field does not mean "unscheduled" when a pending
+  // follow_ups row already has a date.
+  const activeFollowupStatuses = new Set(["pending", "scheduled", "open"]);
+  const pendingFollowupsByLeadId = new Map();
+  for (const followup of followups) {
+    const leadId = String(followup?.lead_id || "");
+    const status = String(followup?.status || "").trim().toLowerCase();
+    if (!leadId || !activeFollowupStatuses.has(status) || !followup?.scheduled_for) continue;
+    const rows = pendingFollowupsByLeadId.get(leadId) || [];
+    rows.push(followup);
+    pendingFollowupsByLeadId.set(leadId, rows);
+  }
+  for (const rows of pendingFollowupsByLeadId.values()) {
+    rows.sort((a, b) => String(a?.scheduled_for || "").localeCompare(String(b?.scheduled_for || "")));
+  }
+
+  const annotatedLeads = leads.map((lead) => {
+    const leadId = String(lead?.id || "");
+    const linked = pendingFollowupsByLeadId.get(leadId) || [];
+    const earliestLinkedFollowup = linked[0] || null;
+    const leadDate = lead?.next_follow_up || null;
+    const linkedDate = earliestLinkedFollowup?.scheduled_for || null;
+    const effectiveDate = linkedDate || leadDate;
+    return {
+      ...withScheduleClass(lead, "next_follow_up", "next_follow_up_timing", businessDate),
+      effective_follow_up_date: effectiveDate,
+      effective_follow_up_timing: classifySchedule(effectiveDate, businessDate),
+      effective_follow_up_source: linkedDate ? "linked_pending_follow_up" : leadDate ? "lead_record" : "none",
+      linked_pending_followup_count: linked.length,
+      follow_up_schedule_conflict: Boolean(leadDate && linkedDate && String(leadDate).slice(0, 10) !== String(linkedDate).slice(0, 10)),
+    };
+  });
+
+  const followUpScheduleConflicts = annotatedLeads
+    .filter((lead) => lead.follow_up_schedule_conflict)
+    .map((lead) => ({
+      lead_id: lead.id || null,
+      business_name: lead.business_name || "Unknown lead",
+      lead_next_follow_up: lead.next_follow_up || null,
+      earliest_linked_pending_follow_up: lead.effective_follow_up_date,
+    }));
+
   const notes = [
     ...(Array.isArray(context.workspace_intelligence_notes) ? context.workspace_intelligence_notes : []),
   ];
@@ -145,9 +188,7 @@ export function buildInnerMeWorkspaceContextForModel(context, message, nowMs = D
 
   const nextContext = {
     ...context,
-    leads: leads.map((row) =>
-      withScheduleClass(row, "next_follow_up", "next_follow_up_timing", businessDate)
-    ),
+    leads: annotatedLeads,
     followups: immediateFollowups.map((row) =>
       withScheduleClass(row, "scheduled_for", "scheduled_timing", businessDate)
     ),
@@ -156,12 +197,22 @@ export function buildInnerMeWorkspaceContextForModel(context, message, nowMs = D
     workspace_temporal_guidance: {
       business_date_johannesburg: businessDate,
       rule: "overdue=date before business date; due_today=date equal to business date; upcoming=date after business date; future dates must never be labelled overdue",
+      // Effective counts use the earliest linked active follow-up when available,
+      // falling back to the lead-level date only if no linked record is scheduled.
       lead_followup_date_counts: {
+        overdue: annotatedLeads.filter((row) => row.effective_follow_up_timing === "overdue").length,
+        due_today: annotatedLeads.filter((row) => row.effective_follow_up_timing === "due_today").length,
+        upcoming: annotatedLeads.filter((row) => row.effective_follow_up_timing === "upcoming").length,
+        unscheduled_or_unknown: annotatedLeads.filter((row) => row.effective_follow_up_timing === "unscheduled_or_unknown").length,
+      },
+      lead_recorded_next_follow_up_date_counts: {
         overdue: leads.filter((row) => classifySchedule(row?.next_follow_up, businessDate) === "overdue").length,
         due_today: leads.filter((row) => classifySchedule(row?.next_follow_up, businessDate) === "due_today").length,
         upcoming: leads.filter((row) => classifySchedule(row?.next_follow_up, businessDate) === "upcoming").length,
         unscheduled_or_unknown: leads.filter((row) => classifySchedule(row?.next_follow_up, businessDate) === "unscheduled_or_unknown").length,
       },
+      lead_followup_schedule_conflict_count: followUpScheduleConflicts.length,
+      lead_followup_schedule_conflicts: followUpScheduleConflicts.slice(0, 10),
       scheduled_followup_record_counts: {
         overdue: immediateFollowups.filter((row) => classifySchedule(row?.scheduled_for, businessDate) === "overdue").length,
         due_today: immediateFollowups.filter((row) => classifySchedule(row?.scheduled_for, businessDate) === "due_today").length,
