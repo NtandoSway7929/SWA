@@ -115,7 +115,8 @@ Deno.test("explicit focused records load allowlisted relationship collections", 
 
 Deno.test("unqueried collection counts and summary metrics are not represented as zero", () => {
   const source: any = fixture();
-  source.workspace_loaded_collections = ["preferences"];
+  source.workspace_loaded_collections = [];
+  source.workspace_loaded_business_brain_collections = ["preferences"];
   const selected: any = buildInnerMeProgressiveContext(source, "Explain what caching means.");
   const leadManifest = selected.workspace_manifest.collections.leads;
   assert(leadManifest.query_executed === false, "unqueried lead table must be explicitly marked");
@@ -124,6 +125,10 @@ Deno.test("unqueried collection counts and summary metrics are not represented a
   assert(selected.operational_summary.lead_counts === undefined, "unloaded lead metrics must be omitted");
   assert(selected.operational_summary.task_summary === undefined, "unloaded task metrics must be omitted");
   assert(typeof selected.operational_summary.metric_scope === "string", "remaining metrics must state their bounded sample scope");
+  assert(selected.innerme_business_brain.playbook_index === undefined, "unqueried playbooks must not appear as an empty registry");
+  assert(selected.innerme_business_brain.agent_index === undefined, "unqueried agents must not appear as an empty registry");
+  assert(selected.innerme_business_brain_manifest.playbooks.query_executed === false, "unqueried registry status must be explicit");
+  assert(selected.innerme_business_brain_manifest.preferences.query_executed === true, "loaded preference query must be marked");
 });
 
 Deno.test("manifest-only questions do not expand unrelated workspace rows", () => {
