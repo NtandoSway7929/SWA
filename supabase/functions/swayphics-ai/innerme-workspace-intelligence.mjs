@@ -231,7 +231,7 @@ export function buildInnerMeWorkspaceContextForModel(context, message, nowMs = D
 
 
 const INNERME_EMAIL_BODY_INTENT_PATTERNS = Object.freeze([
-  /\b(?:read|summari[sz]e|quote|extract|explain|show|find|review|analyse|analyze|rewrite|translate)\b.{0,100}\b(?:email|emails|inbox|mailbox|message|messages|thread|reply|replies|response|responses)\b/i,
+  /\b(?:read|summari[sz]e|quote|extract|explain|review|analyse|analyze|rewrite|translate)\b.{0,100}\b(?:email|emails|inbox|mailbox|message|messages|thread|reply|replies|response|responses)\b/i,
   /\b(?:email|emails|message|messages|thread|reply|replies)\b.{0,100}\b(?:content|body|says|said|wrote|received|response|quote|text|summary)\b/i,
   /\b(?:what did (?:they|he|she|the client|[a-z][a-z0-9'’-]*) say|what does (?:the|this|that|their|the latest) (?:email|message|reply|thread) say|did .{1,60}\b(?:reply|respond|answer)|has .{1,60}\b(?:replied|responded|answered)|latest reply|their reply)\b/i,
 ]);
@@ -314,8 +314,11 @@ export function selectInnerMeEmailBodyIds({
   );
 
   const hasKnownNamedTarget = leadIds.size > 0 || clientIds.size > 0;
-  const hasExplicitRecipientOrSubject = /\b(?:from|for|about|regarding|with|of)\s+[^?.!,]{2,80}/i.test(String(message || ""));
-  const hasNamedTarget = hasKnownNamedTarget || hasExplicitRecipientOrSubject;
+  const normalizedMessage = String(message || "");
+  const hasExplicitRecipientOrSubject = /\\b(?:from|for|about|regarding|with|of)\\s+[^?.!,]{2,80}/i.test(normalizedMessage);
+  const hasUnresolvedNamedPerson = /\\b(?:did|has|have|what did|what has)\\s+(?!they\\b|them\\b|he\\b|she\\b|we\\b|you\\b|the client\\b|the lead\\b|anyone\\b|someone\\b)([a-z][a-z0-9'’-]+(?:\\s+[a-z][a-z0-9'’-]+){0,3})\\s+(?:reply|respond|answer|say|write|send|email|message)\\b/i.test(normalizedMessage);
+
+  const hasNamedTarget = hasKnownNamedTarget || hasExplicitRecipientOrSubject || hasUnresolvedNamedPerson;
   const candidates = hasNamedTarget
     ? rows.filter((row) =>
         leadIds.has(String(row?.lead_id || "")) ||
