@@ -17,6 +17,7 @@ import {
 import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
 import {
   buildInnerMeProgressiveContext,
+  planInnerMeWorkspaceRetrieval,
   resolveInnerMeFocusedRecordDescriptor,
 } from "./innerme-context-manifest.mjs";
 import {
@@ -6494,6 +6495,22 @@ Deno.serve(async (req) => {
    */
   const workspaceSupabase = authSupabase;
 
+  const workspaceQueryPlan = planInnerMeWorkspaceRetrieval({
+    action,
+    message,
+    history: conversationHistory,
+    focusedRecord: body.focused_record,
+  });
+  const loadedWorkspaceCollections = new Set(workspaceQueryPlan.collections);
+  const loadedBusinessBrainCollections = new Set(workspaceQueryPlan.businessBrainCollections);
+  const emptyWorkspaceQuery = () => ({ data: [], error: null });
+  // Supabase PostgREST query builders are PromiseLike/thenable values, not
+  // necessarily native Promise instances. Normalize both paths for Promise.all.
+  const queryWorkspaceCollection = (name: string, load: () => PromiseLike<any>): Promise<any> =>
+    loadedWorkspaceCollections.has(name) ? Promise.resolve(load()) : Promise.resolve(emptyWorkspaceQuery());
+  const queryBusinessBrainCollection = (name: string, load: () => PromiseLike<any>): Promise<any> =>
+    loadedBusinessBrainCollections.has(name) ? Promise.resolve(load()) : Promise.resolve(emptyWorkspaceQuery());
+
   const [
     tasks,
     leads,
@@ -6516,26 +6533,26 @@ Deno.serve(async (req) => {
     innermeAgents,
     predictiveForecasts,
   ] = await Promise.all([
-    workspaceSupabase.from("tasks").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("leads").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("follow_ups").select("*").order("scheduled_for", { ascending: true }).limit(100),
-    workspaceSupabase.from("clients").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("client_projects").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("quotes").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("payments").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("website_enquiries").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("invoices").select("*").order("created_at", { ascending: false }).limit(100),
-    workspaceSupabase.from("client_portal_requests").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("communication_logs").select("*").order("contacted_at", { ascending: false }).limit(100),
-    workspaceSupabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("email_messages").select("id,direction,mailbox,thread_id,from_name,from_email,to_email,subject,received_at,is_read,client_id,lead_id,created_at,updated_at").eq("mailbox", "info@swayphics.co.za").order("received_at", { ascending: false }).limit(100),
-    workspaceSupabase.from("innerme_decisions").select("id,title,decision,context,rationale,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(50),
-    workspaceSupabase.from("innerme_playbooks").select("id,name,purpose,definition_of_done,steps,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(30),
-    workspaceSupabase.from("innerme_experiments").select("id,name,hypothesis,action,success_metric,status,review_date,result,learning,created_at,updated_at").in("status",["idea","running"]).order("updated_at",{ascending:false}).limit(30),
-    workspaceSupabase.from("innerme_insights").select("id,title,insight,evidence,confidence,category,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(50),
-    workspaceSupabase.from("innerme_preferences").select("id,category,preference_key,value,source,updated_at").order("updated_at",{ascending:false}).limit(100),
-    workspaceSupabase.from("innerme_agents").select("id,slug,name,purpose,inputs,outputs,definition_of_done,trust_stage,permissions,status,instructions,updated_at").eq("status","active").order("name",{ascending:true}).limit(30),
-    workspaceSupabase.from("innerme_predictive_forecasts").select("id,forecast_key,forecast_type,horizon_days,forecast_date,status,confidence,unit,baseline_value,projected_value,delta_value,direction,metric_label,statement,assumptions,evidence,evidence_window_start,evidence_window_end,horizon_start,horizon_end,verification_status,actual_value,forecast_error,verified_at,updated_at").eq("forecast_date",new Date().toISOString().slice(0,10)).order("horizon_days",{ascending:true}).limit(30),
+    queryWorkspaceCollection("tasks", () => workspaceSupabase.from("tasks").select("*").order("created_at", { ascending: false }).limit(60)),
+    queryWorkspaceCollection("leads", () => workspaceSupabase.from("leads").select("*").order("created_at", { ascending: false }).limit(60)),
+    queryWorkspaceCollection("followups", () => workspaceSupabase.from("follow_ups").select("*").order("scheduled_for", { ascending: true }).limit(100)),
+    queryWorkspaceCollection("clients", () => workspaceSupabase.from("clients").select("*").order("created_at", { ascending: false }).limit(60)),
+    queryWorkspaceCollection("projects", () => workspaceSupabase.from("client_projects").select("*").order("created_at", { ascending: false }).limit(60)),
+    queryWorkspaceCollection("quotes", () => workspaceSupabase.from("quotes").select("*").order("created_at", { ascending: false }).limit(60)),
+    queryWorkspaceCollection("payments", () => workspaceSupabase.from("payments").select("*").order("created_at", { ascending: false }).limit(60)),
+    queryWorkspaceCollection("enquiries", () => workspaceSupabase.from("website_enquiries").select("*").order("created_at", { ascending: false }).limit(60)),
+    queryWorkspaceCollection("invoices", () => workspaceSupabase.from("invoices").select("*").order("created_at", { ascending: false }).limit(100)),
+    queryWorkspaceCollection("portal_requests", () => workspaceSupabase.from("client_portal_requests").select("*").order("created_at", { ascending: false }).limit(60)),
+    queryWorkspaceCollection("communications", () => workspaceSupabase.from("communication_logs").select("*").order("contacted_at", { ascending: false }).limit(100)),
+    queryWorkspaceCollection("activities", () => workspaceSupabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(60)),
+    queryWorkspaceCollection("email_messages", () => workspaceSupabase.from("email_messages").select("id,direction,mailbox,thread_id,from_name,from_email,to_email,subject,received_at,is_read,client_id,lead_id,created_at,updated_at").eq("mailbox", "info@swayphics.co.za").order("received_at", { ascending: false }).limit(100)),
+    queryBusinessBrainCollection("decisions", () => workspaceSupabase.from("innerme_decisions").select("id,title,decision,context,rationale,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(50)),
+    queryBusinessBrainCollection("playbooks", () => workspaceSupabase.from("innerme_playbooks").select("id,name,purpose,definition_of_done,steps,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(30)),
+    queryBusinessBrainCollection("active_experiments", () => workspaceSupabase.from("innerme_experiments").select("id,name,hypothesis,action,success_metric,status,review_date,result,learning,created_at,updated_at").in("status",["idea","running"]).order("updated_at",{ascending:false}).limit(30)),
+    queryBusinessBrainCollection("insights", () => workspaceSupabase.from("innerme_insights").select("id,title,insight,evidence,confidence,category,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(50)),
+    queryBusinessBrainCollection("preferences", () => workspaceSupabase.from("innerme_preferences").select("id,category,preference_key,value,source,updated_at").order("updated_at",{ascending:false}).limit(100)),
+    queryBusinessBrainCollection("agents", () => workspaceSupabase.from("innerme_agents").select("id,slug,name,purpose,inputs,outputs,definition_of_done,trust_stage,permissions,status,instructions,updated_at").eq("status","active").order("name",{ascending:true}).limit(30)),
+    queryBusinessBrainCollection("predictive_business_intelligence", () => workspaceSupabase.from("innerme_predictive_forecasts").select("id,forecast_key,forecast_type,horizon_days,forecast_date,status,confidence,unit,baseline_value,projected_value,delta_value,direction,metric_label,statement,assumptions,evidence,evidence_window_start,evidence_window_end,horizon_start,horizon_end,verification_status,actual_value,forecast_error,verified_at,updated_at").eq("forecast_date",new Date().toISOString().slice(0,10)).order("horizon_days",{ascending:true}).limit(30)),
   ]);
 
   // Bulk mailbox context carries metadata only. Email text can be long or sensitive,
@@ -6704,20 +6721,27 @@ Deno.serve(async (req) => {
     user_email: userData.user.email || "",
     query_failures: queryFailures,
     workspace_focused_record_lookup_status: focusedRecordLookupStatus,
+    workspace_loaded_collections: workspaceQueryPlan.collections,
+    workspace_loaded_business_brain_collections: workspaceQueryPlan.businessBrainCollections,
+    workspace_retrieval_plan: {
+      profile: workspaceQueryPlan.profile,
+      reason: workspaceQueryPlan.reason,
+      loaded_business_brain_collections: workspaceQueryPlan.businessBrainCollections,
+    },
     workspace_source_record_counts: {
-      tasks: Array.isArray(tasks.data) ? tasks.data.length : 0,
-      leads: Array.isArray(leads.data) ? leads.data.length : 0,
-      followups: Array.isArray(followups.data) ? followups.data.length : 0,
-      clients: Array.isArray(clients.data) ? clients.data.length : 0,
-      projects: Array.isArray(projects.data) ? projects.data.length : 0,
-      quotes: Array.isArray(quotes.data) ? quotes.data.length : 0,
-      payments: Array.isArray(payments.data) ? payments.data.length : 0,
-      enquiries: Array.isArray(enquiries.data) ? enquiries.data.length : 0,
-      invoices: Array.isArray(invoices.data) ? invoices.data.length : 0,
-      portal_requests: Array.isArray(portalRequests.data) ? portalRequests.data.length : 0,
-      communications: Array.isArray(communications.data) ? communications.data.length : 0,
-      activities: Array.isArray(activities.data) ? activities.data.length : 0,
-      email_messages: Array.isArray(emailMessages.data) ? emailMessages.data.length : 0,
+      tasks: loadedWorkspaceCollections.has("tasks") ? (Array.isArray(tasks.data) ? tasks.data.length : 0) : null,
+      leads: loadedWorkspaceCollections.has("leads") ? (Array.isArray(leads.data) ? leads.data.length : 0) : null,
+      followups: loadedWorkspaceCollections.has("followups") ? (Array.isArray(followups.data) ? followups.data.length : 0) : null,
+      clients: loadedWorkspaceCollections.has("clients") ? (Array.isArray(clients.data) ? clients.data.length : 0) : null,
+      projects: loadedWorkspaceCollections.has("projects") ? (Array.isArray(projects.data) ? projects.data.length : 0) : null,
+      quotes: loadedWorkspaceCollections.has("quotes") ? (Array.isArray(quotes.data) ? quotes.data.length : 0) : null,
+      payments: loadedWorkspaceCollections.has("payments") ? (Array.isArray(payments.data) ? payments.data.length : 0) : null,
+      enquiries: loadedWorkspaceCollections.has("enquiries") ? (Array.isArray(enquiries.data) ? enquiries.data.length : 0) : null,
+      invoices: loadedWorkspaceCollections.has("invoices") ? (Array.isArray(invoices.data) ? invoices.data.length : 0) : null,
+      portal_requests: loadedWorkspaceCollections.has("portal_requests") ? (Array.isArray(portalRequests.data) ? portalRequests.data.length : 0) : null,
+      communications: loadedWorkspaceCollections.has("communications") ? (Array.isArray(communications.data) ? communications.data.length : 0) : null,
+      activities: loadedWorkspaceCollections.has("activities") ? (Array.isArray(activities.data) ? activities.data.length : 0) : null,
+      email_messages: loadedWorkspaceCollections.has("email_messages") ? (Array.isArray(emailMessages.data) ? emailMessages.data.length : 0) : null,
     },
     tasks: compactRows(tasks.data || []),
     leads: compactRows(leads.data || []),
@@ -7510,8 +7534,8 @@ Deno.serve(async (req) => {
     return Boolean(due) && due < businessToday;
   });
 
-  const leadById = new Map(
-    (leads.data || []).map(function (lead: any) {
+  const leadById = new Map<string, any>(
+    (leads.data || []).map(function (lead: any): [string, any] {
       return [String(lead?.id || ""), lead];
     }),
   );

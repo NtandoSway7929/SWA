@@ -30,14 +30,26 @@ A loaded row name in the current bounded query window can also cause its collect
 
 The initial workspace retrieval uses bounded lists. If a UI-selected record ID is not found in those lists, the Edge Function now performs an exact lookup against an allowlisted table using the authenticated admin Supabase client. RLS remains in force. Supported types are restricted to the known focused-record types. Lookup failure is recorded as a query failure and explicit lookup status; a missing record is not fabricated.
 
-## What is and is not improved
+## Query-level retrieval
 
-This implementation reduces the **model-facing detail context** and makes exact UI focus reliable beyond the recent-row window. The existing Edge Function still performs its established bounded workspace reads before selecting context because it currently calculates operational summaries and supports several specialized action paths from those results. Therefore this change does not yet reduce the number of database reads on every request. Query-level conditional loading and database-side aggregate counts should be a later change after this selector is validated.
+The workspace query plan is now built **before the Supabase reads** for routine assistant chat. It uses the current question, a small history window, an optional UI-focused record, and a deterministic list of permitted collections.
 
-No database migration is required. No production deployment or live provider experiment is part of this PR. Existing execution-contract checks, Phase 30 policy gates, explicit approval, confirmation and provider quota checks are unchanged.
+- Routine non-business questions skip all operational tables and load only global preferences.
+- Topic-focused requests query the matching domain plus relationship collections, for example invoices with payments and clients, or leads with linked follow-ups, communications, quotes, email metadata and clients.
+- A name-only follow-up such as “What about Maisha's Touch?” receives a bounded entity-resolution fallback across leads, clients, tasks and projects.
+- An explicit focused record selects its allowlisted table and the relationships required for that record type. Exact-ID lookup still uses the authenticated admin client and remains subject to RLS.
+- Broad business reviews/daily priorities keep the full operational evidence set. Non-chat and specialised action paths retain their established full-context behavior for compatibility.
+
+Query-skipped collections use a distinct `query_executed: false` manifest state. Their `loaded_records` is `null`, no record index is manufactured, and metrics for collections that were not queried are omitted rather than represented as zero. Remaining operational metrics are explicitly described as derived from bounded results, not guaranteed database-wide totals. This avoids false certainty while reducing reads.
+
+## Remaining limit: database-wide summaries
+
+The separate database-side aggregate RPC is **not implemented by this change**. The current operational summaries are still calculated from bounded query results; their sample scope is now disclosed rather than overstated. Before replacing them with SQL aggregates, the isolated **Swayphics InnerMe Test** project needs a faithful operational schema: the current isolated database does not contain most of the production workspace tables used by these summaries. An aggregate query tested against that incomplete schema would not validate the production data flow.
+
+No schema migration or provider call is required for query planning itself. Execution-contract validation, Phase 30 safety gates, explicit approval, confirmation and provider quota checks remain unchanged. This branch has not been deployed by this change.
 
 ## Validation
 
-`innerme-context-manifest.test.ts` verifies manifest-only behavior, topic-focused domain selection, broad operations context, record-name expansion, focused-record precedence, on-demand playbook detail, count semantics, and allowlisted exact-lookup descriptors.
+`innerme-context-manifest.test.ts` now covers query planning, selective invoice reads, entity-only lead follow-up, broad-context preservation, focused-record relationships, omitted/unqueried metrics, prior progressive manifest behavior, on-demand playbook detail and allowlisted exact-lookup descriptors. These tests require no Gemini provider calls.
 
-The existing `Validate InnerMe Edge Function` workflow runs these tests without making Gemini requests.
+The existing `Validate InnerMe Edge Function` workflow runs these tests. CI and rollout status must be checked before treating the branch as validated or live.
