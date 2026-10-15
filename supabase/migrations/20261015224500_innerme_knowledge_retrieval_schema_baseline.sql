@@ -142,7 +142,7 @@ BEGIN
       LANGUAGE plpgsql
       AS $refresh_embedding_text_body$
       BEGIN
-        NEW.embedding_text := trim(concat_ws(E'\\n',
+        NEW.embedding_text := trim(concat_ws(E'\n',
           NEW.title,
           'Domain: ' || NEW.domain,
           'Type: ' || NEW.knowledge_type,
