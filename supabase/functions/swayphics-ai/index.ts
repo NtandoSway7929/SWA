@@ -10105,6 +10105,23 @@ Deno.serve(async (req) => {
     let sideEffectStarted = false;
 
     try {
+      // The proposal is now claimed as executing. Recheck its step before any
+      // external/workspace mutation to close the race with a concurrent
+      // administrator completing or blocking the step after the earlier read.
+      const { data: executionStepState, error: executionStepStateError } = await authSupabase
+        .from("innerme_execution_steps")
+        .select("id,status,started_at")
+        .eq("id", proposal.step_id)
+        .maybeSingle();
+      if (
+        executionStepStateError ||
+        !executionStepState ||
+        String(executionStepState.status || "") !== "in_progress" ||
+        !executionStepState.started_at
+      ) {
+        throw new Error("The execution step changed before the side effect began. No task or email operation was attempted; reconcile the audit record before retrying.");
+      }
+
       if (proposal.action_type === "create_task") {
         const payload = proposal.payload || {};
         const dueOffsetRaw = Number(payload?.due_offset_days);
