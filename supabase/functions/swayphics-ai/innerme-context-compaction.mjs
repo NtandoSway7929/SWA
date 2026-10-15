@@ -167,7 +167,12 @@ export function compactInnerMeContextForModel(value, options = {}) {
         if (depth > 0 && Object.keys(output).length >= maxObjectKeys) break;
         const isIdentifier = /^(?:id|.+_id)$/i.test(key);
         const isExactDateOrTimestamp = /(?:^date$|_date$|_at$|^scheduled_for$|^next_follow_up$|^valid_until$|^due_date$|^issue_date$|^completed_at$)/i.test(key);
-        const fieldLimit = isIdentifier || isExactDateOrTimestamp
+        // Exact record labels must survive emergency mode. A 28-character
+        // content budget must not silently rename the business being discussed.
+        const isExactDisplayIdentity =
+          /(?:^|_)(?:business_name|contact_name|name|title)$/i.test(key) ||
+          /^(?:quote_number|invoice_number)$/i.test(key);
+        const fieldLimit = isIdentifier || isExactDateOrTimestamp || isExactDisplayIdentity
           ? 180
           : /(^|_)(status|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
             ? Math.min(180, maxStringChars)
