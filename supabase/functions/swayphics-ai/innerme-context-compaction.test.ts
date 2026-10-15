@@ -320,3 +320,13 @@ Deno.test("final request-envelope budget compaction keeps lead identities and ti
   assert(compacted.workspace_source_record_counts.leads === 19, "unfiltered source counts must survive final-budget compaction");
   assert(source.leads.length === 19 && source.communications.length === 80, "compaction must not mutate the source workspace");
 });
+
+
+Deno.test("email body fields keep the ordinary string budget unless content is explicitly requested", () => {
+  const source = { email_messages: [{ id: "email-1", text_body: "x".repeat(1500) }] };
+  const ordinary = compactInnerMeContextForModel(source, { maxStringChars: 220 });
+  assert(ordinary.email_messages[0].text_body.length === 220, "default compaction must keep email body text at the normal context limit");
+  const explicit = compactInnerMeContextForModel(source, { maxStringChars: 220, emailBodyMaxChars: 1200 });
+  assert(explicit.email_messages[0].text_body.length === 1200, "explicit email requests may retain a useful but bounded excerpt");
+  assert(source.email_messages[0].text_body.length === 1500, "compaction must not mutate source email content");
+});
