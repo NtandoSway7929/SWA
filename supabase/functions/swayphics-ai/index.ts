@@ -693,6 +693,8 @@ function buildPublicDiagnosticLedger(
 }
 
 Deno.serve(async (req) => {
+  const requestStartedAt = performance.now();
+  const requestId = crypto.randomUUID();
   const origin =
     req.headers.get("origin") || "";
 
@@ -6495,6 +6497,7 @@ Deno.serve(async (req) => {
    * instead of depending on a separate service-role secret.
    */
   const workspaceSupabase = authSupabase;
+  const workspaceRetrievalStartedAt = performance.now();
 
   const workspaceQueryPlan = planInnerMeWorkspaceRetrieval({
     action,
@@ -6678,6 +6681,20 @@ Deno.serve(async (req) => {
     }
   }
 
+  const workspaceRetrievalLatencyMs = Math.max(
+    0,
+    Math.round(performance.now() - workspaceRetrievalStartedAt),
+  );
+  const exactFocusedLookupAttempted =
+    Boolean(focusedRecordLookupStatus) &&
+    focusedRecordLookupStatus?.state !== "found_in_bounded_query";
+  const workspaceDataReadCallCount =
+    workspaceQueryPlan.collections.length +
+    workspaceQueryPlan.businessBrainCollections.length +
+    (workspaceQueryPlan.collections.length > 0 ? 1 : 0) +
+    (emailBodyIds.length > 0 ? 1 : 0) +
+    (exactFocusedLookupAttempted ? 1 : 0);
+
   const queryResults = {
     tasks,
     leads,
@@ -6725,6 +6742,7 @@ Deno.serve(async (req) => {
     return field("year") + "-" + field("month") + "-" + field("day");
   })();
 
+  const workspaceContextAssemblyStartedAt = performance.now();
   const context = {
     generated_at: new Date().toISOString(),
     business_date_johannesburg: businessDateJohannesburg,
@@ -6783,6 +6801,12 @@ Deno.serve(async (req) => {
       return value;
     }),
   );
+  const workspaceContextAssemblyLatencyMs = Math.max(
+    0,
+    Math.round(performance.now() - workspaceContextAssemblyStartedAt),
+  );
+  let progressiveWorkspaceAssemblyLatencyMsForRequest: number | null = null;
+  let progressiveWorkspaceJsonBytesForRequest: number | null = null;
 
   function buildFocusedRecord(focusedRecord: any) {
     if (!focusedRecord || !focusedRecord.type || !focusedRecord.id) {
@@ -7809,7 +7833,12 @@ Deno.serve(async (req) => {
       summary.summary_source === "database_aggregate" &&
       !workspaceSummary?.error &&
       metricGroups.length > 0;
+    const progressiveContextAssemblyStartedAt = performance.now();
     const probeContext: any = buildInnerMeProgressiveContext(safeContext, message);
+    const progressiveContextAssemblyLatencyMs = Math.max(
+      0,
+      Math.round(performance.now() - progressiveContextAssemblyStartedAt),
+    );
     const progressiveWorkspaceJsonBytes = new TextEncoder()
       .encode(JSON.stringify(probeContext))
       .byteLength;
@@ -7826,21 +7855,17 @@ Deno.serve(async (req) => {
       },
       0,
     );
-    const exactFocusedLookupAttempted =
-      Boolean(focusedRecordLookupStatus) &&
-      focusedRecordLookupStatus?.state !== "found_in_bounded_query";
-    const workspaceDataReadCallCount =
-      workspaceQueryPlan.collections.length +
-      workspaceQueryPlan.businessBrainCollections.length +
-      (workspaceQueryPlan.collections.length > 0 ? 1 : 0) +
-      (emailBodyIds.length > 0 ? 1 : 0) +
-      (exactFocusedLookupAttempted ? 1 : 0);
 
     return json({
       ok: aggregateReady,
       read_only: true,
       service: "swayphics-ai",
       check: "workspace_retrieval_and_aggregate",
+      request_id: requestId,
+      server_elapsed_ms: Math.max(0, Math.round(performance.now() - requestStartedAt)),
+      workspace_retrieval_ms: workspaceRetrievalLatencyMs,
+      workspace_context_assembly_ms: workspaceContextAssemblyLatencyMs,
+      progressive_context_assembly_ms: progressiveContextAssemblyLatencyMs,
       retrieval_profile: workspaceQueryPlan.profile,
       queried_collection_count: workspaceQueryPlan.collections.length,
       queried_collections: workspaceQueryPlan.collections,
@@ -11252,6 +11277,7 @@ Answer the admin's question directly.
 - Do not use Markdown heading markers, bold markers, code fences, or escaped Markdown characters.`;
 
   async function requestGemini(model: string) {
+    const progressiveWorkspaceAssemblyStartedAt = performance.now();
     const modelWorkspace = buildInnerMeWorkspaceContextForModel(safeContext, message);
     const progressiveWorkspace: Record<string, any> = buildInnerMeProgressiveContext(modelWorkspace, message, conversationHistory) as Record<string, any>;
     const workspaceForPrompt = {
@@ -11272,6 +11298,13 @@ Answer the admin's question directly.
         email_messages: Array.isArray(progressiveWorkspace.email_messages) ? progressiveWorkspace.email_messages.length : 0,
       },
     };
+    progressiveWorkspaceAssemblyLatencyMsForRequest = Math.max(
+      0,
+      Math.round(performance.now() - progressiveWorkspaceAssemblyStartedAt),
+    );
+    progressiveWorkspaceJsonBytesForRequest = new TextEncoder()
+      .encode(JSON.stringify(workspaceForPrompt))
+      .byteLength;
     return await guardedGeminiFetch(model, 
       "https://generativelanguage.googleapis.com/v1beta/models/" +
         encodeURIComponent(model) +
@@ -11397,7 +11430,7 @@ Answer the admin's question directly.
     safeContext.focused_record,
   );
   const cloudflareCredentialsConfigured = Boolean(cloudflareToken && cloudflareAccountId);
-  const providerRequestId = crypto.randomUUID();
+  const providerRequestId = requestId;
   const providerTaskCategory = cloudflareWritingEligible ? "copywriting" : "assistant_chat";
   const innerMeChatRoute = providerTaskCategory === "assistant_chat"
     ? selectInnerMeChatRoute(message, conversationHistory, safeContext.focused_record)
@@ -12466,6 +12499,29 @@ Answer the admin's question directly.
 
 
 
+  const requestTotalLatencyMs = Math.max(
+    0,
+    Math.round(performance.now() - requestStartedAt),
+  );
+  console.info("InnerMe request performance breakdown.", {
+    request_id: requestId,
+    retrieval_profile: workspaceQueryPlan.profile,
+    workspace_data_read_call_count: workspaceDataReadCallCount,
+    workspace_retrieval_ms: workspaceRetrievalLatencyMs,
+    workspace_context_assembly_ms: workspaceContextAssemblyLatencyMs,
+    progressive_context_assembly_ms: progressiveWorkspaceAssemblyLatencyMsForRequest,
+    progressive_workspace_json_bytes: progressiveWorkspaceJsonBytesForRequest,
+    total_server_ms: requestTotalLatencyMs,
+  });
+  const serverTiming = [
+    `innerme_workspace_read;dur=${workspaceRetrievalLatencyMs}`,
+    `innerme_context_assembly;dur=${workspaceContextAssemblyLatencyMs}`,
+    ...(progressiveWorkspaceAssemblyLatencyMsForRequest === null
+      ? []
+      : [`innerme_progressive_context;dur=${progressiveWorkspaceAssemblyLatencyMsForRequest}`]),
+    `innerme_total;dur=${requestTotalLatencyMs}`,
+  ].join(", ");
+
   return new Response(
     JSON.stringify({
       answer: cleanAnswer,
@@ -12497,6 +12553,13 @@ Answer the admin's question directly.
       headers: {
         ...corsHeaders(origin),
         "Content-Type": "application/json",
+        "X-InnerMe-Request-ID": requestId,
+        "X-InnerMe-Workspace-Read-Calls": String(workspaceDataReadCallCount),
+        "X-InnerMe-Progressive-Workspace-JSON-Bytes":
+          progressiveWorkspaceJsonBytesForRequest === null
+            ? "unmeasured"
+            : String(progressiveWorkspaceJsonBytesForRequest),
+        "Server-Timing": serverTiming,
       },
     },
   );
