@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url";
 
 export const TEST_SUPABASE_URL = "https://ofqofhnlzbouclvvrmzd.supabase.co";
 export const MAX_PROVIDER_CALLS = 8;
+export const PROVIDER_TIMEOUT_MS = 40000;
 export const SUITE_VERSION = 1;
 export const MODELS = Object.freeze(["gemini-3.5-flash-lite", "gemini-3.8-flash"]);
 
@@ -165,7 +166,7 @@ async function callGemini(model, prompt, apiKey) {
       "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(apiKey),
       {
         method: "POST",
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
