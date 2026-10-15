@@ -280,6 +280,17 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
   const focusCollection = collectionForFocusType(focused?.type);
   const broad = BROAD_OPERATIONS_PATTERN.test(text);
   const domainCollections = selectedCollectionsForText(text);
+  const normalizedQuery = " " + normalizeText(text) + " ";
+  // If a known row's distinctive label is explicitly named, reveal that
+  // collection even when the user doesn't repeat its category word.
+  for (const [key, config] of Object.entries(COLLECTIONS)) {
+    const rows = Array.isArray(context?.[key]) ? context[key] : [];
+    const mentioned = rows.some((row) => config.identityFields.some((field) => {
+      const identity = normalizeText(row?.[field]);
+      return identity.length >= 5 && normalizedQuery.includes(" " + identity + " ");
+    }));
+    if (mentioned) domainCollections.add(key);
+  }
   let profile = broad ? "broad_operations" : "manifest_only";
   let detailCollections = new Set(domainCollections);
 
@@ -323,12 +334,18 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
     };
   }
 
+  const selectedModelCounts = {};
+  for (const key of CORE_COLLECTIONS) {
+    const rows = Array.isArray(context?.[key]) ? context[key] : [];
+    selectedModelCounts[key] = detailCollections.has(key) ? rows.length : 0;
+  }
+
   const selected = {
     generated_at: context?.generated_at ?? null,
     business_date_johannesburg: context?.business_date_johannesburg ?? null,
     query_failures: Array.isArray(context?.query_failures) ? context.query_failures : [],
     workspace_source_record_counts: context?.workspace_source_record_counts ?? {},
-    workspace_model_context_record_counts: {},
+    workspace_model_context_record_counts: selectedModelCounts,
     workspace_manifest: {
       profile,
       reason: broad
