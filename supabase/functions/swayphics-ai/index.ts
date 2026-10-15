@@ -11027,7 +11027,7 @@ Answer the admin's question directly.
 
   async function requestGemini(model: string) {
     const modelWorkspace = buildInnerMeWorkspaceContextForModel(safeContext, message);
-    const progressiveWorkspace = buildInnerMeProgressiveContext(modelWorkspace, message, conversationHistory);
+    const progressiveWorkspace: Record<string, any> = buildInnerMeProgressiveContext(modelWorkspace, message, conversationHistory) as Record<string, any>;
     const workspaceForPrompt = {
       ...progressiveWorkspace,
       workspace_model_context_record_counts: {
