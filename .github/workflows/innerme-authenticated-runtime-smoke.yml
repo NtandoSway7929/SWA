@@ -10,6 +10,9 @@ on:
     branches: ["main"]
     paths:
       - ".github/workflows/innerme-authenticated-runtime-smoke.yml"
+      - "admin-dashboard/index.html"
+      - "admin-dashboard/innerme-knowledge-intelligence.js"
+      - "admin-dashboard/admin-workspace.css"
 
 permissions:
   contents: read
@@ -238,4 +241,83 @@ jobs:
           if not isinstance(rows, list) or rows:
               raise SystemExit("Unexpected controller events exist for the nonexistent synthetic step.")
           print("PASS: no controller event was written by the non-mutating authenticated RPC test.")
+          PY
+
+      - name: Verify published InnerMe dashboard assets on swayphics.co.za
+        shell: bash
+        run: |
+          set -euo pipefail
+          SITE_URL="https://swayphics.co.za/admin-dashboard/index.html"
+          EXPECTED_CSS_REF="admin-workspace.css?v=20261015-run-controller-1"
+          EXPECTED_JS_REF="innerme-knowledge-intelligence.js?v=20261015-run-controller-1"
+          HTML_FILE="/tmp/innerme-published-dashboard.html"
+          CSS_FILE="/tmp/innerme-published-dashboard.css"
+          JS_FILE="/tmp/innerme-published-dashboard.js"
+          trap 'rm -f "$HTML_FILE" "$CSS_FILE" "$JS_FILE"' EXIT
+
+          # Pages deployment runs alongside push-triggered checks. Wait for the
+          # published HTML to expose the expected asset versions, rather than
+          # mistaking the previous deployment for the current one.
+          published_status="000"
+          for attempt in $(seq 1 18); do
+            published_status="$(curl --location --silent --show-error --max-time 15 \
+              -o "$HTML_FILE" -w '%{http_code}' \
+              -H 'Cache-Control: no-cache' "$SITE_URL" || true)"
+            if [[ "$published_status" == "200" ]] \
+              && grep -Fq "$EXPECTED_CSS_REF" "$HTML_FILE" \
+              && grep -Fq "$EXPECTED_JS_REF" "$HTML_FILE"; then
+              break
+            fi
+            echo "Published dashboard is not on the expected controller asset version yet (attempt ${attempt}/18, HTTP ${published_status}); retrying."
+            sleep 5
+          done
+
+          if [[ "$published_status" != "200" ]] \
+            || ! grep -Fq "$EXPECTED_CSS_REF" "$HTML_FILE" \
+            || ! grep -Fq "$EXPECTED_JS_REF" "$HTML_FILE"; then
+            echo "::error::Live dashboard HTML did not expose the controller asset versions after bounded retries."
+            exit 1
+          fi
+
+          curl --location --fail --silent --show-error --max-time 20 \
+            -H 'Cache-Control: no-cache' \
+            "https://swayphics.co.za/admin-dashboard/${EXPECTED_CSS_REF}" \
+            -o "$CSS_FILE"
+          curl --location --fail --silent --show-error --max-time 20 \
+            -H 'Cache-Control: no-cache' \
+            "https://swayphics.co.za/admin-dashboard/${EXPECTED_JS_REF}" \
+            -o "$JS_FILE"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          html = Path("/tmp/innerme-published-dashboard.html").read_text(encoding="utf-8")
+          css = Path("/tmp/innerme-published-dashboard.css").read_text(encoding="utf-8")
+          js = Path("/tmp/innerme-published-dashboard.js").read_text(encoding="utf-8")
+
+          required_html = [
+              "admin-workspace.css?v=20261015-run-controller-1",
+              "innerme-knowledge-intelligence.js?v=20261015-run-controller-1",
+          ]
+          required_js = [
+              "transition_innerme_execution_step",
+              "data-sway-ai-ki-step-transition",
+              "Start step",
+              "Save checkpoint",
+              "Mark verified complete",
+              "Resume step",
+              "sway-ai-ki-execution-step-history",
+          ]
+          missing_html = [value for value in required_html if value not in html]
+          missing_js = [value for value in required_js if value not in js]
+          if missing_html or missing_js:
+              raise SystemExit(
+                  f"Published dashboard is missing required controller references or UI hooks. "
+                  f"HTML: {missing_html}; JavaScript: {missing_js}"
+              )
+          if len(css) < 50000 or ".sway-workspace-main" not in css:
+              raise SystemExit("Published dashboard stylesheet is missing/empty or not the expected workspace stylesheet.")
+          print("PASS: live dashboard HTML references the new controller assets.")
+          print("PASS: live controller JavaScript exposes the run transitions and action handler.")
+          print("PASS: live workspace stylesheet loaded from the custom domain.")
           PY
