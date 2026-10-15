@@ -1278,22 +1278,51 @@
             const allPlans=Array.isArray(plans)?plans:[];
             const planIds=allPlans.map(function(item){return String(item && item.id || "").trim();}).filter(Boolean);
             let steps=[];
+            let stepEventsByStep=new Map();
+            let runControllerAvailable=true;
+            let runControllerWarning=null;
 
             if(planIds.length){
-                const stepsResponse=await fetch(
-                    SUPABASE_URL+
-                        "/rest/v1/innerme_execution_steps?select=id,plan_id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes,created_at,updated_at&plan_id=in.("+planIds.join(",")+")&order=step_order.asc&limit=400",
-                    {method:"GET",headers:authHeaders()}
-                );
-                const stepsData=await stepsResponse.json().catch(function(){return [];});
+                const controllerStepFields="id,plan_id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes,attempt_count,started_at,checkpoint,checkpointed_at,completion_evidence,completed_at,completed_by,blocked_reason,last_error_code,created_at,updated_at";
+                const stepsUrl=SUPABASE_URL+"/rest/v1/innerme_execution_steps?select="+controllerStepFields+"&plan_id=in.("+planIds.join(",")+")&order=step_order.asc&limit=400";
+                let stepsResponse=await fetch(stepsUrl,{method:"GET",headers:authHeaders()});
+                let stepsData=await stepsResponse.json().catch(function(){return [];});
+
                 if(!stepsResponse.ok){
-                    throw new Error(
-                        stepsData && (stepsData.message || stepsData.error || stepsData.hint)
-                            ? String(stepsData.message || stepsData.error || stepsData.hint)
-                            : "Unable to load execution plan steps."
-                    );
+                    // Older schemas remain readable, but hide controller controls until
+                    // the additive run-controller migration is applied successfully.
+                    const legacyUrl=SUPABASE_URL+"/rest/v1/innerme_execution_steps?select=id,plan_id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes,created_at,updated_at&plan_id=in.("+planIds.join(",")+")&order=step_order.asc&limit=400";
+                    stepsResponse=await fetch(legacyUrl,{method:"GET",headers:authHeaders()});
+                    stepsData=await stepsResponse.json().catch(function(){return [];});
+                    if(!stepsResponse.ok){
+                        throw new Error(
+                            stepsData && (stepsData.message || stepsData.error || stepsData.hint)
+                                ? String(stepsData.message || stepsData.error || stepsData.hint)
+                                : "Unable to load execution plan steps."
+                        );
+                    }
+                    runControllerAvailable=false;
+                    runControllerWarning="The durable step controller is not available until its database migration is applied.";
                 }
+
                 steps=Array.isArray(stepsData)?stepsData:[];
+
+                if(runControllerAvailable){
+                    const eventsUrl=SUPABASE_URL+"/rest/v1/innerme_execution_step_events?select=id,plan_id,step_id,event_type,from_status,to_status,attempt_count,note,created_at&plan_id=in.("+planIds.join(",")+")&order=created_at.desc&limit=500";
+                    const eventsResponse=await fetch(eventsUrl,{method:"GET",headers:authHeaders()});
+                    const eventsData=await eventsResponse.json().catch(function(){return [];});
+                    if(!eventsResponse.ok){
+                        runControllerAvailable=false;
+                        runControllerWarning="The step-event ledger could not be read, so run controls are disabled for safety.";
+                    }else{
+                        (Array.isArray(eventsData)?eventsData:[]).forEach(function(item){
+                            const key=String(item && item.step_id || "");
+                            if(!stepEventsByStep.has(key)) stepEventsByStep.set(key,[]);
+                            const rows=stepEventsByStep.get(key);
+                            if(rows.length<6) rows.push(item);
+                        });
+                    }
+                }
             }
 
             const stepsByPlan=new Map();
@@ -1346,6 +1375,9 @@
                 decisions:Array.isArray(decisions)?decisions:[],
                 plans:allPlans,
                 stepsByPlan:stepsByPlan,
+                stepEventsByStep:stepEventsByStep,
+                runControllerAvailable:runControllerAvailable,
+                runControllerWarning:runControllerWarning,
                 actionProposals:actionProposals,
                 policyReviews:policyReviews
             };
