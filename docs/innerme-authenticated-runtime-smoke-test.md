@@ -57,6 +57,7 @@ The workflow never runs on pull requests. It is manual-only, read-only apart fro
 - **PASS / HTTP 404 with the expected error:** the live test user authenticated, passed the admin check, and reached the missing-proposal branch.
 - **PASS / HTTP 200 from the focused workspace health check:** the live Edge Function uses request-aware selection for the finance prompt, returns only the clients, invoices and payments aggregate groups, and reports no failures while reading those selected collections.
 - **PASS / HTTP 200 from the broad workspace health check:** the live Edge Function retains all 13 operational domains and all 14 aggregate groups for daily-priorities work. Both health checks return only metadata and do not call an LLM/provider.
+- **Runtime metrics:** the focused probe reports the number of workspace data-read requests and the serialized byte size of the progressive workspace JSON. The broad probe reports the corresponding read-call count and JSON size. These do not represent full provider prompt tokens or browser round-trip latency; they isolate the workspace retrieval/context portion.
 - **HTTP 401 during sign-in or function invocation:** check the test user's password, confirmation status and token validity.
 - **HTTP 403 from the function:** the test user's UUID is not active in the isolated project's `public.admin_users` table, or the admin check failed.
 - **Any other result:** treat the smoke test as failed; do not interpret it as proof that action execution is safe.

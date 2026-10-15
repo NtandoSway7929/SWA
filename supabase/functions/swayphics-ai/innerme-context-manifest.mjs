@@ -512,7 +512,14 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
   const selectedModelCounts = {};
   for (const key of CORE_COLLECTIONS) {
     const rows = Array.isArray(context?.[key]) ? context[key] : [];
-    selectedModelCounts[key] = detailCollections.has(key) ? rows.length : 0;
+    // A relationship can be relevant to the question but still not queried.
+    // Null means unknown; zero is reserved for a collection actually queried.
+    selectedModelCounts[key] =
+      loadedSet && !loadedSet.has(key)
+        ? null
+        : detailCollections.has(key)
+          ? rows.length
+          : 0;
   }
 
   const selected = {
@@ -541,6 +548,11 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
   };
 
   for (const key of detailCollections) {
+    if (loadedSet && !loadedSet.has(key)) {
+      // Never expose a synthetic empty array for a domain that was not read.
+      selected.workspace_model_context_record_counts[key] = null;
+      continue;
+    }
     if (Array.isArray(context?.[key])) {
       selected[key] = context[key];
       selected.workspace_model_context_record_counts[key] = context[key].length;

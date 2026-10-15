@@ -196,8 +196,16 @@ jobs:
               raise SystemExit(f"Expected topic_focused retrieval profile, got {body!r}")
           if body.get("workspace_query_failure_count") != 0:
               raise SystemExit(f"Focused workspace record reads had query failures: {body!r}")
+          if body.get("workspace_data_read_call_count") != 5:
+              raise SystemExit(f"Expected 5 workspace data read calls (3 domains + preferences + aggregate RPC), got {body!r}")
+          workspace_bytes = body.get("progressive_workspace_json_bytes")
+          if not isinstance(workspace_bytes, int) or not 0 < workspace_bytes < 50000:
+              raise SystemExit(f"Compacted workspace JSON byte count is absent or over the smoke-test budget: {body!r}")
+          if body.get("progressive_detail_collection_count") != 3:
+              raise SystemExit(f"Expected three progressive detail collections, got {body!r}")
           print("PASS: focused finance request queried exactly clients, invoices, and payments.")
           print("PASS: selected workspace reads and the aggregate RPC completed with zero query failures.")
+          print(f"METRIC: focused workspace data read calls={body['workspace_data_read_call_count']}; progressive workspace JSON={workspace_bytes} bytes.")
           print("PASS: exactly three aggregate groups were returned; unrelated lead/task metrics were omitted.")
           print("PASS: the authenticated probe returned metadata only and did not call an LLM/provider.")
           PY
@@ -265,9 +273,15 @@ jobs:
           if missing:
               raise SystemExit(f"Aggregate metric groups were missing: {missing}; result: {body!r}")
           if body.get("retrieval_profile") != "broad_operations":
-              raise SystemExit(f"Expected broad_operations for daily priorities, got {body!r}")
+              raise SystemExit(f"Expected broad_operations for daily priorities, got: {body!r}")
+          if body.get("workspace_data_read_call_count") != 21:
+              raise SystemExit(f"Expected 21 broad workspace data read calls (13 domains + 7 registries + aggregate RPC), got: {body!r}")
+          broad_bytes = body.get("progressive_workspace_json_bytes")
+          if not isinstance(broad_bytes, int) or broad_bytes <= 0:
+              raise SystemExit(f"Broad workspace JSON byte count is absent: {body!r}")
           print("PASS: broad daily-priorities request reached the read-only database aggregate path.")
           print("PASS: all 13 operational domains and all 14 aggregate metric groups were reported.")
+          print(f"METRIC: broad workspace data read calls={body['workspace_data_read_call_count']}; progressive workspace JSON={broad_bytes} bytes.")
           print("PASS: broad health probe returns no business record data and does not call an LLM/provider.")
           PY
 
