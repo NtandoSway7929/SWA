@@ -6506,9 +6506,9 @@ Deno.serve(async (req) => {
   const emptyWorkspaceQuery = () => ({ data: [], error: null });
   // Supabase PostgREST query builders are PromiseLike/thenable values, not
   // necessarily native Promise instances. Normalize both paths for Promise.all.
-  const queryWorkspaceCollection = (name: string, load: () => PromiseLike<any>) =>
+  const queryWorkspaceCollection = (name: string, load: () => PromiseLike<any>): Promise<any> =>
     loadedWorkspaceCollections.has(name) ? Promise.resolve(load()) : Promise.resolve(emptyWorkspaceQuery());
-  const queryBusinessBrainCollection = (name: string, load: () => PromiseLike<any>) =>
+  const queryBusinessBrainCollection = (name: string, load: () => PromiseLike<any>): Promise<any> =>
     loadedBusinessBrainCollections.has(name) ? Promise.resolve(load()) : Promise.resolve(emptyWorkspaceQuery());
 
   const [
