@@ -131,6 +131,32 @@ Deno.test("unqueried collection counts and summary metrics are not represented a
   assert(selected.innerme_business_brain_manifest.preferences.query_executed === true, "loaded preference query must be marked");
 });
 
+Deno.test("database aggregate provenance is retained without overstating bounded detail", () => {
+  const source: any = fixture();
+  source.workspace_loaded_collections = ["leads"];
+  source.workspace_loaded_business_brain_collections = ["preferences"];
+  source.operational_summary = {
+    generated_date_johannesburg: "2026-10-15",
+    summary_source: "database_aggregate",
+    metric_scope: "Exact aggregate counts from PostgreSQL; detailed rows remain bounded.",
+    lead_counts: { total: 17, open_pipeline: 8 },
+    followup_counts: {
+      pending_total: 12,
+      lead_next_followups_due_today: 2,
+    },
+    task_summary: { total: 44, open: 20 },
+    activity_summary: { total: 99 },
+  };
+  const selected: any = buildInnerMeProgressiveContext(source, "Explain lead totals.");
+  assert(selected.operational_summary.summary_source === "database_aggregate", "aggregate provenance must survive context compaction");
+  assert(selected.operational_summary.lead_counts.total === 17, "authoritative lead aggregate must survive");
+  assert(selected.operational_summary.followup_counts.pending_total === undefined, "follow-up row counts must be omitted when follow-ups were not queried");
+  assert(selected.operational_summary.followup_counts.lead_next_followups_due_today === 2, "lead-based follow-up counts may remain when the lead domain was queried");
+  assert(selected.operational_summary.task_summary === undefined, "unloaded task metrics must be omitted");
+  assert(selected.operational_summary.activity_summary === undefined, "unloaded activity metrics must be omitted");
+  assert(selected.operational_summary.metric_scope === "Exact aggregate counts from PostgreSQL; detailed rows remain bounded.", "database metric scope must not be replaced by bounded-sample wording");
+});
+
 Deno.test("manifest-only questions do not expand unrelated workspace rows", () => {
   const selected: any = buildInnerMeProgressiveContext(fixture(), "Explain what caching means.");
   assert(selected.workspace_manifest.profile === "manifest_only", "generic question should use manifest-only profile");
