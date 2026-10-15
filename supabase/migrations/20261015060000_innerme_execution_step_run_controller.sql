@@ -186,6 +186,9 @@ begin
 end;
 $function$;
 
+revoke all on function public.review_innerme_execution_plan(uuid,text) from public, anon;
+grant execute on function public.review_innerme_execution_plan(uuid,text) to authenticated;
+
 create table if not exists public.innerme_execution_step_events (
   id uuid primary key default gen_random_uuid(),
   plan_id uuid not null references public.innerme_execution_plans(id) on delete cascade,
@@ -293,17 +296,17 @@ begin
     raise exception 'This step requires an observable success signal and a verification method before it can run.';
   end if;
 
-  if v_transition in ('start','resume','complete','block') and exists (
+  if v_transition in ('resume','complete','block') and exists (
     select 1
     from public.innerme_action_proposals p
     left join public.innerme_action_execution_logs e on e.proposal_id=p.id
     where p.step_id=v_step.id
       and (
-        p.status='executing'
+        p.status in ('proposed','approved','executing')
         or e.status='started'
       )
   ) then
-    raise exception 'An action tied to this step may have an unresolved side effect. Reconcile its execution log before resuming, completing, or blocking the step.';
+    raise exception 'A controlled action for this step remains proposed, approved, executing, or has an open execution log. Review/reject it or reconcile its execution before resuming, completing, or blocking this step.';
   end if;
 
   if v_transition='start' then
