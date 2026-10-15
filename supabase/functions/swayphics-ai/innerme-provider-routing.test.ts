@@ -1,6 +1,9 @@
 import {
   CLOUDFLARE_MODEL,
+  INNERME_CHAT_ROUTINE_MODEL,
+  INNERME_CHAT_REASONING_MODEL,
   isCloudflareEligibleWritingRequest,
+  selectInnerMeChatRoute,
 } from "./innerme-provider-routing.mjs";
 
 function assertEqual(actual: unknown, expected: unknown, message: string) {
@@ -108,6 +111,57 @@ Deno.test("InnerMe low-cost provider routing policy", async (t) => {
         isCloudflareEligibleWritingRequest(prompt, noHistory, null),
         false,
         `Sensitive-context exclusion for: ${prompt}`,
+      );
+    }
+  });
+
+
+  await t.step("routes a short stateless routine question to Flash-Lite first", () => {
+    const route = selectInnerMeChatRoute("What does a conversion rate mean?", noHistory, null);
+    assertEqual(route.tier, "routine", "Routine tier");
+    assertEqual(route.reason, "routine_request", "Routine route reason");
+    assertEqual(route.primaryModel, INNERME_CHAT_ROUTINE_MODEL, "Routine primary model");
+    assertEqual(route.fallbackModel, INNERME_CHAT_REASONING_MODEL, "Routine fallback model");
+  });
+
+  await t.step("keeps stateful follow-up questions on the reasoning model", () => {
+    const route = selectInnerMeChatRoute(
+      "What changed since earlier?",
+      [{ role: "user", content: "Earlier question" }],
+      null,
+    );
+    assertEqual(route.tier, "reasoning", "Stateful tier");
+    assertEqual(route.reason, "conversation_history", "Stateful route reason");
+    assertEqual(route.primaryModel, INNERME_CHAT_REASONING_MODEL, "Stateful primary model");
+    assertEqual(route.fallbackModel, INNERME_CHAT_ROUTINE_MODEL, "Stateful fallback model");
+  });
+
+  await t.step("keeps focused-record and long requests on the reasoning model", () => {
+    const focusedRoute = selectInnerMeChatRoute("Summarise this record.", noHistory, { id: "synthetic" });
+    assertEqual(focusedRoute.primaryModel, INNERME_CHAT_REASONING_MODEL, "Focused record primary model");
+    assertEqual(focusedRoute.reason, "focused_record", "Focused record route reason");
+
+    const longRoute = selectInnerMeChatRoute("Explain this carefully. " + "detail ".repeat(110), noHistory, null);
+    assertEqual(longRoute.primaryModel, INNERME_CHAT_REASONING_MODEL, "Long request primary model");
+    assertEqual(longRoute.reason, "long_request", "Long request route reason");
+  });
+
+  await t.step("routes high-reasoning and high-consequence requests to the reasoning model", () => {
+    for (const prompt of [
+      "Compare the two strategies and explain the trade-off.",
+      "Audit the security and permissions for this action.",
+      "Forecast revenue and verify the assumptions.",
+      "How much cash is outstanding?",
+      "Send an email to the lead.",
+      "Create a task for this follow-up.",
+      "What should I prioritise to improve conversion?",
+      "Explain the Phase 30 action safety gate.",
+    ]) {
+      const route = selectInnerMeChatRoute(prompt, noHistory, null);
+      assertEqual(
+        route.primaryModel,
+        INNERME_CHAT_REASONING_MODEL,
+        "Reasoning model selection for: " + prompt,
       );
     }
   });

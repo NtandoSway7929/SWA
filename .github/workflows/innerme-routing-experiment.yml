@@ -1,0 +1,48 @@
+name: InnerMe Paired Routing Experiment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: innerme-paired-routing-experiment
+  cancel-in-progress: false
+
+jobs:
+  paired-routing-experiment:
+    name: Run isolated synthetic model comparison
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Require dedicated no-billing test credentials
+        shell: bash
+        env:
+          INNERME_TEST_GEMINI_API_KEY: ${{ secrets.INNERME_TEST_GEMINI_API_KEY }}
+          INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${INNERME_TEST_GEMINI_API_KEY}" ]]; then
+            echo "::error::Add INNERME_TEST_GEMINI_API_KEY from a separate Google AI Studio test project with billing disabled. Do not use the production SWAYPHICS key."
+            exit 1
+          fi
+          if [[ -z "${INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY}" ]]; then
+            echo "::error::Add INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY from the isolated Swayphics InnerMe Test Supabase project only."
+            exit 1
+          fi
+
+      - name: Check experiment script and scoring tests
+        run: |
+          node --check scripts/innerme-routing-experiment.mjs
+          node --test scripts/innerme-routing-experiment.test.mjs
+          node scripts/innerme-routing-experiment.mjs --dry-run
+
+      - name: Run bounded paired-model experiment
+        env:
+          INNERME_TEST_GEMINI_API_KEY: ${{ secrets.INNERME_TEST_GEMINI_API_KEY }}
+          INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/innerme-routing-experiment.mjs

@@ -7,12 +7,20 @@ on:
       - "supabase/functions/swayphics-ai/**"
       - "supabase/config.toml"
       - ".github/workflows/validate-innerme-function.yml"
+      - "scripts/innerme-routing-experiment.mjs"
+      - "scripts/innerme-routing-experiment.test.mjs"
+      - ".github/workflows/innerme-routing-experiment.yml"
+      - "docs/innerme-routing-experiment.md"
   pull_request:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
       - "supabase/config.toml"
       - ".github/workflows/validate-innerme-function.yml"
+      - "scripts/innerme-routing-experiment.mjs"
+      - "scripts/innerme-routing-experiment.test.mjs"
+      - ".github/workflows/innerme-routing-experiment.yml"
+      - "docs/innerme-routing-experiment.md"
 
 permissions:
   contents: read
@@ -37,6 +45,12 @@ jobs:
 
       - name: Test authenticated action guard and provider routing without API calls
         run: deno test --no-lock --allow-env supabase/functions/swayphics-ai/auth.integration.test.ts supabase/functions/swayphics-ai/innerme-provider-routing.test.ts supabase/functions/swayphics-ai/innerme-workspace-intelligence.test.ts supabase/functions/swayphics-ai/innerme-context-compaction.test.ts
+
+      - name: Test paired routing experiment without provider calls
+        run: |
+          node --check scripts/innerme-routing-experiment.mjs
+          node --test scripts/innerme-routing-experiment.test.mjs
+          node scripts/innerme-routing-experiment.mjs --dry-run
 
       - name: Non-mutating isolated test health GET
         env:

@@ -7,6 +7,7 @@ import {
 import {
   CLOUDFLARE_MODEL,
   isCloudflareEligibleWritingRequest,
+  selectInnerMeChatRoute,
 } from "./innerme-provider-routing.mjs";
 import { buildInnerMeWorkspaceContextForModel } from "./innerme-workspace-intelligence.mjs";
 import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
@@ -11020,6 +11021,19 @@ Answer the admin's question directly.
   const cloudflareCredentialsConfigured = Boolean(cloudflareToken && cloudflareAccountId);
   const providerRequestId = crypto.randomUUID();
   const providerTaskCategory = cloudflareWritingEligible ? "copywriting" : "assistant_chat";
+  const innerMeChatRoute = providerTaskCategory === "assistant_chat"
+    ? selectInnerMeChatRoute(message, conversationHistory, safeContext.focused_record)
+    : null;
+  const requestPrimaryModel = innerMeChatRoute?.primaryModel || PRIMARY_MODEL;
+  const requestFallbackModel = innerMeChatRoute?.fallbackModel || FALLBACK_MODEL;
+  activeModel = requestPrimaryModel;
+  if (innerMeChatRoute) {
+    console.info("InnerMe chat model tier selected.", {
+      tier: innerMeChatRoute.tier,
+      reason: innerMeChatRoute.reason,
+      model: requestPrimaryModel,
+    });
+  }
 
   // Last-resort Cloudflare failover: only intent-relevant compact workspace data is sent.
   async function requestCloudflareWorkspaceFallback(reason: string): Promise<Response | null> {
@@ -11599,7 +11613,7 @@ Answer the admin's question directly.
     let primaryFallbackAttempted = false;
 
     try {
-      geminiResponse = await requestGemini(PRIMARY_MODEL);
+      geminiResponse = await requestGemini(requestPrimaryModel);
     } catch (error) {
       const errorCode = error instanceof Error &&
         (error.name === "TimeoutError" || error.name === "AbortError")
@@ -11610,7 +11624,7 @@ Answer the admin's question directly.
         attempt_number: geminiAttemptNumber,
         task_category: providerTaskCategory,
         provider: "gemini",
-        model: PRIMARY_MODEL,
+        model: requestPrimaryModel,
         outcome: "error",
         http_status: null,
         latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
@@ -11624,14 +11638,14 @@ Answer the admin's question directly.
       // A timeout or transport failure on the primary is also eligible for one
       // guarded fallback attempt. Never retry the same model in a loop.
       console.warn("InnerMe Gemini primary request failed; trying one fallback.", errorCode);
-      activeModel = FALLBACK_MODEL;
+      activeModel = requestFallbackModel;
       geminiAttemptNumber = ++providerAttemptNumber;
       geminiAttemptStartedAt = performance.now();
       geminiAttemptFallbackReason = "gemini_primary_" + errorCode;
       primaryFallbackAttempted = true;
 
       try {
-        geminiResponse = await requestGemini(FALLBACK_MODEL);
+        geminiResponse = await requestGemini(requestFallbackModel);
       } catch (fallbackError) {
         const fallbackErrorCode = fallbackError instanceof Error &&
           (fallbackError.name === "TimeoutError" || fallbackError.name === "AbortError")
@@ -11642,7 +11656,7 @@ Answer the admin's question directly.
           attempt_number: geminiAttemptNumber,
           task_category: providerTaskCategory,
           provider: "gemini",
-          model: FALLBACK_MODEL,
+          model: requestFallbackModel,
           outcome: "error",
           http_status: null,
           latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
@@ -11668,7 +11682,7 @@ Answer the admin's question directly.
     if (
       !primaryFallbackAttempted &&
       (geminiResponse.status === 503 || geminiResponse.status === 429) &&
-      PRIMARY_MODEL !== FALLBACK_MODEL
+      requestPrimaryModel !== requestFallbackModel
     ) {
       const primaryStatus = geminiResponse.status;
       await geminiResponse.text().catch(() => "");
@@ -11677,7 +11691,7 @@ Answer the admin's question directly.
         attempt_number: geminiAttemptNumber,
         task_category: providerTaskCategory,
         provider: "gemini",
-        model: PRIMARY_MODEL,
+        model: requestPrimaryModel,
         outcome: "error",
         http_status: primaryStatus,
         latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
@@ -11692,13 +11706,13 @@ Answer the admin's question directly.
         "Gemini InnerMe primary model unavailable; trying fallback model.",
         primaryStatus,
       );
-      activeModel = FALLBACK_MODEL;
+      activeModel = requestFallbackModel;
       geminiAttemptNumber = ++providerAttemptNumber;
       geminiAttemptStartedAt = performance.now();
       geminiAttemptFallbackReason = "gemini_primary_http_" + primaryStatus;
 
       try {
-        geminiResponse = await requestGemini(FALLBACK_MODEL);
+        geminiResponse = await requestGemini(requestFallbackModel);
       } catch (error) {
         const errorCode = error instanceof Error &&
           (error.name === "TimeoutError" || error.name === "AbortError")
@@ -11709,7 +11723,7 @@ Answer the admin's question directly.
           attempt_number: geminiAttemptNumber,
           task_category: providerTaskCategory,
           provider: "gemini",
-          model: FALLBACK_MODEL,
+          model: requestFallbackModel,
           outcome: "error",
           http_status: null,
           latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
