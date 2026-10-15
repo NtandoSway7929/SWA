@@ -131,6 +131,43 @@ Deno.test("unqueried collection counts and summary metrics are not represented a
   assert(selected.innerme_business_brain_manifest.preferences.query_executed === true, "loaded preference query must be marked");
 });
 
+Deno.test("related but unqueried domains are not emitted as empty detail arrays", () => {
+  const source: any = fixture();
+  source.workspace_loaded_collections = ["clients", "invoices", "payments"];
+  source.workspace_loaded_business_brain_collections = ["preferences"];
+  const selected: any = buildInnerMeProgressiveContext(
+    source,
+    "Show overdue invoices and payments.",
+  );
+
+  for (const collection of ["clients", "invoices", "payments"]) {
+    assert(Array.isArray(selected[collection]), "Queried collection must retain details: " + collection);
+    assert(
+      selected.workspace_manifest.collections[collection].query_executed === true,
+      "Queried collection must be marked as queried: " + collection,
+    );
+  }
+
+  for (const collection of ["projects", "tasks", "portal_requests"]) {
+    assert(
+      selected[collection] === undefined,
+      "Related but unqueried collection must not be represented by an empty/detail array: " + collection,
+    );
+    assert(
+      selected.workspace_model_context_record_counts[collection] === null,
+      "Related but unqueried collection count must remain unknown: " + collection,
+    );
+    assert(
+      selected.workspace_manifest.collections[collection].query_executed === false,
+      "Related but unqueried collection must be marked not queried: " + collection,
+    );
+    assert(
+      selected.workspace_manifest.collections[collection].loaded_records === null,
+      "Related but unqueried records must not be represented as zero: " + collection,
+    );
+  }
+});
+
 Deno.test("database aggregate provenance is retained without overstating bounded detail", () => {
   const source: any = fixture();
   source.workspace_loaded_collections = ["leads"];
