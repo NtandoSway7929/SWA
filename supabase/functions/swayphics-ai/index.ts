@@ -7780,7 +7780,12 @@ Deno.serve(async (req) => {
   // verify the deployed workspace query planner and aggregate RPC without an
   // LLM/provider request and without returning any underlying business records.
   if (action === "innerme_workspace_read_health") {
-    const summary = safeContext.operational_summary || {};
+    const summary =
+      databaseAggregate &&
+      typeof databaseAggregate === "object" &&
+      !Array.isArray(databaseAggregate)
+        ? databaseAggregate
+        : {};
     const knownMetricGroups = [
       "lead_counts",
       "lead_value_zar",
@@ -7812,6 +7817,7 @@ Deno.serve(async (req) => {
       check: "workspace_retrieval_and_aggregate",
       retrieval_profile: workspaceQueryPlan.profile,
       queried_collection_count: workspaceQueryPlan.collections.length,
+      queried_collections: workspaceQueryPlan.collections,
       queried_business_brain_collection_count: workspaceQueryPlan.businessBrainCollections.length,
       summary_source: summary.summary_source || "bounded_fallback",
       summary_metric_groups: metricGroups,
