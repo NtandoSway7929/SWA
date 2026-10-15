@@ -21,7 +21,9 @@ Deno.test("self-owned Swayphics lead is excluded from broad priorities even when
   assert(result.leads.length === 1, "only external prospect should remain");
   assert(result.leads[0].id === "real-prospect", "real prospect should be retained");
   assert(source.leads.length === 2, "source context must remain unchanged");
-  assert(result.workspace_intelligence_notes?.length === 1, "the exclusion should be disclosed");
+  assert(result.workspace_intelligence_notes?.some((note: string) => note.includes("Excluded 1 lead")), "the exclusion should be disclosed");
+  assert(result.workspace_temporal_guidance?.business_date_johannesburg === "2026-10-14", "the business date should be explicit");
+  assert(result.workspace_intelligence_notes?.some((note: string) => note.includes("Never label an upcoming/future date overdue")), "date classification rules should be explicit");
 });
 
 Deno.test("explicit Swayphics record questions preserve the record", () => {
