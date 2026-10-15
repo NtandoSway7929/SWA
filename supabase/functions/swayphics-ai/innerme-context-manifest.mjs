@@ -330,13 +330,16 @@ function compactOperationalSummary(summary, includeFollowupDetails, loadedCollec
   return result;
 }
 
-function makeBusinessBrainView(brain, text) {
+function makeBusinessBrainView(brain, text, loadedCollections = null) {
   if (!brain || typeof brain !== "object") return null;
   const needsBrainDetails = BUSINESS_BRAIN_PATTERN.test(text);
+  const loaded = Array.isArray(loadedCollections) ? new Set(loadedCollections) : null;
   const view = {};
 
   for (const [key, value] of Object.entries(brain)) {
     if (!Array.isArray(value)) continue;
+    // A skipped query must never be presented as an empty registry.
+    if (loaded && !loaded.has(key)) continue;
 
     if (key === "playbooks") {
       const matching = value.filter((item) => {
@@ -539,8 +542,24 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
     if (context?.connected_context) selected.connected_context = context.connected_context;
   }
 
-  const brain = makeBusinessBrainView(context?.innerme_business_brain, text);
+  const loadedBrainCollections = Array.isArray(context?.workspace_loaded_business_brain_collections)
+    ? context.workspace_loaded_business_brain_collections
+    : null;
+  const brain = makeBusinessBrainView(
+    context?.innerme_business_brain,
+    text,
+    loadedBrainCollections,
+  );
   if (brain) selected.innerme_business_brain = brain;
+  if (loadedBrainCollections) {
+    const loadedBrainSet = new Set(loadedBrainCollections);
+    selected.innerme_business_brain_manifest = Object.fromEntries(
+      BUSINESS_BRAIN_COLLECTIONS.map((key) => [
+        key,
+        { query_executed: loadedBrainSet.has(key) },
+      ]),
+    );
+  }
 
   if (context?.workspace_focused_record_lookup_status) {
     selected.workspace_focused_record_lookup_status = context.workspace_focused_record_lookup_status;
