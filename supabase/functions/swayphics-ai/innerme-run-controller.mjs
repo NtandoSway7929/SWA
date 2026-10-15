@@ -199,6 +199,13 @@ export function selectInnerMeActionReadySteps(steps) {
       continue;
     }
 
+    // A plan step must be explicitly started through the run controller before
+    // the model may prepare its controlled action proposal.
+    if (status !== "in_progress") {
+      skippedNotActionable.push(order);
+      continue;
+    }
+
     const rawDependency = step?.depends_on_step_order;
     if (rawDependency !== null && rawDependency !== undefined && rawDependency !== "") {
       const dependencyOrder = Number(rawDependency);
