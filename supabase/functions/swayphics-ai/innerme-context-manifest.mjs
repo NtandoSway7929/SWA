@@ -212,7 +212,10 @@ export function planInnerMeWorkspaceRetrieval(options = {}) {
   ].join("\n");
   const focusedRecord = options?.focusedRecord ?? null;
   const focusCollection = collectionForFocusType(focusedRecord?.type);
-  const isAssistantChat = !action || action === "assistant_chat";
+  const isAssistantChat =
+    !action ||
+    action === "assistant_chat" ||
+    action === "innerme_workspace_read_health";
   const broad = BROAD_OPERATIONS_PATTERN.test(text);
   const businessBrainRequested = BUSINESS_BRAIN_PATTERN.test(text) || broad;
 
