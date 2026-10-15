@@ -14,7 +14,7 @@ jobs:
   paired-routing-experiment:
     name: Run isolated synthetic model comparison
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
