@@ -185,6 +185,7 @@ Deno.test("lead timing uses linked active follow-up when lead next_follow_up is 
 
 Deno.test("email body queries stay off for counts and broad business priorities", () => {
   assert(!shouldLoadInnerMeEmailBodies("How many unread emails are there?"), "counts do not need email bodies");
+  assert(!shouldLoadInnerMeEmailBodies("Show me the latest emails"), "an email-list request does not require message bodies");
   assert(!shouldLoadInnerMeEmailBodies("What are my highest-value moves for today?"), "broad priorities do not need email bodies");
   assert(!shouldLoadInnerMeEmailBodies("Draft an email to Maisha about the website proposal"), "email-writing requests do not need the existing body by default");
   assert(shouldLoadInnerMeEmailBodies("Summarize the latest email from Maisha's Touch"), "an email-summary request needs message content");
@@ -254,6 +255,17 @@ Deno.test("unknown explicit recipients never fall back to unrelated inbox conten
     clients: [],
   });
   assert(ids.length === 0, "an explicit but unresolved recipient must not attach unrelated email bodies");
+});
+
+Deno.test("unlisted people named in reply questions never use unrelated email bodies", () => {
+  const rows = [{ id: "email-other", lead_id: "lead-2", client_id: null }];
+  const ids = selectInnerMeEmailBodyIds({
+    message: "Did Unlisted Prospect reply?",
+    emailRows: rows,
+    leads: [{ id: "lead-1", business_name: "Known Business" }],
+    clients: [],
+  });
+  assert(ids.length === 0, "a specifically named but unresolved person must not attach unrelated messages");
 });
 
 Deno.test("generic email-content request returns only a small newest-first sample", () => {
