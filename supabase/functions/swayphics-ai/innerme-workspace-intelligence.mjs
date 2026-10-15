@@ -252,6 +252,16 @@ export function shouldLoadInnerMeEmailBodies(message) {
  * Explicit lead/client focus and named-record matches never fall back to
  * unrelated mailbox content when no linked message is found.
  */
+/**
+ * Choose email bodies using only already-authorized mailbox metadata.
+ * @param {Object} [options]
+ * @param {string} [options.message]
+ * @param {{type?: string, id?: string}|null} [options.focusedRecord]
+ * @param {Array<{id?: unknown, lead_id?: unknown, client_id?: unknown}>} [options.emailRows]
+ * @param {Array<{id?: unknown, business_name?: unknown, contact_name?: unknown, name?: unknown}>} [options.leads]
+ * @param {Array<{id?: unknown, business_name?: unknown, contact_name?: unknown, name?: unknown}>} [options.clients]
+ * @param {number} [options.maxRows]
+ */
 export function selectInnerMeEmailBodyIds({
   message,
   focusedRecord,
