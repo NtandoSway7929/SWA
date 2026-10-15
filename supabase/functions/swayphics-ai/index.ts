@@ -7816,7 +7816,10 @@ Deno.serve(async (req) => {
     const detailCollections = Array.isArray(probeContext?.workspace_manifest?.detail_collections)
       ? probeContext.workspace_manifest.detail_collections as string[]
       : [];
-    const progressiveDetailRecordCount = detailCollections.reduce(
+    const loadedDetailCollections = detailCollections.filter((collection) =>
+      workspaceQueryPlan.collections.includes(collection)
+    );
+    const progressiveDetailRecordCount = loadedDetailCollections.reduce(
       (total: number, collection: string) => {
         const records = probeContext?.[collection];
         return total + (Array.isArray(records) ? records.length : 0);
@@ -7844,7 +7847,7 @@ Deno.serve(async (req) => {
       queried_business_brain_collection_count: workspaceQueryPlan.businessBrainCollections.length,
       workspace_data_read_call_count: workspaceDataReadCallCount,
       progressive_workspace_json_bytes: progressiveWorkspaceJsonBytes,
-      progressive_detail_collection_count: detailCollections.length,
+      progressive_detail_collection_count: loadedDetailCollections.length,
       progressive_detail_record_count: progressiveDetailRecordCount,
       summary_source: summary.summary_source || "bounded_fallback",
       summary_metric_groups: metricGroups,
