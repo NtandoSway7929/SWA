@@ -11,6 +11,12 @@ import {
 } from "./innerme-provider-routing.mjs";
 import { buildInnerMeWorkspaceContextForModel } from "./innerme-workspace-intelligence.mjs";
 import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
+import {
+  buildInnerMeExecutionContract,
+  INNERME_EXECUTION_CONTRACT_VERSION,
+  isInnerMeExecutionStepContractComplete,
+  validateInnerMeExecutionContract,
+} from "./innerme-execution-contracts.mjs";
 
 // Supabase Edge Runtime provides this embedding API at runtime; declare its surface for Deno checks.
 declare const Supabase: {
@@ -9002,6 +9008,8 @@ Deno.serve(async (req) => {
       ? decision.evidence.slice(0, 8)
       : [];
 
+    const executionContract = buildInnerMeExecutionContract(decision);
+
     const prompt = [
       "You are InnerMe Execution Intelligence for Swayphics.",
       "Turn ONE ACTIVE INNERME DECISION into a concrete, governed execution plan.",
@@ -9014,6 +9022,10 @@ Deno.serve(async (req) => {
       "Use exact workspace record IDs when citing evidence. Verified knowledge may guide interpretation, but it cannot create workspace facts.",
       "Do not create a plan that duplicates an existing active or approved plan. None exists for this decision in the current request.",
       "Use relative timing with due_offset_days rather than inventing calendar dates.",
+      "The execution contract below is binding. Do not skip, silently relax, or guess any required condition.",
+      "If the supplied decision or evidence cannot support a valid plan, return an incomplete structure that will fail validation rather than inventing details.",
+      "EXECUTION CONTRACT (Goal, Constraints, Output Format, Failure Conditions):",
+      JSON.stringify(executionContract),
       "Return JSON only in this exact shape:",
       '{"plan":{"plan_key":"decision-id","title":"...","objective":"...","rationale":"...","evidence":[{"source":"workspace|knowledge","type":"lead|follow_up|quote|invoice|enquiry|communication|email|task|client|project|payment|decision|insight|knowledge","id":"...","why":"..."}],"success_metric":"...","completion_criteria":["..."],"expected_outcome":"...","duration_days":7,"effort":"low|medium|high","urgency":"critical|high|normal|low","confidence":"high|medium|low","risk":"..."},"steps":[{"step_order":1,"title":"...","action":"...","purpose":"...","owner_role":"Swayphics admin","due_offset_days":0,"depends_on_step_order":null,"success_signal":"...","verification_method":"...","risk_level":"low|medium|high","notes":"..."}]}',
       "plan_key is supplied by the server and must not be invented or relied on by the model.",
@@ -9089,9 +9101,15 @@ Deno.serve(async (req) => {
     }
 
     const planInput = parsed?.plan || {};
-    const stepInputs = Array.isArray(parsed?.steps)
-      ? parsed.steps.slice(0, 8)
-      : [];
+    const rawStepInputs = Array.isArray(parsed?.steps) ? parsed.steps : [];
+    if (rawStepInputs.length > 8) {
+      return json(
+        { error: "InnerMe generated more execution steps than the contract permits. No draft was saved.", code: "EXECUTION_CONTRACT_TOO_MANY_STEPS", contract_version: INNERME_EXECUTION_CONTRACT_VERSION, provider_model: model },
+        422,
+        origin,
+      );
+    }
+    const stepInputs = rawStepInputs;
 
     const cleanPlanTitle = cleanForModel(planInput?.title || "", 180);
     const cleanObjective = cleanForModel(planInput?.objective || "", 900);
@@ -9181,31 +9199,33 @@ Deno.serve(async (req) => {
 
     for (let index = 0; index < stepInputs.length; index += 1) {
       const item = stepInputs[index] || {};
-      const stepOrder = index + 1;
+      const providedStepOrder = item?.step_order;
+      const stepOrder = typeof providedStepOrder === "number" && Number.isInteger(providedStepOrder)
+        ? providedStepOrder
+        : -1;
       const title = cleanForModel(item?.title || "", 160);
       const actionText = cleanForModel(item?.action || "", 900);
 
-      if (!title || !actionText) continue;
-
-      const dueOffsetRaw = Number(item?.due_offset_days);
+      // Do not silently repair contract violations. Incomplete or invalid fields
+      // remain detectable by the validator below, and no draft is saved.
+      const dueOffsetValue = item?.due_offset_days;
       const dueOffset =
-        Number.isFinite(dueOffsetRaw)
-          ? Math.max(0, Math.min(Math.round(dueOffsetRaw), 365))
+        typeof dueOffsetValue === "number" && Number.isInteger(dueOffsetValue) && dueOffsetValue >= 0 && dueOffsetValue <= 365
+          ? dueOffsetValue
           : null;
 
-      const dependencyRaw = Number(item?.depends_on_step_order);
-      const dependency =
-        Number.isFinite(dependencyRaw) &&
-        Math.round(dependencyRaw) >= 1 &&
-        Math.round(dependencyRaw) < stepOrder
-          ? Math.round(dependencyRaw)
-          : null;
+      const dependencyValue = item?.depends_on_step_order;
+      const dependencySpecified = dependencyValue !== null && dependencyValue !== undefined && dependencyValue !== "";
+      const dependency = !dependencySpecified
+        ? null
+        : typeof dependencyValue === "number" && Number.isInteger(dependencyValue) && dependencyValue >= 1 && dependencyValue < stepOrder
+          ? dependencyValue
+          : -1;
 
-      const riskLevel = ["low", "medium", "high"].includes(
-        String(item?.risk_level || "").trim(),
-      )
-        ? String(item.risk_level).trim()
-        : "low";
+      const providedRiskLevel = String(item?.risk_level || "").trim();
+      const riskLevel = ["low", "medium", "high"].includes(providedRiskLevel)
+        ? providedRiskLevel
+        : "";
 
       steps.push({
         step_order: stepOrder,
@@ -9235,15 +9255,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    const durationRaw = Number(planInput?.duration_days);
+    const durationValue = planInput?.duration_days;
     const durationDays =
-      Number.isFinite(durationRaw)
-        ? Math.max(0, Math.min(Math.round(durationRaw), 365))
+      typeof durationValue === "number" && Number.isInteger(durationValue) && durationValue >= 0 && durationValue <= 365
+        ? durationValue
         : null;
 
     const completedCriteria = Array.isArray(planInput?.completion_criteria)
       ? planInput.completion_criteria
-          .map((item: any) => cleanForModel(item, 260))
+          .map((item: any) => typeof item === "string" ? cleanForModel(item, 260) : "")
           .filter(Boolean)
           .slice(0, 8)
       : [];
@@ -9287,7 +9307,24 @@ Deno.serve(async (req) => {
       status: "draft",
       source_conversation_id:
         cleanForModel(body.chat_id || "", 120) || "phase9_execution_intelligence",
+      execution_contract_version: INNERME_EXECUTION_CONTRACT_VERSION,
+      execution_contract_snapshot: executionContract,
     };
+
+    const contractValidation = validateInnerMeExecutionContract(planPayload, steps, { decisionId });
+    if (!contractValidation.valid) {
+      return json(
+        {
+          error: "InnerMe’s generated plan did not satisfy its execution contract. No draft was saved.",
+          code: "EXECUTION_CONTRACT_VALIDATION_FAILED",
+          contract_version: INNERME_EXECUTION_CONTRACT_VERSION,
+          validation_issues: contractValidation.issues,
+          provider_model: model,
+        },
+        422,
+        origin,
+      );
+    }
 
     const { data: savedPlan, error: saveError } = await authSupabase.rpc(
       "create_innerme_execution_plan",
@@ -9341,6 +9378,8 @@ Deno.serve(async (req) => {
         created: true,
         approval_required: true,
         live_workspace_changed: false,
+        execution_contract_status: "validated_before_save",
+        execution_contract_version: INNERME_EXECUTION_CONTRACT_VERSION,
         provider_model: model,
       },
       200,
@@ -9406,11 +9445,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    const stepRows = Array.isArray(steps) ? steps : [];
-    if (!stepRows.length) {
+    const loadedStepRows = Array.isArray(steps) ? steps : [];
+    if (!loadedStepRows.length) {
       return json(
         { error: "The execution plan has no approved steps available for controlled actions." },
         400,
+        origin,
+      );
+    }
+
+    const skippedUnverifiedStepOrders = loadedStepRows
+      .filter((step: any) => !isInnerMeExecutionStepContractComplete(step))
+      .map((step: any) => Number(step?.step_order))
+      .filter((order: number) => Number.isInteger(order));
+    const stepRows = loadedStepRows.filter(isInnerMeExecutionStepContractComplete);
+    if (!stepRows.length) {
+      return json(
+        {
+          error: "No approved execution step has both an observable success signal and a verification method. Update the affected steps before preparing controlled actions.",
+          code: "EXECUTION_STEP_CONTRACT_INCOMPLETE",
+          unverified_step_orders: skippedUnverifiedStepOrders,
+          workspace_changed: false,
+        },
+        409,
         origin,
       );
     }
@@ -9755,6 +9812,10 @@ Deno.serve(async (req) => {
         approval_required: true,
         execution_requires_explicit_confirmation: true,
         workspace_changed: false,
+        skipped_unverified_steps: skippedUnverifiedStepOrders,
+        warning: skippedUnverifiedStepOrders.length
+          ? "Some approved steps were excluded because they lack a success signal or verification method."
+          : null,
         provider_model: model,
       },
       200,
