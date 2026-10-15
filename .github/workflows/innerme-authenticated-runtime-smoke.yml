@@ -42,7 +42,7 @@ jobs:
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
-          trap 'rm -f /tmp/innerme-test-login-request.json /tmp/innerme-test-login-response.json /tmp/innerme-test-preflight.json /tmp/innerme-test-action-response.json /tmp/innerme-test-action-request.json /tmp/innerme-test-workspace-health-request.json /tmp/innerme-test-workspace-health-response.json /tmp/innerme-test-controller-preflight.json /tmp/innerme-test-controller-request.json /tmp/innerme-test-controller-response.json /tmp/innerme-test-controller-events.json' EXIT
+          trap 'rm -f /tmp/innerme-test-login-request.json /tmp/innerme-test-login-response.json /tmp/innerme-test-preflight.json /tmp/innerme-test-action-response.json /tmp/innerme-test-action-request.json /tmp/innerme-test-focused-health-request.json /tmp/innerme-test-focused-health-response.json /tmp/innerme-test-workspace-health-request.json /tmp/innerme-test-workspace-health-response.json /tmp/innerme-test-controller-preflight.json /tmp/innerme-test-controller-request.json /tmp/innerme-test-controller-response.json /tmp/innerme-test-controller-events.json' EXIT
 
           SUPABASE_URL="https://ofqofhnlzbouclvvrmzd.supabase.co"
           SUPABASE_PUBLISHABLE_KEY="sb_publishable_p4UqpaLvEx_93XJSWvzo6Q_loju0xzW"
@@ -139,8 +139,69 @@ jobs:
           print("The proposal was confirmed absent beforehand; the request cannot reach task creation or email delivery.")
           PY
 
-          # Exercise the deployed aggregate data path with a real test-admin session.
-          # This read-only diagnostic returns metric group names, not business data,
+          # A topic-focused probe validates the optimization: invoices need only
+          # linked clients and payments, and unrelated domain metrics must be omitted.
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          Path("/tmp/innerme-test-focused-health-request.json").write_text(
+              json.dumps({
+                  "action": "innerme_workspace_read_health",
+                  "message": "Show overdue invoices and payments in a read-only runtime check.",
+              }),
+              encoding="utf-8",
+          )
+          PY
+
+          focused_health_status="$(curl --silent --show-error --max-time 30 \
+            -o /tmp/innerme-test-focused-health-response.json \
+            -w '%{http_code}' \
+            -X POST "${SUPABASE_URL}/functions/v1/swayphics-ai" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/innerme-test-focused-health-request.json)"
+
+          if [[ "${focused_health_status}" != "200" ]]; then
+            echo "::error::Focused workspace health check returned HTTP ${focused_health_status}."
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              print(json.loads(Path("/tmp/innerme-test-focused-health-response.json").read_text(encoding="utf-8")))
+          except Exception:
+              print("Focused health response was not valid JSON.")
+          PY
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          body = json.loads(Path("/tmp/innerme-test-focused-health-response.json").read_text(encoding="utf-8"))
+          expected_collections = ["clients", "invoices", "payments"]
+          expected_groups = {"client_summary", "invoice_summary", "payment_summary"}
+          actual_groups = set(body.get("summary_metric_groups", []))
+          if body.get("ok") is not True or body.get("read_only") is not True:
+              raise SystemExit(f"Focused health action did not pass read-only validation: {body!r}")
+          if body.get("summary_source") != "database_aggregate" or body.get("summary_query_failed") is not False:
+              raise SystemExit(f"Focused request did not use the database aggregate RPC: {body!r}")
+          if body.get("queried_collections") != expected_collections or body.get("queried_collection_count") != 3:
+              raise SystemExit(f"Finance request selected unrelated or missing domains: {body!r}")
+          if actual_groups != expected_groups:
+              raise SystemExit(f"Expected only finance/client aggregate groups, got {body!r}")
+          if body.get("retrieval_profile") != "topic_focused":
+              raise SystemExit(f"Expected topic_focused retrieval profile, got {body!r}")
+          print("PASS: focused finance request queried exactly clients, invoices, and payments.")
+          print("PASS: exactly three aggregate groups were returned; unrelated lead/task metrics were omitted.")
+          print("PASS: the authenticated probe returned metadata only and did not call an LLM/provider.")
+          PY
+
+          # Exercise the broad operational path too, so efficiency does not
+          # come at the cost of missing evidence for daily priorities.
+          # This diagnostic returns metric-group names, not business data,
           # and exits before any LLM/provider call.
           python3 - <<'PY'
           import json
@@ -149,7 +210,7 @@ jobs:
           Path("/tmp/innerme-test-workspace-health-request.json").write_text(
               json.dumps({
                   "action": "innerme_workspace_read_health",
-                  "message": "Run the non-mutating operational summary smoke test.",
+                  "message": "What are my highest-value moves for today?",
               }),
               encoding="utf-8",
           )
@@ -200,9 +261,11 @@ jobs:
               raise SystemExit(f"Expected all 13 operational domains in this dedicated test, got: {body!r}")
           if missing:
               raise SystemExit(f"Aggregate metric groups were missing: {missing}; result: {body!r}")
-          print("PASS: authenticated Edge Function request reached the read-only database aggregate path.")
+          if body.get("retrieval_profile") != "broad_operations":
+              raise SystemExit(f"Expected broad_operations for daily priorities, got {body!r}")
+          print("PASS: broad daily-priorities request reached the read-only database aggregate path.")
           print("PASS: all 13 operational domains and all 14 aggregate metric groups were reported.")
-          print("PASS: health probe returns no business record data and does not call an LLM/provider.")
+          print("PASS: broad health probe returns no business record data and does not call an LLM/provider.")
           PY
 
           # Exercise the deployed run-controller RPC through PostgREST with the
