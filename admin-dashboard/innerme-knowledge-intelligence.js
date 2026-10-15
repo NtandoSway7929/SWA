@@ -1531,8 +1531,18 @@
                             }).join("")+
                         '</div>'
                         : (status==="approved" || status==="active"
-                            ? '<div class="sway-ai-ki-execution-detail"><span>Controlled actions</span><div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-prepare="'+esc(String(plan.id||""))+'">Prepare controlled actions</button></div><strong>No action proposals prepared yet.</strong></div>'
+                            ? '<div class="sway-ai-ki-execution-detail"><span>Controlled actions</span><strong>No action proposals prepared yet. Start an eligible step before preparing its action proposals.</strong></div>'
                             : "");
+
+                    const actionReadyStepExists=steps.some(function(step){
+                        if(String(step.status||"")!=="in_progress" || !String(step.success_signal||"").trim() || !String(step.verification_method||"").trim()) return false;
+                        if(step.depends_on_step_order==null) return true;
+                        const dependency=steps.find(function(candidate){return Number(candidate.step_order)===Number(step.depends_on_step_order);});
+                        return Boolean(dependency && String(dependency.status||"")==="completed");
+                    });
+                    const prepareActionButton=controllerAvailable && (status==="approved" || status==="active") && actionReadyStepExists
+                        ? '<div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-prepare="'+esc(String(plan.id||""))+'">Prepare actions for ready step(s)</button></div>'
+                        : "";
 
                     const reviewActions=status==="draft"
                         ? '<div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-approve="'+esc(String(plan.id||""))+'">Approve plan</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-cancel="'+esc(String(plan.id||""))+'">Cancel draft</button></div>'
@@ -1550,6 +1560,7 @@
                             '<div class="sway-ai-ki-execution-detail"><span>Steps</span><div class="sway-ai-ki-execution-steps">'+(stepsHtml || '<p class="sway-ai-ki-muted">No steps recorded.</p>')+'</div></div>' +
                             evidenceHtml +
                             actionsHtml +
+                            prepareActionButton +
                             reviewActions +
                         '</div>';
                 }
