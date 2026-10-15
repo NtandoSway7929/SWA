@@ -509,7 +509,12 @@ grant execute on function public.review_innerme_execution_plan(uuid,text) to aut
 
 
 -- Durable execution-step transitions and auditable checkpoints.
-create or replace function public.transition_innerme_execution_step(
+-- Keep the privileged implementation outside the PostgREST-exposed public schema.
+create schema if not exists private;
+revoke all on schema private from public, anon;
+grant usage on schema private to authenticated;
+
+create or replace function private.transition_innerme_execution_step_internal(
   p_step_id uuid,
   p_transition text,
   p_note text default null,
@@ -519,7 +524,7 @@ create or replace function public.transition_innerme_execution_step(
 returns jsonb
 language plpgsql
 security definer
-set search_path=public
+set search_path = pg_catalog
 as $function$
 declare
   v_step public.innerme_execution_steps%rowtype;
@@ -823,6 +828,26 @@ begin
     'automatic_side_effect_performed',false
   );
 end;
+$function$;
+
+revoke all on function private.transition_innerme_execution_step_internal(uuid,text,text,jsonb,jsonb) from public, anon, authenticated;
+grant execute on function private.transition_innerme_execution_step_internal(uuid,text,text,jsonb,jsonb) to authenticated;
+
+create or replace function public.transition_innerme_execution_step(
+  p_step_id uuid,
+  p_transition text,
+  p_note text default null,
+  p_checkpoint jsonb default '{}'::jsonb,
+  p_completion_evidence jsonb default '{}'::jsonb
+)
+returns jsonb
+language sql
+security invoker
+set search_path = pg_catalog
+as $function$
+  select private.transition_innerme_execution_step_internal(
+    p_step_id,p_transition,p_note,p_checkpoint,p_completion_evidence
+  );
 $function$;
 
 revoke all on function public.transition_innerme_execution_step(uuid,text,text,jsonb,jsonb) from public, anon;
