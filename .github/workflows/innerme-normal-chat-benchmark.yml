@@ -1,0 +1,191 @@
+name: InnerMe Isolated Normal Chat Performance Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_no_billing:
+        description: "Confirm the isolated test project's Gemini key comes from a separate project with billing disabled"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: innerme-isolated-normal-chat-performance-benchmark
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: Measure one isolated authenticated read-only chat
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require isolated credentials and no-billing confirmation
+        shell: bash
+        env:
+          INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+          INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY }}
+          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
+        run: |
+          set -euo pipefail
+          if [[ "${CONFIRM_NO_BILLING}" != "true" ]]; then
+            echo "::error::Stop: confirm that the isolated test provider key belongs to a Google project with billing disabled."
+            exit 1
+          fi
+          for name in INNERME_TEST_ADMIN_EMAIL INNERME_TEST_ADMIN_PASSWORD INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing repository secret ${name}. Use isolated test-project credentials only."
+              exit 1
+            fi
+          done
+
+      - name: Run one read-only chat and correlate provider telemetry
+        shell: bash
+        env:
+          INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+          INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          trap 'rm -f /tmp/innerme-benchmark-login-request.json /tmp/innerme-benchmark-login-response.json /tmp/innerme-benchmark-chat-request.json /tmp/innerme-benchmark-chat-response.json /tmp/innerme-benchmark-chat-headers.txt /tmp/innerme-benchmark-curl-metrics.txt /tmp/innerme-benchmark-stdout.txt /tmp/innerme-benchmark-provider-usage.json' EXIT
+
+          SUPABASE_URL="https://ofqofhnlzbouclvvrmzd.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY="sb_publishable_p4UqpaLvEx_93XJSWvzo6Q_loju0xzW"
+
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          Path("/tmp/innerme-benchmark-login-request.json").write_text(json.dumps({
+              "email": os.environ["INNERME_TEST_ADMIN_EMAIL"],
+              "password": os.environ["INNERME_TEST_ADMIN_PASSWORD"],
+          }), encoding="utf-8")
+          PY
+
+          login_status="$(curl --silent --show-error --max-time 20             -o /tmp/innerme-benchmark-login-response.json             -w '%{http_code}'             -X POST "${SUPABASE_URL}/auth/v1/token?grant_type=password"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H 'Content-Type: application/json'             --data-binary @/tmp/innerme-benchmark-login-request.json)"
+          if [[ "${login_status}" != "200" ]]; then
+            echo "::error::Isolated test-admin sign-in failed with HTTP ${login_status}; no chat request was sent."
+            exit 1
+          fi
+
+          ACCESS_TOKEN="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("/tmp/innerme-benchmark-login-response.json").read_text(encoding="utf-8"))
+          value = payload.get("access_token")
+          if not isinstance(value, str) or not value:
+              raise SystemExit("Sign-in did not return an access token.")
+          print(value, end="")
+          PY
+          )"
+          echo "::add-mask::${ACCESS_TOKEN}"
+
+          # Short, stateless, harmless request. This exercises the normal chat
+          # route, provider telemetry and timing headers without asking InnerMe
+          # to change workspace records or send messages.
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          Path("/tmp/innerme-benchmark-chat-request.json").write_text(json.dumps({
+              "action": "assistant_chat",
+              "message": "Explain caching in one sentence.",
+          }), encoding="utf-8")
+          PY
+
+          curl --silent --show-error --max-time 45             -D /tmp/innerme-benchmark-chat-headers.txt             -o /tmp/innerme-benchmark-chat-response.json             -w '%{http_code}\t%{time_total}'             -X POST "${SUPABASE_URL}/functions/v1/swayphics-ai"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H "Authorization: Bearer ${ACCESS_TOKEN}"             -H 'Content-Type: application/json'             --data-binary @/tmp/innerme-benchmark-chat-request.json             > /tmp/innerme-benchmark-curl-metrics.txt
+
+          python3 - <<'PY' > /tmp/innerme-benchmark-stdout.txt
+          from pathlib import Path
+          import json
+          import uuid
+
+          metrics = Path("/tmp/innerme-benchmark-curl-metrics.txt").read_text(encoding="utf-8").strip().split("\t")
+          if len(metrics) != 2:
+              raise SystemExit(f"Unexpected curl metrics format: {metrics!r}")
+          status, total_seconds = metrics
+          print(f"HTTP_STATUS={status}")
+          print(f"HTTP_TOTAL_SECONDS={total_seconds}")
+
+          payload = json.loads(Path("/tmp/innerme-benchmark-chat-response.json").read_text(encoding="utf-8"))
+          if status != "200":
+              reason = payload.get("error") or payload.get("message") or payload
+              raise SystemExit(f"Normal authenticated chat failed with HTTP {status}: {reason}")
+          if not isinstance(payload.get("answer"), str) or not payload["answer"].strip():
+              raise SystemExit("Normal chat response did not include an answer.")
+          if payload.get("read_only") is not True:
+              raise SystemExit("Normal chat response did not affirm its read-only contract.")
+
+          headers = {}
+          for line in Path("/tmp/innerme-benchmark-chat-headers.txt").read_text(encoding="utf-8", errors="replace").splitlines():
+              if ":" in line:
+                  key, value = line.split(":", 1)
+                  headers[key.strip().lower()] = value.strip()
+          request_id = headers.get("x-innerme-request-id", "")
+          try:
+              uuid.UUID(request_id)
+          except (ValueError, AttributeError):
+              raise SystemExit("Normal chat response is missing its correlated X-InnerMe-Request-ID header.")
+          server_timing = headers.get("server-timing", "")
+          required_timing = ("innerme_workspace_read", "innerme_context_assembly", "innerme_progressive_context", "innerme_total")
+          missing = [name for name in required_timing if name not in server_timing]
+          if missing:
+              raise SystemExit(f"Normal chat response is missing Server-Timing entries {missing}: {server_timing!r}")
+          read_calls = headers.get("x-innerme-workspace-read-calls", "")
+          workspace_bytes = headers.get("x-innerme-progressive-workspace-json-bytes", "")
+          if not read_calls.isdigit():
+              raise SystemExit("Normal chat workspace-read-call count header is missing or invalid.")
+          if not workspace_bytes.isdigit():
+              raise SystemExit("Normal chat progressive workspace JSON-size header is missing or invalid.")
+          print("REQUEST_ID=" + request_id)
+          print("SERVER_TIMING=" + server_timing)
+          print("WORKSPACE_READ_CALLS=" + read_calls)
+          print("PROGRESSIVE_WORKSPACE_JSON_BYTES=" + workspace_bytes)
+          print("PASS: normal authenticated chat returned a read-only answer and stage timing headers.")
+          PY
+          cat /tmp/innerme-benchmark-stdout.txt
+          REQUEST_ID="$(sed -n 's/^REQUEST_ID=//p' /tmp/innerme-benchmark-stdout.txt | tail -n 1)"
+          if [[ -z "${REQUEST_ID}" ]]; then
+            echo "::error::Could not recover the request ID from benchmark validation."
+            exit 1
+          fi
+
+          provider_key="${INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY}"
+          provider_headers=(-H "apikey: ${provider_key}")
+          if [[ "${provider_key}" != sb_secret_* ]]; then
+            provider_headers+=(-H "Authorization: Bearer ${provider_key}")
+          fi
+
+          curl --silent --show-error --fail-with-body --max-time 20             --get "${SUPABASE_URL}/rest/v1/innerme_provider_usage"             "${provider_headers[@]}"             --data-urlencode 'select=request_id,attempt_number,task_category,provider,model,outcome,http_status,latency_ms,input_tokens,output_tokens,total_tokens,error_code,fallback_reason'             --data-urlencode "request_id=eq.${REQUEST_ID}"             --data-urlencode 'order=attempt_number.asc'             -o /tmp/innerme-benchmark-provider-usage.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          rows = json.loads(Path("/tmp/innerme-benchmark-provider-usage.json").read_text(encoding="utf-8"))
+          if not isinstance(rows, list) or not rows:
+              raise SystemExit("No provider telemetry was found for this request ID. Check the isolated telemetry table and its service-role grants.")
+          for row in rows:
+              if row.get("task_category") != "assistant_chat":
+                  raise SystemExit(f"Unexpected telemetry task category for chat request: {row!r}")
+              latency = row.get("latency_ms")
+              if not isinstance(latency, int) or latency < 0:
+                  raise SystemExit(f"Provider-attempt latency is missing or invalid: {row!r}")
+          print("PROVIDER_ATTEMPTS=" + str(len(rows)))
+          print("PROVIDER_TELEMETRY=" + json.dumps([{
+              "attempt": row["attempt_number"],
+              "provider": row["provider"],
+              "model": row["model"],
+              "outcome": row["outcome"],
+              "http_status": row["http_status"],
+              "latency_ms": row["latency_ms"],
+              "input_tokens": row["input_tokens"],
+              "output_tokens": row["output_tokens"],
+              "error_code": row["error_code"],
+              "fallback_reason": row["fallback_reason"],
+          } for row in rows], separators=(",", ":")))
+          print("PASS: provider latency/token telemetry is correlated to the same normal chat request.")
+          PY
+
