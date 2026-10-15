@@ -28,7 +28,7 @@ export const EXPERIMENT_CASES = Object.freeze([
       { name: "correct_area", pattern: "\\b40\\b" },
       {
         name: "correct_units",
-        pattern: "(?:\\bcm\\s*(?:\\^?2\\b|²)|\\bsquare\\s+centi(?:metres|meters)\\b|\\bcentimetres?\\s+squared\\b|\\bcentimeters?\\s+squared\\b)",
+        pattern: "(?:\\bcm\\s*(?:\\^?\\s*2\\b|²|\\bsquared\\b)|\\bsquare\\s+(?:cm|centi(?:metres|meters))\\b|\\bcentimetres?\\s+squared\\b|\\bcentimeters?\\s+squared\\b|\\bsq\\.?\\s*cm\\b|\\bsq\\.?\\s+centi(?:metres|meters)\\b)",
       },
     ],
   },
