@@ -79,22 +79,20 @@ CREATE TABLE IF NOT EXISTS public.innerme_knowledge (
 ALTER TABLE public.innerme_knowledge_sources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.innerme_knowledge ENABLE ROW LEVEL SECURITY;
 
--- Supabase can grant default Data API privileges to newly created public tables.
--- Remove public/anonymous and direct service-role access while preserving existing
--- production permissions on tables that were already present.
-REVOKE ALL ON TABLE public.innerme_knowledge_sources FROM PUBLIC, anon, service_role;
-REVOKE ALL ON TABLE public.innerme_knowledge FROM PUBLIC, anon, service_role;
-GRANT SELECT ON TABLE public.innerme_knowledge_sources TO authenticated;
-GRANT SELECT ON TABLE public.innerme_knowledge TO authenticated;
-
 DO $policies$
 BEGIN
+  -- Apply least-privilege grants only when this baseline had to create the table.
+  -- Existing production policy/grant state is intentionally left unchanged.
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
     WHERE schemaname = 'public'
       AND tablename = 'innerme_knowledge_sources'
       AND policyname = 'Swayphics admins can manage InnerMe knowledge sources'
   ) THEN
+    REVOKE ALL ON TABLE public.innerme_knowledge_sources FROM PUBLIC, anon, service_role;
+    REVOKE INSERT, UPDATE, DELETE ON TABLE public.innerme_knowledge_sources FROM authenticated;
+    GRANT SELECT ON TABLE public.innerme_knowledge_sources TO authenticated;
+
     CREATE POLICY "Swayphics admins can manage InnerMe knowledge sources"
       ON public.innerme_knowledge_sources
       FOR ALL TO authenticated
@@ -108,6 +106,10 @@ BEGIN
       AND tablename = 'innerme_knowledge'
       AND policyname = 'Swayphics admins can manage InnerMe knowledge'
   ) THEN
+    REVOKE ALL ON TABLE public.innerme_knowledge FROM PUBLIC, anon, service_role;
+    REVOKE INSERT, DELETE ON TABLE public.innerme_knowledge FROM authenticated;
+    GRANT SELECT, UPDATE ON TABLE public.innerme_knowledge TO authenticated;
+
     CREATE POLICY "Swayphics admins can manage InnerMe knowledge"
       ON public.innerme_knowledge
       FOR ALL TO authenticated
