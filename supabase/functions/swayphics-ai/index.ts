@@ -6720,6 +6720,7 @@ Deno.serve(async (req) => {
     query_failures: queryFailures,
     workspace_focused_record_lookup_status: focusedRecordLookupStatus,
     workspace_loaded_collections: workspaceQueryPlan.collections,
+    workspace_loaded_business_brain_collections: workspaceQueryPlan.businessBrainCollections,
     workspace_retrieval_plan: {
       profile: workspaceQueryPlan.profile,
       reason: workspaceQueryPlan.reason,
