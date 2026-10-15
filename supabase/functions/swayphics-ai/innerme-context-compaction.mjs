@@ -61,8 +61,8 @@ const ULTRA_RECENT_COLLECTION_LIMITS = Object.freeze({
 });
 
 const ULTRA_RECORD_FIELDS = Object.freeze({
-  leads: ["id", "business_name", "service_interest", "status", "estimated_value", "next_follow_up", "converted_client_id"],
-  followups: ["id", "lead_id", "client_id", "scheduled_for", "channel", "status", "note"],
+  leads: ["id", "business_name", "service_interest", "status", "estimated_value", "next_follow_up", "next_follow_up_timing", "converted_client_id"],
+  followups: ["id", "lead_id", "client_id", "scheduled_for", "scheduled_timing", "channel", "status", "note"],
   clients: ["id", "business_name", "status", "source_lead_id"],
   projects: ["id", "client_id", "name", "service", "status", "value", "due_date", "payment_status"],
   tasks: ["id", "title", "status", "priority", "due_date", "lead_id", "client_id", "project_id"],
