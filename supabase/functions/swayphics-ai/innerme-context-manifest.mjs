@@ -476,6 +476,11 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
     detailCollections.has("followups") ||
     Boolean(focusCollection && ["leads", "clients"].includes(focusCollection));
 
+  const loadedCollections = Array.isArray(context?.workspace_loaded_collections)
+    ? context.workspace_loaded_collections
+    : null;
+  const loadedSet = loadedCollections ? new Set(loadedCollections) : null;
+
   const manifestCollections = {};
   for (const [key, config] of Object.entries(COLLECTIONS)) {
     const rows = Array.isArray(context?.[key]) ? context[key] : [];
@@ -497,11 +502,6 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
     const rows = Array.isArray(context?.[key]) ? context[key] : [];
     selectedModelCounts[key] = detailCollections.has(key) ? rows.length : 0;
   }
-
-  const loadedCollections = Array.isArray(context?.workspace_loaded_collections)
-    ? context.workspace_loaded_collections
-    : null;
-  const loadedSet = loadedCollections ? new Set(loadedCollections) : null;
 
   const selected = {
     generated_at: context?.generated_at ?? null,
