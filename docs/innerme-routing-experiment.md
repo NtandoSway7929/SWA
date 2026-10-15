@@ -9,7 +9,7 @@ The suite applies deterministic rubric checks to response text. It measures per-
 ## Safety controls
 
 - Live execution is available only through the manual **InnerMe Paired Routing Experiment** GitHub Actions workflow.
-- The code has a fixed matrix of four prompts x two models, with an eight-provider-request maximum. It runs sequentially and does not retry HTTP errors, rate limits, timeouts, or invalid responses.
+- The code has a fixed matrix of four prompts x two models, with an eight-provider-request maximum. It runs sequentially, gives each Gemini request a 40-second timeout, and does not retry HTTP errors, rate limits, timeouts, or invalid responses. The GitHub Actions job has a hard 10-minute overall timeout to leave bounded time for ledger updates and offline checks.
 - It reserves each request in the isolated ledger before making that request. The ledger permits only one run per UTC date; if a run is interrupted or fails, it will fail closed for that date rather than allow a rerun that could increase provider use.
 - Only aggregate scores, latency, token counts, case keys, status, and error codes are stored. Prompt text and model answers are intentionally not stored or printed.
 - Results are written only to https://ofqofhnlzbouclvvrmzd.supabase.co (the isolated Swayphics InnerMe Test project). The runner contains this URL as a fixed constant rather than reading it from an environment variable.
@@ -31,7 +31,7 @@ The automated PR validation executes only static checks, synthetic rubric tests,
 
 - **completed** means all eight model-case responses were received and scored by the deterministic checks.
 - A nonzero exit, HTTP 429/503, timeout, empty response, or ledger failure is an **inconclusive** experiment, not a model-quality failure. The runner does not retry; inspect the aggregate error code and wait for the next UTC day before attempting another run.
-- A case **FAIL** means one or more expected text signals were absent. It may be a rubric mismatch rather than a fully judged answer-quality failure. Inspecting response content is not part of this automated run.
+- A case **FAIL** means one or more expected text signals were absent. It may be a rubric mismatch rather than a fully judged answer-quality failure. The area-units rubric accepts common equivalent forms such as `cm²`, `cm^2`, `cm2`, `cm squared`, `square cm`, and `sq. cm`; it still requires the correct value and an area unit. Inspecting response content is not part of this automated run.
 - Compare the routine and reasoning categories separately. The sample is deliberately too small to justify changing production routing by itself.
 - No run result authorizes merging, deployment, automated self-modification, or a change to InnerMe's permission/action policies. Human review and broader evaluation are still required.
 
