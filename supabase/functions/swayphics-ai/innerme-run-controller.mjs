@@ -184,6 +184,7 @@ export function selectInnerMeActionReadySteps(steps) {
   const ready = [];
   const skippedUnverified = [];
   const skippedDependencies = [];
+  const skippedNotStarted = [];
   const skippedNotActionable = [];
 
   for (const step of rows) {
@@ -196,13 +197,6 @@ export function selectInnerMeActionReadySteps(steps) {
 
     if (!clean(step?.success_signal) || !clean(step?.verification_method)) {
       skippedUnverified.push(order);
-      continue;
-    }
-
-    // A plan step must be explicitly started through the run controller before
-    // the model may prepare its controlled action proposal.
-    if (status !== "in_progress" || !clean(step?.started_at)) {
-      skippedNotActionable.push(order);
       continue;
     }
 
@@ -220,6 +214,13 @@ export function selectInnerMeActionReadySteps(steps) {
       }
     }
 
+    // A plan step must be explicitly started through the run controller before
+    // the model may prepare its controlled action proposal.
+    if (status !== "in_progress" || !clean(step?.started_at)) {
+      skippedNotStarted.push(order);
+      continue;
+    }
+
     ready.push(step);
   }
 
@@ -227,6 +228,7 @@ export function selectInnerMeActionReadySteps(steps) {
     ready,
     skipped_unverified_step_orders: skippedUnverified.filter(Number.isInteger),
     skipped_dependency_steps: skippedDependencies,
+    skipped_not_started_step_orders: skippedNotStarted.filter(Number.isInteger),
     skipped_not_actionable_step_orders: skippedNotActionable.filter(Number.isInteger),
   };
 }
