@@ -129,6 +129,9 @@ export function compactInnerMeContextForModel(value, options = {}) {
   const maxStringChars = Number.isInteger(options.maxStringChars) ? options.maxStringChars : 220;
   const maxObjectKeys = Number.isInteger(options.maxObjectKeys) ? options.maxObjectKeys : 30;
   const maxDepth = Number.isInteger(options.maxDepth) ? options.maxDepth : 5;
+  const emailBodyMaxChars = Number.isInteger(options.emailBodyMaxChars)
+    ? Math.max(maxStringChars, Math.min(4000, options.emailBodyMaxChars))
+    : maxStringChars;
   const aggressive = options.aggressive === true;
   const ultraCompact = options.ultraCompact === true;
 
@@ -172,11 +175,14 @@ export function compactInnerMeContextForModel(value, options = {}) {
         const isExactDisplayIdentity =
           /(?:^|_)(?:business_name|contact_name|name|title)$/i.test(key) ||
           /^(?:quote_number|invoice_number)$/i.test(key);
-        const fieldLimit = isIdentifier || isExactDateOrTimestamp || isExactDisplayIdentity
-          ? 180
-          : /(^|_)(status|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
-            ? Math.min(180, maxStringChars)
-            : maxStringChars;
+        const isEmailBody = parentKey === "email_messages" && key === "text_body";
+        const fieldLimit = isEmailBody
+          ? emailBodyMaxChars
+          : isIdentifier || isExactDateOrTimestamp || isExactDisplayIdentity
+            ? 180
+            : /(^|_)(status|amount|value|name|title|email|phone|type|number|url|count|total|priority|stage|source)(_|$)/i.test(key)
+              ? Math.min(180, maxStringChars)
+              : maxStringChars;
         output[key] = typeof item === "string"
           ? cleanString(item, fieldLimit)
           : visit(item, depth + 1, key);

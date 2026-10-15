@@ -1,4 +1,9 @@
-import { buildInnerMeWorkspaceContextForModel, isBroadBusinessPlanningRequest } from "./innerme-workspace-intelligence.mjs";
+import {
+  buildInnerMeWorkspaceContextForModel,
+  isBroadBusinessPlanningRequest,
+  selectInnerMeEmailBodyIds,
+  shouldLoadInnerMeEmailBodies,
+} from "./innerme-workspace-intelligence.mjs";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -180,4 +185,123 @@ Deno.test("lead timing uses linked active follow-up when lead next_follow_up is 
   assert(result.workspace_temporal_guidance.lead_followup_date_counts.due_today === 1, "effective date totals should count the linked reminder");
   assert(result.workspace_temporal_guidance.lead_followup_date_counts.unscheduled_or_unknown === 1, "effective unscheduled totals should exclude the linked reminder");
   assert(source.leads[0].next_follow_up === null, "source records should not be mutated");
+});
+
+
+Deno.test("email body queries stay off for counts and broad business priorities", () => {
+  assert(!shouldLoadInnerMeEmailBodies("How many unread emails are there?"), "counts do not need email bodies");
+  assert(!shouldLoadInnerMeEmailBodies("Show me the latest emails"), "an email-list request does not require message bodies");
+  assert(!shouldLoadInnerMeEmailBodies("What are my highest-value moves for today?"), "broad priorities do not need email bodies");
+  assert(!shouldLoadInnerMeEmailBodies("Draft an email to Maisha about the website proposal"), "email-writing requests do not need the existing body by default");
+  assert(shouldLoadInnerMeEmailBodies("Summarize the latest email from Maisha's Touch"), "an email-summary request needs message content");
+  assert(shouldLoadInnerMeEmailBodies("Did they reply?"), "a reply-content question needs message content");
+});
+
+Deno.test("email body selection is bounded and follows an explicit lead focus", () => {
+  const rows = [
+    { id: "email-1", lead_id: "lead-1", client_id: null },
+    { id: "email-2", lead_id: "lead-2", client_id: null },
+    { id: "email-3", lead_id: "lead-1", client_id: null },
+    { id: "email-4", lead_id: "lead-1", client_id: null },
+  ];
+  const ids = selectInnerMeEmailBodyIds({
+    message: "Did they reply?",
+    focusedRecord: { type: "lead", id: "lead-1" },
+    emailRows: rows,
+    leads: [],
+    clients: [],
+    maxRows: 2,
+  });
+  assert(ids.join(",") === "email-1,email-3", "only newest linked messages should be selected up to the configured cap");
+});
+
+Deno.test("named-record email content only selects that record's messages", () => {
+  const rows = [
+    { id: "email-maisha", lead_id: "lead-1", client_id: null },
+    { id: "email-other", lead_id: "lead-2", client_id: null },
+  ];
+  const ids = selectInnerMeEmailBodyIds({
+    message: "Summarize the latest email from Maisha's Touch",
+    emailRows: rows,
+    leads: [
+      { id: "lead-1", business_name: "Maisha's Touch" },
+      { id: "lead-2", business_name: "Another Business" },
+    ],
+    clients: [],
+  });
+  assert(ids.join(",") === "email-maisha", "named targets must not attach unrelated messages");
+});
+
+Deno.test("drafting a reply loads only the named source email", () => {
+  const rows = [
+    { id: "email-maisha", lead_id: "lead-1", client_id: null },
+    { id: "email-other", lead_id: "lead-2", client_id: null },
+  ];
+  const message = "Draft a reply to Maisha's Touch's latest email";
+  assert(shouldLoadInnerMeEmailBodies(message), "reply drafting tied to an existing email needs source content");
+  const ids = selectInnerMeEmailBodyIds({
+    message,
+    emailRows: rows,
+    leads: [
+      { id: "lead-1", business_name: "Maisha's Touch" },
+      { id: "lead-2", business_name: "Another Business" },
+    ],
+    clients: [],
+  });
+  assert(ids.join(",") === "email-maisha", "reply drafting must use the named lead's email only");
+});
+
+Deno.test("focused or named records do not fall back to unrelated email bodies", () => {
+  const rows = [{ id: "email-other", lead_id: "lead-2", client_id: "client-2" }];
+  const focused = selectInnerMeEmailBodyIds({
+    message: "Did they reply?",
+    focusedRecord: { type: "lead", id: "lead-1" },
+    emailRows: rows,
+  });
+  assert(focused.length === 0, "a focused lead without linked email metadata must not select another lead's message");
+  const named = selectInnerMeEmailBodyIds({
+    message: "Summarize Maisha's Touch's latest email",
+    emailRows: rows,
+    leads: [{ id: "lead-1", business_name: "Maisha's Touch" }],
+    clients: [],
+  });
+  assert(named.length === 0, "a named lead without linked email metadata must not fall back to the inbox");
+});
+
+Deno.test("unknown explicit recipients never fall back to unrelated inbox content", () => {
+  const rows = [
+    { id: "email-other", lead_id: "lead-2", client_id: null },
+  ];
+  const ids = selectInnerMeEmailBodyIds({
+    message: "Summarize the latest email from an unlisted business",
+    emailRows: rows,
+    leads: [{ id: "lead-1", business_name: "Known Business" }],
+    clients: [],
+  });
+  assert(ids.length === 0, "an explicit but unresolved recipient must not attach unrelated email bodies");
+});
+
+Deno.test("unlisted people named in reply questions never use unrelated email bodies", () => {
+  const rows = [{ id: "email-other", lead_id: "lead-2", client_id: null }];
+  const ids = selectInnerMeEmailBodyIds({
+    message: "Did Unlisted Prospect reply?",
+    emailRows: rows,
+    leads: [{ id: "lead-1", business_name: "Known Business" }],
+    clients: [],
+  });
+  assert(ids.length === 0, "a specifically named but unresolved person must not attach unrelated messages");
+});
+
+Deno.test("generic email-content request returns only a small newest-first sample", () => {
+  const rows = Array.from({ length: 12 }, (_, index) => ({
+    id: "email-" + index,
+    lead_id: null,
+    client_id: null,
+  }));
+  const ids = selectInnerMeEmailBodyIds({
+    message: "Show me the latest emails and summarize what they say",
+    emailRows: rows,
+    maxRows: 3,
+  });
+  assert(ids.join(",") === "email-0,email-1,email-2", "generic email requests must respect the bounded recent-message limit");
 });

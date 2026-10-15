@@ -9,7 +9,11 @@ import {
   isCloudflareEligibleWritingRequest,
   selectInnerMeChatRoute,
 } from "./innerme-provider-routing.mjs";
-import { buildInnerMeWorkspaceContextForModel } from "./innerme-workspace-intelligence.mjs";
+import {
+  buildInnerMeWorkspaceContextForModel,
+  selectInnerMeEmailBodyIds,
+  shouldLoadInnerMeEmailBodies,
+} from "./innerme-workspace-intelligence.mjs";
 import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
 import {
   buildInnerMeProgressiveContext,
@@ -6524,7 +6528,7 @@ Deno.serve(async (req) => {
     workspaceSupabase.from("client_portal_requests").select("*").order("created_at", { ascending: false }).limit(60),
     workspaceSupabase.from("communication_logs").select("*").order("contacted_at", { ascending: false }).limit(100),
     workspaceSupabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(60),
-    workspaceSupabase.from("email_messages").select("id,direction,mailbox,thread_id,from_name,from_email,to_email,subject,text_body,received_at,is_read,client_id,lead_id,created_at,updated_at").eq("mailbox", "info@swayphics.co.za").order("received_at", { ascending: false }).limit(100),
+    workspaceSupabase.from("email_messages").select("id,direction,mailbox,thread_id,from_name,from_email,to_email,subject,received_at,is_read,client_id,lead_id,created_at,updated_at").eq("mailbox", "info@swayphics.co.za").order("received_at", { ascending: false }).limit(100),
     workspaceSupabase.from("innerme_decisions").select("id,title,decision,context,rationale,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(50),
     workspaceSupabase.from("innerme_playbooks").select("id,name,purpose,definition_of_done,steps,status,created_at,updated_at").eq("status","active").order("updated_at",{ascending:false}).limit(30),
     workspaceSupabase.from("innerme_experiments").select("id,name,hypothesis,action,success_metric,status,review_date,result,learning,created_at,updated_at").in("status",["idea","running"]).order("updated_at",{ascending:false}).limit(30),
@@ -6533,6 +6537,43 @@ Deno.serve(async (req) => {
     workspaceSupabase.from("innerme_agents").select("id,slug,name,purpose,inputs,outputs,definition_of_done,trust_stage,permissions,status,instructions,updated_at").eq("status","active").order("name",{ascending:true}).limit(30),
     workspaceSupabase.from("innerme_predictive_forecasts").select("id,forecast_key,forecast_type,horizon_days,forecast_date,status,confidence,unit,baseline_value,projected_value,delta_value,direction,metric_label,statement,assumptions,evidence,evidence_window_start,evidence_window_end,horizon_start,horizon_end,verification_status,actual_value,forecast_error,verified_at,updated_at").eq("forecast_date",new Date().toISOString().slice(0,10)).order("horizon_days",{ascending:true}).limit(30),
   ]);
+
+  // Bulk mailbox context carries metadata only. Email text can be long or sensitive,
+  // so fetch a small, relevant set of bodies only for explicit content questions.
+  const emailBodyLookupWarnings: string[] = [];
+  const emailBodyIds = selectInnerMeEmailBodyIds({
+    message,
+    focusedRecord: body.focused_record,
+    emailRows: emailMessages.data || [],
+    leads: leads.data || [],
+    clients: clients.data || [],
+    maxRows: 5,
+  });
+  if (emailBodyIds.length > 0) {
+    const { data: emailBodies, error: emailBodiesError } = await workspaceSupabase
+      .from("email_messages")
+      .select("id,text_body")
+      .in("id", emailBodyIds);
+    if (emailBodiesError) {
+      emailBodyLookupWarnings.push("email_message_bodies");
+      console.warn("InnerMe email body lookup failed.", emailBodiesError.code || "database_error");
+    } else {
+      const bodiesById = new Map<string, string>();
+      for (const row of Array.isArray(emailBodies) ? emailBodies : []) {
+        if (row?.id) {
+          bodiesById.set(
+            String(row.id),
+            typeof row.text_body === "string" ? row.text_body : "",
+          );
+        }
+      }
+      emailMessages.data = (Array.isArray(emailMessages.data) ? emailMessages.data : []).map((row: any) =>
+        bodiesById.has(String(row?.id || ""))
+          ? { ...row, text_body: bodiesById.get(String(row?.id || "")) }
+          : row
+      );
+    }
+  }
 
   // Exact focused-record lookup: the bounded list queries above may not contain
   // an older record. Use the authenticated admin client to fetch that one ID.
@@ -6637,7 +6678,7 @@ Deno.serve(async (req) => {
   const queryFailures = Object.entries(queryResults)
     .filter(([, result]: [string, any]) => Boolean(result?.error))
     .map(([name]) => name)
-    .concat(focusedRecordLookupWarnings);
+    .concat(focusedRecordLookupWarnings, emailBodyLookupWarnings);
 
   if (queryFailures.length) {
     console.error(
@@ -11156,7 +11197,7 @@ Answer the admin's question directly.
                     "\n\nWORKSPACE INTEGRITY RULES:\n" +
                     "Use workspace_model_context_record_counts for the collections supplied after filters; workspace_source_record_counts reflect bounded query results, not guaranteed database-wide totals; loaded record indexes are pointers, not evidence for row-specific claims. Do not infer totals by counting compacted arrays. Honor workspace_model_context_exclusion_counts and workspace_intelligence_notes: self-owned and test enquiries are not genuine commercial opportunities. Use business_date_johannesburg and deterministic timing fields: earlier than the business date means overdue, the same date means due today, and later means upcoming. Never label a future date overdue. For deciding whether a contacted lead is unscheduled, use effective_follow_up_date, effective_follow_up_timing, effective_follow_up_source and linked_pending_followup_count. An active linked follow-up can exist even if the lead's own next_follow_up field is empty. Prefer linked active schedule records, and flag any conflict between the lead date and the earliest active linked follow-up. Cross-check follow-up lead_id/client_id values against supplied IDs, and flag true orphans and duplicates. Prioritise genuinely overdue and due-soon follow-ups over speculative preparation tasks.\n\n" +
                     "CURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
-                    JSON.stringify(compactInnerMeContextForModel(workspaceForPrompt)),
+                    JSON.stringify(compactInnerMeContextForModel(workspaceForPrompt, shouldLoadInnerMeEmailBodies(message) ? { emailBodyMaxChars: 1200 } : {})),
                 },
               ],
             },
