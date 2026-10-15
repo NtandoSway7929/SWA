@@ -42,14 +42,17 @@ The workspace query plan is now built **before the Supabase reads** for routine 
 
 Query-skipped collections use a distinct `query_executed: false` manifest state. Their `loaded_records` is `null`, no record index is manufactured, and metrics for collections that were not queried are omitted rather than represented as zero. Remaining operational metrics are explicitly described as derived from bounded results, not guaranteed database-wide totals. This avoids false certainty while reducing reads.
 
-## Remaining limit: database-wide summaries
+## Database-side operational aggregates
 
-The separate database-side aggregate RPC is **not implemented by this change**. The current operational summaries are still calculated from bounded query results; their sample scope is now disclosed rather than overstated. Before replacing them with SQL aggregates, the isolated **Swayphics InnerMe Test** project needs a faithful operational schema: the current isolated database does not contain most of the production workspace tables used by these summaries. An aggregate query tested against that incomplete schema would not validate the production data flow.
+The new `public.get_innerme_workspace_summary(text[])` RPC returns request-scoped aggregate metrics for the specific operational collections selected by the query planner. It calculates counts, follow-up status totals, pipeline values and finance totals in PostgreSQL instead of treating the Edge Function's bounded record samples as database-wide totals.
 
-No schema migration or provider call is required for query planning itself. Execution-contract validation, Phase 30 safety gates, explicit approval, confirmation and provider quota checks remain unchanged. This branch has not been deployed by this change.
+- The RPC only accepts an explicit non-empty allowlist of workspace domains; unknown or duplicate domains are rejected.
+- It is `SECURITY INVOKER`, requires an authenticated Swayphics administrator, retains underlying table grants and RLS, and has execution revoked from `PUBLIC` and `anon`.
+- It queries only the aggregate groups relevant to the requested collections and does not return customer record details.
+- The Edge Function requests aggregates in parallel with bounded detail reads. Exact aggregate groups replace the corresponding bounded estimates, while detailed follow-up items and linked business records remain bounded samples.
+- On aggregate RPC failure, the Edge Function falls back to the existing bounded calculation and surfaces `workspace_summary` in query failures. It does not represent a fallback sample as a database-wide total.
+- Context compaction preserves the `database_aggregate` provenance marker and its scope statement and omits aggregate groups for domains not queried.
 
-## Validation
+The aggregate RPC has been applied to the isolated **Swayphics InnerMe Test** project and exercised under an authenticated synthetic admin context. A transaction-based fixture test checked lead counts/values, due/overdue follow-ups, quote totals, outstanding invoices, paid payments, enquiries, tasks, projects, clients, portal requests, communications, activity log and mailbox counts. The test rolled back all synthetic rows; a follow-up query confirmed none of the labelled lead/task fixture IDs remained. Anonymous function execution was denied and authenticated execution was granted.
 
-`innerme-context-manifest.test.ts` now covers query planning, selective invoice reads, entity-only lead follow-up, broad-context preservation, focused-record relationships, omitted/unqueried metrics, prior progressive manifest behavior, on-demand playbook detail and allowlisted exact-lookup descriptors. These tests require no Gemini provider calls.
-
-The existing `Validate InnerMe Edge Function` workflow runs these tests. CI and rollout status must be checked before treating the branch as validated or live.
+The SQL migration and Edge Function integration remain subject to CI review before rollout. No production migration or deployment of this aggregate RPC is claimed by this branch.
