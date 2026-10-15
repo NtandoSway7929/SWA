@@ -165,19 +165,55 @@ language plpgsql
 security invoker
 set search_path=public
 as $function$
+declare
+  v_guard_mode text := current_setting('innerme.execution_step_transition',true);
 begin
-  if current_setting('innerme.execution_step_transition',true) is distinct from 'authorized' then
-    if tg_op='INSERT' then
-      if new.status <> 'planned' then
-        raise exception 'New execution steps must start in planned status.';
-      end if;
-    elsif new.status is distinct from old.status then
-      if old.status='planned' and new.status in ('approved','cancelled') then
-        return new;
-      end if;
-      raise exception 'Execution-step run status changes must use the governed transition RPC.';
+  if tg_op='INSERT' then
+    if v_guard_mode is distinct from 'authorized'
+       and (
+         new.status <> 'planned'
+         or new.attempt_count <> 0
+         or new.started_at is not null
+         or new.checkpoint <> '{}'::jsonb
+         or new.checkpointed_at is not null
+         or new.completion_evidence <> '{}'::jsonb
+         or new.completed_at is not null
+         or new.completed_by is not null
+         or new.blocked_reason is not null
+         or new.last_error_code is not null
+       ) then
+      raise exception 'New execution steps must start in planned status with empty run-controller state.';
+    end if;
+    return new;
+  end if;
+
+  if v_guard_mode is distinct from 'authorized'
+     and (
+       new.attempt_count is distinct from old.attempt_count
+       or new.started_at is distinct from old.started_at
+       or new.checkpoint is distinct from old.checkpoint
+       or new.checkpointed_at is distinct from old.checkpointed_at
+       or new.completion_evidence is distinct from old.completion_evidence
+       or new.completed_at is distinct from old.completed_at
+       or new.completed_by is distinct from old.completed_by
+       or new.blocked_reason is distinct from old.blocked_reason
+       or new.last_error_code is distinct from old.last_error_code
+     ) then
+    raise exception 'Run-controller fields may only be changed through the governed transition RPC.';
+  end if;
+
+  if new.status is distinct from old.status then
+    if v_guard_mode='authorized' then
+      return new;
+    elsif v_guard_mode='plan_review'
+      and old.status='planned'
+      and new.status in ('approved','cancelled') then
+      return new;
+    else
+      raise exception 'Execution-step run status changes must use the governed transition RPC or plan-review RPC.';
     end if;
   end if;
+
   return new;
 end;
 $function$;
@@ -419,6 +455,7 @@ begin
   if not public.is_swayphics_admin() then
     raise exception 'Only active Swayphics admins can review InnerMe execution plans.';
   end if;
+  perform set_config('innerme.execution_step_transition','plan_review',true);
   if v_decision not in ('approved','cancelled') then
     raise exception 'Execution plan review must be approved or cancelled.';
   end if;
