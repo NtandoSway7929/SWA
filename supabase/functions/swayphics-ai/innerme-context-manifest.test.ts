@@ -88,7 +88,7 @@ Deno.test("a named record can trigger its domain even when the question omits th
 });
 
 Deno.test("explicit focused records take precedence and preserve connected context", () => {
-  const source = fixture();
+  const source: any = fixture();
   source.focused_record = {
     type: "lead",
     id: "lead-1",
