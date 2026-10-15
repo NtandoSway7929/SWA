@@ -171,13 +171,162 @@ function selectedCollectionsForText(text) {
   return selected;
 }
 
-function compactOperationalSummary(summary, includeFollowupDetails) {
+const BUSINESS_BRAIN_COLLECTIONS = Object.freeze([
+  "decisions",
+  "playbooks",
+  "active_experiments",
+  "insights",
+  "preferences",
+  "agents",
+  "predictive_business_intelligence",
+]);
+
+const FOCUSED_RELATED_COLLECTIONS = Object.freeze({
+  leads: ["followups", "communications", "quotes", "email_messages", "clients"],
+  clients: ["projects", "tasks", "followups", "quotes", "invoices", "payments", "communications", "portal_requests", "email_messages"],
+  projects: ["clients", "tasks", "invoices", "payments"],
+  tasks: ["clients", "projects"],
+  quotes: ["clients", "leads", "invoices"],
+  invoices: ["clients", "projects", "payments", "email_messages"],
+  enquiries: [],
+  portal_requests: ["clients"],
+});
+
+const ENTITY_LOOKUP_PATTERN = /\b(?:what about|tell me about|update on|status of|how is|how's|any update on|next steps for|regarding|show me|look up)\b/i;
+
+/**
+ * Choose database reads before querying Supabase.
+ *
+ * Routine chat reads only the domains and relationship tables needed for this
+ * turn. Broad operational requests and specialised non-chat actions retain the
+ * full evidence set. A small entity-resolution fallback preserves common
+ * name-only follow-ups such as "What about Maisha's Touch?".
+ */
+export function planInnerMeWorkspaceRetrieval(options = {}) {
+  const action = String(options?.action ?? "").trim();
+  const message = String(options?.message ?? "");
+  const history = Array.isArray(options?.history) ? options.history : [];
+  const text = [
+    message,
+    ...history.slice(-4).map((item) => String(item?.content ?? "")),
+  ].join("\n");
+  const focusedRecord = options?.focusedRecord ?? null;
+  const focusCollection = collectionForFocusType(focusedRecord?.type);
+  const isAssistantChat = !action || action === "assistant_chat";
+  const broad = BROAD_OPERATIONS_PATTERN.test(text);
+  const businessBrainRequested = BUSINESS_BRAIN_PATTERN.test(text) || broad;
+
+  if (!isAssistantChat || broad) {
+    return {
+      profile: broad ? "broad_operations" : "specialized_action",
+      reason: broad
+        ? "Cross-domain planning requires the full operational evidence set."
+        : "Specialized action compatibility preserves its established workspace evidence set.",
+      collections: [...CORE_COLLECTIONS],
+      businessBrainCollections: [...BUSINESS_BRAIN_COLLECTIONS],
+    };
+  }
+
+  const selected = selectedCollectionsForText(text);
+  if (focusCollection) {
+    selected.add(focusCollection);
+    for (const related of FOCUSED_RELATED_COLLECTIONS[focusCollection] ?? []) {
+      selected.add(related);
+    }
+  } else if (selected.size === 0 && ENTITY_LOOKUP_PATTERN.test(text)) {
+    for (const collection of ["leads", "clients", "tasks", "projects"]) {
+      selected.add(collection);
+    }
+  }
+
+  const profile = focusCollection
+    ? "focused_record"
+    : selected.size
+      ? "topic_focused"
+      : "manifest_only";
+
+  const businessBrainCollections = businessBrainRequested
+    ? [...BUSINESS_BRAIN_COLLECTIONS]
+    : ["preferences"];
+
+  return {
+    profile,
+    reason: focusCollection
+      ? "Explicit UI focus selects its record domain and bounded related evidence."
+      : selected.size
+        ? "Request intent selects only matching workspace domains and required relationship tables."
+        : "No business domain is implied, so only global preferences are loaded.",
+    collections: CORE_COLLECTIONS.filter((collection) => selected.has(collection)),
+    businessBrainCollections,
+  };
+}
+
+function compactOperationalSummary(summary, includeFollowupDetails, loadedCollections = null) {
   if (!summary || typeof summary !== "object") return summary ?? null;
   const result = { ...summary };
   if (!includeFollowupDetails) {
     delete result.followups_due;
     delete result.followup_attention_today;
   }
+
+  // Older callers and fixtures that omit this field retain legacy behaviour.
+  // A dynamic query plan must not turn "not queried" into a zero-valued fact.
+  if (Array.isArray(loadedCollections)) {
+    const loaded = new Set(loadedCollections);
+    const groupToCollection = {
+      lead_counts: "leads",
+      lead_value_zar: "leads",
+      quote_summary: "quotes",
+      invoice_summary: "invoices",
+      payment_summary: "payments",
+      enquiry_summary: "enquiries",
+      task_summary: "tasks",
+      project_summary: "projects",
+      client_summary: "clients",
+      portal_request_summary: "portal_requests",
+      communication_summary: "communications",
+      email_summary: "email_messages",
+    };
+    for (const [group, collection] of Object.entries(groupToCollection)) {
+      if (!loaded.has(collection)) delete result[group];
+    }
+
+    const followupCounts = result.followup_counts && typeof result.followup_counts === "object"
+      ? { ...result.followup_counts }
+      : null;
+    if (followupCounts) {
+      if (!loaded.has("followups")) {
+        for (const key of [
+          "pending_due_or_overdue",
+          "pending_due_today",
+          "pending_overdue",
+          "pending_total",
+        ]) delete followupCounts[key];
+      }
+      if (!loaded.has("leads")) {
+        for (const key of [
+          "lead_next_followups_due_or_overdue",
+          "lead_next_followups_due_today",
+          "lead_next_followups_overdue",
+        ]) delete followupCounts[key];
+      }
+      if (Object.keys(followupCounts).length) result.followup_counts = followupCounts;
+      else delete result.followup_counts;
+    }
+
+    if (!loaded.has("followups")) {
+      delete result.followups_due;
+      delete result.followup_attention_today;
+    } else if (!loaded.has("leads") && result.followup_attention_today) {
+      const attention = { ...result.followup_attention_today };
+      delete attention.lead_profile_overdue;
+      delete attention.lead_profile_due_today;
+      result.followup_attention_today = attention;
+    }
+
+    result.metric_scope = "Metrics shown here are derived only from bounded records queried for this turn. They are not guaranteed database-wide totals; omitted metric groups were not queried.";
+  }
+
   return result;
 }
 
@@ -328,13 +477,15 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
   for (const [key, config] of Object.entries(COLLECTIONS)) {
     const rows = Array.isArray(context?.[key]) ? context[key] : [];
     const isDetailed = detailCollections.has(key);
+    const queryExecuted = loadedSet ? loadedSet.has(key) : true;
     manifestCollections[key] = {
       description: config.label,
       trigger_terms: config.triggers.slice(0, 8),
-      loaded_records: rows.length,
+      loaded_records: queryExecuted ? rows.length : null,
+      query_executed: queryExecuted,
       loaded_count_is_database_total: false,
-      detail_loaded: isDetailed,
-      ...(isDetailed ? {} : { record_index: recordIndex(rows, config.identityFields) }),
+      detail_loaded: isDetailed && queryExecuted,
+      ...(!isDetailed && queryExecuted ? { record_index: recordIndex(rows, config.identityFields) } : {}),
     };
   }
 
@@ -343,6 +494,11 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
     const rows = Array.isArray(context?.[key]) ? context[key] : [];
     selectedModelCounts[key] = detailCollections.has(key) ? rows.length : 0;
   }
+
+  const loadedCollections = Array.isArray(context?.workspace_loaded_collections)
+    ? context.workspace_loaded_collections
+    : null;
+  const loadedSet = loadedCollections ? new Set(loadedCollections) : null;
 
   const selected = {
     generated_at: context?.generated_at ?? null,
@@ -363,7 +519,7 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
       progressive_disclosure_rule: "Only expanded collections contain row detail. Record-index entries are pointers, not enough evidence to assert row-specific facts. Loaded counts are bounded query sample sizes, not database-wide totals.",
       collections: manifestCollections,
     },
-    operational_summary: compactOperationalSummary(context?.operational_summary, includeFollowupDetails),
+    operational_summary: compactOperationalSummary(context?.operational_summary, includeFollowupDetails, loadedCollections),
     workspace_temporal_guidance: context?.workspace_temporal_guidance ?? null,
     workspace_model_context_exclusion_counts: context?.workspace_model_context_exclusion_counts ?? {},
     workspace_intelligence_notes: context?.workspace_intelligence_notes ?? [],
