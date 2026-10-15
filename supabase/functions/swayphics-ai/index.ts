@@ -9265,7 +9265,6 @@ Deno.serve(async (req) => {
       ? planInput.completion_criteria
           .map((item: any) => typeof item === "string" ? cleanForModel(item, 260) : "")
           .filter(Boolean)
-          .slice(0, 8)
       : [];
 
     const effort = ["low", "medium", "high"].includes(
@@ -9370,6 +9369,10 @@ Deno.serve(async (req) => {
       );
     }
 
+    const contractSnapshotPersisted =
+      savedPlan.execution_contract_version === INNERME_EXECUTION_CONTRACT_VERSION &&
+      savedPlan.execution_contract_snapshot?.version === INNERME_EXECUTION_CONTRACT_VERSION;
+
     return json(
       {
         ok: true,
@@ -9380,6 +9383,10 @@ Deno.serve(async (req) => {
         live_workspace_changed: false,
         execution_contract_status: "validated_before_save",
         execution_contract_version: INNERME_EXECUTION_CONTRACT_VERSION,
+        execution_contract_persisted: contractSnapshotPersisted,
+        warning: contractSnapshotPersisted
+          ? null
+          : "The plan passed contract validation, but the database did not confirm that its contract snapshot was persisted. Apply the execution-contract schema migration before relying on durable contract history.",
         provider_model: model,
       },
       200,
