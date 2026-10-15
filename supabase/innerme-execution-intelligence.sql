@@ -524,10 +524,7 @@ begin
     where p.step_id=v_step.id
       and (
         p.status='executing'
-        or (
-          e.status='started'
-          and coalesce(e.response_payload->>'phase','') in ('uncertain','executor_result_observed')
-        )
+        or e.status='started'
       )
   ) then
     raise exception 'An action tied to this step may have an unresolved side effect. Reconcile its execution log before resuming, completing, or blocking the step.';
