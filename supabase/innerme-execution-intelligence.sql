@@ -497,7 +497,7 @@ begin
     raise exception 'Step execution requires an approved or active execution plan.';
   end if;
 
-  if v_step.depends_on_step_order is not null then
+  if v_transition in ('start','resume','complete') and v_step.depends_on_step_order is not null then
     select status into v_dependency_status
     from public.innerme_execution_steps
     where plan_id=v_step.plan_id
@@ -510,14 +510,14 @@ begin
 
   v_from_status := v_step.status;
 
-  if v_transition in ('start','resume','complete','block') and (
+  if v_transition in ('start','resume','complete') and (
     nullif(trim(coalesce(v_step.success_signal,'')),'') is null
     or nullif(trim(coalesce(v_step.verification_method,'')),'') is null
   ) then
     raise exception 'This step requires an observable success signal and a verification method before it can run.';
   end if;
 
-  if v_transition in ('resume','complete','block') and exists (
+  if v_transition in ('start','resume','complete','block') and exists (
     select 1
     from public.innerme_action_proposals p
     left join public.innerme_action_execution_logs e on e.proposal_id=p.id
@@ -600,6 +600,18 @@ begin
     end if;
     if jsonb_array_length(coalesce(p_checkpoint->'verified_artifact_refs','[]'::jsonb))>12 then
       raise exception 'A checkpoint may contain at most 12 verified artifact references.';
+    end if;
+    if exists (
+      select 1 from jsonb_array_elements(coalesce(p_checkpoint->'verified_artifact_refs','[]'::jsonb)) as a(value)
+      where jsonb_typeof(a.value)<>'object'
+         or (a.value - array['source','id','why'])<>'{}'::jsonb
+         or coalesce(a.value->>'source','') not in ('workspace_record','task_record','email_message','test_result','external_url','manual_attestation','other')
+         or nullif(trim(coalesce(a.value->>'id','')),'') is null
+         or char_length(a.value->>'id')>240
+         or nullif(trim(coalesce(a.value->>'why','')),'') is null
+         or char_length(a.value->>'why')>500
+    ) then
+      raise exception 'Each checkpoint artifact reference must contain an approved source, an ID/reference, and a short explanation.';
     end if;
     if p_checkpoint ? 'unresolved_items'
        and jsonb_typeof(p_checkpoint->'unresolved_items')<>'array' then
