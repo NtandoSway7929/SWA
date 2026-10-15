@@ -2,6 +2,10 @@ name: InnerMe Authenticated Runtime Smoke Test
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/innerme-authenticated-runtime-smoke.yml"
   push:
     branches: ["main"]
     paths:
@@ -35,7 +39,7 @@ jobs:
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
-          trap 'rm -f /tmp/innerme-test-login-request.json /tmp/innerme-test-login-response.json /tmp/innerme-test-preflight.json /tmp/innerme-test-action-response.json /tmp/innerme-test-action-request.json' EXIT
+          trap 'rm -f /tmp/innerme-test-login-request.json /tmp/innerme-test-login-response.json /tmp/innerme-test-preflight.json /tmp/innerme-test-action-response.json /tmp/innerme-test-action-request.json /tmp/innerme-test-controller-preflight.json /tmp/innerme-test-controller-request.json /tmp/innerme-test-controller-response.json /tmp/innerme-test-controller-events.json' EXIT
 
           SUPABASE_URL="https://ofqofhnlzbouclvvrmzd.supabase.co"
           SUPABASE_PUBLISHABLE_KEY="sb_publishable_p4UqpaLvEx_93XJSWvzo6Q_loju0xzW"
@@ -130,4 +134,108 @@ jobs:
               raise SystemExit("The endpoint returned HTTP 404 but not the expected missing-proposal response.")
           print("PASS: real test-admin session passed Auth and admin checks, then received the expected missing-proposal 404.")
           print("The proposal was confirmed absent beforehand; the request cannot reach task creation or email delivery.")
+          PY
+
+          # Exercise the deployed run-controller RPC through PostgREST with the
+          # same real test-admin token, using a UUID confirmed absent beforehand.
+          # This validates the public SECURITY INVOKER wrapper/private implementation
+          # path and must fail before any step update or audit event can be written.
+          CONTROLLER_STEP_ID="00000000-0000-0000-0000-000000000000"
+
+          controller_preflight_status="$(curl --silent --show-error --max-time 20 \
+            -o /tmp/innerme-test-controller-preflight.json \
+            -w '%{http_code}' \
+            "${SUPABASE_URL}/rest/v1/innerme_execution_steps?select=id&id=eq.${CONTROLLER_STEP_ID}" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}")"
+
+          if [[ "${controller_preflight_status}" != "200" ]]; then
+            echo "::error::Controller test preflight failed with HTTP ${controller_preflight_status}; no controller RPC was sent."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          rows = json.loads(Path("/tmp/innerme-test-controller-preflight.json").read_text(encoding="utf-8"))
+          if not isinstance(rows, list) or rows:
+              raise SystemExit("Controller test step ID is not confirmed absent; no controller RPC should be sent.")
+          print("Read-only controller preflight passed: synthetic step ID is absent.")
+          PY
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          request = {
+              "p_step_id": "00000000-0000-0000-0000-000000000000",
+              "p_transition": "start",
+              "p_note": "Non-mutating authenticated controller runtime smoke test.",
+              "p_checkpoint": {},
+              "p_completion_evidence": {},
+          }
+          Path("/tmp/innerme-test-controller-request.json").write_text(
+              json.dumps(request), encoding="utf-8"
+          )
+          PY
+
+          controller_status="$(curl --silent --show-error --max-time 20 \
+            -o /tmp/innerme-test-controller-response.json \
+            -w '%{http_code}' \
+            -X POST "${SUPABASE_URL}/rest/v1/rpc/transition_innerme_execution_step" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/innerme-test-controller-request.json)"
+
+          if [[ "${controller_status}" != "400" ]]; then
+            echo "::error::Expected authenticated controller RPC to reject the confirmed-missing step with HTTP 400; received HTTP ${controller_status}."
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              body = json.loads(Path("/tmp/innerme-test-controller-response.json").read_text(encoding="utf-8"))
+          except Exception:
+              print("Controller response was not valid JSON.")
+          else:
+              print("Controller response:", body)
+          PY
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          body = json.loads(Path("/tmp/innerme-test-controller-response.json").read_text(encoding="utf-8"))
+          expected = "The InnerMe execution step could not be found."
+          if body.get("message") != expected:
+              raise SystemExit(
+                  "Authenticated controller RPC returned HTTP 400, but not the expected "
+                  "missing-step response. Verify admin authorization, schema cache, and private RPC access."
+              )
+          print("PASS: authenticated test admin reached the controller RPC and was rejected only because the preflight-confirmed step is absent.")
+          PY
+
+          controller_events_status="$(curl --silent --show-error --max-time 20 \
+            -o /tmp/innerme-test-controller-events.json \
+            -w '%{http_code}' \
+            "${SUPABASE_URL}/rest/v1/innerme_execution_step_events?select=id&step_id=eq.${CONTROLLER_STEP_ID}" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}")"
+
+          if [[ "${controller_events_status}" != "200" ]]; then
+            echo "::error::Controller event-ledger postflight failed with HTTP ${controller_events_status}."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          rows = json.loads(Path("/tmp/innerme-test-controller-events.json").read_text(encoding="utf-8"))
+          if not isinstance(rows, list) or rows:
+              raise SystemExit("Unexpected controller events exist for the nonexistent synthetic step.")
+          print("PASS: no controller event was written by the non-mutating authenticated RPC test.")
           PY
