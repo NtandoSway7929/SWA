@@ -254,22 +254,24 @@ export function shouldLoadInnerMeEmailBodies(message) {
  */
 /**
  * Choose email bodies using only already-authorized mailbox metadata.
- * @param {Object} [options]
- * @param {string} [options.message]
- * @param {{type?: string, id?: string}|null} [options.focusedRecord]
- * @param {Array<{id?: unknown, lead_id?: unknown, client_id?: unknown}>} [options.emailRows]
- * @param {Array<{id?: unknown, business_name?: unknown, contact_name?: unknown, name?: unknown}>} [options.leads]
- * @param {Array<{id?: unknown, business_name?: unknown, contact_name?: unknown, name?: unknown}>} [options.clients]
- * @param {number} [options.maxRows]
+ * @param {{
+ *   message?: string,
+ *   focusedRecord?: {type?: string, id?: string}|null,
+ *   emailRows?: Array<{id?: unknown, lead_id?: unknown, client_id?: unknown}>,
+ *   leads?: Array<{id?: unknown, business_name?: unknown, contact_name?: unknown, name?: unknown}>,
+ *   clients?: Array<{id?: unknown, business_name?: unknown, contact_name?: unknown, name?: unknown}>,
+ *   maxRows?: number
+ * }} [options]
  */
-export function selectInnerMeEmailBodyIds({
-  message,
-  focusedRecord,
-  emailRows,
-  leads,
-  clients,
-  maxRows = 5,
-} = {}) {
+export function selectInnerMeEmailBodyIds(options = {}) {
+  const {
+    message,
+    focusedRecord,
+    emailRows,
+    leads,
+    clients,
+    maxRows = 5,
+  } = options;
   if (!shouldLoadInnerMeEmailBodies(message)) return [];
 
   const rows = Array.isArray(emailRows) ? emailRows : [];
