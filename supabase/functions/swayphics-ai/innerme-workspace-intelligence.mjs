@@ -315,8 +315,8 @@ export function selectInnerMeEmailBodyIds({
 
   const hasKnownNamedTarget = leadIds.size > 0 || clientIds.size > 0;
   const normalizedMessage = String(message || "");
-  const hasExplicitRecipientOrSubject = /\\b(?:from|for|about|regarding|with|of)\\s+[^?.!,]{2,80}/i.test(normalizedMessage);
-  const hasUnresolvedNamedPerson = /\\b(?:did|has|have|what did|what has)\\s+(?!they\\b|them\\b|he\\b|she\\b|we\\b|you\\b|the client\\b|the lead\\b|anyone\\b|someone\\b)([a-z][a-z0-9'’-]+(?:\\s+[a-z][a-z0-9'’-]+){0,3})\\s+(?:reply|respond|answer|say|write|send|email|message)\\b/i.test(normalizedMessage);
+  const hasExplicitRecipientOrSubject = /\b(?:from|for|about|regarding|with|of)\s+[^?.!,]{2,80}/i.test(normalizedMessage);
+  const hasUnresolvedNamedPerson = /\b(?:did|has|have|what did|what has)\s+(?!they\b|them\b|he\b|she\b|we\b|you\b|the client\b|the lead\b|anyone\b|someone\b)([a-z][a-z0-9'’-]+(?:\s+[a-z][a-z0-9'’-]+){0,3})\s+(?:reply|respond|answer|say|write|send|email|message)\b/i.test(normalizedMessage);
 
   const hasNamedTarget = hasKnownNamedTarget || hasExplicitRecipientOrSubject || hasUnresolvedNamedPerson;
   const candidates = hasNamedTarget
