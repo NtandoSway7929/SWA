@@ -7861,6 +7861,10 @@ Deno.serve(async (req) => {
       read_only: true,
       service: "swayphics-ai",
       check: "workspace_retrieval_and_aggregate",
+      provider_configuration: {
+        // Configuration status only; never return key material or other secrets.
+        gemini_key_configured: Boolean(geminiKey),
+      },
       request_id: requestId,
       server_elapsed_ms: Math.max(0, Math.round(performance.now() - requestStartedAt)),
       workspace_retrieval_ms: workspaceRetrievalLatencyMs,
