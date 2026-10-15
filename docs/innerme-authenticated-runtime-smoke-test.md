@@ -7,7 +7,7 @@ This is a manual, non-mutating live smoke test against the **isolated** Supabase
 1. Signs in as a dedicated test admin using Supabase Auth.
 2. Uses that real access token to confirm that an intentionally nonexistent action-proposal ID is absent.
 3. Calls the deployed test `swayphics-ai` function with `action=execute_innerme_action` and that same missing ID.
-4. Calls the test function with `action=innerme_workspace_read_health` for a finance-focused prompt. This must select only clients, invoices and payments, and return those exact aggregate groups without unrelated lead/task metrics.
+4. Calls the test function with `action=innerme_workspace_read_health` for a finance-focused prompt. This must select only clients, invoices and payments, return those exact aggregate groups without unrelated lead/task metrics, and report zero query failures for the selected record reads and aggregate RPC.
 5. Calls the same health action for a broad daily-priorities prompt. This must preserve all 13 operational domains and all 14 aggregate groups.
 6. Calls the run-controller RPC with a confirmed-missing synthetic step ID.
 7. Passes only when the expected missing-proposal and missing-step responses occur, the focused request uses `summary_source=database_aggregate` with three relevant domains, and the broad request reports all expected aggregate groups.
@@ -55,7 +55,7 @@ The workflow never runs on pull requests. It is manual-only, read-only apart fro
 ## Interpreting results
 
 - **PASS / HTTP 404 with the expected error:** the live test user authenticated, passed the admin check, and reached the missing-proposal branch.
-- **PASS / HTTP 200 from the focused workspace health check:** the live Edge Function uses request-aware selection for the finance prompt and returns only the clients, invoices and payments aggregate groups.
+- **PASS / HTTP 200 from the focused workspace health check:** the live Edge Function uses request-aware selection for the finance prompt, returns only the clients, invoices and payments aggregate groups, and reports no failures while reading those selected collections.
 - **PASS / HTTP 200 from the broad workspace health check:** the live Edge Function retains all 13 operational domains and all 14 aggregate groups for daily-priorities work. Both health checks return only metadata and do not call an LLM/provider.
 - **HTTP 401 during sign-in or function invocation:** check the test user's password, confirmation status and token validity.
 - **HTTP 403 from the function:** the test user's UUID is not active in the isolated project's `public.admin_users` table, or the admin check failed.

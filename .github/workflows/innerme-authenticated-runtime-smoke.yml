@@ -194,7 +194,10 @@ jobs:
               raise SystemExit(f"Expected only finance/client aggregate groups, got {body!r}")
           if body.get("retrieval_profile") != "topic_focused":
               raise SystemExit(f"Expected topic_focused retrieval profile, got {body!r}")
+          if body.get("workspace_query_failure_count") != 0:
+              raise SystemExit(f"Focused workspace record reads had query failures: {body!r}")
           print("PASS: focused finance request queried exactly clients, invoices, and payments.")
+          print("PASS: selected workspace reads and the aggregate RPC completed with zero query failures.")
           print("PASS: exactly three aggregate groups were returned; unrelated lead/task metrics were omitted.")
           print("PASS: the authenticated probe returned metadata only and did not call an LLM/provider.")
           PY
