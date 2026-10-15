@@ -131,3 +131,53 @@ Deno.test("lead and scheduled follow-up dates get deterministic timing labels", 
   assert(result.workspace_temporal_guidance.lead_followup_date_counts.overdue === 1, "overdue count should be deterministic");
   assert(result.workspace_temporal_guidance.scheduled_followup_record_counts.upcoming === 1, "upcoming count should be deterministic");
 });
+
+
+Deno.test("lead timing uses linked active follow-up when lead next_follow_up is blank", () => {
+  const source = {
+    business_date_johannesburg: "2026-10-15",
+    leads: [
+      {
+        id: "spotless",
+        business_name: "Spotless Cleaning Services Garden Route.",
+        status: "contacted",
+        estimated_value: 3000,
+        next_follow_up: null,
+      },
+      {
+        id: "afrisource",
+        business_name: "AfriSource Supplies/Services",
+        status: "contacted",
+        estimated_value: 3300,
+        next_follow_up: null,
+      },
+    ],
+    followups: [
+      {
+        id: "spotless-reminder",
+        lead_id: "spotless",
+        status: "pending",
+        scheduled_for: "2026-10-15",
+        channel: "WhatsApp",
+      },
+    ],
+  };
+
+  const result = buildInnerMeWorkspaceContextForModel(
+    source,
+    "What are my highest-value moves for today?",
+    Date.parse("2026-10-15T00:00:00Z"),
+  );
+  const spotless = result.leads.find((lead: any) => lead.id === "spotless");
+  const afrisource = result.leads.find((lead: any) => lead.id === "afrisource");
+
+  assert(spotless?.next_follow_up_timing === "unscheduled_or_unknown", "blank lead-level field should remain distinguishable");
+  assert(spotless?.effective_follow_up_date === "2026-10-15", "effective date should use the linked active record");
+  assert(spotless?.effective_follow_up_timing === "due_today", "linked reminder means it is not unscheduled");
+  assert(spotless?.effective_follow_up_source === "linked_pending_follow_up", "the date's source should be explicit");
+  assert(spotless?.linked_pending_followup_count === 1, "linked pending count should be preserved");
+  assert(afrisource?.effective_follow_up_timing === "unscheduled_or_unknown", "a lead with no linked active reminder should remain unscheduled");
+  assert(result.workspace_temporal_guidance.lead_followup_date_counts.due_today === 1, "effective date totals should count the linked reminder");
+  assert(result.workspace_temporal_guidance.lead_followup_date_counts.unscheduled_or_unknown === 1, "effective unscheduled totals should exclude the linked reminder");
+  assert(source.leads[0].next_follow_up === null, "source records should not be mutated");
+});
