@@ -1,5 +1,6 @@
 import {
   buildInnerMeProgressiveContext,
+  planInnerMeWorkspaceRetrieval,
   resolveInnerMeFocusedRecordDescriptor,
 } from "./innerme-context-manifest.mjs";
 
@@ -53,6 +54,77 @@ function fixture() {
     },
   };
 }
+
+Deno.test("query planning skips unrelated tables for routine chat", () => {
+  const plan = planInnerMeWorkspaceRetrieval({
+    action: "assistant_chat",
+    message: "Explain what caching means.",
+  });
+  assert(plan.profile === "manifest_only", "general knowledge questions should avoid workspace reads");
+  assert(plan.collections.length === 0, "unrelated workspace collections should not be queried");
+  assert(
+    JSON.stringify(plan.businessBrainCollections) === JSON.stringify(["preferences"]),
+    "only global preferences should be loaded for an unrelated routine turn",
+  );
+});
+
+Deno.test("query planning loads only an invoice topic and its linked evidence", () => {
+  const plan = planInnerMeWorkspaceRetrieval({
+    action: "assistant_chat",
+    message: "Which invoices are overdue and what payments are outstanding?",
+  });
+  for (const collection of ["invoices", "payments", "clients"]) {
+    assert(plan.collections.includes(collection), "invoice request must load " + collection);
+  }
+  assert(!plan.collections.includes("communications"), "unrelated communications should not be loaded");
+  assert(!plan.collections.includes("activities"), "unrelated activity history should not be loaded");
+});
+
+Deno.test("query planning preserves lead context for entity-only follow-up questions", () => {
+  const plan = planInnerMeWorkspaceRetrieval({
+    action: "assistant_chat",
+    message: "What about Maisha's Touch?",
+  });
+  for (const collection of ["leads", "clients", "tasks", "projects"]) {
+    assert(plan.collections.includes(collection), "name-only follow-up must query " + collection);
+  }
+});
+
+Deno.test("query planning preserves broad evidence for daily priorities", () => {
+  const plan = planInnerMeWorkspaceRetrieval({
+    action: "assistant_chat",
+    message: "What are my highest-value moves for today?",
+  });
+  assert(plan.profile === "broad_operations", "daily priorities must retain broad evidence");
+  assert(plan.collections.length === 13, "broad operational requests should load every core workspace collection");
+  assert(plan.businessBrainCollections.length === 7, "broad operational requests should retain business-brain evidence");
+});
+
+Deno.test("explicit focused records load allowlisted relationship collections", () => {
+  const plan = planInnerMeWorkspaceRetrieval({
+    action: "assistant_chat",
+    message: "Tell me about this record.",
+    focusedRecord: { type: "lead", id: "lead-1" },
+  });
+  assert(plan.profile === "focused_record", "explicit UI focus must take precedence");
+  for (const collection of ["leads", "followups", "communications", "quotes", "email_messages", "clients"]) {
+    assert(plan.collections.includes(collection), "focused lead must preserve linked " + collection);
+  }
+  assert(!plan.collections.includes("invoices"), "focused lead must not load unrelated invoices");
+});
+
+Deno.test("unqueried collection counts and summary metrics are not represented as zero", () => {
+  const source: any = fixture();
+  source.workspace_loaded_collections = ["preferences"];
+  const selected: any = buildInnerMeProgressiveContext(source, "Explain what caching means.");
+  const leadManifest = selected.workspace_manifest.collections.leads;
+  assert(leadManifest.query_executed === false, "unqueried lead table must be explicitly marked");
+  assert(leadManifest.loaded_records === null, "unqueried rows must not appear as zero rows");
+  assert(leadManifest.record_index === undefined, "unqueried rows must not create an empty-looking index");
+  assert(selected.operational_summary.lead_counts === undefined, "unloaded lead metrics must be omitted");
+  assert(selected.operational_summary.task_summary === undefined, "unloaded task metrics must be omitted");
+  assert(typeof selected.operational_summary.metric_scope === "string", "remaining metrics must state their bounded sample scope");
+});
 
 Deno.test("manifest-only questions do not expand unrelated workspace rows", () => {
   const selected: any = buildInnerMeProgressiveContext(fixture(), "Explain what caching means.");
