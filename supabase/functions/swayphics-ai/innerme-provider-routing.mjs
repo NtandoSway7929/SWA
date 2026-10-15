@@ -5,7 +5,7 @@ export const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
 export const INNERME_CHAT_ROUTINE_MODEL = "gemini-3.5-flash-lite";
 export const INNERME_CHAT_REASONING_MODEL = "gemini-3.8-flash";
 
-const INNERME_COMPLEX_CHAT_PATTERN = /\b(?:analyse|analyze|analysis|architecture|audit|benchmark|causal|compare|counterfactual|diagnos(?:e|is|tic)|evaluate|forecast|governance|optim(?:ise|ize|isation|ization)|policy|priorit(?:ise|ize|isation|ization)|predict|root cause|security|strateg(?:y|ic|ies)|trade.?off|trust calibration|verify|verification|execute|execution|automation|action proposal|phase\s*\d+)\b/i;
+const INNERME_COMPLEX_CHAT_PATTERN = /\b(?:analyse|analyze|analysis|architecture|audit|benchmark|causal|compare|counterfactual|diagnos(?:e|is|tic)|evaluate|forecast|governance|financial|revenue|profit|cash|invoice|payment|collection|money|outstanding|confidential|send(?:ing)?\s+(?:an?\s+)?(?:email|message)|create|delete|update|approve|modify|optim(?:ise|ize|isation|ization)|policy|priorit(?:ise|ize|isation|ization)|predict|root cause|security|strateg(?:y|ic|ies)|trade.?off|trust calibration|verify|verification|execute|execution|automation|action proposal|phase\s*\d+)\b/i;
 
 /**
  * Select a model tier for the primary interactive chat request.
