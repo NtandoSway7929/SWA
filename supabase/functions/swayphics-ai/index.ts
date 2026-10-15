@@ -12,6 +12,10 @@ import {
 import { buildInnerMeWorkspaceContextForModel } from "./innerme-workspace-intelligence.mjs";
 import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
 import {
+  buildInnerMeProgressiveContext,
+  resolveInnerMeFocusedRecordDescriptor,
+} from "./innerme-context-manifest.mjs";
+import {
   buildInnerMeExecutionContract,
   INNERME_EXECUTION_CONTRACT_VERSION,
   isInnerMeExecutionStepContractComplete,
@@ -6528,6 +6532,83 @@ Deno.serve(async (req) => {
     workspaceSupabase.from("innerme_predictive_forecasts").select("id,forecast_key,forecast_type,horizon_days,forecast_date,status,confidence,unit,baseline_value,projected_value,delta_value,direction,metric_label,statement,assumptions,evidence,evidence_window_start,evidence_window_end,horizon_start,horizon_end,verification_status,actual_value,forecast_error,verified_at,updated_at").eq("forecast_date",new Date().toISOString().slice(0,10)).order("horizon_days",{ascending:true}).limit(30),
   ]);
 
+  // Exact focused-record lookup: the bounded list queries above may not contain
+  // an older record. Use the authenticated admin client to fetch that one ID.
+  let focusedRecordLookupStatus: Record<string, unknown> | null = null;
+  const focusedRecordLookupWarnings: string[] = [];
+  const focusedDescriptor = resolveInnerMeFocusedRecordDescriptor(body.focused_record);
+  if (focusedDescriptor) {
+    const focusResponses: Record<string, any> = {
+      leads,
+      clients,
+      projects,
+      tasks,
+      quotes,
+      invoices,
+      enquiries,
+      portal_requests: portalRequests,
+    };
+    const collectionResponse = focusResponses[focusedDescriptor.collection];
+    const existingRows = Array.isArray(collectionResponse?.data) ? collectionResponse.data : [];
+    const alreadyLoaded = existingRows.some((row: any) => String(row?.id || "") === focusedDescriptor.id);
+    if (alreadyLoaded) {
+      focusedRecordLookupStatus = {
+        state: "found_in_bounded_query",
+        type: focusedDescriptor.type,
+        id: focusedDescriptor.id,
+        collection: focusedDescriptor.collection,
+      };
+    } else {
+      try {
+        const { data: exactRecord, error: exactRecordError } = await workspaceSupabase
+          .from(focusedDescriptor.table)
+          .select("*")
+          .eq("id", focusedDescriptor.id)
+          .maybeSingle();
+        if (exactRecordError) {
+          focusedRecordLookupWarnings.push("focused_record_lookup:" + focusedDescriptor.collection);
+          focusedRecordLookupStatus = {
+            state: "query_failed",
+            type: focusedDescriptor.type,
+            id: focusedDescriptor.id,
+            collection: focusedDescriptor.collection,
+          };
+          console.warn("InnerMe exact focused-record lookup failed.", focusedDescriptor.collection, exactRecordError.code || "database_error");
+        } else if (exactRecord) {
+          if (collectionResponse) {
+            collectionResponse.data = [
+              exactRecord,
+              ...existingRows.filter((row: any) => String(row?.id || "") !== focusedDescriptor.id),
+            ];
+          }
+          focusedRecordLookupStatus = {
+            state: "loaded_by_exact_id",
+            type: focusedDescriptor.type,
+            id: focusedDescriptor.id,
+            collection: focusedDescriptor.collection,
+          };
+        } else {
+          focusedRecordLookupStatus = {
+            state: "not_found",
+            type: focusedDescriptor.type,
+            id: focusedDescriptor.id,
+            collection: focusedDescriptor.collection,
+          };
+        }
+      } catch (error) {
+        focusedRecordLookupWarnings.push("focused_record_lookup:" + focusedDescriptor.collection);
+        focusedRecordLookupStatus = {
+          state: "query_failed",
+          type: focusedDescriptor.type,
+          id: focusedDescriptor.id,
+          collection: focusedDescriptor.collection,
+        };
+        const errorName = error instanceof Error ? error.name : "unknown_error";
+        console.warn("InnerMe exact focused-record lookup threw.", focusedDescriptor.collection, errorName);
+      }
+    }
+  }
+
   const queryResults = {
     tasks,
     leads,
@@ -6553,7 +6634,8 @@ Deno.serve(async (req) => {
 
   const queryFailures = Object.entries(queryResults)
     .filter(([, result]: [string, any]) => Boolean(result?.error))
-    .map(([name]) => name);
+    .map(([name]) => name)
+    .concat(focusedRecordLookupWarnings);
 
   if (queryFailures.length) {
     console.error(
@@ -6578,6 +6660,7 @@ Deno.serve(async (req) => {
     business_date_johannesburg: businessDateJohannesburg,
     user_email: userData.user.email || "",
     query_failures: queryFailures,
+    workspace_focused_record_lookup_status: focusedRecordLookupStatus,
     workspace_source_record_counts: {
       tasks: Array.isArray(tasks.data) ? tasks.data.length : 0,
       leads: Array.isArray(leads.data) ? leads.data.length : 0,
@@ -10944,22 +11027,23 @@ Answer the admin's question directly.
 
   async function requestGemini(model: string) {
     const modelWorkspace = buildInnerMeWorkspaceContextForModel(safeContext, message);
+    const progressiveWorkspace: Record<string, any> = buildInnerMeProgressiveContext(modelWorkspace, message, conversationHistory) as Record<string, any>;
     const workspaceForPrompt = {
-      ...modelWorkspace,
+      ...progressiveWorkspace,
       workspace_model_context_record_counts: {
-        tasks: Array.isArray(modelWorkspace.tasks) ? modelWorkspace.tasks.length : 0,
-        leads: Array.isArray(modelWorkspace.leads) ? modelWorkspace.leads.length : 0,
-        followups: Array.isArray(modelWorkspace.followups) ? modelWorkspace.followups.length : 0,
-        clients: Array.isArray(modelWorkspace.clients) ? modelWorkspace.clients.length : 0,
-        projects: Array.isArray(modelWorkspace.projects) ? modelWorkspace.projects.length : 0,
-        quotes: Array.isArray(modelWorkspace.quotes) ? modelWorkspace.quotes.length : 0,
-        payments: Array.isArray(modelWorkspace.payments) ? modelWorkspace.payments.length : 0,
-        enquiries: Array.isArray(modelWorkspace.enquiries) ? modelWorkspace.enquiries.length : 0,
-        invoices: Array.isArray(modelWorkspace.invoices) ? modelWorkspace.invoices.length : 0,
-        portal_requests: Array.isArray(modelWorkspace.portal_requests) ? modelWorkspace.portal_requests.length : 0,
-        communications: Array.isArray(modelWorkspace.communications) ? modelWorkspace.communications.length : 0,
-        activities: Array.isArray(modelWorkspace.activities) ? modelWorkspace.activities.length : 0,
-        email_messages: Array.isArray(modelWorkspace.email_messages) ? modelWorkspace.email_messages.length : 0,
+        tasks: Array.isArray(progressiveWorkspace.tasks) ? progressiveWorkspace.tasks.length : 0,
+        leads: Array.isArray(progressiveWorkspace.leads) ? progressiveWorkspace.leads.length : 0,
+        followups: Array.isArray(progressiveWorkspace.followups) ? progressiveWorkspace.followups.length : 0,
+        clients: Array.isArray(progressiveWorkspace.clients) ? progressiveWorkspace.clients.length : 0,
+        projects: Array.isArray(progressiveWorkspace.projects) ? progressiveWorkspace.projects.length : 0,
+        quotes: Array.isArray(progressiveWorkspace.quotes) ? progressiveWorkspace.quotes.length : 0,
+        payments: Array.isArray(progressiveWorkspace.payments) ? progressiveWorkspace.payments.length : 0,
+        enquiries: Array.isArray(progressiveWorkspace.enquiries) ? progressiveWorkspace.enquiries.length : 0,
+        invoices: Array.isArray(progressiveWorkspace.invoices) ? progressiveWorkspace.invoices.length : 0,
+        portal_requests: Array.isArray(progressiveWorkspace.portal_requests) ? progressiveWorkspace.portal_requests.length : 0,
+        communications: Array.isArray(progressiveWorkspace.communications) ? progressiveWorkspace.communications.length : 0,
+        activities: Array.isArray(progressiveWorkspace.activities) ? progressiveWorkspace.activities.length : 0,
+        email_messages: Array.isArray(progressiveWorkspace.email_messages) ? progressiveWorkspace.email_messages.length : 0,
       },
     };
     return await guardedGeminiFetch(model, 
@@ -11019,7 +11103,7 @@ Answer the admin's question directly.
                         : "none"
                     ) +
                     "\n\nWORKSPACE INTEGRITY RULES:\n" +
-                    "Use workspace_model_context_record_counts for the collections supplied after filters; workspace_source_record_counts are unfiltered audit counts. Do not infer totals by counting compacted arrays. Honor workspace_model_context_exclusion_counts and workspace_intelligence_notes: self-owned and test enquiries are not genuine commercial opportunities. Use business_date_johannesburg and deterministic timing fields: earlier than the business date means overdue, the same date means due today, and later means upcoming. Never label a future date overdue. For deciding whether a contacted lead is unscheduled, use effective_follow_up_date, effective_follow_up_timing, effective_follow_up_source and linked_pending_followup_count. An active linked follow-up can exist even if the lead's own next_follow_up field is empty. Prefer linked active schedule records, and flag any conflict between the lead date and the earliest active linked follow-up. Cross-check follow-up lead_id/client_id values against supplied IDs, and flag true orphans and duplicates. Prioritise genuinely overdue and due-soon follow-ups over speculative preparation tasks.\n\n" +
+                    "Use workspace_model_context_record_counts for the collections supplied after filters; workspace_source_record_counts reflect bounded query results, not guaranteed database-wide totals; loaded record indexes are pointers, not evidence for row-specific claims. Do not infer totals by counting compacted arrays. Honor workspace_model_context_exclusion_counts and workspace_intelligence_notes: self-owned and test enquiries are not genuine commercial opportunities. Use business_date_johannesburg and deterministic timing fields: earlier than the business date means overdue, the same date means due today, and later means upcoming. Never label a future date overdue. For deciding whether a contacted lead is unscheduled, use effective_follow_up_date, effective_follow_up_timing, effective_follow_up_source and linked_pending_followup_count. An active linked follow-up can exist even if the lead's own next_follow_up field is empty. Prefer linked active schedule records, and flag any conflict between the lead date and the earliest active linked follow-up. Cross-check follow-up lead_id/client_id values against supplied IDs, and flag true orphans and duplicates. Prioritise genuinely overdue and due-soon follow-ups over speculative preparation tasks.\n\n" +
                     "CURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
                     JSON.stringify(compactInnerMeContextForModel(workspaceForPrompt)),
                 },
