@@ -86,8 +86,6 @@ const FOCUSED_RECORDS = Object.freeze({
   quotes: { table: "quotes", collection: "quotes" },
   invoice: { table: "invoices", collection: "invoices" },
   invoices: { table: "invoices", collection: "invoices" },
-  payment: { table: "payments", collection: "payments" },
-  payments: { table: "payments", collection: "payments" },
   enquiry: { table: "website_enquiries", collection: "enquiries" },
   enquiries: { table: "website_enquiries", collection: "enquiries" },
   "portal-request": { table: "client_portal_requests", collection: "portal_requests" },
@@ -291,6 +289,7 @@ export function buildInnerMeProgressiveContext(context, message, history = []) {
     }));
     if (mentioned) domainCollections.add(key);
   }
+  for (const related of selectedCollectionsForText([...domainCollections].join(" "))) domainCollections.add(related);
   let profile = broad ? "broad_operations" : "manifest_only";
   let detailCollections = new Set(domainCollections);
 
