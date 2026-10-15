@@ -16,9 +16,11 @@ import {
   resolveInnerMeFocusedRecordDescriptor,
 } from "./innerme-context-manifest.mjs";
 import {
+  selectInnerMeActionReadySteps,
+} from "./innerme-run-controller.mjs";
+import {
   buildInnerMeExecutionContract,
   INNERME_EXECUTION_CONTRACT_VERSION,
-  isInnerMeExecutionStepContractComplete,
   validateInnerMeExecutionContract,
 } from "./innerme-execution-contracts.mjs";
 
@@ -9518,10 +9520,9 @@ Deno.serve(async (req) => {
     const { data: steps, error: stepsError } = await authSupabase
       .from("innerme_execution_steps")
       .select(
-        "id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes",
+        "id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,started_at,linked_task_id,notes",
       )
       .eq("plan_id", planId)
-      .in("status", ["approved", "in_progress"])
       .order("step_order", { ascending: true });
 
     if (stepsError) {
@@ -9544,17 +9545,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    const skippedUnverifiedStepOrders = loadedStepRows
-      .filter((step: any) => !isInnerMeExecutionStepContractComplete(step))
-      .map((step: any) => Number(step?.step_order))
-      .filter((order: number) => Number.isInteger(order));
-    const stepRows = loadedStepRows.filter(isInnerMeExecutionStepContractComplete);
+    const stepReadiness = selectInnerMeActionReadySteps(loadedStepRows);
+    const skippedUnverifiedStepOrders = stepReadiness.skipped_unverified_step_orders;
+    const skippedDependencySteps = stepReadiness.skipped_dependency_steps;
+    const skippedNotStartedStepOrders = stepReadiness.skipped_not_started_step_orders;
+    const stepRows = stepReadiness.ready;
     if (!stepRows.length) {
+      const dependenciesUnmet = skippedDependencySteps.length > 0;
+      const allStepsAlreadyCompleteOrBlocked =
+        stepReadiness.skipped_not_actionable_step_orders.length === loadedStepRows.length;
       return json(
         {
-          error: "No approved execution step has both an observable success signal and a verification method. Update the affected steps before preparing controlled actions.",
-          code: "EXECUTION_STEP_CONTRACT_INCOMPLETE",
+          error: dependenciesUnmet
+            ? "Controlled action proposals are blocked until each prerequisite step is explicitly verified as completed."
+            : skippedUnverifiedStepOrders.length
+              ? "No eligible step has both an observable success signal and a verification method. Update the affected steps before preparing controlled actions."
+              : skippedNotStartedStepOrders.length
+                ? "Start an approved step through the run controller before preparing its controlled action proposals."
+                : allStepsAlreadyCompleteOrBlocked
+                  ? "No execution step is available for new controlled action proposals."
+                  : "No eligible step can receive controlled action proposals in its current state.",
+          code: dependenciesUnmet
+            ? "EXECUTION_DEPENDENCY_INCOMPLETE"
+            : skippedUnverifiedStepOrders.length
+              ? "EXECUTION_STEP_CONTRACT_INCOMPLETE"
+              : skippedNotStartedStepOrders.length
+                ? "EXECUTION_STEP_NOT_STARTED"
+                : "NO_ELIGIBLE_EXECUTION_STEPS",
           unverified_step_orders: skippedUnverifiedStepOrders,
+          skipped_dependency_steps: skippedDependencySteps,
+          skipped_not_started_step_orders: skippedNotStartedStepOrders,
           workspace_changed: false,
         },
         409,
@@ -9903,8 +9923,10 @@ Deno.serve(async (req) => {
         execution_requires_explicit_confirmation: true,
         workspace_changed: false,
         skipped_unverified_steps: skippedUnverifiedStepOrders,
-        warning: skippedUnverifiedStepOrders.length
-          ? "Some approved steps were excluded because they lack a success signal or verification method."
+        skipped_dependency_steps: skippedDependencySteps,
+        skipped_not_started_step_orders: skippedNotStartedStepOrders,
+        warning: skippedUnverifiedStepOrders.length || skippedDependencySteps.length || skippedNotStartedStepOrders.length
+          ? "Some steps were excluded because they have not been started, lack verifiable completion criteria, or depend on a step that is not yet completed."
           : null,
         provider_model: model,
       },
@@ -10007,7 +10029,7 @@ Deno.serve(async (req) => {
 
     const { data: step, error: stepError } = await authSupabase
       .from("innerme_execution_steps")
-      .select("id,status,linked_task_id")
+      .select("id,status,linked_task_id,started_at")
       .eq("id", proposal.step_id)
       .eq("plan_id", proposal.plan_id)
       .maybeSingle();
@@ -10019,6 +10041,18 @@ Deno.serve(async (req) => {
           detail: stepError?.message || null,
         },
         400,
+        origin,
+      );
+    }
+
+    if (String(step.status || "") !== "in_progress" || !step.started_at) {
+      return json(
+        {
+          error: "Start this execution step through the InnerMe run controller before executing its approved action.",
+          code: "EXECUTION_STEP_NOT_STARTED",
+          workspace_changed: false,
+        },
+        409,
         origin,
       );
     }
@@ -10080,6 +10114,23 @@ Deno.serve(async (req) => {
     let sideEffectStarted = false;
 
     try {
+      // The proposal is now claimed as executing. Recheck its step before any
+      // external/workspace mutation to close the race with a concurrent
+      // administrator completing or blocking the step after the earlier read.
+      const { data: executionStepState, error: executionStepStateError } = await authSupabase
+        .from("innerme_execution_steps")
+        .select("id,status,started_at")
+        .eq("id", proposal.step_id)
+        .maybeSingle();
+      if (
+        executionStepStateError ||
+        !executionStepState ||
+        String(executionStepState.status || "") !== "in_progress" ||
+        !executionStepState.started_at
+      ) {
+        throw new Error("The execution step changed before the side effect began. No task or email operation was attempted; reconcile the audit record before retrying.");
+      }
+
       if (proposal.action_type === "create_task") {
         const payload = proposal.payload || {};
         const dueOffsetRaw = Number(payload?.due_offset_days);

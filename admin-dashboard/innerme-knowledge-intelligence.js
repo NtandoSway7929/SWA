@@ -1278,22 +1278,51 @@
             const allPlans=Array.isArray(plans)?plans:[];
             const planIds=allPlans.map(function(item){return String(item && item.id || "").trim();}).filter(Boolean);
             let steps=[];
+            let stepEventsByStep=new Map();
+            let runControllerAvailable=true;
+            let runControllerWarning=null;
 
             if(planIds.length){
-                const stepsResponse=await fetch(
-                    SUPABASE_URL+
-                        "/rest/v1/innerme_execution_steps?select=id,plan_id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes,created_at,updated_at&plan_id=in.("+planIds.join(",")+")&order=step_order.asc&limit=400",
-                    {method:"GET",headers:authHeaders()}
-                );
-                const stepsData=await stepsResponse.json().catch(function(){return [];});
+                const controllerStepFields="id,plan_id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes,attempt_count,started_at,checkpoint,checkpointed_at,completion_evidence,completed_at,completed_by,blocked_reason,last_error_code,created_at,updated_at";
+                const stepsUrl=SUPABASE_URL+"/rest/v1/innerme_execution_steps?select="+controllerStepFields+"&plan_id=in.("+planIds.join(",")+")&order=step_order.asc&limit=400";
+                let stepsResponse=await fetch(stepsUrl,{method:"GET",headers:authHeaders()});
+                let stepsData=await stepsResponse.json().catch(function(){return [];});
+
                 if(!stepsResponse.ok){
-                    throw new Error(
-                        stepsData && (stepsData.message || stepsData.error || stepsData.hint)
-                            ? String(stepsData.message || stepsData.error || stepsData.hint)
-                            : "Unable to load execution plan steps."
-                    );
+                    // Older schemas remain readable, but hide controller controls until
+                    // the additive run-controller migration is applied successfully.
+                    const legacyUrl=SUPABASE_URL+"/rest/v1/innerme_execution_steps?select=id,plan_id,step_order,title,action,purpose,owner_role,due_offset_days,depends_on_step_order,success_signal,verification_method,risk_level,status,linked_task_id,notes,created_at,updated_at&plan_id=in.("+planIds.join(",")+")&order=step_order.asc&limit=400";
+                    stepsResponse=await fetch(legacyUrl,{method:"GET",headers:authHeaders()});
+                    stepsData=await stepsResponse.json().catch(function(){return [];});
+                    if(!stepsResponse.ok){
+                        throw new Error(
+                            stepsData && (stepsData.message || stepsData.error || stepsData.hint)
+                                ? String(stepsData.message || stepsData.error || stepsData.hint)
+                                : "Unable to load execution plan steps."
+                        );
+                    }
+                    runControllerAvailable=false;
+                    runControllerWarning="The durable step controller is not available until its database migration is applied.";
                 }
+
                 steps=Array.isArray(stepsData)?stepsData:[];
+
+                if(runControllerAvailable){
+                    const eventsUrl=SUPABASE_URL+"/rest/v1/innerme_execution_step_events?select=id,plan_id,step_id,event_type,from_status,to_status,attempt_count,note,created_at&plan_id=in.("+planIds.join(",")+")&order=created_at.desc&limit=500";
+                    const eventsResponse=await fetch(eventsUrl,{method:"GET",headers:authHeaders()});
+                    const eventsData=await eventsResponse.json().catch(function(){return [];});
+                    if(!eventsResponse.ok){
+                        runControllerAvailable=false;
+                        runControllerWarning="The step-event ledger could not be read, so run controls are disabled for safety.";
+                    }else{
+                        (Array.isArray(eventsData)?eventsData:[]).forEach(function(item){
+                            const key=String(item && item.step_id || "");
+                            if(!stepEventsByStep.has(key)) stepEventsByStep.set(key,[]);
+                            const rows=stepEventsByStep.get(key);
+                            if(rows.length<6) rows.push(item);
+                        });
+                    }
+                }
             }
 
             const stepsByPlan=new Map();
@@ -1346,6 +1375,9 @@
                 decisions:Array.isArray(decisions)?decisions:[],
                 plans:allPlans,
                 stepsByPlan:stepsByPlan,
+                stepEventsByStep:stepEventsByStep,
+                runControllerAvailable:runControllerAvailable,
+                runControllerWarning:runControllerWarning,
                 actionProposals:actionProposals,
                 policyReviews:policyReviews
             };
@@ -1376,17 +1408,55 @@
                 }else{
                     const criteria=Array.isArray(plan.completion_criteria)?plan.completion_criteria:[];
                     const evidence=Array.isArray(plan.evidence)?plan.evidence:[];
+                    const stepEventsByStep=data && data.stepEventsByStep instanceof Map ? data.stepEventsByStep : new Map();
+                    const controllerAvailable=data && data.runControllerAvailable===true;
+                    const stepTransitionButton=function(step,transition,label){
+                        return '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-step-transition="'+esc(transition)+'" data-sway-ai-ki-step-id="'+esc(String(step.id||""))+'">'+esc(label)+'</button>';
+                    };
                     const stepsHtml=steps.map(function(step){
+                        const stepId=String(step.id||"");
+                        const stepStatus=String(step.status||"planned");
+                        const checkpoint=step.checkpoint && typeof step.checkpoint==="object" ? step.checkpoint : {};
+                        const completion=step.completion_evidence && typeof step.completion_evidence==="object" ? step.completion_evidence : {};
+                        const events=stepEventsByStep.get(stepId)||[];
+                        let stepControls="";
+                        if(controllerAvailable){
+                            if(stepStatus==="approved"){
+                                stepControls=stepTransitionButton(step,"start","Start step");
+                            }else if(stepStatus==="in_progress"){
+                                stepControls=stepTransitionButton(step,"checkpoint","Save checkpoint")+
+                                    stepTransitionButton(step,"complete","Mark verified complete")+
+                                    stepTransitionButton(step,"block","Block step");
+                            }else if(stepStatus==="blocked"){
+                                stepControls=stepTransitionButton(step,"resume","Resume step");
+                            }
+                        }
+                        const eventHistory=events.length
+                            ? '<div class="sway-ai-ki-execution-step-detail"><span>Run history</span><div class="sway-ai-ki-execution-step-history">'+events.slice(0,5).map(function(entry){
+                                return '<div><strong>'+esc(String(entry.event_type||"event").replace(/_/g," "))+'</strong><span>'+esc(entry.from_status||"")+' → '+esc(entry.to_status||"")+'</span>'+(entry.note?'<p>'+esc(entry.note)+'</p>':"")+'<small>'+esc(entry.created_at?new Date(entry.created_at).toLocaleString():"")+'</small></div>';
+                            }).join("")+'</div></div>'
+                            : "";
                         return '<div class="sway-ai-ki-execution-step">' +
-                            '<div class="sway-ai-ki-execution-step-head"><strong>'+esc(String(step.step_order||""))+'. '+esc(step.title||"Execution step")+'</strong><span>'+esc(step.status||"planned")+'</span></div>' +
+                            '<div class="sway-ai-ki-execution-step-head"><strong>'+esc(String(step.step_order||""))+'. '+esc(step.title||"Execution step")+'</strong><span>'+esc(stepStatus.replace(/_/g," "))+'</span></div>' +
                             '<p>'+esc(step.action||"")+'</p>' +
                             '<div class="sway-ai-ki-execution-step-meta"><span>Owner: '+esc(step.owner_role||"Swayphics admin")+'</span><span>Due: '+(step.due_offset_days==null?"Not specified":"Day "+esc(step.due_offset_days))+'</span><span>Risk: '+esc(step.risk_level||"low")+'</span>' +
                             (step.depends_on_step_order ? '<span>After step '+esc(step.depends_on_step_order)+'</span>' : '') +
+                            (Number(step.attempt_count||0)>0 ? '<span>Attempts: '+esc(step.attempt_count)+'</span>' : '') +
                             '</div>' +
                             (step.success_signal ? '<div class="sway-ai-ki-execution-step-detail"><span>Success signal</span><strong>'+esc(step.success_signal)+'</strong></div>' : '') +
                             (step.verification_method ? '<div class="sway-ai-ki-execution-step-detail"><span>Verification</span><strong>'+esc(step.verification_method)+'</strong></div>' : '') +
+                            (checkpoint.progress_summary ? '<div class="sway-ai-ki-execution-step-detail"><span>Latest checkpoint</span><strong>'+esc(checkpoint.progress_summary)+'</strong></div>' : '') +
+                            (step.blocked_reason ? '<div class="sway-ai-ki-execution-action-error"><strong>Blocked:</strong> '+esc(step.blocked_reason)+'</div>' : '') +
+                            (completion.verification_note ? '<div class="sway-ai-ki-execution-step-detail"><span>Admin verification</span><strong>'+esc(completion.verification_note)+'</strong>'+(step.completed_at?'<small>Verified '+esc(new Date(step.completed_at).toLocaleString())+'</small>':"")+'</div>' : '') +
+                            (stepControls ? '<div class="sway-ai-ki-execution-actions">'+stepControls+'</div>' : '') +
+                            eventHistory +
                         '</div>';
                     }).join("");
+                    const runControllerWarning=data && data.runControllerWarning ? '<p class="sway-ai-ki-muted">'+esc(data.runControllerWarning)+'</p>' : "";
+                    const allStepsMarkedComplete=steps.length>0 && steps.every(function(step){return String(step.status||"")==="completed";});
+                    const planCompletionVerificationNote=allStepsMarkedComplete
+                        ? '<div class="sway-ai-ki-execution-note">Every step is marked complete. Verify the plan-level success metric and completion criteria separately before claiming the business outcome was achieved.</div>'
+                        : "";
 
                     const criteriaHtml=criteria.length
                         ? '<div class="sway-ai-ki-execution-detail"><span>Completion criteria</span><ul>'+criteria.map(function(item){return '<li>'+esc(item)+'</li>';}).join("")+'</ul></div>'
@@ -1461,8 +1531,18 @@
                             }).join("")+
                         '</div>'
                         : (status==="approved" || status==="active"
-                            ? '<div class="sway-ai-ki-execution-detail"><span>Controlled actions</span><div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-prepare="'+esc(String(plan.id||""))+'">Prepare controlled actions</button></div><strong>No action proposals prepared yet.</strong></div>'
+                            ? '<div class="sway-ai-ki-execution-detail"><span>Controlled actions</span><strong>No action proposals prepared yet. Start an eligible step before preparing its action proposals.</strong></div>'
                             : "");
+
+                    const actionReadyStepExists=steps.some(function(step){
+                        if(String(step.status||"")!=="in_progress" || !String(step.success_signal||"").trim() || !String(step.verification_method||"").trim()) return false;
+                        if(step.depends_on_step_order==null) return true;
+                        const dependency=steps.find(function(candidate){return Number(candidate.step_order)===Number(step.depends_on_step_order);});
+                        return Boolean(dependency && String(dependency.status||"")==="completed");
+                    });
+                    const prepareActionButton=controllerAvailable && (status==="approved" || status==="active") && actionReadyStepExists
+                        ? '<div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-action-prepare="'+esc(String(plan.id||""))+'">Prepare actions for ready step(s)</button></div>'
+                        : "";
 
                     const reviewActions=status==="draft"
                         ? '<div class="sway-ai-ki-execution-actions"><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-approve="'+esc(String(plan.id||""))+'">Approve plan</button><button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-execution-cancel="'+esc(String(plan.id||""))+'">Cancel draft</button></div>'
@@ -1475,9 +1555,12 @@
                             (plan.rationale ? '<div class="sway-ai-ki-execution-detail"><span>Rationale</span><strong>'+esc(plan.rationale)+'</strong></div>' : '') +
                             (plan.risk ? '<div class="sway-ai-ki-execution-detail"><span>Risk</span><strong>'+esc(plan.risk)+'</strong></div>' : '') +
                             criteriaHtml +
+                            runControllerWarning +
+                            planCompletionVerificationNote +
                             '<div class="sway-ai-ki-execution-detail"><span>Steps</span><div class="sway-ai-ki-execution-steps">'+(stepsHtml || '<p class="sway-ai-ki-muted">No steps recorded.</p>')+'</div></div>' +
                             evidenceHtml +
                             actionsHtml +
+                            prepareActionButton +
                             reviewActions +
                         '</div>';
                 }
@@ -1523,6 +1606,7 @@
         }
 
         executionResults.addEventListener("click",async function(event){
+            const stepTransition=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-step-transition]") : null;
             const build=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-build]") : null;
             const approve=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-approve]") : null;
             const cancel=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-execution-cancel]") : null;
@@ -1531,9 +1615,133 @@
             const actionApprove=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-approve]") : null;
             const actionReject=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-reject]") : null;
             const actionExecute=event.target && event.target.closest ? event.target.closest("[data-sway-ai-ki-action-execute]") : null;
-            const target=build||approve||cancel||prepare||actionCheck||actionApprove||actionReject||actionExecute;
+            const target=stepTransition||build||approve||cancel||prepare||actionCheck||actionApprove||actionReject||actionExecute;
             if(!target) return;
             event.preventDefault(); event.stopPropagation();
+
+            if(stepTransition){
+                const stepId=String(stepTransition.dataset.swayAiKiStepId||"").trim();
+                const transition=String(stepTransition.dataset.swayAiKiStepTransition||"").trim();
+                const runData=executionResults.__swayExecutionData;
+                let stepRecord=null;
+                if(runData && runData.stepsByPlan instanceof Map){
+                    for(const planSteps of runData.stepsByPlan.values()){
+                        const match=planSteps.find(function(item){return String(item && item.id || "")===stepId;});
+                        if(match){stepRecord=match;break;}
+                    }
+                }
+                if(!stepId || !["start","resume","checkpoint","complete","block"].includes(transition) || !stepRecord){
+                    window.alert("InnerMe could not resolve the selected execution step. Refresh the panel and try again.");
+                    return;
+                }
+
+                let note="";
+                let checkpoint={};
+                let completionEvidence={};
+
+                if(transition==="start" || transition==="resume"){
+                    const promptText=transition==="start"
+                        ? "Start this step? This records run state only. It will not create a task or send an email."
+                        : "Resume this blocked step? InnerMe will refuse if any related side effect still needs reconciliation.";
+                    if(!window.confirm(promptText)) return;
+                    note=transition==="start"
+                        ? "Administrator started this step after reviewing the approved plan."
+                        : "Administrator resumed this step after reviewing the blocking condition.";
+                }else if(transition==="checkpoint"){
+                    const current=stepRecord.checkpoint && typeof stepRecord.checkpoint==="object"
+                        ? String(stepRecord.checkpoint.progress_summary||"")
+                        : "";
+                    const entered=window.prompt("Record a concise progress checkpoint. Do not paste prompts, model reasoning, secrets, or full conversation history.",current);
+                    if(entered===null) return;
+                    note=String(entered).trim();
+                    if(note.length<10 || note.length>1200){
+                        window.alert("Checkpoint summary must contain 10 to 1,200 characters.");
+                        return;
+                    }
+                    checkpoint={
+                        phase:"manual_operator_checkpoint",
+                        progress_summary:note,
+                        verified_artifact_refs:[],
+                        unresolved_items:[]
+                    };
+                }else if(transition==="complete"){
+                    const summary=window.prompt("What did you verify against this step's success signal and verification method?");
+                    if(summary===null) return;
+                    note=String(summary).trim();
+                    if(note.length<20 || note.length>1200){
+                        window.alert("Verification summary must contain 20 to 1,200 characters.");
+                        return;
+                    }
+                    const reference=window.prompt("Enter a concrete evidence reference, such as a workspace record ID, test result URL, or email/service reference.");
+                    if(reference===null) return;
+                    const referenceValue=String(reference).trim();
+                    if(referenceValue.length<3 || referenceValue.length>240){
+                        window.alert("Evidence reference must contain 3 to 240 characters.");
+                        return;
+                    }
+                    if(!window.confirm("Mark this step complete based on the evidence you entered? This does not mark the whole business outcome as achieved.")) return;
+                    completionEvidence={
+                        verified_by_human:true,
+                        verification_method:String(stepRecord.verification_method||""),
+                        summary:note,
+                        evidence_refs:[{
+                            source:"manual_attestation",
+                            id:referenceValue,
+                            why:note.slice(0,500)
+                        }]
+                    };
+                }else if(transition==="block"){
+                    const reason=window.prompt("Why must this step be blocked? Include the issue or missing prerequisite.");
+                    if(reason===null) return;
+                    note=String(reason).trim();
+                    if(note.length<20 || note.length>1200){
+                        window.alert("Blocking reason must contain 20 to 1,200 characters.");
+                        return;
+                    }
+                    if(!window.confirm("Block this step? It will require an explicit resume after the issue is reviewed.")) return;
+                }
+
+                const originalLabel=stepTransition.textContent;
+                stepTransition.disabled=true;
+                stepTransition.textContent=transition==="checkpoint" ? "Saving…" :
+                    transition==="complete" ? "Verifying…" :
+                    transition==="block" ? "Blocking…" :
+                    transition==="resume" ? "Resuming…" : "Starting…";
+                try{
+                    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/transition_innerme_execution_step",{
+                        method:"POST",
+                        headers:authHeaders(),
+                        body:JSON.stringify({
+                            p_step_id:stepId,
+                            p_transition:transition,
+                            p_note:note,
+                            p_checkpoint:checkpoint,
+                            p_completion_evidence:completionEvidence
+                        })
+                    });
+                    const result=await response.json().catch(function(){return null;});
+                    if(!response.ok || !result || result.ok!==true){
+                        throw new Error(result && (result.message || result.error || result.hint) ? String(result.message || result.error || result.hint) : "InnerMe could not update this execution step.");
+                    }
+                    await refreshExecutionPlans(false);
+                    if(transition==="complete"){
+                        window.alert("Step completion and its verification evidence were recorded. The overall plan outcome still needs its own verification.");
+                    }else if(transition==="checkpoint"){
+                        window.alert("Progress checkpoint saved. No task or email was created or sent.");
+                    }else if(transition==="block"){
+                        window.alert("Step blocked and reason recorded.");
+                    }else if(transition==="resume"){
+                        window.alert("Step resumed. Any unresolved side effect would have blocked this transition.");
+                    }else{
+                        window.alert("Step started. This only changed run state; it did not perform an external action.");
+                    }
+                }catch(error){
+                    stepTransition.disabled=false;
+                    stepTransition.textContent=originalLabel;
+                    window.alert(error.message||"Execution-step transition failed.");
+                }
+                return;
+            }
 
             if(actionCheck){
                 const proposalId=String(actionCheck.dataset.swayAiKiActionCheck||"").trim();
@@ -2926,6 +3134,12 @@
         ".sway-ai-ki-execution-step-detail{display:grid;gap:2px;padding-top:5px;border-top:1px solid rgba(1,82,244,.07)}" +
         ".sway-ai-ki-execution-step-detail span{font-size:7px;opacity:.55}" +
         ".sway-ai-ki-execution-step-detail strong{font-size:8px;line-height:1.4}" +
+        ".sway-ai-ki-execution-step-history{display:grid;gap:5px}" +
+        ".sway-ai-ki-execution-step-history>div{display:grid;gap:3px;padding:6px;border-radius:7px;background:rgba(1,82,244,.035)}" +
+        ".sway-ai-ki-execution-step-history>div>strong{font-size:8px;text-transform:capitalize}" +
+        ".sway-ai-ki-execution-step-history>div>span,.sway-ai-ki-execution-step-history small{font-size:7px;line-height:1.35;opacity:.6}" +
+        ".sway-ai-ki-execution-step-history p{margin:0;font-size:8px;line-height:1.4;overflow-wrap:anywhere}" +
+        "body.sway-dark-mode .sway-ai-ki-execution-step-history>div{background:rgba(119,193,252,.055)}" +
         ".sway-ai-ki-execution-evidence{display:grid;gap:5px}" +
         ".sway-ai-ki-execution-evidence span{font-size:8px;line-height:1.4;padding:5px 6px;border-radius:7px;background:rgba(1,82,244,.045);overflow-wrap:anywhere}" +
         ".sway-ai-ki-execution-actions{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap}" +
