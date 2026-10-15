@@ -27,7 +27,6 @@ jobs:
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
-          INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY }}
           CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
         run: |
           set -euo pipefail
@@ -35,7 +34,7 @@ jobs:
             echo "::error::Stop: confirm that the isolated test provider key belongs to a Google project with billing disabled."
             exit 1
           fi
-          for name in INNERME_TEST_ADMIN_EMAIL INNERME_TEST_ADMIN_PASSWORD INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY; do
+          for name in INNERME_TEST_ADMIN_EMAIL INNERME_TEST_ADMIN_PASSWORD; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Missing repository secret ${name}. Use isolated test-project credentials only."
               exit 1
@@ -47,10 +46,9 @@ jobs:
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
-          INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          trap 'rm -f /tmp/innerme-benchmark-login-request.json /tmp/innerme-benchmark-login-response.json /tmp/innerme-benchmark-provider-preflight-request.json /tmp/innerme-benchmark-provider-preflight-response.json /tmp/innerme-benchmark-chat-request.json /tmp/innerme-benchmark-chat-response.json /tmp/innerme-benchmark-chat-headers.txt /tmp/innerme-benchmark-curl-metrics.txt /tmp/innerme-benchmark-stdout.txt /tmp/innerme-benchmark-provider-usage.json' EXIT
+          trap 'rm -f /tmp/innerme-benchmark-login-request.json /tmp/innerme-benchmark-login-response.json /tmp/innerme-benchmark-provider-preflight-request.json /tmp/innerme-benchmark-provider-preflight-response.json /tmp/innerme-benchmark-telemetry-preflight.json /tmp/innerme-benchmark-chat-request.json /tmp/innerme-benchmark-chat-response.json /tmp/innerme-benchmark-chat-headers.txt /tmp/innerme-benchmark-curl-metrics.txt /tmp/innerme-benchmark-stdout.txt /tmp/innerme-benchmark-provider-usage.json' EXIT
 
           SUPABASE_URL="https://ofqofhnlzbouclvvrmzd.supabase.co"
           SUPABASE_PUBLISHABLE_KEY="sb_publishable_p4UqpaLvEx_93XJSWvzo6Q_loju0xzW"
@@ -132,6 +130,23 @@ jobs:
           print("PASS: isolated Gemini secret is configured; only now may the single benchmark chat be sent.")
           PY
 
+          # Verify that the read-only telemetry table and admin SELECT policy exist
+          # before sending the one provider request.
+          telemetry_preflight_status="$(curl --silent --show-error --max-time 15 \
+            -o /tmp/innerme-benchmark-telemetry-preflight.json \
+            -w '%{http_code}' \
+            --get "${SUPABASE_URL}/rest/v1/innerme_provider_usage" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            --data-urlencode 'select=request_id' \
+            --data-urlencode 'limit=0')"
+          if [[ "${telemetry_preflight_status}" != "200" ]]; then
+            echo "::error::Isolated telemetry preflight returned HTTP ${telemetry_preflight_status}; no model request was sent."
+            cat /tmp/innerme-benchmark-telemetry-preflight.json
+            exit 1
+          fi
+          echo "PASS: isolated provider telemetry schema and admin read access are ready."
+
           # Short, stateless, harmless request. This exercises the normal chat
           # route, provider telemetry and timing headers without asking InnerMe
           # to change workspace records or send messages.
@@ -201,13 +216,16 @@ jobs:
             exit 1
           fi
 
-          provider_key="${INNERME_TEST_SUPABASE_SERVICE_ROLE_KEY}"
-          provider_headers=(-H "apikey: ${provider_key}")
-          if [[ "${provider_key}" != sb_secret_* ]]; then
-            provider_headers+=(-H "Authorization: Bearer ${provider_key}")
-          fi
-
-          curl --silent --show-error --fail-with-body --max-time 20             --get "${SUPABASE_URL}/rest/v1/innerme_provider_usage"             "${provider_headers[@]}"             --data-urlencode 'select=request_id,attempt_number,task_category,provider,model,outcome,http_status,latency_ms,input_tokens,output_tokens,total_tokens,error_code,fallback_reason'             --data-urlencode "request_id=eq.${REQUEST_ID}"             --data-urlencode 'order=attempt_number.asc'             -o /tmp/innerme-benchmark-provider-usage.json
+          # Use the authenticated isolated admin JWT. The telemetry table intentionally
+          # grants SELECT to authenticated admins, not to the service_role API key.
+          curl --silent --show-error --fail-with-body --max-time 20 \
+            --get "${SUPABASE_URL}/rest/v1/innerme_provider_usage" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            --data-urlencode 'select=request_id,attempt_number,task_category,provider,model,outcome,http_status,latency_ms,input_tokens,output_tokens,total_tokens,error_code,fallback_reason' \
+            --data-urlencode "request_id=eq.${REQUEST_ID}" \
+            --data-urlencode 'order=attempt_number.asc' \
+            -o /tmp/innerme-benchmark-provider-usage.json
 
           python3 - <<'PY'
           import json
