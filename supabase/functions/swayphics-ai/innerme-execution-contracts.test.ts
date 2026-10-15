@@ -9,7 +9,7 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function validPlanAndSteps() {
+function validPlanAndSteps(): { plan: any; steps: any[] } {
   return {
     plan: {
       title: "Follow up on a qualified lead",
