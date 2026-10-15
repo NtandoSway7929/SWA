@@ -232,6 +232,25 @@ Deno.test("named-record email content only selects that record's messages", () =
   assert(ids.join(",") === "email-maisha", "named targets must not attach unrelated messages");
 });
 
+Deno.test("drafting a reply loads only the named source email", () => {
+  const rows = [
+    { id: "email-maisha", lead_id: "lead-1", client_id: null },
+    { id: "email-other", lead_id: "lead-2", client_id: null },
+  ];
+  const message = "Draft a reply to Maisha's Touch's latest email";
+  assert(shouldLoadInnerMeEmailBodies(message), "reply drafting tied to an existing email needs source content");
+  const ids = selectInnerMeEmailBodyIds({
+    message,
+    emailRows: rows,
+    leads: [
+      { id: "lead-1", business_name: "Maisha's Touch" },
+      { id: "lead-2", business_name: "Another Business" },
+    ],
+    clients: [],
+  });
+  assert(ids.join(",") === "email-maisha", "reply drafting must use the named lead's email only");
+});
+
 Deno.test("focused or named records do not fall back to unrelated email bodies", () => {
   const rows = [{ id: "email-other", lead_id: "lead-2", client_id: "client-2" }];
   const focused = selectInnerMeEmailBodyIds({
