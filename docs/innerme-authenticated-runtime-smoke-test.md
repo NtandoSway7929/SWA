@@ -7,9 +7,11 @@ This is a manual, non-mutating live smoke test against the **isolated** Supabase
 1. Signs in as a dedicated test admin using Supabase Auth.
 2. Uses that real access token to confirm that an intentionally nonexistent action-proposal ID is absent.
 3. Calls the deployed test `swayphics-ai` function with `action=execute_innerme_action` and that same missing ID.
-4. Passes only when the function returns HTTP 404 with `The InnerMe controlled action proposal could not be found.`.
+4. Calls the test function with `action=innerme_workspace_read_health`, which performs bounded workspace reads and the request-scoped database aggregate, then returns only the retrieval profile, metric-group names and pass/fail metadata.
+5. Calls the run-controller RPC with a confirmed-missing synthetic step ID.
+6. Passes only when the expected missing-proposal and missing-step responses occur, and the aggregate path reports `summary_source=database_aggregate` with all expected aggregate groups.
 
-The missing proposal is checked before the POST. The expected code path reads the proposal and returns before the Phase 30 execution gate, audit-write, task-creation, or email-delivery paths. The workflow does not create a proposal, task, or email.
+The missing proposal and step are checked before the POSTs. The health check returns before any model/provider request. The controlled-action request returns before the Phase 30 execution gate, audit-write, task-creation, or email-delivery paths. The workflow does not create a proposal, task, or email.
 
 ## One-time setup
 
@@ -52,6 +54,7 @@ The workflow never runs on pull requests. It is manual-only, read-only apart fro
 ## Interpreting results
 
 - **PASS / HTTP 404 with the expected error:** the live test user authenticated, passed the admin check, and reached the missing-proposal branch.
+- **PASS / HTTP 200 from the workspace health check with `summary_source=database_aggregate`:** the live Edge Function completed the read-only workspace-summary path and exposed every expected aggregate group without returning underlying business records or calling an LLM/provider.
 - **HTTP 401 during sign-in or function invocation:** check the test user's password, confirmation status and token validity.
 - **HTTP 403 from the function:** the test user's UUID is not active in the isolated project's `public.admin_users` table, or the admin check failed.
 - **Any other result:** treat the smoke test as failed; do not interpret it as proof that action execution is safe.
