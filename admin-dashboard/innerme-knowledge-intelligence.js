@@ -1408,17 +1408,55 @@
                 }else{
                     const criteria=Array.isArray(plan.completion_criteria)?plan.completion_criteria:[];
                     const evidence=Array.isArray(plan.evidence)?plan.evidence:[];
+                    const stepEventsByStep=data && data.stepEventsByStep instanceof Map ? data.stepEventsByStep : new Map();
+                    const controllerAvailable=data && data.runControllerAvailable===true;
+                    const stepTransitionButton=function(step,transition,label){
+                        return '<button type="button" class="sway-ai-knowledge-test-button" data-sway-ai-ki-step-transition="'+esc(transition)+'" data-sway-ai-ki-step-id="'+esc(String(step.id||""))+'">'+esc(label)+'</button>';
+                    };
                     const stepsHtml=steps.map(function(step){
+                        const stepId=String(step.id||"");
+                        const stepStatus=String(step.status||"planned");
+                        const checkpoint=step.checkpoint && typeof step.checkpoint==="object" ? step.checkpoint : {};
+                        const completion=step.completion_evidence && typeof step.completion_evidence==="object" ? step.completion_evidence : {};
+                        const events=stepEventsByStep.get(stepId)||[];
+                        let stepControls="";
+                        if(controllerAvailable){
+                            if(stepStatus==="approved"){
+                                stepControls=stepTransitionButton(step,"start","Start step");
+                            }else if(stepStatus==="in_progress"){
+                                stepControls=stepTransitionButton(step,"checkpoint","Save checkpoint")+
+                                    stepTransitionButton(step,"complete","Mark verified complete")+
+                                    stepTransitionButton(step,"block","Block step");
+                            }else if(stepStatus==="blocked"){
+                                stepControls=stepTransitionButton(step,"resume","Resume step");
+                            }
+                        }
+                        const eventHistory=events.length
+                            ? '<div class="sway-ai-ki-execution-step-detail"><span>Run history</span><div class="sway-ai-ki-execution-step-history">'+events.slice(0,5).map(function(entry){
+                                return '<div><strong>'+esc(String(entry.event_type||"event").replace(/_/g," "))+'</strong><span>'+esc(entry.from_status||"")+' → '+esc(entry.to_status||"")+'</span>'+(entry.note?'<p>'+esc(entry.note)+'</p>':"")+'<small>'+esc(entry.created_at?new Date(entry.created_at).toLocaleString():"")+'</small></div>';
+                            }).join("")+'</div></div>'
+                            : "";
                         return '<div class="sway-ai-ki-execution-step">' +
-                            '<div class="sway-ai-ki-execution-step-head"><strong>'+esc(String(step.step_order||""))+'. '+esc(step.title||"Execution step")+'</strong><span>'+esc(step.status||"planned")+'</span></div>' +
+                            '<div class="sway-ai-ki-execution-step-head"><strong>'+esc(String(step.step_order||""))+'. '+esc(step.title||"Execution step")+'</strong><span>'+esc(stepStatus.replace(/_/g," "))+'</span></div>' +
                             '<p>'+esc(step.action||"")+'</p>' +
                             '<div class="sway-ai-ki-execution-step-meta"><span>Owner: '+esc(step.owner_role||"Swayphics admin")+'</span><span>Due: '+(step.due_offset_days==null?"Not specified":"Day "+esc(step.due_offset_days))+'</span><span>Risk: '+esc(step.risk_level||"low")+'</span>' +
                             (step.depends_on_step_order ? '<span>After step '+esc(step.depends_on_step_order)+'</span>' : '') +
+                            (Number(step.attempt_count||0)>0 ? '<span>Attempts: '+esc(step.attempt_count)+'</span>' : '') +
                             '</div>' +
                             (step.success_signal ? '<div class="sway-ai-ki-execution-step-detail"><span>Success signal</span><strong>'+esc(step.success_signal)+'</strong></div>' : '') +
                             (step.verification_method ? '<div class="sway-ai-ki-execution-step-detail"><span>Verification</span><strong>'+esc(step.verification_method)+'</strong></div>' : '') +
+                            (checkpoint.progress_summary ? '<div class="sway-ai-ki-execution-step-detail"><span>Latest checkpoint</span><strong>'+esc(checkpoint.progress_summary)+'</strong></div>' : '') +
+                            (step.blocked_reason ? '<div class="sway-ai-ki-execution-action-error"><strong>Blocked:</strong> '+esc(step.blocked_reason)+'</div>' : '') +
+                            (completion.verification_note ? '<div class="sway-ai-ki-execution-step-detail"><span>Admin verification</span><strong>'+esc(completion.verification_note)+'</strong>'+(step.completed_at?'<small>Verified '+esc(new Date(step.completed_at).toLocaleString())+'</small>':"")+'</div>' : '') +
+                            (stepControls ? '<div class="sway-ai-ki-execution-actions">'+stepControls+'</div>' : '') +
+                            eventHistory +
                         '</div>';
                     }).join("");
+                    const runControllerWarning=data && data.runControllerWarning ? '<p class="sway-ai-ki-muted">'+esc(data.runControllerWarning)+'</p>' : "";
+                    const allStepsMarkedComplete=steps.length>0 && steps.every(function(step){return String(step.status||"")==="completed";});
+                    const planCompletionVerificationNote=allStepsMarkedComplete
+                        ? '<div class="sway-ai-ki-execution-note">Every step is marked complete. Verify the plan-level success metric and completion criteria separately before claiming the business outcome was achieved.</div>'
+                        : "";
 
                     const criteriaHtml=criteria.length
                         ? '<div class="sway-ai-ki-execution-detail"><span>Completion criteria</span><ul>'+criteria.map(function(item){return '<li>'+esc(item)+'</li>';}).join("")+'</ul></div>'
@@ -1507,6 +1545,8 @@
                             (plan.rationale ? '<div class="sway-ai-ki-execution-detail"><span>Rationale</span><strong>'+esc(plan.rationale)+'</strong></div>' : '') +
                             (plan.risk ? '<div class="sway-ai-ki-execution-detail"><span>Risk</span><strong>'+esc(plan.risk)+'</strong></div>' : '') +
                             criteriaHtml +
+                            runControllerWarning +
+                            planCompletionVerificationNote +
                             '<div class="sway-ai-ki-execution-detail"><span>Steps</span><div class="sway-ai-ki-execution-steps">'+(stepsHtml || '<p class="sway-ai-ki-muted">No steps recorded.</p>')+'</div></div>' +
                             evidenceHtml +
                             actionsHtml +
