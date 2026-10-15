@@ -9,7 +9,7 @@ import {
   isCloudflareEligibleWritingRequest,
 } from "./innerme-provider-routing.mjs";
 import { buildInnerMeWorkspaceContextForModel } from "./innerme-workspace-intelligence.mjs";
-import { compactInnerMeContextForModel } from "./innerme-context-compaction.mjs";
+import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
 
 // Supabase Edge Runtime provides this embedding API at runtime; declare its surface for Deno checks.
 declare const Supabase: {
@@ -478,6 +478,38 @@ async function guardedGeminiFetch(
         } catch {
           // Preserve the last valid request representation and let the final size guard decide.
           break;
+        }
+      }
+    }
+  }
+
+  // Final exact-envelope compaction. Earlier passes reduce the workspace and prompt,
+  // but they cannot predict how much space the real admin instructions leave.
+  // Budget the remaining bytes from the serialized request itself before deciding to block.
+  if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES && Array.isArray(parsedBody.contents)) {
+    const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
+    const lastPart = lastTurn?.parts?.[0];
+    const contentText = lastPart?.text;
+    const marker = "\\n\\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\\n";
+    if (typeof contentText === "string") {
+      const markerIndex = contentText.lastIndexOf(marker);
+      if (markerIndex >= 0) {
+        try {
+          const workspace = JSON.parse(contentText.slice(markerIndex + marker.length));
+          // Measure the actual system prompt + question + integrity instructions without
+          // the workspace suffix, then reserve only the bytes genuinely available to JSON.
+          lastPart.text = contentText.slice(0, markerIndex);
+          const fixedRequestBytes = measureRequest();
+          const markerBytes = new TextEncoder().encode(marker).byteLength;
+          const workspaceByteBudget = Math.max(
+            0,
+            INNERME_MAX_GEMINI_REQUEST_BYTES - fixedRequestBytes - markerBytes,
+          );
+          const fittedWorkspace = compactInnerMeContextToByteBudget(workspace, workspaceByteBudget);
+          lastPart.text = contentText.slice(0, markerIndex) + marker + JSON.stringify(fittedWorkspace);
+          requestBytes = measureRequest();
+        } catch {
+          // Do not alter an unparseable workspace suffix; the final hard cap still fails closed.
         }
       }
     }
