@@ -10,7 +10,7 @@ This is an incremental controller for the existing Phase 9/10 execution-plan lif
 - **Checkpoint:** an administrator records a short progress summary plus optional unresolved items or verified artifact references. The payload is bounded and has an allowlisted schema. Prompt text, hidden reasoning, full conversation history, and secrets are not supported fields.
 - **Complete:** an administrator must provide a verification summary, a concrete evidence reference, and the step's stated verification method. The server records who verified it and when, changes the step to `completed`, and writes a completion event. This records an administrator's verification, not an independently proven business outcome.
 - **Block:** an administrator records why an approved or in-progress step cannot proceed. Blocking a step is not an action cancellation or a recovery operation.
-- **Resume:** a blocked step can resume only after its prerequisite is completed. The server refuses to resume, complete, or block the step while a related controlled action proposal is still `executing` or its execution log remains `started`. Reconcile uncertain task/email side effects through the existing Phase 30 recovery workflow first.
+- **Resume:** a blocked step can resume only after its prerequisite is completed. The server refuses to resume, complete, or block a step while a related controlled action proposal is still `proposed`, `approved`, or `executing`, or its execution log remains `started`. Review/reject outstanding proposals, or reconcile uncertain task/email side effects through the existing Phase 30 recovery workflow first.
 
 A step with an incomplete success contract cannot start, resume, or complete. It can be blocked so the missing condition is documented.
 
@@ -29,7 +29,7 @@ The action-execution route checks the step state again after it claims a proposa
 
 ## Audit model
 
-`innerme_execution_step_events` is an append-only transition ledger from the application path. Authenticated admins can read it; direct authenticated insert/update/delete privileges are not granted. The RPC checks the active admin identity, locks the affected step and plan, validates allowed transitions, updates the step and inserts the event in the same database transaction.
+`innerme_execution_step_events` is an append-only transition ledger from the application path. Authenticated admins can read it; direct authenticated insert/update/delete privileges are not granted. A database trigger protects run-controller fields and rejects direct step-status edits except the planned-to-approved/cancelled transition used by the existing plan-review RPC. That plan-review RPC sets its own transaction-local capability. The controller RPC checks the active admin identity, locks the affected step and plan, validates allowed transitions, updates the step and inserts the event in the same database transaction. This keeps the existing broad admin table policy from becoming an alternate path around the run controller.
 
 Events contain the transition, from/to statuses, attempt count, short admin note and bounded checkpoint/verification payload. They do not accept model prompts, reasoning traces or full chat histories.
 
