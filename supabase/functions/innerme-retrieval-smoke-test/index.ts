@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { extractBearerToken } from "./auth-header.mjs";
 
 // TEST-ONLY: this endpoint must never be deployed to production.
 // It hard-refuses every Supabase project except the isolated project below.
@@ -204,7 +205,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const authorization = req.headers.get("authorization") || "";
-  const accessToken = authorization.match(/^Bearer\\s+(.+)$/i)?.[1] || "";
+  const accessToken = extractBearerToken(authorization);
   if (!accessToken) {
     return jsonResponse({ ok: false, error: "A signed-in isolated test-admin token is required." }, 401);
   }

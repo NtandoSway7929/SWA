@@ -61,6 +61,12 @@ jobs:
           node --test scripts/innerme-routing-experiment.test.mjs
           node scripts/innerme-routing-experiment.mjs --dry-run
 
+      - name: Test isolated regression bearer-token parsing
+        run: |
+          node --check supabase/functions/innerme-retrieval-smoke-test/auth-header.mjs
+          node --check scripts/innerme-semantic-retrieval-auth.test.mjs
+          node --test scripts/innerme-semantic-retrieval-auth.test.mjs
+
       - name: Validate versioned semantic retrieval regression baseline
         run: |
           node --check scripts/innerme-semantic-retrieval-regression.test.mjs
