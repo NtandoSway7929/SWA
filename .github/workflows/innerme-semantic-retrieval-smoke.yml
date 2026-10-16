@@ -262,6 +262,8 @@ jobs:
               raise SystemExit("Semantic retrieval regression suite did not pass; inspect the case table and archived result.")
           if counts.get("passed") != counts.get("total") or counts.get("failed") != 0:
               raise SystemExit("Not all pinned regression cases passed.")
+          if (result.get("retrieval_metrics") or {}).get("complete") is not True:
+              raise SystemExit("Corpus-wide precision/recall metrics did not cover every pinned corpus case.")
           if cleanup.get("passed") is not True or cleanup.get("fixture_removed") is not True:
               raise SystemExit("Synthetic fixture cleanup was not verified.")
           print("PASS: every versioned semantic retrieval regression case passed and all synthetic fixtures were removed.")
