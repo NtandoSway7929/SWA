@@ -365,10 +365,10 @@ Deno.test("InnerMe public website chat boundary is checked before authentication
   });
 });
 
-async function invokeMockedPublicSuccess(): Promise<{
+async function invokeMockedPublicSuccess(simulatePrimaryUnavailable = false): Promise<{
   status: number;
   body: Record<string, unknown>;
-  requests: Array<{ host: string; path: string; method: string }>;
+  requests: Array<{ host: string; path: string; method: string; payload?: Record<string, unknown> }>;
 }> {
   const envKeys = [
     "SUPABASE_URL",
@@ -382,8 +382,9 @@ async function invokeMockedPublicSuccess(): Promise<{
   Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
   Deno.env.set("GEMINI_API_KEY", "test-gemini-key");
 
-  const requests: Array<{ host: string; path: string; method: string }> = [];
+  const requests: Array<{ host: string; path: string; method: string; payload?: Record<string, unknown> }> = [];
   const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
   const mockedAnswer = {
     answer: "Start by identifying the one outcome you most want customers to take next.",
     visitor_goal: "Clarify the next customer outcome.",
@@ -401,7 +402,15 @@ async function invokeMockedPublicSuccess(): Promise<{
       : new URL(String(input));
     const method = (init?.method ||
       (input instanceof Request ? input.method : "GET")).toUpperCase();
-    requests.push({ host: url.host, path: url.pathname, method });
+    let payload: Record<string, unknown> | undefined;
+    if (url.pathname === "/rest/v1/innerme_provider_usage" && typeof init?.body === "string") {
+      try {
+        payload = JSON.parse(init.body) as Record<string, unknown>;
+      } catch {
+        payload = undefined;
+      }
+    }
+    requests.push({ host: url.host, path: url.pathname, method, ...(payload ? { payload } : {}) });
 
     if (url.pathname === "/rest/v1/rpc/consume_public_innerme_rate_limit") {
       return jsonResponse(200, [{ allowed: true, retry_after_seconds: 60 }]);
@@ -414,8 +423,15 @@ async function invokeMockedPublicSuccess(): Promise<{
         reason: null,
       });
     }
+    if (url.pathname === "/rest/v1/innerme_provider_usage") {
+      return jsonResponse(201, {});
+    }
     if (url.host === "generativelanguage.googleapis.com" &&
       url.pathname.endsWith(":generateContent")) {
+      providerCalls += 1;
+      if (simulatePrimaryUnavailable && providerCalls === 1) {
+        return jsonResponse(503, { error: { status: "UNAVAILABLE" } });
+      }
       return jsonResponse(200, {
         candidates: [{
           content: {
@@ -493,15 +509,55 @@ Deno.test("InnerMe public website chat completes the guarded flow without worksp
     1,
     "Mocked provider request count",
   );
+  const usageEvents = result.requests
+    .filter((request) => request.path === "/rest/v1/innerme_provider_usage")
+    .map((request) => request.payload)
+    .filter((event): event is Record<string, unknown> => Boolean(event));
+  assertEqual(usageEvents.length, 1, "Successful public-chat provider attempt should be recorded");
+  assertEqual(usageEvents[0].task_category, "assistant_chat", "Public-chat telemetry category");
+  assertEqual(usageEvents[0].provider, "gemini", "Public-chat telemetry provider");
+  assertEqual(usageEvents[0].outcome, "success", "Public-chat telemetry outcome");
+  assertEqual(usageEvents[0].input_tokens, 100, "Public-chat reported prompt tokens");
+  assertEqual(usageEvents[0].output_tokens, 20, "Public-chat reported output tokens");
+  assertEqual(usageEvents[0].total_tokens, 120, "Public-chat reported total tokens");
+  assert(!("answer" in usageEvents[0]) && !("message" in usageEvents[0]), "Telemetry must not persist prompts or answers");
   assert(
     result.requests.every((request) =>
       (request.host === "mock-supabase.invalid" && [
         "/rest/v1/rpc/consume_public_innerme_rate_limit",
         "/rest/v1/rpc/innerme_reserve_provider_quota",
       ].includes(request.path)) ||
+      (request.host === "mock-supabase.invalid" && request.path === "/rest/v1/innerme_provider_usage") ||
       (request.host === "generativelanguage.googleapis.com" &&
         request.path.endsWith(":generateContent"))
     ),
     "Public chat must not fetch admin workspace tables, internal knowledge, or other private records.",
   );
+});
+
+
+Deno.test("InnerMe public website chat attributes fallback failures and successes", async () => {
+  const result = await invokeMockedPublicSuccess(true);
+  assertEqual(result.status, 200, "Fallback public-chat response status");
+  assertEqual(
+    result.requests.filter((request) => request.host === "generativelanguage.googleapis.com").length,
+    2,
+    "Primary and fallback provider request count",
+  );
+  const usageEvents = result.requests
+    .filter((request) => request.path === "/rest/v1/innerme_provider_usage")
+    .map((request) => request.payload)
+    .filter((event): event is Record<string, unknown> => Boolean(event))
+    .sort((a, b) => Number(a.attempt_number) - Number(b.attempt_number));
+  assertEqual(usageEvents.length, 2, "Both public-chat provider attempts should be recorded");
+  assertEqual(usageEvents[0].attempt_number, 1, "Primary attempt number");
+  assertEqual(usageEvents[0].model, "gemini-3.8-flash", "Primary model telemetry");
+  assertEqual(usageEvents[0].outcome, "error", "Primary unavailable outcome");
+  assertEqual(usageEvents[0].http_status, 503, "Primary unavailable HTTP status");
+  assertEqual(usageEvents[0].error_code, "provider_unavailable", "Primary unavailable error code");
+  assertEqual(usageEvents[1].attempt_number, 2, "Fallback attempt number");
+  assertEqual(usageEvents[1].model, "gemini-3.5-flash-lite", "Fallback model telemetry");
+  assertEqual(usageEvents[1].outcome, "success", "Fallback success outcome");
+  assertEqual(usageEvents[1].fallback_reason, "gemini_primary_http_503", "Fallback attribution");
+  assertEqual(usageEvents[0].request_id, usageEvents[1].request_id, "Attempts from one public message share a correlation ID");
 });
