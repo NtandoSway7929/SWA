@@ -25,6 +25,8 @@ on:
       - "scripts/innerme-routing-experiment.test.mjs"
       - ".github/workflows/innerme-routing-experiment.yml"
       - "docs/innerme-routing-experiment.md"
+      - "supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json"
+      - "scripts/innerme-semantic-retrieval-regression.test.mjs"
 
 permissions:
   contents: read
