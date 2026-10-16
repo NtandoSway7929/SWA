@@ -5985,7 +5985,7 @@ Deno.serve(async (req) => {
     const matchThreshold =
       Number.isFinite(thresholdRaw)
         ? Math.max(0, Math.min(thresholdRaw, 1))
-        : 0.45;
+: 0.8;
 
     const countRaw = Number(body.match_count);
     const matchCount =
@@ -8921,7 +8921,7 @@ Deno.serve(async (req) => {
             "match_innerme_knowledge",
             {
               query_embedding: knowledgeEmbedding,
-              match_threshold: 0.55,
+              match_threshold: 0.8,
               match_count: 10,
             },
           );

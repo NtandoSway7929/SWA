@@ -6,28 +6,29 @@ The original single-canary runtime smoke test has been expanded into a fixed, ve
 
 Canonical baseline: `supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json`.
 
-Current baseline version: **1.0.0**.
+Current baseline version: **1.1.0**. Run #5 attempt 2 exposed a false positive at similarity 0.7172 for an unrelated query. The lowest relevant match in that run was 0.9009. Version 1.1.0 chooses a 0.80 cutoff between those measured scores, records the calibration evidence in the baseline, adds unrelated cooking and algorithm queries, and checks normal-chat irrelevant-context exclusion.
 
 ## Fixed coverage
 
-The baseline includes six run-unique synthetic knowledge fixtures and ten pinned test cases:
+The baseline includes six run-unique synthetic knowledge fixtures and thirteen pinned test cases:
 
 | Case family | Count | Required behaviour |
 |---|---:|---|
-| Relevant semantic retrieval | 3 | Natural-language queries retrieve the intended verified/current fixture at similarity `>= 0.45`. |
-| Irrelevant-query rejection | 1 | An unrelated astronomy query must not return the synthetic invoice fixture. |
+| Relevant semantic retrieval | 3 | Natural-language queries retrieve the intended verified/current fixture at similarity `>= 0.80`. |
+| Irrelevant-query rejection | 3 | Unrelated astronomy, cooking and algorithm queries must not return the synthetic invoice fixture. |
 | Eligibility exclusions | 3 | Stale, unverified, and expired-review records must not be returned even when the query matches their wording. |
 | Normal-chat grounding | 3 | Normal chat must report the correct verified fixture as retrieved evidence and reproduce its exact canary phrase. |
+| Normal-chat irrelevant-context exclusion | 1 | Normal chat must not retrieve the invoice fixture or reproduce its canary when asked an unrelated astronomy question. |
 
-The suite pins the six fixture keys, all ten case IDs, their types, expected outcomes, eligibility metadata and the `gte-small` 384-dimensional retrieval contract. Case prompts, synthetic statements, titles and phrases are versioned in the JSON baseline. The endpoint rejects a baseline that changes the suite version, threshold, mandatory case IDs, expected match polarity, or exclusion fixture metadata without a corresponding helper change.
+The suite pins the six fixture keys, all thirteen case IDs, their types, expected outcomes, eligibility metadata, the 0.80 retrieval cutoff and the `gte-small` 384-dimensional retrieval contract. Case prompts, synthetic statements, titles and phrases are versioned in the JSON baseline. The endpoint rejects a baseline that changes the suite version, threshold, mandatory case IDs, expected match polarity, or exclusion fixture metadata without a corresponding helper change.
 
 ## What happens during a run
 
 1. GitHub Actions checks the explicit no-billing confirmation and the dedicated isolated-admin credentials.
 2. The workflow checks out the versioned baseline and authenticates to the isolated project.
 3. The test-only Edge Function verifies the project ref, parses the signed-in user's bearer token with a separately unit-tested parser, verifies the active administrator, then validates the baseline contract.
-4. It creates six uniquely named synthetic records, uses the real built-in `gte-small` model to generate and save 384-dimensional embeddings, and executes the seven retrieval and eligibility cases.
-5. It sends up to three read-only normal-chat requests to test grounding across invoice, appointment-rescheduling and warehouse-dispatch topics.
+4. It creates six uniquely named synthetic records, uses the real built-in `gte-small` model to generate and save 384-dimensional embeddings, and executes seven retrieval and eligibility cases.
+5. It sends up to four read-only normal-chat requests to test grounding across invoice, appointment-rescheduling and warehouse-dispatch topics and check that irrelevant astronomy questions do not leak invoice knowledge into chat context.
 6. It deletes all run-specific fixtures, confirms there are no residual rows, and returns a case-by-case result report.
 
 Each run has unique fixture slugs and domain names to avoid cross-run interference. Cleanup runs even if a fixture, retrieval or chat stage fails. A cleanup failure is a suite failure and must be resolved before rerunning.
@@ -38,7 +39,7 @@ Each run has unique fixture slugs and domain names to avoid cross-run interferen
 - Fixture database operations use the caller's authenticated JWT and the existing active-admin RLS policy. The isolated-only grants file is `supabase/isolated-test/innerme-semantic-retrieval-smoke-test-grants.sql`; it must never be applied to production.
 - `service_role` retains no direct privileges on `public.innerme_knowledge`. The helper uses its server-side service key only to validate the user's session and active-admin record.
 - `gte-small` embeddings use Supabase's built-in Edge Runtime AI interface. No external embedding provider is called.
-- The three normal-chat grounding cases make up to three real provider chat requests. Keep the isolated Gemini key in a separate Google test project with billing disabled. Do not reuse the production key. The workflow requires explicit confirmation before it runs.
+- The normal-chat checks make up to four real provider chat requests. Keep the isolated Gemini key in a separate Google test project with billing disabled. Do not reuse the production key. The workflow requires explicit confirmation before it runs.
 - The suite does not create or execute proposals, send email, mutate real business records, or copy production knowledge rows.
 
 ## Regression and inconclusive-result policy
@@ -56,7 +57,7 @@ Workflow: `.github/workflows/innerme-semantic-retrieval-smoke.yml`.
 
 ## What a passing suite does and does not prove
 
-A pass establishes that these fixed positive, negative, eligibility-exclusion and normal-chat grounding cases work together in the isolated runtime at the recorded baseline version. It does not prove broad factual accuracy for every domain, guarantee all future responses, establish production readiness, or prove completion of all 30 roadmap phases. Expand the suite only with reviewed, representative cases and bump the baseline version when the expected contract deliberately changes.
+A pass establishes that these fixed positive, negative, eligibility-exclusion, normal-chat grounding and irrelevant-context exclusion cases work together in the isolated runtime at the recorded baseline version. It does not prove broad factual accuracy for every domain, guarantee all future responses, establish production readiness, or prove completion of all 30 roadmap phases. Expand the suite only with reviewed, representative cases and bump the baseline version when the expected contract deliberately changes.
 
 ## Failure recovery
 

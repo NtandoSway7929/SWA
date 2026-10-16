@@ -22,22 +22,28 @@ const expectedTests = {
   semantic_appointment_match: ["retrieval_positive", "appointment", true],
   semantic_dispatch_match: ["retrieval_positive", "dispatch", true],
   semantic_irrelevant_query_excluded: ["retrieval_negative", "invoice", false],
+  semantic_irrelevant_cooking_excluded: ["retrieval_negative", "invoice", false],
+  semantic_irrelevant_algorithm_excluded: ["retrieval_negative", "invoice", false],
   semantic_stale_knowledge_excluded: ["eligibility_exclusion", "stale", false],
   semantic_unverified_knowledge_excluded: ["eligibility_exclusion", "unverified", false],
   semantic_expired_review_excluded: ["eligibility_exclusion", "expired_review", false],
   normal_chat_invoice_grounding: ["chat_grounding", "invoice", true],
   normal_chat_appointment_grounding: ["chat_grounding", "appointment", true],
   normal_chat_dispatch_grounding: ["chat_grounding", "dispatch", true],
+  normal_chat_irrelevant_invoice_exclusion: ["chat_exclusion", "invoice", false],
 };
 
 test("regression baseline pins its suite version, model contract, threshold and case count", () => {
   assert.equal(baseline.suite_id, "innerme_semantic_retrieval_regression");
-  assert.equal(baseline.baseline_version, "1.0.0");
+  assert.equal(baseline.baseline_version, "1.1.0");
   assert.equal(baseline.embedding_model, "gte-small");
   assert.equal(baseline.embedding_dimensions, 384);
-  assert.equal(baseline.retrieval_similarity_threshold, 0.45);
+  assert.equal(baseline.retrieval_similarity_threshold, 0.8);
+  assert.equal(baseline.threshold_calibration.chosen_threshold, 0.8);
+  assert.ok(baseline.threshold_calibration.observed_similarity < baseline.retrieval_similarity_threshold);
+  assert.ok(baseline.threshold_calibration.lowest_positive_similarity > baseline.retrieval_similarity_threshold);
   assert.equal(baseline.fixtures.length, 6);
-  assert.equal(baseline.tests.length, 10);
+  assert.equal(baseline.tests.length, 13);
 });
 
 test("fixtures isolate the exact metadata dimension each eligibility regression checks", () => {
@@ -95,12 +101,17 @@ test("positive retrieval and grounding coverage includes three distinct topics",
 test("negative cases cover irrelevant queries and all three eligibility exclusions", () => {
   const irrelevant = baseline.tests.find((item) => item.id === "semantic_irrelevant_query_excluded");
   assert.match(irrelevant.query, /Kepler-452b/);
+  assert.match(baseline.tests.find((item) => item.id === "semantic_irrelevant_cooking_excluded").query, /sourdough/i);
+  assert.match(baseline.tests.find((item) => item.id === "semantic_irrelevant_algorithm_excluded").query, /Dijkstra/i);
   assert.equal(irrelevant.expected_match, false);
 
   for (const id of [
+    "semantic_irrelevant_cooking_excluded",
+    "semantic_irrelevant_algorithm_excluded",
     "semantic_stale_knowledge_excluded",
     "semantic_unverified_knowledge_excluded",
     "semantic_expired_review_excluded",
+    "normal_chat_irrelevant_invoice_exclusion",
   ]) {
     assert.equal(baseline.tests.find((item) => item.id === id).expected_match, false);
   }

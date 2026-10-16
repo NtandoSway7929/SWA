@@ -5,7 +5,7 @@ import { extractBearerToken } from "./auth-header.mjs";
 // It hard-refuses every Supabase project except the isolated project below.
 const ISOLATED_PROJECT_REF = "ofqofhnlzbouclvvrmzd";
 const SUITE_ID = "innerme_semantic_retrieval_regression";
-const BASELINE_VERSION = "1.0.0";
+const BASELINE_VERSION = "1.1.0";
 const EMBEDDING_MODEL = "gte-small";
 const EMBEDDING_DIMENSIONS = 384;
 
@@ -23,12 +23,15 @@ const REQUIRED_TESTS: Record<string, { type: string; fixture_key: string; expect
   semantic_appointment_match: { type: "retrieval_positive", fixture_key: "appointment", expected_match: true },
   semantic_dispatch_match: { type: "retrieval_positive", fixture_key: "dispatch", expected_match: true },
   semantic_irrelevant_query_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
+  semantic_irrelevant_cooking_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
+  semantic_irrelevant_algorithm_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
   semantic_stale_knowledge_excluded: { type: "eligibility_exclusion", fixture_key: "stale", expected_match: false },
   semantic_unverified_knowledge_excluded: { type: "eligibility_exclusion", fixture_key: "unverified", expected_match: false },
   semantic_expired_review_excluded: { type: "eligibility_exclusion", fixture_key: "expired_review", expected_match: false },
   normal_chat_invoice_grounding: { type: "chat_grounding", fixture_key: "invoice", expected_match: true },
   normal_chat_appointment_grounding: { type: "chat_grounding", fixture_key: "appointment", expected_match: true },
   normal_chat_dispatch_grounding: { type: "chat_grounding", fixture_key: "dispatch", expected_match: true },
+  normal_chat_irrelevant_invoice_exclusion: { type: "chat_exclusion", fixture_key: "invoice", expected_match: false },
 };
 
 const REQUIRED_FIXTURE_POLICY: Record<string, { status: string; verification_status: string; review_window: string }> = {
@@ -99,10 +102,23 @@ function validateBaseline(value: unknown): { baseline: any | null; error: string
   if (
     baseline.embedding_model !== EMBEDDING_MODEL ||
     baseline.embedding_dimensions !== EMBEDDING_DIMENSIONS ||
-    baseline.retrieval_similarity_threshold !== 0.45
+    baseline.retrieval_similarity_threshold !== 0.8
   ) {
     return { baseline: null, error: "The regression baseline changed a pinned model, dimension, or retrieval threshold." };
   }
+  const calibration = baseline.threshold_calibration as Record<string, any> | undefined;
+  if (
+    !calibration ||
+    calibration.source_run_id !== "38839420386" ||
+    calibration.source_attempt !== 2 ||
+    calibration.case_id !== "semantic_irrelevant_query_excluded" ||
+    calibration.observed_similarity !== 0.717157678773543 ||
+    calibration.lowest_positive_similarity !== 0.900932317916614 ||
+    calibration.chosen_threshold !== 0.8
+  ) {
+    return { baseline: null, error: "Threshold calibration evidence does not match the reviewed baseline v1.1.0." };
+  }
+
   if (!Array.isArray(baseline.fixtures) || !Array.isArray(baseline.tests)) {
     return { baseline: null, error: "The regression baseline must include fixture and test arrays." };
   }
@@ -363,7 +379,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Retrieval positive, irrelevant-query negative and eligibility exclusion cases.
-    for (const test of baseline.tests.filter((item: any) => item.type !== "chat_grounding")) {
+    for (const test of baseline.tests.filter((item: any) => item.type !== "chat_grounding" && item.type !== "chat_exclusion")) {
       if (executionFailure) {
         recordNotRun(test, "Suite execution stopped after " + executionFailure.stage + ".");
         continue;
@@ -436,7 +452,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Each chat case must report the target knowledge evidence and reproduce its exact canary.
-    for (const test of baseline.tests.filter((item: any) => item.type === "chat_grounding")) {
+    for (const test of baseline.tests.filter((item: any) => item.type === "chat_grounding" || item.type === "chat_exclusion")) {
       if (executionFailure) {
         recordNotRun(test, "Suite execution stopped after " + executionFailure.stage + ".");
         continue;
@@ -498,23 +514,30 @@ Deno.serve(async (req: Request) => {
 
         const matches = Array.isArray(knowledge.matches) ? knowledge.matches : [];
         const target = matches.find((item: Record<string, unknown>) => item?.id === targetId);
-        const knowledgeMatch = knowledge.used === true && Boolean(target);
+        const targetRetrieved = knowledge.used === true && Boolean(target);
         const answerContainsExpectedPhrase = String(chatPayload.answer).toLowerCase().includes(String(fixture.canary_phrase).toLowerCase());
-        const passed = knowledgeMatch && answerContainsExpectedPhrase;
+        const expectsRelevantEvidence = test.expected_match === true;
+        const passed = expectsRelevantEvidence
+          ? targetRetrieved && answerContainsExpectedPhrase
+          : !targetRetrieved && !answerContainsExpectedPhrase;
         caseResults.push({
           id: test.id,
           type: test.type,
           status: passed ? "passed" : "failed",
           fixture_key: test.fixture_key,
-          expected_match: true,
-          observed_match: knowledgeMatch,
+          expected_match: test.expected_match,
+          observed_match: targetRetrieved,
           similarity: target && Number.isFinite(Number(target.similarity)) ? Number(target.similarity) : null,
-          knowledge_match: knowledgeMatch,
+          knowledge_match: targetRetrieved,
           answer_contains_expected_phrase: answerContainsExpectedPhrase,
           ...(passed ? {} : {
-            error: !knowledgeMatch
-              ? "Normal chat did not include the expected fixture among retrieved knowledge evidence."
-              : "Normal chat did not reproduce the fixture's exact canary phrase.",
+            error: expectsRelevantEvidence
+              ? (!targetRetrieved
+                ? "Normal chat did not include the expected fixture among retrieved knowledge evidence."
+                : "Normal chat did not reproduce the fixture's exact canary phrase.")
+              : (targetRetrieved
+                ? "Normal chat leaked an unrelated fixture into retrieved knowledge evidence."
+                : "Normal chat reproduced the canary phrase for an unrelated query."),
           }),
         });
       } catch (error) {
