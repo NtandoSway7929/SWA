@@ -8921,7 +8921,7 @@ Deno.serve(async (req) => {
             "match_innerme_knowledge",
             {
               query_embedding: knowledgeEmbedding,
-              match_threshold: 0.75,
+              match_threshold: 0.8,
               match_count: 10,
             },
           );
