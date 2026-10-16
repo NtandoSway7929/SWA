@@ -1,45 +1,63 @@
-# InnerMe Semantic Retrieval End-to-End Smoke Test
+# InnerMe Isolated Semantic Retrieval Regression Suite
 
-## What this checks
+## Purpose
 
-This test is stronger than the SQL-level positive-path test in supabase/tests/innerme_knowledge_retrieval_smoke_test.sql. It exercises the actual isolated Edge Function and normal chat:
+The original single-canary runtime smoke test has been expanded into a fixed, versioned regression suite. The suite tests semantic retrieval quality, knowledge eligibility gates, normal-chat grounding, and synthetic-fixture cleanup in the isolated **Swayphics InnerMe Test** project.
 
-1. Authenticate a dedicated administrator in **Swayphics InnerMe Test**.
-2. Create one synthetic, run-unique knowledge record and verify its embedding text includes the canary.
-3. Generate a real 384-dimensional gte-small document embedding and store it on the synthetic record.
-4. Call the deployed swayphics-ai action search_knowledge with a natural-language query and require the synthetic record to be returned at similarity >= 0.45.
-5. Ask normal InnerMe chat for a unique canary phrase that is present only in the synthetic knowledge record. Require the normal-chat response to include that record in its reported retrieved evidence and reproduce the exact phrase.
-6. Delete the synthetic fixture and query the table to confirm it is gone, even when an earlier test stage fails.
+Canonical baseline: `supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json`.
 
-The canary phrase is **Cobalt Compass 417**. It is a synthetic test value, not a business fact.
+Current baseline version: **1.0.0**.
+
+## Fixed coverage
+
+The baseline includes six run-unique synthetic knowledge fixtures and ten pinned test cases:
+
+| Case family | Count | Required behaviour |
+|---|---:|---|
+| Relevant semantic retrieval | 3 | Natural-language queries retrieve the intended verified/current fixture at similarity `>= 0.45`. |
+| Irrelevant-query rejection | 1 | An unrelated astronomy query must not return the synthetic invoice fixture. |
+| Eligibility exclusions | 3 | Stale, unverified, and expired-review records must not be returned even when the query matches their wording. |
+| Normal-chat grounding | 3 | Normal chat must report the correct verified fixture as retrieved evidence and reproduce its exact canary phrase. |
+
+The suite pins the six fixture keys, all ten case IDs, their types, expected outcomes, eligibility metadata and the `gte-small` 384-dimensional retrieval contract. Case prompts, synthetic statements, titles and phrases are versioned in the JSON baseline. The endpoint rejects a baseline that changes the suite version, threshold, mandatory case IDs, expected match polarity, or exclusion fixture metadata without a corresponding helper change.
+
+## What happens during a run
+
+1. GitHub Actions checks the explicit no-billing confirmation and the dedicated isolated-admin credentials.
+2. The workflow checks out the versioned baseline and authenticates to the isolated project.
+3. The test-only Edge Function verifies the project ref and active administrator, then validates the baseline contract.
+4. It creates six uniquely named synthetic records, uses the real built-in `gte-small` model to generate and save 384-dimensional embeddings, and executes the seven retrieval and eligibility cases.
+5. It sends up to three read-only normal-chat requests to test grounding across invoice, appointment-rescheduling and warehouse-dispatch topics.
+6. It deletes all run-specific fixtures, confirms there are no residual rows, and returns a case-by-case result report.
+
+Each run has unique fixture slugs and domain names to avoid cross-run interference. Cleanup runs even if a fixture, retrieval or chat stage fails. A cleanup failure is a suite failure and must be resolved before rerunning.
 
 ## Security and cost boundaries
 
-- The helper endpoint at supabase/functions/innerme-retrieval-smoke-test/index.ts has a hard guard for the isolated project ref ofqofhnlzbouclvvrmzd. It refuses to run under any other Supabase URL and also checks that the caller is an active admin in the isolated project's admin_users table.
-- The helper is a separate test function, not part of the production swayphics-ai deployment. Deploy it only to the isolated test project; never deploy it to production.
-- A server-side service key is used only to validate the caller's session and confirm the active admin record. Fixture insert/update/delete/read operations use the caller's authenticated JWT, so the existing admin-only RLS policy continues to apply. The service_role role remains without direct privileges on innerme_knowledge.
-- The file supabase/isolated-test/innerme-semantic-retrieval-smoke-test-grants.sql grants INSERT and DELETE to authenticated only in the isolated test project. It checks that RLS and the active-admin policy exist first. Never apply this isolated-only SQL to production.
-- The helper checks for the Gemini key only after verifying the isolated admin and before inserting the fixture. This avoids using the broader workspace-health action as a provider-key preflight.
-- The main chat request calls the configured Gemini provider once or may use its existing fallback route. The workflow therefore requires explicit confirmation that the test project's dedicated Gemini key belongs to a separate Google project with billing disabled. Do not reuse the production key.
-- gte-small embeddings are generated through the Supabase Edge Runtime's built-in AI interface. No external embedding API is called.
-- The workflow is manual-only. It does not create, approve, or execute proposals; send email; change real business records; or copy production knowledge data.
-- The helper performs cleanup in a finally block and fails if it detects a fixture left behind.
+- The helper has a hard project guard for Supabase ref `ofqofhnlzbouclvvrmzd`. Never deploy it to the production project.
+- Fixture database operations use the caller's authenticated JWT and the existing active-admin RLS policy. The isolated-only grants file is `supabase/isolated-test/innerme-semantic-retrieval-smoke-test-grants.sql`; it must never be applied to production.
+- `service_role` retains no direct privileges on `public.innerme_knowledge`. The helper uses its server-side service key only to validate the user's session and active-admin record.
+- `gte-small` embeddings use Supabase's built-in Edge Runtime AI interface. No external embedding provider is called.
+- The three normal-chat grounding cases make up to three real provider chat requests. Keep the isolated Gemini key in a separate Google test project with billing disabled. Do not reuse the production key. The workflow requires explicit confirmation before it runs.
+- The suite does not create or execute proposals, send email, mutate real business records, or copy production knowledge rows.
 
-## One-time setup and execution
+## Regression and inconclusive-result policy
 
-1. Confirm that the isolated test project's GEMINI_API_KEY belongs to the separate no-billing Google test project. The helper checks only whether the secret exists and never prints its value.
-2. Apply supabase/isolated-test/innerme-semantic-retrieval-smoke-test-grants.sql to **only** the isolated Supabase project ofqofhnlzbouclvvrmzd after verifying the project ref. It grants fixture INSERT/DELETE to authenticated under the existing active-admin RLS policy and does not grant table privileges to service_role. Never apply this file to production.
-3. Deploy supabase/functions/innerme-retrieval-smoke-test/index.ts to **only** the isolated Supabase project ofqofhnlzbouclvvrmzd with JWT verification enabled. Do not add it to the production project's deployed functions.
-4. Confirm repository secrets INNERME_TEST_ADMIN_EMAIL and INNERME_TEST_ADMIN_PASSWORD refer to the dedicated isolated test admin, not a personal or production admin account.
-5. After this workflow is merged to main and the isolated-only helper is deployed, open the repository's Actions tab, select **InnerMe Isolated Semantic Retrieval End-to-End Smoke Test**, select **Run workflow**, and confirm the no-billing prerequisite.
-6. A pass must report a natural-language match, normal-chat canary grounding, and fixture removal. Inspect any failed stage and cleanup result before rerunning.
+- If a pinned case executes successfully but its expected retrieval/grounding assertion is false, the case is marked **failed**. The workflow exits non-zero, blocking the regression gate.
+- If a provider, Edge Function, authentication, embedding or retrieval execution error prevents a trustworthy assertion, the run is marked **inconclusive**, not misreported as an answer-quality regression. The workflow still exits non-zero, so the pipeline cannot silently treat it as a pass.
+- A complete pass requires all ten cases to pass and all synthetic fixtures to be confirmed removed.
+- The workflow writes a case table to the GitHub Actions run summary and uploads two files as an artifact: the full case-level result JSON and the exact baseline JSON used. The result includes the baseline SHA-256, GitHub run ID, commit, per-case status/similarity and cleanup state. Artifacts are retained for 90 days; the versioned expected-case baseline remains in Git.
 
-## What a pass does and does not prove
+## Running the suite
 
-A pass would verify the runtime chain from document embedding through natural-language vector search and retrieval-grounded normal-chat output, plus synthetic-fixture cleanup in the isolated project.
+Open the repository's Actions tab, choose **InnerMe Isolated Semantic Retrieval Regression Suite**, select **Run workflow**, and confirm the separate no-billing Google test project prerequisite.
 
-It would not prove broad semantic quality across real knowledge topics, factual accuracy in all business domains, production readiness, or completion of all 30 roadmap phases. Those require separate representative evidence, regression and security tests, and production rollout checks.
+Workflow: `.github/workflows/innerme-semantic-retrieval-smoke.yml`.
+
+## What a passing suite does and does not prove
+
+A pass establishes that these fixed positive, negative, eligibility-exclusion and normal-chat grounding cases work together in the isolated runtime at the recorded baseline version. It does not prove broad factual accuracy for every domain, guarantee all future responses, establish production readiness, or prove completion of all 30 roadmap phases. Expand the suite only with reviewed, representative cases and bump the baseline version when the expected contract deliberately changes.
 
 ## Failure recovery
 
-If the function returns an error, check its stage, failure, and cleanup fields. If cleanup.passed is false, query the isolated project's public.innerme_knowledge table for the returned fixture slug, remove that synthetic row from the isolated project only, and verify the count is zero before rerunning. Never grant direct table privileges to service_role or disable RLS as a workaround. If fixture writes fail, verify that the isolated-only grants file was applied to the isolated project and that the caller is still an active administrator.
+Inspect the per-case status and failure stage in the run summary/artifact. If cleanup did not pass, query the isolated project's `public.innerme_knowledge` for slugs beginning with `__innerme_semantic_regression_`, remove only those synthetic fixtures in the isolated project, and verify the residue count is zero. Never grant direct table privileges to `service_role`, disable RLS, or run the isolated-only grants script against production.
