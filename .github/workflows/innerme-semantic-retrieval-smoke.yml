@@ -124,9 +124,11 @@ jobs:
           baseline = json.loads(baseline_bytes)
           raw = Path("/tmp/innerme-semantic-regression-response.json").read_text(encoding="utf-8", errors="replace")
 
+          valid_json_response = True
           try:
               payload = json.loads(raw)
           except json.JSONDecodeError:
+              valid_json_response = False
               headers = Path("/tmp/innerme-semantic-regression-headers.txt").read_text(encoding="utf-8", errors="replace")
               request_id = next((line.split(":", 1)[1].strip() for line in headers.splitlines() if line.lower().startswith("x-request-id:")), "")
               payload = {
@@ -145,6 +147,38 @@ jobs:
                   "case_results": [],
                   "cleanup": {"passed": False, "fixture_removed": False, "error": "Cleanup could not be confirmed from response."},
                   "counts": {"total": len(baseline.get("tests", [])), "passed": 0, "failed": 0, "inconclusive": len(baseline.get("tests", [])), "not_run": 0},
+              }
+
+          # A JSON response without run_id is an early rejection: the helper has
+          # not entered fixture setup, so no fixture cleanup was required and
+          # every test is not_run. Do not call this a cleanup failure.
+          if valid_json_response and isinstance(payload, dict) and not payload.get("run_id"):
+              early_message = str(payload.get("error") or payload.get("failure", {}).get("message") or "Regression suite was rejected before fixture setup.")
+              payload = {
+                  **payload,
+                  "status": "inconclusive",
+                  "failure": payload.get("failure") or {
+                      "stage": "preflight",
+                      "kind": "execution",
+                      "message": early_message[:500],
+                      "http_status": int(http_status) if http_status.isdigit() else None,
+                  },
+                  "case_results": [],
+                  "counts": {
+                      "total": len(baseline.get("tests", [])),
+                      "passed": 0,
+                      "failed": 0,
+                      "inconclusive": 0,
+                      "not_run": len(baseline.get("tests", [])),
+                  },
+                  "cleanup": {
+                      "passed": True,
+                      "fixture_removed": True,
+                      "fixtures_attempted": 0,
+                      "error": None,
+                      "not_required": True,
+                  },
+                  "provider_chat_requests_attempted": 0,
               }
 
           result = {
