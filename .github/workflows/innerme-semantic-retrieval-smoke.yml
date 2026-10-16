@@ -118,14 +118,16 @@ jobs:
 
           test_status="$(curl --silent --show-error --max-time 150             -o /tmp/innerme-semantic-test-response.json             -w '%{http_code}'             -X POST "${SUPABASE_URL}/functions/v1/innerme-retrieval-smoke-test"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H "Authorization: Bearer ${ACCESS_TOKEN}"             -H 'Content-Type: application/json'             --data-binary @/tmp/innerme-semantic-test-request.json)"
 
-          python3 - <<'PY'
+          TEST_HTTP_STATUS="${test_status}" python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
 
+          http_status = os.environ["TEST_HTTP_STATUS"]
           payload = json.loads(Path("/tmp/innerme-semantic-test-response.json").read_text(encoding="utf-8"))
-          if payload.get("ok") is not True:
+          if http_status != "200" or payload.get("ok") is not True:
               print(json.dumps({
-                  "http_status": "${test_status}",
+                  "http_status": http_status,
                   "stage": payload.get("stage"),
                   "failure": payload.get("failure"),
                   "cleanup": payload.get("cleanup"),
@@ -142,7 +144,7 @@ jobs:
           if cleanup.get("passed") is not True or cleanup.get("fixture_removed") is not True:
               raise SystemExit("The synthetic fixture cleanup assertion did not pass.")
 
-          print("HTTP_STATUS=${test_status}")
+          print("HTTP_STATUS=" + http_status)
           print("EMBEDDING_MODEL=" + str(payload.get("model")))
           print("EMBEDDING_DIMENSIONS=" + str(payload.get("embedding_dimensions")))
           print("SEMANTIC_RETRIEVAL_SIMILARITY=" + str(retrieval.get("similarity")))
