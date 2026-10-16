@@ -25,7 +25,7 @@ The suite pins the six fixture keys, all ten case IDs, their types, expected out
 
 1. GitHub Actions checks the explicit no-billing confirmation and the dedicated isolated-admin credentials.
 2. The workflow checks out the versioned baseline and authenticates to the isolated project.
-3. The test-only Edge Function verifies the project ref and active administrator, then validates the baseline contract.
+3. The test-only Edge Function verifies the project ref, parses the signed-in user's bearer token with a separately unit-tested parser, verifies the active administrator, then validates the baseline contract.
 4. It creates six uniquely named synthetic records, uses the real built-in `gte-small` model to generate and save 384-dimensional embeddings, and executes the seven retrieval and eligibility cases.
 5. It sends up to three read-only normal-chat requests to test grounding across invoice, appointment-rescheduling and warehouse-dispatch topics.
 6. It deletes all run-specific fixtures, confirms there are no residual rows, and returns a case-by-case result report.
