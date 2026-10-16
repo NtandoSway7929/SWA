@@ -1,8 +1,23 @@
-import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
+import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget, INNERME_WORKSPACE_CONTEXT_MARKER } from "./innerme-context-compaction.mjs";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
+
+Deno.test("workspace context marker is shared and retains literal newline boundaries", () => {
+  assert(
+    INNERME_WORKSPACE_CONTEXT_MARKER === "\\n\\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\\n",
+    "request fitting and prompt assembly must use the same literal workspace suffix marker",
+  );
+  const payload = { record_id: "lead-1", name: "A full business name" };
+  const assembled = "ADMIN QUESTION" + INNERME_WORKSPACE_CONTEXT_MARKER + JSON.stringify(payload);
+  const markerIndex = assembled.lastIndexOf(INNERME_WORKSPACE_CONTEXT_MARKER);
+  assert(markerIndex >= 0, "the workspace marker must be discoverable in the assembled prompt");
+  assert(
+    JSON.parse(assembled.slice(markerIndex + INNERME_WORKSPACE_CONTEXT_MARKER.length)).record_id === "lead-1",
+    "the JSON suffix after the shared marker must parse without losing record identity",
+  );
+});
 
 Deno.test("all retrieved leads and due-sorted follow-ups survive normal workspace compaction", () => {
   const source = {
@@ -242,7 +257,7 @@ Deno.test("ultra-compaction keeps workspace context under the 24 KB provider req
     systemInstruction: { parts: [{ text: "s".repeat(9500) }] },
     contents: [{ role: "user", parts: [{
       text: "Highest-value moves for today. " + "Review the real workspace and rank priorities. ".repeat(25) +
-        "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" + JSON.stringify(workspace),
+        INNERME_WORKSPACE_CONTEXT_MARKER + JSON.stringify(workspace),
     }] }],
     generationConfig: { maxOutputTokens: 2048 },
   };
@@ -300,7 +315,7 @@ Deno.test("final request-envelope budget compaction keeps lead identities and ti
     connected_context: { bulky: "Detailed linked context ".repeat(5000) },
     innerme_business_brain: { agents: Array.from({ length: 50 }, (_, index) => ({ name: "agent " + index, instructions: "instructions ".repeat(100) })) },
   };
-  const marker = "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n";
+  const marker = INNERME_WORKSPACE_CONTEXT_MARKER;
   const prefix = "ADMIN QUESTION:\nWhat are my highest-value moves for today?\n\nFOCUSED RECORD DIRECTIVE:\nnone\n\nWORKSPACE INTEGRITY RULES:\n" + "Operational instruction ".repeat(130);
   const requestBody: any = {
     systemInstruction: { parts: [{ text: "s".repeat(9500) }] },
