@@ -110,6 +110,7 @@ Deno.serve(async (req: Request) => {
     "What exact marker phrase should be returned for the isolated semantic retrieval canary test?";
 
   let stage = "fixture_insert";
+  let failureStage: string | null = null;
   let fixtureId = "";
   let failure: string | null = null;
   let cleanupError: string | null = null;
@@ -288,6 +289,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("Normal chat retrieved the canary but did not return its exact marker phrase; grounding check failed.");
     }
   } catch (error) {
+    failureStage = stage;
     failure = safeError(error);
   } finally {
     stage = "cleanup";
@@ -319,7 +321,7 @@ Deno.serve(async (req: Request) => {
   return jsonResponse({
     ok,
     test: "innerme_semantic_retrieval_e2e",
-    stage,
+    stage: failureStage || (cleanupError ? "cleanup" : "completed"),
     project: "isolated_test_only",
     model: "gte-small",
     embedding_dimensions: queryEmbeddingDimensions,
