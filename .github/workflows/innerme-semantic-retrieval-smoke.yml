@@ -216,8 +216,8 @@ jobs:
               f"- Cases: {counts.get('passed', 0)} passed, {counts.get('failed', 0)} failed, {counts.get('inconclusive', 0)} inconclusive, {counts.get('not_run', 0)} not run",
               f"- Fixture cleanup: {'PASS' if cleanup.get('passed') is True and cleanup.get('fixture_removed') is True else 'FAIL'}",
               "",
-              "| Case | Type | Status | Similarity | Retrieved target | Grounded phrase | Expected corpus fixtures | Observed corpus fixtures | False positives | False negatives |",
-              "|---|---|---:|---:|---:|---:|---|---|---|---|",
+              "| Case | Type | Status | Similarity | Retrieved target | Grounded phrase | Expected corpus fixtures | Observed corpus fixtures | False positives | False negatives | Ranked matches (fixture@similarity) |",
+              "|---|---|---:|---:|---:|---:|---|---|---|---|---|",
           ]
           for case in cases:
               similarity = case.get("similarity")
@@ -232,6 +232,12 @@ jobs:
                   ", ".join(case.get("observed_fixture_keys") or []) or "-",
                   ", ".join(case.get("false_positive_fixture_keys") or []) or "-",
                   ", ".join(case.get("false_negative_fixture_keys") or []) or "-",
+                  ", ".join(
+                      f"{match.get('rank', '?')}:{match.get('fixture_key') or 'other'}@{float(match['similarity']):.4f}"
+                      if match.get("similarity") is not None
+                      else f"{match.get('rank', '?')}:{match.get('fixture_key') or 'other'}@n/a"
+                      for match in (case.get("retrieved_matches") or [])
+                  ) or "-",
               ]) + " |")
               if case.get("error"):
                   summary.append("")
