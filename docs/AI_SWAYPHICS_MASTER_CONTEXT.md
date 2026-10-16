@@ -140,7 +140,7 @@ These are **review findings**, not verified exploitable vulnerabilities or blank
 
 ### Recently observed GitHub state
 
-At the audit, `main` was at `c63e7bf2e1df9030ed1ee79682b4025575b1f35c`. Latest reported actions associated with it included successful site validation, InnerMe validation, authenticated runtime smoke and Pages deployment. Check current workflow runs before relying on that snapshot. The co-management documentation PR is [#74](https://github.com/NtandoSway7929/SWA/pull/74), open as a draft; the latest two doc-only commits have no combined commit status currently reported, while a site-validation run passed on the earlier intermediate PR head.
+At the audit, `main` was at `c63e7bf2e1df9030ed1ee79682b4025575b1f35c`. Latest reported actions associated with it included successful site validation, InnerMe validation, authenticated runtime smoke and Pages deployment. Check current workflow runs before relying on that snapshot. The co-management documentation PR is [#74](https://github.com/NtandoSway7929/SWA/pull/74), open as a draft. Recheck its current GitHub Actions result against the exact head commit before relying on validation.
 
 Existing [PR #4](https://github.com/NtandoSway7929/SWA/pull/4), titled “Require source-level evidence traceability in InnerMe,” was still open and draft when inspected. Do not merge or rewrite it as part of the onboarding/docs work. Its description references older deployment/benchmark evidence and explicitly leaves an authenticated evidence-answer test plus a valid benchmark outstanding; re-evaluate those requirements against current source and runtime before changing its status.
 
