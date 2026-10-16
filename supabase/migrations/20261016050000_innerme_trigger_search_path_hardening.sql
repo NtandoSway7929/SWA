@@ -28,5 +28,5 @@ BEGIN
       v_hardened_count,
       v_function_count;
   END IF;
-END
+END;
 $verify_innerme_trigger_search_path$;
