@@ -150,7 +150,7 @@ type InnerMeUsageOutcome = "success" | "error";
 type InnerMeProviderUsageEvent = {
   request_id: string;
   attempt_number: number;
-  task_category: "copywriting" | "assistant_chat";
+  task_category: "copywriting" | "assistant_chat" | "proposal_draft";
   provider: InnerMeTrackedProvider;
   model: string;
   outcome: InnerMeUsageOutcome;
@@ -6438,54 +6438,165 @@ Deno.serve(async (req) => {
       "\n\nASSESSMENT:\n" +
       assessmentText;
 
-    async function requestProposal(model: string) {
-      return await guardedGeminiFetch(model, 
-        "https://generativelanguage.googleapis.com/v1beta/models/" +
-          encodeURIComponent(model) +
-          ":generateContent",
-        {
-          method: "POST",
-          headers: {
-            "x-goog-api-key": geminiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: proposalSystem }],
+    const proposalRequestId = crypto.randomUUID();
+    let proposalAttemptNumber = 0;
+    type PendingProposalUsage = {
+      attemptNumber: number;
+      model: string;
+      httpStatus: number;
+      latencyMs: number;
+      payload: any;
+      fallbackReason: string | null;
+    };
+    let pendingProposalUsage: PendingProposalUsage | null = null;
+
+    async function requestProposal(
+      model: string,
+      fallbackReason: string | null,
+    ): Promise<Response> {
+      const attemptNumber = ++proposalAttemptNumber;
+      const startedAt = performance.now();
+      let response: Response;
+
+      try {
+        response = await guardedGeminiFetch(
+          model,
+          "https://generativelanguage.googleapis.com/v1beta/models/" +
+            encodeURIComponent(model) +
+            ":generateContent",
+          {
+            method: "POST",
+            headers: {
+              "x-goog-api-key": geminiKey,
+              "Content-Type": "application/json",
             },
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: proposalPrompt }],
+            body: JSON.stringify({
+              systemInstruction: {
+                parts: [{ text: proposalSystem }],
               },
-            ],
-            generationConfig: {
-              maxOutputTokens: 2400,
-              responseMimeType: "application/json",
-            },
-          }),
-        },
-      );
+              contents: [
+                {
+                  role: "user",
+                  parts: [{ text: proposalPrompt }],
+                },
+              ],
+              generationConfig: {
+                maxOutputTokens: 2400,
+                responseMimeType: "application/json",
+              },
+            }),
+          },
+        );
+      } catch (error) {
+        const errorCode = error instanceof Error &&
+            (error.name === "TimeoutError" || error.name === "AbortError")
+          ? "timeout"
+          : "network_error";
+        await recordInnerMeProviderUsage({
+          request_id: proposalRequestId,
+          attempt_number: attemptNumber,
+          task_category: "proposal_draft",
+          provider: "gemini",
+          model,
+          outcome: "error",
+          http_status: null,
+          latency_ms: Math.max(0, Math.round(performance.now() - startedAt)),
+          input_tokens: null,
+          output_tokens: null,
+          total_tokens: null,
+          error_code: errorCode,
+          fallback_reason: fallbackReason,
+        });
+        throw error;
+      }
+
+      const latencyMs = Math.max(0, Math.round(performance.now() - startedAt));
+
+      // A guard response means no Gemini request was sent. It is not a provider attempt.
+      if (response.headers.get("X-InnerMe-Guard") === "blocked") {
+        pendingProposalUsage = null;
+        return response;
+      }
+
+      const payload = await response.clone().json().catch(() => null);
+      if (!response.ok) {
+        pendingProposalUsage = null;
+        await recordInnerMeProviderUsage({
+          request_id: proposalRequestId,
+          attempt_number: attemptNumber,
+          task_category: "proposal_draft",
+          provider: "gemini",
+          model,
+          outcome: "error",
+          http_status: response.status,
+          latency_ms: latencyMs,
+          ...readProviderTokenMetrics(payload, "gemini"),
+          error_code: response.status === 429
+            ? "rate_limited"
+            : response.status === 503
+            ? "provider_unavailable"
+            : "http_" + response.status,
+          fallback_reason: fallbackReason,
+        });
+      } else {
+        // A 200 response is only counted as successful after its proposal shape is validated.
+        pendingProposalUsage = {
+          attemptNumber,
+          model,
+          httpStatus: response.status,
+          latencyMs,
+          payload,
+          fallbackReason,
+        };
+      }
+
+      return response;
     }
 
-    let proposalResponse = await requestProposal(PRIMARY_MODEL);
+    async function finalizeProposalUsage(
+      outcome: "success" | "error",
+      errorCode: string | null,
+    ): Promise<void> {
+      const pending = pendingProposalUsage;
+      if (!pending) return;
+      pendingProposalUsage = null;
+
+      await recordInnerMeProviderUsage({
+        request_id: proposalRequestId,
+        attempt_number: pending.attemptNumber,
+        task_category: "proposal_draft",
+        provider: "gemini",
+        model: pending.model,
+        outcome,
+        http_status: pending.httpStatus,
+        latency_ms: pending.latencyMs,
+        ...readProviderTokenMetrics(pending.payload, "gemini"),
+        error_code: errorCode,
+        fallback_reason: pending.fallbackReason,
+      });
+    }
+
+    let proposalFallbackReason: string | null = null;
+    let proposalResponse = await requestProposal(PRIMARY_MODEL, null);
     let proposalModel = PRIMARY_MODEL;
 
     if (
+      proposalResponse.headers.get("X-InnerMe-Guard") !== "blocked" &&
       (proposalResponse.status === 503 ||
         proposalResponse.status === 429) &&
       PRIMARY_MODEL !== FALLBACK_MODEL
     ) {
+      proposalFallbackReason = "gemini_primary_http_" + proposalResponse.status;
       proposalModel = FALLBACK_MODEL;
-      proposalResponse = await requestProposal(FALLBACK_MODEL);
+      proposalResponse = await requestProposal(FALLBACK_MODEL, proposalFallbackReason);
     }
 
     if (!proposalResponse.ok) {
-      const errorText = await proposalResponse.text();
-      console.error(
-        "Gemini proposal drafting error:",
-        errorText.slice(0, 2000),
-      );
+      // Provider error bodies are not written to logs because they may echo request details.
+      console.error("InnerMe proposal provider returned an HTTP error.", {
+        status: proposalResponse.status,
+        model: proposalModel,
+      });
 
       return json(
         {
@@ -6498,7 +6609,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    const proposalResult = await proposalResponse.json();
+    let proposalResult: any;
+    try {
+      proposalResult = await proposalResponse.json();
+    } catch {
+      await finalizeProposalUsage("error", "invalid_json_response");
+      return json(
+        {
+          error: "InnerMe returned an incomplete proposal draft.",
+          provider_model: proposalModel,
+        },
+        502,
+        origin,
+      );
+    }
+
     const rawProposal =
       proposalResult?.candidates?.[0]?.content?.parts
         ?.filter((part: any) => typeof part?.text === "string")
@@ -6511,10 +6636,9 @@ Deno.serve(async (req) => {
     try {
       proposal = JSON.parse(rawProposal);
     } catch {
-      console.error(
-        "Gemini proposal response was not valid JSON:",
-        rawProposal.slice(0, 3000),
-      );
+      // Do not log generated proposal text: it can contain client-specific material.
+      console.warn("InnerMe proposal response was not valid JSON; response content omitted from logs.");
+      await finalizeProposalUsage("error", "invalid_proposal_json");
     }
 
     if (
@@ -6524,6 +6648,7 @@ Deno.serve(async (req) => {
       typeof proposal.content !== "string" ||
       proposal.content.trim().length < 80
     ) {
+      await finalizeProposalUsage("error", "invalid_proposal_response");
       return json(
         {
           error: "InnerMe returned an incomplete proposal draft.",
@@ -6533,6 +6658,8 @@ Deno.serve(async (req) => {
         origin,
       );
     }
+
+    await finalizeProposalUsage("success", null);
 
     return json(
       {
