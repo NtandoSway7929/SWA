@@ -6,21 +6,21 @@ The original single-canary runtime smoke test has been expanded into a fixed, ve
 
 Canonical baseline: `supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json`.
 
-Current baseline version: **1.1.0**. The prior run exposed a false positive at similarity 0.7172 for an unrelated query, so v1.1.0 calibrates the retrieval cutoff to 0.75 and adds an explicit normal-chat irrelevant-context exclusion case.
+Current baseline version: **1.1.0**. Run #5 attempt 2 exposed a false positive at similarity 0.7172 for an unrelated query. The lowest relevant match in that run was 0.9009. Version 1.1.0 chooses a 0.80 cutoff between those measured scores, records the calibration evidence in the baseline, adds unrelated cooking and algorithm queries, and checks normal-chat irrelevant-context exclusion.
 
 ## Fixed coverage
 
-The baseline includes six run-unique synthetic knowledge fixtures and eleven pinned test cases:
+The baseline includes six run-unique synthetic knowledge fixtures and thirteen pinned test cases:
 
 | Case family | Count | Required behaviour |
 |---|---:|---|
-| Relevant semantic retrieval | 3 | Natural-language queries retrieve the intended verified/current fixture at similarity `>= 0.45`. |
+| Relevant semantic retrieval | 3 | Natural-language queries retrieve the intended verified/current fixture at similarity `>= 0.80`. |
 | Irrelevant-query rejection | 1 | An unrelated astronomy query must not return the synthetic invoice fixture. |
 | Eligibility exclusions | 3 | Stale, unverified, and expired-review records must not be returned even when the query matches their wording. |
 | Normal-chat grounding | 3 | Normal chat must report the correct verified fixture as retrieved evidence and reproduce its exact canary phrase. |
 | Normal-chat irrelevant-context exclusion | 1 | Normal chat must not retrieve the invoice fixture or reproduce its canary when asked an unrelated astronomy question. |
 
-The suite pins the six fixture keys, all eleven case IDs, their types, expected outcomes, eligibility metadata, the 0.75 retrieval cutoff and the `gte-small` 384-dimensional retrieval contract. Case prompts, synthetic statements, titles and phrases are versioned in the JSON baseline. The endpoint rejects a baseline that changes the suite version, threshold, mandatory case IDs, expected match polarity, or exclusion fixture metadata without a corresponding helper change.
+The suite pins the six fixture keys, all thirteen case IDs, their types, expected outcomes, eligibility metadata, the 0.75 retrieval cutoff and the `gte-small` 384-dimensional retrieval contract. Case prompts, synthetic statements, titles and phrases are versioned in the JSON baseline. The endpoint rejects a baseline that changes the suite version, threshold, mandatory case IDs, expected match polarity, or exclusion fixture metadata without a corresponding helper change.
 
 ## What happens during a run
 
