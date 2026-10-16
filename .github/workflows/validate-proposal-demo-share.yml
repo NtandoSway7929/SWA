@@ -24,9 +24,9 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Lint Edge Function entrypoint and check provider-free handler syntax
+      - name: Type-check Edge Function and check provider-free handler syntax
         run: |
-          deno lint --no-config supabase/functions/proposal-demo-share/index.ts
+          deno check --no-lock supabase/functions/proposal-demo-share/index.ts
           node --check supabase/functions/proposal-demo-share/handler.mjs
 
       - name: Verify demo share authorization and lifecycle
