@@ -25,7 +25,7 @@ The canary phrase is **Cobalt Compass 417**. It is a synthetic test value, not a
 
 ## One-time setup and execution
 
-1. Confirm that the isolated test project's GEMINI_API_KEY belongs to the separate no-billing Google test project. The workflow checks only whether the secret exists and never prints its value.
+1. Confirm that the isolated test project's GEMINI_API_KEY belongs to the separate no-billing Google test project. The helper checks only whether the secret exists and never prints its value.
 2. Deploy supabase/functions/innerme-retrieval-smoke-test/index.ts to **only** the isolated Supabase project ofqofhnlzbouclvvrmzd with JWT verification enabled. Do not add it to the production project's deployed functions.
 3. Confirm repository secrets INNERME_TEST_ADMIN_EMAIL and INNERME_TEST_ADMIN_PASSWORD refer to the dedicated isolated test admin, not a personal or production admin account.
 4. After this workflow is merged to main and the isolated-only helper is deployed, open the repository's Actions tab, select **InnerMe Isolated Semantic Retrieval End-to-End Smoke Test**, select **Run workflow**, and confirm the no-billing prerequisite.
