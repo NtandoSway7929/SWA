@@ -87,5 +87,5 @@ Append new entries rather than replacing prior history.
 ### PR state
 
 - [PR #74](https://github.com/NtandoSway7929/SWA/pull/74) is an open draft documentation PR.
-- The site-validation workflow passed on an earlier intermediate head of this documentation branch. The final doc-only head has no combined commit status presently reported by the connector, so do not claim checks passed on the latest head.
+- Site-validation workflow run [#939](https://github.com/NtandoSway7929/SWA/actions/runs/38928292746) completed successfully on commit `e1ca20b7d680eb162f05c29d6a4b00e4602cd557`. Any later commit must be checked against its own workflow result; do not inherit the pass automatically.
 - Existing [PR #4](https://github.com/NtandoSway7929/SWA/pull/4) was not modified.
