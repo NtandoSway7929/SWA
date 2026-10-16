@@ -56,3 +56,36 @@ Append new entries rather than replacing prior history.
 - **Scope:** five documentation files only. PR is intentionally draft pending review and checks.
 - **Production change:** none. No Supabase writes or deployments.
 - **Next:** review relative links and rendered Markdown, inspect PR checks, then merge only after review.
+
+## 2026-10-16 — Production/test source and schema comparison
+
+**Agent:** ChatGPT
+**Evidence level:** PRODUCTION-READ-ONLY-VERIFIED for metadata/schema/function-source comparisons.
+**Scope:** Read-only; no deployment, schema or business-record writes.
+
+### Edge Function source comparison
+
+- Production `Swayphics Web`: `swayphics-ai` ACTIVE v137.
+- Isolated test `Swayphics InnerMe Test`: `swayphics-ai` ACTIVE v24.
+- Both reported bundle SHA-256 `d468870f5dd7bceaf27914c943d21432fad5091b65a659e755e571326c415fce`.
+- Compared deployed files to `main` individually: `index.ts`, `innerme-evidence-traceability.mjs`, `innerme-provider-routing.mjs`, `innerme-workspace-intelligence.mjs`, `innerme-context-compaction.mjs`, `innerme-context-manifest.mjs`, `innerme-run-controller.mjs`, `innerme-execution-contracts.mjs`, `innerme-retrieval-ranking.mjs`. All nine exact text comparisons passed in both projects.
+- This confirms source/deployment parity for the inspected bundle; it does not prove end-to-end chat/retrieval/controlled execution behaviour.
+
+### Schema and migration parity
+
+- Public tables: production 89, isolated test 26. Shared 25; 64 production-only; one test-only (`innerme_routing_experiment_runs`). The test project is a scoped isolated test environment, not a full production schema replica.
+- Migration ledger: production 40 entries, isolated test 17. Six names overlap and all six use different migration version identifiers between projects.
+- Eight same-purpose production migration names have version identifiers that differ from the checked-in migration filenames: lead-not-interested, provider telemetry, zero-cost provider guard, provider usage upsert privileges, execution contract snapshots, execution-step controller, workspace-summary RPC and zero-cost quota exhaustion fix. Detailed timestamps are recorded in `AI_SWAYPHICS_MASTER_CONTEXT.md`.
+- Do not assume this means SQL/schema drift. Compare exact migration bodies, current function definitions, indexes, policies, grants, triggers and dependent objects. Do not reapply migrations to force ledger parity.
+
+### Security-advisor follow-up
+
+- The three advisor-flagged public tables with RLS but no policies (`enquiry_rate_limits`, `innerme_provider_quota_daily`, `public_innerme_rate_limits`) also have no direct SELECT/INSERT/UPDATE/DELETE privilege for `anon` or `authenticated`. This is consistent with backend/service-role-only access and may be intentional.
+- Five anon-executable `SECURITY DEFINER` RPCs were inspected. They are token-gated onboarding/client-portal paths; the inspected definitions hash the supplied token and check token activity/expiry where applicable. `submit_client_portal_request` has per-token rate limiting. Continue reviewing token issuance entropy and life cycle, expiry policy, rate-limit bypasses and data returned. Do not blindly revoke grants because the client portal requires a public token path.
+- Seven search-path advisor warnings and 75 unindexed-FK warnings remain triage items; not remediated in this read-only session.
+
+### PR state
+
+- [PR #74](https://github.com/NtandoSway7929/SWA/pull/74) is an open draft documentation PR.
+- The site-validation workflow passed on an earlier intermediate head of this documentation branch. The final doc-only head has no combined commit status presently reported by the connector, so do not claim checks passed on the latest head.
+- Existing [PR #4](https://github.com/NtandoSway7929/SWA/pull/4) was not modified.
