@@ -819,6 +819,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (!geminiKey) {
+      return json(
+        { error: "InnerMe is temporarily unavailable." },
+        503,
+        origin,
+      );
+    }
+
     const rateLimitUrl =
       Deno.env.get("SUPABASE_URL");
     const rateLimitKey =
