@@ -23,6 +23,10 @@ const REQUIRED_TESTS: Record<string, { type: string; fixture_key: string; expect
   semantic_appointment_match: { type: "retrieval_positive", fixture_key: "appointment", expected_match: true },
   semantic_dispatch_match: { type: "retrieval_positive", fixture_key: "dispatch", expected_match: true },
   semantic_irrelevant_query_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
+  semantic_irrelevant_cooking_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
+  semantic_irrelevant_algorithm_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
+  semantic_irrelevant_cooking_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
+  semantic_irrelevant_algorithm_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
   semantic_stale_knowledge_excluded: { type: "eligibility_exclusion", fixture_key: "stale", expected_match: false },
   semantic_unverified_knowledge_excluded: { type: "eligibility_exclusion", fixture_key: "unverified", expected_match: false },
   semantic_expired_review_excluded: { type: "eligibility_exclusion", fixture_key: "expired_review", expected_match: false },
@@ -100,10 +104,23 @@ function validateBaseline(value: unknown): { baseline: any | null; error: string
   if (
     baseline.embedding_model !== EMBEDDING_MODEL ||
     baseline.embedding_dimensions !== EMBEDDING_DIMENSIONS ||
-    baseline.retrieval_similarity_threshold !== 0.75
+    baseline.retrieval_similarity_threshold !== 0.8
   ) {
     return { baseline: null, error: "The regression baseline changed a pinned model, dimension, or retrieval threshold." };
   }
+  const calibration = baseline.threshold_calibration as Record<string, any> | undefined;
+  if (
+    !calibration ||
+    calibration.source_run_id !== "38839420386" ||
+    calibration.source_attempt !== 2 ||
+    calibration.case_id !== "semantic_irrelevant_query_excluded" ||
+    calibration.observed_similarity !== 0.717157678773543 ||
+    calibration.lowest_positive_similarity !== 0.900932317916614 ||
+    calibration.chosen_threshold !== 0.8
+  ) {
+    return { baseline: null, error: "Threshold calibration evidence does not match the reviewed baseline v1.1.0." };
+  }
+
   if (!Array.isArray(baseline.fixtures) || !Array.isArray(baseline.tests)) {
     return { baseline: null, error: "The regression baseline must include fixture and test arrays." };
   }
