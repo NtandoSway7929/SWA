@@ -1,0 +1,153 @@
+name: InnerMe Isolated Semantic Retrieval End-to-End Smoke Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_no_billing:
+        description: "Confirm the isolated test project's Gemini key belongs to a separate Google project with billing disabled"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: innerme-isolated-semantic-retrieval-smoke
+  cancel-in-progress: false
+
+jobs:
+  semantic-retrieval:
+    name: Verify gte-small retrieval and normal-chat grounding
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require isolated credentials and no-billing confirmation
+        shell: bash
+        env:
+          INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
+        run: |
+          set -euo pipefail
+          if [[ "${CONFIRM_NO_BILLING}" != "true" ]]; then
+            echo "::error::Stop: confirm that the isolated test provider key belongs to a separate Google project with billing disabled."
+            exit 1
+          fi
+          for name in INNERME_TEST_ADMIN_EMAIL INNERME_TEST_ADMIN_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing repository secret ${name}. Use isolated test-project credentials only."
+              exit 1
+            fi
+          done
+
+      - name: Run isolated semantic retrieval and grounded-answer test
+        shell: bash
+        env:
+          INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          trap 'rm -f /tmp/innerme-semantic-login-request.json /tmp/innerme-semantic-login-response.json /tmp/innerme-semantic-health-request.json /tmp/innerme-semantic-health-response.json /tmp/innerme-semantic-test-request.json /tmp/innerme-semantic-test-response.json' EXIT
+
+          SUPABASE_URL="https://ofqofhnlzbouclvvrmzd.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY="sb_publishable_p4UqpaLvEx_93XJSWvzo6Q_loju0xzW"
+
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          Path("/tmp/innerme-semantic-login-request.json").write_text(json.dumps({
+              "email": os.environ["INNERME_TEST_ADMIN_EMAIL"],
+              "password": os.environ["INNERME_TEST_ADMIN_PASSWORD"],
+          }), encoding="utf-8")
+          PY
+
+          login_status="$(curl --silent --show-error --max-time 20             -o /tmp/innerme-semantic-login-response.json             -w '%{http_code}'             -X POST "${SUPABASE_URL}/auth/v1/token?grant_type=password"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H 'Content-Type: application/json'             --data-binary @/tmp/innerme-semantic-login-request.json)"
+          if [[ "${login_status}" != "200" ]]; then
+            echo "::error::Isolated test-admin sign-in failed with HTTP ${login_status}."
+            exit 1
+          fi
+
+          ACCESS_TOKEN="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("/tmp/innerme-semantic-login-response.json").read_text(encoding="utf-8"))
+          token = payload.get("access_token")
+          if not isinstance(token, str) or not token:
+              raise SystemExit("Sign-in did not return an access token.")
+          print(token, end="")
+          PY
+          )"
+          echo "::add-mask::${ACCESS_TOKEN}"
+
+          # This probe does not call Gemini; it checks the isolated provider
+          # configuration before the one normal-chat request is permitted.
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          Path("/tmp/innerme-semantic-health-request.json").write_text(json.dumps({
+              "action": "innerme_workspace_read_health",
+              "message": "Check read-only isolated workspace health before semantic retrieval testing.",
+          }), encoding="utf-8")
+          PY
+
+          health_status="$(curl --silent --show-error --max-time 25             -o /tmp/innerme-semantic-health-response.json             -w '%{http_code}'             -X POST "${SUPABASE_URL}/functions/v1/swayphics-ai"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H "Authorization: Bearer ${ACCESS_TOKEN}"             -H 'Content-Type: application/json'             --data-binary @/tmp/innerme-semantic-health-request.json)"
+          if [[ "${health_status}" != "200" ]]; then
+            echo "::error::Isolated preflight failed with HTTP ${health_status}; semantic test did not start."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("/tmp/innerme-semantic-health-response.json").read_text(encoding="utf-8"))
+          configured = payload.get("provider_configuration", {}).get("gemini_key_configured")
+          if configured is not True:
+              raise SystemExit("GEMINI_API_KEY is not configured in the isolated project. No semantic test was started.")
+          print("PASS: isolated test key is configured; no key value was returned.")
+          PY
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          Path("/tmp/innerme-semantic-test-request.json").write_text(json.dumps({
+              "test": "innerme_semantic_retrieval_e2e",
+          }), encoding="utf-8")
+          PY
+
+          test_status="$(curl --silent --show-error --max-time 150             -o /tmp/innerme-semantic-test-response.json             -w '%{http_code}'             -X POST "${SUPABASE_URL}/functions/v1/innerme-retrieval-smoke-test"             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}"             -H "Authorization: Bearer ${ACCESS_TOKEN}"             -H 'Content-Type: application/json'             --data-binary @/tmp/innerme-semantic-test-request.json)"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/innerme-semantic-test-response.json").read_text(encoding="utf-8"))
+          if payload.get("ok") is not True:
+              print(json.dumps({
+                  "http_status": "${test_status}",
+                  "stage": payload.get("stage"),
+                  "failure": payload.get("failure"),
+                  "cleanup": payload.get("cleanup"),
+              }, separators=(",", ":")))
+              raise SystemExit("Semantic retrieval end-to-end smoke test failed.")
+
+          retrieval = payload.get("natural_language_retrieval") or {}
+          grounding = payload.get("normal_chat_grounding") or {}
+          cleanup = payload.get("cleanup") or {}
+          if retrieval.get("passed") is not True:
+              raise SystemExit("The natural-language retrieval assertion did not pass.")
+          if grounding.get("passed") is not True or grounding.get("answer_contains_canary") is not True:
+              raise SystemExit("The normal-chat grounding assertion did not pass.")
+          if cleanup.get("passed") is not True or cleanup.get("fixture_removed") is not True:
+              raise SystemExit("The synthetic fixture cleanup assertion did not pass.")
+
+          print("HTTP_STATUS=${test_status}")
+          print("EMBEDDING_MODEL=" + str(payload.get("model")))
+          print("EMBEDDING_DIMENSIONS=" + str(payload.get("embedding_dimensions")))
+          print("SEMANTIC_RETRIEVAL_SIMILARITY=" + str(retrieval.get("similarity")))
+          print("NORMAL_CHAT_KNOWLEDGE_MATCH=" + str(grounding.get("knowledge_match")))
+          print("NORMAL_CHAT_CANARY_GROUNDED=" + str(grounding.get("answer_contains_canary")))
+          print("SYNTHETIC_FIXTURE_REMOVED=" + str(cleanup.get("fixture_removed")))
+          print("PASS: real gte-small embedding, natural-language retrieval, normal-chat grounding, and cleanup verified.")
+          PY
