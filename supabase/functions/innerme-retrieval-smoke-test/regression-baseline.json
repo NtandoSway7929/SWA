@@ -1,7 +1,7 @@
 {
   "suite_id": "innerme_semantic_retrieval_regression",
   "baseline_version": "1.1.0",
-  "retrieval_similarity_threshold": 0.75,
+  "retrieval_similarity_threshold": 0.8,
   "embedding_model": "gte-small",
   "embedding_dimensions": 384,
   "fixtures": [
@@ -108,6 +108,20 @@
       "expected_match": false
     },
     {
+      "id": "semantic_irrelevant_cooking_excluded",
+      "type": "retrieval_negative",
+      "fixture_key": "invoice",
+      "query": "How many grams of salt per kilogram of flour are used in sourdough bread fermentation?",
+      "expected_match": false
+    },
+    {
+      "id": "semantic_irrelevant_algorithm_excluded",
+      "type": "retrieval_negative",
+      "fixture_key": "invoice",
+      "query": "What are the time and space complexity of Dijkstra's shortest-path algorithm with a binary heap?",
+      "expected_match": false
+    },
+    {
       "id": "semantic_stale_knowledge_excluded",
       "type": "eligibility_exclusion",
       "fixture_key": "stale",
@@ -156,5 +170,14 @@
       "query": "Explain the orbital period and upper-atmosphere temperature of the exoplanet Kepler-452b. Do not use unrelated business records.",
       "expected_match": false
     }
-  ]
+  ],
+  "threshold_calibration": {
+    "source_run_id": "38839420386",
+    "source_attempt": 2,
+    "case_id": "semantic_irrelevant_query_excluded",
+    "observed_similarity": 0.717157678773543,
+    "lowest_positive_similarity": 0.900932317916614,
+    "chosen_threshold": 0.8,
+    "rationale": "The previous irrelevant match scored 0.7172 while the lowest observed relevant match scored 0.9009; 0.80 separates these recorded examples with a margin on both sides."
+  }
 }
