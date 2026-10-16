@@ -16144,8 +16144,14 @@ function simpleBars(items, color) {
     function openEmailComposer(
         contactType,
         contactId,
-        threadId
+        threadId,
+        options
     ) {
+        const composerOptions =
+            options && typeof options === "object"
+                ? options
+                : {};
+
         const modalId =
             "sway-email-composer";
 
@@ -16459,12 +16465,20 @@ function simpleBars(items, color) {
                         '<textarea id="sway-email-message" rows="11" maxlength="10000" placeholder="Type what you want to say. Your greeting and Swayphics signature will be added automatically." required></textarea>' +
                     "</div>" +
                     '<div class="sway-email-composer-note">' +
-                        '<strong>Branded template</strong>' +
+                        "<strong>" +
+                            (
+                                composerOptions.preparedFromProposal === true
+                                    ? "Approved proposal draft"
+                                    : "Branded template"
+                            ) +
+                        "</strong>" +
                         "<span>" +
                             (
-                                isReply
-                                    ? "Blue Swayphics header · automatic greeting · your reply · automatic sign-off · original thread headers"
-                                    : "Blue Swayphics header · automatic greeting · your message · automatic sign-off · Swayphics contact footer"
+                                composerOptions.preparedFromProposal === true
+                                    ? "Prepared for the linked lead. Review the recipient, subject and message. Nothing is sent until you choose Send email."
+                                    : isReply
+                                        ? "Blue Swayphics header · automatic greeting · your reply · automatic sign-off · original thread headers"
+                                        : "Blue Swayphics header · automatic greeting · your message · automatic sign-off · Swayphics contact footer"
                             ) +
                         "</span>" +
                     "</div>" +
@@ -16520,6 +16534,35 @@ function simpleBars(items, color) {
                 "#sway-email-proposal-type"
             );
 
+        if (
+            proposalTypeInput &&
+            [
+                "improv-website",
+                "no-website",
+                "not-website-related"
+            ].includes(composerOptions.proposalType)
+        ) {
+            proposalTypeInput.value =
+                composerOptions.proposalType;
+        }
+
+        if (composerOptions.lockRecipient === true) {
+            if (typeInput) {
+                typeInput.disabled = true;
+            }
+
+            if (contactInput) {
+                contactInput.disabled = true;
+            }
+        }
+
+        if (
+            proposalTypeInput &&
+            composerOptions.preparedFromProposal === true
+        ) {
+            proposalTypeInput.disabled = true;
+        }
+
         const sendButton =
             modal.querySelector(
                 "#sway-email-send-button"
@@ -16550,6 +16593,15 @@ function simpleBars(items, color) {
 
         let subjectWasEdited =
             false;
+
+        if (composerOptions.preparedFromProposal === true) {
+            subjectInput.value =
+                String(composerOptions.subject || "").slice(0, 180);
+            messageInput.value =
+                String(composerOptions.message || "").slice(0, 10000);
+            subjectWasEdited =
+                Boolean(subjectInput.value);
+        }
 
         function selectedContact() {
             return (
@@ -19579,6 +19631,33 @@ function simpleBars(items, color) {
                 return item.id === proposal.lead_id;
             });
 
+        function createProposalEmailPrefill(subject, content) {
+            const helper =
+                window.SwayphicsProposalEmail;
+
+            if (
+                !helper ||
+                typeof helper.createPrefill !== "function"
+            ) {
+                return null;
+            }
+
+            return helper.createPrefill(
+                {
+                    ...proposal,
+                    subject: subject,
+                    content: content
+                },
+                lead
+            );
+        }
+
+        const initialEmailPrefill =
+            createProposalEmailPrefill(
+                proposal.subject || "",
+                proposal.content || ""
+            );
+
         const modal = document.createElement("div");
         modal.className = "sway-modal sway-proposal-review-modal";
 
@@ -19617,8 +19696,13 @@ function simpleBars(items, color) {
                     '<button type="button" class="sway-workspace-button primary" data-proposal-approve="' +
                         esc(proposal.id) +
                     '">Approve proposal</button>' +
+                    '<button type="button" class="sway-workspace-button" data-proposal-prepare="' +
+                        esc(proposal.id) +
+                        '"' +
+                        (initialEmailPrefill ? "" : " disabled") +
+                    '>Approve &amp; prepare email</button>' +
                 '</div>' +
-                '<p class="sway-proposal-review-note">Approval only approves the draft. It does not send an email to the lead.</p>' +
+                '<p class="sway-proposal-review-note">Approval records the proposal. Preparing an email opens a draft for this lead; it never sends automatically. Return a Not Interested lead to the active pipeline before preparing a new email.</p>' +
             '</div>';
 
         document.body.appendChild(modal);
@@ -19630,6 +19714,55 @@ function simpleBars(items, color) {
         modal.querySelector(".sway-modal-close")?.addEventListener("click", close);
         modal.querySelector(".sway-modal-backdrop")?.addEventListener("click", close);
 
+        const prepareButton =
+            modal.querySelector("[data-proposal-prepare]");
+
+        function updatePrepareButton() {
+            if (!prepareButton) {
+                return null;
+            }
+
+            const subject = String(
+                modal.querySelector("#sway-proposal-subject")?.value || ""
+            ).trim();
+            const content = String(
+                modal.querySelector("#sway-proposal-content")?.value || ""
+            ).trim();
+            const prefill =
+                createProposalEmailPrefill(subject, content);
+
+            prepareButton.disabled = !prefill;
+
+            if (prefill) {
+                prepareButton.title =
+                    "Approves the proposal and opens a lead-specific email draft for review.";
+            } else if (
+                String(lead?.status || "").trim().toLowerCase().replace(/\s+/g, "_") ===
+                "not_interested"
+            ) {
+                prepareButton.title =
+                    "Return this lead to the active pipeline before preparing an email.";
+            } else if (!String(lead?.email || "").trim()) {
+                prepareButton.title =
+                    "Add a valid email address to the linked lead before preparing an email.";
+            } else {
+                prepareButton.title =
+                    "A matching lead, valid email address and proposal content of 10,000 characters or less are required.";
+            }
+
+            return prefill;
+        }
+
+        modal.querySelector("#sway-proposal-subject")?.addEventListener(
+            "input",
+            updatePrepareButton
+        );
+        modal.querySelector("#sway-proposal-content")?.addEventListener(
+            "input",
+            updatePrepareButton
+        );
+        updatePrepareButton();
+
         modal.querySelector("[data-proposal-reject]")?.addEventListener(
             "click",
             function () {
@@ -19637,9 +19770,14 @@ function simpleBars(items, color) {
             }
         );
 
-        modal.querySelector("[data-proposal-approve]")?.addEventListener(
+        modal.querySelectorAll(
+            "[data-proposal-approve], [data-proposal-prepare]"
+        ).forEach(function (actionButton) {
+            actionButton.addEventListener(
             "click",
             async function () {
+                const shouldPrepareEmail =
+                    actionButton.hasAttribute("data-proposal-prepare");
                 const title = String(
                     modal.querySelector("#sway-proposal-title")?.value || ""
                 ).trim();
@@ -19655,14 +19793,46 @@ function simpleBars(items, color) {
                     return;
                 }
 
-                const approveButton =
-                    modal.querySelector("[data-proposal-approve]");
+                const emailPrefill =
+                    shouldPrepareEmail
+                        ? createProposalEmailPrefill(subject, content)
+                        : null;
 
-                approveButton.disabled = true;
-                approveButton.textContent = "Approving…";
+                if (shouldPrepareEmail && !emailPrefill) {
+                    swayAlert(
+                        String(lead?.status || "").trim().toLowerCase().replace(/\s+/g, "_") === "not_interested"
+                            ? "Return this lead to the active pipeline before preparing another email."
+                            : "A matching lead with a valid email and proposal content is required."
+                    );
+                    updatePrepareButton();
+                    return;
+                }
 
-                try {
-                    const updated = await api(
+                const approvalActions =
+                    Array.from(
+                        modal.querySelectorAll(
+                            "[data-proposal-approve], [data-proposal-prepare]"
+                        )
+                    );
+
+                approvalActions.forEach(function (button) {
+                    button.disabled = true;
+                });
+
+                actionButton.textContent =
+                    shouldPrepareEmail
+                        ? "Approving…"
+                        : "Saving…";
+
+                const proposalDraft = {
+                    ...proposal,
+                    title: title || "Swayphics Proposal",
+                    subject: subject || "Swayphics | Proposal",
+                    content
+                };
+
+                function saveProposalApproval(draft) {
+                    return api(
                         "/rest/v1/lead_proposals?id=eq." +
                         encodeURIComponent(proposal.id),
                         {
@@ -19672,52 +19842,118 @@ function simpleBars(items, color) {
                                 "Prefer": "return=representation"
                             }),
                             body: JSON.stringify({
-                                title: title || "Swayphics Proposal",
-                                subject:
-                                    subject ||
-                                    "Swayphics | Proposal",
-                                content,
+                                title: draft.title,
+                                subject: draft.subject,
+                                content: draft.content,
                                 status: "approved",
                                 approved_by:
                                     state.currentUser &&
                                     state.currentUser.id
                                         ? state.currentUser.id
                                         : null,
-                                approved_at:
-                                    new Date().toISOString()
+                                approved_at: new Date().toISOString()
                             })
                         }
                     );
+                }
 
-                    const updatedProposal =
-                        Array.isArray(updated)
-                            ? updated[0]
-                            : updated;
-
+                function recordApproval(updatedProposal) {
                     const index =
                         state.leadProposals.findIndex(function (item) {
                             return item.id === proposal.id;
                         });
 
-                    if (index >= 0 && updatedProposal) {
+                    if (index >= 0) {
                         state.leadProposals[index] = updatedProposal;
+                    } else {
+                        state.leadProposals.push(updatedProposal);
                     }
 
                     close();
-                    swayAlert(
-                        "Proposal approved for review. It has not been sent."
-                    );
                     renderView();
+                }
+
+                try {
+                    if (shouldPrepareEmail) {
+                        const helper =
+                            window.SwayphicsProposalEmail;
+
+                        if (
+                            !helper ||
+                            typeof helper.approveAndPrepareEmail !== "function"
+                        ) {
+                            throw new Error(
+                                "The proposal email handoff is unavailable."
+                            );
+                        }
+
+                        await helper.approveAndPrepareEmail(
+                            proposalDraft,
+                            lead,
+                            {
+                                approveProposal: function (draft) {
+                                    return saveProposalApproval(draft);
+                                },
+                                onApprovalConfirmed: function (updatedProposal) {
+                                    recordApproval(updatedProposal);
+                                },
+                                openComposer: function (
+                                    contactType,
+                                    contactId,
+                                    threadId,
+                                    options
+                                ) {
+                                    openEmailComposer(
+                                        contactType,
+                                        contactId,
+                                        threadId,
+                                        options
+                                    );
+                                }
+                            }
+                        );
+                    } else {
+                        const updated = await saveProposalApproval(proposalDraft);
+
+                        const updatedProposal =
+                            Array.isArray(updated)
+                                ? updated[0]
+                                : updated;
+
+                        if (
+                            !updatedProposal ||
+                            String(updatedProposal.id || "") !== String(proposal.id) ||
+                            String(updatedProposal.status || "").toLowerCase() !== "approved"
+                        ) {
+                            throw new Error(
+                                "Proposal approval could not be confirmed."
+                            );
+                        }
+
+                        recordApproval(updatedProposal);
+                        swayAlert(
+                            "Proposal approved for review. It has not been sent."
+                        );
+                    }
                 } catch (error) {
-                    approveButton.disabled = false;
-                    approveButton.textContent = "Approve proposal";
+                    approvalActions.forEach(function (button) {
+                        button.disabled = false;
+                    });
+                    modal.querySelector("[data-proposal-approve]").textContent =
+                        "Approve proposal";
+                    if (prepareButton) {
+                        prepareButton.textContent =
+                            "Approve & prepare email";
+                    }
+                    updatePrepareButton();
                     swayAlert(
                         error.message ||
                         "The proposal could not be approved."
                     );
                 }
             }
-        );
+            );
+        });
     }
 
     function exportWorkspaceJson() {

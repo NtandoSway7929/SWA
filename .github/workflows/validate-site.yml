@@ -17,8 +17,10 @@ jobs:
       - name: Validate standalone JavaScript
         run: |
           set -e
+          node --check admin-dashboard/proposal-email-prefill.js
           node --check admin-dashboard/admin-workspace.js
           node --check admin-dashboard/innerme-provider-usage.js
+          node --test scripts/swayphics-proposal-email.test.mjs
 
       - name: Validate inline JavaScript
         shell: bash
