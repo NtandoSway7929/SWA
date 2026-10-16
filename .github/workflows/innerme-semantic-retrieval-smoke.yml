@@ -24,7 +24,7 @@ concurrency:
 jobs:
   semantic-retrieval-regression:
     name: Verify InnerMe retrieval, eligibility and optional chat grounding
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Require isolated credentials and no-billing confirmation
@@ -48,7 +48,7 @@ jobs:
           done
 
       - name: Check out the versioned regression baseline
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run isolated semantic retrieval regression suite
         shell: bash
@@ -323,7 +323,7 @@ jobs:
 
       - name: Archive case-level result and exact baseline
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: innerme-semantic-retrieval-regression-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
