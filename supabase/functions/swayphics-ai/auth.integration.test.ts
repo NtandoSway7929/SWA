@@ -611,3 +611,245 @@ Deno.test("InnerMe public website chat stops before Gemini when quota reservatio
     "A guard-blocked request must not be misreported as a provider attempt.",
   );
 });
+
+
+type ProposalContractMockResult = {
+  status: number;
+  body: Record<string, unknown>;
+  requests: Array<{
+    host: string;
+    path: string;
+    method: string;
+    providerPayload?: Record<string, unknown>;
+  }>;
+};
+
+async function invokeDraftProposalWithMockedProvider(
+  generatedText: string,
+): Promise<ProposalContractMockResult> {
+  const envKeys = [
+    "GEMINI_API_KEY",
+    "SUPABASE_SECRET_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ];
+  const savedEnv = new Map(envKeys.map((key) => [key, Deno.env.get(key)]));
+  Deno.env.set("GEMINI_API_KEY", "synthetic-gemini-key");
+  Deno.env.set("SUPABASE_SECRET_KEY", "synthetic-supabase-secret-key");
+  Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
+
+  const requests: ProposalContractMockResult["requests"] = [];
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input instanceof Request
+      ? new URL(input.url)
+      : new URL(String(input));
+    const method = (init?.method ||
+      (input instanceof Request ? input.method : "GET")).toUpperCase();
+    let providerPayload: Record<string, unknown> | undefined;
+
+    if (
+      url.host === "generativelanguage.googleapis.com" &&
+      typeof init?.body === "string"
+    ) {
+      try {
+        providerPayload = JSON.parse(init.body) as Record<string, unknown>;
+      } catch {
+        providerPayload = undefined;
+      }
+    }
+
+    requests.push({
+      host: url.host,
+      path: url.pathname,
+      method,
+      ...(providerPayload ? { providerPayload } : {}),
+    });
+
+    if (url.pathname === "/auth/v1/user") {
+      return jsonResponse(200, {
+        id: "11111111-1111-4111-8111-111111111111",
+        aud: "authenticated",
+        role: "authenticated",
+        email: "synthetic-innerme-admin@example.invalid",
+        app_metadata: { provider: "email", providers: ["email"] },
+        user_metadata: {},
+        identities: [],
+        created_at: "2026-01-01T00:00:00.000Z",
+        updated_at: "2026-01-01T00:00:00.000Z",
+      });
+    }
+
+    if (url.pathname === "/rest/v1/rpc/is_swayphics_admin") {
+      return jsonResponse(200, true);
+    }
+
+    if (url.pathname === "/rest/v1/rpc/innerme_reserve_provider_quota") {
+      return jsonResponse(200, {
+        allowed: true,
+        used: 1,
+        daily_limit: 40,
+        reason: null,
+      });
+    }
+
+    if (url.pathname === "/rest/v1/rpc/get_innerme_workspace_summary") {
+      return jsonResponse(200, {
+        generated_date_johannesburg: "2026-10-16",
+        timezone: "Africa/Johannesburg",
+        summary_source: "database_aggregate",
+        metric_scope: "Synthetic fixture for provider-free contract testing.",
+      });
+    }
+
+    if (url.pathname === "/rest/v1/innerme_provider_usage" && method === "POST") {
+      return jsonResponse(201, {});
+    }
+
+    if (
+      url.host === "generativelanguage.googleapis.com" &&
+      url.pathname.endsWith(":generateContent")
+    ) {
+      return jsonResponse(200, {
+        candidates: [{
+          content: {
+            parts: [{ text: generatedText }],
+          },
+        }],
+        usageMetadata: {
+          promptTokenCount: 100,
+          candidatesTokenCount: 120,
+          totalTokenCount: 220,
+        },
+      });
+    }
+
+    if (url.host === "mock-supabase.invalid" &&
+      url.pathname.startsWith("/rest/v1/") &&
+      method === "GET") {
+      return jsonResponse(200, []);
+    }
+
+    return jsonResponse(500, {
+      message: "Unexpected request in the mocked proposal contract test.",
+      host: url.host,
+      path: url.pathname,
+      method,
+    });
+  }) as typeof globalThis.fetch;
+
+  try {
+    const response = await capturedHandler!(
+      new Request("http://localhost/functions/v1/swayphics-ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer synthetic-test-token",
+        },
+        body: JSON.stringify({
+          action: "draft_proposal",
+          lead_id: "synthetic-lead-123",
+          lead: {
+            business_name: "Example Business",
+            contact_name: "Example Owner",
+            service_interest: "Website design",
+            estimated_value: 1500,
+          },
+          assessment: {
+            business_assessment: "The current customer journey needs clearer service information and a stronger enquiry path.",
+            research_findings: "The supplied assessment identifies avoidable friction before a prospective customer makes contact.",
+            swayphics_solution: "We can structure the website around the customer's next useful action.",
+            recommended_services: "Website design and enquiry-flow improvements",
+            research_sources: "Synthetic test fixture only",
+          },
+        }),
+      }),
+    );
+
+    return {
+      status: response.status,
+      body: await response.json() as Record<string, unknown>,
+      requests,
+    };
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of savedEnv.entries()) {
+      if (value === undefined) Deno.env.delete(key);
+      else Deno.env.set(key, value);
+    }
+  }
+}
+
+Deno.test("InnerMe proposal drafting preserves the proposal.title/subject/content response contract", async () => {
+  const modelProposal = {
+    title: "Website and enquiry journey proposal",
+    subject: "Swayphics | Proposal for Example Business",
+    content: "We can help your business present its services more clearly and make the next step easier for prospective customers. The proposed scope focuses on the website structure, useful service information, and a straightforward enquiry path. We can confirm final pricing and delivery details separately after agreeing the scope. The next step is to review the proposed scope and tell us which priorities matter most to your business.",
+  };
+  const result = await invokeDraftProposalWithMockedProvider(JSON.stringify(modelProposal));
+
+  assertEqual(result.status, 200, "Valid proposal response status");
+  const proposal = result.body.proposal as Record<string, unknown> | undefined;
+  assert(!!proposal && typeof proposal === "object", "Successful response must include a proposal object.");
+  assertEqual(proposal.title, modelProposal.title, "Proposal title contract");
+  assertEqual(proposal.subject, modelProposal.subject, "Proposal subject contract");
+  assertEqual(proposal.content, modelProposal.content, "Proposal content contract");
+  assertEqual(result.body.lead_id, "synthetic-lead-123", "Proposal must preserve the requested lead ID");
+  assertEqual(result.body.approval_required, true, "Proposal must remain subject to admin approval");
+  assertEqual(result.body.provider_model, "gemini-3.8-flash", "Proposal provider attribution");
+
+  const providerRequests = result.requests.filter((request) =>
+    request.host === "generativelanguage.googleapis.com" &&
+    request.path.endsWith(":generateContent")
+  );
+  assertEqual(providerRequests.length, 1, "Mocked provider call count");
+  assertEqual(
+    (providerRequests[0].providerPayload?.generationConfig as Record<string, unknown>)?.responseMimeType,
+    "application/json",
+    "Proposal generation must request JSON output",
+  );
+  assert(
+    result.requests.some((request) =>
+      request.path === "/rest/v1/rpc/innerme_reserve_provider_quota" &&
+      request.method === "POST"
+    ),
+    "The provider-free test must still exercise the server quota reservation gate.",
+  );
+  assert(
+    result.requests.every((request) =>
+      request.host === "mock-supabase.invalid" ||
+      request.host === "generativelanguage.googleapis.com"
+    ),
+    "The test must not make any real outbound requests.",
+  );
+});
+
+Deno.test("InnerMe proposal drafting rejects malformed provider JSON instead of returning a broken contract", async () => {
+  const result = await invokeDraftProposalWithMockedProvider("not valid JSON");
+
+  assertEqual(result.status, 502, "Malformed proposal status");
+  assertEqual(
+    result.body.error,
+    "InnerMe returned an incomplete proposal draft.",
+    "Malformed proposal should fail closed with a stable error",
+  );
+  assert(
+    !("proposal" in result.body),
+    "Malformed provider output must not return a partial proposal object.",
+  );
+  assertEqual(
+    result.requests.filter((request) =>
+      request.host === "generativelanguage.googleapis.com" &&
+      request.path.endsWith(":generateContent")
+    ).length,
+    1,
+    "Malformed-output test provider call count",
+  );
+  assert(
+    result.requests.every((request) =>
+      request.host === "mock-supabase.invalid" ||
+      request.host === "generativelanguage.googleapis.com"
+    ),
+    "Malformed-output testing must not make any real outbound requests.",
+  );
+});
