@@ -75,4 +75,12 @@ test("operator documentation matches the provider-free workflow default", () => 
     documentation.includes("`run_chat_checks=true` and `confirm_no_billing=true`"),
     "Documentation must retain the explicit full-suite opt-in and no-billing prerequisite."
   );
+  assert.ok(
+    documentation.includes("Only when `run_chat_checks=true`, it sends up to four read-only normal-chat requests"),
+    "Documentation must make provider calls conditional on explicit full-chat mode."
+  );
+  assert.ok(
+    documentation.includes("With the default `run_chat_checks=false`, all four normal-chat cases are skipped and no Gemini requests are made."),
+    "Documentation must state that retrieval-only mode makes no Gemini requests."
+  );
 });
