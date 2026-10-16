@@ -47,3 +47,45 @@ test("full-mode chat quota preflight stops before fixture creation when budget i
   assert.match(regressionHelper, /stage: "provider_quota_preflight"/);
   assert.match(regressionHelper, /no fixtures or chat requests were made/i);
 });
+
+
+const innermeFunctionSource = readFileSync(
+  new URL("../supabase/functions/swayphics-ai/index.ts", import.meta.url),
+  "utf8",
+);
+const supabaseFunctionConfig = readFileSync(
+  new URL("../supabase/config.toml", import.meta.url),
+  "utf8",
+);
+
+test("public InnerMe remains available while private operations require application-level admin auth", () => {
+  assert.match(supabaseFunctionConfig, /\[functions\.swayphics-ai\]\s*verify_jwt\s*=\s*false/);
+
+  const publicChatIndex = innermeFunctionSource.indexOf('if (body.action === "public_chat") {');
+  const adminAuthIndex = innermeFunctionSource.indexOf('const authHeader = req.headers.get("Authorization") || "";');
+  assert.ok(publicChatIndex >= 0, "public chat route must exist");
+  assert.ok(adminAuthIndex > publicChatIndex, "public chat must be handled before private-admin authentication");
+
+  const publicRoute = innermeFunctionSource.slice(publicChatIndex, adminAuthIndex);
+  assert.match(publicRoute, /https:\/\/swayphics\.co\.za/);
+  assert.match(publicRoute, /https:\/\/www\.swayphics\.co\.za/);
+  assert.match(publicRoute, /consume_public_innerme_rate_limit/);
+  assert.match(publicRoute, /x-innerme-session/);
+  assert.match(publicRoute, /publicSession\.length < 16/);
+
+  const adminGate = innermeFunctionSource.slice(adminAuthIndex, adminAuthIndex + 5000);
+  assert.match(adminGate, /if \(!accessToken\)/);
+  assert.match(adminGate, /authSupabase\.auth\.getUser\(accessToken\)/);
+  assert.match(adminGate, /authSupabase\.rpc\("is_swayphics_admin"\)/);
+});
+
+test("Gemini copywriting fallback omits deprecated Gemini 3.x sampling controls", () => {
+  const start = innermeFunctionSource.indexOf("async function requestGeminiCopywritingFallback(model: string) {");
+  assert.ok(start >= 0, "Gemini copywriting fallback must exist");
+  const end = innermeFunctionSource.indexOf("\n  async function ", start + 10);
+  assert.ok(end > start, "Gemini copywriting fallback end must be discoverable");
+  const fallbackSource = innermeFunctionSource.slice(start, end);
+  const generationConfig = fallbackSource.match(/generationConfig:\s*\{([\s\S]*?)\}/);
+  assert.ok(generationConfig, "Gemini fallback must have a generationConfig");
+  assert.doesNotMatch(generationConfig[1], /\b(?:temperature|top_p|top_k)\s*:/i);
+});

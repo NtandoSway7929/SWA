@@ -16,5 +16,7 @@ verify_jwt = false
 [functions.submit-enquiry]
 verify_jwt = false
 
+# Public website chat is protected by origin/session rate limits in its public route.
+# All private workspace actions enforce user JWT and Swayphics-admin checks in the function.
 [functions.swayphics-ai]
 verify_jwt = false
