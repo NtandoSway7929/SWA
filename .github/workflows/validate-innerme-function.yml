@@ -15,6 +15,8 @@ on:
       - "scripts/innerme-semantic-retrieval-regression.test.mjs"
       - "scripts/innerme-retrieval-ranking.test.mjs"
       - "supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json"
+      - "supabase/migrations/20261016034000_innerme_zero_cost_quota_exhaustion_fix.sql"
+      - "scripts/innerme-zero-cost-provider-guard.test.mjs"
   pull_request:
     branches: ["main"]
     paths:
@@ -29,6 +31,8 @@ on:
       - "supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json"
       - "scripts/innerme-retrieval-ranking.test.mjs"
       - "scripts/innerme-semantic-retrieval-regression.test.mjs"
+      - "supabase/migrations/20261016034000_innerme_zero_cost_quota_exhaustion_fix.sql"
+      - "scripts/innerme-zero-cost-provider-guard.test.mjs"
 
 permissions:
   contents: read
@@ -78,6 +82,11 @@ jobs:
         run: |
           node --check scripts/innerme-semantic-retrieval-regression.test.mjs
           node --test scripts/innerme-semantic-retrieval-regression.test.mjs
+
+      - name: Test zero-cost quota exhaustion guard without provider calls
+        run: |
+          node --check scripts/innerme-zero-cost-provider-guard.test.mjs
+          node --test scripts/innerme-zero-cost-provider-guard.test.mjs
 
       - name: Non-mutating isolated test health GET
         env:
