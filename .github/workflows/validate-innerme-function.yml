@@ -12,6 +12,8 @@ on:
       - "scripts/innerme-routing-experiment.test.mjs"
       - ".github/workflows/innerme-routing-experiment.yml"
       - "docs/innerme-routing-experiment.md"
+      - "scripts/innerme-semantic-retrieval-regression.test.mjs"
+      - "supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json"
   pull_request:
     branches: ["main"]
     paths:
@@ -23,6 +25,8 @@ on:
       - "scripts/innerme-routing-experiment.test.mjs"
       - ".github/workflows/innerme-routing-experiment.yml"
       - "docs/innerme-routing-experiment.md"
+      - "supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json"
+      - "scripts/innerme-semantic-retrieval-regression.test.mjs"
 
 permissions:
   contents: read
@@ -56,6 +60,11 @@ jobs:
           node --check scripts/innerme-routing-experiment.mjs
           node --test scripts/innerme-routing-experiment.test.mjs
           node scripts/innerme-routing-experiment.mjs --dry-run
+
+      - name: Validate versioned semantic retrieval regression baseline
+        run: |
+          node --check scripts/innerme-semantic-retrieval-regression.test.mjs
+          node --test scripts/innerme-semantic-retrieval-regression.test.mjs
 
       - name: Non-mutating isolated test health GET
         env:

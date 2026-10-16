@@ -1,0 +1,153 @@
+{
+  "suite_id": "innerme_semantic_retrieval_regression",
+  "baseline_version": "1.0.0",
+  "retrieval_similarity_threshold": 0.45,
+  "embedding_model": "gte-small",
+  "embedding_dimensions": 384,
+  "fixtures": [
+    {
+      "key": "invoice",
+      "title": "Synthetic invoice processing window marker",
+      "domain": "semantic-regression-invoice",
+      "knowledge_type": "definition",
+      "statement": "For this isolated regression test, the exact invoice processing window marker phrase is Azure Lantern 284. When asked which marker belongs to the synthetic invoice processing window, return Azure Lantern 284 exactly.",
+      "application": "Use only to test semantically relevant invoice-marker retrieval and chat grounding.",
+      "canary_phrase": "Azure Lantern 284",
+      "status": "active",
+      "verification_status": "verified",
+      "review_window": "future"
+    },
+    {
+      "key": "appointment",
+      "title": "Synthetic appointment rescheduling confirmation marker",
+      "domain": "semantic-regression-appointment",
+      "knowledge_type": "definition",
+      "statement": "For this isolated regression test, the exact appointment rescheduling confirmation marker phrase is Amber Kestrel 628. When asked for the confirmation marker associated with the synthetic appointment rescheduling request, return Amber Kestrel 628 exactly.",
+      "application": "Use only to test semantically relevant appointment-marker retrieval and chat grounding.",
+      "canary_phrase": "Amber Kestrel 628",
+      "status": "active",
+      "verification_status": "verified",
+      "review_window": "future"
+    },
+    {
+      "key": "dispatch",
+      "title": "Synthetic warehouse dispatch audit marker",
+      "domain": "semantic-regression-dispatch",
+      "knowledge_type": "definition",
+      "statement": "For this isolated regression test, the exact warehouse dispatch audit marker phrase is Copper Meadow 951. When asked which marker belongs to the synthetic warehouse dispatch audit, return Copper Meadow 951 exactly.",
+      "application": "Use only to test semantically relevant dispatch-marker retrieval and chat grounding.",
+      "canary_phrase": "Copper Meadow 951",
+      "status": "active",
+      "verification_status": "verified",
+      "review_window": "future"
+    },
+    {
+      "key": "stale",
+      "title": "Stale synthetic knowledge exclusion marker",
+      "domain": "semantic-regression-stale",
+      "knowledge_type": "definition",
+      "statement": "For this isolated regression test, the stale record's exact marker phrase is Stale Quartz 519. This record must not be returned because its verification status is stale.",
+      "application": "Synthetic eligibility-exclusion test only.",
+      "canary_phrase": "Stale Quartz 519",
+      "status": "active",
+      "verification_status": "stale",
+      "review_window": "future"
+    },
+    {
+      "key": "unverified",
+      "title": "Unverified synthetic knowledge exclusion marker",
+      "domain": "semantic-regression-unverified",
+      "knowledge_type": "definition",
+      "statement": "For this isolated regression test, the unverified record's exact marker phrase is Unverified Mica 836. This record must not be returned because it has not been verified.",
+      "application": "Synthetic eligibility-exclusion test only.",
+      "canary_phrase": "Unverified Mica 836",
+      "status": "active",
+      "verification_status": "unverified",
+      "review_window": "future"
+    },
+    {
+      "key": "expired_review",
+      "title": "Expired-review synthetic knowledge exclusion marker",
+      "domain": "semantic-regression-expired-review",
+      "knowledge_type": "definition",
+      "statement": "For this isolated regression test, the expired-review record's exact marker phrase is Expired Juniper 472. This record must not be returned because its review window has expired.",
+      "application": "Synthetic eligibility-exclusion test only.",
+      "canary_phrase": "Expired Juniper 472",
+      "status": "active",
+      "verification_status": "verified",
+      "review_window": "expired"
+    }
+  ],
+  "tests": [
+    {
+      "id": "semantic_invoice_match",
+      "type": "retrieval_positive",
+      "fixture_key": "invoice",
+      "query": "Which exact marker phrase identifies the synthetic invoice processing window?",
+      "expected_match": true
+    },
+    {
+      "id": "semantic_appointment_match",
+      "type": "retrieval_positive",
+      "fixture_key": "appointment",
+      "query": "What confirmation token is associated with the sample appointment rescheduling request?",
+      "expected_match": true
+    },
+    {
+      "id": "semantic_dispatch_match",
+      "type": "retrieval_positive",
+      "fixture_key": "dispatch",
+      "query": "Which exact marker phrase belongs to the synthetic warehouse dispatch audit?",
+      "expected_match": true
+    },
+    {
+      "id": "semantic_irrelevant_query_excluded",
+      "type": "retrieval_negative",
+      "fixture_key": "invoice",
+      "query": "Explain the orbital period and upper-atmosphere temperature of the exoplanet Kepler-452b.",
+      "expected_match": false
+    },
+    {
+      "id": "semantic_stale_knowledge_excluded",
+      "type": "eligibility_exclusion",
+      "fixture_key": "stale",
+      "query": "What is the exact marker phrase stored in the stale synthetic knowledge record?",
+      "expected_match": false
+    },
+    {
+      "id": "semantic_unverified_knowledge_excluded",
+      "type": "eligibility_exclusion",
+      "fixture_key": "unverified",
+      "query": "What is the exact marker phrase stored in the unverified synthetic knowledge record?",
+      "expected_match": false
+    },
+    {
+      "id": "semantic_expired_review_excluded",
+      "type": "eligibility_exclusion",
+      "fixture_key": "expired_review",
+      "query": "What is the exact marker phrase stored in the expired-review synthetic knowledge record?",
+      "expected_match": false
+    },
+    {
+      "id": "normal_chat_invoice_grounding",
+      "type": "chat_grounding",
+      "fixture_key": "invoice",
+      "query": "What exact marker phrase does the synthetic invoice processing window test specify? Use verified knowledge and return the phrase exactly.",
+      "expected_match": true
+    },
+    {
+      "id": "normal_chat_appointment_grounding",
+      "type": "chat_grounding",
+      "fixture_key": "appointment",
+      "query": "What exact confirmation marker does the synthetic appointment rescheduling test specify? Use verified knowledge and return the phrase exactly.",
+      "expected_match": true
+    },
+    {
+      "id": "normal_chat_dispatch_grounding",
+      "type": "chat_grounding",
+      "fixture_key": "dispatch",
+      "query": "What exact marker phrase does the synthetic warehouse dispatch audit test specify? Use verified knowledge and return the phrase exactly.",
+      "expected_match": true
+    }
+  ]
+}
