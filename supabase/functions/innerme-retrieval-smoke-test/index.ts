@@ -96,6 +96,18 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: false, error: "An active administrator in the isolated test project is required." }, 403);
   }
 
+  // Check provider configuration here rather than calling the broader workspace
+  // health probe. This returns before creating the fixture or making a provider
+  // request, and deliberately reveals only a boolean configuration result.
+  if (!Deno.env.get("GEMINI_API_KEY")) {
+    return jsonResponse({
+      ok: false,
+      stage: "provider_preflight",
+      failure: "GEMINI_API_KEY is not configured in the isolated test project; no fixture was created and no chat request was sent.",
+      provider_chat_request_made: false,
+    }, 503);
+  }
+
   const runId = crypto.randomUUID().replaceAll("-", "");
   const fixtureSlug = "__innerme_semantic_retrieval_smoke_test_" + runId + "__";
   const fixtureDomain = FIXTURE_DOMAIN_PREFIX + "-" + runId;
