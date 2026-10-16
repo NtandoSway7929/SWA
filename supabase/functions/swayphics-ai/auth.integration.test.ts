@@ -463,3 +463,45 @@ async function invokeMockedPublicSuccess(): Promise<{
     }
   }
 }
+
+Deno.test("InnerMe public website chat completes the guarded flow without workspace access", async () => {
+  const result = await invokeMockedPublicSuccess();
+  assertEqual(result.status, 200, "Public-chat success status");
+  assertEqual(result.body.public, true, "Public-chat response marker");
+  assertEqual(
+    result.body.answer,
+    "Start by identifying the one outcome you most want customers to take next.",
+    "Public-chat answer",
+  );
+  assertEqual(result.body.ready_for_enquiry, false, "Exploratory chat must not force enquiry handoff");
+  assertEqual(result.body.recommended_service, null, "Exploratory chat must not force a service recommendation");
+
+  const rateLimitIndex = result.requests.findIndex((request) =>
+    request.path === "/rest/v1/rpc/consume_public_innerme_rate_limit"
+  );
+  const quotaIndex = result.requests.findIndex((request) =>
+    request.path === "/rest/v1/rpc/innerme_reserve_provider_quota"
+  );
+  const providerIndex = result.requests.findIndex((request) =>
+    request.host === "generativelanguage.googleapis.com"
+  );
+  assert(rateLimitIndex >= 0, "Public chat must call the server-side rate limiter.");
+  assert(quotaIndex > rateLimitIndex, "The free-tier quota reservation must follow public rate limiting.");
+  assert(providerIndex > quotaIndex, "The provider request must follow a successful quota reservation.");
+  assertEqual(
+    result.requests.filter((request) => request.host === "generativelanguage.googleapis.com").length,
+    1,
+    "Mocked provider request count",
+  );
+  assert(
+    result.requests.every((request) =>
+      (request.host === "mock-supabase.invalid" && [
+        "/rest/v1/rpc/consume_public_innerme_rate_limit",
+        "/rest/v1/rpc/innerme_reserve_provider_quota",
+      ].includes(request.path)) ||
+      (request.host === "generativelanguage.googleapis.com" &&
+        request.path.endsWith(":generateContent"))
+    ),
+    "Public chat must not fetch admin workspace tables, internal knowledge, or other private records.",
+  );
+});
