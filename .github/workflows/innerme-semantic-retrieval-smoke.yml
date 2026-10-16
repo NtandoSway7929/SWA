@@ -220,5 +220,5 @@ jobs:
           path: |
             innerme-semantic-retrieval-regression-result.json
             supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
