@@ -108,6 +108,20 @@ Deno.serve(async (req: Request) => {
     }, 503);
   }
 
+  // Fixture writes use the caller's authenticated JWT, not service_role. This
+  // preserves the existing admin-only RLS policy; only the isolated test
+  // project grants authenticated INSERT/DELETE for synthetic fixture lifecycle.
+  const authenticatedDb = createClient(supabaseUrl, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: { Authorization: "Bearer " + accessToken },
+    },
+  });
+
   const runId = crypto.randomUUID().replaceAll("-", "");
   const fixtureSlug = "__innerme_semantic_retrieval_smoke_test_" + runId + "__";
   const fixtureDomain = FIXTURE_DOMAIN_PREFIX + "-" + runId;
@@ -137,7 +151,7 @@ Deno.serve(async (req: Request) => {
   try {
     // The run-specific slug/domain prevent parallel tests from matching each
     // other's fixture. The workflow also uses a non-cancelling concurrency group.
-    const { data: inserted, error: insertError } = await adminDb
+    const { data: inserted, error: insertError } = await authenticatedDb
       .from("innerme_knowledge")
       .insert({
         slug: fixtureSlug,
@@ -188,7 +202,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("Expected 384 document-embedding dimensions; received " + documentEmbedding.length + ".");
     }
 
-    const { error: embeddingUpdateError } = await adminDb
+    const { error: embeddingUpdateError } = await authenticatedDb
       .from("innerme_knowledge")
       .update({
         embedding: JSON.stringify(documentEmbedding),
@@ -307,7 +321,7 @@ Deno.serve(async (req: Request) => {
     stage = "cleanup";
     // Delete by this invocation's unique slug, even if insert/update/search/chat
     // failed after a row was created. No production URL passes the guard above.
-    const { error: deleteError } = await adminDb
+    const { error: deleteError } = await authenticatedDb
       .from("innerme_knowledge")
       .delete()
       .eq("slug", fixtureSlug);
@@ -315,7 +329,7 @@ Deno.serve(async (req: Request) => {
     if (deleteError) {
       cleanupError = deleteError.message.slice(0, 400);
     } else {
-      const { data: residue, error: residueError } = await adminDb
+      const { data: residue, error: residueError } = await authenticatedDb
         .from("innerme_knowledge")
         .select("id")
         .eq("slug", fixtureSlug)
