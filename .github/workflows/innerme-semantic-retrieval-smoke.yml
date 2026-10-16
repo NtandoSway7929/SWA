@@ -216,8 +216,8 @@ jobs:
               f"- Cases: {counts.get('passed', 0)} passed, {counts.get('failed', 0)} failed, {counts.get('inconclusive', 0)} inconclusive, {counts.get('not_run', 0)} not run",
               f"- Fixture cleanup: {'PASS' if cleanup.get('passed') is True and cleanup.get('fixture_removed') is True else 'FAIL'}",
               "",
-              "| Case | Type | Status | Similarity | Retrieved target | Grounded phrase | Expected corpus fixtures | Observed corpus fixtures | False positives | False negatives | Ranked matches (fixture@similarity) |",
-              "|---|---|---:|---:|---:|---:|---|---|---|---|---|",
+              "| Case | Type | Status | Similarity | Retrieved target | Grounded phrase | Expected corpus fixtures | Observed corpus fixtures | False positives | False negatives | Ranked matches (fixture@similarity) | Candidates→selected | Excluded by score gap |",
+              "|---|---|---:|---:|---:|---:|---|---|---|---|---|---:|---|",
           ]
           for case in cases:
               similarity = case.get("similarity")
@@ -237,6 +237,16 @@ jobs:
                       if match.get("similarity") is not None
                       else f"{match.get('rank', '?')}:{match.get('fixture_key') or 'other'}@n/a"
                       for match in (case.get("retrieved_matches") or [])
+                  ) or "-",
+                  (
+                      f"{(case.get('ranking_diagnostics') or {}).get('candidate_count', 0)}→{(case.get('ranking_diagnostics') or {}).get('selected_count', 0)}"
+                      if case.get("ranking_diagnostics") else "-"
+                  ),
+                  ", ".join(
+                      f"{match.get('fixture_key') or 'other'}@{float(match['similarity']):.4f}"
+                      if match.get("similarity") is not None
+                      else str(match.get("fixture_key") or "other")
+                      for match in ((case.get("ranking_diagnostics") or {}).get("excluded_matches") or [])
                   ) or "-",
               ]) + " |")
               if case.get("error"):
