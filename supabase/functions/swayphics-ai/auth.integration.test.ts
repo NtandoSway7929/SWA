@@ -833,6 +833,41 @@ Deno.test("InnerMe proposal drafting preserves the proposal.title/subject/conten
     "application/json",
     "Proposal generation must request JSON output",
   );
+
+  const telemetryEvents = result.requests
+    .filter((request) =>
+      request.path === "/rest/v1/innerme_provider_usage" &&
+      request.method === "POST"
+    )
+    .map((request) => request.telemetryPayload)
+    .filter((event): event is Record<string, unknown> => Boolean(event));
+  assertEqual(telemetryEvents.length, 1, "Successful proposal provider attempt telemetry count");
+  assertEqual(telemetryEvents[0].task_category, "proposal_draft", "Proposal telemetry category");
+  assertEqual(telemetryEvents[0].provider, "gemini", "Proposal telemetry provider");
+  assertEqual(telemetryEvents[0].model, "gemini-3.8-flash", "Proposal telemetry model");
+  assertEqual(telemetryEvents[0].outcome, "success", "Proposal telemetry outcome");
+  assertEqual(telemetryEvents[0].http_status, 200, "Proposal provider HTTP status");
+  assertEqual(telemetryEvents[0].attempt_number, 1, "Proposal provider attempt number");
+  assertEqual(telemetryEvents[0].input_tokens, 100, "Proposal reported prompt tokens");
+  assertEqual(telemetryEvents[0].output_tokens, 120, "Proposal reported output tokens");
+  assertEqual(telemetryEvents[0].total_tokens, 220, "Proposal reported total tokens");
+  assert(
+    typeof telemetryEvents[0].request_id === "string" &&
+      /^[0-9a-f-]{36}$/i.test(String(telemetryEvents[0].request_id)),
+    "Proposal telemetry must include a UUID request correlation ID",
+  );
+  const telemetryJson = JSON.stringify(telemetryEvents[0]);
+  for (const privateValue of [
+    "Example Business",
+    "Example Owner",
+    "customer journey",
+    modelProposal.content,
+  ]) {
+    assert(!telemetryJson.includes(privateValue), "Telemetry must not store proposal or lead content.");
+  }
+  for (const privateField of ["prompt", "message", "answer", "content", "business_name", "assessment"]) {
+    assert(!(privateField in telemetryEvents[0]), "Telemetry must not have a " + privateField + " field.");
+  }
   assert(
     result.requests.some((request) =>
       request.path === "/rest/v1/rpc/innerme_reserve_provider_quota" &&
@@ -870,11 +905,102 @@ Deno.test("InnerMe proposal drafting rejects malformed provider JSON instead of 
     1,
     "Malformed-output test provider call count",
   );
+  const telemetryEvents = result.requests
+    .filter((request) =>
+      request.path === "/rest/v1/innerme_provider_usage" &&
+      request.method === "POST"
+    )
+    .map((request) => request.telemetryPayload)
+    .filter((event): event is Record<string, unknown> => Boolean(event));
+  assertEqual(telemetryEvents.length, 1, "Malformed proposal attempt telemetry count");
+  assertEqual(telemetryEvents[0].task_category, "proposal_draft", "Malformed proposal telemetry category");
+  assertEqual(telemetryEvents[0].outcome, "error", "Malformed proposal telemetry outcome");
+  assertEqual(telemetryEvents[0].error_code, "invalid_proposal_json", "Malformed proposal telemetry attribution");
+  assertEqual(telemetryEvents[0].http_status, 200, "Malformed response still records the successful provider HTTP status");
+  assert(
+    !JSON.stringify(telemetryEvents[0]).includes("not valid JSON"),
+    "Telemetry must not capture provider response content.",
+  );
   assert(
     result.requests.every((request) =>
       request.host === "mock-supabase.invalid" ||
       request.host === "generativelanguage.googleapis.com"
     ),
     "Malformed-output testing must not make any real outbound requests.",
+  );
+});
+
+Deno.test("InnerMe proposal drafting records both primary failure and fallback success", async () => {
+  const modelProposal = {
+    title: "Website and enquiry journey proposal",
+    subject: "Swayphics | Proposal for Example Business",
+    content: "We can help your business present its services more clearly and make the next step easier for prospective customers. The proposed scope focuses on the website structure, useful service information, and a straightforward enquiry path. We can confirm final pricing and delivery details separately after agreeing the scope. The next step is to review the proposed scope and tell us which priorities matter most to your business.",
+  };
+  const result = await invokeDraftProposalWithMockedProvider(
+    JSON.stringify(modelProposal),
+    { simulatePrimaryUnavailable: true },
+  );
+
+  assertEqual(result.status, 200, "Fallback proposal response status");
+  assertEqual(
+    result.requests.filter((request) =>
+      request.host === "generativelanguage.googleapis.com" &&
+      request.path.endsWith(":generateContent")
+    ).length,
+    2,
+    "Proposal primary and fallback provider request count",
+  );
+
+  const telemetryEvents = result.requests
+    .filter((request) =>
+      request.path === "/rest/v1/innerme_provider_usage" &&
+      request.method === "POST"
+    )
+    .map((request) => request.telemetryPayload)
+    .filter((event): event is Record<string, unknown> => Boolean(event))
+    .sort((a, b) => Number(a.attempt_number) - Number(b.attempt_number));
+
+  assertEqual(telemetryEvents.length, 2, "Both proposal provider attempts must be recorded");
+  assertEqual(telemetryEvents[0].attempt_number, 1, "Primary proposal attempt number");
+  assertEqual(telemetryEvents[0].model, "gemini-3.8-flash", "Primary proposal model");
+  assertEqual(telemetryEvents[0].outcome, "error", "Primary proposal outcome");
+  assertEqual(telemetryEvents[0].http_status, 503, "Primary provider-unavailable status");
+  assertEqual(telemetryEvents[0].error_code, "provider_unavailable", "Primary provider error attribution");
+  assertEqual(telemetryEvents[1].attempt_number, 2, "Fallback proposal attempt number");
+  assertEqual(telemetryEvents[1].model, "gemini-3.5-flash-lite", "Fallback proposal model");
+  assertEqual(telemetryEvents[1].outcome, "success", "Fallback proposal outcome");
+  assertEqual(telemetryEvents[1].fallback_reason, "gemini_primary_http_503", "Proposal fallback reason");
+  assertEqual(telemetryEvents[0].request_id, telemetryEvents[1].request_id, "Proposal attempts must share a request ID");
+  assert(
+    telemetryEvents.every((event) =>
+      !JSON.stringify(event).includes("Example Business") &&
+      !JSON.stringify(event).includes(modelProposal.content)
+    ),
+    "Fallback telemetry must remain free of proposal content.",
+  );
+});
+
+Deno.test("InnerMe proposal drafting does not record a guard-blocked request as a provider attempt", async () => {
+  const result = await invokeDraftProposalWithMockedProvider(
+    "not used because quota is denied",
+    { blockQuota: true },
+  );
+
+  assertEqual(result.status, 502, "Quota-guarded proposal response status");
+  assertEqual(
+    result.requests.filter((request) =>
+      request.host === "generativelanguage.googleapis.com" &&
+      request.path.endsWith(":generateContent")
+    ).length,
+    0,
+    "A guard-blocked proposal must not call Gemini",
+  );
+  assertEqual(
+    result.requests.filter((request) =>
+      request.path === "/rest/v1/innerme_provider_usage" &&
+      request.method === "POST"
+    ).length,
+    0,
+    "A guard-blocked proposal must not be reported as a provider attempt",
   );
 });
