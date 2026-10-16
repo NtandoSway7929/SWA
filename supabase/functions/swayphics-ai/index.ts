@@ -5985,7 +5985,7 @@ Deno.serve(async (req) => {
     const matchThreshold =
       Number.isFinite(thresholdRaw)
         ? Math.max(0, Math.min(thresholdRaw, 1))
-: 0.75;
+: 0.8;
 
     const countRaw = Number(body.match_count);
     const matchCount =
