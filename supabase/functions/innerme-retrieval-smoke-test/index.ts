@@ -135,7 +135,7 @@ function validateBaseline(value: unknown): { baseline: any | null; error: string
     calibration.lowest_positive_similarity !== 0.900932317916614 ||
     calibration.chosen_threshold !== 0.8
   ) {
-    return { baseline: null, error: "Threshold calibration evidence does not match the reviewed baseline v1.1.0." };
+    return { baseline: null, error: "Threshold calibration evidence does not match the pinned calibration record." };
   }
 
   if (!Array.isArray(baseline.fixtures) || !Array.isArray(baseline.tests)) {
@@ -441,17 +441,19 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const matches = Array.isArray(searchPayload.matches) ? searchPayload.matches : [];
+        const matches: Array<Record<string, unknown>> = Array.isArray(searchPayload.matches)
+          ? searchPayload.matches as Array<Record<string, unknown>>
+          : [];
         const match = matches.find((item: Record<string, unknown>) => item?.slug === targetSlug);
         const observedMatch = Boolean(match);
         const similarity = match ? Number(match.similarity) : null;
         const isCorpusWide = test.retrieval_scope === "corpus";
         const slugToFixtureKey = new Map<string, string>();
         for (const [key, slug] of fixtureSlugs.entries()) slugToFixtureKey.set(slug, key);
-        const observedFixtureKeys = Array.from(new Set(
+        const observedFixtureKeys: string[] = Array.from(new Set(
           matches
-            .map((item: Record<string, unknown>) => slugToFixtureKey.get(String(item?.slug || "")))
-            .filter((key: string | undefined): key is string => Boolean(key)),
+            .map((item) => slugToFixtureKey.get(String(item?.slug || "")))
+            .filter((key): key is string => typeof key === "string"),
         )).sort();
         const expectedFixtureKeys = isCorpusWide ? [...test.expected_fixture_keys].sort() : [];
         const expectedSetMatchesObserved = isCorpusWide &&
