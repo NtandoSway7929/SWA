@@ -379,7 +379,7 @@ Deno.test("InnerMe public website chat boundary is checked before authentication
   });
 });
 
-async function invokeMockedPublicSuccess(simulatePrimaryUnavailable = false): Promise<{
+async function invokeMockedPublicSuccess(options: { simulatePrimaryUnavailable?: boolean; blockQuota?: boolean } = {}): Promise<{
   status: number;
   body: Record<string, unknown>;
   requests: Array<{ host: string; path: string; method: string; payload?: Record<string, unknown> }>;
@@ -430,12 +430,19 @@ async function invokeMockedPublicSuccess(simulatePrimaryUnavailable = false): Pr
       return jsonResponse(200, [{ allowed: true, retry_after_seconds: 60 }]);
     }
     if (url.pathname === "/rest/v1/rpc/innerme_reserve_provider_quota") {
-      return jsonResponse(200, {
-        allowed: true,
-        used: 1,
-        daily_limit: 40,
-        reason: null,
-      });
+      return jsonResponse(200, options.blockQuota
+        ? {
+            allowed: false,
+            used: 40,
+            daily_limit: 40,
+            reason: "daily_quota_reached",
+          }
+        : {
+            allowed: true,
+            used: 1,
+            daily_limit: 40,
+            reason: null,
+          });
     }
     if (url.pathname === "/rest/v1/innerme_provider_usage") {
       return jsonResponse(201, {});
@@ -443,7 +450,7 @@ async function invokeMockedPublicSuccess(simulatePrimaryUnavailable = false): Pr
     if (url.host === "generativelanguage.googleapis.com" &&
       url.pathname.endsWith(":generateContent")) {
       providerCalls += 1;
-      if (simulatePrimaryUnavailable && providerCalls === 1) {
+      if (options.simulatePrimaryUnavailable && providerCalls === 1) {
         return jsonResponse(503, { error: { status: "UNAVAILABLE" } });
       }
       return jsonResponse(200, {
@@ -551,7 +558,7 @@ Deno.test("InnerMe public website chat completes the guarded flow without worksp
 
 
 Deno.test("InnerMe public website chat attributes fallback failures and successes", async () => {
-  const result = await invokeMockedPublicSuccess(true);
+  const result = await invokeMockedPublicSuccess({ simulatePrimaryUnavailable: true });
   assertEqual(result.status, 200, "Fallback public-chat response status");
   assertEqual(
     result.requests.filter((request) => request.host === "generativelanguage.googleapis.com").length,
@@ -574,4 +581,33 @@ Deno.test("InnerMe public website chat attributes fallback failures and successe
   assertEqual(usageEvents[1].outcome, "success", "Fallback success outcome");
   assertEqual(usageEvents[1].fallback_reason, "gemini_primary_http_503", "Fallback attribution");
   assertEqual(usageEvents[0].request_id, usageEvents[1].request_id, "Attempts from one public message share a correlation ID");
+});
+
+Deno.test("InnerMe public website chat stops before Gemini when quota reservation is denied", async () => {
+  const result = await invokeMockedPublicSuccess({ blockQuota: true });
+  assertEqual(result.status, 502, "Quota-blocked public-chat response status");
+  assertEqual(result.body.provider_status, 403, "Quota guard status surfaced by public handler");
+  assertEqual(
+    result.body.error,
+    "InnerMe is unavailable right now. Please try again in a moment.",
+    "Quota-blocked public-chat message",
+  );
+  assert(
+    result.requests.some((request) => request.path === "/rest/v1/rpc/consume_public_innerme_rate_limit"),
+    "Public rate limiting should still run before provider checks.",
+  );
+  assert(
+    result.requests.some((request) => request.path === "/rest/v1/rpc/innerme_reserve_provider_quota"),
+    "The server-side provider quota must be checked.",
+  );
+  assertEqual(
+    result.requests.filter((request) => request.host === "generativelanguage.googleapis.com").length,
+    0,
+    "A denied quota reservation must block every Gemini request.",
+  );
+  assertEqual(
+    result.requests.filter((request) => request.path === "/rest/v1/innerme_provider_usage").length,
+    0,
+    "A guard-blocked request must not be misreported as a provider attempt.",
+  );
 });
