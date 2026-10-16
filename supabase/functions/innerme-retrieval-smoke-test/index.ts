@@ -302,6 +302,79 @@ Deno.serve(async (req: Request) => {
     }, 503);
   }
 
+  // Full mode requires room for four chat cases plus one guarded Gemini fallback
+  // attempt per case. Check the UTC reservation counter before seeding fixtures.
+  // This is advisory; reserveInnerMeProviderQuota remains the atomic authority.
+  if (runChatChecks) {
+    const utcQuotaDate = new Date().toISOString().slice(0, 10);
+    const { data: quotaRow, error: quotaReadError } = await adminDb
+      .from("innerme_provider_quota_daily")
+      .select("request_count")
+      .eq("provider", "gemini")
+      .eq("quota_date", utcQuotaDate)
+      .maybeSingle();
+
+    if (quotaReadError) {
+      return jsonResponse({
+        ok: false,
+        status: "inconclusive",
+        suite_id: SUITE_ID,
+        baseline_version: BASELINE_VERSION,
+        failure: {
+          stage: "provider_quota_preflight",
+          kind: "execution",
+          message: "Could not verify the isolated Gemini UTC quota before fixture setup; no fixtures or chat requests were made.",
+        },
+        provider_chat_requests_attempted: 0,
+        quota_preflight: { passed: false, quota_date_utc: utcQuotaDate, reason: "counter_unavailable" },
+      }, 503);
+    }
+
+    const used = quotaRow == null ? 0 : Number(quotaRow.request_count);
+    const dailyLimit = 40;
+    const minimumRequiredRequests = 8;
+    if (!Number.isSafeInteger(used) || used < 0 || used > dailyLimit) {
+      return jsonResponse({
+        ok: false,
+        status: "inconclusive",
+        suite_id: SUITE_ID,
+        baseline_version: BASELINE_VERSION,
+        failure: {
+          stage: "provider_quota_preflight",
+          kind: "execution",
+          message: "The isolated Gemini quota counter returned an invalid value; failing closed before fixture setup.",
+        },
+        provider_chat_requests_attempted: 0,
+        quota_preflight: { passed: false, quota_date_utc: utcQuotaDate, reason: "counter_invalid" },
+      }, 503);
+    }
+
+    const remainingBudget = dailyLimit - used;
+    if (remainingBudget < minimumRequiredRequests) {
+      return jsonResponse({
+        ok: false,
+        status: "inconclusive",
+        suite_id: SUITE_ID,
+        baseline_version: BASELINE_VERSION,
+        failure: {
+          stage: "provider_quota_preflight",
+          kind: "execution",
+          message: "Full mode needs at least 8 remaining Gemini request reservations to cover four chat cases and their possible guarded fallback attempts. Current usage is " + used + "/" + dailyLimit + " for UTC date " + utcQuotaDate + "; no fixtures or chat requests were made. Run retrieval-only mode or retry after the next UTC reset.",
+          http_status: 429,
+        },
+        provider_chat_requests_attempted: 0,
+        quota_preflight: {
+          passed: false,
+          quota_date_utc: utcQuotaDate,
+          used,
+          daily_limit: dailyLimit,
+          remaining: remainingBudget,
+          minimum_required: minimumRequiredRequests,
+        },
+      }, 429);
+    }
+  }
+
   const authenticatedDb = createClient(supabaseUrl, anonKey, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
     global: { headers: { Authorization: "Bearer " + accessToken } },
