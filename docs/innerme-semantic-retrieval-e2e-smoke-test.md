@@ -18,6 +18,7 @@ The canary phrase is **Cobalt Compass 417**. It is a synthetic test value, not a
 - The helper endpoint at supabase/functions/innerme-retrieval-smoke-test/index.ts has a hard guard for the isolated project ref ofqofhnlzbouclvvrmzd. It refuses to run under any other Supabase URL and also checks that the caller is an active admin in the isolated project's admin_users table.
 - The helper is a separate test function, not part of the production swayphics-ai deployment. Deploy it only to the isolated test project; never deploy it to production.
 - A server-side service key is read from Edge Function environment variables and is never returned to the caller or passed to another function. It is used only to create and remove the one synthetic row after admin verification.
+- The helper checks for the Gemini key only after verifying the isolated admin and before inserting the fixture. This avoids using the broader workspace-health action as a provider-key preflight.
 - The main chat request calls the configured Gemini provider once or may use its existing fallback route. The workflow therefore requires explicit confirmation that the test project's dedicated Gemini key belongs to a separate Google project with billing disabled. Do not reuse the production key.
 - gte-small embeddings are generated through the Supabase Edge Runtime's built-in AI interface. No external embedding API is called.
 - The workflow is manual-only. It does not create, approve, or execute proposals; send email; change real business records; or copy production knowledge data.
@@ -25,7 +26,7 @@ The canary phrase is **Cobalt Compass 417**. It is a synthetic test value, not a
 
 ## One-time setup and execution
 
-1. Confirm that the isolated test project's GEMINI_API_KEY belongs to the separate no-billing Google test project. The workflow checks only whether the secret exists and never prints its value.
+1. Confirm that the isolated test project's GEMINI_API_KEY belongs to the separate no-billing Google test project. The helper checks only whether the secret exists and never prints its value.
 2. Deploy supabase/functions/innerme-retrieval-smoke-test/index.ts to **only** the isolated Supabase project ofqofhnlzbouclvvrmzd with JWT verification enabled. Do not add it to the production project's deployed functions.
 3. Confirm repository secrets INNERME_TEST_ADMIN_EMAIL and INNERME_TEST_ADMIN_PASSWORD refer to the dedicated isolated test admin, not a personal or production admin account.
 4. After this workflow is merged to main and the isolated-only helper is deployed, open the repository's Actions tab, select **InnerMe Isolated Semantic Retrieval End-to-End Smoke Test**, select **Run workflow**, and confirm the no-billing prerequisite.
