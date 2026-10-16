@@ -363,6 +363,20 @@ Deno.test("InnerMe public website chat boundary is checked before authentication
     );
     assertEqual(result.outboundRequests, 0, "Malformed session outbound request count");
   });
+
+  await t.step("fails closed when the Gemini key is missing before any outbound request", async () => {
+    const result = await invokePublicBoundary(
+      "https://swayphics.co.za",
+      "synthetic-session-id-12345",
+    );
+    assertEqual(result.status, 503, "Missing public-chat Gemini key status");
+    assertEqual(
+      result.body.error,
+      "InnerMe is temporarily unavailable.",
+      "Missing public-chat Gemini key message",
+    );
+    assertEqual(result.outboundRequests, 0, "Missing Gemini key outbound request count");
+  });
 });
 
 async function invokeMockedPublicSuccess(simulatePrimaryUnavailable = false): Promise<{
