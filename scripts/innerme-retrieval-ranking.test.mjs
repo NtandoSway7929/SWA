@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { selectRelevantKnowledgeMatches } from "../supabase/functions/swayphics-ai/innerme-retrieval-ranking.mjs";
 
-// Scores recorded from isolated semantic retrieval regression run 38841956023, attempt 2.
+// Scores recorded from isolated semantic retrieval regression run 38841956023, attempts 2 and 3.
 const observedQueryCandidates = [
   { id: "corpus_invoice_paraphrase_1", expected: "invoice", candidates: [["invoice", 0.847644899855709], ["appointment", 0.80577642883203]] },
+  { id: "corpus_invoice_paraphrase_1_attempt_3", expected: "invoice", candidates: [["invoice", 0.848529467074308], ["appointment", 0.809362005629421]] },
   { id: "corpus_invoice_paraphrase_2", expected: "invoice", candidates: [["invoice", 0.854035717730013], ["appointment", 0.812533570456529], ["dispatch", 0.803760671727686]] },
   { id: "corpus_invoice_paraphrase_3", expected: "invoice", candidates: [["invoice", 0.887446787579262], ["appointment", 0.816403150558472], ["dispatch", 0.81233270094796]] },
   { id: "corpus_appointment_paraphrase_1", expected: "appointment", candidates: [["appointment", 0.871258847192459], ["invoice", 0.808766735383875]] },
@@ -15,10 +16,10 @@ const observedQueryCandidates = [
   { id: "corpus_dispatch_paraphrase_3", expected: "dispatch", candidates: [["dispatch", 0.882790684700018], ["invoice", 0.834343150348349], ["appointment", 0.831007351339303]] },
 ];
 
-test("the 0.04 relative score gap removes observed cross-topic false positives", () => {
+test("the 0.035 relative score gap removes observed cross-topic false positives", () => {
   for (const item of observedQueryCandidates) {
     const candidates = item.candidates.map(([fixture_key, similarity]) => ({ fixture_key, similarity }));
-    const selected = selectRelevantKnowledgeMatches(candidates, 0.04, 6);
+    const selected = selectRelevantKnowledgeMatches(candidates, 0.035, 6);
     assert.deepEqual(
       selected.map((match) => match.fixture_key),
       [item.expected],
@@ -34,7 +35,7 @@ test("records inside the score gap remain available as multi-record evidence", (
     { fixture_key: "weak_tail", similarity: 0.869 },
   ];
   assert.deepEqual(
-    selectRelevantKnowledgeMatches(matches, 0.04, 10).map((match) => match.fixture_key),
+    selectRelevantKnowledgeMatches(matches, 0.035, 10).map((match) => match.fixture_key),
     ["primary", "supporting"],
   );
 });
@@ -45,7 +46,7 @@ test("ties preserve input order and result limits are enforced", () => {
     similarity: 0.9,
   }));
   assert.deepEqual(
-    selectRelevantKnowledgeMatches(matches, 0.04, 3).map((match) => match.fixture_key),
+    selectRelevantKnowledgeMatches(matches, 0.035, 3).map((match) => match.fixture_key),
     ["fixture-0", "fixture-1", "fixture-2"],
   );
 });
