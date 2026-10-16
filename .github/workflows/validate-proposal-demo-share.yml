@@ -19,9 +19,14 @@ jobs:
         with:
           node-version: 24
 
-      - name: Check Edge Function and provider-free handler syntax
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Edge Function and check provider-free handler syntax
         run: |
-          node --experimental-strip-types --check supabase/functions/proposal-demo-share/index.ts
+          deno check --no-lock supabase/functions/proposal-demo-share/index.ts
           node --check supabase/functions/proposal-demo-share/handler.mjs
 
       - name: Verify demo share authorization and lifecycle
