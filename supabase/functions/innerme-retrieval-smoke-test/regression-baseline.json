@@ -1,7 +1,7 @@
 {
   "suite_id": "innerme_semantic_retrieval_regression",
-  "baseline_version": "1.0.0",
-  "retrieval_similarity_threshold": 0.45,
+  "baseline_version": "1.1.0",
+  "retrieval_similarity_threshold": 0.75,
   "embedding_model": "gte-small",
   "embedding_dimensions": 384,
   "fixtures": [
@@ -148,6 +148,13 @@
       "fixture_key": "dispatch",
       "query": "What exact marker phrase does the synthetic warehouse dispatch audit test specify? Use verified knowledge and return the phrase exactly.",
       "expected_match": true
+    },
+    {
+      "id": "normal_chat_irrelevant_invoice_exclusion",
+      "type": "chat_exclusion",
+      "fixture_key": "invoice",
+      "query": "Explain the orbital period and upper-atmosphere temperature of the exoplanet Kepler-452b. Do not use unrelated business records.",
+      "expected_match": false
     }
   ]
 }
