@@ -49,7 +49,7 @@ Each run has unique fixture slugs and domain names to avoid cross-run interferen
 - If a pinned case executes successfully but its expected retrieval/grounding assertion is false, the case is marked **failed**. The workflow exits non-zero, blocking the regression gate.
 - If a provider, Edge Function, authentication, embedding or retrieval execution error prevents a trustworthy assertion, the run is marked **inconclusive**, not misreported as an answer-quality regression. The workflow still exits non-zero, so the pipeline cannot silently treat it as a pass.
 - A complete pass requires all twenty-eight cases to pass, corpus metrics to cover all fifteen corpus-wide cases, and all synthetic fixtures to be confirmed removed.
-- The workflow writes a case table to the GitHub Actions run summary and uploads two files as an artifact: the full case-level result JSON and the exact baseline JSON used. The result includes the baseline SHA-256, GitHub run ID, commit, per-case status/similarity and cleanup state. Artifacts are retained for 90 days; the versioned expected-case baseline remains in Git.
+- The workflow writes a case table to the GitHub Actions run summary and uploads two files as an artifact: the full case-level result JSON and the exact baseline JSON used. The result includes the baseline SHA-256, GitHub run ID, commit, per-case status/similarity, ordered fixture ranks and similarity scores, and cleanup state. Artifacts are retained for 90 days; the versioned expected-case baseline remains in Git.
 
 ## Running the suite
 
