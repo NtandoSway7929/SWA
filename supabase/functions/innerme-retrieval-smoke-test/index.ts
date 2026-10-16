@@ -25,8 +25,6 @@ const REQUIRED_TESTS: Record<string, { type: string; fixture_key: string; expect
   semantic_irrelevant_query_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
   semantic_irrelevant_cooking_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
   semantic_irrelevant_algorithm_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
-  semantic_irrelevant_cooking_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
-  semantic_irrelevant_algorithm_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
   semantic_stale_knowledge_excluded: { type: "eligibility_exclusion", fixture_key: "stale", expected_match: false },
   semantic_unverified_knowledge_excluded: { type: "eligibility_exclusion", fixture_key: "unverified", expected_match: false },
   semantic_expired_review_excluded: { type: "eligibility_exclusion", fixture_key: "expired_review", expected_match: false },
