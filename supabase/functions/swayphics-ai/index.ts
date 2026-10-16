@@ -28,6 +28,7 @@ import {
   INNERME_EXECUTION_CONTRACT_VERSION,
   validateInnerMeExecutionContract,
 } from "./innerme-execution-contracts.mjs";
+import { selectRelevantKnowledgeMatches } from "./innerme-retrieval-ranking.mjs";
 
 // Supabase Edge Runtime provides this embedding API at runtime; declare its surface for Deno checks.
 declare const Supabase: {
@@ -67,6 +68,8 @@ const INNERME_BENCHMARK_PRIMARY_MODEL: string = "gemini-3.1-flash-lite";
 const INNERME_BENCHMARK_FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
 const INNERME_BENCHMARK_VERSION = 8;
 const INNERME_JUDGE_CALIBRATION_VERSION = 6;
+// Keep all records within this observed similarity gap from the top-ranked record.
+const INNERME_KNOWLEDGE_MAX_SCORE_DELTA = 0.04;
 const INNERME_ROADMAP_CONTEXT = [
   "INNERME ROADMAP KNOWLEDGE (internal architecture reference):",
   "ROADMAP INDEX SOURCE: docs/innerme-30-phase-roadmap.md. This index documents the roadmap; it does not by itself prove runtime behaviour.",
@@ -6061,13 +6064,45 @@ Deno.serve(async (req) => {
       );
     }
 
+    const candidateMatches = Array.isArray(matches) ? matches : [];
+    const selectedMatches = selectRelevantKnowledgeMatches(
+      candidateMatches,
+      INNERME_KNOWLEDGE_MAX_SCORE_DELTA,
+      matchCount,
+    );
+    const selectedIds = new Set(
+      selectedMatches.map((match: any) => String(match?.id || "")),
+    );
+    const excludedMatches = candidateMatches
+      .map((match: any, index: number) => ({ match, rank: index + 1 }))
+      .filter(({ match }: { match: any }) => !selectedIds.has(String(match?.id || "")))
+      .map(({ match, rank }: { match: any; rank: number }) => ({
+        rank,
+        slug: match?.slug || null,
+        title: match?.title || null,
+        similarity: Number.isFinite(Number(match?.similarity))
+          ? Number(match.similarity)
+          : null,
+      }));
+
     return json(
       {
         ok: true,
         query,
         match_threshold: matchThreshold,
         requested_match_count: matchCount,
-        matches: Array.isArray(matches) ? matches : [],
+        matches: selectedMatches,
+        retrieval_ranking: {
+          method: "relative_score_gap",
+          max_similarity_delta: INNERME_KNOWLEDGE_MAX_SCORE_DELTA,
+          candidate_count: candidateMatches.length,
+          selected_count: selectedMatches.length,
+          excluded_count: excludedMatches.length,
+          best_similarity: candidateMatches.length && Number.isFinite(Number(candidateMatches[0]?.similarity))
+            ? Number(candidateMatches[0].similarity)
+            : null,
+          excluded_matches: excludedMatches,
+        },
         embedding_model: "gte-small",
         embedding_dimensions: queryEmbedding.length,
         read_only: true,
@@ -8933,7 +8968,12 @@ Deno.serve(async (req) => {
           );
         }
 
-        (Array.isArray(matches) ? matches : []).forEach(function(match: any) {
+        const selectedForQuery = selectRelevantKnowledgeMatches(
+          Array.isArray(matches) ? matches : [],
+          INNERME_KNOWLEDGE_MAX_SCORE_DELTA,
+          10,
+        );
+        selectedForQuery.forEach(function(match: any) {
           const id = String(match?.id || "").trim();
           if (!id) return;
 

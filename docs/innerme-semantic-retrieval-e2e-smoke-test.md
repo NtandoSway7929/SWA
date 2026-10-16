@@ -6,7 +6,7 @@ The original single-canary runtime smoke test has been expanded into a fixed, ve
 
 Canonical baseline: `supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json`.
 
-Current baseline version: **1.2.0**. Run #5 attempt 2 exposed a false positive at similarity 0.7172 for an unrelated query. The lowest relevant match in that run was 0.9009. Version 1.2.0 retains the calibrated 0.80 cutoff and adds fifteen corpus-wide queries across invoice, appointment and dispatch paraphrases plus unrelated subjects. Unlike the original fixture-scoped checks, these cases search the complete temporary corpus and assert the exact expected fixture set, allowing case-level precision, recall, and unrelated-query rejection to be measured.
+Current baseline version: **1.2.0**. Run #5 attempt 2 exposed a false positive at similarity 0.7172 for an unrelated query. The lowest relevant match in that run was 0.9009. Version 1.2.0 retains the calibrated 0.80 cutoff and adds fifteen corpus-wide queries across invoice, appointment and dispatch paraphrases plus unrelated subjects. Unlike the original fixture-scoped checks, these cases search the complete temporary corpus and assert the exact expected fixture set, allowing case-level precision, recall, and unrelated-query rejection to be measured. Run #7 (attempt 2) then showed that intended matches ranked first at 0.848–0.891 while cross-topic tail matches scored 0.801–0.838, with a smallest observed top-to-tail gap of approximately 0.0415. The application now applies a 0.04 relative-score gap per query after the 0.80 absolute threshold. This margin is an empirically tested starting point for these isolated cases, not a claim that every real-world knowledge corpus has the same score distribution.
 
 ## Fixed coverage
 
@@ -34,6 +34,10 @@ The suite pins the six fixture keys, all twenty-eight case IDs, their types, exp
 6. It deletes all run-specific fixtures, confirms there are no residual rows, and returns a case-by-case result report.
 
 Each run has unique fixture slugs and domain names to avoid cross-run interference. Cleanup runs even if a fixture, retrieval or chat stage fails. A cleanup failure is a suite failure and must be resolved before rerunning.
+
+## Ranking policy
+
+The same local, zero-provider-call selector is used by normal chat and the authenticated `search_knowledge` test action. It keeps all results no more than `0.04` similarity below the best result for each query, preserving multiple closely ranked pieces of evidence while removing weak tail matches. `scripts/innerme-retrieval-ranking.test.mjs` pins all nine positive corpus-query score sets observed in run #7 attempt 2 and verifies that the selected evidence contains the expected fixture. The absolute `0.80` threshold and all eligibility conditions remain in force.
 
 ## Security and cost boundaries
 

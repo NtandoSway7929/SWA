@@ -13,6 +13,7 @@ on:
       - ".github/workflows/innerme-routing-experiment.yml"
       - "docs/innerme-routing-experiment.md"
       - "scripts/innerme-semantic-retrieval-regression.test.mjs"
+      - "scripts/innerme-retrieval-ranking.test.mjs"
       - "supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json"
   pull_request:
     branches: ["main"]
@@ -26,6 +27,7 @@ on:
       - ".github/workflows/innerme-routing-experiment.yml"
       - "docs/innerme-routing-experiment.md"
       - "supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json"
+      - "scripts/innerme-retrieval-ranking.test.mjs"
       - "scripts/innerme-semantic-retrieval-regression.test.mjs"
 
 permissions:
@@ -60,6 +62,11 @@ jobs:
           node --check scripts/innerme-routing-experiment.mjs
           node --test scripts/innerme-routing-experiment.test.mjs
           node scripts/innerme-routing-experiment.mjs --dry-run
+
+      - name: Test retrieval score-gap selection without provider calls
+        run: |
+          node --check scripts/innerme-retrieval-ranking.test.mjs
+          node --test scripts/innerme-retrieval-ranking.test.mjs
 
       - name: Test isolated regression bearer-token parsing
         run: |

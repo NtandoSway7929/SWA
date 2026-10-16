@@ -82,6 +82,7 @@ type RegressionCaseResult = {
   false_negative_fixture_keys?: string[];
   unmapped_match_count?: number;
   retrieved_matches?: Array<{ fixture_key: string | null; similarity: number | null; rank: number }>;
+  ranking_diagnostics?: { method: string; max_similarity_delta: number; candidate_count: number; selected_count: number; excluded_matches: Array<{ fixture_key: string | null; similarity: number | null; rank: number }> };
   error?: string;
 };
 
@@ -457,6 +458,24 @@ Deno.serve(async (req: Request) => {
           similarity: Number.isFinite(Number(item?.similarity)) ? Number(item.similarity) : null,
           rank: index + 1,
         }));
+        const rankingPayload = searchPayload.retrieval_ranking && typeof searchPayload.retrieval_ranking === "object"
+          ? searchPayload.retrieval_ranking as Record<string, unknown>
+          : null;
+        const excludedRaw = rankingPayload && Array.isArray(rankingPayload.excluded_matches)
+          ? rankingPayload.excluded_matches as Array<Record<string, unknown>>
+          : [];
+        const excludedByGap = excludedRaw.map((item) => ({
+          fixture_key: slugToFixtureKey.get(String(item?.slug || "")) || null,
+          similarity: Number.isFinite(Number(item?.similarity)) ? Number(item.similarity) : null,
+          rank: Number.isFinite(Number(item?.rank)) ? Number(item.rank) : 0,
+        }));
+        const rankingDiagnostics = rankingPayload ? {
+          method: String(rankingPayload.method || "unknown"),
+          max_similarity_delta: Number(rankingPayload.max_similarity_delta),
+          candidate_count: Number(rankingPayload.candidate_count || 0),
+          selected_count: Number(rankingPayload.selected_count || 0),
+          excluded_matches: excludedByGap,
+        } : undefined;
         const observedFixtureKeys: string[] = Array.from(new Set(
           retrievedMatches
             .map((item) => item.fixture_key)
@@ -495,6 +514,7 @@ Deno.serve(async (req: Request) => {
             false_negative_fixture_keys: falseNegativeFixtureKeys,
             unmapped_match_count: unmappedMatchCount,
             retrieved_matches: retrievedMatches,
+            ...(rankingDiagnostics ? { ranking_diagnostics: rankingDiagnostics } : {}),
           } : {}),
           ...(passed ? {} : {
             error: isCorpusWide
