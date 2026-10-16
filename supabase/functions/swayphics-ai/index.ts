@@ -14,7 +14,7 @@ import {
   selectInnerMeEmailBodyIds,
   shouldLoadInnerMeEmailBodies,
 } from "./innerme-workspace-intelligence.mjs";
-import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget } from "./innerme-context-compaction.mjs";
+import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget, INNERME_WORKSPACE_CONTEXT_MARKER } from "./innerme-context-compaction.mjs";
 import {
   buildInnerMeProgressiveContext,
   planInnerMeWorkspaceRetrieval,
@@ -441,7 +441,7 @@ async function guardedGeminiFetch(
       const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
       const lastPart = lastTurn?.parts?.[0];
       const contentText = lastPart?.text;
-      const marker = "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n";
+      const marker = INNERME_WORKSPACE_CONTEXT_MARKER;
       if (typeof contentText === "string") {
         const markerIndex = contentText.lastIndexOf(marker);
         if (markerIndex >= 0) {
@@ -478,7 +478,7 @@ async function guardedGeminiFetch(
         const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
         const lastPart = lastTurn?.parts?.[0];
         const contentText = lastPart?.text;
-        const marker = "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n";
+        const marker = INNERME_WORKSPACE_CONTEXT_MARKER;
         if (typeof contentText !== "string") break;
         const markerIndex = contentText.lastIndexOf(marker);
         if (markerIndex < 0) break;
@@ -511,7 +511,7 @@ async function guardedGeminiFetch(
     const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
     const lastPart = lastTurn?.parts?.[0];
     const contentText = lastPart?.text;
-    const marker = "\\n\\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\\n";
+    const marker = INNERME_WORKSPACE_CONTEXT_MARKER;
     if (typeof contentText === "string") {
       const markerIndex = contentText.lastIndexOf(marker);
       if (markerIndex >= 0) {
@@ -11406,8 +11406,8 @@ Answer the admin's question directly.
                         : "none"
                     ) +
                     "\n\nWORKSPACE INTEGRITY RULES:\n" +
-                    "Use workspace_model_context_record_counts for the collections supplied after filters; workspace_source_record_counts reflect bounded query results, not guaranteed database-wide totals; loaded record indexes are pointers, not evidence for row-specific claims. Do not infer totals by counting compacted arrays. Honor workspace_model_context_exclusion_counts and workspace_intelligence_notes: self-owned and test enquiries are not genuine commercial opportunities. Use business_date_johannesburg and deterministic timing fields: earlier than the business date means overdue, the same date means due today, and later means upcoming. Never label a future date overdue. For deciding whether a contacted lead is unscheduled, use effective_follow_up_date, effective_follow_up_timing, effective_follow_up_source and linked_pending_followup_count. An active linked follow-up can exist even if the lead's own next_follow_up field is empty. Prefer linked active schedule records, and flag any conflict between the lead date and the earliest active linked follow-up. Cross-check follow-up lead_id/client_id values against supplied IDs, and flag true orphans and duplicates. Prioritise genuinely overdue and due-soon follow-ups over speculative preparation tasks.\n\n" +
-                    "CURRENT SWAYPHICS WORKSPACE DATA (JSON):\n" +
+                    "Use workspace_model_context_record_counts for the collections supplied after filters; workspace_source_record_counts reflect bounded query results, not guaranteed database-wide totals; loaded record indexes are pointers, not evidence for row-specific claims. Do not infer totals by counting compacted arrays. Honor workspace_model_context_exclusion_counts and workspace_intelligence_notes: self-owned and test enquiries are not genuine commercial opportunities. Use business_date_johannesburg and deterministic timing fields: earlier than the business date means overdue, the same date means due today, and later means upcoming. Never label a future date overdue. For deciding whether a contacted lead is unscheduled, use effective_follow_up_date, effective_follow_up_timing, effective_follow_up_source and linked_pending_followup_count. An active linked follow-up can exist even if the lead's own next_follow_up field is empty. Prefer linked active schedule records, and flag any conflict between the lead date and the earliest active linked follow-up. Cross-check follow-up lead_id/client_id values against supplied IDs, and flag true orphans and duplicates. Prioritise genuinely overdue and due-soon follow-ups over speculative preparation tasks." +
+                    INNERME_WORKSPACE_CONTEXT_MARKER +
                     JSON.stringify(compactInnerMeContextForModel(workspaceForPrompt, shouldLoadInnerMeEmailBodies(message) ? { emailBodyMaxChars: 1200 } : {})),
                 },
               ],
