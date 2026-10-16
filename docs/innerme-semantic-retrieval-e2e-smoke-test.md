@@ -26,11 +26,11 @@ The suite pins the six fixture keys, all twenty-eight case IDs, their types, exp
 
 ## What happens during a run
 
-1. GitHub Actions checks the explicit no-billing confirmation and the dedicated isolated-admin credentials.
+1. GitHub Actions requires the dedicated isolated-admin credentials for every run. If normal-chat checks are enabled, it also requires explicit confirmation that the isolated Gemini key belongs to a separate Google test project with billing disabled.
 2. The workflow checks out the versioned baseline and authenticates to the isolated project.
 3. The test-only Edge Function verifies the project ref, parses the signed-in user's bearer token with a separately unit-tested parser, verifies the active administrator, then validates the baseline contract.
 4. It creates six uniquely named synthetic records, uses the real built-in `gte-small` model to generate and save 384-dimensional embeddings, and executes twenty-four retrieval and eligibility cases. Fifteen new cases omit the domain filter and evaluate all fixtures together.
-5. It sends up to four read-only normal-chat requests to test grounding across invoice, appointment-rescheduling and warehouse-dispatch topics and check that irrelevant astronomy questions do not leak invoice knowledge into chat context.
+5. Only when `run_chat_checks=true`, it sends up to four read-only normal-chat requests to test grounding across invoice, appointment-rescheduling and warehouse-dispatch topics and check that irrelevant astronomy questions do not leak invoice knowledge into chat context. With the default `run_chat_checks=false`, all four normal-chat cases are skipped and no Gemini requests are made.
 6. It deletes all run-specific fixtures, confirms there are no residual rows, and returns a case-by-case result report.
 
 Each run has unique fixture slugs and domain names to avoid cross-run interference. Cleanup runs even if a fixture, retrieval or chat stage fails. A cleanup failure is a suite failure and must be resolved before rerunning.
