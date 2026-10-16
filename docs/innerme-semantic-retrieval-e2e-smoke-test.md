@@ -57,7 +57,7 @@ The same local, zero-provider-call selector is used by normal chat and the authe
 
 ## Running the suite
 
-Open the repository's Actions tab, choose **InnerMe Isolated Semantic Retrieval Regression Suite**, and select **Run workflow**. The default `run_chat_checks=true` runs the full suite and requires confirmation of the separate no-billing Google test project. Set `run_chat_checks=false` for retrieval-only mode when the isolated provider quota is unavailable or when avoiding provider calls: this mode skips exactly four normal-chat cases, makes no Gemini requests, and evaluates all retrieval and eligibility cases. It is a retrieval-only pass, not a full-suite pass.
+Open the repository's Actions tab, choose **InnerMe Isolated Semantic Retrieval Regression Suite**, and select **Run workflow**. By default, `run_chat_checks=false`, so a manual dispatch runs the retrieval and eligibility checks without Gemini chat requests. This mode skips exactly four normal-chat cases, makes no Gemini requests, and evaluates all retrieval and eligibility cases. To run full retrieval plus chat, explicitly set `run_chat_checks=true` and `confirm_no_billing=true` only after verifying that the isolated test key belongs to a separate Google project with billing disabled; full mode may make up to four provider requests. A retrieval-only pass does not establish normal-chat grounding.
 
 Workflow: `.github/workflows/innerme-semantic-retrieval-smoke.yml`.
 
