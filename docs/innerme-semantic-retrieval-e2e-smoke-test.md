@@ -15,12 +15,12 @@ The baseline includes six run-unique synthetic knowledge fixtures and thirteen p
 | Case family | Count | Required behaviour |
 |---|---:|---|
 | Relevant semantic retrieval | 3 | Natural-language queries retrieve the intended verified/current fixture at similarity `>= 0.80`. |
-| Irrelevant-query rejection | 1 | An unrelated astronomy query must not return the synthetic invoice fixture. |
+| Irrelevant-query rejection | 3 | Unrelated astronomy, cooking and algorithm queries must not return the synthetic invoice fixture. |
 | Eligibility exclusions | 3 | Stale, unverified, and expired-review records must not be returned even when the query matches their wording. |
 | Normal-chat grounding | 3 | Normal chat must report the correct verified fixture as retrieved evidence and reproduce its exact canary phrase. |
 | Normal-chat irrelevant-context exclusion | 1 | Normal chat must not retrieve the invoice fixture or reproduce its canary when asked an unrelated astronomy question. |
 
-The suite pins the six fixture keys, all thirteen case IDs, their types, expected outcomes, eligibility metadata, the 0.75 retrieval cutoff and the `gte-small` 384-dimensional retrieval contract. Case prompts, synthetic statements, titles and phrases are versioned in the JSON baseline. The endpoint rejects a baseline that changes the suite version, threshold, mandatory case IDs, expected match polarity, or exclusion fixture metadata without a corresponding helper change.
+The suite pins the six fixture keys, all thirteen case IDs, their types, expected outcomes, eligibility metadata, the 0.80 retrieval cutoff and the `gte-small` 384-dimensional retrieval contract. Case prompts, synthetic statements, titles and phrases are versioned in the JSON baseline. The endpoint rejects a baseline that changes the suite version, threshold, mandatory case IDs, expected match polarity, or exclusion fixture metadata without a corresponding helper change.
 
 ## What happens during a run
 
