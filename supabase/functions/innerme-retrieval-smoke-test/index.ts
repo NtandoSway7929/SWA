@@ -80,6 +80,7 @@ type RegressionCaseResult = {
   observed_fixture_keys?: string[];
   false_positive_fixture_keys?: string[];
   false_negative_fixture_keys?: string[];
+  unmapped_match_count?: number;
   error?: string;
 };
 
@@ -456,7 +457,11 @@ Deno.serve(async (req: Request) => {
             .filter((key): key is string => typeof key === "string"),
         )).sort();
         const expectedFixtureKeys = isCorpusWide ? [...test.expected_fixture_keys].sort() : [];
+        const unmappedMatchCount = isCorpusWide
+          ? matches.filter((item) => !slugToFixtureKey.has(String(item?.slug || ""))).length
+          : 0;
         const expectedSetMatchesObserved = isCorpusWide &&
+          unmappedMatchCount === 0 &&
           expectedFixtureKeys.length === observedFixtureKeys.length &&
           expectedFixtureKeys.every((key: string, index: number) => key === observedFixtureKeys[index]);
         const passed = isCorpusWide
@@ -482,10 +487,13 @@ Deno.serve(async (req: Request) => {
             observed_fixture_keys: observedFixtureKeys,
             false_positive_fixture_keys: falsePositiveFixtureKeys,
             false_negative_fixture_keys: falseNegativeFixtureKeys,
+            unmapped_match_count: unmappedMatchCount,
           } : {}),
           ...(passed ? {} : {
             error: isCorpusWide
-              ? "Expected corpus fixture set [" + expectedFixtureKeys.join(", ") + "] but observed [" + observedFixtureKeys.join(", ") + "]."
+              ? (unmappedMatchCount > 0
+                ? "Retrieved " + unmappedMatchCount + " result(s) outside the six run-specific fixtures."
+                : "Expected corpus fixture set [" + expectedFixtureKeys.join(", ") + "] but observed [" + observedFixtureKeys.join(", ") + "].")
               : "Expected target match=" + test.expected_match + " but observed match=" + observedMatch + ".",
           }),
         });
@@ -674,7 +682,8 @@ Deno.serve(async (req: Request) => {
     evaluated_cases: evaluatedCorpusCases.length,
     complete: evaluatedCorpusCases.length === totalCorpusCases,
     true_positives: truePositives,
-    false_positives: falsePositives,
+    false_positives: falsePositives + evaluatedCorpusCases.reduce((sum, item) => sum + (item.unmapped_match_count || 0), 0),
+    unmapped_result_count: evaluatedCorpusCases.reduce((sum, item) => sum + (item.unmapped_match_count || 0), 0),
     false_negatives: falseNegatives,
     precision: truePositives + falsePositives > 0 ? truePositives / (truePositives + falsePositives) : null,
     recall: truePositives + falseNegatives > 0 ? truePositives / (truePositives + falseNegatives) : null,
