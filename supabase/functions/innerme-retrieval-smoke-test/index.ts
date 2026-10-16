@@ -69,7 +69,7 @@ declare const Supabase: {
 type RegressionCaseResult = {
   id: string;
   type: string;
-  status: "passed" | "failed" | "inconclusive" | "not_run";
+  status: "passed" | "failed" | "inconclusive" | "not_run" | "skipped";
   fixture_key: string;
   expected_match: boolean;
   observed_match?: boolean;
@@ -83,6 +83,7 @@ type RegressionCaseResult = {
   unmapped_match_count?: number;
   retrieved_matches?: Array<{ fixture_key: string | null; similarity: number | null; rank: number }>;
   ranking_diagnostics?: { method: string; max_similarity_delta: number; candidate_count: number; selected_count: number; excluded_matches: Array<{ fixture_key: string | null; similarity: number | null; rank: number }> };
+  skip_reason?: string;
   error?: string;
 };
 
@@ -118,6 +119,9 @@ function validateBaseline(value: unknown): { baseline: any | null; error: string
     return { baseline: null, error: "The regression baseline must be a JSON object." };
   }
   const baseline = value as Record<string, any>;
+  if (baseline.run_chat_checks !== undefined && typeof baseline.run_chat_checks !== "boolean") {
+    return { baseline: null, error: "run_chat_checks must be a boolean when supplied." };
+  }
   if (baseline.suite_id !== SUITE_ID || baseline.baseline_version !== BASELINE_VERSION) {
     return { baseline: null, error: "The regression suite identifier or version is not supported by this helper." };
   }
@@ -280,9 +284,10 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: false, error: validation.error || "The regression baseline is invalid." }, 400);
   }
   const baseline = validation.baseline;
+  const runChatChecks = baseline.run_chat_checks !== false;
 
-  // Provider preflight is deliberately before all fixture writes and chat calls.
-  if (!Deno.env.get("GEMINI_API_KEY")) {
+  // Provider preflight is only required when normal-chat calls are included.
+  if (runChatChecks && !Deno.env.get("GEMINI_API_KEY")) {
     return jsonResponse({
       ok: false,
       status: "inconclusive",
@@ -540,6 +545,17 @@ Deno.serve(async (req: Request) => {
 
     // Each chat case must report the target knowledge evidence and reproduce its exact canary.
     for (const test of baseline.tests.filter((item: any) => item.type === "chat_grounding" || item.type === "chat_exclusion")) {
+      if (!runChatChecks) {
+        caseResults.push({
+          id: test.id,
+          type: test.type,
+          status: "skipped",
+          fixture_key: test.fixture_key,
+          expected_match: test.expected_match,
+          skip_reason: "Normal-chat checks were intentionally disabled; no provider request was made.",
+        });
+        continue;
+      }
       if (executionFailure) {
         recordNotRun(test, "Suite execution stopped after " + executionFailure.stage + ".");
         continue;
@@ -757,10 +773,12 @@ Deno.serve(async (req: Request) => {
     failed: failedCases.length,
     inconclusive: caseResults.filter((item) => item.status === "inconclusive").length,
     not_run: caseResults.filter((item) => item.status === "not_run").length,
+    skipped: caseResults.filter((item) => item.status === "skipped").length,
   };
   const payload = {
     ok: overallStatus === "passed",
     status: overallStatus,
+    run_mode: runChatChecks ? "full" : "retrieval_only",
     suite_id: SUITE_ID,
     baseline_version: BASELINE_VERSION,
     run_id: runId,

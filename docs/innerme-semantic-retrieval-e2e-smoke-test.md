@@ -37,7 +37,7 @@ Each run has unique fixture slugs and domain names to avoid cross-run interferen
 
 ## Ranking policy
 
-The same local, zero-provider-call selector is used by normal chat and the authenticated `search_knowledge` test action. It keeps all results no more than `0.04` similarity below the best result for each query, preserving multiple closely ranked pieces of evidence while removing weak tail matches. `scripts/innerme-retrieval-ranking.test.mjs` pins all nine positive corpus-query score sets observed in run #7 attempt 2 and verifies that the selected evidence contains the expected fixture. The absolute `0.80` threshold and all eligibility conditions remain in force.
+The same local, zero-provider-call selector is used by normal chat and the authenticated `search_knowledge` test action. It keeps all results no more than `0.035` similarity below the best result for each query, preserving multiple closely ranked pieces of evidence while removing weak tail matches. `scripts/innerme-retrieval-ranking.test.mjs` pins all nine positive corpus-query score sets observed in run #7 attempt 2 and verifies that the selected evidence contains the expected fixture. The absolute `0.80` threshold and all eligibility conditions remain in force.
 
 ## Security and cost boundaries
 
@@ -45,19 +45,19 @@ The same local, zero-provider-call selector is used by normal chat and the authe
 - Fixture database operations use the caller's authenticated JWT and the existing active-admin RLS policy. The isolated-only grants file is `supabase/isolated-test/innerme-semantic-retrieval-smoke-test-grants.sql`; it must never be applied to production.
 - `service_role` retains no direct privileges on `public.innerme_knowledge`. The helper uses its server-side service key only to validate the user's session and active-admin record.
 - `gte-small` embeddings use Supabase's built-in Edge Runtime AI interface. No external embedding provider is called.
-- The normal-chat checks make up to four real provider chat requests. Keep the isolated Gemini key in a separate Google test project with billing disabled. Do not reuse the production key. The workflow requires explicit confirmation before it runs.
+- The full-mode normal-chat checks make up to four provider chat requests. Keep the isolated Gemini key in a separate Google test project with billing disabled. Do not reuse the production key. The workflow requires explicit confirmation before full mode runs. Retrieval-only mode makes no Gemini requests.
 - The suite does not create or execute proposals, send email, mutate real business records, or copy production knowledge rows.
 
 ## Regression and inconclusive-result policy
 
 - If a pinned case executes successfully but its expected retrieval/grounding assertion is false, the case is marked **failed**. The workflow exits non-zero, blocking the regression gate.
 - If a provider, Edge Function, authentication, embedding or retrieval execution error prevents a trustworthy assertion, the run is marked **inconclusive**, not misreported as an answer-quality regression. The workflow still exits non-zero, so the pipeline cannot silently treat it as a pass.
-- A complete pass requires all twenty-eight cases to pass, corpus metrics to cover all fifteen corpus-wide cases, and all synthetic fixtures to be confirmed removed.
-- The workflow writes a case table to the GitHub Actions run summary and uploads two files as an artifact: the full case-level result JSON and the exact baseline JSON used. The result includes the baseline SHA-256, GitHub run ID, commit, per-case status/similarity, ordered fixture ranks and similarity scores, and cleanup state. Artifacts are retained for 90 days; the versioned expected-case baseline remains in Git.
+- A full-mode pass requires all twenty-eight cases to pass, corpus metrics to cover all fifteen corpus-wide cases, and all synthetic fixtures to be confirmed removed. Retrieval-only mode requires all twenty-four retrieval/eligibility cases to pass, the four normal-chat cases to be marked intentionally skipped, complete corpus metrics, and verified fixture cleanup; it does not claim normal-chat grounding has passed.
+- The workflow writes a case table to the GitHub Actions run summary and uploads the full case-level result JSON, the exact versioned baseline, and the effective request JSON (including whether chat checks were enabled). The result includes the baseline SHA-256, GitHub run ID, commit, per-case status/similarity, ordered fixture ranks and similarity scores, and cleanup state. Artifacts are retained for 90 days; the versioned expected-case baseline remains in Git.
 
 ## Running the suite
 
-Open the repository's Actions tab, choose **InnerMe Isolated Semantic Retrieval Regression Suite**, select **Run workflow**, and confirm the separate no-billing Google test project prerequisite.
+Open the repository's Actions tab, choose **InnerMe Isolated Semantic Retrieval Regression Suite**, and select **Run workflow**. The default `run_chat_checks=true` runs the full suite and requires confirmation of the separate no-billing Google test project. Set `run_chat_checks=false` for retrieval-only mode when the isolated provider quota is unavailable or when avoiding provider calls: this mode skips exactly four normal-chat cases, makes no Gemini requests, and evaluates all retrieval and eligibility cases. It is a retrieval-only pass, not a full-suite pass.
 
 Workflow: `.github/workflows/innerme-semantic-retrieval-smoke.yml`.
 

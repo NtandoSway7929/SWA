@@ -8,6 +8,11 @@ on:
         required: true
         type: boolean
         default: false
+      run_chat_checks:
+        description: "Include normal-chat grounding checks (uses up to four isolated provider requests)"
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -18,7 +23,7 @@ concurrency:
 
 jobs:
   semantic-retrieval-regression:
-    name: Verify retrieval quality, eligibility filters and chat grounding
+    name: Verify InnerMe retrieval, eligibility and optional chat grounding
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -28,10 +33,11 @@ jobs:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
           CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
+          RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks }}
         run: |
           set -euo pipefail
-          if [[ "${CONFIRM_NO_BILLING}" != "true" ]]; then
-            echo "::error::Stop: confirm that the isolated test provider key belongs to a separate Google project with billing disabled."
+          if [[ "${RUN_CHAT_CHECKS}" == "true" && "${CONFIRM_NO_BILLING}" != "true" ]]; then
+            echo "::error::Stop: full mode requires confirmation that the isolated test provider key belongs to a separate Google project with billing disabled."
             exit 1
           fi
           for name in INNERME_TEST_ADMIN_EMAIL INNERME_TEST_ADMIN_PASSWORD; do
@@ -49,6 +55,7 @@ jobs:
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+          RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           GITHUB_SHA: ${{ github.sha }}
@@ -98,6 +105,17 @@ jobs:
           # Send the versioned baseline itself. The Edge Function independently
           # pins the required IDs, case types, eligibility rules and threshold.
           cp "${BASELINE_PATH}" /tmp/innerme-semantic-baseline-request.json
+          RUN_CHAT_CHECKS="${RUN_CHAT_CHECKS}" python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          path = Path("/tmp/innerme-semantic-baseline-request.json")
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          payload["run_chat_checks"] = os.environ["RUN_CHAT_CHECKS"].strip().lower() == "true"
+          path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+          PY
+          EFFECTIVE_REQUEST_PATH="innerme-semantic-retrieval-effective-request.json"
+          cp /tmp/innerme-semantic-baseline-request.json "${EFFECTIVE_REQUEST_PATH}"
           test_status="$(curl --silent --show-error --max-time 420 \
             -D /tmp/innerme-semantic-regression-headers.txt \
             -o /tmp/innerme-semantic-regression-response.json \
@@ -109,6 +127,7 @@ jobs:
             --data-binary @/tmp/innerme-semantic-baseline-request.json)"
 
           BASELINE_PATH="${BASELINE_PATH}" RESULT_PATH="${RESULT_PATH}" \
+          REQUEST_PATH="${EFFECTIVE_REQUEST_PATH}" RUN_CHAT_CHECKS="${RUN_CHAT_CHECKS}" \
           TEST_HTTP_STATUS="${test_status}" GITHUB_RUN_ID="${GITHUB_RUN_ID}" \
           GITHUB_RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT}" GITHUB_SHA="${GITHUB_SHA}" \
           python3 - <<'PY'
@@ -122,6 +141,8 @@ jobs:
           http_status = os.environ["TEST_HTTP_STATUS"]
           baseline_bytes = baseline_path.read_bytes()
           baseline = json.loads(baseline_bytes)
+          effective_request_bytes = Path(os.environ["REQUEST_PATH"]).read_bytes()
+          run_mode = "full" if os.environ["RUN_CHAT_CHECKS"].strip().lower() == "true" else "retrieval_only"
           raw = Path("/tmp/innerme-semantic-regression-response.json").read_text(encoding="utf-8", errors="replace")
 
           valid_json_response = True
@@ -185,6 +206,8 @@ jobs:
               **payload,
               "http_status": int(http_status) if http_status.isdigit() else None,
               "baseline_sha256": hashlib.sha256(baseline_bytes).hexdigest(),
+              "effective_request_sha256": hashlib.sha256(effective_request_bytes).hexdigest(),
+              "run_mode": run_mode,
               "github_run_id": os.environ["GITHUB_RUN_ID"],
               "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
               "github_commit": os.environ["GITHUB_SHA"],
@@ -203,6 +226,8 @@ jobs:
           print("CASES_FAILED=" + str(counts.get("failed", 0)))
           print("CASES_INCONCLUSIVE=" + str(counts.get("inconclusive", 0)))
           print("CASES_NOT_RUN=" + str(counts.get("not_run", 0)))
+          print("CASES_SKIPPED=" + str(counts.get("skipped", 0)))
+          print("RUN_MODE=" + str(result.get("run_mode", "full")))
           print("CLEANUP_PASSED=" + str(cleanup.get("passed") is True and cleanup.get("fixture_removed") is True))
 
           summary = [
@@ -210,10 +235,12 @@ jobs:
               "",
               f"**Overall status:** {status.upper()}",
               "",
+              f"- Run mode: {'full retrieval + chat' if result.get('run_mode', 'full') == 'full' else 'retrieval-only; normal-chat cases intentionally skipped'}",
+              f"- Effective request SHA-256: `{result.get('effective_request_sha256', 'unavailable')}`",
               f"- Baseline: `{result.get('baseline_version', baseline.get('baseline_version'))}`",
               f"- Baseline SHA-256: `{result['baseline_sha256']}`",
               f"- Run ID: `{os.environ['GITHUB_RUN_ID']}` (attempt {os.environ['GITHUB_RUN_ATTEMPT']})",
-              f"- Cases: {counts.get('passed', 0)} passed, {counts.get('failed', 0)} failed, {counts.get('inconclusive', 0)} inconclusive, {counts.get('not_run', 0)} not run",
+              f"- Cases: {counts.get('passed', 0)} passed, {counts.get('failed', 0)} failed, {counts.get('inconclusive', 0)} inconclusive, {counts.get('not_run', 0)} not run, {counts.get('skipped', 0)} intentionally skipped",
               f"- Fixture cleanup: {'PASS' if cleanup.get('passed') is True and cleanup.get('fixture_removed') is True else 'FAIL'}",
               "",
               "| Case | Type | Status | Similarity | Retrieved target | Grounded phrase | Expected corpus fixtures | Observed corpus fixtures | False positives | False negatives | Ranked matches (fixture@similarity) | Candidates→selected | Excluded by score gap |",
@@ -277,13 +304,21 @@ jobs:
 
           if status != "passed" or http_status != "200" or result.get("ok") is not True:
               raise SystemExit("Semantic retrieval regression suite did not pass; inspect the case table and archived result.")
-          if counts.get("passed") != counts.get("total") or counts.get("failed") != 0:
-              raise SystemExit("Not all pinned regression cases passed.")
+          skipped_count = int(counts.get("skipped", 0))
+          if counts.get("passed", 0) + skipped_count != counts.get("total") or counts.get("failed", 0) != 0:
+              raise SystemExit("Not all required regression cases passed or were intentionally skipped.")
+          if result.get("run_mode", "full") == "full" and skipped_count != 0:
+              raise SystemExit("Full mode must execute every pinned regression case.")
+          if result.get("run_mode") == "retrieval_only" and skipped_count != 4:
+              raise SystemExit("Retrieval-only mode must explicitly skip exactly the four pinned normal-chat cases.")
           if (result.get("retrieval_metrics") or {}).get("complete") is not True:
               raise SystemExit("Corpus-wide precision/recall metrics did not cover every pinned corpus case.")
           if cleanup.get("passed") is not True or cleanup.get("fixture_removed") is not True:
               raise SystemExit("Synthetic fixture cleanup was not verified.")
-          print("PASS: every versioned semantic retrieval regression case passed and all synthetic fixtures were removed.")
+          if result.get("run_mode", "full") == "retrieval_only":
+              print("PASS: all required retrieval/eligibility cases passed, chat cases were intentionally skipped, and all synthetic fixtures were removed.")
+          else:
+              print("PASS: every versioned semantic retrieval regression case passed and all synthetic fixtures were removed.")
           PY
 
       - name: Archive case-level result and exact baseline
@@ -294,5 +329,6 @@ jobs:
           path: |
             innerme-semantic-retrieval-regression-result.json
             supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json
+            innerme-semantic-retrieval-effective-request.json
           if-no-files-found: warn
           retention-days: 90
