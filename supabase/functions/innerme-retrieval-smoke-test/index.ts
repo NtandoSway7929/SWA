@@ -5,7 +5,7 @@ import { extractBearerToken } from "./auth-header.mjs";
 // It hard-refuses every Supabase project except the isolated project below.
 const ISOLATED_PROJECT_REF = "ofqofhnlzbouclvvrmzd";
 const SUITE_ID = "innerme_semantic_retrieval_regression";
-const BASELINE_VERSION = "1.1.0";
+const BASELINE_VERSION = "1.2.0";
 const EMBEDDING_MODEL = "gte-small";
 const EMBEDDING_DIMENSIONS = 384;
 
@@ -18,20 +18,35 @@ const REQUIRED_FIXTURE_KEYS = [
   "expired_review",
 ] as const;
 
-const REQUIRED_TESTS: Record<string, { type: string; fixture_key: string; expected_match: boolean }> = {
-  semantic_invoice_match: { type: "retrieval_positive", fixture_key: "invoice", expected_match: true },
-  semantic_appointment_match: { type: "retrieval_positive", fixture_key: "appointment", expected_match: true },
-  semantic_dispatch_match: { type: "retrieval_positive", fixture_key: "dispatch", expected_match: true },
-  semantic_irrelevant_query_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
-  semantic_irrelevant_cooking_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
-  semantic_irrelevant_algorithm_excluded: { type: "retrieval_negative", fixture_key: "invoice", expected_match: false },
-  semantic_stale_knowledge_excluded: { type: "eligibility_exclusion", fixture_key: "stale", expected_match: false },
-  semantic_unverified_knowledge_excluded: { type: "eligibility_exclusion", fixture_key: "unverified", expected_match: false },
-  semantic_expired_review_excluded: { type: "eligibility_exclusion", fixture_key: "expired_review", expected_match: false },
-  normal_chat_invoice_grounding: { type: "chat_grounding", fixture_key: "invoice", expected_match: true },
-  normal_chat_appointment_grounding: { type: "chat_grounding", fixture_key: "appointment", expected_match: true },
-  normal_chat_dispatch_grounding: { type: "chat_grounding", fixture_key: "dispatch", expected_match: true },
-  normal_chat_irrelevant_invoice_exclusion: { type: "chat_exclusion", fixture_key: "invoice", expected_match: false },
+const REQUIRED_TESTS: Record<string, { type: string; fixture_key: string; expected_match: boolean; retrieval_scope?: "fixture" | "corpus"; expected_fixture_keys?: string[] }> = {
+  semantic_invoice_match: {"type":"retrieval_positive","fixture_key":"invoice","expected_match":true},
+  semantic_appointment_match: {"type":"retrieval_positive","fixture_key":"appointment","expected_match":true},
+  semantic_dispatch_match: {"type":"retrieval_positive","fixture_key":"dispatch","expected_match":true},
+  semantic_irrelevant_query_excluded: {"type":"retrieval_negative","fixture_key":"invoice","expected_match":false},
+  semantic_irrelevant_cooking_excluded: {"type":"retrieval_negative","fixture_key":"invoice","expected_match":false},
+  semantic_irrelevant_algorithm_excluded: {"type":"retrieval_negative","fixture_key":"invoice","expected_match":false},
+  semantic_stale_knowledge_excluded: {"type":"eligibility_exclusion","fixture_key":"stale","expected_match":false},
+  semantic_unverified_knowledge_excluded: {"type":"eligibility_exclusion","fixture_key":"unverified","expected_match":false},
+  semantic_expired_review_excluded: {"type":"eligibility_exclusion","fixture_key":"expired_review","expected_match":false},
+  normal_chat_invoice_grounding: {"type":"chat_grounding","fixture_key":"invoice","expected_match":true},
+  normal_chat_appointment_grounding: {"type":"chat_grounding","fixture_key":"appointment","expected_match":true},
+  normal_chat_dispatch_grounding: {"type":"chat_grounding","fixture_key":"dispatch","expected_match":true},
+  normal_chat_irrelevant_invoice_exclusion: {"type":"chat_exclusion","fixture_key":"invoice","expected_match":false},
+  corpus_invoice_paraphrase_1: {"type":"corpus_retrieval_positive","fixture_key":"invoice","expected_match":true,"retrieval_scope":"corpus","expected_fixture_keys":["invoice"]},
+  corpus_invoice_paraphrase_2: {"type":"corpus_retrieval_positive","fixture_key":"invoice","expected_match":true,"retrieval_scope":"corpus","expected_fixture_keys":["invoice"]},
+  corpus_invoice_paraphrase_3: {"type":"corpus_retrieval_positive","fixture_key":"invoice","expected_match":true,"retrieval_scope":"corpus","expected_fixture_keys":["invoice"]},
+  corpus_appointment_paraphrase_1: {"type":"corpus_retrieval_positive","fixture_key":"appointment","expected_match":true,"retrieval_scope":"corpus","expected_fixture_keys":["appointment"]},
+  corpus_appointment_paraphrase_2: {"type":"corpus_retrieval_positive","fixture_key":"appointment","expected_match":true,"retrieval_scope":"corpus","expected_fixture_keys":["appointment"]},
+  corpus_appointment_paraphrase_3: {"type":"corpus_retrieval_positive","fixture_key":"appointment","expected_match":true,"retrieval_scope":"corpus","expected_fixture_keys":["appointment"]},
+  corpus_dispatch_paraphrase_1: {"type":"corpus_retrieval_positive","fixture_key":"dispatch","expected_match":true,"retrieval_scope":"corpus","expected_fixture_keys":["dispatch"]},
+  corpus_dispatch_paraphrase_2: {"type":"corpus_retrieval_positive","fixture_key":"dispatch","expected_match":true,"retrieval_scope":"corpus","expected_fixture_keys":["dispatch"]},
+  corpus_dispatch_paraphrase_3: {"type":"corpus_retrieval_positive","fixture_key":"dispatch","expected_match":true,"retrieval_scope":"corpus","expected_fixture_keys":["dispatch"]},
+  corpus_irrelevant_lunar_phases: {"type":"corpus_retrieval_negative","fixture_key":"invoice","expected_match":false,"retrieval_scope":"corpus","expected_fixture_keys":[]},
+  corpus_irrelevant_guitar_tuning: {"type":"corpus_retrieval_negative","fixture_key":"invoice","expected_match":false,"retrieval_scope":"corpus","expected_fixture_keys":[]},
+  corpus_irrelevant_tomato_soil: {"type":"corpus_retrieval_negative","fixture_key":"invoice","expected_match":false,"retrieval_scope":"corpus","expected_fixture_keys":[]},
+  corpus_irrelevant_ocean_tides: {"type":"corpus_retrieval_negative","fixture_key":"invoice","expected_match":false,"retrieval_scope":"corpus","expected_fixture_keys":[]},
+  corpus_irrelevant_mountain_pressure: {"type":"corpus_retrieval_negative","fixture_key":"invoice","expected_match":false,"retrieval_scope":"corpus","expected_fixture_keys":[]},
+  corpus_irrelevant_chess_opening: {"type":"corpus_retrieval_negative","fixture_key":"invoice","expected_match":false,"retrieval_scope":"corpus","expected_fixture_keys":[]},
 };
 
 const REQUIRED_FIXTURE_POLICY: Record<string, { status: string; verification_status: string; review_window: string }> = {
@@ -61,6 +76,11 @@ type RegressionCaseResult = {
   similarity?: number | null;
   knowledge_match?: boolean;
   answer_contains_expected_phrase?: boolean;
+  expected_fixture_keys?: string[];
+  observed_fixture_keys?: string[];
+  false_positive_fixture_keys?: string[];
+  false_negative_fixture_keys?: string[];
+  unmapped_match_count?: number;
   error?: string;
 };
 
@@ -116,7 +136,7 @@ function validateBaseline(value: unknown): { baseline: any | null; error: string
     calibration.lowest_positive_similarity !== 0.900932317916614 ||
     calibration.chosen_threshold !== 0.8
   ) {
-    return { baseline: null, error: "Threshold calibration evidence does not match the reviewed baseline v1.1.0." };
+    return { baseline: null, error: "Threshold calibration evidence does not match the pinned calibration record." };
   }
 
   if (!Array.isArray(baseline.fixtures) || !Array.isArray(baseline.tests)) {
@@ -163,7 +183,7 @@ function validateBaseline(value: unknown): { baseline: any | null; error: string
   }
   const requiredIds = Object.keys(REQUIRED_TESTS);
   if (tests.size !== requiredIds.length || requiredIds.some((id) => !tests.has(id))) {
-    return { baseline: null, error: "The baseline must include all ten pinned regression cases." };
+    return { baseline: null, error: "The baseline must include all " + requiredIds.length + " pinned regression cases." };
   }
 
   for (const [id, pinned] of Object.entries(REQUIRED_TESTS)) {
@@ -172,6 +192,8 @@ function validateBaseline(value: unknown): { baseline: any | null; error: string
       test.type !== pinned.type ||
       test.fixture_key !== pinned.fixture_key ||
       test.expected_match !== pinned.expected_match ||
+      (test.retrieval_scope || "fixture") !== (pinned.retrieval_scope || "fixture") ||
+      (pinned.retrieval_scope === "corpus" && (!Array.isArray(test.expected_fixture_keys) || JSON.stringify(test.expected_fixture_keys) !== JSON.stringify(pinned.expected_fixture_keys))) ||
       !isNonEmptyString(test.query) ||
       test.query.length > 1200
     ) {
@@ -299,6 +321,7 @@ Deno.serve(async (req: Request) => {
       status: "not_run",
       fixture_key: test.fixture_key,
       expected_match: test.expected_match,
+      ...(Array.isArray(test.expected_fixture_keys) ? { expected_fixture_keys: test.expected_fixture_keys } : {}),
       error: reason.slice(0, 300),
     });
   }
@@ -399,7 +422,7 @@ Deno.serve(async (req: Request) => {
             query: test.query,
             match_threshold: baseline.retrieval_similarity_threshold,
             match_count: 6,
-            filter_domain: fixture.domain + "-" + runId,
+            ...(test.retrieval_scope === "corpus" ? {} : { filter_domain: fixture.domain + "-" + runId }),
             filter_jurisdiction: "Global",
             filter_knowledge_type: fixture.knowledge_type,
           }),
@@ -419,12 +442,38 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const matches = Array.isArray(searchPayload.matches) ? searchPayload.matches : [];
+        const matches: Array<Record<string, unknown>> = Array.isArray(searchPayload.matches)
+          ? searchPayload.matches as Array<Record<string, unknown>>
+          : [];
         const match = matches.find((item: Record<string, unknown>) => item?.slug === targetSlug);
         const observedMatch = Boolean(match);
         const similarity = match ? Number(match.similarity) : null;
-        const passed = observedMatch === test.expected_match &&
-          (!test.expected_match || (Number.isFinite(similarity) && Number(similarity) >= baseline.retrieval_similarity_threshold));
+        const isCorpusWide = test.retrieval_scope === "corpus";
+        const slugToFixtureKey = new Map<string, string>();
+        for (const [key, slug] of fixtureSlugs.entries()) slugToFixtureKey.set(slug, key);
+        const observedFixtureKeys: string[] = Array.from(new Set(
+          matches
+            .map((item) => slugToFixtureKey.get(String(item?.slug || "")))
+            .filter((key): key is string => typeof key === "string"),
+        )).sort();
+        const expectedFixtureKeys = isCorpusWide ? [...test.expected_fixture_keys].sort() : [];
+        const unmappedMatchCount = isCorpusWide
+          ? matches.filter((item) => !slugToFixtureKey.has(String(item?.slug || ""))).length
+          : 0;
+        const expectedSetMatchesObserved = isCorpusWide &&
+          unmappedMatchCount === 0 &&
+          expectedFixtureKeys.length === observedFixtureKeys.length &&
+          expectedFixtureKeys.every((key: string, index: number) => key === observedFixtureKeys[index]);
+        const passed = isCorpusWide
+          ? expectedSetMatchesObserved
+          : observedMatch === test.expected_match &&
+            (!test.expected_match || (Number.isFinite(similarity) && Number(similarity) >= baseline.retrieval_similarity_threshold));
+        const falsePositiveFixtureKeys = isCorpusWide
+          ? observedFixtureKeys.filter((key: string) => !expectedFixtureKeys.includes(key))
+          : [];
+        const falseNegativeFixtureKeys = isCorpusWide
+          ? expectedFixtureKeys.filter((key: string) => !observedFixtureKeys.includes(key))
+          : [];
         caseResults.push({
           id: test.id,
           type: test.type,
@@ -433,8 +482,19 @@ Deno.serve(async (req: Request) => {
           expected_match: test.expected_match,
           observed_match: observedMatch,
           similarity: Number.isFinite(similarity) ? similarity : null,
+          ...(isCorpusWide ? {
+            expected_fixture_keys: expectedFixtureKeys,
+            observed_fixture_keys: observedFixtureKeys,
+            false_positive_fixture_keys: falsePositiveFixtureKeys,
+            false_negative_fixture_keys: falseNegativeFixtureKeys,
+            unmapped_match_count: unmappedMatchCount,
+          } : {}),
           ...(passed ? {} : {
-            error: "Expected target match=" + test.expected_match + " but observed match=" + observedMatch + ".",
+            error: isCorpusWide
+              ? (unmappedMatchCount > 0
+                ? "Retrieved " + unmappedMatchCount + " result(s) outside the six run-specific fixtures."
+                : "Expected corpus fixture set [" + expectedFixtureKeys.join(", ") + "] but observed [" + observedFixtureKeys.join(", ") + "].")
+              : "Expected target match=" + test.expected_match + " but observed match=" + observedMatch + ".",
           }),
         });
       } catch (error) {
@@ -594,6 +654,46 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  const corpusCaseIds = new Set(
+    baseline.tests
+      .filter((item: any) => item.retrieval_scope === "corpus")
+      .map((item: any) => item.id),
+  );
+  const evaluatedCorpusCases = caseResults.filter((item) =>
+    corpusCaseIds.has(item.id) &&
+    Array.isArray(item.expected_fixture_keys) &&
+    Array.isArray(item.observed_fixture_keys)
+  );
+  let truePositives = 0;
+  let falsePositives = 0;
+  let falseNegatives = 0;
+  for (const item of evaluatedCorpusCases) {
+    const expected = item.expected_fixture_keys || [];
+    const observed = item.observed_fixture_keys || [];
+    truePositives += expected.filter((key: string) => observed.includes(key)).length;
+    falsePositives += observed.filter((key: string) => !expected.includes(key)).length;
+    falseNegatives += expected.filter((key: string) => !observed.includes(key)).length;
+  }
+  const evaluatedNegativeCases = evaluatedCorpusCases.filter((item) => (item.expected_fixture_keys || []).length === 0);
+  const rejectedNegativeCases = evaluatedNegativeCases.filter((item) => (item.observed_fixture_keys || []).length === 0);
+  const totalCorpusCases = corpusCaseIds.size;
+  const retrievalMetrics = {
+    total_cases: totalCorpusCases,
+    evaluated_cases: evaluatedCorpusCases.length,
+    complete: evaluatedCorpusCases.length === totalCorpusCases,
+    true_positives: truePositives,
+    false_positives: falsePositives + evaluatedCorpusCases.reduce((sum, item) => sum + (item.unmapped_match_count || 0), 0),
+    unmapped_result_count: evaluatedCorpusCases.reduce((sum, item) => sum + (item.unmapped_match_count || 0), 0),
+    false_negatives: falseNegatives,
+    precision: truePositives + falsePositives > 0 ? truePositives / (truePositives + falsePositives) : null,
+    recall: truePositives + falseNegatives > 0 ? truePositives / (truePositives + falseNegatives) : null,
+    unrelated_query_count: evaluatedNegativeCases.length,
+    unrelated_queries_rejected: rejectedNegativeCases.length,
+    unrelated_query_rejection_rate: evaluatedNegativeCases.length > 0
+      ? rejectedNegativeCases.length / evaluatedNegativeCases.length
+      : null,
+  };
+
   const failedCases = caseResults.filter((item) => item.status === "failed");
   const inconclusiveCases = caseResults.filter((item) => item.status === "inconclusive" || item.status === "not_run");
   let overallStatus: "passed" | "failed" | "inconclusive" = "passed";
@@ -622,6 +722,7 @@ Deno.serve(async (req: Request) => {
     model: EMBEDDING_MODEL,
     embedding_dimensions: embeddingDimensions,
     retrieval_similarity_threshold: baseline.retrieval_similarity_threshold,
+    retrieval_metrics: retrievalMetrics,
     counts,
     case_results: caseResults,
     cleanup: {

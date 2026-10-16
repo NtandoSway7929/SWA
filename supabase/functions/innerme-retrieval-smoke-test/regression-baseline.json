@@ -1,6 +1,6 @@
 {
   "suite_id": "innerme_semantic_retrieval_regression",
-  "baseline_version": "1.1.0",
+  "baseline_version": "1.2.0",
   "retrieval_similarity_threshold": 0.8,
   "embedding_model": "gte-small",
   "embedding_dimensions": 384,
@@ -169,6 +169,159 @@
       "fixture_key": "invoice",
       "query": "Explain the orbital period and upper-atmosphere temperature of the exoplanet Kepler-452b. Do not use unrelated business records.",
       "expected_match": false
+    },
+    {
+      "id": "corpus_invoice_paraphrase_1",
+      "type": "corpus_retrieval_positive",
+      "fixture_key": "invoice",
+      "expected_match": true,
+      "query": "In the accounts workflow, which exact reference phrase marks the period when an invoice is processed?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": [
+        "invoice"
+      ]
+    },
+    {
+      "id": "corpus_invoice_paraphrase_2",
+      "type": "corpus_retrieval_positive",
+      "fixture_key": "invoice",
+      "expected_match": true,
+      "query": "I need to identify the invoice workflow's processing period. What exact label is stored for it?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": [
+        "invoice"
+      ]
+    },
+    {
+      "id": "corpus_invoice_paraphrase_3",
+      "type": "corpus_retrieval_positive",
+      "fixture_key": "invoice",
+      "expected_match": true,
+      "query": "Which marker should I look up to identify the processing window for a billing invoice?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": [
+        "invoice"
+      ]
+    },
+    {
+      "id": "corpus_appointment_paraphrase_1",
+      "type": "corpus_retrieval_positive",
+      "fixture_key": "appointment",
+      "expected_match": true,
+      "query": "A customer needs to move a booking. Which exact token confirms the appointment rescheduling request?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": [
+        "appointment"
+      ]
+    },
+    {
+      "id": "corpus_appointment_paraphrase_2",
+      "type": "corpus_retrieval_positive",
+      "fixture_key": "appointment",
+      "expected_match": true,
+      "query": "What confirmation phrase is associated with changing a scheduled appointment?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": [
+        "appointment"
+      ]
+    },
+    {
+      "id": "corpus_appointment_paraphrase_3",
+      "type": "corpus_retrieval_positive",
+      "fixture_key": "appointment",
+      "expected_match": true,
+      "query": "When rearranging a booked time slot, what reference phrase confirms the change?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": [
+        "appointment"
+      ]
+    },
+    {
+      "id": "corpus_dispatch_paraphrase_1",
+      "type": "corpus_retrieval_positive",
+      "fixture_key": "dispatch",
+      "expected_match": true,
+      "query": "Which identifier is used to check the audit trail when warehouse goods are dispatched?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": [
+        "dispatch"
+      ]
+    },
+    {
+      "id": "corpus_dispatch_paraphrase_2",
+      "type": "corpus_retrieval_positive",
+      "fixture_key": "dispatch",
+      "expected_match": true,
+      "query": "What exact reference marks the dispatch audit for goods leaving the warehouse?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": [
+        "dispatch"
+      ]
+    },
+    {
+      "id": "corpus_dispatch_paraphrase_3",
+      "type": "corpus_retrieval_positive",
+      "fixture_key": "dispatch",
+      "expected_match": true,
+      "query": "I'm reviewing outbound stock movement. Which phrase identifies the warehouse dispatch check?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": [
+        "dispatch"
+      ]
+    },
+    {
+      "id": "corpus_irrelevant_lunar_phases",
+      "type": "corpus_retrieval_negative",
+      "fixture_key": "invoice",
+      "expected_match": false,
+      "query": "Why does the Moon appear to change shape during its monthly cycle?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": []
+    },
+    {
+      "id": "corpus_irrelevant_guitar_tuning",
+      "type": "corpus_retrieval_negative",
+      "fixture_key": "invoice",
+      "expected_match": false,
+      "query": "How should a guitarist tune the low E string on a standard six-string guitar?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": []
+    },
+    {
+      "id": "corpus_irrelevant_tomato_soil",
+      "type": "corpus_retrieval_negative",
+      "fixture_key": "invoice",
+      "expected_match": false,
+      "query": "What soil pH range is most suitable for growing tomato seedlings?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": []
+    },
+    {
+      "id": "corpus_irrelevant_ocean_tides",
+      "type": "corpus_retrieval_negative",
+      "fixture_key": "invoice",
+      "expected_match": false,
+      "query": "How do gravitational forces create tidal cycles in ocean bays?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": []
+    },
+    {
+      "id": "corpus_irrelevant_mountain_pressure",
+      "type": "corpus_retrieval_negative",
+      "fixture_key": "invoice",
+      "expected_match": false,
+      "query": "Why does atmospheric pressure decrease at high mountain elevations?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": []
+    },
+    {
+      "id": "corpus_irrelevant_chess_opening",
+      "type": "corpus_retrieval_negative",
+      "fixture_key": "invoice",
+      "expected_match": false,
+      "query": "What are common strategic goals in the Queen's Gambit chess opening?",
+      "retrieval_scope": "corpus",
+      "expected_fixture_keys": []
     }
   ],
   "threshold_calibration": {

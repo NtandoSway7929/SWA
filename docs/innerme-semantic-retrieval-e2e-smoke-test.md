@@ -6,28 +6,30 @@ The original single-canary runtime smoke test has been expanded into a fixed, ve
 
 Canonical baseline: `supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json`.
 
-Current baseline version: **1.1.0**. Run #5 attempt 2 exposed a false positive at similarity 0.7172 for an unrelated query. The lowest relevant match in that run was 0.9009. Version 1.1.0 chooses a 0.80 cutoff between those measured scores, records the calibration evidence in the baseline, adds unrelated cooking and algorithm queries, and checks normal-chat irrelevant-context exclusion.
+Current baseline version: **1.2.0**. Run #5 attempt 2 exposed a false positive at similarity 0.7172 for an unrelated query. The lowest relevant match in that run was 0.9009. Version 1.2.0 retains the calibrated 0.80 cutoff and adds fifteen corpus-wide queries across invoice, appointment and dispatch paraphrases plus unrelated subjects. Unlike the original fixture-scoped checks, these cases search the complete temporary corpus and assert the exact expected fixture set, allowing case-level precision, recall, and unrelated-query rejection to be measured.
 
 ## Fixed coverage
 
-The baseline includes six run-unique synthetic knowledge fixtures and thirteen pinned test cases:
+The baseline includes six run-unique synthetic knowledge fixtures and twenty-eight pinned test cases:
 
 | Case family | Count | Required behaviour |
 |---|---:|---|
-| Relevant semantic retrieval | 3 | Natural-language queries retrieve the intended verified/current fixture at similarity `>= 0.80`. |
-| Irrelevant-query rejection | 3 | Unrelated astronomy, cooking and algorithm queries must not return the synthetic invoice fixture. |
-| Eligibility exclusions | 3 | Stale, unverified, and expired-review records must not be returned even when the query matches their wording. |
-| Normal-chat grounding | 3 | Normal chat must report the correct verified fixture as retrieved evidence and reproduce its exact canary phrase. |
-| Normal-chat irrelevant-context exclusion | 1 | Normal chat must not retrieve the invoice fixture or reproduce its canary when asked an unrelated astronomy question. |
+| Fixture-scoped relevant retrieval | 3 | Canonical topic queries retrieve their intended fixture at similarity `>= 0.80`. |
+| Fixture-scoped irrelevant-query rejection | 3 | Astronomy, cooking and algorithm queries do not retrieve the target invoice fixture under its domain filter. |
+| Corpus-wide paraphrase retrieval | 9 | Three independently worded invoice, appointment and dispatch queries each return only the intended eligible fixture from the shared temporary corpus. |
+| Corpus-wide unrelated-query rejection | 6 | Moon phases, guitar tuning, tomato soil, ocean tides, mountain pressure and chess queries return no fixture from the test corpus. |
+| Eligibility exclusions | 3 | Stale, unverified, and expired-review records are not returned even when a query matches their wording. |
+| Normal-chat grounding | 3 | Normal chat reports the correct verified fixture as retrieved evidence and reproduces its exact canary phrase. |
+| Normal-chat irrelevant-context exclusion | 1 | Normal chat does not retrieve the invoice fixture or reproduce its canary when asked an unrelated astronomy question. |
 
-The suite pins the six fixture keys, all thirteen case IDs, their types, expected outcomes, eligibility metadata, the 0.80 retrieval cutoff and the `gte-small` 384-dimensional retrieval contract. Case prompts, synthetic statements, titles and phrases are versioned in the JSON baseline. The endpoint rejects a baseline that changes the suite version, threshold, mandatory case IDs, expected match polarity, or exclusion fixture metadata without a corresponding helper change.
+The suite pins the six fixture keys, all twenty-eight case IDs, their types, expected outcomes, corpus-wide scope and expected fixture sets, eligibility metadata, the 0.80 retrieval cutoff and the `gte-small` 384-dimensional retrieval contract. Case prompts, synthetic statements, titles and phrases are versioned in the JSON baseline. The endpoint rejects a baseline that changes the suite version, threshold, mandatory case IDs, expected match polarity, or exclusion fixture metadata without a corresponding helper change.
 
 ## What happens during a run
 
 1. GitHub Actions checks the explicit no-billing confirmation and the dedicated isolated-admin credentials.
 2. The workflow checks out the versioned baseline and authenticates to the isolated project.
 3. The test-only Edge Function verifies the project ref, parses the signed-in user's bearer token with a separately unit-tested parser, verifies the active administrator, then validates the baseline contract.
-4. It creates six uniquely named synthetic records, uses the real built-in `gte-small` model to generate and save 384-dimensional embeddings, and executes seven retrieval and eligibility cases.
+4. It creates six uniquely named synthetic records, uses the real built-in `gte-small` model to generate and save 384-dimensional embeddings, and executes twenty-four retrieval and eligibility cases. Fifteen new cases omit the domain filter and evaluate all fixtures together.
 5. It sends up to four read-only normal-chat requests to test grounding across invoice, appointment-rescheduling and warehouse-dispatch topics and check that irrelevant astronomy questions do not leak invoice knowledge into chat context.
 6. It deletes all run-specific fixtures, confirms there are no residual rows, and returns a case-by-case result report.
 
@@ -46,7 +48,7 @@ Each run has unique fixture slugs and domain names to avoid cross-run interferen
 
 - If a pinned case executes successfully but its expected retrieval/grounding assertion is false, the case is marked **failed**. The workflow exits non-zero, blocking the regression gate.
 - If a provider, Edge Function, authentication, embedding or retrieval execution error prevents a trustworthy assertion, the run is marked **inconclusive**, not misreported as an answer-quality regression. The workflow still exits non-zero, so the pipeline cannot silently treat it as a pass.
-- A complete pass requires all ten cases to pass and all synthetic fixtures to be confirmed removed.
+- A complete pass requires all twenty-eight cases to pass, corpus metrics to cover all fifteen corpus-wide cases, and all synthetic fixtures to be confirmed removed.
 - The workflow writes a case table to the GitHub Actions run summary and uploads two files as an artifact: the full case-level result JSON and the exact baseline JSON used. The result includes the baseline SHA-256, GitHub run ID, commit, per-case status/similarity and cleanup state. Artifacts are retained for 90 days; the versioned expected-case baseline remains in Git.
 
 ## Running the suite
