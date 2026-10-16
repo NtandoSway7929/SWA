@@ -15,7 +15,7 @@ This file coordinates work between AI sessions. Always refresh it and inspect op
 
 | Task | Agent | Branch / PR | Paths / resources | Status | Last update | Handoff |
 |---|---|---|---|---|---|---|
-| AI co-management foundation docs | ChatGPT | `docs/ai-co-management-foundation` (PR to be opened) | `docs/AI_SWAYPHICS_MASTER_CONTEXT.md`, `docs/ai-co-manager-protocol.md`, `docs/ai-coordination-log.md`, `docs/ai-ownership-registry.md`, `docs/ai-decisions.md` | In progress | 2026-10-16 | Release claim after PR creation; another agent may review, but should not rewrite these files on the same branch. |
+| AI co-management foundation docs | ChatGPT | `docs/ai-co-management-foundation` ([PR #74](https://github.com/NtandoSway7929/SWA/pull/74), draft) | `docs/AI_SWAYPHICS_MASTER_CONTEXT.md`, `docs/ai-co-manager-protocol.md`, `docs/ai-coordination-log.md`, `docs/ai-ownership-registry.md`, `docs/ai-decisions.md` | Draft PR open; await review | 2026-10-16 | [PR #74](https://github.com/NtandoSway7929/SWA/pull/74). Release claim after review/merge or handoff; another agent may review but should not push conflicting changes on this branch. |
 | InnerMe evidence traceability | Existing owner PR | [PR #4](https://github.com/NtandoSway7929/SWA/pull/4) | InnerMe traceability helper/prompt/tests and affected workflow files per PR | Existing draft; separate scope | 2026-10-16 | Do not merge or rewrite as part of docs onboarding. Use PR #4 discussion for that task. |
 
 ## Queue / unclaimed recommended work
