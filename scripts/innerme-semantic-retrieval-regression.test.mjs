@@ -22,6 +22,8 @@ const expectedTests = {
   semantic_appointment_match: ["retrieval_positive", "appointment", true],
   semantic_dispatch_match: ["retrieval_positive", "dispatch", true],
   semantic_irrelevant_query_excluded: ["retrieval_negative", "invoice", false],
+  semantic_irrelevant_cooking_excluded: ["retrieval_negative", "invoice", false],
+  semantic_irrelevant_algorithm_excluded: ["retrieval_negative", "invoice", false],
   semantic_stale_knowledge_excluded: ["eligibility_exclusion", "stale", false],
   semantic_unverified_knowledge_excluded: ["eligibility_exclusion", "unverified", false],
   semantic_expired_review_excluded: ["eligibility_exclusion", "expired_review", false],
@@ -36,9 +38,12 @@ test("regression baseline pins its suite version, model contract, threshold and 
   assert.equal(baseline.baseline_version, "1.1.0");
   assert.equal(baseline.embedding_model, "gte-small");
   assert.equal(baseline.embedding_dimensions, 384);
-  assert.equal(baseline.retrieval_similarity_threshold, 0.75);
+  assert.equal(baseline.retrieval_similarity_threshold, 0.8);
+  assert.equal(baseline.threshold_calibration.chosen_threshold, 0.8);
+  assert.ok(baseline.threshold_calibration.observed_similarity < baseline.retrieval_similarity_threshold);
+  assert.ok(baseline.threshold_calibration.lowest_positive_similarity > baseline.retrieval_similarity_threshold);
   assert.equal(baseline.fixtures.length, 6);
-  assert.equal(baseline.tests.length, 11);
+  assert.equal(baseline.tests.length, 13);
 });
 
 test("fixtures isolate the exact metadata dimension each eligibility regression checks", () => {
@@ -96,9 +101,13 @@ test("positive retrieval and grounding coverage includes three distinct topics",
 test("negative cases cover irrelevant queries and all three eligibility exclusions", () => {
   const irrelevant = baseline.tests.find((item) => item.id === "semantic_irrelevant_query_excluded");
   assert.match(irrelevant.query, /Kepler-452b/);
+  assert.match(baseline.tests.find((item) => item.id === "semantic_irrelevant_cooking_excluded").query, /sourdough/i);
+  assert.match(baseline.tests.find((item) => item.id === "semantic_irrelevant_algorithm_excluded").query, /Dijkstra/i);
   assert.equal(irrelevant.expected_match, false);
 
   for (const id of [
+    "semantic_irrelevant_cooking_excluded",
+    "semantic_irrelevant_algorithm_excluded",
     "semantic_stale_knowledge_excluded",
     "semantic_unverified_knowledge_excluded",
     "semantic_expired_review_excluded",
