@@ -216,8 +216,8 @@ jobs:
               f"- Cases: {counts.get('passed', 0)} passed, {counts.get('failed', 0)} failed, {counts.get('inconclusive', 0)} inconclusive, {counts.get('not_run', 0)} not run",
               f"- Fixture cleanup: {'PASS' if cleanup.get('passed') is True and cleanup.get('fixture_removed') is True else 'FAIL'}",
               "",
-              "| Case | Type | Status | Similarity | Retrieved target | Grounded phrase |",
-              "|---|---|---:|---:|---:|---:|",
+              "| Case | Type | Status | Similarity | Retrieved target | Grounded phrase | Expected corpus fixtures | Observed corpus fixtures | False positives | False negatives |",
+              "|---|---|---:|---:|---:|---:|---|---|---|---|",
           ]
           for case in cases:
               similarity = case.get("similarity")
@@ -228,10 +228,31 @@ jobs:
                   "-" if similarity is None else str(round(float(similarity), 4)),
                   str(case.get("observed_match", case.get("knowledge_match", "-"))),
                   str(case.get("answer_contains_expected_phrase", "-")),
+                  ", ".join(case.get("expected_fixture_keys") or []) or "-",
+                  ", ".join(case.get("observed_fixture_keys") or []) or "-",
+                  ", ".join(case.get("false_positive_fixture_keys") or []) or "-",
+                  ", ".join(case.get("false_negative_fixture_keys") or []) or "-",
               ]) + " |")
               if case.get("error"):
                   summary.append("")
                   summary.append(f"> **{case.get('id')}**: {str(case['error'])[:300]}")
+          metrics = result.get("retrieval_metrics") or {}
+          if metrics:
+              def percent(value):
+                  return "n/a" if value is None else f"{float(value) * 100:.1f}%"
+              summary.extend([
+                  "",
+                  "## Corpus-wide retrieval metrics",
+                  "",
+                  f"- Cases evaluated: {metrics.get('evaluated_cases', 0)} / {metrics.get('total_cases', 0)}",
+                  f"- Precision: {percent(metrics.get('precision'))}",
+                  f"- Recall: {percent(metrics.get('recall'))}",
+                  f"- Unrelated-query rejection: {metrics.get('unrelated_queries_rejected', 0)} / {metrics.get('unrelated_query_count', 0)} ({percent(metrics.get('unrelated_query_rejection_rate'))})",
+                  f"- True positives: {metrics.get('true_positives', 0)}",
+                  f"- False positives: {metrics.get('false_positives', 0)}",
+                  f"- False negatives: {metrics.get('false_negatives', 0)}",
+                  f"- Metric coverage complete: {metrics.get('complete') is True}",
+              ])
           if result.get("failure"):
               summary.extend(["", "## Execution detail", "", "```json", json.dumps(result["failure"], indent=2)[:1500], "```"])
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
