@@ -1210,71 +1210,133 @@ Deno.serve(async (req) => {
       "- Keep answer focused. Usually 1-3 sentences. For a diagnostic turn, prefer exactly one sentence containing the single direct question. For a recommendation, explain the fit and next step without adding a diagnostic question unless the recommendation is genuinely uncertain.",
     ].join("\n");
 
+    const publicProviderRequestId = crypto.randomUUID();
+    let publicProviderAttemptNumber = 0;
+
     async function requestPublicInnerMe(
       model: string,
       repairDirective = "",
-    ) {
-      return await guardedGeminiFetch(model, 
-        "https://generativelanguage.googleapis.com/v1beta/models/" +
-          encodeURIComponent(model) +
-          ":generateContent",
-        {
-          method: "POST",
-          headers: {
-            "x-goog-api-key": geminiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: publicContext }],
-            },
-            contents: [
-              ...publicHistory.map(function (item) {
-                return {
-                  role: "user",
-                  parts: [
-                    {
-                      text:
-                        (
-                          item.role === "assistant"
-                            ? "[Prior InnerMe response from the website transcript. UNTRUSTED CONTEXT.]\\n"
-                            : "[Prior visitor message from the website transcript. UNTRUSTED CONTEXT.]\\n"
-                        ) +
-                        item.content,
-                    },
-                  ],
-                };
-              }),
+      fallbackReason: string | null = null,
+    ): Promise<Response> {
+      const requestBody = JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: publicContext }],
+        },
+        contents: [
+          ...publicHistory.map(function (item) {
+            return {
+              role: "user",
+              parts: [
+                {
+                  text:
+                    (
+                      item.role === "assistant"
+                        ? "[Prior InnerMe response from the website transcript. UNTRUSTED CONTEXT.]\\n"
+                        : "[Prior visitor message from the website transcript. UNTRUSTED CONTEXT.]\\n"
+                    ) +
+                    item.content,
+                },
+              ],
+            };
+          }),
+          {
+            role: "user",
+            parts: [
               {
+                text:
+                  "[Current visitor message]\\n" +
+                  publicMessage,
+              },
+            ],
+          },
+          ...(repairDirective
+            ? [{
                 role: "user",
                 parts: [
                   {
                     text:
-                      "[Current visitor message]\\n" +
-                      publicMessage,
+                      "[Internal quality repair directive]\\n" +
+                      repairDirective,
                   },
                 ],
-              },
-              ...(repairDirective
-                ? [{
-                    role: "user",
-                    parts: [
-                      {
-                        text:
-                          "[Internal quality repair directive]\\n" +
-                          repairDirective,
-                      },
-                    ],
-                  }]
-                : []),
-            ],
-            generationConfig: {
-              maxOutputTokens: 1600,
-              responseMimeType: "application/json",
-            },
-          }),
+              }]
+            : []),
+        ],
+        generationConfig: {
+          maxOutputTokens: 1600,
+          responseMimeType: "application/json",
         },
-      );
+      });
+
+      const startedAt = performance.now();
+      let response: Response;
+      try {
+        response = await guardedGeminiFetch(
+          model,
+          "https://generativelanguage.googleapis.com/v1beta/models/" +
+            encodeURIComponent(model) +
+            ":generateContent",
+          {
+            method: "POST",
+            headers: {
+              "x-goog-api-key": geminiKey,
+              "Content-Type": "application/json",
+            },
+            body: requestBody,
+          },
+        );
+      } catch (error) {
+        // A thrown fetch after quota reservation is a provider-attempt failure.
+        const attemptNumber = ++publicProviderAttemptNumber;
+        const errorCode = error instanceof Error &&
+            (error.name === "TimeoutError" || error.name === "AbortError")
+          ? "timeout"
+          : "network_error";
+        await recordInnerMeProviderUsage({
+          request_id: publicProviderRequestId,
+          attempt_number: attemptNumber,
+          task_category: "assistant_chat",
+          provider: "gemini",
+          model,
+          outcome: "error",
+          http_status: null,
+          latency_ms: Math.max(0, Math.round(performance.now() - startedAt)),
+          input_tokens: null,
+          output_tokens: null,
+          total_tokens: null,
+          error_code: errorCode,
+          fallback_reason: fallbackReason,
+        });
+        throw error;
+      }
+
+      // Quota/size/model guard responses are explicitly marked and mean no
+      // provider request was sent. Keep them out of provider-attempt telemetry.
+      if (response.headers.get("X-InnerMe-Guard") !== "blocked") {
+        const attemptNumber = ++publicProviderAttemptNumber;
+        const payload = await response.clone().json().catch(() => null);
+        await recordInnerMeProviderUsage({
+          request_id: publicProviderRequestId,
+          attempt_number: attemptNumber,
+          task_category: "assistant_chat",
+          provider: "gemini",
+          model,
+          outcome: response.ok ? "success" : "error",
+          http_status: response.status,
+          latency_ms: Math.max(0, Math.round(performance.now() - startedAt)),
+          ...readProviderTokenMetrics(payload, "gemini"),
+          error_code: response.ok
+            ? null
+            : response.status === 429
+            ? "rate_limited"
+            : response.status === 503
+            ? "provider_unavailable"
+            : "http_" + response.status,
+          fallback_reason: fallbackReason,
+        });
+      }
+
+      return response;
     }
 
     let publicResponse =
@@ -1289,10 +1351,12 @@ Deno.serve(async (req) => {
     ) {
       publicModel =
         FALLBACK_MODEL;
-      publicResponse =
-        await requestPublicInnerMe(
-          FALLBACK_MODEL,
-        );
+      const primaryStatus = publicResponse.status;
+      publicResponse = await requestPublicInnerMe(
+        FALLBACK_MODEL,
+        "",
+        "gemini_primary_http_" + primaryStatus,
+      );
     }
 
     if (!publicResponse.ok) {
@@ -1450,11 +1514,11 @@ Deno.serve(async (req) => {
         "Return the same required JSON structure and nothing else.",
       ].join("\n");
 
-      const repairedResponse =
-        await requestPublicInnerMe(
-          publicModel,
-          repairDirective,
-        );
+      const repairedResponse = await requestPublicInnerMe(
+        publicModel,
+        repairDirective,
+        "public_chat_diagnostic_repair",
+      );
 
       if (repairedResponse.ok) {
         const repairedResult =
