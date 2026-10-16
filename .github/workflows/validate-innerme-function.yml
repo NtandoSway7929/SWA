@@ -16,6 +16,7 @@ on:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
+      - "supabase/functions/innerme-retrieval-smoke-test/**"
       - "supabase/config.toml"
       - ".github/workflows/validate-innerme-function.yml"
       - "scripts/innerme-routing-experiment.mjs"
