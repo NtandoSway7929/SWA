@@ -28,16 +28,17 @@ const expectedTests = {
   normal_chat_invoice_grounding: ["chat_grounding", "invoice", true],
   normal_chat_appointment_grounding: ["chat_grounding", "appointment", true],
   normal_chat_dispatch_grounding: ["chat_grounding", "dispatch", true],
+  normal_chat_irrelevant_invoice_exclusion: ["chat_exclusion", "invoice", false],
 };
 
 test("regression baseline pins its suite version, model contract, threshold and case count", () => {
   assert.equal(baseline.suite_id, "innerme_semantic_retrieval_regression");
-  assert.equal(baseline.baseline_version, "1.0.0");
+  assert.equal(baseline.baseline_version, "1.1.0");
   assert.equal(baseline.embedding_model, "gte-small");
   assert.equal(baseline.embedding_dimensions, 384);
-  assert.equal(baseline.retrieval_similarity_threshold, 0.45);
+  assert.equal(baseline.retrieval_similarity_threshold, 0.75);
   assert.equal(baseline.fixtures.length, 6);
-  assert.equal(baseline.tests.length, 10);
+  assert.equal(baseline.tests.length, 11);
 });
 
 test("fixtures isolate the exact metadata dimension each eligibility regression checks", () => {
@@ -101,6 +102,7 @@ test("negative cases cover irrelevant queries and all three eligibility exclusio
     "semantic_stale_knowledge_excluded",
     "semantic_unverified_knowledge_excluded",
     "semantic_expired_review_excluded",
+    "normal_chat_irrelevant_invoice_exclusion",
   ]) {
     assert.equal(baseline.tests.find((item) => item.id === id).expected_match, false);
   }
