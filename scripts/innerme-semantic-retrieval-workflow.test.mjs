@@ -12,6 +12,11 @@ const endpointPath = fileURLToPath(
 );
 const endpoint = readFileSync(endpointPath, "utf8");
 
+const documentationPath = fileURLToPath(
+  new URL("../docs/innerme-semantic-retrieval-e2e-smoke-test.md", import.meta.url)
+);
+const documentation = readFileSync(documentationPath, "utf8");
+
 function workflowInput(name) {
   const marker = "      " + name + ":\n";
   const start = workflow.indexOf(marker);
@@ -54,5 +59,28 @@ test("the isolated endpoint limits its Gemini key and quota preflight to full ch
   assert.ok(
     endpoint.includes('if (runChatChecks) {\n    const utcQuotaDate = new Date().toISOString().slice(0, 10);\n    const { data: quotaRow, error: quotaReadError }'),
     "The full-chat quota preflight must remain scoped to chat mode."
+  );
+});
+
+test("operator documentation matches the provider-free workflow default", () => {
+  assert.ok(
+    documentation.includes("By default, `run_chat_checks=false`"),
+    "Documentation must identify retrieval-only mode as the manual workflow default."
+  );
+  assert.ok(
+    !documentation.includes("The default `run_chat_checks=true`"),
+    "Documentation must not describe provider-chat mode as the default."
+  );
+  assert.ok(
+    documentation.includes("`run_chat_checks=true` and `confirm_no_billing=true`"),
+    "Documentation must retain the explicit full-suite opt-in and no-billing prerequisite."
+  );
+  assert.ok(
+    documentation.includes("Only when `run_chat_checks=true`, it sends up to four read-only normal-chat requests"),
+    "Documentation must make provider calls conditional on explicit full-chat mode."
+  );
+  assert.ok(
+    documentation.includes("With the default `run_chat_checks=false`, all four normal-chat cases are skipped and no Gemini requests are made."),
+    "Documentation must state that retrieval-only mode makes no Gemini requests."
   );
 });
