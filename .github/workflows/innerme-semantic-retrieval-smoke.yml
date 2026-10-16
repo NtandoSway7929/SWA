@@ -251,6 +251,7 @@ jobs:
                   f"- True positives: {metrics.get('true_positives', 0)}",
                   f"- False positives: {metrics.get('false_positives', 0)}",
                   f"- False negatives: {metrics.get('false_negatives', 0)}",
+                  f"- Unmapped results: {metrics.get('unmapped_result_count', 0)}",
                   f"- Metric coverage complete: {metrics.get('complete') is True}",
               ])
           if result.get("failure"):
