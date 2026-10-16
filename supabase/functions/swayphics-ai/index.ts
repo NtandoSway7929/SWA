@@ -11455,7 +11455,6 @@ Answer the admin's question directly.
           ],
           generationConfig: {
             maxOutputTokens: 700,
-            temperature: 0.5,
           },
         }),
         signal: AbortSignal.timeout(10000),
