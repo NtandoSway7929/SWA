@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
+      - "supabase/functions/innerme-retrieval-smoke-test/**"
       - "supabase/config.toml"
       - ".github/workflows/validate-innerme-function.yml"
       - "scripts/innerme-routing-experiment.mjs"
@@ -42,6 +43,9 @@ jobs:
 
       - name: Type-check checked-in Edge Function source
         run: deno check --no-lock supabase/functions/swayphics-ai/index.ts
+
+      - name: Type-check isolated semantic retrieval smoke endpoint
+        run: deno check --no-lock supabase/functions/innerme-retrieval-smoke-test/index.ts
 
       - name: Test authenticated action guard and provider routing without API calls
         run: deno test --no-lock --allow-env supabase/functions/swayphics-ai/auth.integration.test.ts supabase/functions/swayphics-ai/innerme-provider-routing.test.ts supabase/functions/swayphics-ai/innerme-workspace-intelligence.test.ts supabase/functions/swayphics-ai/innerme-context-compaction.test.ts supabase/functions/swayphics-ai/innerme-execution-contracts.test.ts supabase/functions/swayphics-ai/innerme-context-manifest.test.ts supabase/functions/swayphics-ai/innerme-run-controller.test.ts
