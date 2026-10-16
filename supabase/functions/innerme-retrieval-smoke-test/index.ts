@@ -559,6 +559,17 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // If setup failed before a test loop began, persist explicit not_run entries
+  // for every case so the report never silently undercounts the fixed suite.
+  const recordedIds = new Set(caseResults.map((item) => item.id));
+  for (const test of baseline.tests) {
+    if (!recordedIds.has(test.id)) {
+      recordNotRun(test, executionFailure
+        ? "Test was not executed because suite setup/execution stopped at " + executionFailure.stage + "."
+        : "Test was not executed.");
+    }
+  }
+
   const failedCases = caseResults.filter((item) => item.status === "failed");
   const inconclusiveCases = caseResults.filter((item) => item.status === "inconclusive" || item.status === "not_run");
   let overallStatus: "passed" | "failed" | "inconclusive" = "passed";
