@@ -12,7 +12,7 @@ on:
         description: "Include normal-chat grounding checks (uses up to four isolated provider requests)"
         required: true
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
