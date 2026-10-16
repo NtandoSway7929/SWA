@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
+      - "supabase/functions/tests/innerme-evidence-traceability.test.mjs"
       - "supabase/functions/innerme-retrieval-smoke-test/**"
       - "supabase/config.toml"
       - ".github/workflows/validate-innerme-function.yml"
@@ -29,6 +30,7 @@ on:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
+      - "supabase/functions/tests/innerme-evidence-traceability.test.mjs"
       - "supabase/functions/innerme-retrieval-smoke-test/**"
       - "supabase/config.toml"
       - ".github/workflows/validate-innerme-function.yml"
@@ -103,6 +105,11 @@ jobs:
         run: |
           node --check scripts/innerme-zero-cost-provider-guard.test.mjs
           node --test scripts/innerme-zero-cost-provider-guard.test.mjs
+
+      - name: Test InnerMe evidence traceability formatting
+        run: |
+          node --check supabase/functions/tests/innerme-evidence-traceability.test.mjs
+          node --test supabase/functions/tests/innerme-evidence-traceability.test.mjs
 
       - name: Test InnerMe trigger search-path hardening migration
         run: |
