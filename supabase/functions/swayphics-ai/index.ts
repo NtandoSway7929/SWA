@@ -69,7 +69,7 @@ const INNERME_BENCHMARK_FALLBACK_MODEL: string = "gemini-3.5-flash-lite";
 const INNERME_BENCHMARK_VERSION = 8;
 const INNERME_JUDGE_CALIBRATION_VERSION = 6;
 // Keep all records within this observed similarity gap from the top-ranked record.
-const INNERME_KNOWLEDGE_MAX_SCORE_DELTA = 0.04;
+const INNERME_KNOWLEDGE_MAX_SCORE_DELTA = 0.035;
 const INNERME_ROADMAP_CONTEXT = [
   "INNERME ROADMAP KNOWLEDGE (internal architecture reference):",
   "ROADMAP INDEX SOURCE: docs/innerme-30-phase-roadmap.md. This index documents the roadmap; it does not by itself prove runtime behaviour.",
