@@ -25,3 +25,25 @@ test("the corrected guard preserves the approved-model and fail-closed boundarie
   assert.match(migration, /grant execute on function public\.innerme_reserve_provider_quota\(text, text, integer\) to service_role/i);
   assert.doesNotMatch(migration, /grant execute[^;]*\b(?:anon|authenticated)\b/i);
 });
+
+
+const regressionHelper = readFileSync(
+  new URL("../supabase/functions/innerme-retrieval-smoke-test/index.ts", import.meta.url),
+  "utf8",
+);
+
+test("full-mode chat quota preflight stops before fixture creation when budget is insufficient", () => {
+  const preflightIndex = regressionHelper.indexOf('const utcQuotaDate = new Date().toISOString().slice(0, 10);');
+  const runIdIndex = regressionHelper.indexOf('const runId = crypto.randomUUID()');
+  const fixtureSeedIndex = regressionHelper.indexOf("// Seed only run-unique synthetic rows");
+  assert.ok(preflightIndex >= 0, "the quota preflight must exist");
+  assert.ok(runIdIndex > preflightIndex, "quota preflight must run before allocating a test run ID");
+  assert.ok(fixtureSeedIndex > preflightIndex, "quota preflight must run before creating synthetic fixtures");
+  assert.match(regressionHelper, /from\("innerme_provider_quota_daily"\)/);
+  assert.match(regressionHelper, /\.eq\("quota_date", utcQuotaDate\)/);
+  assert.match(regressionHelper, /const dailyLimit = 40;/);
+  assert.match(regressionHelper, /const minimumRequiredRequests = 8;/);
+  assert.match(regressionHelper, /remainingBudget < minimumRequiredRequests/);
+  assert.match(regressionHelper, /stage: "provider_quota_preflight"/);
+  assert.match(regressionHelper, /no fixtures or chat requests were made/i);
+});
