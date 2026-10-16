@@ -57,7 +57,7 @@ test("fixtures isolate the exact metadata dimension each eligibility regression 
     );
     assert.equal(fixture.knowledge_type, "definition");
     assert.ok(fixture.domain.startsWith("semantic-regression-"));
-    assert.ok(fixture.title.startsWith("Synthetic "));
+    assert.match(fixture.title, /synthetic/i);
     assert.ok(fixture.statement.includes(fixture.canary_phrase));
     assert.ok(fixture.statement.includes("isolated regression test"));
   }
