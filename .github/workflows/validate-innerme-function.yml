@@ -21,6 +21,8 @@ on:
       - "scripts/innerme-trigger-search-path.test.mjs"
       - "supabase/migrations/20261016060000_innerme_public_rate_limit_search_path_hardening.sql"
       - "scripts/innerme-public-rate-limit-search-path.test.mjs"
+      - "supabase/migrations/20261016070000_innerme_policy_definer_search_path_hardening.sql"
+      - "scripts/innerme-policy-definer-search-path.test.mjs"
   pull_request:
     branches: ["main"]
     paths:
@@ -41,6 +43,8 @@ on:
       - "scripts/innerme-trigger-search-path.test.mjs"
       - "supabase/migrations/20261016060000_innerme_public_rate_limit_search_path_hardening.sql"
       - "scripts/innerme-public-rate-limit-search-path.test.mjs"
+      - "supabase/migrations/20261016070000_innerme_policy_definer_search_path_hardening.sql"
+      - "scripts/innerme-policy-definer-search-path.test.mjs"
 
 permissions:
   contents: read
@@ -105,6 +109,11 @@ jobs:
         run: |
           node --check scripts/innerme-public-rate-limit-search-path.test.mjs
           node --test scripts/innerme-public-rate-limit-search-path.test.mjs
+
+      - name: Test InnerMe Phase 30 policy definer search-path hardening
+        run: |
+          node --check scripts/innerme-policy-definer-search-path.test.mjs
+          node --test scripts/innerme-policy-definer-search-path.test.mjs
 
       - name: Non-mutating isolated test health GET
         env:
