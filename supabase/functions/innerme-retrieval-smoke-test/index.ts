@@ -81,6 +81,7 @@ type RegressionCaseResult = {
   false_positive_fixture_keys?: string[];
   false_negative_fixture_keys?: string[];
   unmapped_match_count?: number;
+  retrieved_matches?: Array<{ fixture_key: string | null; similarity: number | null; rank: number }>;
   error?: string;
 };
 
@@ -451,9 +452,14 @@ Deno.serve(async (req: Request) => {
         const isCorpusWide = test.retrieval_scope === "corpus";
         const slugToFixtureKey = new Map<string, string>();
         for (const [key, slug] of fixtureSlugs.entries()) slugToFixtureKey.set(slug, key);
+        const retrievedMatches = matches.map((item, index) => ({
+          fixture_key: slugToFixtureKey.get(String(item?.slug || "")) || null,
+          similarity: Number.isFinite(Number(item?.similarity)) ? Number(item.similarity) : null,
+          rank: index + 1,
+        }));
         const observedFixtureKeys: string[] = Array.from(new Set(
-          matches
-            .map((item) => slugToFixtureKey.get(String(item?.slug || "")))
+          retrievedMatches
+            .map((item) => item.fixture_key)
             .filter((key): key is string => typeof key === "string"),
         )).sort();
         const expectedFixtureKeys = isCorpusWide ? [...test.expected_fixture_keys].sort() : [];
@@ -488,6 +494,7 @@ Deno.serve(async (req: Request) => {
             false_positive_fixture_keys: falsePositiveFixtureKeys,
             false_negative_fixture_keys: falseNegativeFixtureKeys,
             unmapped_match_count: unmappedMatchCount,
+            retrieved_matches: retrievedMatches,
           } : {}),
           ...(passed ? {} : {
             error: isCorpusWide
@@ -572,7 +579,19 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const matches = Array.isArray(knowledge.matches) ? knowledge.matches : [];
+        const matches: Array<Record<string, unknown>> = Array.isArray(knowledge.matches)
+          ? knowledge.matches as Array<Record<string, unknown>>
+          : [];
+        const fixtureKeyById = new Map<string, string>();
+        for (const [key, id] of fixtureIds.entries()) fixtureKeyById.set(id, key);
+        const retrievedMatches = matches.map((item, index) => ({
+          fixture_key: fixtureKeyById.get(String(item?.id || "")) || null,
+          similarity: Number.isFinite(Number(item?.similarity)) ? Number(item.similarity) : null,
+          rank: index + 1,
+        }));
+        const observedFixtureKeys = Array.from(new Set(
+          retrievedMatches.map((item) => item.fixture_key).filter((key): key is string => typeof key === "string"),
+        )).sort();
         const target = matches.find((item: Record<string, unknown>) => item?.id === targetId);
         const targetRetrieved = knowledge.used === true && Boolean(target);
         const answerContainsExpectedPhrase = String(chatPayload.answer).toLowerCase().includes(String(fixture.canary_phrase).toLowerCase());
@@ -590,6 +609,8 @@ Deno.serve(async (req: Request) => {
           similarity: target && Number.isFinite(Number(target.similarity)) ? Number(target.similarity) : null,
           knowledge_match: targetRetrieved,
           answer_contains_expected_phrase: answerContainsExpectedPhrase,
+          observed_fixture_keys: observedFixtureKeys,
+          retrieved_matches: retrievedMatches,
           ...(passed ? {} : {
             error: expectsRelevantEvidence
               ? (!targetRetrieved
