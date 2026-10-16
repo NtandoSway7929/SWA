@@ -17,6 +17,8 @@ on:
       - "supabase/functions/innerme-retrieval-smoke-test/regression-baseline.json"
       - "supabase/migrations/20261016034000_innerme_zero_cost_quota_exhaustion_fix.sql"
       - "scripts/innerme-zero-cost-provider-guard.test.mjs"
+      - "supabase/migrations/20261016050000_innerme_trigger_search_path_hardening.sql"
+      - "scripts/innerme-trigger-search-path.test.mjs"
   pull_request:
     branches: ["main"]
     paths:
@@ -33,6 +35,8 @@ on:
       - "scripts/innerme-semantic-retrieval-regression.test.mjs"
       - "supabase/migrations/20261016034000_innerme_zero_cost_quota_exhaustion_fix.sql"
       - "scripts/innerme-zero-cost-provider-guard.test.mjs"
+      - "supabase/migrations/20261016050000_innerme_trigger_search_path_hardening.sql"
+      - "scripts/innerme-trigger-search-path.test.mjs"
 
 permissions:
   contents: read
@@ -87,6 +91,11 @@ jobs:
         run: |
           node --check scripts/innerme-zero-cost-provider-guard.test.mjs
           node --test scripts/innerme-zero-cost-provider-guard.test.mjs
+
+      - name: Test InnerMe trigger search-path hardening migration
+        run: |
+          node --check scripts/innerme-trigger-search-path.test.mjs
+          node --test scripts/innerme-trigger-search-path.test.mjs
 
       - name: Non-mutating isolated test health GET
         env:
