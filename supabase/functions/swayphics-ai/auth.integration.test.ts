@@ -364,3 +364,102 @@ Deno.test("InnerMe public website chat boundary is checked before authentication
     assertEqual(result.outboundRequests, 0, "Malformed session outbound request count");
   });
 });
+
+async function invokeMockedPublicSuccess(): Promise<{
+  status: number;
+  body: Record<string, unknown>;
+  requests: Array<{ host: string; path: string; method: string }>;
+}> {
+  const envKeys = [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_SECRET_KEY",
+    "GEMINI_API_KEY",
+  ];
+  const savedEnv = new Map(envKeys.map((key) => [key, Deno.env.get(key)]));
+  for (const key of envKeys) Deno.env.delete(key);
+  Deno.env.set("SUPABASE_URL", "https://mock-supabase.invalid");
+  Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+  Deno.env.set("GEMINI_API_KEY", "test-gemini-key");
+
+  const requests: Array<{ host: string; path: string; method: string }> = [];
+  const originalFetch = globalThis.fetch;
+  const mockedAnswer = {
+    answer: "Start by identifying the one outcome you most want customers to take next.",
+    visitor_goal: "Clarify the next customer outcome.",
+    problem_area: null,
+    business_stage: "unsure",
+    recommended_service: null,
+    recommendation_reason: null,
+    recommendation_confidence: null,
+    ready_for_enquiry: false,
+  };
+
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input instanceof Request
+      ? new URL(input.url)
+      : new URL(String(input));
+    const method = (init?.method ||
+      (input instanceof Request ? input.method : "GET")).toUpperCase();
+    requests.push({ host: url.host, path: url.pathname, method });
+
+    if (url.pathname === "/rest/v1/rpc/consume_public_innerme_rate_limit") {
+      return jsonResponse(200, [{ allowed: true, retry_after_seconds: 60 }]);
+    }
+    if (url.pathname === "/rest/v1/rpc/innerme_reserve_provider_quota") {
+      return jsonResponse(200, {
+        allowed: true,
+        used: 1,
+        daily_limit: 40,
+        reason: null,
+      });
+    }
+    if (url.host === "generativelanguage.googleapis.com" &&
+      url.pathname.endsWith(":generateContent")) {
+      return jsonResponse(200, {
+        candidates: [{
+          content: {
+            parts: [{ text: JSON.stringify(mockedAnswer) }],
+          },
+        }],
+        usageMetadata: {
+          promptTokenCount: 100,
+          candidatesTokenCount: 20,
+          totalTokenCount: 120,
+        },
+      });
+    }
+
+    return jsonResponse(500, {
+      message: "Unexpected outbound request in mocked public-chat success test.",
+      host: url.host,
+      path: url.pathname,
+      method,
+    });
+  }) as typeof globalThis.fetch;
+
+  try {
+    const response = await capturedHandler!(
+      new Request("http://localhost/functions/v1/swayphics-ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://swayphics.co.za",
+          "x-innerme-session": "synthetic-session-id-12345",
+        },
+        body: JSON.stringify({
+          action: "public_chat",
+          message: "I need help deciding what my business needs.",
+        }),
+      }),
+    );
+    const body = await response.json() as Record<string, unknown>;
+    return { status: response.status, body, requests };
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of savedEnv.entries()) {
+      if (value === undefined) Deno.env.delete(key);
+      else Deno.env.set(key, value);
+    }
+  }
+}
