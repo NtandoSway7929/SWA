@@ -621,11 +621,13 @@ type ProposalContractMockResult = {
     path: string;
     method: string;
     providerPayload?: Record<string, unknown>;
+    telemetryPayload?: Record<string, unknown>;
   }>;
 };
 
 async function invokeDraftProposalWithMockedProvider(
   generatedText: string,
+  options: { simulatePrimaryUnavailable?: boolean; blockQuota?: boolean } = {},
 ): Promise<ProposalContractMockResult> {
   const envKeys = [
     "GEMINI_API_KEY",
@@ -647,15 +649,19 @@ async function invokeDraftProposalWithMockedProvider(
     const method = (init?.method ||
       (input instanceof Request ? input.method : "GET")).toUpperCase();
     let providerPayload: Record<string, unknown> | undefined;
+    let telemetryPayload: Record<string, unknown> | undefined;
 
-    if (
-      url.host === "generativelanguage.googleapis.com" &&
-      typeof init?.body === "string"
-    ) {
+    if (typeof init?.body === "string") {
       try {
-        providerPayload = JSON.parse(init.body) as Record<string, unknown>;
+        const parsedBody = JSON.parse(init.body) as Record<string, unknown>;
+        if (url.host === "generativelanguage.googleapis.com") {
+          providerPayload = parsedBody;
+        } else if (url.pathname === "/rest/v1/innerme_provider_usage") {
+          telemetryPayload = parsedBody;
+        }
       } catch {
         providerPayload = undefined;
+        telemetryPayload = undefined;
       }
     }
 
@@ -664,6 +670,7 @@ async function invokeDraftProposalWithMockedProvider(
       path: url.pathname,
       method,
       ...(providerPayload ? { providerPayload } : {}),
+      ...(telemetryPayload ? { telemetryPayload } : {}),
     });
 
     if (url.pathname === "/auth/v1/user") {
@@ -685,12 +692,19 @@ async function invokeDraftProposalWithMockedProvider(
     }
 
     if (url.pathname === "/rest/v1/rpc/innerme_reserve_provider_quota") {
-      return jsonResponse(200, {
-        allowed: true,
-        used: 1,
-        daily_limit: 40,
-        reason: null,
-      });
+      return jsonResponse(200, options.blockQuota
+        ? {
+            allowed: false,
+            used: 40,
+            daily_limit: 40,
+            reason: "daily_quota_reached",
+          }
+        : {
+            allowed: true,
+            used: 1,
+            daily_limit: 40,
+            reason: null,
+          });
     }
 
     if (url.pathname === "/rest/v1/rpc/get_innerme_workspace_summary") {
@@ -710,7 +724,18 @@ async function invokeDraftProposalWithMockedProvider(
       url.host === "generativelanguage.googleapis.com" &&
       url.pathname.endsWith(":generateContent")
     ) {
+      const model = url.pathname.match(/\/models\/([^/]+):generateContent/)?.[1] || "";
+      const providerCallNumber = requests.filter((request) =>
+        request.host === "generativelanguage.googleapis.com" &&
+        request.path.endsWith(":generateContent")
+      ).length;
+
+      if (options.simulatePrimaryUnavailable && providerCallNumber === 1) {
+        return jsonResponse(503, { error: { status: "UNAVAILABLE" } });
+      }
+
       return jsonResponse(200, {
+        model,
         candidates: [{
           content: {
             parts: [{ text: generatedText }],
