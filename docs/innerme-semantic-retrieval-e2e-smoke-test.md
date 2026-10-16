@@ -10,7 +10,7 @@ Current baseline version: **1.2.0**. Run #5 attempt 2 exposed a false positive a
 
 ## Fixed coverage
 
-The baseline includes six run-unique synthetic knowledge fixtures and thirteen pinned test cases:
+The baseline includes six run-unique synthetic knowledge fixtures and twenty-eight pinned test cases:
 
 | Case family | Count | Required behaviour |
 |---|---:|---|
