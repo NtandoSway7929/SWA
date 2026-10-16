@@ -6,7 +6,7 @@ function assert(condition: unknown, message: string): asserts condition {
 
 Deno.test("workspace context marker is shared and retains literal newline boundaries", () => {
   assert(
-    INNERME_WORKSPACE_CONTEXT_MARKER === "\\n\\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\\n",
+    INNERME_WORKSPACE_CONTEXT_MARKER === "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n",
     "request fitting and prompt assembly must use the same literal workspace suffix marker",
   );
   const payload = { record_id: "lead-1", name: "A full business name" };
