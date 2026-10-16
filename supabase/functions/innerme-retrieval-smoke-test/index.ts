@@ -677,15 +677,22 @@ Deno.serve(async (req: Request) => {
   const evaluatedNegativeCases = evaluatedCorpusCases.filter((item) => (item.expected_fixture_keys || []).length === 0);
   const rejectedNegativeCases = evaluatedNegativeCases.filter((item) => (item.observed_fixture_keys || []).length === 0);
   const totalCorpusCases = corpusCaseIds.size;
+  const unmappedResultCount = evaluatedCorpusCases.reduce(
+    (sum, item) => sum + (item.unmapped_match_count || 0),
+    0,
+  );
+  const totalFalsePositives = falsePositives + unmappedResultCount;
   const retrievalMetrics = {
     total_cases: totalCorpusCases,
     evaluated_cases: evaluatedCorpusCases.length,
     complete: evaluatedCorpusCases.length === totalCorpusCases,
     true_positives: truePositives,
-    false_positives: falsePositives + evaluatedCorpusCases.reduce((sum, item) => sum + (item.unmapped_match_count || 0), 0),
-    unmapped_result_count: evaluatedCorpusCases.reduce((sum, item) => sum + (item.unmapped_match_count || 0), 0),
+    false_positives: totalFalsePositives,
+    unmapped_result_count: unmappedResultCount,
     false_negatives: falseNegatives,
-    precision: truePositives + falsePositives > 0 ? truePositives / (truePositives + falsePositives) : null,
+    precision: truePositives + totalFalsePositives > 0
+      ? truePositives / (truePositives + totalFalsePositives)
+      : null,
     recall: truePositives + falseNegatives > 0 ? truePositives / (truePositives + falseNegatives) : null,
     unrelated_query_count: evaluatedNegativeCases.length,
     unrelated_queries_rejected: rejectedNegativeCases.length,
