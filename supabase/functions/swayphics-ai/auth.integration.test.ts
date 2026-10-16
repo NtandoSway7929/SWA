@@ -299,3 +299,68 @@ Deno.test("InnerMe authenticated action guard rejects unsafe requests before sid
     );
   });
 });
+
+// Public website chat has a deliberately separate, unauthenticated entry path.
+// These tests protect its origin/session perimeter without calling Gemini or Supabase.
+async function invokePublicBoundary(
+  origin: string,
+  session: string,
+): Promise<{ status: number; body: Record<string, unknown>; outboundRequests: number }> {
+  const originalFetch = globalThis.fetch;
+  let outboundRequests = 0;
+  globalThis.fetch = (async () => {
+    outboundRequests += 1;
+    return jsonResponse(500, { message: "Unexpected outbound request in public boundary test." });
+  }) as typeof globalThis.fetch;
+
+  try {
+    const response = await capturedHandler!(
+      new Request("http://localhost/functions/v1/swayphics-ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: origin,
+          "x-innerme-session": session,
+        },
+        body: JSON.stringify({
+          action: "public_chat",
+          message: "I need help deciding what my business needs.",
+        }),
+      }),
+    );
+    const body = await response.json() as Record<string, unknown>;
+    return { status: response.status, body, outboundRequests };
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+Deno.test("InnerMe public website chat boundary is checked before authentication and outbound calls", async (t) => {
+  await t.step("rejects unapproved origins before any outbound request", async () => {
+    const result = await invokePublicBoundary(
+      "https://attacker.example",
+      "synthetic-session-id-12345",
+    );
+    assertEqual(result.status, 403, "Unapproved public-chat origin status");
+    assertEqual(
+      result.body.error,
+      "Public InnerMe is available through the Swayphics website only.",
+      "Unapproved public-chat origin message",
+    );
+    assertEqual(result.outboundRequests, 0, "Unapproved origin outbound request count");
+  });
+
+  await t.step("rejects malformed session identifiers on an allowed origin before rate-limit or provider calls", async () => {
+    const result = await invokePublicBoundary(
+      "https://swayphics.co.za",
+      "short",
+    );
+    assertEqual(result.status, 400, "Malformed public-chat session status");
+    assertEqual(
+      result.body.error,
+      "Please refresh the page and try again.",
+      "Malformed public-chat session message",
+    );
+    assertEqual(result.outboundRequests, 0, "Malformed session outbound request count");
+  });
+});
