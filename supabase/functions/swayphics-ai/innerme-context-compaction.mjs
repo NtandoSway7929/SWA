@@ -7,6 +7,8 @@
  * compacted representation.
  */
 
+export const INNERME_WORKSPACE_CONTEXT_MARKER = "\n\nCURRENT SWAYPHICS WORKSPACE DATA (JSON):\n";
+
 const CRITICAL_COLLECTION_LIMITS = Object.freeze({
   leads: 30,
   followups: 30,
