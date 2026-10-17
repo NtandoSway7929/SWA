@@ -18,8 +18,10 @@ It:
 3. Gives the temporary container a random per-run API token, binds the published server port to host loopback only, keeps JavaScript evaluation disabled, and uses no repository secrets.
 4. Runs a separate static preview container on a private Docker network so the browser can compare production with the checked-out candidate without exposing the preview port.
 5. Waits for the managed browser to report `running`, then smoke-tests navigation before beginning audits.
-6. Audits each of the seven public sitemap routes individually and compares production with the candidate, saving reports and visual-diff artifacts.
-7. Uploads audit JSON/HTML, screenshots, compare output, browser/server logs, CSV and summary; then removes the temporary containers, network and volume.
+6. Audits each of the seven public sitemap routes individually.
+7. Captures the live homepage at 390×844 (mobile), 768×1024 (tablet), and 1440×900 (desktop), verifying all three screenshot files are non-empty.
+8. Compares production with the candidate and validates route-level comparison results, not merely the command exit code.
+9. Uploads audit JSON/HTML, responsive screenshots, compare output, browser/server logs, CSV and summary; then removes the temporary containers, network and volume.
 
 ## Why routes are audited individually
 
@@ -39,7 +41,8 @@ The initial local test with PinchTab 0.15.2 found that the sitemap-audit command
 Review at least three successful workflow runs before deciding whether to retain PinchTab as a regular regression workflow. The pilot should demonstrate:
 
 - Each of the seven routes produces a valid report and screenshot.
-- The comparison produces valid route-pair data and inspectable visual-diff artifacts for the checked-out candidate.
+- Three responsive screenshots exist for mobile 390×844, tablet 768×1024, and desktop 1440×900.
+- The comparison produces seven successfully compared route pairs, with no route-level errors, and inspectable visual-diff artifacts for the checked-out candidate.
 - The reports reveal browser-only issues or visual changes that the static workflow cannot detect.
 - Runtime cost and false-positive/noise levels are acceptable.
 
