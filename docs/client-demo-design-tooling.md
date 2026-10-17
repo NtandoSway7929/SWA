@@ -8,7 +8,7 @@ This setup adds a repeatable design research and implementation process for clie
 - **21st MCP**: component discovery and optional AI-assisted UI generation/review in Antigravity.
 - **Swayphics client-demo skill**: repository-specific instructions in `.agents/skills/swayphics-client-website-demo/SKILL.md`.
 
-We target the standard Agent Skills layout with `uipro init --ai universal`, rather than depending on Antigravity's legacy workflow files. Google's Antigravity documentation says standard skills live under `.agents/skills/` and legacy workflows are scheduled for retirement on 19 October 2026. See the current [Antigravity Skills guide](https://antigravity.google/docs/skills) and [workflow migration guide](https://antigravity.google/docs/migration/workflows-to-skills).
+We target the standard Agent Skills layout with `uipro init --ai universal`, rather than depending on Antigravity's legacy workflow files. Google's Antigravity documentation now recommends standard Agent Skills under `.agents/skills/` instead of relying on the legacy workflow format. See the current [Antigravity Skills guide](https://antigravity.google/docs/skills) and [workflow migration guide](https://antigravity.google/docs/migration/workflows-to-skills).
 
 ## Install on Windows
 
