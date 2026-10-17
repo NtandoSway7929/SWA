@@ -421,15 +421,29 @@ jobs:
           compare_page_count = 0
           compare_successful_pairs = 0
           compare_error_pairs = []
+          compare_details = []
+          compare_has_diffs = None
           try:
               compare_report = json.loads((compare_folder / "report.json").read_text(encoding="utf-8"))
               compare_pages = compare_report.get("pages")
               compare_valid = isinstance(compare_pages, list)
+              compare_has_diffs = bool(compare_report.get("hasDiffs"))
               compare_page_count = len(compare_pages) if isinstance(compare_pages, list) else 0
               for pair in compare_pages if isinstance(compare_pages, list) else []:
                   error = str(pair.get("error") or "").strip()
                   pair_status = str(pair.get("status") or "")
                   pair_path = str(pair.get("path") or "(unknown route)")
+                  raw_diff = pair.get("diffPercentage")
+                  diff_percentage = round(float(raw_diff), 2) if isinstance(raw_diff, (int, float)) else None
+                  drift = pair.get("drift") or []
+                  detail = {
+                      "path": pair_path,
+                      "status": pair_status,
+                      "visualDiffPercentage": diff_percentage,
+                      "dataDriftCount": len(drift) if isinstance(drift, list) else None,
+                      "error": error,
+                  }
+                  compare_details.append(detail)
                   if error:
                       compare_error_pairs.append(f"{pair_path}: {error}")
                   elif pair_status == "compared":
@@ -462,6 +476,8 @@ jobs:
                   "pagePairsReported": compare_page_count,
                   "successfulPairs": compare_successful_pairs,
                   "errorPairs": compare_error_pairs,
+                  "hasDiffs": compare_has_diffs,
+                  "routeDetails": compare_details,
                   "failOnDiffEnabled": False,
               },
               "toolFailures": failures,
@@ -487,11 +503,25 @@ jobs:
               f"- Syntactically valid visual-compare report: {compare_valid}",
               f"- Successfully compared route pairs: {compare_successful_pairs}/{len(routes)}",
               f"- Comparison route errors: {len(compare_error_pairs)}",
-              "- Visual differences do not fail the pilot; review the diff artifacts.",
+              f"- Comparison reports visual differences: {compare_has_diffs}",
+              "- Visual differences do not fail the pilot; inspect the annotated diff images, especially on pages with autoplay media.",
+              "",
+              "## Route-by-route visual comparison",
+              "",
+              "| Route | Status | Pixel difference | Data drift fields | Route error |",
+              "|---|---|---:|---:|---|",
+              "|---|---:|---:|---:|---:|---:|---:|",
+          ]
+          for pair in compare_details:
+              pct = f"{pair['visualDiffPercentage']:.2f}%" if pair["visualDiffPercentage"] is not None else "n/a"
+              err = pair["error"].replace("|", "\\|") or "—"
+              drift_count = pair["dataDriftCount"] if pair["dataDriftCount"] is not None else "n/a"
+              lines.append(f"| {pair['path'] or '(base)'} | {pair['status']} | {pct} | {drift_count} | {err} |")
+          lines.extend([
               "",
               "| Route | HTTP | Accessibility | JS errors | Broken assets | Failed requests | Requests without status |",
               "|---|---:|---:|---:|---:|---:|---:|",
-          ]
+          ])
           for row in rows:
               score = row["accessibilityScore"] if row["accessibilityScore"] is not None else "n/a"
               js = row["jsErrors"] if row["jsErrors"] is not None else "n/a"
