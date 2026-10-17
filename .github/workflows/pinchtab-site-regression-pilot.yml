@@ -122,7 +122,7 @@ jobs:
             python -m http.server 8765 --bind 0.0.0.0 --directory /www >/dev/null
           preview_ready=false
           for attempt in $(seq 1 15); do
-            if docker exec swayphics-preview python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/index.html', timeout=5).read(32)" >/dev/null 2>&1; then
+            if docker exec swayphics-preview python -c "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8765/index.html', method='HEAD'), timeout=5).read()" >/dev/null 2>&1; then
               preview_ready=true
               break
             fi
@@ -156,7 +156,6 @@ jobs:
           import json
           import os
           import time
-          from urllib.error import HTTPError, URLError
           from urllib.request import Request, urlopen
           url = "http://127.0.0.1:9867/health"
           token = os.environ["PINCHTAB_TOKEN"]
@@ -171,7 +170,7 @@ jobs:
                   if last_status == "running":
                       print("PinchTab server and managed browser are ready.")
                       break
-              except (HTTPError, URLError, TimeoutError, ValueError) as exc:
+              except (OSError, TimeoutError, ValueError) as exc:
                   last_status = type(exc).__name__
               if attempt in (0, 4, 9, 19, 39, 59, 79):
                   print(f"Waiting for browser readiness; attempt={attempt + 1}, status={last_status}")
