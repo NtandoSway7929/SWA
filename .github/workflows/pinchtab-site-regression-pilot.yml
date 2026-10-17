@@ -510,7 +510,6 @@ jobs:
               "",
               "| Route | Status | Pixel difference | Data drift fields | Route error |",
               "|---|---|---:|---:|---|",
-              "|---|---:|---:|---:|---:|---:|---:|",
           ]
           for pair in compare_details:
               pct = f"{pair['visualDiffPercentage']:.2f}%" if pair["visualDiffPercentage"] is not None else "n/a"
