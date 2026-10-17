@@ -80,6 +80,7 @@ jobs:
         uses: browser-actions/setup-chrome@v1
         with:
           chrome-version: stable
+          install-dependencies: true
 
       - name: Install pinned PinchTab CLI
         run: npm install --global --allow-scripts=pinchtab pinchtab@0.15.2
@@ -91,8 +92,26 @@ jobs:
           set -euo pipefail
           mkdir -p "$ARTIFACT_DIR"
           pinchtab config init
-          pinchtab config patch "{\"server\":{\"port\":\"9867\",\"bind\":\"127.0.0.1\"},\"browser\":{\"binary\":\"$CHROME_BIN\"},\"security\":{\"allowEvaluate\":false,\"allowMacro\":false,\"allowScreencast\":false,\"allowDownload\":false,\"allowCookies\":false,\"allowFileScheme\":false,\"allowUpload\":false,\"allowClipboard\":false,\"allowedDomains\":[\"127.0.0.1\",\"localhost\",\"::1\",\"swayphics.co.za\"],\"idpi\":{\"enabled\":true,\"strictMode\":true,\"scanContent\":true,\"wrapContent\":true}}}"
+          pinchtab config patch "{\"server\":{\"port\":\"9867\",\"bind\":\"127.0.0.1\"},\"browsers\":{\"default\":\"chrome\"},\"browser\":{\"binary\":\"$CHROME_BIN\"},\"security\":{\"allowEvaluate\":false,\"allowMacro\":false,\"allowScreencast\":false,\"allowDownload\":false,\"allowCookies\":false,\"allowFileScheme\":false,\"allowUpload\":false,\"allowClipboard\":false,\"allowedDomains\":[\"127.0.0.1\",\"localhost\",\"::1\",\"swayphics.co.za\"],\"idpi\":{\"enabled\":true,\"strictMode\":true,\"scanContent\":true,\"wrapContent\":true}}}"
           pinchtab config validate
+
+      - name: Preflight configured Chrome launch
+        env:
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$ARTIFACT_DIR"
+          "$CHROME_BIN" --version | tee "$ARTIFACT_DIR/chrome-version.txt"
+          pinchtab config get browsers.default | tee "$ARTIFACT_DIR/pinchtab-default-browser.txt"
+          pinchtab config get browser.binary | sed -E 's#^(.+)$#Configured browser binary: \1#' | tee "$ARTIFACT_DIR/pinchtab-browser-binary.txt"
+          if pinchtab doctor browser chrome --json > "$ARTIFACT_DIR/pinchtab-doctor-browser.json" 2> "$ARTIFACT_DIR/pinchtab-doctor-browser.stderr"; then
+            cat "$ARTIFACT_DIR/pinchtab-doctor-browser.json"
+          else
+            cat "$ARTIFACT_DIR/pinchtab-doctor-browser.json" || true
+            cat "$ARTIFACT_DIR/pinchtab-doctor-browser.stderr" || true
+            echo "PinchTab Chrome preflight failed. See doctor artifacts." >&2
+            exit 1
+          fi
 
       - name: Start local PinchTab server
         run: |
