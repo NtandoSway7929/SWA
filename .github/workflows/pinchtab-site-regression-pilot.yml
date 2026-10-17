@@ -1,0 +1,568 @@
+name: PinchTab Site Regression Pilot
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/pinchtab-site-regression-pilot.yml"
+      - "index.html"
+      - "sitemap.xml"
+      - "404.html"
+      - "*.css"
+      - "*.js"
+      - "*.webp"
+      - "*.png"
+      - "*.jpg"
+      - "*.jpeg"
+      - "*.svg"
+      - "*.mp4"
+      - "card/**"
+      - "testimonial/**"
+      - "privacy-policy/**"
+      - "cookie-policy/**"
+      - "terms-and-conditions/**"
+      - "paia-manual/**"
+      - "docs/pinchtab-ci-pilot.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pinchtab-site-regression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-regression:
+    name: Audit public routes and compare candidate preview
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PINCHTAB_VERSION: "0.15.2"
+
+    steps:
+      - name: Check out the candidate site
+        uses: actions/checkout@v4
+
+      - name: Create artifact workspace and select isolated PinchTab config
+        shell: bash
+        run: |
+          mkdir -p artifacts/pinchtab
+          echo "PINCHTAB_CONFIG_FILE=$RUNNER_TEMP/pinchtab-config.json" >> "$GITHUB_ENV"
+
+      - name: Download and verify pinned PinchTab binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_dir="$RUNNER_TEMP/pinchtab-install"
+          mkdir -p "$install_dir"
+          cd "$install_dir"
+
+          base_url="https://github.com/pinchtab/pinchtab/releases/download/v$PINCHTAB_VERSION"
+          curl --fail --silent --show-error --location --retry 3 \
+            "$base_url/checksums.txt" -o checksums.txt
+          curl --fail --silent --show-error --location --retry 3 \
+            "$base_url/pinchtab-linux-amd64" -o pinchtab-linux-amd64
+
+          sha256sum --check --ignore-missing checksums.txt
+          chmod 0755 pinchtab-linux-amd64
+          ln -sf pinchtab-linux-amd64 pinchtab
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Prepare isolated container config and runtime network
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          echo "PINCHTAB_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "PINCHTAB_SERVER=http://127.0.0.1:9867" >> "$GITHUB_ENV"
+          export PINCHTAB_GENERATED_TOKEN="$token"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          cfg = {
+              "server": {
+                  "bind": "0.0.0.0",
+                  "port": "9867",
+                  "token": os.environ["PINCHTAB_GENERATED_TOKEN"],
+                  "stateDir": "/data/state",
+              },
+              "instanceDefaults": {
+                  "mode": "headless",
+                  "noRestore": True,
+                  "maxTabs": 4,
+                  "maxParallelTabs": 1,
+              },
+              "security": {
+                  "allowEvaluate": False,
+                  "allowedDomains": [
+                      "127.0.0.1", "localhost", "::1",
+                      "swayphics.co.za", "swayphics-preview",
+                  ],
+                  "trustedResolveCIDRs": ["172.30.255.2/32"],
+              },
+          }
+          Path(os.environ["PINCHTAB_CONFIG_FILE"]).write_text(
+              json.dumps(cfg, indent=2) + "\n", encoding="utf-8"
+          )
+          print("Prepared ephemeral token-protected PinchTab config; evaluation is disabled.")
+          PY
+          docker network create --subnet 172.30.255.0/24 pinchtab-ci-net >/dev/null
+          docker run -d --rm \
+            --name swayphics-preview \
+            --network pinchtab-ci-net \
+            --ip 172.30.255.2 \
+            --read-only \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --tmpfs /tmp:rw,size=64m,mode=1777 \
+            --volume "$GITHUB_WORKSPACE:/www:ro" \
+            python:3.12-alpine \
+            python -m http.server 8765 --bind 0.0.0.0 --directory /www >/dev/null
+          preview_ready=false
+          for attempt in $(seq 1 15); do
+            if docker exec swayphics-preview python -c "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8765/index.html', method='HEAD'), timeout=5).read()" >/dev/null 2>&1; then
+              preview_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [[ "$preview_ready" != "true" ]]; then
+            docker logs swayphics-preview || true
+            echo "::error::Candidate preview container did not become reachable."
+            exit 1
+          fi
+
+      - name: Start PinchTab container and verify browser readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d \
+            --name pinchtab-ci \
+            --network pinchtab-ci-net \
+            --shm-size=2g \
+            --publish 127.0.0.1:9867:9867 \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --read-only \
+            --tmpfs /tmp:rw,size=512m,mode=1777 \
+            --volume pinchtab-ci-data:/data \
+            --volume "$PINCHTAB_CONFIG_FILE:/config/pinchtab.json:ro" \
+            --env PINCHTAB_CONFIG=/config/pinchtab.json \
+            pinchtab/pinchtab:0.15.2 >/dev/null
+          docker exec pinchtab-ci pinchtab --version
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          from urllib.request import Request, urlopen
+          url = "http://127.0.0.1:9867/health"
+          token = os.environ["PINCHTAB_TOKEN"]
+          last_status = "unavailable"
+          for attempt in range(90):
+              try:
+                  req = Request(url, headers={"Authorization": "Bearer " + token})
+                  with urlopen(req, timeout=3) as response:
+                      payload = json.loads(response.read().decode("utf-8"))
+                  instance = payload.get("defaultInstance") or {}
+                  last_status = str(instance.get("status", "missing"))
+                  if last_status == "running":
+                      print("PinchTab server and managed browser are ready.")
+                      break
+              except (OSError, TimeoutError, ValueError) as exc:
+                  last_status = type(exc).__name__
+              if attempt in (0, 4, 9, 19, 39, 59, 79):
+                  print(f"Waiting for browser readiness; attempt={attempt + 1}, status={last_status}")
+              time.sleep(1)
+          else:
+              raise SystemExit(f"Browser not ready within 90 seconds (last status: {last_status}).")
+          PY
+
+      - name: Smoke-test PinchTab browser navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! pinchtab --server "$PINCHTAB_SERVER" nav "https://swayphics.co.za/index.html" --new-tab \
+              > artifacts/pinchtab/browser-smoke.log 2>&1; then
+            echo "::error::PinchTab server responds, but its managed browser did not navigate."
+            cat artifacts/pinchtab/browser-smoke.log || true
+            echo "::group::PinchTab doctor diagnostics"
+            docker exec pinchtab-ci pinchtab doctor > artifacts/pinchtab/doctor.log 2>&1 || true
+            cat artifacts/pinchtab/doctor.log || true
+            echo "::endgroup::"
+            echo "::group::PinchTab server diagnostics"
+            docker logs --tail 240 pinchtab-ci > artifacts/pinchtab/server.log 2>&1 || true
+            echo "::endgroup::"
+            exit 1
+          fi
+          cat artifacts/pinchtab/browser-smoke.log
+          if ! pinchtab --server "$PINCHTAB_SERVER" snap -i -c > artifacts/pinchtab/browser-smoke-snapshot.txt 2>&1; then
+            echo "::error::Browser navigation succeeded but PinchTab snapshot extraction failed."
+            cat artifacts/pinchtab/browser-smoke-snapshot.txt || true
+            docker logs --tail 240 pinchtab-ci > artifacts/pinchtab/server.log 2>&1 || true
+            exit 1
+          fi
+      - name: Audit all seven sitemap routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Audit individually because the local 0.15.2 sitemap path returned
+          # "unexpected end of JSON input"; individual route audits worked.
+          while IFS='|' read -r slug url; do
+            out_dir="$GITHUB_WORKSPACE/artifacts/pinchtab/audit/$slug"
+            mkdir -p "$out_dir"
+
+            echo "::group::Audit $url"
+            if pinchtab --server "$PINCHTAB_SERVER" audit "$url" \
+                --concurrency 1 \
+                --format html \
+                --output-dir "$out_dir" \
+                > "$out_dir/cli.log" 2>&1; then
+              printf '0\n' > "$out_dir/exit-code.txt"
+            else
+              rc=$?
+              printf '%s\n' "$rc" > "$out_dir/exit-code.txt"
+              echo "::warning::PinchTab audit command failed for $url (exit $rc)."
+            fi
+            cat "$out_dir/cli.log"
+            echo "::endgroup::"
+          done <<'ROUTES'
+          home|https://swayphics.co.za/
+          card|https://swayphics.co.za/card/
+          testimonial|https://swayphics.co.za/testimonial/
+          privacy-policy|https://swayphics.co.za/privacy-policy/
+          cookie-policy|https://swayphics.co.za/cookie-policy/
+          terms-and-conditions|https://swayphics.co.za/terms-and-conditions/
+          paia-manual|https://swayphics.co.za/paia-manual/
+          ROUTES
+
+      - name: Capture deterministic responsive screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          out_dir="$GITHUB_WORKSPACE/artifacts/pinchtab/responsive"
+          mkdir -p "$out_dir"
+          nav_output="$(pinchtab --server "$PINCHTAB_SERVER" nav "https://swayphics.co.za/index.html" --new-tab)"
+          printf '%s\n' "$nav_output" > "$out_dir/navigation.log"
+          tab_id="$(printf '%s\n' "$nav_output" | sed -n '1p' | tr -d '\r')"
+          if [[ -z "$tab_id" || "$tab_id" == \{* ]]; then
+            echo "::error::Could not extract a tab ID for responsive screenshot capture."
+            cat "$out_dir/navigation.log"
+            exit 1
+          fi
+
+          pinchtab --server "$PINCHTAB_SERVER" set viewport 390 844 --dpr 1 --mobile --tab "$tab_id"
+          sleep 3
+          pinchtab --server "$PINCHTAB_SERVER" screenshot --tab "$tab_id" -o "$out_dir/homepage-mobile-390x844.png"
+
+          pinchtab --server "$PINCHTAB_SERVER" set viewport 768 1024 --dpr 1 --tab "$tab_id"
+          sleep 3
+          pinchtab --server "$PINCHTAB_SERVER" screenshot --tab "$tab_id" -o "$out_dir/homepage-tablet-768x1024.png"
+
+          pinchtab --server "$PINCHTAB_SERVER" set viewport 1440 900 --dpr 1 --tab "$tab_id"
+          sleep 3
+          pinchtab --server "$PINCHTAB_SERVER" screenshot --tab "$tab_id" -o "$out_dir/homepage-desktop-1440x900.png"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          folder = Path(os.environ["GITHUB_WORKSPACE"]) / "artifacts/pinchtab/responsive"
+          required = [
+              "homepage-mobile-390x844.png",
+              "homepage-tablet-768x1024.png",
+              "homepage-desktop-1440x900.png",
+          ]
+          errors = []
+          for name in required:
+              path = folder / name
+              if not path.is_file() or path.stat().st_size == 0:
+                  errors.append(f"Missing or empty responsive screenshot: {name}")
+              else:
+                  print(f"Captured {name}: {path.stat().st_size} bytes")
+          if errors:
+              raise SystemExit("; ".join(errors))
+          PY
+
+      - name: Compare production against the checked-out candidate site
+        shell: bash
+        run: |
+          set -euo pipefail
+          preview_url="http://swayphics-preview:8765"
+          compare_dir="$GITHUB_WORKSPACE/artifacts/pinchtab/visual-compare"
+          mkdir -p "$compare_dir"
+
+          if pinchtab --server "$PINCHTAB_SERVER" compare \
+              "https://swayphics.co.za" \
+              "$preview_url" \
+              --pages "/,/card/,/testimonial/,/privacy-policy/,/cookie-policy/,/terms-and-conditions/,/paia-manual/" \
+              --concurrency 1 \
+              --format html \
+              --output-dir "$compare_dir" \
+              > "$compare_dir/cli.log" 2>&1; then
+            printf '0\n' > "$compare_dir/exit-code.txt"
+          else
+            rc=$?
+            printf '%s\n' "$rc" > "$compare_dir/exit-code.txt"
+            echo "::warning::PinchTab compare returned exit $rc; diagnostics will be included in artifacts."
+          fi
+          cat "$compare_dir/cli.log"
+
+      - name: Summarize reports and verify tool output
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("artifacts/pinchtab")
+          routes = [
+              ("home", "https://swayphics.co.za/"),
+              ("card", "https://swayphics.co.za/card/"),
+              ("testimonial", "https://swayphics.co.za/testimonial/"),
+              ("privacy-policy", "https://swayphics.co.za/privacy-policy/"),
+              ("cookie-policy", "https://swayphics.co.za/cookie-policy/"),
+              ("terms-and-conditions", "https://swayphics.co.za/terms-and-conditions/"),
+              ("paia-manual", "https://swayphics.co.za/paia-manual/"),
+          ]
+          failures = []
+          rows = []
+
+          asset_types = {"image", "stylesheet", "font", "media", "script"}
+          for slug, url in routes:
+              folder = root / "audit" / slug
+              try:
+                  exit_code = int((folder / "exit-code.txt").read_text().strip())
+              except Exception:
+                  exit_code = None
+              report_path = folder / "report.json"
+              page = None
+              parse_error = ""
+              try:
+                  report = json.loads(report_path.read_text(encoding="utf-8"))
+                  pages = report.get("pages")
+                  if isinstance(pages, list) and pages:
+                      page = pages[0]
+                  else:
+                      parse_error = "report has no page entries"
+              except Exception as exc:
+                  parse_error = f"{type(exc).__name__}: {exc}"
+
+              record = {
+                  "slug": slug, "url": url, "exitCode": exit_code,
+                  "reportValid": page is not None, "pageError": "",
+                  "statusCode": None, "accessibilityScore": None,
+                  "jsErrors": None, "brokenAssets": None,
+                  "failedRequests": None, "networkRequests": None,
+                  "requestsWithoutStatus": None,
+              }
+              if page is None:
+                  failures.append(f"{slug}: missing/invalid report ({parse_error})")
+              else:
+                  browser = page.get("browser") or {}
+                  requests = browser.get("networkRequests") or []
+                  requests = requests if isinstance(requests, list) else []
+                  document = next((
+                      item for item in requests
+                      if isinstance(item, dict) and str(item.get("resourceType", "")).lower() == "document"
+                  ), {})
+                  failed_requests = [
+                      item for item in requests
+                      if isinstance(item, dict) and isinstance(item.get("status"), int) and item["status"] >= 400
+                  ]
+                  broken_assets = [
+                      item for item in failed_requests
+                      if str(item.get("resourceType", "")).lower() in asset_types
+                  ]
+                  js_errors = browser.get("jsErrors") or []
+                  if not isinstance(js_errors, list):
+                      js_errors = [js_errors]
+                  record.update({
+                      "pageError": str(page.get("error") or ""),
+                      "statusCode": document.get("status"),
+                      "accessibilityScore": browser.get("accessibilityScore"),
+                      "jsErrors": len(js_errors),
+                      "brokenAssets": len(broken_assets),
+                      "failedRequests": len(failed_requests),
+                      "networkRequests": len(requests),
+                      "requestsWithoutStatus": sum(
+                          1 for item in requests
+                          if not isinstance(item, dict) or not isinstance(item.get("status"), int)
+                      ),
+                  })
+              if exit_code != 0:
+                  failures.append(f"{slug}: audit command exit code {exit_code}")
+              rows.append(record)
+
+          responsive_dir = root / "responsive"
+          responsive_files = [
+              "homepage-mobile-390x844.png",
+              "homepage-tablet-768x1024.png",
+              "homepage-desktop-1440x900.png",
+          ]
+          responsive_missing = [
+              name for name in responsive_files
+              if not (responsive_dir / name).is_file() or (responsive_dir / name).stat().st_size == 0
+          ]
+          if responsive_missing:
+              failures.append("Responsive screenshot artifacts missing: " + ", ".join(responsive_missing))
+
+          compare_folder = root / "visual-compare"
+          try:
+              compare_exit = int((compare_folder / "exit-code.txt").read_text().strip())
+          except Exception:
+              compare_exit = None
+          compare_valid = False
+          compare_page_count = 0
+          compare_successful_pairs = 0
+          compare_error_pairs = []
+          compare_details = []
+          compare_has_diffs = None
+          try:
+              compare_report = json.loads((compare_folder / "report.json").read_text(encoding="utf-8"))
+              compare_pages = compare_report.get("pages")
+              compare_valid = isinstance(compare_pages, list)
+              compare_has_diffs = bool(compare_report.get("hasDiffs"))
+              compare_page_count = len(compare_pages) if isinstance(compare_pages, list) else 0
+              for pair in compare_pages if isinstance(compare_pages, list) else []:
+                  error = str(pair.get("error") or "").strip()
+                  pair_status = str(pair.get("status") or "")
+                  pair_path = "(base)" if pair.get("path") == "" else str(pair.get("path") or "(unknown route)")
+                  raw_diff = pair.get("diffPercentage")
+                  diff_percentage = round(float(raw_diff), 2) if isinstance(raw_diff, (int, float)) else None
+                  drift = pair.get("drift") or []
+                  detail = {
+                      "path": pair_path,
+                      "status": pair_status,
+                      "visualDiffPercentage": diff_percentage,
+                      "dataDriftCount": len(drift) if isinstance(drift, list) else None,
+                      "error": error,
+                  }
+                  compare_details.append(detail)
+                  if error:
+                      compare_error_pairs.append(f"{pair_path}: {error}")
+                  elif pair_status == "compared":
+                      compare_successful_pairs += 1
+                  else:
+                      compare_error_pairs.append(f"{pair_path}: unexpected comparison status {pair_status!r}")
+          except Exception as exc:
+              failures.append(f"Visual comparison report missing/invalid: {type(exc).__name__}: {exc}")
+          if compare_exit != 0:
+              failures.append(f"Visual compare command exit code {compare_exit}")
+          if not compare_valid:
+              failures.append("Visual comparison report does not contain a pages array.")
+          if compare_page_count != len(routes):
+              failures.append(f"Visual comparison returned {compare_page_count}/{len(routes)} route pairs.")
+          for pair_error in compare_error_pairs:
+              failures.append("Visual comparison did not complete: " + pair_error)
+
+          summary = {
+              "pinchtabVersion": "0.15.2",
+              "auditedRoutes": len(routes),
+              "audits": rows,
+              "responsiveScreenshots": {
+                  "required": responsive_files,
+                  "missing": responsive_missing,
+                  "valid": not responsive_missing,
+              },
+              "visualCompare": {
+                  "exitCode": compare_exit,
+                  "reportValid": compare_valid,
+                  "pagePairsReported": compare_page_count,
+                  "successfulPairs": compare_successful_pairs,
+                  "errorPairs": compare_error_pairs,
+                  "hasDiffs": compare_has_diffs,
+                  "routeDetails": compare_details,
+                  "failOnDiffEnabled": False,
+              },
+              "toolFailures": failures,
+          }
+          (root / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+          with (root / "summary.csv").open("w", newline="", encoding="utf-8") as handle:
+              fields = [
+                  "slug", "url", "exitCode", "reportValid", "statusCode",
+                  "accessibilityScore", "jsErrors", "brokenAssets", "failedRequests",
+                  "networkRequests", "requestsWithoutStatus", "pageError",
+              ]
+              writer = csv.DictWriter(handle, fieldnames=fields)
+              writer.writeheader()
+              writer.writerows(rows)
+
+          lines = [
+              "# PinchTab site-regression pilot",
+              "",
+              "- PinchTab version: 0.15.2",
+              f"- Routes audited: {len(routes)}",
+              f"- Valid route reports: {sum(1 for row in rows if row['reportValid'])}/{len(routes)}",
+              f"- Responsive screenshots: {len(responsive_files) - len(responsive_missing)}/{len(responsive_files)} captured",
+              f"- Syntactically valid visual-compare report: {compare_valid}",
+              f"- Successfully compared route pairs: {compare_successful_pairs}/{len(routes)}",
+              f"- Comparison route errors: {len(compare_error_pairs)}",
+              f"- Comparison reports visual differences: {compare_has_diffs}",
+              "- Visual differences do not fail the pilot; inspect the annotated diff images, especially on pages with autoplay media.",
+              "",
+              "## Route-by-route visual comparison",
+              "",
+              "| Route | Status | Pixel difference | Data drift fields | Route error |",
+              "|---|---|---:|---:|---|",
+          ]
+          for pair in compare_details:
+              pct = f"{pair['visualDiffPercentage']:.2f}%" if pair["visualDiffPercentage"] is not None else "n/a"
+              err = pair["error"].replace("|", "\\|") or "—"
+              drift_count = pair["dataDriftCount"] if pair["dataDriftCount"] is not None else "n/a"
+              lines.append(f"| {pair['path'] or '(base)'} | {pair['status']} | {pct} | {drift_count} | {err} |")
+          lines.extend([
+              "",
+              "| Route | HTTP | Accessibility | JS errors | Broken assets | Failed requests | Requests without status |",
+              "|---|---:|---:|---:|---:|---:|---:|",
+          ])
+          for row in rows:
+              score = row["accessibilityScore"] if row["accessibilityScore"] is not None else "n/a"
+              js = row["jsErrors"] if row["jsErrors"] is not None else "n/a"
+              assets = row["brokenAssets"] if row["brokenAssets"] is not None else "n/a"
+              status = row["statusCode"] if row["statusCode"] is not None else "n/a"
+              failed = row["failedRequests"] if row["failedRequests"] is not None else "n/a"
+              missing = row["requestsWithoutStatus"] if row["requestsWithoutStatus"] is not None else "n/a"
+              lines.append(f"| {row['slug']} | {status} | {score} | {js} | {assets} | {failed} | {missing} |")
+          lines.extend([
+              "",
+              "Responsive screenshot artifacts: responsive/homepage-mobile-390x844.png, responsive/homepage-tablet-768x1024.png, responsive/homepage-desktop-1440x900.png.",
+              "Artifacts: audit route folders, responsive screenshots, visual-compare, summary.json, summary.csv.",
+              "This workflow is observational: it does not fail on existing site findings or visual differences. It fails only when PinchTab cannot produce valid reports.",
+          ])
+          Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+          if failures:
+              for failure in failures:
+                  print(f"::error::{failure}")
+              raise SystemExit(f"PinchTab tool/report failures: {len(failures)}. Artifacts are uploaded even on failure.")
+          print(f"All seven route reports generated; visual comparison completed for {compare_successful_pairs}/{len(routes)} routes.")
+          PY
+
+      - name: Collect container diagnostics
+        if: always()
+        shell: bash
+        run: |
+          docker logs pinchtab-ci > artifacts/pinchtab/server.log 2>&1 || true
+          docker logs swayphics-preview > artifacts/pinchtab/preview-server.log 2>&1 || true
+      - name: Upload audit and comparison artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinchtab-site-regression-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/pinchtab/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stop temporary containers and network
+        if: always()
+        shell: bash
+        run: |
+          docker rm -f pinchtab-ci swayphics-preview >/dev/null 2>&1 || true
+          docker network rm pinchtab-ci-net >/dev/null 2>&1 || true
+          docker volume rm pinchtab-ci-data >/dev/null 2>&1 || true
