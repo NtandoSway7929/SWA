@@ -2,6 +2,14 @@
     "use strict";
 
     function createPrefill(proposal, lead) {
+        const activeLeadStatuses = [
+            "new",
+            "contacted",
+            "interested",
+            "proposal_sent",
+            "negotiating",
+            "follow-up"
+        ];
         const draft = proposal || {};
         const contact = lead || {};
         const proposalLeadId = String(draft.lead_id || "").trim();
@@ -17,7 +25,7 @@
             !proposalLeadId ||
             !leadId ||
             proposalLeadId !== leadId ||
-            leadStatus === "not_interested" ||
+            !activeLeadStatuses.includes(leadStatus) ||
             !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
             !content ||
             content.length > 10000

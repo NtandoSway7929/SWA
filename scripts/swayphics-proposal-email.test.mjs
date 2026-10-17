@@ -26,7 +26,7 @@ test("builds a generic email draft for the proposal's matching lead", () => {
         {
             id: "lead-1",
             email: "owner@example.com",
-            status: "qualified"
+            status: "contacted"
         }
     );
 
@@ -71,6 +71,28 @@ test("requires an eligible lead email and proposal content", () => {
         ),
         null
     );
+});
+
+test("prepares drafts only for leads in an active pipeline status", () => {
+    const proposal = { lead_id: "lead-1", content: "Proposal" };
+    const activeLead = {
+        id: "lead-1",
+        email: "owner@example.com",
+        status: "proposal sent"
+    };
+
+    assert.ok(createPrefill(proposal, activeLead));
+
+    for (const status of ["not interested", "won", "lost", "", "archived"]) {
+        assert.equal(
+            createPrefill(proposal, {
+                ...activeLead,
+                status
+            }),
+            null,
+            `status ${JSON.stringify(status)} must not be eligible`
+        );
+    }
 });
 
 test("rejects content that exceeds the email composer limit", () => {
