@@ -43,7 +43,11 @@ test("does not prepare a proposal for a different lead", () => {
     assert.equal(
         createPrefill(
             { lead_id: "lead-1", content: "Proposal" },
-            { id: "lead-2", email: "owner@example.com" }
+            {
+                id: "lead-2",
+                email: "owner@example.com",
+                status: "contacted"
+            }
         ),
         null
     );
@@ -51,9 +55,17 @@ test("does not prepare a proposal for a different lead", () => {
 
 test("requires an eligible lead email and proposal content", () => {
     const proposal = { lead_id: "lead-1", content: "Proposal" };
+    const activeLead = {
+        id: "lead-1",
+        email: "owner@example.com",
+        status: "contacted"
+    };
 
     assert.equal(
-        createPrefill(proposal, { id: "lead-1", email: "not-an-email" }),
+        createPrefill(proposal, {
+            ...activeLead,
+            email: "not-an-email"
+        }),
         null
     );
     assert.equal(
@@ -67,7 +79,7 @@ test("requires an eligible lead email and proposal content", () => {
     assert.equal(
         createPrefill(
             { lead_id: "lead-1", content: "   " },
-            { id: "lead-1", email: "owner@example.com" }
+            activeLead
         ),
         null
     );
@@ -99,7 +111,11 @@ test("rejects content that exceeds the email composer limit", () => {
     assert.equal(
         createPrefill(
             { lead_id: "lead-1", content: "x".repeat(10001) },
-            { id: "lead-1", email: "owner@example.com" }
+            {
+                id: "lead-1",
+                email: "owner@example.com",
+                status: "contacted"
+            }
         ),
         null
     );
