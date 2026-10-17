@@ -40,15 +40,16 @@ jobs:
     timeout-minutes: 25
     env:
       PINCHTAB_VERSION: "0.15.2"
-      PINCHTAB_CONFIG: ${{ runner.temp }}/pinchtab-config.json
 
     steps:
       - name: Check out the candidate site
         uses: actions/checkout@v4
 
-      - name: Create artifact workspace
+      - name: Create artifact workspace and select isolated PinchTab config
         shell: bash
-        run: mkdir -p artifacts/pinchtab
+        run: |
+          mkdir -p artifacts/pinchtab
+          echo "PINCHTAB_CONFIG=$RUNNER_TEMP/pinchtab-config.json" >> "$GITHUB_ENV"
 
       - name: Install Chrome for Testing
         id: chrome
