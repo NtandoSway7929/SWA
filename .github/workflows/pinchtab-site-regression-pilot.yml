@@ -432,7 +432,7 @@ jobs:
               for pair in compare_pages if isinstance(compare_pages, list) else []:
                   error = str(pair.get("error") or "").strip()
                   pair_status = str(pair.get("status") or "")
-                  pair_path = str(pair.get("path") or "(unknown route)")
+                  pair_path = "(base)" if pair.get("path") == "" else str(pair.get("path") or "(unknown route)")
                   raw_diff = pair.get("diffPercentage")
                   diff_percentage = round(float(raw_diff), 2) if isinstance(raw_diff, (int, float)) else None
                   drift = pair.get("drift") or []
