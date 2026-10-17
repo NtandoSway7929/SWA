@@ -1,0 +1,305 @@
+name: PinchTab Browser QA Pilot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 4 * * 1"
+  push:
+    branches:
+      - main
+      - qa/pinchtab-browser-qa-pilot
+    paths:
+      - "index.html"
+      - "sitemap.xml"
+      - "*.html"
+      - "*.css"
+      - "*.js"
+      - "*.webp"
+      - "*.png"
+      - "*.jpg"
+      - "*.jpeg"
+      - "*.svg"
+      - "*.mp4"
+      - "card/**"
+      - "testimonial/**"
+      - "privacy-policy/**"
+      - "cookie-policy/**"
+      - "terms-and-conditions/**"
+      - "paia-manual/**"
+      - ".github/workflows/pinchtab-browser-qa-pilot.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "index.html"
+      - "sitemap.xml"
+      - "*.html"
+      - "*.css"
+      - "*.js"
+      - "*.webp"
+      - "*.png"
+      - "*.jpg"
+      - "*.jpeg"
+      - "*.svg"
+      - "*.mp4"
+      - "card/**"
+      - "testimonial/**"
+      - "privacy-policy/**"
+      - "cookie-policy/**"
+      - "terms-and-conditions/**"
+      - "paia-manual/**"
+      - ".github/workflows/pinchtab-browser-qa-pilot.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pinchtab-browser-qa-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  browser-qa:
+    name: Audit live routes and compare checkout visually
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      ARTIFACT_DIR: artifacts/pinchtab-qa
+      LIVE_SITE_URL: https://swayphics.co.za
+      LOCAL_SITE_URL: http://127.0.0.1:4173
+
+    steps:
+      - name: Check out the current source revision
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up Chrome for Testing
+        id: chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Install pinned PinchTab CLI
+        run: npm install --global --allow-scripts=pinchtab pinchtab@0.15.2
+
+      - name: Configure isolated, least-privilege PinchTab runtime
+        env:
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$ARTIFACT_DIR"
+          pinchtab config init
+          pinchtab config patch "{\"server\":{\"port\":\"9867\",\"bind\":\"127.0.0.1\"},\"browser\":{\"binary\":\"$CHROME_BIN\"},\"security\":{\"allowEvaluate\":false,\"allowMacro\":false,\"allowScreencast\":false,\"allowDownload\":false,\"allowCookies\":false,\"allowFileScheme\":false,\"allowUpload\":false,\"allowClipboard\":false,\"allowedDomains\":[\"127.0.0.1\",\"localhost\",\"::1\",\"swayphics.co.za\"],\"idpi\":{\"enabled\":true,\"strictMode\":true,\"scanContent\":true,\"wrapContent\":true}}}"
+          pinchtab config validate
+
+      - name: Start local PinchTab server
+        run: |
+          set -euo pipefail
+          pinchtab server --log-level info > "$ARTIFACT_DIR/pinchtab-server.log" 2>&1 &
+          echo $! > "$ARTIFACT_DIR/pinchtab-server.pid"
+          for attempt in $(seq 1 30); do
+            if pinchtab health > /dev/null 2>&1; then
+              echo "PinchTab server is healthy."
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$ARTIFACT_DIR/pinchtab-server.log"
+          echo "PinchTab server failed to become healthy." >&2
+          exit 1
+
+      - name: Audit all seven live sitemap routes
+        run: |
+          set -uo pipefail
+          failures=0
+          while IFS='|' read -r slug url; do
+            [ -n "$slug" ] || continue
+            report_dir="$ARTIFACT_DIR/live-audit/$slug"
+            log_dir="$ARTIFACT_DIR/logs"
+            mkdir -p "$report_dir" "$log_dir"
+            log_path="$log_dir/live-audit-$slug.log"
+            echo "Auditing $url"
+            if ! pinchtab audit "$url" --output-dir "$report_dir" --concurrency 1 > "$log_path" 2>&1; then
+              echo "Audit command failed: $url" | tee -a "$ARTIFACT_DIR/infrastructure-failures.txt"
+              cat "$log_path"
+              failures=$((failures + 1))
+            fi
+            if [ ! -s "$report_dir/report.json" ]; then
+              echo "Missing or empty report: $url" | tee -a "$ARTIFACT_DIR/infrastructure-failures.txt"
+              failures=$((failures + 1))
+            fi
+          done <<'PAGES'
+          home|https://swayphics.co.za/
+          card|https://swayphics.co.za/card/
+          testimonial|https://swayphics.co.za/testimonial/
+          privacy-policy|https://swayphics.co.za/privacy-policy/
+          cookie-policy|https://swayphics.co.za/cookie-policy/
+          terms-and-conditions|https://swayphics.co.za/terms-and-conditions/
+          paia-manual|https://swayphics.co.za/paia-manual/
+          PAGES
+          if [ "$failures" -gt 0 ]; then
+            echo "One or more audits failed to produce usable reports." >&2
+            exit 1
+          fi
+
+      - name: Start a loopback-only preview of this checkout
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory "$GITHUB_WORKSPACE" > "$ARTIFACT_DIR/local-preview-server.log" 2>&1 &
+          echo $! > "$ARTIFACT_DIR/local-preview-server.pid"
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error "$LOCAL_SITE_URL/" -o /dev/null; then
+              echo "Local checkout preview is serving on loopback."
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$ARTIFACT_DIR/local-preview-server.log"
+          echo "Local preview did not start." >&2
+          exit 1
+
+      - name: Compare live production against this checkout
+        run: |
+          set -euo pipefail
+          mkdir -p "$ARTIFACT_DIR/live-vs-checkout" "$ARTIFACT_DIR/logs"
+          pinchtab compare "$LIVE_SITE_URL" "$LOCAL_SITE_URL" \
+            --pages "/,/card/,/testimonial/,/privacy-policy/,/cookie-policy/,/terms-and-conditions/,/paia-manual/" \
+            --concurrency 1 \
+            --output-dir "$ARTIFACT_DIR/live-vs-checkout" \
+            > "$ARTIFACT_DIR/logs/live-vs-checkout.log" 2>&1 || {
+              cat "$ARTIFACT_DIR/logs/live-vs-checkout.log"
+              echo "PinchTab visual/data comparison failed to run." >&2
+              exit 1
+            }
+          if [ ! -s "$ARTIFACT_DIR/live-vs-checkout/report.json" ]; then
+            cat "$ARTIFACT_DIR/logs/live-vs-checkout.log"
+            echo "Comparison did not produce report.json." >&2
+            exit 1
+          fi
+
+      - name: Capture checkout screenshots at mobile, tablet, and desktop sizes
+        run: |
+          set -euo pipefail
+          mkdir -p "$ARTIFACT_DIR/responsive"
+          nav_output="$(pinchtab nav "$LOCAL_SITE_URL/" --new-tab)"
+          printf '%s\n' "$nav_output" > "$ARTIFACT_DIR/responsive/navigation-output.txt"
+          tab_id="$(printf '%s\n' "$nav_output" | sed -n '1p' | tr -d '\r')"
+          if [[ ! "$tab_id" =~ ^[A-Fa-f0-9]{32}$ ]]; then
+            cat "$ARTIFACT_DIR/responsive/navigation-output.txt"
+            echo "Could not determine PinchTab tab ID for responsive screenshots." >&2
+            exit 1
+          fi
+          sleep 3
+          pinchtab set viewport 390 844 --dpr 1 --mobile --tab "$tab_id"
+          sleep 1
+          pinchtab screenshot --tab "$tab_id" -o "$ARTIFACT_DIR/responsive/home-mobile-390x844.png"
+          pinchtab set viewport 768 1024 --dpr 1 --tab "$tab_id"
+          sleep 1
+          pinchtab screenshot --tab "$tab_id" -o "$ARTIFACT_DIR/responsive/home-tablet-768x1024.png"
+          pinchtab set viewport 1440 900 --dpr 1 --tab "$tab_id"
+          sleep 1
+          pinchtab screenshot --tab "$tab_id" -o "$ARTIFACT_DIR/responsive/home-desktop-1440x900.png"
+
+      - name: Write evidence-based audit summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["ARTIFACT_DIR"])
+          expected = {"home", "card", "testimonial", "privacy-policy", "cookie-policy", "terms-and-conditions", "paia-manual"}
+          lines = [
+              "# PinchTab Browser QA Pilot",
+              "",
+              f"- Source revision: {os.environ.get('GITHUB_SHA', 'unknown')}",
+              f"- Live target: {os.environ['LIVE_SITE_URL']}",
+              f"- Checked-out source preview: {os.environ['LOCAL_SITE_URL']}",
+              "- Non-gating pilot: site findings are reported, not used as a visual-diff merge gate.",
+              "",
+              "## Live route audit results",
+              "",
+              "| Route | Page load error | Accessibility score | Uncaught JS errors | Broken assets |",
+              "|---|---|---:|---:|---:|",
+          ]
+          missing = []
+          total_js = 0
+          total_assets = 0
+          pages_seen = 0
+          for slug in sorted(expected):
+              report_path = root / "live-audit" / slug / "report.json"
+              if not report_path.is_file():
+                  missing.append(slug)
+                  continue
+              try:
+                  report = json.loads(report_path.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  lines.append(f"| {slug} | report parse failure: {type(exc).__name__} | n/a | n/a | n/a |")
+                  missing.append(slug)
+                  continue
+              for page in report.get("pages") or []:
+                  pages_seen += 1
+                  browser = page.get("browser") or {}
+                  js_errors = browser.get("jsErrors") or []
+                  broken = browser.get("brokenAssets") or []
+                  total_js += len(js_errors)
+                  total_assets += len(broken)
+                  page_error = str(page.get("error") or "None reported").replace("|", "\\|").replace("\n", " ")
+                  score = browser.get("accessibilityScore", "n/a")
+                  lines.append(f"| {page.get('url', slug)} | {page_error} | {score} | {len(js_errors)} | {len(broken)} |")
+                  for error in js_errors:
+                      message = str(error.get("message", error)) if isinstance(error, dict) else str(error)
+                      lines.extend(["", f"JavaScript finding on {page.get('url', slug)}:", "", message[:1500], ""])
+          lines += [
+              "",
+              "## Totals",
+              "",
+              f"- Pages reported: {pages_seen} of {len(expected)} expected sitemap routes.",
+              f"- Uncaught JavaScript errors reported: {total_js}.",
+              f"- Broken assets reported: {total_assets}.",
+              "- Accessibility scores are automated tool scores, not proof of full conformance.",
+              "",
+              "## Visual comparison and viewport evidence",
+              "",
+              "- Live-vs-checkout JSON and diff images: live-vs-checkout/.",
+              "- Responsive screenshots: responsive/.",
+              "- Visual differences do not fail the pilot; inspect the report and diff images before proposing an enforcement threshold.",
+              "",
+              "## Scope boundary",
+              "",
+              "No standalone lead-demo preview was available in the benchmark, so this run compares production with the checked-out Swayphics site and does not claim demo-build coverage.",
+          ]
+          if missing:
+              lines += ["", "## Missing or unreadable reports", ""]
+              lines += [f"- {slug}" for slug in sorted(set(missing))]
+          summary = "\n".join(lines) + "\n"
+          root.mkdir(parents=True, exist_ok=True)
+          (root / "summary.md").write_text(summary, encoding="utf-8")
+          step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if step_summary:
+              with open(step_summary, "a", encoding="utf-8") as handle:
+                  handle.write(summary)
+          if missing or pages_seen != len(expected):
+              raise SystemExit("Some live-route reports are missing or contain no page entries.")
+          PY
+
+      - name: Stop temporary test servers
+        if: always()
+        run: |
+          for pid_file in "$ARTIFACT_DIR/pinchtab-server.pid" "$ARTIFACT_DIR/local-preview-server.pid"; do
+            if [ -s "$pid_file" ]; then
+              kill "$(cat "$pid_file")" 2>/dev/null || true
+            fi
+          done
+
+      - name: Upload reports, screenshots, and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinchtab-browser-qa-${{ github.run_id }}
+          path: artifacts/pinchtab-qa/
+          if-no-files-found: warn
+          retention-days: 14
