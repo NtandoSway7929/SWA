@@ -14,7 +14,7 @@ It runs manually through workflow_dispatch and on pull requests into main that t
 
 It:
 1. Downloads the pinned PinchTab 0.15.2 Linux CLI and verifies it against the release checksum.
-2. Runs the official `ghcr.io/pinchtab/pinchtab:0.15.2` browser container, which includes Chromium and container-compatible launch settings.
+2. Runs the official `pinchtab/pinchtab:0.15.2` browser container, which includes Chromium and container-compatible launch settings.
 3. Gives the temporary container a random per-run API token, binds the published server port to host loopback only, keeps JavaScript evaluation disabled, and uses no repository secrets.
 4. Runs a separate static preview container on a private Docker network so the browser can compare production with the checked-out candidate without exposing the preview port.
 5. Waits for the managed browser to report `running`, then smoke-tests navigation before beginning audits.
