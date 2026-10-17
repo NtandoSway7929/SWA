@@ -19824,8 +19824,15 @@ function simpleBars(items, color) {
                         ? "Approving…"
                         : "Saving…";
 
-                try {
-                    const updated = await api(
+                const proposalDraft = {
+                    ...proposal,
+                    title: title || "Swayphics Proposal",
+                    subject: subject || "Swayphics | Proposal",
+                    content
+                };
+
+                function saveProposalApproval(draft) {
+                    return api(
                         "/rest/v1/lead_proposals?id=eq." +
                         encodeURIComponent(proposal.id),
                         {
@@ -19835,38 +19842,22 @@ function simpleBars(items, color) {
                                 "Prefer": "return=representation"
                             }),
                             body: JSON.stringify({
-                                title: title || "Swayphics Proposal",
-                                subject:
-                                    subject ||
-                                    "Swayphics | Proposal",
-                                content,
+                                title: draft.title,
+                                subject: draft.subject,
+                                content: draft.content,
                                 status: "approved",
                                 approved_by:
                                     state.currentUser &&
                                     state.currentUser.id
                                         ? state.currentUser.id
                                         : null,
-                                approved_at:
-                                    new Date().toISOString()
+                                approved_at: new Date().toISOString()
                             })
                         }
                     );
+                }
 
-                    const updatedProposal =
-                        Array.isArray(updated)
-                            ? updated[0]
-                            : updated;
-
-                    if (
-                        !updatedProposal ||
-                        String(updatedProposal.id || "") !== String(proposal.id) ||
-                        String(updatedProposal.status || "").toLowerCase() !== "approved"
-                    ) {
-                        throw new Error(
-                            "Proposal approval could not be confirmed. No email draft was opened."
-                        );
-                    }
-
+                function recordApproval(updatedProposal) {
                     const index =
                         state.leadProposals.findIndex(function (item) {
                             return item.id === proposal.id;
@@ -19880,15 +19871,66 @@ function simpleBars(items, color) {
 
                     close();
                     renderView();
+                }
 
+                try {
                     if (shouldPrepareEmail) {
-                        openEmailComposer(
-                            "lead",
-                            lead.id,
-                            null,
-                            emailPrefill
+                        const helper =
+                            window.SwayphicsProposalEmail;
+
+                        if (
+                            !helper ||
+                            typeof helper.approveAndPrepareEmail !== "function"
+                        ) {
+                            throw new Error(
+                                "The proposal email handoff is unavailable."
+                            );
+                        }
+
+                        await helper.approveAndPrepareEmail(
+                            proposalDraft,
+                            lead,
+                            {
+                                approveProposal: function (draft) {
+                                    return saveProposalApproval(draft);
+                                },
+                                onApprovalConfirmed: function (updatedProposal) {
+                                    recordApproval(updatedProposal);
+                                },
+                                openComposer: function (
+                                    contactType,
+                                    contactId,
+                                    threadId,
+                                    options
+                                ) {
+                                    openEmailComposer(
+                                        contactType,
+                                        contactId,
+                                        threadId,
+                                        options
+                                    );
+                                }
+                            }
                         );
                     } else {
+                        const updated = await saveProposalApproval(proposalDraft);
+
+                        const updatedProposal =
+                            Array.isArray(updated)
+                                ? updated[0]
+                                : updated;
+
+                        if (
+                            !updatedProposal ||
+                            String(updatedProposal.id || "") !== String(proposal.id) ||
+                            String(updatedProposal.status || "").toLowerCase() !== "approved"
+                        ) {
+                            throw new Error(
+                                "Proposal approval could not be confirmed."
+                            );
+                        }
+
+                        recordApproval(updatedProposal);
                         swayAlert(
                             "Proposal approved for review. It has not been sent."
                         );

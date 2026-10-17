@@ -1,15 +1,16 @@
 (function (root) {
     "use strict";
 
+    const activeLeadStatuses = Object.freeze([
+        "new",
+        "contacted",
+        "interested",
+        "proposal_sent",
+        "negotiating",
+        "follow-up"
+    ]);
+
     function createPrefill(proposal, lead) {
-        const activeLeadStatuses = [
-            "new",
-            "contacted",
-            "interested",
-            "proposal_sent",
-            "negotiating",
-            "follow-up"
-        ];
         const draft = proposal || {};
         const contact = lead || {};
         const proposalLeadId = String(draft.lead_id || "").trim();
@@ -50,7 +51,60 @@
         };
     }
 
+    async function approveAndPrepareEmail(proposal, lead, actions) {
+        const draft = proposal || {};
+        const contact = lead || {};
+        const operations = actions || {};
+        const proposalId = String(draft.id || "").trim();
+        const leadId = String(contact.id || "").trim();
+        const prefill = createPrefill(draft, contact);
+
+        if (!proposalId || !prefill) {
+            throw new Error(
+                "A matching active lead, valid email and proposal content are required."
+            );
+        }
+
+        if (
+            typeof operations.approveProposal !== "function" ||
+            typeof operations.openComposer !== "function"
+        ) {
+            throw new Error("Proposal email handoff actions are unavailable.");
+        }
+
+        const approvalResult =
+            await operations.approveProposal(draft);
+        const approvedProposal =
+            Array.isArray(approvalResult)
+                ? approvalResult[0]
+                : approvalResult;
+
+        if (
+            !approvedProposal ||
+            String(approvedProposal.id || "") !== proposalId ||
+            String(approvedProposal.status || "").toLowerCase() !== "approved"
+        ) {
+            throw new Error(
+                "Proposal approval could not be confirmed. No email draft was opened."
+            );
+        }
+
+        if (typeof operations.onApprovalConfirmed === "function") {
+            await operations.onApprovalConfirmed(approvedProposal);
+        }
+
+        operations.openComposer(
+            "lead",
+            leadId,
+            null,
+            prefill
+        );
+
+        return approvedProposal;
+    }
+
     root.SwayphicsProposalEmail = Object.freeze({
-        createPrefill
+        createPrefill,
+        approveAndPrepareEmail
     });
 })(typeof window === "undefined" ? globalThis : window);
