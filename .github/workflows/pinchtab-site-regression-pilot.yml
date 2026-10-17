@@ -120,13 +120,24 @@ jobs:
             --volume "$GITHUB_WORKSPACE:/www:ro" \
             python:3.12-alpine \
             python -m http.server 8765 --bind 0.0.0.0 --directory /www >/dev/null
-          docker exec swayphics-preview python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/index.html', timeout=5).read(32)"
+          preview_ready=false
+          for attempt in $(seq 1 15); do
+            if docker exec swayphics-preview python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/index.html', timeout=5).read(32)" >/dev/null 2>&1; then
+              preview_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [[ "$preview_ready" != "true" ]]; then
+            docker logs swayphics-preview || true
+            echo "::error::Candidate preview container did not become reachable."
+            exit 1
+          fi
 
       - name: Start PinchTab container and verify browser readiness
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/pinchtab-data"
           docker run -d \
             --name pinchtab-ci \
             --network pinchtab-ci-net \
@@ -136,7 +147,7 @@ jobs:
             --security-opt=no-new-privileges \
             --read-only \
             --tmpfs /tmp:rw,size=512m,mode=1777 \
-            --volume "$RUNNER_TEMP/pinchtab-data:/data" \
+            --volume pinchtab-ci-data:/data \
             --volume "$PINCHTAB_CONFIG_FILE:/config/pinchtab.json:ro" \
             --env PINCHTAB_CONFIG=/config/pinchtab.json \
             ghcr.io/pinchtab/pinchtab:0.15.2 >/dev/null
@@ -190,7 +201,7 @@ jobs:
           if ! pinchtab --server "$PINCHTAB_SERVER" snap -i -c > artifacts/pinchtab/browser-smoke-snapshot.txt 2>&1; then
             echo "::error::Browser navigation succeeded but PinchTab snapshot extraction failed."
             cat artifacts/pinchtab/browser-smoke-snapshot.txt || true
-            tail -n 240 artifacts/pinchtab/server.log || true
+            docker logs --tail 240 pinchtab-ci > artifacts/pinchtab/server.log 2>&1 || true
             exit 1
           fi
       - name: Audit all seven sitemap routes
@@ -426,3 +437,4 @@ jobs:
         run: |
           docker rm -f pinchtab-ci swayphics-preview >/dev/null 2>&1 || true
           docker network rm pinchtab-ci-net >/dev/null 2>&1 || true
+          docker volume rm pinchtab-ci-data >/dev/null 2>&1 || true
