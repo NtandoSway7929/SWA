@@ -1,0 +1,2 @@
+# Local Antigravity MCP configuration can contain API credentials.
+.agents/mcp_config.json
