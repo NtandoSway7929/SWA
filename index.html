@@ -18604,9 +18604,7 @@ document.addEventListener("DOMContentLoaded", () => {
 const revealSelectors = [
 ];
 
-const revealElements = document.querySelectorAll(
-    revealSelectors.join(", ")
-);
+const revealElements = revealSelectors.length > 0 ? document.querySelectorAll(revealSelectors.join(", ")) : [];
 
 
 /* ---------------------------------------------------------
