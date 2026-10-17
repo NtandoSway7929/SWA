@@ -150,7 +150,7 @@ jobs:
             --volume pinchtab-ci-data:/data \
             --volume "$PINCHTAB_CONFIG_FILE:/config/pinchtab.json:ro" \
             --env PINCHTAB_CONFIG=/config/pinchtab.json \
-            ghcr.io/pinchtab/pinchtab:0.15.2 >/dev/null
+            pinchtab/pinchtab:0.15.2 >/dev/null
           docker exec pinchtab-ci pinchtab --version
           python3 - <<'PY'
           import json
