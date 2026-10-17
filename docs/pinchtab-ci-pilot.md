@@ -13,13 +13,13 @@ Workflow: [PinchTab Site Regression Pilot](../.github/workflows/pinchtab-site-re
 It runs manually through workflow_dispatch and on pull requests into main that touch the public website, route content, sitemap, media assets, or the pilot itself.
 
 It:
-1. Downloads the pinned PinchTab 0.15.2 Linux binary and verifies it against the release checksum.
-2. Installs headless Chrome for Testing.
-3. Starts PinchTab bound to 127.0.0.1; JavaScript evaluation remains disabled and no repository secrets are used.
-4. Audits each of the seven public sitemap routes individually.
-5. Serves the checked-out candidate site on a temporary loopback-only HTTP server.
-6. Compares the live production routes to the checked-out candidate routes, saving report and visual-diff artifacts.
-7. Uploads the audit JSON/HTML, screenshots, compare output, logs, CSV and summary.
+1. Downloads the pinned PinchTab 0.15.2 Linux CLI and verifies it against the release checksum.
+2. Runs the official `ghcr.io/pinchtab/pinchtab:0.15.2` browser container, which includes Chromium and container-compatible launch settings.
+3. Gives the temporary container a random per-run API token, binds the published server port to host loopback only, keeps JavaScript evaluation disabled, and uses no repository secrets.
+4. Runs a separate static preview container on a private Docker network so the browser can compare production with the checked-out candidate without exposing the preview port.
+5. Waits for the managed browser to report `running`, then smoke-tests navigation before beginning audits.
+6. Audits each of the seven public sitemap routes individually and compares production with the candidate, saving reports and visual-diff artifacts.
+7. Uploads audit JSON/HTML, screenshots, compare output, browser/server logs, CSV and summary; then removes the temporary containers, network and volume.
 
 ## Why routes are audited individually
 
@@ -27,9 +27,9 @@ The initial local test with PinchTab 0.15.2 found that the sitemap-audit command
 
 ## Safety and interpretation
 
-- The job has read-only repository permissions and does not deploy, merge, submit forms, send messages, or mutate production data.
+- The job has read-only repository permissions and does not deploy, merge, submit forms, send messages, or mutate production data. The PinchTab and preview containers use a read-only root filesystem, dropped Linux capabilities, no-new-privileges, and ephemeral storage; the browser API is published only on host loopback.
 - PinchTab's security.allowEvaluate is not enabled.
-- The preview server binds only to 127.0.0.1 and exists only for the duration of the job.
+- The candidate preview runs on a private Docker network without a published host port and exists only for the duration of the job. PinchTab's public host port is bound to 127.0.0.1.
 - Visual diffs are not a pass/fail gate in this pilot. They are expected if a pull request changes the live design and can also reflect content, font, media, timing, or viewport differences.
 - Existing page errors, including the previously observed homepage empty-selector exception, are reported but do not by themselves fail the job.
 - The job fails if PinchTab cannot create valid route reports or a valid compare report. This distinguishes tool reliability from website findings.
