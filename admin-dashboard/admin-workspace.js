@@ -12062,12 +12062,12 @@ function simpleBars(items, color) {
 
 
     function renderLeads() {
-        const visibleLeads =
-            state.leads.filter(function (item) {
-                return !["follow-up", "not interested"].includes(
-                    String(item.status || "").toLowerCase()
-                );
-            });
+        /*
+         * Keep all records visible in the lead manager. Follow-up and
+         * Not Interested leads still need to be reviewable and actionable
+         * (including the option to return a lead to the active pipeline).
+         */
+        const visibleLeads = state.leads;
 
         const rows =
             visibleLeads.map(function (item) {
@@ -12181,7 +12181,7 @@ function simpleBars(items, color) {
             ) +
             panel(
                 "Lead pipeline",
-                "Active prospects only. Leads needing extra attention automatically move to Follow-ups after the no-response window.",
+                "All lead records, including follow-up and long-term re-engagement stages. Scheduled follow-up tasks are managed in Follow-ups.",
                 state.leads.length
                     ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
                       rows +
