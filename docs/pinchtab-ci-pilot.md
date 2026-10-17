@@ -42,7 +42,7 @@ Review at least three successful workflow runs before deciding whether to retain
 
 - Each of the seven routes produces a valid report and screenshot.
 - Three responsive screenshots exist for mobile 390×844, tablet 768×1024, and desktop 1440×900.
-- The comparison produces seven successfully compared route pairs, with no route-level errors, and inspectable visual-diff artifacts for the checked-out candidate.
+- The comparison produces seven successfully compared route pairs, with no route-level errors, and inspectable visual-diff artifacts for the checked-out candidate. The workflow summary records each pair’s pixel-difference percentage and data-drift count; autoplay media can cause nonzero pixel diffs even when data-level fields match.
 - The reports reveal browser-only issues or visual changes that the static workflow cannot detect.
 - Runtime cost and false-positive/noise levels are acceptable.
 
