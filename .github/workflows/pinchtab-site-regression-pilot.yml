@@ -102,6 +102,7 @@ jobs:
                       "127.0.0.1", "localhost", "::1",
                       "swayphics.co.za", "swayphics-preview",
                   ],
+                  "trustedResolveCIDRs": ["172.30.255.2/32"],
               },
           }
           Path(os.environ["PINCHTAB_CONFIG_FILE"]).write_text(
@@ -109,10 +110,11 @@ jobs:
           )
           print("Prepared ephemeral token-protected PinchTab config; evaluation is disabled.")
           PY
-          docker network create pinchtab-ci-net >/dev/null
+          docker network create --subnet 172.30.255.0/24 pinchtab-ci-net >/dev/null
           docker run -d --rm \
             --name swayphics-preview \
             --network pinchtab-ci-net \
+            --ip 172.30.255.2 \
             --read-only \
             --cap-drop=ALL \
             --security-opt=no-new-privileges \
@@ -284,15 +286,7 @@ jobs:
           failures = []
           rows = []
 
-          def count_items(value):
-              if value is None:
-                  return None
-              if isinstance(value, list):
-                  return len(value)
-              if isinstance(value, str) and not value.strip():
-                  return 0
-              return 1
-
+          asset_types = {"image", "stylesheet", "font", "media", "script"}
           for slug, url in routes:
               folder = root / "audit" / slug
               try:
@@ -315,30 +309,45 @@ jobs:
               record = {
                   "slug": slug, "url": url, "exitCode": exit_code,
                   "reportValid": page is not None, "pageError": "",
-                  "accessibilityScore": None, "jsErrors": None,
-                  "brokenAssets": None, "statusCode": None,
+                  "statusCode": None, "accessibilityScore": None,
+                  "jsErrors": None, "brokenAssets": None,
+                  "failedRequests": None, "networkRequests": None,
+                  "requestsWithoutStatus": None,
               }
               if page is None:
                   failures.append(f"{slug}: missing/invalid report ({parse_error})")
               else:
                   browser = page.get("browser") or {}
+                  requests = browser.get("networkRequests") or []
+                  requests = requests if isinstance(requests, list) else []
+                  document = next((
+                      item for item in requests
+                      if isinstance(item, dict) and str(item.get("resourceType", "")).lower() == "document"
+                  ), {})
+                  failed_requests = [
+                      item for item in requests
+                      if isinstance(item, dict) and isinstance(item.get("status"), int) and item["status"] >= 400
+                  ]
+                  broken_assets = [
+                      item for item in failed_requests
+                      if str(item.get("resourceType", "")).lower() in asset_types
+                  ]
+                  js_errors = browser.get("jsErrors") or []
+                  if not isinstance(js_errors, list):
+                      js_errors = [js_errors]
                   record.update({
                       "pageError": str(page.get("error") or ""),
+                      "statusCode": document.get("status"),
                       "accessibilityScore": browser.get("accessibilityScore"),
-                      "jsErrors": count_items(browser.get("jsErrors")),
-                      "brokenAssets": count_items(browser.get("brokenAssets")),
-                      "statusCode": page.get("statusCode"),
+                      "jsErrors": len(js_errors),
+                      "brokenAssets": len(broken_assets),
+                      "failedRequests": len(failed_requests),
+                      "networkRequests": len(requests),
+                      "requestsWithoutStatus": sum(
+                          1 for item in requests
+                          if not isinstance(item, dict) or not isinstance(item.get("status"), int)
+                      ),
                   })
-                  if record["jsErrors"] is None and "consoleLogs" in browser:
-                      console = browser.get("consoleLogs") or []
-                      if isinstance(console, list):
-                          record["jsErrors"] = sum(
-                              1 for item in console
-                              if isinstance(item, dict) and (
-                                  str(item.get("level", item.get("type", ""))).lower() in {"error", "severe"}
-                                  or str(item.get("message", "")).startswith("Uncaught:")
-                              )
-                          )
               if exit_code != 0:
                   failures.append(f"{slug}: audit command exit code {exit_code}")
               rows.append(record)
@@ -350,15 +359,33 @@ jobs:
               compare_exit = None
           compare_valid = False
           compare_page_count = 0
+          compare_successful_pairs = 0
+          compare_error_pairs = []
           try:
               compare_report = json.loads((compare_folder / "report.json").read_text(encoding="utf-8"))
-              pages = compare_report.get("pages")
-              compare_valid = isinstance(pages, list)
-              compare_page_count = len(pages) if isinstance(pages, list) else 0
+              compare_pages = compare_report.get("pages")
+              compare_valid = isinstance(compare_pages, list)
+              compare_page_count = len(compare_pages) if isinstance(compare_pages, list) else 0
+              for pair in compare_pages if isinstance(compare_pages, list) else []:
+                  error = str(pair.get("error") or "").strip()
+                  pair_status = str(pair.get("status") or "")
+                  pair_path = str(pair.get("path") or "(unknown route)")
+                  if error:
+                      compare_error_pairs.append(f"{pair_path}: {error}")
+                  elif pair_status == "compared":
+                      compare_successful_pairs += 1
+                  else:
+                      compare_error_pairs.append(f"{pair_path}: unexpected comparison status {pair_status!r}")
           except Exception as exc:
               failures.append(f"Visual comparison report missing/invalid: {type(exc).__name__}: {exc}")
           if compare_exit != 0:
               failures.append(f"Visual compare command exit code {compare_exit}")
+          if not compare_valid:
+              failures.append("Visual comparison report does not contain a pages array.")
+          if compare_page_count != len(routes):
+              failures.append(f"Visual comparison returned {compare_page_count}/{len(routes)} route pairs.")
+          for pair_error in compare_error_pairs:
+              failures.append("Visual comparison did not complete: " + pair_error)
 
           summary = {
               "pinchtabVersion": "0.15.2",
@@ -368,6 +395,8 @@ jobs:
                   "exitCode": compare_exit,
                   "reportValid": compare_valid,
                   "pagePairsReported": compare_page_count,
+                  "successfulPairs": compare_successful_pairs,
+                  "errorPairs": compare_error_pairs,
                   "failOnDiffEnabled": False,
               },
               "toolFailures": failures,
@@ -376,7 +405,8 @@ jobs:
           with (root / "summary.csv").open("w", newline="", encoding="utf-8") as handle:
               fields = [
                   "slug", "url", "exitCode", "reportValid", "statusCode",
-                  "accessibilityScore", "jsErrors", "brokenAssets", "pageError",
+                  "accessibilityScore", "jsErrors", "brokenAssets", "failedRequests",
+                  "networkRequests", "requestsWithoutStatus", "pageError",
               ]
               writer = csv.DictWriter(handle, fieldnames=fields)
               writer.writeheader()
@@ -388,19 +418,22 @@ jobs:
               "- PinchTab version: 0.15.2",
               f"- Routes audited: {len(routes)}",
               f"- Valid route reports: {sum(1 for row in rows if row['reportValid'])}/{len(routes)}",
-              f"- Valid visual-compare report: {compare_valid}",
-              f"- Page pairs in compare report: {compare_page_count}",
+              f"- Syntactically valid visual-compare report: {compare_valid}",
+              f"- Successfully compared route pairs: {compare_successful_pairs}/{len(routes)}",
+              f"- Comparison route errors: {len(compare_error_pairs)}",
               "- Visual differences do not fail the pilot; review the diff artifacts.",
               "",
-              "| Route | Accessibility | JS errors | Broken assets | Page error |",
-              "|---|---:|---:|---:|---|",
+              "| Route | HTTP | Accessibility | JS errors | Broken assets | Failed requests | Requests without status |",
+              "|---|---:|---:|---:|---:|---:|---:|",
           ]
           for row in rows:
               score = row["accessibilityScore"] if row["accessibilityScore"] is not None else "n/a"
               js = row["jsErrors"] if row["jsErrors"] is not None else "n/a"
               assets = row["brokenAssets"] if row["brokenAssets"] is not None else "n/a"
-              error = row["pageError"].replace("|", "\\|") or "—"
-              lines.append(f"| {row['slug']} | {score} | {js} | {assets} | {error} |")
+              status = row["statusCode"] if row["statusCode"] is not None else "n/a"
+              failed = row["failedRequests"] if row["failedRequests"] is not None else "n/a"
+              missing = row["requestsWithoutStatus"] if row["requestsWithoutStatus"] is not None else "n/a"
+              lines.append(f"| {row['slug']} | {status} | {score} | {js} | {assets} | {failed} | {missing} |")
           lines.extend([
               "",
               "Artifacts: audit route folders, visual-compare, summary.json, summary.csv.",
@@ -412,7 +445,7 @@ jobs:
               for failure in failures:
                   print(f"::error::{failure}")
               raise SystemExit(f"PinchTab tool/report failures: {len(failures)}. Artifacts are uploaded even on failure.")
-          print("All seven route reports and the visual comparison report were generated.")
+          print(f"All seven route reports generated; visual comparison completed for {compare_successful_pairs}/{len(routes)} routes.")
           PY
 
       - name: Collect container diagnostics
