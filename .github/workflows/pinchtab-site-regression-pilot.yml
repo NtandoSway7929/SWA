@@ -239,6 +239,53 @@ jobs:
           paia-manual|https://swayphics.co.za/paia-manual/
           ROUTES
 
+      - name: Capture deterministic responsive screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          out_dir="$GITHUB_WORKSPACE/artifacts/pinchtab/responsive"
+          mkdir -p "$out_dir"
+          nav_output="$(pinchtab --server "$PINCHTAB_SERVER" nav "https://swayphics.co.za/index.html" --new-tab)"
+          printf '%s\n' "$nav_output" > "$out_dir/navigation.log"
+          tab_id="$(printf '%s\n' "$nav_output" | sed -n '1p' | tr -d '\r')"
+          if [[ -z "$tab_id" || "$tab_id" == \{* ]]; then
+            echo "::error::Could not extract a tab ID for responsive screenshot capture."
+            cat "$out_dir/navigation.log"
+            exit 1
+          fi
+
+          pinchtab --server "$PINCHTAB_SERVER" set viewport 390 844 --dpr 1 --mobile --tab "$tab_id"
+          sleep 3
+          pinchtab --server "$PINCHTAB_SERVER" screenshot --tab "$tab_id" -o "$out_dir/homepage-mobile-390x844.png"
+
+          pinchtab --server "$PINCHTAB_SERVER" set viewport 768 1024 --dpr 1 --tab "$tab_id"
+          sleep 3
+          pinchtab --server "$PINCHTAB_SERVER" screenshot --tab "$tab_id" -o "$out_dir/homepage-tablet-768x1024.png"
+
+          pinchtab --server "$PINCHTAB_SERVER" set viewport 1440 900 --dpr 1 --tab "$tab_id"
+          sleep 3
+          pinchtab --server "$PINCHTAB_SERVER" screenshot --tab "$tab_id" -o "$out_dir/homepage-desktop-1440x900.png"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          folder = Path(os.environ["GITHUB_WORKSPACE"]) / "artifacts/pinchtab/responsive"
+          required = [
+              "homepage-mobile-390x844.png",
+              "homepage-tablet-768x1024.png",
+              "homepage-desktop-1440x900.png",
+          ]
+          errors = []
+          for name in required:
+              path = folder / name
+              if not path.is_file() or path.stat().st_size == 0:
+                  errors.append(f"Missing or empty responsive screenshot: {name}")
+              else:
+                  print(f"Captured {name}: {path.stat().st_size} bytes")
+          if errors:
+              raise SystemExit("; ".join(errors))
+          PY
+
       - name: Compare production against the checked-out candidate site
         shell: bash
         run: |
@@ -352,6 +399,19 @@ jobs:
                   failures.append(f"{slug}: audit command exit code {exit_code}")
               rows.append(record)
 
+          responsive_dir = root / "responsive"
+          responsive_files = [
+              "homepage-mobile-390x844.png",
+              "homepage-tablet-768x1024.png",
+              "homepage-desktop-1440x900.png",
+          ]
+          responsive_missing = [
+              name for name in responsive_files
+              if not (responsive_dir / name).is_file() or (responsive_dir / name).stat().st_size == 0
+          ]
+          if responsive_missing:
+              failures.append("Responsive screenshot artifacts missing: " + ", ".join(responsive_missing))
+
           compare_folder = root / "visual-compare"
           try:
               compare_exit = int((compare_folder / "exit-code.txt").read_text().strip())
@@ -391,6 +451,11 @@ jobs:
               "pinchtabVersion": "0.15.2",
               "auditedRoutes": len(routes),
               "audits": rows,
+              "responsiveScreenshots": {
+                  "required": responsive_files,
+                  "missing": responsive_missing,
+                  "valid": not responsive_missing,
+              },
               "visualCompare": {
                   "exitCode": compare_exit,
                   "reportValid": compare_valid,
@@ -418,6 +483,7 @@ jobs:
               "- PinchTab version: 0.15.2",
               f"- Routes audited: {len(routes)}",
               f"- Valid route reports: {sum(1 for row in rows if row['reportValid'])}/{len(routes)}",
+              f"- Responsive screenshots: {len(responsive_files) - len(responsive_missing)}/{len(responsive_files)} captured",
               f"- Syntactically valid visual-compare report: {compare_valid}",
               f"- Successfully compared route pairs: {compare_successful_pairs}/{len(routes)}",
               f"- Comparison route errors: {len(compare_error_pairs)}",
@@ -436,7 +502,8 @@ jobs:
               lines.append(f"| {row['slug']} | {status} | {score} | {js} | {assets} | {failed} | {missing} |")
           lines.extend([
               "",
-              "Artifacts: audit route folders, visual-compare, summary.json, summary.csv.",
+              "Responsive screenshot artifacts: responsive/homepage-mobile-390x844.png, responsive/homepage-tablet-768x1024.png, responsive/homepage-desktop-1440x900.png.",
+              "Artifacts: audit route folders, responsive screenshots, visual-compare, summary.json, summary.csv.",
               "This workflow is observational: it does not fail on existing site findings or visual differences. It fails only when PinchTab cannot produce valid reports.",
           ])
           Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text("\n".join(lines) + "\n", encoding="utf-8")
