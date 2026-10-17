@@ -96,6 +96,7 @@ jobs:
 
           config = json.loads(config_path.read_text(encoding="utf-8"))
           config.setdefault("browser", {})["binary"] = os.environ["PINCHTAB_CHROME_PATH"]
+          config.setdefault("instanceDefaults", {})["mode"] = "headless"
 
           security = config.setdefault("security", {})
           if security.get("allowEvaluate", False):
@@ -112,11 +113,37 @@ jobs:
           pinchtab --version
           "$PINCHTAB_CHROME_PATH" --version
 
+      - name: Smoke-test Chrome directly
+        shell: bash
+        env:
+          PINCHTAB_CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          set -euo pipefail
+          profile="$RUNNER_TEMP/chrome-smoke-profile"
+          mkdir -p "$profile"
+          smoke_url='data:text/html,<title>PINCHTAB_CHROME_SMOKE_OK</title><body>PINCHTAB_CHROME_SMOKE_OK</body>'
+          if ! timeout 30s "$PINCHTAB_CHROME_PATH" \
+              --headless=new \
+              --disable-dev-shm-usage \
+              --remote-debugging-port=0 \
+              --user-data-dir="$profile" \
+              --dump-dom "$smoke_url" \
+              > artifacts/pinchtab/chrome-smoke.log 2>&1; then
+            echo "::error::Direct Chrome headless smoke test failed."
+            cat artifacts/pinchtab/chrome-smoke.log
+            exit 1
+          fi
+          if ! grep -q "PINCHTAB_CHROME_SMOKE_OK" artifacts/pinchtab/chrome-smoke.log; then
+            echo "::error::Chrome exited without rendering the smoke-test page."
+            cat artifacts/pinchtab/chrome-smoke.log
+            exit 1
+          fi
+          echo "Direct Chrome headless smoke test passed."
       - name: Start PinchTab server and verify health
         shell: bash
         run: |
           set -euo pipefail
-          nohup pinchtab server --bind 127.0.0.1 --log-level info \
+          nohup pinchtab server --bind 127.0.0.1 --log-level debug \
             > artifacts/pinchtab/server.log 2>&1 &
           echo "$!" > "$RUNNER_TEMP/pinchtab-server.pid"
 
@@ -131,10 +158,34 @@ jobs:
           done
           if [[ "$ready" != "true" ]]; then
             echo "::error::PinchTab server did not become healthy."
-            tail -n 120 artifacts/pinchtab/server.log || true
+            tail -n 200 artifacts/pinchtab/server.log || true
             exit 1
           fi
 
+      - name: Smoke-test PinchTab browser navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! pinchtab nav "https://swayphics.co.za/index.html" --new-tab \
+              > artifacts/pinchtab/browser-smoke.log 2>&1; then
+            echo "::error::PinchTab server responds, but its managed browser did not navigate."
+            cat artifacts/pinchtab/browser-smoke.log || true
+            echo "::group::PinchTab doctor diagnostics"
+            pinchtab doctor > artifacts/pinchtab/doctor.log 2>&1 || true
+            cat artifacts/pinchtab/doctor.log || true
+            echo "::endgroup::"
+            echo "::group::PinchTab server diagnostics"
+            tail -n 240 artifacts/pinchtab/server.log || true
+            echo "::endgroup::"
+            exit 1
+          fi
+          cat artifacts/pinchtab/browser-smoke.log
+          if ! pinchtab snap -i -c > artifacts/pinchtab/browser-smoke-snapshot.txt 2>&1; then
+            echo "::error::Browser navigation succeeded but PinchTab snapshot extraction failed."
+            cat artifacts/pinchtab/browser-smoke-snapshot.txt || true
+            tail -n 240 artifacts/pinchtab/server.log || true
+            exit 1
+          fi
       - name: Audit all seven sitemap routes
         shell: bash
         run: |
