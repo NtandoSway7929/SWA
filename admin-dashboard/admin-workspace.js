@@ -1463,6 +1463,7 @@
             codeLines = [];
             codeLanguage = "";
             inCodeFence = false;
+            firstContentSeen = true;
         }
 
         function splitMarkdownTableRow(value) {
