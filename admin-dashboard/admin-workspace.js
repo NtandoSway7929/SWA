@@ -24942,7 +24942,7 @@ function simpleBars(items, color) {
                         '</button>' +
                     '</div>' +
                 '</form>' +
-                '<small class="sway-ai-note">InnerMe can analyse Swayphics workspace data and help you think through the next step. Nothing is sent or changed automatically. Enter to send · Shift+Enter for a new line.</small>' +
+                '<small class="sway-ai-note" id="sway-ai-composer-note">InnerMe can analyse Swayphics workspace data and help you think through the next step. Nothing is sent or changed automatically. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>' +
             '</section>' +
             '<section class="sway-innerme-subview sway-innerme-actions-view" data-innerme-section="actions"' +
@@ -27312,14 +27312,34 @@ function simpleBars(items, color) {
             workspace.querySelector("#sway-ai-input");
 
         if (aiInput) {
+            const resizeInnerMeComposer = function () {
+                aiInput.style.height = "auto";
+                const maxHeight = 220;
+                const nextHeight = Math.min(aiInput.scrollHeight, maxHeight);
+                aiInput.style.height = nextHeight + "px";
+                aiInput.style.overflowY =
+                    aiInput.scrollHeight > maxHeight ? "auto" : "hidden";
+            };
+
+            aiInput.setAttribute("aria-label", "Message InnerMe");
+            aiInput.setAttribute("aria-describedby", "sway-ai-composer-note");
+            aiInput.style.maxHeight = "220px";
+            aiInput.style.boxSizing = "border-box";
+            aiInput.style.overflowY = "hidden";
+            aiInput.oninput = resizeInnerMeComposer;
+            resizeInnerMeComposer();
+
             aiInput.onkeydown = function (event) {
                 if (
                     event.key === "Enter" &&
                     !event.shiftKey &&
-                    !event.isComposing
+                    !event.isComposing &&
+                    event.keyCode !== 229
                 ) {
                     event.preventDefault();
-                    askSwayphicsAI(aiInput.value);
+                    if (!state.aiRequestInFlight) {
+                        askSwayphicsAI(aiInput.value);
+                    }
                 }
             };
         }
