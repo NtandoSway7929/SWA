@@ -53,6 +53,24 @@ export async function consumeInnerMeSseStream(body, onPayload, options = {}) {
   const decoder = new TextDecoder();
   let buffer = "";
   let eventCount = 0;
+  let abortRequested = false;
+
+  const handleAbort = () => {
+    abortRequested = true;
+    try {
+      // Cancel the active read as well as marking the signal, so a pending
+      // reader.read() unblocks when the browser disconnects or aborts.
+      void reader.cancel(options.signal?.reason).catch(() => {});
+    } catch {
+      // Some readers reject cancel once their stream is already closed.
+    }
+  };
+
+  if (options.signal?.aborted) {
+    handleAbort();
+  } else if (options.signal) {
+    options.signal.addEventListener("abort", handleAbort, { once: true });
+  }
 
   async function dispatch(frame) {
     if (!String(frame || "").trim()) return;
@@ -64,7 +82,7 @@ export async function consumeInnerMeSseStream(body, onPayload, options = {}) {
 
   try {
     while (true) {
-      if (options.signal?.aborted) {
+      if (abortRequested || options.signal?.aborted) {
         throw new DOMException("The InnerMe stream was cancelled.", "AbortError");
       }
 
@@ -95,6 +113,9 @@ export async function consumeInnerMeSseStream(body, onPayload, options = {}) {
     }
     throw error;
   } finally {
+    if (options.signal) {
+      options.signal.removeEventListener("abort", handleAbort);
+    }
     try {
       reader.releaseLock();
     } catch {
