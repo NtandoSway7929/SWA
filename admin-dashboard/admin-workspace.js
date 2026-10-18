@@ -24941,6 +24941,7 @@ function simpleBars(items, color) {
                             '<span aria-hidden="true">↑</span>' +
                         '</button>' +
                     '</div>' +
+                    '<div class="sway-ai-composer-status" id="sway-ai-composer-status" role="status" aria-live="polite" aria-atomic="true"></div>' +
                 '</form>' +
                 '<small class="sway-ai-note" id="sway-ai-composer-note">InnerMe can analyse Swayphics workspace data and help you think through the next step. Nothing is sent or changed automatically. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>' +
@@ -25205,6 +25206,15 @@ function simpleBars(items, color) {
         input.dispatchEvent(new Event("input", { bubbles: true }));
         input.disabled = true;
         send.disabled = true;
+        input.setAttribute("aria-disabled", "true");
+        send.setAttribute("aria-label", "InnerMe is responding");
+        send.setAttribute("aria-busy", "true");
+        const sendGlyph = send.querySelector("span");
+        if (sendGlyph) sendGlyph.textContent = "…";
+        const composerStatus = document.getElementById("sway-ai-composer-status");
+        const composerForm = document.getElementById("sway-ai-form");
+        if (composerForm) composerForm.setAttribute("aria-busy", "true");
+        if (composerStatus) composerStatus.textContent = "InnerMe is thinking…";
 
         try {
             const result = await api(
@@ -25319,6 +25329,15 @@ function simpleBars(items, color) {
             state.aiRequestInFlight = false;
             input.disabled = false;
             send.disabled = false;
+            input.removeAttribute("aria-disabled");
+            send.setAttribute("aria-label", "Ask InnerMe");
+            send.removeAttribute("aria-busy");
+            const restoredSendGlyph = send.querySelector("span");
+            if (restoredSendGlyph) restoredSendGlyph.textContent = "↑";
+            const restoredComposerForm = document.getElementById("sway-ai-form");
+            if (restoredComposerForm) restoredComposerForm.removeAttribute("aria-busy");
+            const restoredComposerStatus = document.getElementById("sway-ai-composer-status");
+            if (restoredComposerStatus) restoredComposerStatus.textContent = "Ready for your next message.";
             input.focus();
             conversation.scrollTop =
                 conversation.scrollHeight;
