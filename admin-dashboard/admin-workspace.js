@@ -1387,144 +1387,165 @@
     }
 
     function formatAIAnswer(value) {
-        let text = String(
-            value == null
-                ? ""
-                : value
-        )
+        let text = String(value == null ? "" : value)
             .replace(/\\n/g, "\n")
             .replace(/\\r\\n/g, "\n")
             .replace(/\\@/g, "@")
             .replace(/\r\n?/g, "\n")
             .trim();
 
-        /*
-         * Normalise common Gemini output variations first. The visual
-         * hierarchy is then rendered by the dashboard so InnerMe remains
-         * consistent even when the model's raw spacing varies.
-         */
         text = text
-            .replace(
-                /\s+(?=(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)\b)/g,
-                "\n\n"
-            )
-            .replace(
-                /\s+(?=•\s)/g,
-                "\n"
-            )
-            .replace(
-                /(^|\n)\s*\*\s+/g,
-                "$1• "
-            )
-            .replace(
-                /\n\s*•\s*/g,
-                "\n• "
-            )
-            .replace(
-                /\n{3,}/g,
-                "\n\n"
-            )
+            .replace(/\s+(?=(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)\b)/g, "\n\n")
+            .replace(/\s+(?=•\s)/g, "\n")
+            .replace(/(^|\n)\s*\*\s+/g, "$1• ")
+            .replace(/\n\s*•\s*/g, "\n• ")
+            .replace(/\n{3,}/g, "\n\n")
             .trim();
 
-        if (!text) {
-            return "";
+        if (!text) return "";
+
+        function inlineMarkdown(source) {
+            let safe = esc(String(source || ""));
+            const protectedParts = [];
+            safe = safe.replace(/\x60([^\x60]+)\x60/g, function (_, code) {
+                const token = "IMECODETOKEN" + protectedParts.length + "END";
+                protectedParts.push('<code class="sway-ai-inline-code">' + code + '</code>');
+                return token;
+            });
+            safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, function (_, label, url) {
+                return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+            });
+            safe = safe
+                .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+                .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+                .replace(/~~([^~]+)~~/g, "<del>$1</del>")
+                .replace(/(^|[^\*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+                .replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
+            protectedParts.forEach(function (html, index) {
+                safe = safe.replace("IMECODETOKEN" + index + "END", html);
+            });
+            return safe;
         }
 
         const lines = text.split("\n");
-        const headingPattern =
-            /^(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)$/;
-
         const html = [];
         let firstContentSeen = false;
+        let inCodeFence = false;
+        let codeLanguage = "";
+        let codeLines = [];
+        let listType = "";
 
-        lines.forEach(function (rawLine, index) {
+        function closeList() {
+            if (listType) {
+                html.push("</" + listType + ">");
+                listType = "";
+            }
+        }
+
+        function closeCodeFence() {
+            html.push('<pre class="sway-ai-code-block"><code' +
+                (codeLanguage ? ' data-language="' + esc(codeLanguage) + '"' : "") +
+                '>' + esc(codeLines.join("\n")) + '</code></pre>');
+            codeLines = [];
+            codeLanguage = "";
+            inCodeFence = false;
+        }
+
+        lines.forEach(function (rawLine) {
             const line = String(rawLine || "").trim();
 
+            if (/^\x60\x60\x60/.test(line)) {
+                closeList();
+                if (inCodeFence) {
+                    closeCodeFence();
+                } else {
+                    inCodeFence = true;
+                    codeLanguage = line.slice(3).trim().replace(/[^a-zA-Z0-9_+#.-]/g, "").slice(0, 30);
+                    codeLines = [];
+                }
+                return;
+            }
+
+            if (inCodeFence) {
+                codeLines.push(String(rawLine || ""));
+                return;
+            }
+
             if (!line) {
+                closeList();
                 html.push('<div class="sway-ai-answer-spacer" aria-hidden="true"></div>');
+                return;
+            }
+
+            const markdownHeading = line.match(/^(#{1,3})\s+(.+)$/);
+            if (markdownHeading) {
+                closeList();
+                const level = markdownHeading[1].length;
+                html.push('<div class="sway-ai-answer-heading sway-ai-markdown-heading sway-ai-markdown-h' + level + '">' + inlineMarkdown(markdownHeading[2]) + '</div>');
+                firstContentSeen = true;
+                return;
+            }
+
+            if (/^(?:---+|\*\*\*+|___+)$/.test(line)) {
+                closeList();
+                html.push('<hr class="sway-ai-answer-divider">');
+                firstContentSeen = true;
+                return;
+            }
+
+            const unordered = line.match(/^(?:[-*+] |•\s+)(.+)$/);
+            const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+            if (unordered || ordered) {
+                const nextType = unordered ? "ul" : "ol";
+                if (listType !== nextType) {
+                    closeList();
+                    listType = nextType;
+                    html.push("<" + listType + ' class="sway-ai-markdown-list">');
+                }
+                html.push("<li>" + inlineMarkdown((unordered || ordered)[1]) + "</li>");
+                firstContentSeen = true;
+                return;
+            }
+            closeList();
+
+            if (/^>\s?/.test(line)) {
+                html.push('<blockquote class="sway-ai-answer-quote">' + inlineMarkdown(line.replace(/^>\s?/, "")) + '</blockquote>');
+                firstContentSeen = true;
+                return;
+            }
+
+            const customHeading = /^(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)$/;
+            if (customHeading.test(line)) {
+                html.push('<div class="sway-ai-answer-heading">' + inlineMarkdown(line) + '</div>');
+                firstContentSeen = true;
                 return;
             }
 
             if (!firstContentSeen) {
                 firstContentSeen = true;
-                html.push(
-                    '<div class="sway-ai-answer-title">' +
-                        esc(line) +
-                    '</div>'
-                );
-                return;
-            }
-
-            if (headingPattern.test(line)) {
-                html.push(
-                    '<div class="sway-ai-answer-heading">' +
-                        esc(line) +
-                    '</div>'
-                );
+                html.push('<div class="sway-ai-answer-title">' + inlineMarkdown(line.replace(/^#\s*/, "")) + '</div>');
                 return;
             }
 
             if (/^•\s+/.test(line)) {
                 const bulletText = line.replace(/^•\s+/, "").trim();
                 const colonIndex = bulletText.indexOf(":");
-
-                if (
-                    colonIndex > 0 &&
-                    colonIndex < 80
-                ) {
-                    const label = bulletText
-                        .slice(0, colonIndex)
-                        .trim();
-                    const detail = bulletText
-                        .slice(colonIndex + 1)
-                        .trim();
-
-                    html.push(
-                        '<div class="sway-ai-answer-item">' +
-                            '<span class="sway-ai-answer-bullet" aria-hidden="true">•</span>' +
-                            '<div class="sway-ai-answer-item-text">' +
-                                '<strong>' +
-                                    esc(label) +
-                                '</strong>' +
-                                (
-                                    detail
-                                        ? ': ' + esc(detail)
-                                        : ''
-                                ) +
-                            '</div>' +
-                        '</div>'
-                    );
-
-                    return;
+                if (colonIndex > 0 && colonIndex < 80) {
+                    html.push('<div class="sway-ai-answer-item"><span class="sway-ai-answer-bullet" aria-hidden="true">•</span><div class="sway-ai-answer-item-text"><strong>' + inlineMarkdown(bulletText.slice(0, colonIndex).trim()) + '</strong>' + (bulletText.slice(colonIndex + 1).trim() ? ': ' + inlineMarkdown(bulletText.slice(colonIndex + 1).trim()) : '') + '</div></div>');
+                } else {
+                    html.push('<div class="sway-ai-answer-item"><span class="sway-ai-answer-bullet" aria-hidden="true">•</span><div class="sway-ai-answer-item-text">' + inlineMarkdown(bulletText) + '</div></div>');
                 }
-
-                html.push(
-                    '<div class="sway-ai-answer-item">' +
-                        '<span class="sway-ai-answer-bullet" aria-hidden="true">•</span>' +
-                        '<div class="sway-ai-answer-item-text">' +
-                            esc(bulletText) +
-                        '</div>' +
-                    '</div>'
-                );
-
                 return;
             }
 
-            html.push(
-                '<div class="sway-ai-answer-paragraph">' +
-                    esc(line) +
-                '</div>'
-            );
+            html.push('<div class="sway-ai-answer-paragraph">' + inlineMarkdown(line) + '</div>');
         });
 
-        return (
-            '<div class="sway-ai-answer">' +
-                html.join("") +
-                renderAIRecordActions(text) +
-            '</div>'
-        );
-    }
+        closeList();
+        if (inCodeFence) closeCodeFence();
 
+        return '<div class="sway-ai-answer">' + html.join("") + renderAIRecordActions(text) + '</div>';
+    }
 
     function renderAIKnowledgeTrace(retrieval, attribution) {
         if (
