@@ -17595,6 +17595,13 @@ body.sway-dark-mode #sway-admin-workspace .sway-workspace-main.sway-innerme-acti
 }
 
 
+/* Show line breaks faithfully while the plain-text answer is streaming. The
+   message is replaced by the safe Markdown renderer after the done event. */
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-message-content.sway-ai-streaming-content {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere;
+}
+
 /* Step 8: interactive code and horizontally scrollable Markdown tables. */
 #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-code-block-wrap {
     max-width: 100%;
