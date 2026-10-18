@@ -62,7 +62,7 @@ Deno.test("InnerMe SSE consumer handles CRLF, split frames and split UTF-8 bytes
   });
 
   const payloads: any[] = [];
-  const result = await consumeInnerMeSseStream(stream, (payload) => {
+  const result = await consumeInnerMeSseStream(stream, (payload: unknown) => {
     payloads.push(payload);
   });
 
@@ -87,4 +87,32 @@ Deno.test("InnerMe SSE consumer rejects malformed JSON rather than silently losi
     failed = error instanceof SyntaxError;
   }
   assert(failed, "Malformed SSE JSON should fail explicitly");
+});
+
+
+Deno.test("InnerMe SSE consumer cancels a pending read when its signal aborts", async () => {
+  const abortController = new AbortController();
+  let underlyingCancelled = false;
+  const stream = new ReadableStream<Uint8Array>({
+    cancel() {
+      underlyingCancelled = true;
+    },
+  });
+
+  const consuming = consumeInnerMeSseStream(
+    stream,
+    () => {},
+    { signal: abortController.signal },
+  );
+  abortController.abort();
+
+  let abortCaught = false;
+  try {
+    await consuming;
+  } catch (error) {
+    abortCaught = error instanceof DOMException && error.name === "AbortError";
+  }
+
+  assert(abortCaught, "Aborted stream consumption should reject with AbortError");
+  assert(underlyingCancelled, "Abort should cancel the pending underlying stream read");
 });
