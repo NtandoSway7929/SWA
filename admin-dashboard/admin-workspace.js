@@ -611,6 +611,8 @@
                 },
                 options || {}
             );
+        const returnRawResponse = requestOptions.returnRawResponse === true;
+        delete requestOptions.returnRawResponse;
 
         requestOptions.headers =
             Object.assign(
@@ -646,6 +648,10 @@
                         requestOptions
                     );
             }
+        }
+
+        if (returnRawResponse && response.ok) {
+            return response;
         }
 
         const responseText = await response.text();
@@ -25170,6 +25176,157 @@ function simpleBars(items, color) {
         );
     }
 
+    async function readInnerMeChatStream(response, loading, conversation, composerStatus) {
+        if (!response || !response.body || typeof response.body.getReader !== "function") {
+            throw new Error("InnerMe returned a stream that this browser cannot read. Please retry.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let doneResult = null;
+        let streamedText = "";
+
+        const contentNode = loading.querySelector(".sway-ai-message-content");
+        if (!contentNode) {
+            throw new Error("InnerMe's response area is no longer available.");
+        }
+
+        contentNode.setAttribute("aria-live", "off");
+
+        function keepConversationInView() {
+            const remaining = conversation.scrollHeight -
+                conversation.scrollTop -
+                conversation.clientHeight;
+            if (remaining < 120) {
+                conversation.scrollTop = conversation.scrollHeight;
+            }
+        }
+
+        function parseFrame(frame) {
+            const lines = String(frame || "").split("\n");
+            let eventName = "message";
+            const dataLines = [];
+
+            lines.forEach(function (line) {
+                if (!line || line.startsWith(":")) return;
+
+                if (line.startsWith("event:")) {
+                    eventName = line.slice(6).trim() || "message";
+                    return;
+                }
+
+                if (line.startsWith("data:")) {
+                    dataLines.push(line.slice(5).replace(/^ /, ""));
+                }
+            });
+
+            if (!dataLines.length) return;
+
+            let payload;
+            try {
+                payload = JSON.parse(dataLines.join("\n"));
+            } catch (error) {
+                throw new Error("InnerMe received an invalid streaming event. Please retry.");
+            }
+
+            if (eventName === "delta") {
+                const text = payload && typeof payload.text === "string"
+                    ? payload.text
+                    : "";
+                if (!text) return;
+
+                if (!streamedText) {
+                    const thinking = contentNode.querySelector(".sway-ai-thinking");
+                    if (thinking) thinking.remove();
+                    loading.classList.remove("sway-ai-loading");
+                }
+
+                streamedText += text;
+                contentNode.textContent = streamedText;
+                keepConversationInView();
+
+                if (composerStatus) {
+                    composerStatus.textContent = "InnerMe is responding…";
+                }
+                return;
+            }
+
+            if (eventName === "phase") {
+                if (composerStatus && payload && typeof payload.status === "string") {
+                    composerStatus.textContent = payload.status;
+                }
+                return;
+            }
+
+            if (eventName === "done") {
+                if (!payload || typeof payload.answer !== "string" || !payload.answer.trim()) {
+                    throw new Error("InnerMe finished without a usable answer. Please retry.");
+                }
+                doneResult = payload;
+                return;
+            }
+
+            if (eventName === "error") {
+                throw new Error(
+                    payload && typeof payload.error === "string"
+                        ? payload.error
+                        : "InnerMe's response was interrupted. Please retry."
+                );
+            }
+        }
+
+        async function dispatch(frame) {
+            if (!String(frame || "").trim()) return;
+            parseFrame(frame);
+        }
+
+        try {
+            while (true) {
+                const item = await reader.read();
+                buffer += decoder.decode(item.value || new Uint8Array(), {
+                    stream: !item.done
+                });
+                buffer = buffer.replace(/\r\n/g, "\n");
+
+                let separator = buffer.indexOf("\n\n");
+                while (separator >= 0) {
+                    const frame = buffer.slice(0, separator);
+                    buffer = buffer.slice(separator + 2);
+                    await dispatch(frame);
+                    separator = buffer.indexOf("\n\n");
+                }
+
+                if (item.done) break;
+            }
+
+            if (buffer.trim()) await dispatch(buffer);
+
+            if (!doneResult) {
+                throw new Error(
+                    streamedText
+                        ? "InnerMe's response ended before final verification completed. Please retry."
+                        : "InnerMe closed the response stream before answering. Please retry."
+                );
+            }
+
+            return doneResult;
+        } catch (error) {
+            try {
+                await reader.cancel(error);
+            } catch (cancelError) {
+                // The server may already have ended the stream.
+            }
+            throw error;
+        } finally {
+            try {
+                reader.releaseLock();
+            } catch (releaseError) {
+                // Some browsers release a failed stream reader automatically.
+            }
+        }
+    }
+
     async function askSwayphicsAI(message) {
         if (state.aiRequestInFlight) {
             return;
@@ -25347,7 +25504,7 @@ function simpleBars(items, color) {
         if (composerStatus) composerStatus.textContent = "InnerMe is thinking…";
 
         try {
-            const result = await api(
+            const response = await api(
                 "/functions/v1/swayphics-ai",
                 {
                     method: "POST",
@@ -25380,10 +25537,24 @@ function simpleBars(items, color) {
                                 type: state.aiFocusedRecord.type,
                                 id: state.aiFocusedRecord.id
                             }
-                            : null
-                    })
+                            : null,
+                        stream_response: true
+                    }),
+                    returnRawResponse: true
                 }
             );
+
+            const responseContentType = String(
+                response.headers.get("content-type") || ""
+            ).toLowerCase();
+            const result = responseContentType.includes("text/event-stream")
+                ? await readInnerMeChatStream(
+                    response,
+                    loading,
+                    conversation,
+                    composerStatus
+                )
+                : await response.json();
 
             const answer =
                 result && result.answer
