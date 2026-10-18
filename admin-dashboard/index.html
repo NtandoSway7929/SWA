@@ -17247,6 +17247,122 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-intelligence-actions .sw
 
 </style>
 
+
+
+<style id="innerme-chat-layout-v1">
+/* Step 3: give InnerMe Chat a dedicated, viewport-aware conversation workspace.
+   Keep this scoped to the Chat subview so governance and dashboard panels are unchanged. */
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-panel {
+    width: 100% !important;
+    max-width: none !important;
+    height: min(900px, calc(100dvh - 176px)) !important;
+    min-height: 500px !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: clamp(16px, 2vw, 28px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(0, 32, 150, .09) !important;
+    border-radius: 24px !important;
+    background: linear-gradient(145deg, #FFFFFF 0%, #FCFDFF 62%, #F7FAFF 100%) !important;
+    box-shadow: 0 18px 48px rgba(0, 32, 150, .055), inset 0 1px 0 rgba(255,255,255,.95) !important;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-header {
+    flex: 0 0 auto !important;
+    align-items: center !important;
+    gap: 16px !important;
+    padding: 0 0 18px !important;
+    margin: 0 0 10px !important;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-header-actions {
+    width: auto !important;
+    max-width: 100% !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-conversation {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 18px clamp(0px, 1.4vw, 18px) !important;
+    gap: 18px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    scroll-behavior: smooth !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    scrollbar-gutter: stable;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-form {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    margin: 10px 0 0 !important;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-note {
+    flex: 0 0 auto !important;
+    margin: 9px 2px 0 !important;
+    text-align: center !important;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-panel {
+    border-color: rgba(119, 193, 252, .14) !important;
+    background: linear-gradient(145deg, #0D1525 0%, #0B1322 64%, #0C172A 100%) !important;
+    box-shadow: 0 18px 48px rgba(0,0,0,.16) !important;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-conversation {
+    background: transparent !important;
+}
+@media (max-width: 760px) {
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-panel {
+        height: auto !important;
+        min-height: calc(100dvh - 148px) !important;
+        max-height: none !important;
+        padding: 14px !important;
+        border-radius: 18px !important;
+        overflow: visible !important;
+    }
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-header {
+        align-items: flex-start !important;
+        gap: 10px !important;
+        padding-bottom: 13px !important;
+        margin-bottom: 6px !important;
+    }
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-header-actions {
+        gap: 6px !important;
+    }
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-conversation {
+        flex: 1 1 auto !important;
+        min-height: 44dvh !important;
+        max-height: 54dvh !important;
+        padding: 12px 0 !important;
+        gap: 14px !important;
+    }
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-note {
+        text-align: left !important;
+    }
+}
+@media (max-width: 420px) {
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-panel {
+        padding: 11px !important;
+        border-radius: 15px !important;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-conversation {
+        scroll-behavior: auto !important;
+    }
+}
+</style>
+
 </body>
 
 </html>
