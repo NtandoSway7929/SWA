@@ -11557,9 +11557,9 @@ Answer the admin's question directly.
     return await guardedGeminiFetch(model, 
       "https://generativelanguage.googleapis.com/v1beta/models/" +
         encodeURIComponent(model) +
-        body.stream_response === true && !cloudflareWritingEligible
+        (body.stream_response === true && !cloudflareWritingEligible
           ? ":streamGenerateContent?alt=sse"
-          : ":generateContent",
+          : ":generateContent"),
       {
         method: "POST",
         headers: {
