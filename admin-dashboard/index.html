@@ -17460,6 +17460,18 @@ body.sway-dark-mode #sway-admin-workspace .sway-workspace-main.sway-innerme-acti
     box-shadow: 0 6px 24px rgba(14, 35, 74, .045) !important;
     transition: border-color 150ms ease, box-shadow 150ms ease !important;
 }
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-composer-status {
+    min-height: 0;
+    padding: 0 4px;
+    color: var(--im-muted);
+    font: 11px/1.5 Montserrat, "Segoe UI", sans-serif;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-composer-status:empty {
+    display: none;
+}
+#sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-form[aria-busy="true"] .sway-ai-composer-status {
+    color: var(--im-accent);
+}
 #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-form textarea:focus {
     border-color: rgba(1, 82, 244, .62) !important;
     outline: 3px solid rgba(1, 82, 244, .09) !important;
