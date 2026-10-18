@@ -1443,15 +1443,57 @@
         }
 
         function closeCodeFence() {
-            html.push('<pre class="sway-ai-code-block"><code' +
-                (codeLanguage ? ' data-language="' + esc(codeLanguage) + '"' : "") +
-                '>' + esc(codeLines.join("\n")) + '</code></pre>');
+            const codeText = codeLines.join("\n");
+            const languageLabel = codeLanguage || "Code";
+            const copyControl = codeText.trim()
+                ? '<button type="button" class="sway-ai-copy sway-ai-code-copy" aria-label="Copy code block" data-ai-copy="' +
+                    esc(codeText) + '">Copy code</button>'
+                : "";
+            html.push(
+                '<div class="sway-ai-code-block-wrap">' +
+                    '<div class="sway-ai-code-toolbar">' +
+                        '<span class="sway-ai-code-language">' + esc(languageLabel) + '</span>' +
+                        copyControl +
+                    '</div>' +
+                    '<pre class="sway-ai-code-block"><code' +
+                        (codeLanguage ? ' data-language="' + esc(codeLanguage) + '"' : "") +
+                    '>' + esc(codeText) + '</code></pre>' +
+                '</div>'
+            );
             codeLines = [];
             codeLanguage = "";
             inCodeFence = false;
         }
 
-        lines.forEach(function (rawLine) {
+        function splitMarkdownTableRow(value) {
+            let source = String(value || "").trim();
+            if (source.startsWith("|")) source = source.slice(1);
+            if (source.endsWith("|") && !source.endsWith("\\|")) {
+                source = source.slice(0, -1);
+            }
+
+            const cells = [];
+            let current = "";
+            for (let index = 0; index < source.length; index += 1) {
+                const character = source[index];
+                if (character === "\\" && source[index + 1] === "|") {
+                    current += "|";
+                    index += 1;
+                } else if (character === "|") {
+                    cells.push(current.trim());
+                    current = "";
+                } else {
+                    current += character;
+                }
+            }
+            cells.push(current.trim());
+            return cells;
+        }
+
+        const handledTableRows = new Set();
+
+        lines.forEach(function (rawLine, lineIndex) {
+            if (handledTableRows.has(lineIndex)) return;
             const line = String(rawLine || "").trim();
 
             if (/^\x60\x60\x60/.test(line)) {
@@ -1475,6 +1517,65 @@
                 closeList();
                 html.push('<div class="sway-ai-answer-spacer" aria-hidden="true"></div>');
                 return;
+            }
+
+            const possibleTableHeader = line.includes("|");
+            const followingLine = String(lines[lineIndex + 1] || "").trim();
+            if (possibleTableHeader && followingLine.includes("|")) {
+                const headers = splitMarkdownTableRow(line);
+                const separators = splitMarkdownTableRow(followingLine);
+                const alignments = separators.map(function (cell) {
+                    const separator = cell.trim();
+                    if (!/^:?-{3,}:?$/.test(separator)) return "";
+                    if (separator.startsWith(":") && separator.endsWith(":")) return "center";
+                    if (separator.endsWith(":")) return "right";
+                    return "left";
+                });
+
+                if (
+                    headers.length > 0 &&
+                    headers.length === separators.length &&
+                    alignments.every(function (alignment) { return Boolean(alignment); })
+                ) {
+                    closeList();
+                    handledTableRows.add(lineIndex + 1);
+                    const bodyRows = [];
+                    let tableLineIndex = lineIndex + 2;
+
+                    while (
+                        tableLineIndex < lines.length &&
+                        String(lines[tableLineIndex] || "").trim().includes("|")
+                    ) {
+                        bodyRows.push(splitMarkdownTableRow(lines[tableLineIndex]));
+                        handledTableRows.add(tableLineIndex);
+                        tableLineIndex += 1;
+                    }
+
+                    const headerHtml = headers.map(function (cell, cellIndex) {
+                        return '<th scope="col" style="text-align:' + alignments[cellIndex] + '">' +
+                            inlineMarkdown(cell) + '</th>';
+                    }).join("");
+
+                    const bodyHtml = bodyRows.map(function (row) {
+                        const cells = headers.map(function (_, cellIndex) {
+                            const value = row[cellIndex] == null ? "" : row[cellIndex];
+                            return '<td style="text-align:' + alignments[cellIndex] + '">' +
+                                inlineMarkdown(value) + '</td>';
+                        }).join("");
+                        return '<tr>' + cells + '</tr>';
+                    }).join("");
+
+                    html.push(
+                        '<div class="sway-ai-table-wrap" role="region" aria-label="Answer table" tabindex="0">' +
+                            '<table class="sway-ai-markdown-table">' +
+                                '<thead><tr>' + headerHtml + '</tr></thead>' +
+                                (bodyRows.length ? '<tbody>' + bodyHtml + '</tbody>' : '') +
+                            '</table>' +
+                        '</div>'
+                    );
+                    firstContentSeen = true;
+                    return;
+                }
             }
 
             const markdownHeading = line.match(/^(#{1,3})\s+(.+)$/);
@@ -2642,15 +2743,18 @@
     function copyAIMessage(button) {
         if (!button) return;
 
-        const message = String(button.getAttribute("data-ai-copy") || "").trim();
-        if (!message) return;
+        const rawMessage = String(button.getAttribute("data-ai-copy") || "");
+        const isCodeCopy = button.classList.contains("sway-ai-code-copy");
+        const message = isCodeCopy ? rawMessage : rawMessage.trim();
+        if (!message.trim()) return;
 
         const originalText = button.textContent;
-        const originalLabel = button.getAttribute("aria-label") || "Copy InnerMe response";
+        const originalLabel = button.getAttribute("aria-label") ||
+            (isCodeCopy ? "Copy code block" : "Copy InnerMe response");
 
         function showCopied() {
-            button.textContent = "Copied";
-            button.setAttribute("aria-label", "Response copied to clipboard");
+            button.textContent = isCodeCopy ? "Copied code" : "Copied";
+            button.setAttribute("aria-label", isCodeCopy ? "Code copied to clipboard" : "Response copied to clipboard");
             button.setAttribute("aria-live", "polite");
             button.disabled = true;
 
@@ -2690,7 +2794,7 @@
                         return;
                     }
 
-                    swayAlert("InnerMe could not copy that response.");
+                    swayAlert("InnerMe could not copy this content.");
                 });
             return;
         }
@@ -2700,7 +2804,7 @@
             return;
         }
 
-        swayAlert("InnerMe could not copy that response.");
+        swayAlert("InnerMe could not copy this content.");
     }
 
     function dateInput(value) {
