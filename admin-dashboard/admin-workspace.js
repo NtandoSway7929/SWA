@@ -2646,13 +2646,17 @@
         if (!message) return;
 
         const originalText = button.textContent;
+        const originalLabel = button.getAttribute("aria-label") || "Copy InnerMe response";
 
         function showCopied() {
             button.textContent = "Copied";
+            button.setAttribute("aria-label", "Response copied to clipboard");
+            button.setAttribute("aria-live", "polite");
             button.disabled = true;
 
             window.setTimeout(function () {
                 button.textContent = originalText;
+                button.setAttribute("aria-label", originalLabel);
                 button.disabled = false;
             }, 1400);
         }
@@ -24840,7 +24844,7 @@ function simpleBars(items, color) {
                     item.role === "assistant" &&
                     !item.loading &&
                     String(item.content || "").trim()
-                        ? '<button type="button" class="sway-ai-copy" data-ai-copy="' +
+                        ? '<button type="button" class="sway-ai-copy" aria-label="Copy InnerMe response" data-ai-copy="' +
                             esc(String(item.content || "")) +
                           '">Copy</button>'
                         : "";
@@ -25304,7 +25308,7 @@ function simpleBars(items, color) {
                     '<span class="sway-ai-message-time">' +
                         esc(formatAIMessageTime(assistantEntry.createdAt)) +
                     '</span>' +
-                    '<button type="button" class="sway-ai-copy" data-ai-copy="' +
+                    '<button type="button" class="sway-ai-copy" aria-label="Copy InnerMe response" data-ai-copy="' +
                         esc(answer) +
                     '">Copy</button>' +
                     renderAIKnowledgeTrace(
@@ -25952,10 +25956,33 @@ function simpleBars(items, color) {
         });
     }
 
+    function bindAIMessageActions() {
+        if (workspace.__swayInnerMeMessageActionsBound) {
+            return;
+        }
+
+        workspace.__swayInnerMeMessageActionsBound = true;
+
+        workspace.addEventListener("click", function (event) {
+            const button =
+                event.target && typeof event.target.closest === "function"
+                    ? event.target.closest(".sway-ai-copy[data-ai-copy]")
+                    : null;
+
+            if (!button || !workspace.contains(button)) {
+                return;
+            }
+
+            event.preventDefault();
+            copyAIMessage(button);
+        });
+    }
+
     function bindViewActions() {
 
         bindSwayActionDropdowns();
         bindAIFeedbackEvents();
+        bindAIMessageActions();
 
         workspace
             .querySelectorAll("[data-refresh-workspace]")
