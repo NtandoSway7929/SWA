@@ -25202,6 +25202,7 @@ function simpleBars(items, color) {
             conversation.scrollHeight;
 
         input.value = "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
         input.disabled = true;
         send.disabled = true;
 
