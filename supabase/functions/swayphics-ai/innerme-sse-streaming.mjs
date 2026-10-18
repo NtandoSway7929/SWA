@@ -103,6 +103,10 @@ export async function consumeInnerMeSseStream(body, onPayload, options = {}) {
       if (item.done) break;
     }
 
+    if (abortRequested || options.signal?.aborted) {
+      throw new DOMException("The InnerMe stream was cancelled.", "AbortError");
+    }
+
     if (buffer.trim()) await dispatch(buffer);
     return { eventCount };
   } catch (error) {
