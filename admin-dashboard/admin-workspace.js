@@ -25181,17 +25181,23 @@ function simpleBars(items, color) {
             throw new Error("InnerMe returned a stream that this browser cannot read. Please retry.");
         }
 
+        const contentNode = loading.querySelector(".sway-ai-message-content");
+        if (!contentNode) {
+            try {
+                await response.body.cancel();
+            } catch (cancelError) {
+                // The chat node may have been removed while the request was opening.
+            }
+            throw new Error("InnerMe's response area is no longer available.");
+        }
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         let doneResult = null;
         let streamedText = "";
 
-        const contentNode = loading.querySelector(".sway-ai-message-content");
-        if (!contentNode) {
-            throw new Error("InnerMe's response area is no longer available.");
-        }
-
+        contentNode.classList.add("sway-ai-streaming-content");
         contentNode.setAttribute("aria-live", "off");
 
         function keepConversationInView() {
