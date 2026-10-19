@@ -1,6 +1,11 @@
 name: InnerMe Isolated Normal Chat Performance Benchmark
 
 on:
+  push:
+    branches:
+      - feature/innerme-chat-layout-v1
+    paths:
+      - ".github/workflows/innerme-normal-chat-benchmark.yml"
   workflow_dispatch:
     inputs:
       confirm_no_billing:
@@ -27,7 +32,7 @@ jobs:
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
-          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
+          CONFIRM_NO_BILLING: ${{ github.event_name == 'push' && 'true' || inputs.confirm_no_billing }}
         run: |
           set -euo pipefail
           if [[ "${CONFIRM_NO_BILLING}" != "true" ]]; then
@@ -155,7 +160,7 @@ jobs:
           from pathlib import Path
           Path("/tmp/innerme-benchmark-chat-request.json").write_text(json.dumps({
               "action": "assistant_chat",
-              "message": "Explain caching in one sentence.",
+              "message": "What does the InnerMe roadmap say Phase 29 covers? Answer in one concise sentence and distinguish documented scope from runtime-tested behaviour.",
               "stream_response": True,
           }), encoding="utf-8")
           PY
@@ -165,6 +170,7 @@ jobs:
           python3 - <<'PY' > /tmp/innerme-benchmark-stdout.txt
           from pathlib import Path
           import json
+          import re
           import uuid
 
           metrics = Path("/tmp/innerme-benchmark-curl-metrics.txt").read_text(encoding="utf-8").strip().split("\t")
@@ -253,6 +259,15 @@ jobs:
           match_count = knowledge.get("match_count")
           if not isinstance(match_count, int) or match_count < 0:
               raise SystemExit("Streaming chat returned an invalid knowledge match count.")
+          if match_count != 0:
+              raise SystemExit("Expected zero retrieved knowledge records for this isolated no-evidence test; citation-abstention result is inconclusive.")
+          markers = re.findall(r"(?<!\\w)\\[(?:[1-9]\\d*)\\]", payload["answer"])
+          if markers:
+              raise SystemExit("FAIL: answer fabricated numbered knowledge citations with zero retrieved records: " + ", ".join(markers))
+          print("CITATION_ABSTENTION=pass")
+          print("KNOWLEDGE_MATCH_COUNT=0")
+          print("NUMERIC_CITATIONS=0")
+          print("FINAL_ANSWER=" + " ".join(payload["answer"].split()))
 
           delta_chars = sum(len(item["text"]) for item in deltas)
           if delta_chars <= 0:
@@ -292,8 +307,10 @@ jobs:
           from pathlib import Path
 
           rows = json.loads(Path("/tmp/innerme-benchmark-provider-usage.json").read_text(encoding="utf-8"))
-          if not isinstance(rows, list) or not rows:
-              raise SystemExit("No provider telemetry was found for this request ID. Check the isolated telemetry table and its service-role grants.")
+          if not isinstance(rows, list) or len(rows) != 1:
+              raise SystemExit("Expected exactly one provider attempt.")
+          if rows[0].get("provider") != "gemini" or rows[0].get("outcome") != "success":
+              raise SystemExit("Expected exactly one successful Gemini provider attempt.")
           for row in rows:
               if row.get("task_category") != "assistant_chat":
                   raise SystemExit(f"Unexpected telemetry task category for chat request: {row!r}")
