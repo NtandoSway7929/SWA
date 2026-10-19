@@ -1455,7 +1455,26 @@
                 return token;
             });
             safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, function (_, label, url) {
-                return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+                let parsedUrl;
+                try {
+                    // Decode HTML-escaped ampersands only for URL parsing; keep
+                    // the final attribute escaped after canonicalization.
+                    parsedUrl = new URL(String(url).replace(/&amp;/g, "&"));
+                } catch (urlError) {
+                    return label + " (" + url + ")";
+                }
+
+                if (
+                    (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") ||
+                    parsedUrl.username ||
+                    parsedUrl.password
+                ) {
+                    // Show the destination as inert text rather than making
+                    // credential-bearing or malformed URLs look trustworthy.
+                    return label + " (" + url + ")";
+                }
+
+                return '<a href="' + esc(parsedUrl.href) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
             });
             safe = safe
                 .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
