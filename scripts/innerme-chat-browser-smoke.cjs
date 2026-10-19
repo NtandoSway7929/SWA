@@ -120,6 +120,75 @@ async function configureIsolatedContext(context, initialView, theme) {
     localStorage.removeItem("swayphics_admin_workspace_snapshot_" + testUserId);
     localStorage.removeItem("swayphics_admin_innerme_conversation_" + testUserId);
     localStorage.removeItem("swayphics_admin_innerme_sessions_" + testUserId);
+
+    // Produce one deterministic, browser-native partial SSE response for the
+    // Stop-response test. It never reaches Supabase or an AI provider.
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async function (input, init) {
+      const requestUrl = typeof input === "string"
+        ? input
+        : input && typeof input.url === "string" ? input.url : "";
+      const requestOptions = init || {};
+      let payload = null;
+      if (typeof requestOptions.body === "string") {
+        try {
+          payload = JSON.parse(requestOptions.body);
+        } catch (error) {
+          payload = null;
+        }
+      }
+
+      if (
+        requestUrl.includes("/functions/v1/swayphics-ai") &&
+        payload &&
+        typeof payload.message === "string" &&
+        payload.message.includes("[test-partial-stream]")
+      ) {
+        window.__innerMePartialStreamRequests =
+          (window.__innerMePartialStreamRequests || 0) + 1;
+        const signal = requestOptions.signal ||
+          (typeof Request !== "undefined" && input instanceof Request ? input.signal : null);
+        const encoder = new TextEncoder();
+        let abortHandler = null;
+        const body = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(
+              "event: delta\\ndata: " +
+              JSON.stringify({ text: "Partial answer preserved when stopped." }) +
+              "\\n\\n"
+            ));
+            abortHandler = function () {
+              try {
+                controller.error(new DOMException("The operation was aborted.", "AbortError"));
+              } catch (error) {
+                // The stream may already have been cancelled by the consumer.
+              }
+            };
+            if (signal) {
+              if (signal.aborted) {
+                abortHandler();
+              } else {
+                signal.addEventListener("abort", abortHandler, { once: true });
+              }
+            }
+          },
+          cancel() {
+            if (signal && abortHandler) {
+              signal.removeEventListener("abort", abortHandler);
+            }
+          }
+        });
+        return new Response(body, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "Cache-Control": "no-cache, no-transform"
+          }
+        });
+      }
+
+      return originalFetch(input, init);
+    };
   }, {
     testUserId: TEST_USER_ID,
     view: initialView,
@@ -427,12 +496,63 @@ async function verifyKeyboardAndFallbackPaths(page, metrics) {
   assert.equal(await send.getAttribute("data-ai-stop-generation"), null, "Stop control state should be removed after cancellation");
   metrics.cancelledResponses += 1;
 
+  // Unlike the empty-response check above, this stream has already delivered a
+  // visible delta before Stop is clicked. The stream then remains open until
+  // AbortSignal cancels it, proving the partial answer survives cancellation.
+  await input.fill("[test-partial-stream]");
+  await send.click();
+  const partialStop = page.locator('#sway-ai-send[data-ai-stop-generation="true"]');
+  await partialStop.waitFor({ state: "visible", timeout: 5000 });
+  assert.equal(
+    await partialStop.getAttribute("aria-label"),
+    "Stop generating response",
+    "Stop control should remain accessible while partial text is streaming"
+  );
+  await page.waitForFunction(() => {
+    const messages = document.querySelectorAll(
+      ".sway-ai-message.sway-ai-assistant .sway-ai-message-content"
+    );
+    const latestContent = messages.length ? messages[messages.length - 1] : null;
+    return latestContent &&
+      latestContent.textContent.includes("Partial answer preserved when stopped.");
+  }, null, { timeout: 5000 });
+  await partialStop.click();
+
+  const partialStoppedMessage = page.locator(
+    ".sway-ai-message.sway-ai-assistant.sway-ai-response-stopped"
+  ).last();
+  await partialStoppedMessage.waitFor({ state: "visible", timeout: 5000 });
+  const partialStoppedText = await partialStoppedMessage.textContent();
+  assert.ok(
+    partialStoppedText.includes("Partial answer preserved when stopped."),
+    "Stop must preserve text already received from the stream"
+  );
+  assert.ok(
+    !partialStoppedText.includes("Response stopped before any text was received."),
+    "A partial response must not be replaced by the empty-response message"
+  );
+  assert.equal(
+    (await partialStoppedMessage.locator(".sway-ai-stopped-label").textContent()).trim(),
+    "Stopped",
+    "Interrupted partial response should be labelled as stopped"
+  );
+  assert.equal(await input.isEnabled(), true, "Composer input should be re-enabled after partial cancellation");
+  assert.equal(await send.getAttribute("type"), "submit", "Send button should return to submit mode after partial cancellation");
+  assert.equal(await send.getAttribute("data-ai-stop-generation"), null, "Stop control state should be removed after partial cancellation");
+  const partialMockRequests = await page.evaluate(
+    () => window.__innerMePartialStreamRequests || 0
+  );
+  assert.equal(partialMockRequests, 1, "Exactly one local partial stream should be used");
+  metrics.cancelledResponses += 1;
+
   return {
     enterSubmitsMessage: true,
     shiftEnterAddsNewlineWithoutSending: true,
     nonStreamingJsonFallbackRenders: true,
     streamErrorRendersRecoverableMessage: true,
-    stopResponseCancelsRequest: true
+    stopResponseCancelsRequest: true,
+    stopResponsePreservesPartialAnswer: true,
+    partialMockRequests
   };
 }
 
