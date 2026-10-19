@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "supabase/migrations/20261019030000_innerme_knowledge_acquisition_workflow.sql"
+      - "supabase/migrations/20261019033000_innerme_knowledge_acquisition_compatibility_hardening.sql"
       - "admin-dashboard/innerme-knowledge-intelligence.js"
       - "scripts/innerme-knowledge-acquisition-governance.test.mjs"
       - ".github/workflows/innerme-knowledge-acquisition-governance.yml"
@@ -12,6 +13,7 @@ on:
     branches: ["main"]
     paths:
       - "supabase/migrations/20261019030000_innerme_knowledge_acquisition_workflow.sql"
+      - "supabase/migrations/20261019033000_innerme_knowledge_acquisition_compatibility_hardening.sql"
       - "admin-dashboard/innerme-knowledge-intelligence.js"
       - "scripts/innerme-knowledge-acquisition-governance.test.mjs"
       - ".github/workflows/innerme-knowledge-acquisition-governance.yml"
