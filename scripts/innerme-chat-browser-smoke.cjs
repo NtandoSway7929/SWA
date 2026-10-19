@@ -251,7 +251,7 @@ async function verifyKeyboardAndFallbackPaths(page, metrics) {
   const beforeShiftEnter = metrics.mockedChatRequests;
   await input.fill("line one");
   await input.press("Shift+Enter");
-  assert.equal(await input.inputValue(), "line one\\n", "Shift+Enter should insert a newline");
+  assert.equal(await input.inputValue(), "line one\n", "Shift+Enter should insert a newline");
   assert.equal(metrics.mockedChatRequests, beforeShiftEnter, "Shift+Enter must not send a message");
 
   const beforeEnter = await headings.count();
