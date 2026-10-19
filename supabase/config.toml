@@ -16,6 +16,11 @@ verify_jwt = false
 [functions.submit-enquiry]
 verify_jwt = false
 
+# Public demo links authenticate by a high-entropy share token. Admin POST
+# operations validate the caller's JWT and Swayphics-admin status in the handler.
+[functions.proposal-demo-share]
+verify_jwt = false
+
 # Public website chat is protected by origin/session rate limits in its public route.
 # All private workspace actions enforce user JWT and Swayphics-admin checks in the function.
 [functions.swayphics-ai]
