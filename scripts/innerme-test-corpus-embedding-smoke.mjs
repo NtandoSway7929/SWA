@@ -117,6 +117,24 @@ async function cleanupCreatedKnowledge(accessToken, createdIds) {
   }
 }
 
+async function cleanupVerificationLogs(accessToken, knowledgeIds) {
+  if (!knowledgeIds.length) return;
+  const params = new URLSearchParams({
+    knowledge_id: "in.(" + knowledgeIds.join(",") + ")",
+  });
+  const response = await fetch(SUPABASE_URL + "/rest/v1/innerme_knowledge_verification_log?" + params.toString(), {
+    method: "DELETE",
+    headers: {
+      ...authHeaders(accessToken),
+      Prefer: "return=minimal",
+    },
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error("Failed to remove TEST ONLY verification log rows (HTTP " + response.status + "): " + text.slice(0, 300));
+  }
+}
+
 async function main() {
   assertTestOnlyConfiguration();
 
@@ -124,10 +142,17 @@ async function main() {
   const createdIds = [];
   const result = {
     project_ref: "ofqofhnlzbouclvvrmzd",
-    mode: "isolated-test-only-embedding-and-retrieval",
+    mode: "isolated-test-only-governance-embedding-and-retrieval",
     normal_chat_requests: 0,
+    verification_rpc_exercised: false,
+    verification_audit_checked: false,
     results: [],
-    cleanup: { attempted: false, passed: false, remaining_knowledge_rows: null },
+    cleanup: {
+      attempted: false,
+      passed: false,
+      remaining_knowledge_rows: null,
+      remaining_verification_logs: null,
+    },
   };
 
   try {
@@ -187,12 +212,12 @@ async function main() {
         tags: ["test-only", "source-backed", "innerme-qa"],
         priority: 90,
         status: "active",
-        last_verified_at: now.toISOString(),
-        review_after: future,
-        verification_status: "verified",
-        verification_method: "internal_review",
-        verification_notes: "TEST ONLY: this source-backed fixture was checked against the linked repository file to validate embedding and retrieval in the isolated project. This is not a production verification record.",
-        verified_source_url: source.url,
+        last_verified_at: null,
+        review_after: null,
+        verification_status: "unverified",
+        verification_method: null,
+        verification_notes: "TEST ONLY: created as an unverified fixture so the isolated governance RPC must verify it before retrieval.",
+        verified_source_url: null,
         embedding_status: "pending",
       };
     });
@@ -209,6 +234,50 @@ async function main() {
       createdIds.push(row.id);
     });
 
+    const sourceBySlug = new Map(sourceRows.map((source) => [source.slug, source]));
+    for (const row of inserted) {
+      const source = sourceBySlug.get(records.find((record) => record.slug === row.slug).source_slug);
+      assert.ok(source, "Missing source for governance verification of " + row.slug);
+      const verified = await apiRequest(
+        accessToken,
+        SUPABASE_URL + "/rest/v1/rpc/verify_innerme_knowledge",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            p_knowledge_id: row.id,
+            p_verification_method: "internal_review",
+            p_verification_notes: "TEST ONLY: linked internal source reviewed for isolated verification workflow testing.",
+            p_verified_source_url: source.url,
+          }),
+        },
+        "Exercise InnerMe knowledge source-verification RPC",
+      );
+      assert.equal(verified.verification_status, "verified", row.slug + " must become verified through the governance RPC.");
+      assert.equal(verified.verification_method, "internal_review", row.slug + " must persist the verification method.");
+      assert.equal(verified.verified_source_url, source.url, row.slug + " must persist the verified source URL.");
+      assert.ok(verified.review_after && new Date(verified.review_after).getTime() > Date.now(), row.slug + " must receive a future review deadline.");
+    }
+    result.verification_rpc_exercised = true;
+
+    const auditParams = new URLSearchParams({
+      select: "id,knowledge_id,source_id,verification_status,verification_method,verification_notes,verified_source_url,verified_at",
+      knowledge_id: "in.(" + createdIds.join(",") + ")",
+    });
+    const auditRows = await apiRequest(
+      accessToken,
+      SUPABASE_URL + "/rest/v1/innerme_knowledge_verification_log?" + auditParams.toString(),
+      { method: "GET" },
+      "Read back InnerMe verification audit records",
+    );
+    assert.equal(auditRows.length, records.length, "Every governed test record must have one audit entry.");
+    for (const row of auditRows) {
+      assert.equal(row.verification_status, "verified", "Audit status must say verified.");
+      assert.equal(row.verification_method, "internal_review", "Audit method must be preserved.");
+      assert.ok(String(row.verification_notes || "").startsWith("TEST ONLY:"), "Audit record must carry the cleanup-safe test marker.");
+      assert.ok(/^https?:\\/\\//i.test(row.verified_source_url || ""), "Audit record must retain an HTTP(S) source URL.");
+    }
+    result.verification_audit_checked = true;
+
     await apiRequest(
       accessToken,
       SUPABASE_URL + "/functions/v1/swayphics-ai",
@@ -216,13 +285,15 @@ async function main() {
         method: "POST",
         body: JSON.stringify({ action: "embed_knowledge", knowledge_ids: createdIds }),
       },
-      "Generate isolated gte-small embeddings",
+      "Generate isolated gte-small embeddings after governance verification",
     );
 
-    const statusRows = await getBySlugs(accessToken, "innerme_knowledge", records.map((r) => r.slug), "id,slug,source_id,verification_status,embedding_status,embedded_at");
+    const statusRows = await getBySlugs(accessToken, "innerme_knowledge", records.map((r) => r.slug), "id,slug,source_id,verification_status,verification_method,verified_source_url,review_after,embedding_status,embedded_at");
     assert.equal(statusRows.length, records.length, "Both test rows must remain available after embedding.");
     for (const row of statusRows) {
-      assert.equal(row.verification_status, "verified", row.slug + " must meet the test retrieval verification gate.");
+      assert.equal(row.verification_status, "verified", row.slug + " must meet the governance verification gate.");
+      assert.equal(row.verification_method, "internal_review", row.slug + " must be verified via the expected RPC.");
+      assert.ok(row.review_after && new Date(row.review_after).getTime() > Date.now(), row.slug + " must have a future review deadline.");
       assert.equal(row.embedding_status, "ready", row.slug + " must be indexed and ready.");
       assert.ok(row.embedded_at, row.slug + " must have an embedding timestamp.");
     }
@@ -256,6 +327,9 @@ async function main() {
         similarity: Number(found.similarity),
         source_url: found.source_url,
         verification_status: row.verification_status,
+        verification_method: row.verification_method,
+        review_after: row.review_after,
+        verification_audit_checked: result.verification_audit_checked,
         embedding_status: row.embedding_status,
         retrieved: true,
       });
@@ -269,15 +343,40 @@ async function main() {
     if (accessToken) {
       result.cleanup.attempted = createdIds.length > 0;
       try {
+        await cleanupVerificationLogs(accessToken, createdIds);
+      } catch (error) {
+        result.cleanup.verification_log_error = error instanceof Error ? error.message : String(error);
+      }
+      try {
         await cleanupCreatedKnowledge(accessToken, createdIds);
         const leftovers = await getBySlugs(accessToken, "innerme_knowledge", records.map((r) => r.slug), "id,slug");
+        const auditParams = new URLSearchParams({
+          select: "id,knowledge_id",
+          knowledge_id: "in.(" + createdIds.join(",") + ")",
+        });
+        const remainingLogs = createdIds.length
+          ? await apiRequest(
+              accessToken,
+              SUPABASE_URL + "/rest/v1/innerme_knowledge_verification_log?" + auditParams.toString(),
+              { method: "GET" },
+              "Verify temporary audit-log cleanup",
+            )
+          : [];
         result.cleanup.remaining_knowledge_rows = leftovers.length;
-        result.cleanup.passed = leftovers.length === 0;
+        result.cleanup.remaining_verification_logs = remainingLogs.length;
+        result.cleanup.passed = leftovers.length === 0 && remainingLogs.length === 0 && !result.cleanup.verification_log_error;
         if (leftovers.length !== 0) {
           throw new Error("Temporary corpus cleanup left " + leftovers.length + " test-only knowledge row(s).");
         }
+        if (remainingLogs.length !== 0) {
+          throw new Error("Temporary governance cleanup left " + remainingLogs.length + " test-only audit row(s).");
+        }
       } catch (error) {
         result.cleanup.error = error instanceof Error ? error.message : String(error);
+        result.status = "failed";
+        process.exitCode = 1;
+      }
+      if (!result.cleanup.passed) {
         result.status = "failed";
         process.exitCode = 1;
       }
@@ -293,12 +392,15 @@ async function main() {
         "- Isolated project: `ofqofhnlzbouclvvrmzd`",
         "- Normal-chat/Gemini requests: 0",
         "- Temporary records created: " + createdIds.length,
+        "- Governance RPC exercised: " + String(result.verification_rpc_exercised),
+        "- Verification audit read back: " + String(result.verification_audit_checked),
         "- Cleanup verified: " + String(result.cleanup.passed),
         "- Remaining knowledge rows with test slugs: " + String(result.cleanup.remaining_knowledge_rows),
+        "- Remaining test verification-log rows: " + String(result.cleanup.remaining_verification_logs),
         "",
-        "| Test record | Retrieved | Similarity | Source URL |",
-        "|---|---:|---:|---|",
-        ...result.results.map((item) => "| " + item.slug + " | " + item.retrieved + " | " + item.similarity.toFixed(4) + " | " + item.source_url + " |"),
+        "| Test record | Governance verified | Audit checked | Retrieved | Similarity | Source URL |",
+        "|---|---:|---:|---:|---:|---|",
+        ...result.results.map((item) => "| " + item.slug + " | " + item.verification_status + " | " + item.verification_audit_checked + " | " + item.retrieved + " | " + item.similarity.toFixed(4) + " | " + item.source_url + " |"),
       ];
       if (result.error) lines.push("", "**Failure:** " + result.error);
       if (result.cleanup.error) lines.push("", "**Cleanup failure:** " + result.cleanup.error);
