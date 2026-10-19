@@ -488,6 +488,72 @@ jobs:
               throw new Error("Chat composer unexpectedly contained a message before testing.");
             }
 
+            // Send exactly one synthetic message. The preview's fetch guard
+            // returns a browser-local SSE stream; it never calls Gemini or Supabase.
+            await composer.fill("Render the local preview mock.");
+            await page.locator("#sway-ai-send").click();
+
+            const mockMessage = page.locator(
+              ".sway-ai-message.sway-ai-assistant:not(.sway-ai-loading) .sway-ai-message-content"
+            ).filter({ hasText: "Preview-only streamed response" }).first();
+            await mockMessage.waitFor({ state: "visible", timeout: 15000 });
+
+            await page.waitForFunction(() => {
+              const messages = Array.from(document.querySelectorAll(
+                ".sway-ai-message.sway-ai-assistant:not(.sway-ai-loading) .sway-ai-message-content"
+              ));
+              const content = messages.find(el =>
+                (el.textContent || "").includes("Preview-only streamed response")
+              );
+              return Boolean(
+                content &&
+                content.querySelector(".sway-ai-markdown-h2") &&
+                content.querySelector(".sway-ai-markdown-h3") &&
+                content.querySelector(".sway-ai-inline-code") &&
+                content.querySelector("pre code") &&
+                content.querySelector("table.sway-ai-markdown-table") &&
+                content.querySelector('a[href="https://example.com"]')
+              );
+            }, null, { timeout: 15000 });
+
+            const mockRenderMetrics = await page.evaluate(() => {
+              const messages = Array.from(document.querySelectorAll(
+                ".sway-ai-message.sway-ai-assistant:not(.sway-ai-loading) .sway-ai-message-content"
+              ));
+              const content = messages.find(el =>
+                (el.textContent || "").includes("Preview-only streamed response")
+              );
+              return {
+                localMockStreamCount: Number(window.__SWAYPHICS_PREVIEW_MOCK_STREAMS__ || 0),
+                heading2: Boolean(content && content.querySelector(".sway-ai-markdown-h2")),
+                heading3: Boolean(content && content.querySelector(".sway-ai-markdown-h3")),
+                inlineCode: Boolean(content && content.querySelector(".sway-ai-inline-code")),
+                fencedCode: Boolean(content && content.querySelector("pre code")),
+                table: Boolean(content && content.querySelector("table.sway-ai-markdown-table")),
+                safeLink: Boolean(content && content.querySelector('a[href="https://example.com"]')),
+                injectedScriptNode: Boolean(document.querySelector("#innerme-preview-injected")),
+                injectedScriptExecuted: window.__INNERME_PREVIEW_INJECTED__ === true,
+                answerLength: content ? (content.textContent || "").length : 0
+              };
+            });
+            if (mockRenderMetrics.localMockStreamCount !== 1) {
+              throw new Error("Expected one browser-local mock SSE response: " + JSON.stringify(mockRenderMetrics));
+            }
+            if (
+              !mockRenderMetrics.heading2 ||
+              !mockRenderMetrics.heading3 ||
+              !mockRenderMetrics.inlineCode ||
+              !mockRenderMetrics.fencedCode ||
+              !mockRenderMetrics.table ||
+              !mockRenderMetrics.safeLink
+            ) {
+              throw new Error("Mock SSE Markdown rendering did not pass: " + JSON.stringify(mockRenderMetrics));
+            }
+            if (mockRenderMetrics.injectedScriptNode || mockRenderMetrics.injectedScriptExecuted) {
+              throw new Error("Untrusted mock HTML was interpreted as script instead of escaped.");
+            }
+            await page.screenshot({ path: "/tmp/innerme-ui-screenshots/mock-stream-rendered.png", fullPage: true });
+
             const bannerText = await page.evaluate(() => {
               const banner = document.querySelector("#innerme-test-preview-banner");
               return banner
