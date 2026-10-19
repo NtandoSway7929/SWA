@@ -6,12 +6,12 @@ import { extractBearerToken } from "./auth-header.mjs";
 const ISOLATED_PROJECT_REF = "ofqofhnlzbouclvvrmzd";
 const SUITE_ID = "innerme_semantic_retrieval_regression";
 const BASELINE_VERSION = "1.2.0";
-const ALLOWED_CHAT_CASE_IDS = [
+const ALLOWED_CHAT_CASE_IDS: readonly string[] = [
   "normal_chat_invoice_grounding",
   "normal_chat_appointment_grounding",
   "normal_chat_dispatch_grounding",
   "normal_chat_irrelevant_invoice_exclusion",
-] as const;
+];
 const EMBEDDING_MODEL = "gte-small";
 const EMBEDDING_DIMENSIONS = 384;
 
