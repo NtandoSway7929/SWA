@@ -34,6 +34,7 @@ const metrics = {
   scenarios: [],
   mockedChatRequests: 0,
   cancelledResponses: 0,
+  retryRequests: 0,
   unexpectedExternalRequests: [],
   pageErrors: []
 };
@@ -204,6 +205,33 @@ async function configureIsolatedContext(context, initialView, theme) {
       const postData = request.postDataJSON() || {};
       metrics.mockedChatRequests += 1;
       const message = String(postData.message || "");
+
+      if (message.includes("[test-retry-once]")) {
+        metrics.retryRequests += 1;
+        if (metrics.retryRequests === 1) {
+          return route.fulfill({
+            status: 200,
+            contentType: "text/event-stream; charset=utf-8",
+            headers: { "Cache-Control": "no-cache, no-transform" },
+            body: sseFrame("phase", { status: "Preparing a read-only answer…" }) +
+              sseFrame("error", { error: "Synthetic retry failure", retryable: true })
+          });
+        }
+
+        const retryAnswer = "## Retry succeeded\\n\\nThe original question was retried successfully.";
+        return route.fulfill({
+          status: 200,
+          contentType: "text/event-stream; charset=utf-8",
+          headers: { "Cache-Control": "no-cache, no-transform" },
+          body: sseFrame("delta", { text: retryAnswer }) +
+            sseFrame("done", {
+              answer: retryAnswer,
+              read_only: true,
+              knowledge_retrieval: { match_count: 0, retrieval_error: null },
+              knowledge_attribution: []
+            })
+        });
+      }
 
       // Exercise the existing non-SSE response contract, which must remain
       // available for fallback providers and older function deployments.
@@ -545,6 +573,47 @@ async function verifyKeyboardAndFallbackPaths(page, metrics) {
   assert.equal(partialMockRequests, 1, "Exactly one local partial stream should be used");
   metrics.cancelledResponses += 1;
 
+  // Simulate a transient failure, then verify Retry replays the same prompt,
+  // replaces the failed turn, and renders the successful answer.
+  const retryPrompt = "[test-retry-once] retry this read-only question";
+  await input.fill(retryPrompt);
+  await send.click();
+  const failedRetryMessage = page.locator(
+    ".sway-ai-message.sway-ai-assistant.sway-ai-response-error"
+  ).filter({ hasText: "Synthetic retry failure" }).last();
+  await failedRetryMessage.waitFor({ state: "visible", timeout: 5000 });
+  const retryButton = failedRetryMessage.locator("button.sway-ai-retry");
+  assert.equal(
+    await retryButton.getAttribute("aria-label"),
+    "Retry last InnerMe request",
+    "Retry action should have an accessible name"
+  );
+  assert.equal(
+    await page.locator(".sway-ai-message.sway-ai-user .sway-ai-message-content")
+      .filter({ hasText: retryPrompt }).count(),
+    1,
+    "Initial failed attempt should have exactly one visible user prompt"
+  );
+  await retryButton.click();
+
+  await page.locator(".sway-ai-message.sway-ai-assistant .sway-ai-answer-heading")
+    .filter({ hasText: "Retry succeeded" })
+    .waitFor({ state: "visible", timeout: 5000 });
+  assert.equal(
+    await page.locator(".sway-ai-message.sway-ai-assistant.sway-ai-response-error").count(),
+    0,
+    "Retry should replace, not retain, the old error bubble"
+  );
+  assert.equal(
+    await page.locator(".sway-ai-message.sway-ai-user .sway-ai-message-content")
+      .filter({ hasText: retryPrompt }).count(),
+    1,
+    "Retry must not duplicate the user prompt in the transcript"
+  );
+  assert.equal(metrics.retryRequests, 2, "Retry should issue exactly one second mocked request");
+  assert.equal(await input.isEnabled(), true, "Composer should be re-enabled after a successful retry");
+  assert.equal(await send.getAttribute("type"), "submit", "Send control should remain in submit mode after retry");
+
   return {
     enterSubmitsMessage: true,
     shiftEnterAddsNewlineWithoutSending: true,
@@ -552,6 +621,9 @@ async function verifyKeyboardAndFallbackPaths(page, metrics) {
     streamErrorRendersRecoverableMessage: true,
     stopResponseCancelsRequest: true,
     stopResponsePreservesPartialAnswer: true,
+    failedRequestCanBeRetried: true,
+    retryReplacesFailedTurnWithoutDuplicatePrompt: true,
+    retryRequests: metrics.retryRequests,
     partialMockRequests
   };
 }
