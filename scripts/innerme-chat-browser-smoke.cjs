@@ -170,6 +170,10 @@ async function openChat(page, initialView) {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
   if (initialView !== "swayphics-ai") {
+    const innerMeGroup = page.locator('[data-nav-group-toggle="innerme"]');
+    if ((await innerMeGroup.getAttribute("aria-expanded")) !== "true") {
+      await innerMeGroup.click();
+    }
     const chatNav = page.locator('[data-view="swayphics-ai"]').first();
     await chatNav.waitFor({ state: "visible", timeout: 15000 });
     await chatNav.click();
