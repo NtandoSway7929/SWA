@@ -9404,3 +9404,41 @@ body.sway-dark-mode .sway-ai-inline-citation-unavailable {
 body.sway-dark-mode .sway-ai-knowledge-trace-row-highlight {
     outline-color: rgba(119, 193, 252, .7);
 }
+
+
+/* InnerMe chat: retry failed requests without changing the stopped-response state. */
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 29px;
+  margin-left: 8px;
+  padding: 5px 10px;
+  border: 1px solid rgba(1, 82, 244, .22);
+  border-radius: 8px;
+  background: rgba(1, 82, 244, .06);
+  color: #0031C5;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry:hover {
+  background: rgba(1, 82, 244, .12);
+  border-color: rgba(1, 82, 244, .38);
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry:focus-visible {
+  outline: 2px solid #0152F4;
+  outline-offset: 3px;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry {
+  border-color: rgba(119, 193, 252, .25);
+  background: rgba(119, 193, 252, .10);
+  color: #9EC9FF;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry:hover {
+  background: rgba(119, 193, 252, .17);
+}
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry:focus-visible {
+  outline-color: #77C1FC;
+}
