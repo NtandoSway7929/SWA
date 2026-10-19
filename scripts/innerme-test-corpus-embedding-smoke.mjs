@@ -154,6 +154,14 @@ async function main() {
       assert.equal(source.url, expected.url, "Test source URL must match the reviewed repository source.");
     }
 
+    const corpusNow = await apiRequest(
+      accessToken,
+      SUPABASE_URL + "/rest/v1/innerme_knowledge?select=id,slug&limit=1000",
+      { method: "GET" },
+      "Preflight isolated knowledge corpus",
+    );
+    assert.ok(Array.isArray(corpusNow), "Knowledge corpus preflight must return a row array.");
+    assert.equal(corpusNow.length, 0, "Safety stop: the isolated knowledge table is not empty. Refusing to seed alongside existing rows.");
     const existing = await getBySlugs(accessToken, "innerme_knowledge", records.map((r) => r.slug), "id,slug");
     assert.equal(existing.length, 0, "A matching test-only record already exists. Refusing to overwrite or delete pre-existing data.");
 
