@@ -140,6 +140,9 @@ async function main() {
 
   let accessToken = "";
   const createdIds = [];
+  let insertionMayHaveCommitted = false;
+  let approvedSourceIds = new Set();
+  const expectedRecordSlugs = new Set(records.map((record) => record.slug));
   const result = {
     project_ref: "ofqofhnlzbouclvvrmzd",
     mode: "isolated-test-only-governance-embedding-and-retrieval",
@@ -171,6 +174,7 @@ async function main() {
 
     const sourceRows = await getBySlugs(accessToken, "innerme_knowledge_sources", sources.map((s) => s.slug), "id,slug,status,verification_status,url");
     assert.equal(sourceRows.length, sources.length, "Both reviewed test-only source records must already exist.");
+    approvedSourceIds = new Set(sourceRows.map((source) => String(source.id)));
     for (const expected of sources) {
       const source = sourceRows.find((row) => row.slug === expected.slug);
       assert.ok(source, "Missing test-only source " + expected.slug);
@@ -222,16 +226,33 @@ async function main() {
       };
     });
 
+    // A connection can fail after Postgres commits the insert but before the
+    // client receives its representation. Mark this as potentially committed
+    // before issuing the request so finally can rediscover the reserved slugs.
+    insertionMayHaveCommitted = true;
     const inserted = await apiRequest(
       accessToken,
       SUPABASE_URL + "/rest/v1/innerme_knowledge",
       { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload) },
       "Create temporary source-backed test corpus",
     );
+    if (Array.isArray(inserted)) {
+      for (const row of inserted) {
+        if (
+          row &&
+          typeof row.id === "string" &&
+          row.id &&
+          expectedRecordSlugs.has(String(row.slug || "")) &&
+          approvedSourceIds.has(String(row.source_id || "")) &&
+          String(row.verification_notes || "").startsWith("TEST ONLY:")
+        ) {
+          if (!createdIds.includes(row.id)) createdIds.push(row.id);
+        }
+      }
+    }
     assert.ok(Array.isArray(inserted) && inserted.length === records.length, "Both temporary test records must be created.");
     inserted.forEach((row) => {
       assert.ok(row.id && row.slug, "Inserted test row must have an id and slug.");
-      createdIds.push(row.id);
     });
 
     for (const row of inserted) {
@@ -340,20 +361,67 @@ async function main() {
     process.exitCode = 1;
   } finally {
     if (accessToken) {
-      result.cleanup.attempted = createdIds.length > 0;
+      let cleanupIds = Array.from(new Set(createdIds));
+      result.cleanup.attempted = insertionMayHaveCommitted || cleanupIds.length > 0;
+
+      // Recover any rows whose insert committed but whose HTTP representation
+      // was lost. Never delete by slug alone: require the reserved slug, a
+      // reviewed test source ID, and the explicit TEST ONLY marker.
+      if (insertionMayHaveCommitted) {
+        try {
+          const discoveredRows = await getBySlugs(
+            accessToken,
+            "innerme_knowledge",
+            records.map((r) => r.slug),
+            "id,slug,source_id,verification_notes",
+          );
+          for (const row of discoveredRows) {
+            if (
+              row &&
+              typeof row.id === "string" &&
+              expectedRecordSlugs.has(String(row.slug || "")) &&
+              approvedSourceIds.has(String(row.source_id || "")) &&
+              String(row.verification_notes || "").startsWith("TEST ONLY:")
+            ) {
+              if (!cleanupIds.includes(row.id)) cleanupIds.push(row.id);
+              if (!createdIds.includes(row.id)) createdIds.push(row.id);
+            }
+          }
+        } catch (error) {
+          result.cleanup.discovery_error = error instanceof Error ? error.message : String(error);
+        }
+      }
+
       try {
-        await cleanupVerificationLogs(accessToken, createdIds);
+        await cleanupVerificationLogs(accessToken, cleanupIds);
       } catch (error) {
         result.cleanup.verification_log_error = error instanceof Error ? error.message : String(error);
       }
       try {
-        await cleanupCreatedKnowledge(accessToken, createdIds);
-        const leftovers = await getBySlugs(accessToken, "innerme_knowledge", records.map((r) => r.slug), "id,slug");
+        await cleanupCreatedKnowledge(accessToken, cleanupIds);
+        const leftovers = await getBySlugs(
+          accessToken,
+          "innerme_knowledge",
+          records.map((r) => r.slug),
+          "id,slug,source_id,verification_notes",
+        );
+        const remainingLogIds = Array.from(new Set([
+          ...cleanupIds,
+          ...leftovers
+            .filter((row) =>
+              row &&
+              expectedRecordSlugs.has(String(row.slug || "")) &&
+              approvedSourceIds.has(String(row.source_id || "")) &&
+              String(row.verification_notes || "").startsWith("TEST ONLY:")
+            )
+            .map((row) => String(row.id || ""))
+            .filter(Boolean),
+        ]));
         const auditParams = new URLSearchParams({
           select: "id,knowledge_id",
-          knowledge_id: "in.(" + createdIds.join(",") + ")",
+          knowledge_id: "in.(" + remainingLogIds.join(",") + ")",
         });
-        const remainingLogs = createdIds.length
+        const remainingLogs = remainingLogIds.length
           ? await apiRequest(
               accessToken,
               SUPABASE_URL + "/rest/v1/innerme_knowledge_verification_log?" + auditParams.toString(),
@@ -363,12 +431,19 @@ async function main() {
           : [];
         result.cleanup.remaining_knowledge_rows = leftovers.length;
         result.cleanup.remaining_verification_logs = remainingLogs.length;
-        result.cleanup.passed = leftovers.length === 0 && remainingLogs.length === 0 && !result.cleanup.verification_log_error;
+        result.cleanup.passed =
+          leftovers.length === 0 &&
+          remainingLogs.length === 0 &&
+          !result.cleanup.verification_log_error &&
+          !result.cleanup.discovery_error;
         if (leftovers.length !== 0) {
           throw new Error("Temporary corpus cleanup left " + leftovers.length + " test-only knowledge row(s).");
         }
         if (remainingLogs.length !== 0) {
           throw new Error("Temporary governance cleanup left " + remainingLogs.length + " test-only audit row(s).");
+        }
+        if (result.cleanup.discovery_error) {
+          throw new Error("Could not rediscover rows for safe cleanup after a potentially committed insert: " + result.cleanup.discovery_error);
         }
       } catch (error) {
         result.cleanup.error = error instanceof Error ? error.message : String(error);

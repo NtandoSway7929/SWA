@@ -11,6 +11,10 @@ const endpointPath = fileURLToPath(
   new URL("../supabase/functions/innerme-retrieval-smoke-test/index.ts", import.meta.url)
 );
 const endpoint = readFileSync(endpointPath, "utf8");
+const seederPath = fileURLToPath(
+  new URL("../scripts/innerme-test-corpus-embedding-smoke.mjs", import.meta.url)
+);
+const seeder = readFileSync(seederPath, "utf8");
 
 function workflowInput(name) {
   const marker = "      " + name + ":\n";
@@ -58,6 +62,32 @@ test("full chat mode requires a separate explicit no-billing confirmation", () =
   assert.ok(
     workflow.includes('payload["run_chat_case_id"] = os.environ["RUN_CHAT_CASE_ID"].strip()'),
     "The selected grounding case must be forwarded to the isolated endpoint."
+  );
+});
+
+test("the workflow rejects a dispatch that selects no test task", () => {
+  const regressionInput = workflowInput("run_retrieval_regression");
+  const corpusInput = workflowInput("seed_test_only_corpus");
+  assert.ok(regressionInput.includes("        default: true"));
+  assert.ok(corpusInput.includes("        default: false"));
+  assert.ok(
+    workflow.includes('if [[ "${RUN_RETRIEVAL_REGRESSION}" != "true" && "${SEED_TEST_ONLY_CORPUS}" != "true" ]]; then'),
+    "At least one test mode must be selected; a no-op workflow must fail closed."
+  );
+});
+
+test("ambiguous test-corpus insertion outcomes still discover and clean owned test rows", () => {
+  assert.ok(
+    seeder.includes("insertionMayHaveCommitted = true;"),
+    "Mark the insert as potentially committed before sending the HTTP request."
+  );
+  assert.ok(
+    seeder.includes('getBySlugs(accessToken, "innerme_knowledge", records.map((r) => r.slug),\n            "id,slug,source_id,verification_notes")'),
+    "Cleanup must rediscover the fixed test slugs if the insert response is lost or malformed."
+  );
+  assert.ok(
+    seeder.includes('String(row.verification_notes || "").startsWith("TEST ONLY:")'),
+    "Cleanup must be restricted to explicitly marked test-only rows."
   );
 });
 

@@ -60,10 +60,15 @@ jobs:
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
           CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
           RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks }}
+          RUN_RETRIEVAL_REGRESSION: ${{ inputs.run_retrieval_regression }}
           SEED_TEST_ONLY_CORPUS: ${{ inputs.seed_test_only_corpus }}
           CONFIRM_TEST_ONLY_CORPUS: ${{ inputs.confirm_test_only_corpus }}
         run: |
           set -euo pipefail
+          if [[ "${RUN_RETRIEVAL_REGRESSION}" != "true" && "${SEED_TEST_ONLY_CORPUS}" != "true" ]]; then
+            echo "::error::Select the retrieval regression suite or the explicitly confirmed test-only corpus smoke; no-op workflows must not pass."
+            exit 1
+          fi
           if [[ "${SEED_TEST_ONLY_CORPUS}" == "true" && "${CONFIRM_TEST_ONLY_CORPUS}" != "true" ]]; then
             echo "::error::Stop: confirm the isolated test-only corpus operation before seeding any knowledge records."
             exit 1
