@@ -411,7 +411,53 @@ jobs:
             await chatNav.waitFor({ state: "visible" });
             await chatNav.click();
             const composer = page.locator("#sway-ai-input");
-            await composer.waitFor({ state: "visible", timeout: 30000 });
+            try {
+              await composer.waitFor({ state: "visible", timeout: 30000 });
+            } catch (error) {
+              const diagnostic = await page.evaluate(() => {
+                const chat = document.querySelector(".sway-innerme-chat-view");
+                const input = document.querySelector("#sway-ai-input");
+                const main = document.querySelector("#sway-workspace-main");
+                return {
+                  pathname: location.pathname,
+                  pageTitle: document.title,
+                  composerCount: document.querySelectorAll("#sway-ai-input").length,
+                  composer: input ? {
+                    hidden: input.hidden,
+                    display: getComputedStyle(input).display,
+                    visibility: getComputedStyle(input).visibility,
+                    width: Math.round(input.getBoundingClientRect().width),
+                    height: Math.round(input.getBoundingClientRect().height)
+                  } : null,
+                  chatSection: chat ? {
+                    hidden: chat.hidden,
+                    ariaHidden: chat.getAttribute("aria-hidden"),
+                    display: getComputedStyle(chat).display,
+                    className: chat.className
+                  } : null,
+                  innermeSections: Array.from(document.querySelectorAll("[data-innerme-section]")).map(el => ({
+                    name: el.dataset.innermeSection,
+                    hidden: el.hidden,
+                    ariaHidden: el.getAttribute("aria-hidden")
+                  })),
+                  navButtons: Array.from(document.querySelectorAll("[data-view]"))
+                    .filter(el => /chat|innerme/i.test(el.textContent || ""))
+                    .map(el => ({
+                      text: (el.textContent || "").trim().slice(0, 80),
+                      view: el.dataset.view,
+                      active: el.classList.contains("active"),
+                      display: getComputedStyle(el).display
+                    })).slice(0, 15),
+                  mainClass: main ? main.className : null,
+                  testBannerVisible: Boolean(document.querySelector("#innerme-test-preview-banner") &&
+                    document.querySelector("#innerme-test-preview-banner").getBoundingClientRect().height > 0)
+                };
+              });
+              console.log("PRE_COMPOSER_DIAGNOSTIC=" + JSON.stringify(diagnostic));
+              console.log("PAGE_ERRORS_BEFORE_COMPOSER=" + JSON.stringify(pageErrors.slice(0, 8)));
+              console.log("CONSOLE_ERRORS_BEFORE_COMPOSER=" + JSON.stringify(consoleErrors.slice(0, 8)));
+              throw error;
+            }
             await page.waitForFunction(() => {
               const chat = document.querySelector(".sway-innerme-chat-view");
               return Boolean(chat && !chat.hidden);
