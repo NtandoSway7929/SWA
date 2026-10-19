@@ -1392,7 +1392,43 @@
         }
     }
 
-    function formatAIAnswer(value) {
+    function formatAIAnswer(value, retrieval, attribution) {
+        const citationUIEnabled = arguments.length > 1;
+        const sourceMatches =
+            retrieval && Array.isArray(retrieval.matches)
+                ? retrieval.matches.slice(0, 6)
+                : [];
+        const attributedIds = new Set(
+            attribution &&
+            !attribution.error &&
+            Array.isArray(attribution.matches)
+                ? attribution.matches.map(function (item) {
+                    return String(item && item.id || "");
+                }).filter(Boolean)
+                : []
+        );
+
+        function renderInlineCitation(indexValue) {
+            const index = Number(indexValue);
+            const source = Number.isInteger(index) && index >= 1 && index <= 6
+                ? sourceMatches[index - 1]
+                : null;
+            const sourceId = String(source && source.id || "");
+            const sourceTitle = String(source && source.title || "Knowledge record").trim() || "Knowledge record";
+            if (!sourceId || !attributedIds.has(sourceId)) {
+                return '<span class="sway-ai-inline-citation-unavailable" title="No verified supporting source was returned for citation ' +
+                    esc(String(indexValue)) +
+                    '" aria-label="Citation ' + esc(String(indexValue)) + ' unavailable">[' +
+                    esc(String(indexValue)) + ']</span>';
+            }
+            return '<button type="button" class="sway-ai-inline-citation" data-ai-citation-id="' +
+                esc(sourceId) +
+                '" data-ai-citation-index="' + esc(String(index)) +
+                '" title="Open supporting evidence: ' + esc(sourceTitle) +
+                '" aria-label="Open supporting source ' + esc(String(index)) + ': ' +
+                esc(sourceTitle) + '">[' + esc(String(index)) + ']</button>';
+        }
+
         let text = String(value == null ? "" : value)
             .replace(/\\n/g, "\n")
             .replace(/\\r\\n/g, "\n")
@@ -1427,6 +1463,19 @@
                 .replace(/~~([^~]+)~~/g, "<del>$1</del>")
                 .replace(/(^|[^\*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
                 .replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
+
+            if (citationUIEnabled) {
+                // Keep links intact, including bracket characters inside URLs.
+                safe = safe.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, function (anchor) {
+                    const token = "IMELINKTOKEN" + protectedParts.length + "END";
+                    protectedParts.push(anchor);
+                    return token;
+                });
+                safe = safe.replace(/\[(\d{1,2})\]/g, function (_, indexValue) {
+                    return renderInlineCitation(indexValue);
+                });
+            }
+
             protectedParts.forEach(function (html, index) {
                 safe = safe.replace("IMECODETOKEN" + index + "END", html);
             });
@@ -1705,7 +1754,8 @@
                 attributedById.get(String(match.id || "")) || null;
 
             return (
-                '<div class="sway-ai-knowledge-trace-row">' +
+                '<div class="sway-ai-knowledge-trace-row" data-ai-knowledge-id="' +
+                    esc(String(match.id || "")) + '">' +
                     '<div class="sway-ai-knowledge-trace-copy">' +
                         '<strong>' +
                             esc(match.title || "Knowledge record") +
@@ -24977,7 +25027,7 @@ function simpleBars(items, color) {
                 const knowledgeHtml =
                     item.role === "assistant" &&
                     !item.loading
-                        ? renderAIKnowledgeTrace(item.knowledge_retrieval)
+                        ? renderAIKnowledgeTrace(item.knowledge_retrieval, item.knowledge_attribution)
                         : "";
 
                 const contentHtml =
@@ -24987,7 +25037,11 @@ function simpleBars(items, color) {
                           '</span>'
                         : (
                             item.role === "assistant"
-                                ? formatAIAnswer(String(item.content || ""))
+                                ? formatAIAnswer(
+                                    String(item.content || ""),
+                                    item.knowledge_retrieval || { matches: [] },
+                                    item.knowledge_attribution || { matches: [] }
+                                )
                                 : esc(String(item.content || ""))
                           );
 
@@ -25614,7 +25668,11 @@ function simpleBars(items, color) {
             loading.innerHTML =
                 '<span class="sway-ai-message-label">InnerMe</span>' +
                 '<div class="sway-ai-message-content">' +
-                    formatAIAnswer(answer) +
+                    formatAIAnswer(
+                        answer,
+                        assistantEntry.knowledge_retrieval || { matches: [] },
+                        assistantEntry.knowledge_attribution || { matches: [] }
+                    ) +
                 '</div>' +
                 '<div class="sway-ai-message-meta">' +
                     '<span class="sway-ai-message-time">' +
@@ -26314,11 +26372,50 @@ function simpleBars(items, color) {
         workspace.__swayInnerMeMessageActionsBound = true;
 
         workspace.addEventListener("click", function (event) {
-            const button =
-                event.target && typeof event.target.closest === "function"
-                    ? event.target.closest(".sway-ai-copy[data-ai-copy]")
-                    : null;
+            const target = event.target && typeof event.target.closest === "function"
+                ? event.target
+                : null;
+            const citation = target
+                ? target.closest(".sway-ai-inline-citation[data-ai-citation-id]")
+                : null;
 
+            if (citation && workspace.contains(citation)) {
+                event.preventDefault();
+                const message = citation.closest(".sway-ai-message");
+                const trace = message
+                    ? message.querySelector(".sway-ai-knowledge-trace")
+                    : null;
+                const sourceId = String(citation.getAttribute("data-ai-citation-id") || "");
+                const rows = trace ? Array.from(trace.querySelectorAll(".sway-ai-knowledge-trace-row")) : [];
+                const row = rows.find(function (item) {
+                    return String(item.getAttribute("data-ai-knowledge-id") || "") === sourceId;
+                });
+
+                if (!trace || !row) {
+                    citation.disabled = true;
+                    citation.classList.add("sway-ai-inline-citation-unavailable");
+                    citation.setAttribute("aria-label", "The cited source is no longer available");
+                    citation.title = "The cited source is no longer available";
+                    return;
+                }
+
+                trace.open = true;
+                rows.forEach(function (item) {
+                    item.classList.remove("sway-ai-knowledge-trace-row-highlight");
+                });
+                row.classList.add("sway-ai-knowledge-trace-row-highlight");
+                row.setAttribute("tabindex", "-1");
+                row.scrollIntoView({
+                    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                    block: "center"
+                });
+                row.focus({ preventScroll: true });
+                return;
+            }
+
+            const button = target
+                ? target.closest(".sway-ai-copy[data-ai-copy]")
+                : null;
             if (!button || !workspace.contains(button)) {
                 return;
             }

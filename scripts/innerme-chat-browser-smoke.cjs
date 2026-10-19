@@ -51,7 +51,7 @@ function sseFrame(name, payload) {
 }
 
 function buildSourceTraceResponse(sourceUrl) {
-  const answer = "## Grounded answer\n\nThis answer is supported by a reviewed source in the test fixture.";
+  const answer = "## Grounded answer\n\nThis answer is supported by a reviewed source [1]. Citation [9] has no matching source and must remain unavailable.";
   const frames = [sseFrame("phase", { status: "Checking reviewed sources…" })];
   for (let offset = 0; offset < answer.length; offset += 64) {
     frames.push(sseFrame("delta", { text: answer.slice(offset, offset + 64) }));
@@ -367,9 +367,19 @@ async function verifyKeyboardAndFallbackPaths(page, metrics) {
     hasText: "Grounded answer"
   }).last();
   const evidencePanel = groundedMessage.locator("details.sway-ai-knowledge-trace");
-  await evidencePanel.locator("summary").click();
+  const inlineCitation = groundedMessage.locator('.sway-ai-inline-citation[data-ai-citation-id="ui-smoke-evidence-1"]');
+  assert.equal(await inlineCitation.count(), 1, "Supported [1] citation should become an interactive source marker");
+  assert.equal((await inlineCitation.textContent()).trim(), "[1]", "Inline citation should retain its numbered marker");
+  assert.equal(await inlineCitation.getAttribute("aria-label"), "Open supporting source 1: Test evidence record", "Inline citation should have a descriptive accessible name");
+  const unavailableCitation = groundedMessage.locator(".sway-ai-inline-citation-unavailable").filter({ hasText: "[9]" });
+  assert.equal(await unavailableCitation.count(), 1, "Unknown citation [9] should be marked unavailable, not linked");
+  assert.equal(await unavailableCitation.locator("button").count(), 0, "Unknown citation must not be an interactive source control");
+  await inlineCitation.click();
+  assert.equal(await evidencePanel.evaluate(el => el.open), true, "Inline citation should open the evidence panel");
   assert.ok((await evidencePanel.locator("summary").textContent()).includes("Evidence used"), "Grounded answer should expose an evidence-used summary");
   const evidenceRow = evidencePanel.locator(".sway-ai-knowledge-trace-row").first();
+  assert.equal(await evidenceRow.getAttribute("data-ai-knowledge-id"), "ui-smoke-evidence-1", "Citation target must resolve to the exact retrieved record");
+  assert.ok((await evidenceRow.getAttribute("class")).includes("sway-ai-knowledge-trace-row-highlight"), "Citation target row should be highlighted");
   assert.ok((await evidenceRow.textContent()).includes("Test evidence record"), "Evidence title should be visible");
   assert.ok((await evidenceRow.textContent()).includes("High confidence"), "Attribution confidence should be visible");
   assert.ok((await evidenceRow.textContent()).includes("The test source directly supports the answer."), "Attribution reason should be visible");
