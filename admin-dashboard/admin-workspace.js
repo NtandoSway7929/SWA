@@ -1467,7 +1467,7 @@
             if (citationUIEnabled) {
                 // Keep links intact, including bracket characters inside URLs.
                 safe = safe.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, function (anchor) {
-                    const token = "IMELINKTOKEN" + protectedParts.length + "END";
+                    const token = "IMECODETOKEN" + protectedParts.length + "END";
                     protectedParts.push(anchor);
                     return token;
                 });
