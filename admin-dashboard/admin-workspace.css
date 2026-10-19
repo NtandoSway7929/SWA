@@ -9287,3 +9287,28 @@ body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal.warning .s
 body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal.info .sway-provider-usage-signal-label{background:rgba(119,193,252,.12);color:#9EC9FF}
 body.sway-dark-mode #sway-admin-workspace .sway-provider-usage-signal.good .sway-provider-usage-signal-label{background:rgba(36,168,112,.13);color:#8BE0B7}
 @media(max-width:560px){#sway-admin-workspace .sway-provider-usage-signal{grid-template-columns:minmax(0,1fr);gap:7px}#sway-admin-workspace .sway-provider-usage-signal-label{justify-self:start}}
+
+/* InnerMe chat: distinguish the active Stop response control and stopped state. */
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-send.sway-ai-send-stop {
+  background: #1f2937 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(31, 41, 55, .2) !important;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-send.sway-ai-send-stop:hover {
+  background: #111827 !important;
+}
+#sway-admin-workspace .sway-innerme-chat-view .sway-ai-stopped-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid #d5dae3;
+  border-radius: 999px;
+  color: #5b6472;
+  font-size: 11px;
+  font-weight: 650;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-stopped-label {
+  border-color: #334155;
+  color: #b8c4d7;
+}

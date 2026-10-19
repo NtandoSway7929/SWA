@@ -33,6 +33,7 @@ const markdownAnswer = [
 const metrics = {
   scenarios: [],
   mockedChatRequests: 0,
+  cancelledResponses: 0,
   unexpectedExternalRequests: [],
   pageErrors: []
 };
@@ -111,6 +112,27 @@ async function configureIsolatedContext(context, initialView, theme) {
           knowledge_retrieval: { match_count: 0, retrieval_error: null },
           knowledge_attribution: []
         }));
+      }
+
+      if (message.includes("[test-slow-stream]")) {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        try {
+          return await route.fulfill({
+            status: 200,
+            contentType: "text/event-stream; charset=utf-8",
+            headers: { "Cache-Control": "no-cache, no-transform" },
+            body: sseFrame("delta", { text: "This delayed response should be cancelled." }) +
+              sseFrame("done", {
+                answer: "This delayed response should be cancelled.",
+                read_only: true,
+                knowledge_retrieval: { match_count: 0, retrieval_error: null },
+                knowledge_attribution: []
+              })
+          });
+        } catch (error) {
+          // The browser may have already aborted the request; that is expected here.
+          return;
+        }
       }
 
       if (postData.stream_response === true) {
@@ -288,11 +310,33 @@ async function verifyKeyboardAndFallbackPaths(page, metrics) {
     hasText: "Synthetic stream interruption test"
   }).waitFor({ state: "visible", timeout: 10000 });
 
+  const beforeSlowRequest = metrics.mockedChatRequests;
+  await input.fill("[test-slow-stream]");
+  await send.click();
+  const startWait = Date.now();
+  while (metrics.mockedChatRequests <= beforeSlowRequest && Date.now() - startWait < 3000) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  assert.ok(metrics.mockedChatRequests > beforeSlowRequest, "Slow mocked chat request should reach the intercepted backend");
+  const stop = page.locator('#sway-ai-send[data-ai-stop-generation="true"]');
+  await stop.waitFor({ state: "visible", timeout: 5000 });
+  assert.equal(await stop.getAttribute("aria-label"), "Stop generating response", "Stop control should have an accessible name");
+  await stop.click();
+
+  const stoppedMessage = page.locator(".sway-ai-message.sway-ai-assistant.sway-ai-response-stopped").last();
+  await stoppedMessage.waitFor({ state: "visible", timeout: 5000 });
+  assert.ok((await stoppedMessage.textContent()).includes("Response stopped before any text was received."), "Cancelled empty response should show a clear stopped state");
+  assert.equal(await input.isEnabled(), true, "Composer input should be re-enabled after cancellation");
+  assert.equal(await send.getAttribute("type"), "submit", "Send button should return to submit mode after cancellation");
+  assert.equal(await send.getAttribute("data-ai-stop-generation"), null, "Stop control state should be removed after cancellation");
+  metrics.cancelledResponses += 1;
+
   return {
     enterSubmitsMessage: true,
     shiftEnterAddsNewlineWithoutSending: true,
     nonStreamingJsonFallbackRenders: true,
-    streamErrorRendersRecoverableMessage: true
+    streamErrorRendersRecoverableMessage: true,
+    stopResponseCancelsRequest: true
   };
 }
 

@@ -25361,6 +25361,7 @@ function simpleBars(items, color) {
                 return (
                     item &&
                     !item.loading &&
+                    !item.cancelled &&
                     (item.role === "user" ||
                         item.role === "assistant") &&
                     String(item.content || "").trim()
@@ -25449,6 +25450,8 @@ function simpleBars(items, color) {
         );
 
         state.aiRequestInFlight = true;
+        const requestAbortController = new AbortController();
+        state.aiRequestAbortController = requestAbortController;
 
         state.aiConversation =
             state.aiConversation.slice(-40);
@@ -25498,12 +25501,24 @@ function simpleBars(items, color) {
         input.value = "";
         input.dispatchEvent(new Event("input", { bubbles: true }));
         input.disabled = true;
-        send.disabled = true;
-        input.setAttribute("aria-disabled", "true");
-        send.setAttribute("aria-label", "InnerMe is responding");
-        send.setAttribute("aria-busy", "true");
+        send.disabled = false;
+        send.type = "button";
+        send.classList.add("sway-ai-send-stop");
+        send.setAttribute("data-ai-stop-generation", "true");
+        send.setAttribute("title", "Stop response");
+        send.setAttribute("aria-label", "Stop generating response");
+        send.removeAttribute("aria-busy");
         const sendGlyph = send.querySelector("span");
-        if (sendGlyph) sendGlyph.textContent = "…";
+        if (sendGlyph) sendGlyph.textContent = "■";
+        send.onclick = function (event) {
+            event.preventDefault();
+            if (requestAbortController.signal.aborted) return;
+            send.disabled = true;
+            send.setAttribute("aria-label", "Stopping response");
+            const stoppingStatus = document.getElementById("sway-ai-composer-status");
+            if (stoppingStatus) stoppingStatus.textContent = "Stopping response…";
+            requestAbortController.abort();
+        };
         const composerStatus = document.getElementById("sway-ai-composer-status");
         const composerForm = document.getElementById("sway-ai-form");
         if (composerForm) composerForm.setAttribute("aria-busy", "true");
@@ -25546,6 +25561,7 @@ function simpleBars(items, color) {
                             : null,
                         stream_response: true
                     }),
+                    signal: requestAbortController.signal,
                     returnRawResponse: true
                 }
             );
@@ -25601,40 +25617,78 @@ function simpleBars(items, color) {
                 '</div>';
 
         } catch (error) {
-            const errorMessage =
-                (
-                    error &&
+            const wasCancelled = requestAbortController.signal.aborted ||
+                (error && error.name === "AbortError");
+
+            if (wasCancelled) {
+                const contentNode = loading.querySelector(".sway-ai-message-content");
+                const partialAnswer = String(contentNode ? contentNode.textContent || "" : "").trim();
+                const stoppedAnswer = partialAnswer || "Response stopped before any text was received.";
+                assistantEntry.content = stoppedAnswer;
+                assistantEntry.cancelled = true;
+                assistantEntry.createdAt = new Date().toISOString();
+                assistantEntry.loading = false;
+                saveAIConversation();
+
+                loading.classList.remove("sway-ai-loading");
+                loading.classList.add("sway-ai-response-stopped");
+                loading.innerHTML =
+                    '<span class="sway-ai-message-label">InnerMe</span>' +
+                    '<div class="sway-ai-message-content">' +
+                        (partialAnswer
+                            ? formatAIAnswer(partialAnswer)
+                            : '<p class="sway-ai-answer-paragraph">Response stopped before any text was received.</p>') +
+                    '</div>' +
+                    '<div class="sway-ai-message-meta">' +
+                        '<span class="sway-ai-message-time">' +
+                            esc(formatAIMessageTime(assistantEntry.createdAt)) +
+                        '</span>' +
+                        '<span class="sway-ai-stopped-label" role="status">Stopped</span>' +
+                    '</div>';
+            } else {
+                const errorMessage =
                     (
-                        error.name === "TypeError" ||
-                        String(error.message || "").toLowerCase() === "failed to fetch"
-                    ) &&
-                    String(error.message || "").toLowerCase().includes("fetch")
-                )
-                    ? "InnerMe could not reach its AI service. The Swayphics AI Edge Function may need to be redeployed in Supabase, or its CORS settings may be blocking this dashboard."
-                    : (
-                        error.message ||
-                        "InnerMe could not complete the request."
-                    );
+                        error &&
+                        (
+                            error.name === "TypeError" ||
+                            String(error.message || "").toLowerCase() === "failed to fetch"
+                        ) &&
+                        String(error.message || "").toLowerCase().includes("fetch")
+                    )
+                        ? "InnerMe could not reach its AI service. The Swayphics AI Edge Function may need to be redeployed in Supabase, or its CORS settings may be blocking this dashboard."
+                        : (
+                            error.message ||
+                            "InnerMe could not complete the request."
+                        );
 
-            assistantEntry.content = errorMessage;
-            assistantEntry.createdAt = new Date().toISOString();
-            assistantEntry.loading = false;
-            saveAIConversation();
+                assistantEntry.content = errorMessage;
+                assistantEntry.createdAt = new Date().toISOString();
+                assistantEntry.loading = false;
+                saveAIConversation();
 
-            loading.classList.remove("sway-ai-loading");
-            loading.innerHTML =
-                '<span class="sway-ai-message-label">InnerMe</span>' +
-                '<div class="sway-ai-message-content">' +
-                    esc(errorMessage) +
-                '</div>' +
-                '<div class="sway-ai-message-meta">' +
-                    '<span class="sway-ai-message-time">' +
-                        esc(formatAIMessageTime(assistantEntry.createdAt)) +
-                    '</span>' +
-                '</div>';
+                loading.classList.remove("sway-ai-loading");
+                loading.innerHTML =
+                    '<span class="sway-ai-message-label">InnerMe</span>' +
+                    '<div class="sway-ai-message-content">' +
+                        esc(errorMessage) +
+                    '</div>' +
+                    '<div class="sway-ai-message-meta">' +
+                        '<span class="sway-ai-message-time">' +
+                            esc(formatAIMessageTime(assistantEntry.createdAt)) +
+                        '</span>' +
+                    '</div>';
+            }
         } finally {
             state.aiRequestInFlight = false;
+            if (state.aiRequestAbortController === requestAbortController) {
+                state.aiRequestAbortController = null;
+            }
             input.disabled = false;
+            send.type = "submit";
+            send.classList.remove("sway-ai-send-stop");
+            send.removeAttribute("data-ai-stop-generation");
+            send.removeAttribute("title");
+            send.onclick = null;
             send.disabled = false;
             input.removeAttribute("aria-disabled");
             send.setAttribute("aria-label", "Ask InnerMe");
