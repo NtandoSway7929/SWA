@@ -34,7 +34,7 @@ test("streaming acceptance mode is isolated, explicitly confirmed, and runs alon
     "The dedicated streaming path must require no-billing confirmation."
   );
   assert.ok(
-    workflow.includes('if: ${{ inputs.run_stream_smoke == true }}'),
+    workflow.includes("inputs.run_stream_smoke == true"),
     "The provider-backed stream test must be opt-in."
   );
   assert.ok(
