@@ -8,6 +8,11 @@ on:
         required: true
         type: boolean
         default: false
+      preview_ui_only:
+        description: "Run browser-only UI QA; do not send a model/provider request"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,6 +47,7 @@ jobs:
           done
 
       - name: Run one read-only chat and correlate provider telemetry
+        if: ${{ inputs.preview_ui_only != true }}
         shell: bash
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
@@ -316,3 +322,217 @@ jobs:
           print("PASS: provider latency/token telemetry is correlated to the same normal chat request.")
           PY
 
+
+      - name: Smoke-test responsive InnerMe UI preview without a provider request
+        if: ${{ inputs.preview_ui_only == true }}
+        shell: bash
+        env:
+          INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${INNERME_TEST_ADMIN_EMAIL}" || { echo "::error::Missing isolated test-admin email secret."; exit 1; }
+          test -n "${INNERME_TEST_ADMIN_PASSWORD}" || { echo "::error::Missing isolated test-admin password secret."; exit 1; }
+
+          npm init -y >/dev/null
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+          node <<'NODE'
+          const { chromium } = require("playwright");
+          const fs = require("node:fs/promises");
+
+          const baseUrl = "https://ntandosway7929.github.io/innerme-chat-ui-preview/";
+          const testOrigin = "https://ofqofhnlzbouclvvrmzd.supabase.co";
+          const productionHost = "sqifhribgsqfaxgtobsa.supabase.co";
+          const email = process.env.INNERME_TEST_ADMIN_EMAIL;
+          const password = process.env.INNERME_TEST_ADMIN_PASSWORD;
+          const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+          async function main() {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({
+              viewport: { width: 1440, height: 1000 },
+              deviceScaleFactor: 1
+            });
+            const page = await context.newPage();
+            page.setDefaultTimeout(15000);
+
+            const productionRequests = [];
+            const assistantPosts = [];
+            const externalSupabaseRequests = [];
+            const pageErrors = [];
+            const guardWarnings = [];
+            const consoleErrors = [];
+            page.on("request", request => {
+              let url;
+              try { url = new URL(request.url()); } catch (_) { return; }
+              const method = request.method().toUpperCase();
+              if (url.hostname === productionHost) {
+                productionRequests.push({ method, path: url.pathname });
+              }
+              if (url.hostname.endsWith(".supabase.co") && url.origin !== testOrigin) {
+                externalSupabaseRequests.push({ method, host: url.hostname, path: url.pathname });
+              }
+              if (url.origin === testOrigin && method === "POST" &&
+                  url.pathname === "/functions/v1/swayphics-ai") {
+                assistantPosts.push({ path: url.pathname });
+              }
+            });
+            page.on("pageerror", error => pageErrors.push(String(error.message || error).slice(0, 300)));
+            page.on("console", message => {
+              const value = message.text();
+              if (message.type() === "error") consoleErrors.push(value.slice(0, 300));
+              if (value.includes("[InnerMe test preview safety gate]")) guardWarnings.push(value.slice(0, 300));
+            });
+
+            await page.goto(baseUrl + "admin/index.html", {
+              waitUntil: "domcontentloaded",
+              timeout: 60000
+            });
+            await page.locator("#innerme-test-preview-banner").waitFor({ state: "visible" });
+            await page.locator("#admin-email").fill(email);
+            await page.locator("#admin-password").fill(password);
+            await page.locator("#login-button").click();
+
+            await page.waitForURL(url =>
+              url.hostname === "ntandosway7929.github.io" &&
+              url.pathname.includes("/innerme-chat-ui-preview/admin-dashboard/"),
+              { timeout: 45000 }
+            );
+            await page.locator("#sway-admin-workspace").waitFor({ state: "attached", timeout: 45000 });
+            await page.locator('[data-nav-group-toggle="innerme"]').waitFor({ state: "visible", timeout: 30000 });
+
+            const innermeGroup = page.locator('[data-nav-group-toggle="innerme"]');
+            if (await innermeGroup.getAttribute("aria-expanded") !== "true") {
+              await innermeGroup.click();
+            }
+            const chatNav = page.locator('[data-view="swayphics-ai"]');
+            await chatNav.waitFor({ state: "visible" });
+            await chatNav.click();
+            const composer = page.locator("#sway-ai-input");
+            await composer.waitFor({ state: "visible", timeout: 30000 });
+            await page.waitForFunction(() => {
+              const chat = document.querySelector(".sway-innerme-chat-view");
+              return Boolean(chat && !chat.hidden);
+            }, null, { timeout: 15000 });
+
+            const promptButtons = page.locator(".sway-innerme-chat-view [data-ai-prompt]");
+            const promptCount = await promptButtons.count();
+            if (promptCount < 3) {
+              throw new Error("Expected at least three InnerMe quick prompts; found " + promptCount + ".");
+            }
+            await promptButtons.first().click();
+            const quickPromptPopulatedComposer = (await composer.inputValue()).trim().length > 0;
+            if (!quickPromptPopulatedComposer) {
+              throw new Error("Quick prompt did not populate the chat composer.");
+            }
+            await composer.fill("");
+
+            const bannerText = (await page.locator("#innerme-test-preview-banner").innerText()).replace(/\s+/g, " ").trim();
+            const themeToggle = page.locator("#admin-theme-toggle");
+            await themeToggle.waitFor({ state: "visible" });
+            const lightMetrics = await page.evaluate(() => {
+              const composer = document.querySelector("#sway-ai-input");
+              const rect = composer.getBoundingClientRect();
+              return {
+                viewportWidth: window.innerWidth,
+                documentWidth: document.documentElement.scrollWidth,
+                bodyWidth: document.body.scrollWidth,
+                composerWidth: Math.round(rect.width),
+                composerLeft: Math.round(rect.left),
+                composerRight: Math.round(rect.right),
+                composerVisible: rect.width > 0 && rect.height > 0,
+                chatViewActive: Boolean(document.querySelector(".sway-innerme-chat-view") &&
+                  !document.querySelector(".sway-innerme-chat-view").hidden)
+              };
+            });
+            if (!lightMetrics.chatViewActive || !lightMetrics.composerVisible) {
+              throw new Error("Chat view/composer was not visible in desktop light mode.");
+            }
+            if (lightMetrics.documentWidth > lightMetrics.viewportWidth + 2) {
+              throw new Error("Desktop layout has horizontal overflow: " + JSON.stringify(lightMetrics));
+            }
+            await fs.mkdir("/tmp/innerme-ui-screenshots", { recursive: true });
+            await page.screenshot({ path: "/tmp/innerme-ui-screenshots/desktop-light.png", fullPage: true });
+
+            await themeToggle.click();
+            await page.waitForFunction(() => document.body.classList.contains("sway-dark-mode"), null, { timeout: 10000 });
+            const darkThemeActive = await page.locator("body").evaluate(el => el.classList.contains("sway-dark-mode"));
+            if (!darkThemeActive) throw new Error("Theme toggle did not activate dark mode.");
+            await page.screenshot({ path: "/tmp/innerme-ui-screenshots/desktop-dark.png", fullPage: true });
+
+            await page.setViewportSize({ width: 390, height: 844 });
+            await wait(250);
+            const mobileMetrics = await page.evaluate(() => {
+              const composer = document.querySelector("#sway-ai-input");
+              const rect = composer.getBoundingClientRect();
+              const banner = document.querySelector("#innerme-test-preview-banner");
+              const bannerRect = banner.getBoundingClientRect();
+              return {
+                viewportWidth: window.innerWidth,
+                documentWidth: document.documentElement.scrollWidth,
+                bodyWidth: document.body.scrollWidth,
+                composerWidth: Math.round(rect.width),
+                composerLeft: Math.round(rect.left),
+                composerRight: Math.round(rect.right),
+                composerBottom: Math.round(rect.bottom),
+                bannerWidth: Math.round(bannerRect.width),
+                bannerBottom: Math.round(bannerRect.bottom),
+                composerVisible: rect.width > 0 && rect.height > 0,
+                chatViewActive: Boolean(document.querySelector(".sway-innerme-chat-view") &&
+                  !document.querySelector(".sway-innerme-chat-view").hidden),
+                darkModeActive: document.body.classList.contains("sway-dark-mode")
+              };
+            });
+            if (!mobileMetrics.composerVisible || !mobileMetrics.chatViewActive) {
+              throw new Error("Chat composer did not remain visible at mobile width: " + JSON.stringify(mobileMetrics));
+            }
+            if (mobileMetrics.documentWidth > 392 || mobileMetrics.bodyWidth > 392) {
+              throw new Error("Mobile layout has horizontal overflow: " + JSON.stringify(mobileMetrics));
+            }
+            if (mobileMetrics.composerRight > 392 || mobileMetrics.composerLeft < -2) {
+              throw new Error("Mobile composer extends outside the viewport: " + JSON.stringify(mobileMetrics));
+            }
+            if (mobileMetrics.composerBottom < mobileMetrics.bannerBottom) {
+              throw new Error("Mobile composer position unexpectedly conflicts with the preview banner.");
+            }
+            await page.screenshot({ path: "/tmp/innerme-ui-screenshots/mobile-dark.png", fullPage: true });
+
+            if (productionRequests.length || externalSupabaseRequests.length) {
+              throw new Error("Detected a request to a non-test Supabase origin: " +
+                JSON.stringify({ productionRequests, externalSupabaseRequests }));
+            }
+            if (assistantPosts.length) {
+              throw new Error("UI-only smoke test unexpectedly submitted a provider/chat request.");
+            }
+
+            const screenshotFiles = await fs.readdir("/tmp/innerme-ui-screenshots");
+            console.log("PREVIEW_URL=" + baseUrl);
+            console.log("LOGIN_STATUS=passed");
+            console.log("CHAT_VIEW=visible");
+            console.log("QUICK_PROMPTS=" + promptCount);
+            console.log("QUICK_PROMPT_POPULATES_COMPOSER=" + quickPromptPopulatedComposer);
+            console.log("DARK_MODE=passed");
+            console.log("DESKTOP_LIGHT_LAYOUT=" + JSON.stringify(lightMetrics));
+            console.log("MOBILE_DARK_LAYOUT=" + JSON.stringify(mobileMetrics));
+            console.log("SCREENSHOT_CAPTURE_COUNT=" + screenshotFiles.length);
+            console.log("PREVIEW_BANNER=" + bannerText);
+            console.log("PRODUCTION_SUPABASE_REQUESTS=" + productionRequests.length);
+            console.log("EXTERNAL_SUPABASE_REQUESTS=" + externalSupabaseRequests.length);
+            console.log("MODEL_CHAT_POSTS=" + assistantPosts.length);
+            console.log("PAGE_ERROR_COUNT=" + pageErrors.length);
+            console.log("CONSOLE_ERROR_COUNT=" + consoleErrors.length);
+            console.log("SAFETY_GUARD_WARNING_COUNT=" + guardWarnings.length);
+            if (pageErrors.length) {
+              console.log("PAGE_ERRORS=" + JSON.stringify(pageErrors.slice(0, 5)));
+              throw new Error("Browser raised uncaught page errors.");
+            }
+            await browser.close();
+          }
+
+          main().catch(error => {
+            console.error("ISOLATED_PREVIEW_UI_TEST_FAILED=" + String(error && error.message || error).slice(0, 1000));
+            process.exit(1);
+          });
+          NODE
