@@ -21,6 +21,7 @@ assert.ok(sql.includes("v_knowledge.status <> 'draft'"), "Draft verification mus
 assert.ok(sql.includes("GRANT SELECT, INSERT, UPDATE ON TABLE public.innerme_knowledge_sources TO authenticated"));
 assert.ok(sql.includes("GRANT SELECT, INSERT, UPDATE ON TABLE public.innerme_knowledge TO authenticated"));
 
+assert.ok(compatibility.includes("CREATE UNIQUE INDEX IF NOT EXISTS innerme_knowledge_acquisition_tasks_gap_id_uidx"), "Each approved gap must map to one task in existing production schemas.");
 assert.ok(compatibility.includes("ADD COLUMN IF NOT EXISTS source_verified_by"), "Existing task schemas must retain source-verification identity.");
 assert.ok(compatibility.includes("source_verified_by = auth.uid()"), "Source verification must be attributable to an admin.");
 assert.ok(compatibility.includes("IF v_source.licence_status = 'unknown' THEN"), "Unknown licence status must block source verification.");
