@@ -9,6 +9,7 @@ on:
       - "supabase/functions/innerme-retrieval-smoke-test/**"
       - ".github/workflows/innerme-semantic-retrieval-smoke.yml"
       - "scripts/innerme-semantic-retrieval-workflow.test.mjs"
+      - "scripts/innerme-streaming-provider-smoke.mjs"
       - "supabase/config.toml"
       - ".github/workflows/validate-innerme-function.yml"
       - "scripts/innerme-routing-experiment.mjs"
@@ -36,6 +37,7 @@ on:
       - "supabase/functions/innerme-retrieval-smoke-test/**"
       - ".github/workflows/innerme-semantic-retrieval-smoke.yml"
       - "scripts/innerme-semantic-retrieval-workflow.test.mjs"
+      - "scripts/innerme-streaming-provider-smoke.mjs"
       - "supabase/config.toml"
       - ".github/workflows/validate-innerme-function.yml"
       - "scripts/innerme-routing-experiment.mjs"
@@ -86,6 +88,7 @@ jobs:
       - name: Test retrieval workflow safe defaults
         run: |
           node --check scripts/innerme-semantic-retrieval-workflow.test.mjs
+          node --check scripts/innerme-streaming-provider-smoke.mjs
           node --test scripts/innerme-semantic-retrieval-workflow.test.mjs
 
       - name: Test authenticated action guard and provider routing without API calls
