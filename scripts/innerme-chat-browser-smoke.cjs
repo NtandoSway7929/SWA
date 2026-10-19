@@ -50,6 +50,39 @@ function sseFrame(name, payload) {
   return "event: " + name + "\ndata: " + JSON.stringify(payload) + "\n\n";
 }
 
+function buildSourceTraceResponse(sourceUrl) {
+  const answer = "## Grounded answer\n\nThis answer is supported by a reviewed source in the test fixture.";
+  const frames = [sseFrame("phase", { status: "Checking reviewed sources…" })];
+  for (let offset = 0; offset < answer.length; offset += 64) {
+    frames.push(sseFrame("delta", { text: answer.slice(offset, offset + 64) }));
+  }
+  frames.push(sseFrame("done", {
+    answer,
+    read_only: true,
+    knowledge_retrieval: {
+      used: true,
+      match_count: 1,
+      matches: [{
+        id: "ui-smoke-evidence-1",
+        title: "Test evidence record",
+        source_name: "Department of Example",
+        source_publisher: "Example Government",
+        source_url: sourceUrl,
+        evidence_level: "authoritative",
+        similarity: 0.947
+      }]
+    },
+    knowledge_attribution: {
+      matches: [{
+        id: "ui-smoke-evidence-1",
+        confidence: "High confidence",
+        reason: "The test source directly supports the answer."
+      }]
+    }
+  }));
+  return frames.join("");
+}
+
 function buildSseResponse() {
   const frames = [];
   frames.push(sseFrame("phase", { status: "Preparing a read-only answer…" }));
@@ -133,6 +166,18 @@ async function configureIsolatedContext(context, initialView, theme) {
           // The browser may have already aborted the request; that is expected here.
           return;
         }
+      }
+
+      if (message.includes("[test-source-trace]") || message.includes("[test-unsafe-source]")) {
+        const sourceUrl = message.includes("[test-unsafe-source]")
+          ? "javascript:alert(1)"
+          : "https://example.com/reviewed-source";
+        return route.fulfill({
+          status: 200,
+          contentType: "text/event-stream; charset=utf-8",
+          headers: { "Cache-Control": "no-cache, no-transform" },
+          body: buildSourceTraceResponse(sourceUrl)
+        });
       }
 
       if (postData.stream_response === true) {
@@ -309,6 +354,47 @@ async function verifyKeyboardAndFallbackPaths(page, metrics) {
   await page.locator(".sway-ai-message-content").filter({
     hasText: "Synthetic stream interruption test"
   }).waitFor({ state: "visible", timeout: 10000 });
+
+  const beforeSafeTraceCount = await page.locator(".sway-ai-knowledge-trace").count();
+  await input.fill("[test-source-trace]");
+  await send.click();
+  await page.waitForFunction(
+    (count) => document.querySelectorAll(".sway-ai-knowledge-trace").length === count + 1,
+    beforeSafeTraceCount,
+    { timeout: 10000 }
+  );
+  const groundedMessage = page.locator(".sway-ai-message.sway-ai-assistant").filter({
+    hasText: "Grounded answer"
+  }).last();
+  const evidencePanel = groundedMessage.locator("details.sway-ai-knowledge-trace");
+  await evidencePanel.locator("summary").click();
+  assert.ok((await evidencePanel.locator("summary").textContent()).includes("Evidence used"), "Grounded answer should expose an evidence-used summary");
+  const evidenceRow = evidencePanel.locator(".sway-ai-knowledge-trace-row").first();
+  assert.ok((await evidenceRow.textContent()).includes("Test evidence record"), "Evidence title should be visible");
+  assert.ok((await evidenceRow.textContent()).includes("High confidence"), "Attribution confidence should be visible");
+  assert.ok((await evidenceRow.textContent()).includes("The test source directly supports the answer."), "Attribution reason should be visible");
+  assert.ok((await evidenceRow.locator(".sway-ai-knowledge-trace-score").textContent()).includes("94.7%"), "Retrieval similarity should be visible");
+  const safeSourceLink = evidenceRow.locator("a.sway-ai-knowledge-trace-link");
+  assert.equal(await safeSourceLink.getAttribute("href"), "https://example.com/reviewed-source", "HTTP(S) source links should remain usable");
+  assert.equal(await safeSourceLink.getAttribute("aria-label"), "Open source: Test evidence record", "Source link should have a descriptive accessible name");
+  assert.ok((await safeSourceLink.getAttribute("rel")).includes("noopener"), "External source link should be isolated from its opener");
+
+  const beforeUnsafeTraceCount = await page.locator(".sway-ai-knowledge-trace").count();
+  await input.fill("[test-unsafe-source]");
+  await send.click();
+  await page.waitForFunction(
+    (count) => document.querySelectorAll(".sway-ai-knowledge-trace").length === count + 1,
+    beforeUnsafeTraceCount,
+    { timeout: 10000 }
+  );
+  const unsafeMessage = page.locator(".sway-ai-message.sway-ai-assistant").filter({
+    hasText: "Grounded answer"
+  }).last();
+  const unsafeEvidence = unsafeMessage.locator("details.sway-ai-knowledge-trace");
+  await unsafeEvidence.locator("summary").click();
+  assert.equal(await unsafeEvidence.locator('a[href^="javascript:"]').count(), 0, "JavaScript source URLs must not become clickable links");
+  assert.equal(await unsafeEvidence.locator("a.sway-ai-knowledge-trace-link").count(), 0, "Invalid source URLs should be shown as metadata only");
+  assert.ok((await unsafeEvidence.textContent()).includes("Test evidence record"), "Invalid source URL must not hide the evidence record");
 
   const beforeSlowRequest = metrics.mockedChatRequests;
   await input.fill("[test-slow-stream]");

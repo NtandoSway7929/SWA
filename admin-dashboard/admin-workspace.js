@@ -1687,8 +1687,20 @@
                 String(match.source_publisher || "").trim() ||
                 "Verified source";
 
-            const sourceLink =
-                String(match.source_url || "").trim();
+            let sourceLink = "";
+            try {
+                const parsedSourceUrl = new URL(String(match.source_url || "").trim());
+                if (
+                    (parsedSourceUrl.protocol === "https:" ||
+                        parsedSourceUrl.protocol === "http:") &&
+                    !parsedSourceUrl.username &&
+                    !parsedSourceUrl.password
+                ) {
+                    sourceLink = parsedSourceUrl.href;
+                }
+            } catch (sourceUrlError) {
+                // A malformed source URL remains visible as source metadata, not a link.
+            }
             const attributionMatch =
                 attributedById.get(String(match.id || "")) || null;
 
@@ -1721,7 +1733,9 @@
                         sourceLink
                             ? '<a class="sway-ai-knowledge-trace-link" href="' +
                                 esc(sourceLink) +
-                                '" target="_blank" rel="noopener noreferrer">Source</a>'
+                                '" target="_blank" rel="noopener noreferrer" aria-label="Open source: ' +
+                                esc(match.title || "Knowledge record") +
+                                '">Open source ↗</a>'
                             : ""
                     ) +
                 '</div>'

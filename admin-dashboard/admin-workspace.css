@@ -9312,3 +9312,39 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-stopp
   border-color: #334155;
   color: #b8c4d7;
 }
+
+/* InnerMe evidence sources: keyboard-visible links and readable interactive affordance. */
+.sway-ai-knowledge-trace-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-underline-offset: 2px;
+    white-space: nowrap;
+}
+.sway-ai-knowledge-trace-link:focus-visible {
+    outline: 2px solid #0152F4;
+    outline-offset: 3px;
+    border-radius: 3px;
+}
+body.sway-dark-mode .sway-ai-knowledge-trace-link:focus-visible {
+    outline-color: #77C1FC;
+}
+
+/* InnerMe evidence sources: keyboard-visible links and readable interactive affordance. */
+.sway-ai-knowledge-trace-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-underline-offset: 2px;
+    white-space: nowrap;
+}
+.sway-ai-knowledge-trace-link:focus-visible {
+    outline: 2px solid #0152F4;
+    outline-offset: 3px;
+    border-radius: 3px;
+}
+body.sway-dark-mode .sway-ai-knowledge-trace-link:focus-visible {
+    outline-color: #77C1FC;
+}
