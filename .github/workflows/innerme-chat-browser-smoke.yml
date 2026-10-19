@@ -10,6 +10,15 @@ on:
       - "admin-dashboard/admin-workspace.js"
       - "scripts/innerme-chat-browser-smoke.cjs"
       - ".github/workflows/innerme-chat-browser-smoke.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "admin-dashboard/index.html"
+      - "admin-dashboard/admin-workspace.css"
+      - "admin-dashboard/admin-workspace.js"
+      - "scripts/innerme-chat-browser-smoke.cjs"
+      - ".github/workflows/innerme-chat-browser-smoke.yml"
   workflow_dispatch:
     inputs:
       confirm_mocked_network:
@@ -23,7 +32,7 @@ permissions:
 
 jobs:
   browser-smoke:
-    if: ${{ github.event_name == 'push' || inputs.confirm_mocked_network == true }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || inputs.confirm_mocked_network == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
