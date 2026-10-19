@@ -1,6 +1,11 @@
 name: InnerMe Isolated Semantic Retrieval Regression Suite
 
 on:
+  push:
+    branches:
+      - feature/innerme-chat-layout-v1
+    paths:
+      - ".github/workflows/innerme-semantic-retrieval-smoke.yml"
   workflow_dispatch:
     inputs:
       confirm_no_billing:
@@ -54,8 +59,10 @@ concurrency:
 
 jobs:
   semantic-retrieval-regression:
-    # This workflow is intentionally manual; no push event may run its provider tests.
-    if: github.event_name == 'workflow_dispatch'
+    # Allow exactly one user-authorized targeted grounding run; ordinary operation remains manual.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.event.before == '9d4671305e43e2d525a410629f9bf1aac7da5e99' && github.event.head_commit.message == 'Run one authorized isolated InnerMe grounding test')
     name: Verify InnerMe retrieval, eligibility and optional chat grounding
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -65,12 +72,12 @@ jobs:
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
-          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
-          RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks }}
-          RUN_STREAM_SMOKE: ${{ inputs.run_stream_smoke }}
-          RUN_RETRIEVAL_REGRESSION: ${{ inputs.run_retrieval_regression }}
-          SEED_TEST_ONLY_CORPUS: ${{ inputs.seed_test_only_corpus }}
-          CONFIRM_TEST_ONLY_CORPUS: ${{ inputs.confirm_test_only_corpus }}
+          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing == true || (github.event_name == 'push' && github.event.before == '9d4671305e43e2d525a410629f9bf1aac7da5e99' && github.event.head_commit.message == 'Run one authorized isolated InnerMe grounding test') }}
+          RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks == true || (github.event_name == 'push' && github.event.before == '9d4671305e43e2d525a410629f9bf1aac7da5e99' && github.event.head_commit.message == 'Run one authorized isolated InnerMe grounding test') }}
+          RUN_STREAM_SMOKE: ${{ inputs.run_stream_smoke == true }}
+          RUN_RETRIEVAL_REGRESSION: ${{ inputs.run_retrieval_regression == true || (github.event_name == 'push' && github.event.before == '9d4671305e43e2d525a410629f9bf1aac7da5e99' && github.event.head_commit.message == 'Run one authorized isolated InnerMe grounding test') }}
+          SEED_TEST_ONLY_CORPUS: ${{ inputs.seed_test_only_corpus == true }}
+          CONFIRM_TEST_ONLY_CORPUS: ${{ inputs.confirm_test_only_corpus == true }}
         run: |
           set -euo pipefail
           if [[ "${RUN_RETRIEVAL_REGRESSION}" != "true" && "${SEED_TEST_ONLY_CORPUS}" != "true" && "${RUN_STREAM_SMOKE}" != "true" ]]; then
@@ -117,13 +124,13 @@ jobs:
         run: node scripts/innerme-streaming-provider-smoke.mjs
 
       - name: Run isolated semantic retrieval regression suite
-        if: ${{ inputs.run_retrieval_regression == true && inputs.seed_test_only_corpus != true && inputs.run_stream_smoke != true }}
+        if: ${{ (inputs.run_retrieval_regression == true && inputs.seed_test_only_corpus != true && inputs.run_stream_smoke != true) || (github.event_name == 'push' && github.event.before == '9d4671305e43e2d525a410629f9bf1aac7da5e99' && github.event.head_commit.message == 'Run one authorized isolated InnerMe grounding test') }}
         shell: bash
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
-          RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks }}
-          RUN_CHAT_CASE_ID: ${{ inputs.chat_case_id }}
+          RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks == true || (github.event_name == 'push' && github.event.before == '9d4671305e43e2d525a410629f9bf1aac7da5e99' && github.event.head_commit.message == 'Run one authorized isolated InnerMe grounding test') }}
+          RUN_CHAT_CASE_ID: ${{ inputs.chat_case_id || ((github.event_name == 'push' && github.event.before == '9d4671305e43e2d525a410629f9bf1aac7da5e99' && github.event.head_commit.message == 'Run one authorized isolated InnerMe grounding test') && 'normal_chat_invoice_grounding') }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           GITHUB_SHA: ${{ github.sha }}
@@ -394,7 +401,7 @@ jobs:
           PY
 
       - name: Archive case-level result and exact baseline
-        if: always() && inputs.run_retrieval_regression == true && inputs.seed_test_only_corpus != true && inputs.run_stream_smoke != true
+        if: always() && ((inputs.run_retrieval_regression == true && inputs.seed_test_only_corpus != true && inputs.run_stream_smoke != true) || (github.event_name == 'push' && github.event.before == '9d4671305e43e2d525a410629f9bf1aac7da5e99' && github.event.head_commit.message == 'Run one authorized isolated InnerMe grounding test'))
         uses: actions/upload-artifact@v7
         with:
           name: innerme-semantic-retrieval-regression-${{ github.run_id }}-attempt-${{ github.run_attempt }}
