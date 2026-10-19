@@ -1,12 +1,6 @@
 name: InnerMe Isolated Semantic Retrieval Regression Suite
 
 on:
-  push:
-    branches:
-      - feature/innerme-chat-layout-v1
-    paths:
-      - ".github/workflows/innerme-semantic-retrieval-smoke.yml"
-      - "scripts/innerme-streaming-provider-smoke.mjs"
   workflow_dispatch:
     inputs:
       confirm_no_billing:
@@ -60,15 +54,8 @@ concurrency:
 
 jobs:
   semantic-retrieval-regression:
-    # Permit exactly this one push-based test dispatch for this one parent and marker;
-    # all ordinary operation remains a manual workflow_dispatch with explicit inputs.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event_name == 'push' &&
-        github.event.before == 'f27cbec03d76b113ed193087ae646373f0145d73' &&
-        github.event.head_commit.message == 'Run one authorized isolated InnerMe SSE smoke retry'
-      )
+    # This workflow is intentionally manual; no push event may run its provider tests.
+    if: github.event_name == 'workflow_dispatch'
     name: Verify InnerMe retrieval, eligibility and optional chat grounding
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -78,9 +65,9 @@ jobs:
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
-          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing == true || (github.event_name == 'push' && github.event.before == 'f27cbec03d76b113ed193087ae646373f0145d73' && github.event.head_commit.message == 'Run one authorized isolated InnerMe SSE smoke retry') }}
+          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
           RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks }}
-          RUN_STREAM_SMOKE: ${{ inputs.run_stream_smoke == true || (github.event_name == 'push' && github.event.before == 'f27cbec03d76b113ed193087ae646373f0145d73' && github.event.head_commit.message == 'Run one authorized isolated InnerMe SSE smoke retry') }}
+          RUN_STREAM_SMOKE: ${{ inputs.run_stream_smoke }}
           RUN_RETRIEVAL_REGRESSION: ${{ inputs.run_retrieval_regression }}
           SEED_TEST_ONLY_CORPUS: ${{ inputs.seed_test_only_corpus }}
           CONFIRM_TEST_ONLY_CORPUS: ${{ inputs.confirm_test_only_corpus }}
@@ -121,12 +108,12 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Run one isolated provider-backed SSE streaming smoke
-        if: ${{ inputs.run_stream_smoke == true || (github.event_name == 'push' && github.event.before == 'f27cbec03d76b113ed193087ae646373f0145d73' && github.event.head_commit.message == 'Run one authorized isolated InnerMe SSE smoke retry') }}
+        if: ${{ inputs.run_stream_smoke == true }}
         shell: bash
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
-          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing == true || (github.event_name == 'push' && github.event.before == 'f27cbec03d76b113ed193087ae646373f0145d73' && github.event.head_commit.message == 'Run one authorized isolated InnerMe SSE smoke retry') }}
+          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
         run: node scripts/innerme-streaming-provider-smoke.mjs
 
       - name: Run isolated semantic retrieval regression suite
