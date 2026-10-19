@@ -17697,6 +17697,31 @@ body.sway-dark-mode #sway-admin-workspace .sway-workspace-main.sway-innerme-acti
     outline-offset: 2px;
 }
 
+
+/* MOBILE COMPOSER STATUS MUST STACK BELOW THE INPUT ROW.
+   Older dashboard CSS changes .sway-ai-form to a horizontal flex row below
+   760px, which would place the live status beside the input and send button. */
+@media (max-width: 760px) {
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-form {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-composer-row {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    #sway-admin-workspace .sway-workspace-main.sway-innerme-active.sway-innerme-chat-active .sway-innerme-chat-view .sway-ai-composer-status {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        align-self: stretch !important;
+    }
+}
+
 </style>
 
 </body>
