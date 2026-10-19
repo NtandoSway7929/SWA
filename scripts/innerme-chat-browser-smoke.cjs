@@ -153,9 +153,9 @@ async function configureIsolatedContext(context, initialView, theme) {
         const body = new ReadableStream({
           start(controller) {
             controller.enqueue(encoder.encode(
-              "event: delta\\ndata: " +
+              "event: delta\ndata: " +
               JSON.stringify({ text: "Partial answer preserved when stopped." }) +
-              "\\n\\n"
+              "\n\n"
             ));
             abortHandler = function () {
               try {
