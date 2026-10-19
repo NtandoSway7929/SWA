@@ -29,6 +29,8 @@ assert.ok(compatibility.includes("v_source.authority_level = 1"), "Review window
 assert.ok(compatibility.includes("v_knowledge.embedding_model <> 'gte-small'"), "Publication must require the production embedding model.");
 assert.ok(compatibility.includes("v_source.licence_status = 'unknown'"), "Publication must re-check the linked source licence.");
 
+assert.ok(ui.includes("innerme_knowledge_sources?on_conflict=slug"), "Acquisition source saves must support safe retries.");
+assert.ok(ui.includes("resolution=merge-duplicates,return=representation"), "Source upsert must return the canonical row for task linkage.");
 assert.ok(ui.includes("/rest/v1/rpc/verify_innerme_knowledge_draft"), "UI must call the draft-specific verification gate.");
 assert.ok(ui.includes("p_acquisition_task_id:id"), "UI must bind verification to its acquisition task.");
 assert.ok(!ui.includes('p_verification_method:"acquisition_knowledge_review"'), "UI must not pass an unsupported verification method.");
