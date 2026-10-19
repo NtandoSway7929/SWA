@@ -234,7 +234,6 @@ async function main() {
       createdIds.push(row.id);
     });
 
-    const sourceBySlug = new Map(sourceRows.map((source) => [source.slug, source]));
     for (const row of inserted) {
       const source = sourceBySlug.get(records.find((record) => record.slug === row.slug).source_slug);
       assert.ok(source, "Missing source for governance verification of " + row.slug);
