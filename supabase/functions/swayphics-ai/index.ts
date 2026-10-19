@@ -12806,6 +12806,17 @@ Answer the admin's question directly.
                 read_only: true,
                 knowledge_retrieval: buildInnerMeKnowledgeRetrievalPayload(),
                 knowledge_attribution: innermeKnowledgeAttribution,
+                server_metrics: {
+                  workspace_read_ms: workspaceRetrievalLatencyMs,
+                  context_assembly_ms: workspaceContextAssemblyLatencyMs,
+                  progressive_context_assembly_ms:
+                    progressiveWorkspaceAssemblyLatencyMsForRequest,
+                  progressive_workspace_json_bytes:
+                    progressiveWorkspaceJsonBytesForRequest,
+                  workspace_data_read_call_count: workspaceDataReadCallCount,
+                  provider_stream_ms: providerLatency,
+                  total_server_ms: requestTotalLatencyMs,
+                },
               });
             } catch (error) {
               if (downstreamCancellation.signal.aborted || req.signal.aborted) {
@@ -12859,6 +12870,24 @@ Answer the admin's question directly.
         },
       });
 
+      // Streaming headers are committed before the provider stream finishes.
+      // Expose pre-stream stages here, and include final total/provider timings
+      // in the terminal "done" event once those values can be measured.
+      const streamSetupLatencyMs = Math.max(
+        0,
+        Math.round(performance.now() - requestStartedAt),
+      );
+      const streamingServerTiming = [
+        `innerme_workspace_read;dur=${workspaceRetrievalLatencyMs}`,
+        `innerme_context_assembly;dur=${workspaceContextAssemblyLatencyMs}`,
+        ...(progressiveWorkspaceAssemblyLatencyMsForRequest === null
+          ? []
+          : [
+              `innerme_progressive_context;dur=${progressiveWorkspaceAssemblyLatencyMsForRequest}`,
+            ]),
+        `innerme_stream_setup;dur=${streamSetupLatencyMs}`,
+      ].join(", ");
+
       return new Response(streamingBody, {
         status: 200,
         headers: {
@@ -12867,6 +12896,12 @@ Answer the admin's question directly.
           "Cache-Control": "no-cache, no-transform",
           "X-Accel-Buffering": "no",
           "X-InnerMe-Request-ID": requestId,
+          "X-InnerMe-Workspace-Read-Calls": String(workspaceDataReadCallCount),
+          "X-InnerMe-Progressive-Workspace-JSON-Bytes":
+            progressiveWorkspaceJsonBytesForRequest === null
+              ? "unmeasured"
+              : String(progressiveWorkspaceJsonBytesForRequest),
+          "Server-Timing": streamingServerTiming,
         },
       });
     }
