@@ -82,7 +82,8 @@ test("ambiguous test-corpus insertion outcomes still discover and clean owned te
     "Mark the insert as potentially committed before sending the HTTP request."
   );
   assert.ok(
-    seeder.includes('getBySlugs(accessToken, "innerme_knowledge", records.map((r) => r.slug),\n            "id,slug,source_id,verification_notes")'),
+    seeder.includes("const discoveredRows = await getBySlugs(") &&
+      seeder.includes('records.map((r) => r.slug),\n            "id,slug,source_id,verification_notes"'),
     "Cleanup must rediscover the fixed test slugs if the insert response is lost or malformed."
   );
   assert.ok(
