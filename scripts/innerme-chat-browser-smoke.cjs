@@ -231,6 +231,18 @@ async function askMockedQuestion(page) {
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   assert.equal(copied, "const ready = true;", "Code copy should preserve exact whitespace/content");
 
+  const assistantMessage = page.locator(".sway-ai-message.sway-ai-assistant").filter({
+    hasText: "Browser smoke answer"
+  }).last();
+  const copyResponse = assistantMessage.locator("button.sway-ai-copy:not(.sway-ai-code-copy)");
+  await copyResponse.click();
+  await page.waitForFunction(() => {
+    const button = document.querySelector(".sway-ai-message.sway-ai-assistant button.sway-ai-copy:not(.sway-ai-code-copy)");
+    return button && button.textContent.trim() === "Copied";
+  }, { timeout: 5000 });
+  const copiedResponse = await page.evaluate(() => navigator.clipboard.readText());
+  assert.equal(copiedResponse, markdownAnswer.trim(), "Response copy should preserve the original assistant Markdown, not rendered HTML");
+
   return {
     renderedHeading: true,
     renderedListItems: 2,
