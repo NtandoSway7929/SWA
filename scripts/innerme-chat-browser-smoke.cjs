@@ -600,9 +600,10 @@ async function verifyKeyboardAndFallbackPaths(page, metrics) {
     .filter({ hasText: "Retry succeeded" })
     .waitFor({ state: "visible", timeout: 5000 });
   assert.equal(
-    await page.locator(".sway-ai-message.sway-ai-assistant.sway-ai-response-error").count(),
+    await page.locator(".sway-ai-message.sway-ai-assistant.sway-ai-response-error")
+      .filter({ hasText: "Synthetic retry failure" }).count(),
     0,
-    "Retry should replace, not retain, the old error bubble"
+    "Retry should replace its own error bubble without removing unrelated earlier errors"
   );
   assert.equal(
     await page.locator(".sway-ai-message.sway-ai-user .sway-ai-message-content")
