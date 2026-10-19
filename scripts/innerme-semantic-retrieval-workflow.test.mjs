@@ -26,9 +26,21 @@ test("manual semantic retrieval workflow defaults to retrieval-only mode", () =>
   assert.ok(chatInput.includes("        type: boolean"));
   assert.ok(chatInput.includes("        default: false"));
   assert.ok(
-    chatInput.includes("normal-chat grounding checks (uses up to four isolated provider requests)"),
+    chatInput.includes("normal-chat grounding checks"),
     "The input description must disclose the provider-request impact."
   );
+  const caseInput = workflowInput("chat_case_id");
+  assert.ok(caseInput.includes("        type: choice"));
+  assert.ok(caseInput.includes("        default: normal_chat_invoice_grounding"));
+  for (const id of [
+    "normal_chat_invoice_grounding",
+    "normal_chat_appointment_grounding",
+    "normal_chat_dispatch_grounding",
+    "normal_chat_irrelevant_invoice_exclusion",
+    "          - all",
+  ]) {
+    assert.ok(caseInput.includes(id), "the chat case selector must allow " + id);
+  }
 });
 
 test("full chat mode requires a separate explicit no-billing confirmation", () => {
@@ -43,6 +55,10 @@ test("full chat mode requires a separate explicit no-billing confirmation", () =
     workflow.includes('payload["run_chat_checks"] = os.environ["RUN_CHAT_CHECKS"].strip().lower() == "true"'),
     "The selected workflow mode must be forwarded to the regression endpoint."
   );
+  assert.ok(
+    workflow.includes('payload["run_chat_case_id"] = os.environ["RUN_CHAT_CASE_ID"].strip()'),
+    "The selected grounding case must be forwarded to the isolated endpoint."
+  );
 });
 
 test("the isolated endpoint limits its Gemini key and quota preflight to full chat mode", () => {
@@ -55,4 +71,25 @@ test("the isolated endpoint limits its Gemini key and quota preflight to full ch
     endpoint.includes('if (runChatChecks) {\n    const utcQuotaDate = new Date().toISOString().slice(0, 10);\n    const { data: quotaRow, error: quotaReadError }'),
     "The full-chat quota preflight must remain scoped to chat mode."
   );
+});
+
+
+test("targeted grounding mode defaults to one case and scales quota preflight", () => {
+  assert.ok(endpoint.includes('baseline.run_chat_case_id !== undefined'));
+  assert.ok(endpoint.includes('baseline.run_chat_case_id !== "all" && !ALLOWED_CHAT_CASE_IDS.includes(baseline.run_chat_case_id)'));
+  assert.ok(endpoint.includes('const selectedChatCaseCount = runChatCaseId === "all" ? ALLOWED_CHAT_CASE_IDS.length : 1;'));
+  assert.ok(endpoint.includes("const minimumRequiredRequests = selectedChatCaseCount * 2;"));
+  assert.ok(endpoint.includes('runChatCaseId !== "all" && test.id !== runChatCaseId'));
+  assert.ok(endpoint.includes('run_mode: !runChatChecks ? "retrieval_only" : (runChatCaseId === "all" ? "full" : "targeted_grounding")'));
+  assert.ok(endpoint.includes("this case was intentionally not sent to the provider"));
+});
+
+test("operator guide describes retrieval-only, targeted grounding, and explicit all-cases mode", () => {
+  const docsPath = fileURLToPath(
+    new URL("../docs/innerme-semantic-retrieval-e2e-smoke-test.md", import.meta.url)
+  );
+  const docs = readFileSync(docsPath, "utf8");
+  assert.ok(docs.includes("default `run_chat_checks=false`"));
+  assert.ok(docs.includes("Targeted grounding mode"));
+  assert.ok(docs.includes("`chat_case_id=all`"));
 });

@@ -42,7 +42,8 @@ test("full-mode chat quota preflight stops before fixture creation when budget i
   assert.match(regressionHelper, /from\("innerme_provider_quota_daily"\)/);
   assert.match(regressionHelper, /\.eq\("quota_date", utcQuotaDate\)/);
   assert.match(regressionHelper, /const dailyLimit = 40;/);
-  assert.match(regressionHelper, /const minimumRequiredRequests = 8;/);
+  assert.match(regressionHelper, /const selectedChatCaseCount = runChatCaseId === "all" \? ALLOWED_CHAT_CASE_IDS.length : 1;/);
+  assert.match(regressionHelper, /const minimumRequiredRequests = selectedChatCaseCount \* 2;/);
   assert.match(regressionHelper, /remainingBudget < minimumRequiredRequests/);
   assert.match(regressionHelper, /stage: "provider_quota_preflight"/);
   assert.match(regressionHelper, /no fixtures or chat requests were made/i);
