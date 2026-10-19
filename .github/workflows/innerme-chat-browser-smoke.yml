@@ -1,0 +1,75 @@
+name: InnerMe Chat Browser Smoke (mocked backend)
+
+on:
+  push:
+    branches:
+      - feature/innerme-chat-layout-v1
+    paths:
+      - "admin-dashboard/index.html"
+      - "admin-dashboard/admin-workspace.css"
+      - "admin-dashboard/admin-workspace.js"
+      - "scripts/innerme-chat-browser-smoke.cjs"
+      - ".github/workflows/innerme-chat-browser-smoke.yml"
+  workflow_dispatch:
+    inputs:
+      confirm_mocked_network:
+        description: "Confirm all Supabase/API calls are intercepted and mocked; no production or provider request is made."
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  browser-smoke:
+    if: ${{ github.event_name == 'push' || inputs.confirm_mocked_network == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out isolated UI branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pinned Playwright
+        run: npm install --prefix /tmp/innerme-playwright playwright@1.55.0 --no-audit --no-fund
+
+      - name: Install Chromium
+        run: /tmp/innerme-playwright/node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Start local static server
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory . > /tmp/innerme-ui-server.log 2>&1 &
+          echo $! > /tmp/innerme-ui-server.pid
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4173/admin-dashboard/index.html > /dev/null; then
+              echo "PASS: branch UI served locally."
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/innerme-ui-server.log
+          echo "::error::Local UI server did not become ready."
+          exit 1
+
+      - name: Run desktop/mobile chat smoke tests with mocked APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/innerme-chat-browser-smoke
+          NODE_PATH=/tmp/innerme-playwright/node_modules node scripts/innerme-chat-browser-smoke.cjs
+
+      - name: Upload browser screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: innerme-chat-browser-smoke
+          path: artifacts/innerme-chat-browser-smoke/
+          if-no-files-found: warn
+          retention-days: 7
