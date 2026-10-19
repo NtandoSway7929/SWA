@@ -468,12 +468,25 @@ jobs:
             if (promptCount < 3) {
               throw new Error("Expected at least three InnerMe quick prompts; found " + promptCount + ".");
             }
-            await promptButtons.first().click();
-            const quickPromptPopulatedComposer = (await composer.inputValue()).trim().length > 0;
-            if (!quickPromptPopulatedComposer) {
-              throw new Error("Quick prompt did not populate the chat composer.");
+            const promptLabels = (await promptButtons.allTextContents())
+              .map(label => label.replace(/\\s+/g, " ").trim())
+              .filter(Boolean);
+            const expectedPrompts = [
+              "What should I do today?",
+              "Where is revenue leaking?",
+              "Which lead first?",
+              "3-step plan"
+            ];
+            const missingPrompts = expectedPrompts.filter(expected =>
+              !promptLabels.some(label => label.includes(expected))
+            );
+            if (missingPrompts.length) {
+              throw new Error("Quick prompt labels are missing: " + JSON.stringify(missingPrompts));
             }
-            await composer.fill("");
+            const composerInitiallyEmpty = !(await composer.inputValue()).trim();
+            if (!composerInitiallyEmpty) {
+              throw new Error("Chat composer unexpectedly contained a message before testing.");
+            }
 
             const bannerText = (await page.locator("#innerme-test-preview-banner").innerText()).replace(/\s+/g, " ").trim();
             const themeToggle = page.locator("#admin-theme-toggle");
@@ -558,7 +571,8 @@ jobs:
             console.log("LOGIN_STATUS=passed");
             console.log("CHAT_VIEW=visible");
             console.log("QUICK_PROMPTS=" + promptCount);
-            console.log("QUICK_PROMPT_POPULATES_COMPOSER=" + quickPromptPopulatedComposer);
+            console.log("QUICK_PROMPT_LABELS=" + JSON.stringify(expectedPrompts));
+            console.log("COMPOSER_EMPTY_NO_PROMPT_SENT=" + composerInitiallyEmpty);
             console.log("DARK_MODE=passed");
             console.log("DESKTOP_LIGHT_LAYOUT=" + JSON.stringify(lightMetrics));
             console.log("MOBILE_DARK_LAYOUT=" + JSON.stringify(mobileMetrics));
