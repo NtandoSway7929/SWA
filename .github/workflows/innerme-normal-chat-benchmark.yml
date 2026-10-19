@@ -488,7 +488,12 @@ jobs:
               throw new Error("Chat composer unexpectedly contained a message before testing.");
             }
 
-            const bannerText = (await page.locator("#innerme-test-preview-banner").innerText()).replace(/\s+/g, " ").trim();
+            const bannerText = await page.evaluate(() => {
+              const banner = document.querySelector("#innerme-test-preview-banner");
+              return banner
+                ? String(banner.innerText || banner.textContent || "").replace(/\\s+/g, " ").trim()
+                : "not present after dashboard navigation";
+            });
             const themeToggle = page.locator("#admin-theme-toggle");
             await themeToggle.waitFor({ state: "visible" });
             const lightMetrics = await page.evaluate(() => {
