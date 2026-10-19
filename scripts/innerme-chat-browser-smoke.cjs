@@ -272,6 +272,9 @@ async function main() {
     const newChat = desktopPage.locator("#sway-ai-new-chat");
     await newChat.waitFor({ state: "visible" });
     await newChat.click();
+    const confirmDialog = desktopPage.locator(".sway-dialog");
+    await confirmDialog.waitFor({ state: "visible", timeout: 5000 });
+    await confirmDialog.locator("[data-dialog-confirm]").click();
     await assertNoHorizontalOverflow(desktopPage, "Desktop after New chat");
     assert.equal(
       await desktopPage.locator("#sway-ai-conversation").getByText("Browser smoke answer").count(),
