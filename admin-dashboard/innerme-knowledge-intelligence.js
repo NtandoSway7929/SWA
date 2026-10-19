@@ -799,14 +799,13 @@
         if(button){button.disabled=true;button.textContent="Verifying…";}
 
         try{
-            const verifyResponse=await fetch(SUPABASE_URL+"/rest/v1/rpc/verify_innerme_knowledge",{
+            const verifyResponse=await fetch(SUPABASE_URL+"/rest/v1/rpc/verify_innerme_knowledge_draft",{
                 method:"POST",
                 headers:authHeaders(),
                 body:JSON.stringify({
                     p_knowledge_id:task.knowledge_draft_id,
-                    p_verification_method:"acquisition_knowledge_review",
-                    p_verification_notes:"Draft reviewed by a Swayphics admin against the verified acquisition source excerpt on "+new Date().toISOString().slice(0,10)+".",
-                    p_verified_source_url:(task.source && task.source.url) || null
+                    p_acquisition_task_id:id,
+                    p_verification_notes:"Draft reviewed by a Swayphics admin against the verified acquisition source excerpt on "+new Date().toISOString().slice(0,10)+"."
                 })
             });
             const verifyData=await verifyResponse.json().catch(function(){return null;});
