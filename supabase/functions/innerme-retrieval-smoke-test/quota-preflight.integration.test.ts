@@ -50,6 +50,7 @@ type Scenario = {
   quotaStatus?: number;
   quotaUsed?: number;
   geminiKeyConfigured?: boolean;
+  chatCaseId?: string;
 };
 
 async function invoke(scenario: Scenario) {
@@ -58,6 +59,7 @@ async function invoke(scenario: Scenario) {
   );
   const baseline = JSON.parse(baselineText) as Record<string, unknown>;
   baseline.run_chat_checks = true;
+  baseline.run_chat_case_id = scenario.chatCaseId ?? "all";
 
   const requestLog: Array<{ path: string; method: string }> = [];
   const originalFetch = globalThis.fetch;
@@ -181,14 +183,28 @@ Deno.test("semantic retrieval full-mode quota preflight fails closed before fixt
     assertNoFixtureOrProviderRequests(result.requestLog);
   });
 
-  await t.step("fewer than eight remaining reservations stops before fixture setup", async () => {
-    const result = await invoke({ quotaUsed: 33 });
+  await t.step("fewer than eight remaining reservations stops full-suite mode before fixture setup", async () => {
+    const result = await invoke({ quotaUsed: 33, chatCaseId: "all" });
 
     assertEqual(result.status, 429, "Low-budget status");
     assertEqual(result.body.failure?.stage, "provider_quota_preflight", "Low-budget failure stage");
     assertEqual(result.body.quota_preflight?.remaining, 7, "Remaining quota reservations");
     assertEqual(result.body.quota_preflight?.minimum_required, 8, "Required quota reservations");
     assertEqual(result.body.provider_chat_requests_attempted, 0, "Provider chat requests attempted");
+    assertNoFixtureOrProviderRequests(result.requestLog);
+  });
+
+  await t.step("targeted grounding requires two reservations and stops before fixture setup when only one remains", async () => {
+    const result = await invoke({
+      quotaUsed: 39,
+      chatCaseId: "normal_chat_invoice_grounding",
+    });
+
+    assertEqual(result.status, 429, "Targeted low-budget status");
+    assertEqual(result.body.failure?.stage, "provider_quota_preflight", "Targeted failure stage");
+    assertEqual(result.body.quota_preflight?.remaining, 1, "Targeted remaining quota reservations");
+    assertEqual(result.body.quota_preflight?.minimum_required, 2, "Targeted required quota reservations");
+    assertEqual(result.body.provider_chat_requests_attempted, 0, "Targeted provider chat requests attempted");
     assertNoFixtureOrProviderRequests(result.requestLog);
   });
 

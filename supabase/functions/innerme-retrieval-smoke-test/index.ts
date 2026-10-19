@@ -6,6 +6,12 @@ import { extractBearerToken } from "./auth-header.mjs";
 const ISOLATED_PROJECT_REF = "ofqofhnlzbouclvvrmzd";
 const SUITE_ID = "innerme_semantic_retrieval_regression";
 const BASELINE_VERSION = "1.2.0";
+const ALLOWED_CHAT_CASE_IDS: readonly string[] = [
+  "normal_chat_invoice_grounding",
+  "normal_chat_appointment_grounding",
+  "normal_chat_dispatch_grounding",
+  "normal_chat_irrelevant_invoice_exclusion",
+];
 const EMBEDDING_MODEL = "gte-small";
 const EMBEDDING_DIMENSIONS = 384;
 
@@ -121,6 +127,13 @@ function validateBaseline(value: unknown): { baseline: any | null; error: string
   const baseline = value as Record<string, any>;
   if (baseline.run_chat_checks !== undefined && typeof baseline.run_chat_checks !== "boolean") {
     return { baseline: null, error: "run_chat_checks must be a boolean when supplied." };
+  }
+  if (
+    baseline.run_chat_case_id !== undefined &&
+    (!isNonEmptyString(baseline.run_chat_case_id) ||
+      (baseline.run_chat_case_id !== "all" && !ALLOWED_CHAT_CASE_IDS.includes(baseline.run_chat_case_id)))
+  ) {
+    return { baseline: null, error: "run_chat_case_id must be one of the pinned normal-chat case IDs or 'all'." };
   }
   if (baseline.suite_id !== SUITE_ID || baseline.baseline_version !== BASELINE_VERSION) {
     return { baseline: null, error: "The regression suite identifier or version is not supported by this helper." };
@@ -285,6 +298,10 @@ Deno.serve(async (req: Request) => {
   }
   const baseline = validation.baseline;
   const runChatChecks = baseline.run_chat_checks !== false;
+  // Safer default: one focused grounding case. The full four-case suite is explicit.
+  const runChatCaseId = runChatChecks
+    ? (isNonEmptyString(baseline.run_chat_case_id) ? baseline.run_chat_case_id : "normal_chat_invoice_grounding")
+    : null;
 
   // Provider preflight is only required when normal-chat calls are included.
   if (runChatChecks && !Deno.env.get("GEMINI_API_KEY")) {
@@ -302,8 +319,8 @@ Deno.serve(async (req: Request) => {
     }, 503);
   }
 
-  // Full mode requires room for four chat cases plus one guarded Gemini fallback
-  // attempt per case. Check the UTC reservation counter before seeding fixtures.
+  // Reserve two Gemini attempts per selected chat case: the primary attempt and
+  // one possible guarded fallback. Check quota before seeding any fixtures.
   // This is advisory; reserveInnerMeProviderQuota remains the atomic authority.
   if (runChatChecks) {
     const utcQuotaDate = new Date().toISOString().slice(0, 10);
@@ -332,7 +349,8 @@ Deno.serve(async (req: Request) => {
 
     const used = quotaRow == null ? 0 : Number(quotaRow.request_count);
     const dailyLimit = 40;
-    const minimumRequiredRequests = 8;
+    const selectedChatCaseCount = runChatCaseId === "all" ? ALLOWED_CHAT_CASE_IDS.length : 1;
+    const minimumRequiredRequests = selectedChatCaseCount * 2;
     if (!Number.isSafeInteger(used) || used < 0 || used > dailyLimit) {
       return jsonResponse({
         ok: false,
@@ -359,7 +377,7 @@ Deno.serve(async (req: Request) => {
         failure: {
           stage: "provider_quota_preflight",
           kind: "execution",
-          message: "Full mode needs at least 8 remaining Gemini request reservations to cover four chat cases and their possible guarded fallback attempts. Current usage is " + used + "/" + dailyLimit + " for UTC date " + utcQuotaDate + "; no fixtures or chat requests were made. Run retrieval-only mode or retry after the next UTC reset.",
+          message: "The selected chat mode needs at least " + minimumRequiredRequests + " remaining Gemini request reservations to cover the selected case(s) and possible guarded fallback attempts. Current usage is " + used + "/" + dailyLimit + " for UTC date " + utcQuotaDate + "; no fixtures or chat requests were made. Run retrieval-only mode or retry after the next UTC reset.",
           http_status: 429,
         },
         provider_chat_requests_attempted: 0,
@@ -616,7 +634,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Each chat case must report the target knowledge evidence and reproduce its exact canary.
+    // Each selected chat case must report the target knowledge evidence and reproduce its exact canary.
     for (const test of baseline.tests.filter((item: any) => item.type === "chat_grounding" || item.type === "chat_exclusion")) {
       if (!runChatChecks) {
         caseResults.push({
@@ -626,6 +644,17 @@ Deno.serve(async (req: Request) => {
           fixture_key: test.fixture_key,
           expected_match: test.expected_match,
           skip_reason: "Normal-chat checks were intentionally disabled; no provider request was made.",
+        });
+        continue;
+      }
+      if (runChatCaseId !== "all" && test.id !== runChatCaseId) {
+        caseResults.push({
+          id: test.id,
+          type: test.type,
+          status: "skipped",
+          fixture_key: test.fixture_key,
+          expected_match: test.expected_match,
+          skip_reason: "A single normal-chat case was selected; this case was intentionally not sent to the provider.",
         });
         continue;
       }
@@ -851,7 +880,8 @@ Deno.serve(async (req: Request) => {
   const payload = {
     ok: overallStatus === "passed",
     status: overallStatus,
-    run_mode: runChatChecks ? "full" : "retrieval_only",
+    run_mode: !runChatChecks ? "retrieval_only" : (runChatCaseId === "all" ? "full" : "targeted_grounding"),
+    run_chat_case_id: runChatChecks ? runChatCaseId : null,
     suite_id: SUITE_ID,
     baseline_version: BASELINE_VERSION,
     run_id: runId,

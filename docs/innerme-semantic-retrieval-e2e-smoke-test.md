@@ -30,7 +30,7 @@ The suite pins the six fixture keys, all twenty-eight case IDs, their types, exp
 2. The workflow checks out the versioned baseline and authenticates to the isolated project.
 3. The test-only Edge Function verifies the project ref, parses the signed-in user's bearer token with a separately unit-tested parser, verifies the active administrator, then validates the baseline contract.
 4. It creates six uniquely named synthetic records, uses the real built-in `gte-small` model to generate and save 384-dimensional embeddings, and executes twenty-four retrieval and eligibility cases. Fifteen new cases omit the domain filter and evaluate all fixtures together.
-5. It sends up to four read-only normal-chat requests to test grounding across invoice, appointment-rescheduling and warehouse-dispatch topics and check that irrelevant astronomy questions do not leak invoice knowledge into chat context.
+5. When normal-chat checks are enabled, it sends one read-only normal-chat request by default (invoice grounding). Choosing `chat_case_id=all` sends all four pinned chat cases, including the irrelevant-astronomy exclusion.
 6. It deletes all run-specific fixtures, confirms there are no residual rows, and returns a case-by-case result report.
 
 Each run has unique fixture slugs and domain names to avoid cross-run interference. Cleanup runs even if a fixture, retrieval or chat stage fails. A cleanup failure is a suite failure and must be resolved before rerunning.
@@ -45,19 +45,20 @@ The same local, zero-provider-call selector is used by normal chat and the authe
 - Fixture database operations use the caller's authenticated JWT and the existing active-admin RLS policy. The isolated-only grants file is `supabase/isolated-test/innerme-semantic-retrieval-smoke-test-grants.sql`; it must never be applied to production.
 - `service_role` retains no direct privileges on `public.innerme_knowledge`. The helper uses its server-side service key only to validate the user's session and active-admin record.
 - `gte-small` embeddings use Supabase's built-in Edge Runtime AI interface. No external embedding provider is called.
-- The full-mode normal-chat checks make up to four provider chat requests. Keep the isolated Gemini key in a separate Google test project with billing disabled. Do not reuse the production key. The workflow requires explicit confirmation before full mode runs. Retrieval-only mode makes no Gemini requests.
+- Retrieval-only mode makes no Gemini chat requests. When chat checks are enabled, the default targeted mode sends one normal-chat request; the isolated runtime reserves room for a possible guarded fallback, so its quota preflight requires two remaining Gemini request reservations. Choose `chat_case_id=all` to run all four normal-chat cases; full mode reserves eight possible attempts.
+- Keep the isolated Gemini key in a separate Google test project with billing disabled. Do not reuse the production key. The workflow requires explicit no-billing confirmation for any chat-check mode.
 - The suite does not create or execute proposals, send email, mutate real business records, or copy production knowledge rows.
 
 ## Regression and inconclusive-result policy
 
 - If a pinned case executes successfully but its expected retrieval/grounding assertion is false, the case is marked **failed**. The workflow exits non-zero, blocking the regression gate.
 - If a provider, Edge Function, authentication, embedding or retrieval execution error prevents a trustworthy assertion, the run is marked **inconclusive**, not misreported as an answer-quality regression. The workflow still exits non-zero, so the pipeline cannot silently treat it as a pass.
-- A full-mode pass requires all twenty-eight cases to pass, corpus metrics to cover all fifteen corpus-wide cases, and all synthetic fixtures to be confirmed removed. Retrieval-only mode requires all twenty-four retrieval/eligibility cases to pass, the four normal-chat cases to be marked intentionally skipped, complete corpus metrics, and verified fixture cleanup; it does not claim normal-chat grounding has passed.
+- A full-mode pass requires all twenty-eight cases to pass, corpus metrics to cover all fifteen corpus-wide cases, and all synthetic fixtures to be confirmed removed. Targeted grounding mode requires all twenty-four retrieval/eligibility cases and the selected normal-chat case to pass; the other three chat cases must be marked intentionally skipped, corpus metrics must be complete, and fixture cleanup must be verified. Retrieval-only mode requires all twenty-four retrieval/eligibility cases to pass, all four normal-chat cases to be intentionally skipped, complete corpus metrics, and verified fixture cleanup; it does not claim normal-chat grounding has passed.
 - The workflow writes a case table to the GitHub Actions run summary and uploads the full case-level result JSON, the exact versioned baseline, and the effective request JSON (including whether chat checks were enabled). The result includes the baseline SHA-256, GitHub run ID, commit, per-case status/similarity, ordered fixture ranks and similarity scores, and cleanup state. Artifacts are retained for 90 days; the versioned expected-case baseline remains in Git.
 
 ## Running the suite
 
-Open the repository's Actions tab, choose **InnerMe Isolated Semantic Retrieval Regression Suite**, and select **Run workflow**. The default `run_chat_checks=true` runs the full suite and requires confirmation of the separate no-billing Google test project. Set `run_chat_checks=false` for retrieval-only mode when the isolated provider quota is unavailable or when avoiding provider calls: this mode skips exactly four normal-chat cases, makes no Gemini requests, and evaluates all retrieval and eligibility cases. It is a retrieval-only pass, not a full-suite pass.
+Open the repository's Actions tab, choose **InnerMe Isolated Semantic Retrieval Regression Suite**, and select **Run workflow**. The default `run_chat_checks=false` runs retrieval-only mode and makes no Gemini chat requests. To test grounding, set `run_chat_checks=true` and keep the default `chat_case_id=normal_chat_invoice_grounding` for one focused normal-chat case; the other three chat cases will be skipped. Choose `chat_case_id=all` only when deliberately running the full four-case chat suite. Every chat-enabled mode requires confirmation that the isolated Gemini key belongs to a separate Google project with billing disabled.
 
 Workflow: `.github/workflows/innerme-semantic-retrieval-smoke.yml`.
 
