@@ -274,7 +274,7 @@ async function main() {
       assert.equal(row.verification_status, "verified", "Audit status must say verified.");
       assert.equal(row.verification_method, "internal_review", "Audit method must be preserved.");
       assert.ok(String(row.verification_notes || "").startsWith("TEST ONLY:"), "Audit record must carry the cleanup-safe test marker.");
-      assert.ok(/^https?:\\/\\//i.test(row.verified_source_url || ""), "Audit record must retain an HTTP(S) source URL.");
+      assert.ok(String(row.verified_source_url || "").startsWith("https://") || String(row.verified_source_url || "").startsWith("http://"), "Audit record must retain an HTTP(S) source URL.");
     }
     result.verification_audit_checked = true;
 
