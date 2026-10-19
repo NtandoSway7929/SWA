@@ -90,6 +90,6 @@ test("operator guide describes retrieval-only, targeted grounding, and explicit 
   );
   const docs = readFileSync(docsPath, "utf8");
   assert.ok(docs.includes("default `run_chat_checks=false`"));
-  assert.ok(docs.includes("targeted grounding"));
+  assert.ok(docs.includes("Targeted grounding mode"));
   assert.ok(docs.includes("`chat_case_id=all`"));
 });
