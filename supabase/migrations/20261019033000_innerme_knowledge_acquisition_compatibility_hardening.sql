@@ -9,6 +9,11 @@ ALTER TABLE public.innerme_knowledge_acquisition_tasks
 ALTER TABLE public.innerme_knowledge_acquisition_tasks
   ADD COLUMN IF NOT EXISTS source_verified_by uuid REFERENCES auth.users(id) ON DELETE RESTRICT;
 
+-- One approved knowledge gap must map to no more than one acquisition task.
+-- The production table predates this workflow and did not enforce this key.
+CREATE UNIQUE INDEX IF NOT EXISTS innerme_knowledge_acquisition_tasks_gap_id_uidx
+  ON public.innerme_knowledge_acquisition_tasks (gap_id);
+
 CREATE INDEX IF NOT EXISTS innerme_knowledge_acquisition_tasks_created_by_idx
   ON public.innerme_knowledge_acquisition_tasks (created_by);
 CREATE INDEX IF NOT EXISTS innerme_knowledge_acquisition_tasks_source_verified_by_idx
