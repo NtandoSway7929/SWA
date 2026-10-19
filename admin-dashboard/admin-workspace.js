@@ -25739,6 +25739,7 @@ function simpleBars(items, color) {
                 saveAIConversation();
 
                 loading.classList.remove("sway-ai-loading");
+                loading.classList.add("sway-ai-response-error");
                 loading.innerHTML =
                     '<span class="sway-ai-message-label">InnerMe</span>' +
                     '<div class="sway-ai-message-content">' +
@@ -25748,7 +25749,34 @@ function simpleBars(items, color) {
                         '<span class="sway-ai-message-time">' +
                             esc(formatAIMessageTime(assistantEntry.createdAt)) +
                         '</span>' +
+                        '<button type="button" class="sway-ai-retry" aria-label="Retry last InnerMe request">Retry</button>' +
                     '</div>';
+
+                const retryButton = loading.querySelector(".sway-ai-retry");
+                if (retryButton) {
+                    retryButton.addEventListener("click", function () {
+                        if (state.aiRequestInFlight) return;
+
+                        /* Replace the failed attempt rather than duplicating its user turn. */
+                        state.aiConversation = state.aiConversation.filter(function (entry) {
+                            return entry !== userEntry && entry !== assistantEntry;
+                        });
+                        saveAIConversation();
+                        userBubble.remove();
+                        loading.remove();
+
+                        input.value = clean;
+                        input.dispatchEvent(new Event("input", { bubbles: true }));
+                        if (composerForm && typeof composerForm.requestSubmit === "function") {
+                            composerForm.requestSubmit(send);
+                        } else if (composerForm) {
+                            composerForm.dispatchEvent(new Event("submit", {
+                                bubbles: true,
+                                cancelable: true
+                            }));
+                        }
+                    });
+                }
             }
         } finally {
             state.aiRequestInFlight = false;
