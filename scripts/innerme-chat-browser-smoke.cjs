@@ -333,6 +333,33 @@ async function main() {
     assert.ok(mobileLayout.inputWidth > 100, "Mobile composer input should remain usable");
     assert.ok(mobileLayout.composerVisible, "Mobile composer should remain visible");
     const mobileInteractions = await askMockedQuestion(mobilePage);
+    const composerStatusLayout = await mobilePage.evaluate(() => {
+      const form = document.querySelector("#sway-ai-form");
+      const row = document.querySelector(".sway-ai-composer-row");
+      const status = document.querySelector("#sway-ai-composer-status");
+      const rowRect = row.getBoundingClientRect();
+      const statusRect = status.getBoundingClientRect();
+      return {
+        formDirection: getComputedStyle(form).flexDirection,
+        rowBottom: Math.round(rowRect.bottom),
+        rowWidth: Math.round(rowRect.width),
+        statusTop: Math.round(statusRect.top),
+        statusHeight: Math.round(statusRect.height),
+        statusWidth: Math.round(statusRect.width),
+        statusText: String(status.textContent || "").trim()
+      };
+    });
+    assert.equal(composerStatusLayout.formDirection, "column", "Mobile composer status must stack below the input row");
+    if (composerStatusLayout.statusText) {
+      assert.ok(
+        composerStatusLayout.statusTop >= composerStatusLayout.rowBottom - 1,
+        "Mobile live status must not overlap the input row: " + JSON.stringify(composerStatusLayout)
+      );
+      assert.ok(
+        composerStatusLayout.statusWidth >= composerStatusLayout.rowWidth - 4,
+        "Mobile live status must use the full composer width: " + JSON.stringify(composerStatusLayout)
+      );
+    }
     await mobilePage.screenshot({ path: path.join(ARTIFACT_DIR, "mobile-light-response.png") });
     await mobilePage.emulateMedia({ reducedMotion: "reduce" });
     const reducedMotion = await mobilePage.evaluate(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -344,6 +371,7 @@ async function main() {
       overflow: mobileSize,
       layout: mobileLayout,
       interactions: mobileInteractions,
+      composerStatus: composerStatusLayout,
       reducedMotionPreference: reducedMotion
     });
     await mobileContext.close();
