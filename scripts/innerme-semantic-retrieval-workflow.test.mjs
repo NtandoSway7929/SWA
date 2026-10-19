@@ -101,7 +101,7 @@ test("the workflow rejects a dispatch that selects no test task", () => {
   assert.ok(regressionInput.includes("        default: true"));
   assert.ok(corpusInput.includes("        default: false"));
   assert.ok(
-    workflow.includes('if [[ "${RUN_RETRIEVAL_REGRESSION}" != "true" && "${SEED_TEST_ONLY_CORPUS}" != "true" ]]; then'),
+    workflow.includes('if [[ "${RUN_RETRIEVAL_REGRESSION}" != "true" && "${SEED_TEST_ONLY_CORPUS}" != "true" && "${RUN_STREAM_SMOKE}" != "true" ]]; then'),
     "At least one test mode must be selected; a no-op workflow must fail closed."
   );
 });
