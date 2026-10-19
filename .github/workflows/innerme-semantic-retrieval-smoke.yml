@@ -9,10 +9,21 @@ on:
         type: boolean
         default: false
       run_chat_checks:
-        description: "Include normal-chat grounding checks (uses up to four isolated provider requests)"
+        description: "Include normal-chat grounding checks; requires separate no-billing confirmation"
         required: true
         type: boolean
         default: false
+      chat_case_id:
+        description: "Normal-chat case to execute when chat checks are enabled; choose all for the full four-case suite"
+        required: true
+        type: choice
+        options:
+          - normal_chat_invoice_grounding
+          - normal_chat_appointment_grounding
+          - normal_chat_dispatch_grounding
+          - normal_chat_irrelevant_invoice_exclusion
+          - all
+        default: normal_chat_invoice_grounding
 
 permissions:
   contents: read
@@ -56,6 +67,7 @@ jobs:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
           RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks }}
+          RUN_CHAT_CASE_ID: ${{ inputs.chat_case_id }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           GITHUB_SHA: ${{ github.sha }}
@@ -105,13 +117,14 @@ jobs:
           # Send the versioned baseline itself. The Edge Function independently
           # pins the required IDs, case types, eligibility rules and threshold.
           cp "${BASELINE_PATH}" /tmp/innerme-semantic-baseline-request.json
-          RUN_CHAT_CHECKS="${RUN_CHAT_CHECKS}" python3 - <<'PY'
+          RUN_CHAT_CHECKS="${RUN_CHAT_CHECKS}" RUN_CHAT_CASE_ID="${RUN_CHAT_CASE_ID}" python3 - <<'PY'
           import json
           import os
           from pathlib import Path
           path = Path("/tmp/innerme-semantic-baseline-request.json")
           payload = json.loads(path.read_text(encoding="utf-8"))
           payload["run_chat_checks"] = os.environ["RUN_CHAT_CHECKS"].strip().lower() == "true"
+          payload["run_chat_case_id"] = os.environ["RUN_CHAT_CASE_ID"].strip()
           path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
           PY
           EFFECTIVE_REQUEST_PATH="innerme-semantic-retrieval-effective-request.json"
@@ -128,7 +141,7 @@ jobs:
 
           BASELINE_PATH="${BASELINE_PATH}" RESULT_PATH="${RESULT_PATH}" \
           REQUEST_PATH="${EFFECTIVE_REQUEST_PATH}" RUN_CHAT_CHECKS="${RUN_CHAT_CHECKS}" \
-          TEST_HTTP_STATUS="${test_status}" GITHUB_RUN_ID="${GITHUB_RUN_ID}" \
+          RUN_CHAT_CASE_ID="${RUN_CHAT_CASE_ID}" TEST_HTTP_STATUS="${test_status}" GITHUB_RUN_ID="${GITHUB_RUN_ID}" \
           GITHUB_RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT}" GITHUB_SHA="${GITHUB_SHA}" \
           python3 - <<'PY'
           import hashlib
@@ -142,7 +155,9 @@ jobs:
           baseline_bytes = baseline_path.read_bytes()
           baseline = json.loads(baseline_bytes)
           effective_request_bytes = Path(os.environ["REQUEST_PATH"]).read_bytes()
-          run_mode = "full" if os.environ["RUN_CHAT_CHECKS"].strip().lower() == "true" else "retrieval_only"
+          run_chat_checks = os.environ["RUN_CHAT_CHECKS"].strip().lower() == "true"
+          selected_chat_case = os.environ["RUN_CHAT_CASE_ID"].strip()
+          run_mode = "retrieval_only" if not run_chat_checks else ("full" if selected_chat_case == "all" else "targeted_grounding")
           raw = Path("/tmp/innerme-semantic-regression-response.json").read_text(encoding="utf-8", errors="replace")
 
           valid_json_response = True
@@ -228,6 +243,7 @@ jobs:
           print("CASES_NOT_RUN=" + str(counts.get("not_run", 0)))
           print("CASES_SKIPPED=" + str(counts.get("skipped", 0)))
           print("RUN_MODE=" + str(result.get("run_mode", "full")))
+          print("CHAT_CASE_ID=" + (selected_chat_case if run_chat_checks else "disabled"))
           print("CLEANUP_PASSED=" + str(cleanup.get("passed") is True and cleanup.get("fixture_removed") is True))
 
           summary = [
@@ -235,7 +251,7 @@ jobs:
               "",
               f"**Overall status:** {status.upper()}",
               "",
-              f"- Run mode: {'full retrieval + chat' if result.get('run_mode', 'full') == 'full' else 'retrieval-only; normal-chat cases intentionally skipped'}",
+              f"- Run mode: {'retrieval-only; normal-chat cases intentionally skipped' if result.get('run_mode') == 'retrieval_only' else ('full retrieval + all four normal-chat cases' if result.get('run_mode') == 'full' else 'targeted grounding: ' + selected_chat_case)}",
               f"- Effective request SHA-256: `{result.get('effective_request_sha256', 'unavailable')}`",
               f"- Baseline: `{result.get('baseline_version', baseline.get('baseline_version'))}`",
               f"- Baseline SHA-256: `{result['baseline_sha256']}`",
