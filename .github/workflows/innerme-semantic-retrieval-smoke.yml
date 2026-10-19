@@ -13,6 +13,16 @@ on:
         required: true
         type: boolean
         default: false
+      seed_test_only_corpus:
+        description: "After retrieval-only regression passes, temporarily seed and verify two source-backed internal QA records, then delete the knowledge rows"
+        required: true
+        type: boolean
+        default: false
+      confirm_test_only_corpus:
+        description: "Confirm that temporary test-only knowledge may be created only in isolated project ofqofhnlzbouclvvrmzd, with normal-chat checks disabled"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,8 +44,18 @@ jobs:
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
           CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
           RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks }}
+          SEED_TEST_ONLY_CORPUS: ${{ inputs.seed_test_only_corpus }}
+          CONFIRM_TEST_ONLY_CORPUS: ${{ inputs.confirm_test_only_corpus }}
         run: |
           set -euo pipefail
+          if [[ "${SEED_TEST_ONLY_CORPUS}" == "true" && "${CONFIRM_TEST_ONLY_CORPUS}" != "true" ]]; then
+            echo "::error::Stop: confirm the isolated test-only corpus operation before seeding any knowledge records."
+            exit 1
+          fi
+          if [[ "${SEED_TEST_ONLY_CORPUS}" == "true" && "${RUN_CHAT_CHECKS}" == "true" ]]; then
+            echo "::error::Stop: the source-backed corpus smoke must run with normal-chat/Gemini checks disabled."
+            exit 1
+          fi
           if [[ "${RUN_CHAT_CHECKS}" == "true" && "${CONFIRM_NO_BILLING}" != "true" ]]; then
             echo "::error::Stop: full mode requires confirmation that the isolated test provider key belongs to a separate Google project with billing disabled."
             exit 1
@@ -332,3 +352,22 @@ jobs:
             innerme-semantic-retrieval-effective-request.json
           if-no-files-found: warn
           retention-days: 90
+
+      - name: Seed, embed, retrieve and clean up source-backed test-only corpus
+        if: ${{ inputs.seed_test_only_corpus == true }}
+        shell: bash
+        env:
+          INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+          CONFIRM_TEST_ONLY_CORPUS: ${{ inputs.confirm_test_only_corpus }}
+          RUN_CHAT_CHECKS: ${{ inputs.run_chat_checks }}
+        run: node scripts/innerme-test-corpus-embedding-smoke.mjs
+
+      - name: Archive source-backed test-only corpus result
+        if: always() && inputs.seed_test_only_corpus == true
+        uses: actions/upload-artifact@v7
+        with:
+          name: innerme-test-corpus-smoke-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: innerme-test-corpus-embedding-smoke-result.json
+          if-no-files-found: warn
+          retention-days: 30
