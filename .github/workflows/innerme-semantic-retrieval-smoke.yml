@@ -18,6 +18,11 @@ on:
         required: true
         type: boolean
         default: false
+      run_retrieval_regression:
+        description: "Run the 24-case retrieval-only regression before any optional corpus smoke (disable only to diagnose the corpus smoke separately)"
+        required: true
+        type: boolean
+        default: true
       confirm_test_only_corpus:
         description: "Confirm that temporary test-only knowledge may be created only in isolated project ofqofhnlzbouclvvrmzd, with normal-chat checks disabled"
         required: true
@@ -71,6 +76,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Run isolated semantic retrieval regression suite
+        if: ${{ inputs.run_retrieval_regression == true }}
         shell: bash
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
@@ -342,7 +348,7 @@ jobs:
           PY
 
       - name: Archive case-level result and exact baseline
-        if: always()
+        if: always() && inputs.run_retrieval_regression == true
         uses: actions/upload-artifact@v7
         with:
           name: innerme-semantic-retrieval-regression-${{ github.run_id }}-attempt-${{ github.run_attempt }}
@@ -354,7 +360,7 @@ jobs:
           retention-days: 90
 
       - name: Seed, embed, retrieve and clean up source-backed test-only corpus
-        if: ${{ inputs.seed_test_only_corpus == true }}
+        if: ${{ !cancelled() && inputs.seed_test_only_corpus == true }}
         shell: bash
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
