@@ -98,9 +98,9 @@ async function configureIsolatedContext(context, initialView, theme) {
     const method = request.method().toUpperCase();
 
     if (url.pathname === "/functions/v1/swayphics-ai" && method === "POST") {
-      metrics.mockedProviderRequests += 1;
       const postData = request.postDataJSON() || {};
       if (postData.stream_response === true) {
+        metrics.mockedProviderRequests += 1;
         return route.fulfill({
           status: 200,
           contentType: "text/event-stream; charset=utf-8",
@@ -209,7 +209,7 @@ async function askMockedQuestion(page) {
   await copyCode.click();
   await page.waitForFunction(() => {
     const button = document.querySelector(".sway-ai-message-content button.sway-ai-code-copy");
-    return button && button.textContent.trim() === "Copied";
+    return button && button.textContent.trim() === "Copied code";
   }, { timeout: 5000 });
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   assert.equal(copied, "const ready = true;", "Code copy should preserve exact whitespace/content");
