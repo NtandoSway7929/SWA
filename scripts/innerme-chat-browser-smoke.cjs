@@ -218,7 +218,7 @@ async function configureIsolatedContext(context, initialView, theme) {
           });
         }
 
-        const retryAnswer = "## Retry succeeded\\n\\nThe original question was retried successfully.";
+        const retryAnswer = "## Retry succeeded\n\nThe original question was retried successfully.";
         return route.fulfill({
           status: 200,
           contentType: "text/event-stream; charset=utf-8",
