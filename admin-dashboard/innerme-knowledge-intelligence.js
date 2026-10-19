@@ -680,9 +680,11 @@
 
         try{
             const sourceSlug=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,70)+"-"+id.slice(0,8);
-            const sourceResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_knowledge_sources",{
+            const sourceResponse=await fetch(SUPABASE_URL+"/rest/v1/innerme_knowledge_sources?on_conflict=slug",{
                 method:"POST",
-                headers:Object.assign({},authHeaders(),{"Prefer":"return=representation"}),
+                // A retry after saving the source but before updating the task must reuse
+                // the task-scoped source record instead of failing on duplicate slug.
+                headers:Object.assign({},authHeaders(),{"Prefer":"resolution=merge-duplicates,return=representation"}),
                 body:JSON.stringify({
                     slug:sourceSlug,
                     name:name,
