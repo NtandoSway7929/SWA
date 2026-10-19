@@ -32,7 +32,7 @@ const markdownAnswer = [
 
 const metrics = {
   scenarios: [],
-  mockedProviderRequests: 0,
+  mockedChatRequests: 0,
   unexpectedExternalRequests: [],
   pageErrors: []
 };
@@ -99,8 +99,25 @@ async function configureIsolatedContext(context, initialView, theme) {
 
     if (url.pathname === "/functions/v1/swayphics-ai" && method === "POST") {
       const postData = request.postDataJSON() || {};
+      metrics.mockedChatRequests += 1;
+      const message = String(postData.message || "");
+
+      // Exercise the existing non-SSE response contract, which must remain
+      // available for fallback providers and older function deployments.
+      if (message.includes("[test-json-fallback]")) {
+        return route.fulfill(responseJson({
+          answer: "## JSON fallback answer\n\nThe legacy JSON response path remains compatible.",
+          read_only: true,
+          knowledge_retrieval: { match_count: 0, retrieval_error: null },
+          knowledge_attribution: []
+        }));
+      }
+
       if (postData.stream_response === true) {
-        metrics.mockedProviderRequests += 1;
+        const streamBody = message.includes("[test-stream-error]")
+          ? sseFrame("phase", { status: "Preparing an answer…" }) +
+            sseFrame("error", { error: "Synthetic stream interruption test", retryable: true })
+          : buildSseResponse();
         return route.fulfill({
           status: 200,
           contentType: "text/event-stream; charset=utf-8",
@@ -108,7 +125,7 @@ async function configureIsolatedContext(context, initialView, theme) {
             "Cache-Control": "no-cache, no-transform",
             "X-InnerMe-Request-ID": "ui-smoke-mocked-request"
           },
-          body: buildSseResponse()
+          body: streamBody
         });
       }
       return route.fulfill(responseJson({ answer: markdownAnswer, read_only: true }));
@@ -226,6 +243,47 @@ async function askMockedQuestion(page) {
   };
 }
 
+async function verifyKeyboardAndFallbackPaths(page, metrics) {
+  const input = page.locator("#sway-ai-input");
+  const send = page.locator("#sway-ai-send");
+  const headings = page.locator(".sway-ai-message-content .sway-ai-answer-heading");
+
+  const beforeShiftEnter = metrics.mockedChatRequests;
+  await input.fill("line one");
+  await input.press("Shift+Enter");
+  assert.equal(await input.inputValue(), "line one\\n", "Shift+Enter should insert a newline");
+  assert.equal(metrics.mockedChatRequests, beforeShiftEnter, "Shift+Enter must not send a message");
+
+  const beforeEnter = await headings.count();
+  await input.fill("Keyboard send test");
+  await input.press("Enter");
+  await page.waitForFunction((count) =>
+    document.querySelectorAll(".sway-ai-message-content .sway-ai-answer-heading").length === count + 1,
+    beforeEnter,
+    { timeout: 10000 }
+  );
+  assert.ok(metrics.mockedChatRequests > beforeShiftEnter, "Enter should submit the message");
+
+  await input.fill("[test-json-fallback]");
+  await send.click();
+  await page.locator(".sway-ai-message-content .sway-ai-answer-heading").filter({
+    hasText: "JSON fallback answer"
+  }).waitFor({ state: "visible", timeout: 10000 });
+
+  await input.fill("[test-stream-error]");
+  await send.click();
+  await page.locator(".sway-ai-message-content").filter({
+    hasText: "Synthetic stream interruption test"
+  }).waitFor({ state: "visible", timeout: 10000 });
+
+  return {
+    enterSubmitsMessage: true,
+    shiftEnterAddsNewlineWithoutSending: true,
+    nonStreamingJsonFallbackRenders: true,
+    streamErrorRendersRecoverableMessage: true
+  };
+}
+
 async function main() {
   fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   const browser = await chromium.launch({ headless: true });
@@ -266,6 +324,7 @@ async function main() {
     assert.ok(["auto", "scroll"].includes(desktopLayout.conversationScrollable), "Chat transcript should have independent vertical scrolling");
 
     const desktopInteractions = await askMockedQuestion(desktopPage);
+    const edgeCaseInteractions = await verifyKeyboardAndFallbackPaths(desktopPage, metrics);
     await desktopPage.screenshot({ path: path.join(ARTIFACT_DIR, "desktop-light-response.png") });
 
     await desktopPage.locator("#sway-ai-more-toggle").click();
@@ -291,6 +350,7 @@ async function main() {
       overflow: desktopSize,
       layout: desktopLayout,
       interactions: desktopInteractions,
+      edgeCases: edgeCaseInteractions,
       newChatClearsTranscript: true,
       darkModeToggle: true
     });
@@ -378,7 +438,7 @@ async function main() {
 
     assert.equal(metrics.pageErrors.length, 0, "Browser must not produce uncaught page errors: " + metrics.pageErrors.join("; "));
     assert.equal(metrics.unexpectedExternalRequests.length, 0, "Browser attempted an unapproved external request: " + metrics.unexpectedExternalRequests.join(", "));
-    assert.ok(metrics.mockedProviderRequests >= 2, "Desktop and mobile should both exercise mocked streaming");
+    assert.ok(metrics.mockedChatRequests >= 2, "Desktop and mobile should both exercise mocked streaming");
 
     fs.writeFileSync(path.join(ARTIFACT_DIR, "browser-smoke-results.json"), JSON.stringify(metrics, null, 2));
     process.stdout.write("INNERME_CHAT_BROWSER_SMOKE=PASS\n" + JSON.stringify(metrics, null, 2) + "\n");
