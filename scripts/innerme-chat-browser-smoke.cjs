@@ -12,6 +12,7 @@ const markdownAnswer = [
   "## Browser smoke answer",
   "",
   "A **bold** result and a [safe link](https://example.com/docs).",
+  "Credential-bearing link: [deceptive](https://trusted.example@evil.example/path).",
   "",
   "- First step",
   "- Second step",
@@ -380,6 +381,8 @@ async function askMockedQuestion(page) {
   assert.equal(await response.locator(".sway-ai-answer-heading").count(), 1, "Markdown heading should render");
   assert.equal(await response.locator("ul li").count(), 2, "Markdown list items should render");
   assert.equal(await response.locator('a[href="https://example.com/docs"]').count(), 1, "HTTPS link should render");
+  assert.equal(await response.locator('a[href*="evil.example"]').count(), 0, "Credential-bearing URLs must not become clickable links");
+  assert.ok((await response.textContent()).includes("https://trusted.example@evil.example/path"), "Rejected destinations should remain visible as inert text");
   assert.equal(await response.locator(".sway-ai-code-block-wrap pre code").count(), 1, "Fenced code should render");
   assert.equal(await response.locator(".sway-ai-table-wrap table").count(), 1, "Markdown table should render accessibly");
   assert.equal(await response.locator("img").count(), 0, "Untrusted HTML must not create an image node");
@@ -411,6 +414,7 @@ async function askMockedQuestion(page) {
     renderedHeading: true,
     renderedListItems: 2,
     renderedSafeLink: true,
+    credentialBearingLinkBlocked: true,
     renderedCodeBlock: true,
     renderedTable: true,
     untrustedHtmlEscaped: true,
