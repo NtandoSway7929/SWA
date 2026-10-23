@@ -845,6 +845,100 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     const glintAfter = animationsAfter.find(animation => animation.name === "swayphics-welcome-glint");
     assert.ok(glintBefore && glintAfter && glintAfter.currentTime > glintBefore.currentTime,
       "the glint animation timeline must advance while the greeting is visible");
+
+    const centerFlight = page.locator("#swayphics-admin-welcome-flight");
+    await centerFlight.waitFor({ state: "attached", timeout: 5000 });
+    await page.waitForFunction(() => {
+      const flight = document.getElementById("swayphics-admin-welcome-flight");
+      return flight && flight.getAnimations().some(animation =>
+        animation.effect &&
+        Number(animation.effect.getTiming().duration) === 2700 &&
+        Number(animation.currentTime || 0) >= 400
+      );
+    }, undefined, { timeout: 5000 });
+
+    const flightAtCenter = await centerFlight.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const target = document.querySelector("#swayphics-admin-welcome");
+      const targetRect = target.getBoundingClientRect();
+      const primary = node.getAnimations().find(animation =>
+        animation.effect &&
+        Number(animation.effect.getTiming().duration) === 2700 &&
+        animation.effect.getKeyframes().length === 4
+      );
+      return {
+        position: getComputedStyle(node).position,
+        ariaHidden: node.getAttribute("aria-hidden"),
+        flightState: node.getAttribute("data-flight-state"),
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+        targetRect: { left: targetRect.left, top: targetRect.top, width: targetRect.width, height: targetRect.height },
+        animationTime: Number(primary && primary.currentTime || 0)
+      };
+    });
+    assert.equal(flightAtCenter.position, "fixed",
+      "the traveling greeting must be a viewport-level element");
+    assert.equal(flightAtCenter.ariaHidden, "true",
+      "the visual traveling copy must not be announced twice by assistive technology");
+    assert.equal(flightAtCenter.flightState, "in-progress",
+      "the center-to-header animation should report its active phase");
+    assert.ok(
+      Math.abs(flightAtCenter.rect.left + flightAtCenter.rect.width / 2 - flightAtCenter.viewportWidth / 2) < 12 &&
+      Math.abs(flightAtCenter.rect.top + flightAtCenter.rect.height / 2 - flightAtCenter.viewportHeight / 2) < 12,
+      "the greeting must pop into the center of the viewport before it travels"
+    );
+    assert.ok(flightAtCenter.rect.width > flightAtCenter.targetRect.width + 25,
+      "the greeting must start visibly larger than its final header size");
+    assert.ok(flightAtCenter.rect.height > flightAtCenter.targetRect.height + 18,
+      "the greeting must start visibly taller than its final header size");
+
+    await page.waitForTimeout(1050);
+    const flightInMotion = await centerFlight.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const targetRect = document.querySelector("#swayphics-admin-welcome").getBoundingClientRect();
+      const primary = node.getAnimations().find(animation =>
+        animation.effect &&
+        Number(animation.effect.getTiming().duration) === 2700 &&
+        animation.effect.getKeyframes().length === 4
+      );
+      const initial = {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height
+      };
+      return {
+        animationTime: Number(primary && primary.currentTime || 0),
+        rect: initial,
+        targetRect: { left: targetRect.left, top: targetRect.top, width: targetRect.width, height: targetRect.height },
+        distanceToTarget: Math.hypot(initial.left - targetRect.left, initial.top - targetRect.top)
+      };
+    });
+    assert.ok(flightInMotion.animationTime > flightAtCenter.animationTime,
+      "the center-to-header flight timeline must advance");
+    assert.ok(flightInMotion.distanceToTarget <
+      Math.hypot(
+        flightAtCenter.rect.left - flightAtCenter.targetRect.left,
+        flightAtCenter.rect.top - flightAtCenter.targetRect.top
+      ),
+      "the greeting must move from the viewport center toward its header destination");
+    assert.ok(flightInMotion.rect.width < flightAtCenter.rect.width - 8,
+      "the greeting must gradually shrink as it travels toward the header");
+
+    await centerFlight.waitFor({ state: "detached", timeout: 4000 });
+    const settledGreeting = await welcomeToast.evaluate(node => ({
+      flightState: node.getAttribute("data-flight-state"),
+      opacity: getComputedStyle(node).opacity,
+      isInsideHeader: node.parentElement?.classList.contains("admin-header-inner") === true
+    }));
+    assert.equal(settledGreeting.flightState, null,
+      "the temporary flight state must clear when the greeting settles");
+    assert.equal(settledGreeting.opacity, "1",
+      "the original greeting must become visible after the traveling copy arrives");
+    assert.equal(settledGreeting.isInsideHeader, true,
+      "the original greeting must remain in its existing header position after the flight");
+
     assert.equal(welcomeVisual.accessibleRole, "status", "welcome message must expose a status role");
     assert.equal(welcomeVisual.ariaLive, "polite", "welcome message must announce politely to assistive technology");
 

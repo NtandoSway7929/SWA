@@ -462,3 +462,54 @@
         box-shadow: none !important;
     }
 }
+
+/* The transient center-screen copy flies into the real header greeting.
+   The real grid item remains mounted underneath it, preserving header layout. */
+.swayphics-welcome-flight {
+    position: fixed !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    flex: none !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    overflow: hidden !important;
+    isolation: isolate !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    pointer-events: none !important;
+    transform-origin: center center !important;
+    will-change: left, top, width, height, transform, opacity;
+}
+
+/* WAAPI owns the travelling card's position, size and opacity. Keep its
+   animated light glint, trails and particles, but avoid competing transforms. */
+.swayphics-welcome-flight.swayphics-welcome-animate {
+    animation: none !important;
+}
+
+.swayphics-welcome-flight .swayphics-welcome-title {
+    font-size: clamp(1.05rem, 2vw, 1.45rem);
+    line-height: 1.18;
+}
+
+.swayphics-welcome-flight .swayphics-welcome-subtitle {
+    font-size: clamp(0.78rem, 1.2vw, 0.9rem);
+    line-height: 1.25;
+}
+
+.swayphics-welcome-flight .swayphics-welcome-copy {
+    text-align: left;
+}
+
+.sway-dark-mode .swayphics-welcome-flight {
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.38) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .swayphics-welcome-flight {
+        display: none !important;
+    }
+}
+
