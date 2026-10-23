@@ -7,6 +7,9 @@ const BASE_URL = "http://127.0.0.1:4173/admin-dashboard/index.html";
 const SUPABASE_ORIGIN = "https://sqifhribgsqfaxgtobsa.supabase.co";
 const TEST_USER_ID = "11111111-1111-4111-8111-111111111111";
 const ARTIFACT_DIR = path.resolve("artifacts/innerme-chat-browser-smoke");
+const REPO_ROOT = path.resolve(__dirname, "..");
+const dashboardHtmlSource = fs.readFileSync(path.join(REPO_ROOT, "admin-dashboard/index.html"), "utf8");
+const welcomeCssSource = fs.readFileSync(path.join(REPO_ROOT, "admin-dashboard/admin-welcome.css"), "utf8");
 
 const markdownAnswer = [
   "## Browser smoke answer",
@@ -797,6 +800,9 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       position: getComputedStyle(node).position,
       isInsideHeader: node.parentElement?.classList.contains("admin-header-inner") === true,
       isAnimated: node.classList.contains("swayphics-welcome-animate"),
+      entryAnimation: getComputedStyle(node).animationName,
+      trailAnimation: getComputedStyle(node.querySelector(".swayphics-welcome-light-trails span")).animationName,
+      trailAnimationDuration: getComputedStyle(node.querySelector(".swayphics-welcome-light-trails span")).animationDuration,
       accessibleRole: node.getAttribute("role"),
       ariaLive: node.getAttribute("aria-live")
     }));
@@ -808,8 +814,91 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     assert.equal(welcomeVisual.isInsideHeader, true, "welcome greeting must be mounted inside the existing header");
     assert.notEqual(welcomeVisual.position, "fixed", "welcome greeting must not render as a separate viewport overlay");
     assert.equal(welcomeVisual.isAnimated, true, "a new login should animate when reduced motion is not requested");
+    assert.notEqual(welcomeVisual.entryAnimation, "none", "welcome entry must have a real CSS animation");
+    assert.notEqual(welcomeVisual.trailAnimation, "none", "blue light trails must have a real CSS animation");
+    assert.notEqual(welcomeVisual.trailAnimationDuration, "0s", "light-trail animation must have a visible duration");
     assert.equal(welcomeVisual.accessibleRole, "status", "welcome message must expose a status role");
     assert.equal(welcomeVisual.ariaLive, "polite", "welcome message must announce politely to assistive technology");
+
+    // The welcome stylesheet must load after the large inline CSS block, and each
+    // visible header item must occupy a deliberate grid area instead of auto-flowing.
+    const desktopHeaderLayout = await page.evaluate(() => {
+      const header = document.querySelector(".admin-header-inner");
+      const rect = node => {
+        const r = node.getBoundingClientRect();
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+      };
+      const welcomeLink = document.querySelector('link[href*="admin-welcome.css"]');
+      const headChildren = Array.from(document.head.children);
+      const welcomeLinkIndex = headChildren.indexOf(welcomeLink);
+      const lastStyleIndex = headChildren.reduce((last, node, index) =>
+        node.tagName === "STYLE" ? index : last, -1);
+      return {
+        header: rect(header),
+        brand: rect(header.querySelector(".admin-brand")),
+        welcome: rect(header.querySelector(".swayphics-welcome-toast")),
+        search: rect(header.querySelector(".admin-global-search")),
+        controls: rect(header.querySelector(".admin-header-right")),
+        toggleDisplay: getComputedStyle(header.querySelector(".admin-mobile-sidebar-toggle")).display,
+        gridTemplateAreas: getComputedStyle(header).gridTemplateAreas,
+        gridTemplateColumns: getComputedStyle(header).gridTemplateColumns,
+        welcomeLinkIndex,
+        lastStyleIndex
+      };
+    });
+    assert.ok(desktopHeaderLayout.welcomeLinkIndex > desktopHeaderLayout.lastStyleIndex,
+      "welcome stylesheet must load after the dashboard's inline layout rules");
+    assert.equal(desktopHeaderLayout.toggleDisplay, "none",
+      "mobile sidebar toggle must not become an extra desktop grid item");
+    assert.ok(desktopHeaderLayout.gridTemplateAreas.includes("welcome"),
+      "desktop header must reserve an explicit grid area for the greeting");
+    const desktopHeaderItems = [
+      desktopHeaderLayout.brand,
+      desktopHeaderLayout.welcome,
+      desktopHeaderLayout.search,
+      desktopHeaderLayout.controls
+    ].filter(item => item.width > 0).sort((a, b) => a.left - b.left);
+    assert.equal(desktopHeaderItems.length, 4, "all four desktop header items must be visible");
+    for (let index = 1; index < desktopHeaderItems.length; index += 1) {
+      assert.ok(desktopHeaderItems[index - 1].right <= desktopHeaderItems[index].left + 1,
+        "desktop header items must not overlap or pile up");
+    }
+    assert.ok(desktopHeaderItems.every(item =>
+      item.left >= desktopHeaderLayout.header.left - 1 &&
+      item.right <= desktopHeaderLayout.header.right + 1),
+      "desktop header items must fit inside the header container");
+
+    await page.setViewportSize({ width: 1024, height: 900 });
+    const tabletHeaderLayout = await page.evaluate(() => {
+      const header = document.querySelector(".admin-header-inner");
+      const rect = node => {
+        const r = node.getBoundingClientRect();
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+      };
+      return {
+        header: rect(header),
+        toggle: rect(header.querySelector(".admin-mobile-sidebar-toggle")),
+        brand: rect(header.querySelector(".admin-brand")),
+        welcome: rect(header.querySelector(".swayphics-welcome-toast")),
+        search: rect(header.querySelector(".admin-global-search")),
+        controls: rect(header.querySelector(".admin-header-right")),
+        gridTemplateAreas: getComputedStyle(header).gridTemplateAreas
+      };
+    });
+    assert.ok(tabletHeaderLayout.gridTemplateAreas.includes("toggle"),
+      "tablet header must reserve a grid area for its sidebar toggle");
+    assert.ok(tabletHeaderLayout.welcome.top >= tabletHeaderLayout.controls.bottom - 1,
+      "tablet greeting must occupy a separate row below the controls");
+    const tabletTopRow = [
+      tabletHeaderLayout.toggle,
+      tabletHeaderLayout.brand,
+      tabletHeaderLayout.search,
+      tabletHeaderLayout.controls
+    ].filter(item => item.width > 0).sort((a, b) => a.left - b.left);
+    for (let index = 1; index < tabletTopRow.length; index += 1) {
+      assert.ok(tabletTopRow[index - 1].right <= tabletTopRow[index].left + 1,
+        "tablet controls must not overlap horizontally");
+    }
 
     // Verify readable copy in dark mode without depending on a screenshot.
     await page.locator("#admin-theme-toggle").click();
