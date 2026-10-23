@@ -14247,6 +14247,9 @@ function simpleBars(items, color) {
         // Retain a newly-created invoice ID across retries if a later item,
         // activity-log, refresh, or send step fails after the invoice POST.
         let pendingInvoiceId = invoice && invoice.id ? invoice.id : null;
+        // Once the send endpoint confirms success, retries must not send again
+        // just because a later activity-log or refresh step failed.
+        let pendingInvoiceSent = false;
 
         function closeModal() {
             root.remove();
@@ -14838,11 +14841,20 @@ function simpleBars(items, color) {
                     savedId
                 );
 
-                if (shouldSend) {
-                    await sendInvoiceById(
-                        savedId,
-                        false
-                    );
+                if (shouldSend && !pendingInvoiceSent) {
+                    const selectedClient = state.clients.find(function (item) {
+                        return item.id === clientId;
+                    });
+
+                    if (!selectedClient || !selectedClient.email) {
+                        throw new Error("This client does not have an email address.");
+                    }
+
+                    // Separate the send request from refreshData(): once the send
+                    // endpoint succeeds, remember that fact before any later step
+                    // can fail and expose a retry path.
+                    await invokeInvoiceFunction(savedId, "send");
+                    pendingInvoiceSent = true;
 
                     await logActivity(
                         "Sent invoice " +
