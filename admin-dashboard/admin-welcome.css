@@ -259,6 +259,13 @@
 }
 
 @media (max-width: 760px) {
+    /* The legacy mobile header reserves 62px for its old absolutely-positioned
+       search field. The greeting-aware layout puts search in the grid, so remove
+       that obsolete spacer only while this layout is active. */
+    .admin-header.swayphics-has-welcome {
+        padding-bottom: 12px !important;
+    }
+
     .admin-header-inner.swayphics-has-welcome {
         display: grid !important;
         grid-template-columns: 38px auto minmax(0, 1fr) !important;
