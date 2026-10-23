@@ -12337,6 +12337,7 @@ function simpleBars(items, color) {
 
         const rows =
             visibleLeads.map(function (item) {
+                const contactStatus = leadContactStatus(item);
                 return (
                     '<tr data-admin-table-row="leads" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableControls.searchText("leads", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="leads:' + esc(item.id) + '">' +
                         adminTableControls.selectionCell("leads", item, item.business_name || item.contact_name || "lead") +
@@ -12407,6 +12408,15 @@ function simpleBars(items, color) {
                                         '<button type="button" class="sway-row-action" data-draft-lead-proposal="' +
                                             esc(item.id) +
                                         '">Draft proposal</button>' +
+                                        (
+                                            contactStatus.source === "communication"
+                                                ? '<button type="button" class="sway-row-action" disabled title="An outbound communication is already recorded for this lead.">Contacted (logged)</button>'
+                                                : '<button type="button" class="sway-row-action" data-toggle-lead-contacted="' +
+                                                  esc(item.id) +
+                                                  '">' +
+                                                  (contactStatus.contacted ? "Undo contacted mark" : "Mark as contacted") +
+                                                  "</button>"
+                                        ) +
                                         (
                                             !["won", "lost", "not interested"].includes(
                                                 String(item.status || "").toLowerCase()

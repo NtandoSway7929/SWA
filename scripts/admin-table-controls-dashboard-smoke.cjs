@@ -136,7 +136,7 @@ function jsonResponse(body, status = 200, extraHeaders = {}) {
     contentType: "application/json; charset=utf-8",
     headers: {
       "Access-Control-Allow-Origin": "http://127.0.0.1:4173",
-      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, OPTIONS",
       "Access-Control-Allow-Headers": "apikey,authorization,content-type,prefer,x-client-info",
       "Access-Control-Max-Age": "600",
       ...extraHeaders
@@ -245,7 +245,7 @@ async function main() {
         status: 204,
         headers: {
           "Access-Control-Allow-Origin": "http://127.0.0.1:4173",
-          "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, OPTIONS",
           "Access-Control-Allow-Headers": "apikey,authorization,content-type,prefer,x-client-info",
           "Access-Control-Max-Age": "600"
         },
@@ -289,6 +289,21 @@ async function main() {
           return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
         }
       }
+      if (method === "POST" && url.pathname === "/rest/v1/rpc/set_swayphics_lead_manual_contact") {
+        const body = JSON.parse(request.postData() || "{}");
+        const record = leads.find(item => String(item.id) === String(body.p_lead_id));
+        if (record) {
+          record.contacted_manually = body.p_contacted === true;
+          metrics.mockedTableActionWrites.push({
+            method,
+            path: url.pathname,
+            id: record.id,
+            contacted_manually: record.contacted_manually
+          });
+          return route.fulfill(jsonResponse([record]));
+        }
+      }
+
       if (method === "POST" && url.pathname === "/rest/v1/activity_log") {
         const body = JSON.parse(request.postData() || "{}");
         mockActivityLog.push(Object.assign({ id: "activity-ui-test-" + (mockActivityLog.length + 1) }, body));
@@ -358,6 +373,19 @@ async function main() {
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 3, "the actual Leads view should render all synthetic lead records");
+
+    const alphaLeadRow = leadRows.filter({ hasText: "Alpha Studio" });
+    await alphaLeadRow.locator(".sway-lead-actions-menu > summary").click();
+    const alphaContactToggle = alphaLeadRow.locator('[data-toggle-lead-contacted="lead-alpha"]');
+    assert.equal((await alphaContactToggle.textContent()).trim(), "Mark as contacted",
+      "the lead Actions dropdown should offer a manual contacted mark when no outbound log exists");
+    await alphaContactToggle.click();
+    await page.waitForFunction(() => {
+      const button = document.querySelector('[data-toggle-lead-contacted="lead-alpha"]');
+      return button && button.textContent.trim() === "Undo contacted mark";
+    });
+    assert.equal(leads.find(item => item.id === "lead-alpha").contacted_manually, true,
+      "marking a lead as contacted should update only the in-memory mocked lead");
 
     await leadView.locator('[data-admin-table-search-input="leads"]').fill("lee@example.invalid");
     const visibleLeadRows = leadView.locator('[data-admin-table-row="leads"]:visible');
@@ -596,8 +624,12 @@ async function main() {
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
-    assert.equal(metrics.mockedTableActionWrites.length, 5,
-      "only the expected task/follow-up action writes should be captured by the in-memory mock");
+    assert.equal(metrics.mockedTableActionWrites.length, 7,
+      "only the expected lead-contact, task and follow-up action writes should be captured by the in-memory mock");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
+      item.id === "lead-alpha" && item.contacted_manually === true),
+      "the contacted toggle should call the existing manual-contact RPC against synthetic lead data");
     assert.equal(tasks.find(item => item.id === "task-urgent").status, "completed");
     assert.equal(followups.find(item => item.id === "follow-sooner").status, "completed");
     assert.equal(leads.find(item => item.id === "lead-bravo").status, "contacted");

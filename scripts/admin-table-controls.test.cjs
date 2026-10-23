@@ -26,6 +26,14 @@ for (const view of ["leads", "followups", "tasks"]) {
 }
 assert.ok(workspaceSource.includes("adminTableControls.bind();"),
     "dashboard view lifecycle must bind the table controls after rendering");
+assert.match(workspaceSource, /data-toggle-lead-contacted=/,
+    "each eligible lead row should expose the contacted toggle in its Actions dropdown");
+assert.match(workspaceSource, /contactStatus\.source === "communication"[\s\S]*?data-toggle-lead-contacted=/,
+    "leads with outbound communication records should be distinguished from manual contact marks");
+assert.match(workspaceSource, /contactStatus\.contacted \? "Undo contacted mark" : "Mark as contacted"/,
+    "the lead contact action should offer the correct mark or undo label");
+assert.match(workspaceSource, /querySelectorAll\("\[data-toggle-lead-contacted\]"\)/,
+    "the existing lead-contact click handler should bind the restored action");
 
 assert.ok(
     workspaceSource.includes('(item.client_id ? clientHealthChip(item.client_id) : "—")'),
