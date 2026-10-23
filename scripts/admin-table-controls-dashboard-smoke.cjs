@@ -24,7 +24,7 @@ const leads = [
     email: "lee@example.invalid", phone: "0000000001", service_interest: "Branding",
     status: "interested", source: "Website", estimated_value: 4500,
     next_follow_up: "2026-10-25", created_at: "2026-10-02T12:00:00Z",
-    updated_at: "2026-10-23T12:00:00Z"
+    updated_at: new Date().toISOString()
   },
   {
     id: "lead-bravo", business_name: "Bravo Cafe", contact_name: "Ana Ndlovu",
