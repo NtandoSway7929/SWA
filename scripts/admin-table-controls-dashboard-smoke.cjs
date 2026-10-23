@@ -336,13 +336,32 @@ async function main() {
     // table-control layout without forcing navigation behind the mobile menu.
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileWorkspace = page.locator("#sway-admin-workspace");
-    if (await mobileWorkspace.evaluate(el => el.classList.contains("nav-open"))) {
-      const mobileToggle = page.locator(".admin-mobile-sidebar-toggle").first();
-      await mobileToggle.waitFor({ state: "visible" });
+    const mobileSidebar = page.locator("#sway-admin-workspace .sway-workspace-sidebar");
+    const mobileToggle = page.locator(".admin-mobile-sidebar-toggle").first();
+    await mobileToggle.waitFor({ state: "visible" });
+    const mobileMenuIsOpen = await page.evaluate(() => {
+      const workspace = document.getElementById("sway-admin-workspace");
+      const sidebar = workspace && workspace.querySelector(".sway-workspace-sidebar");
+      const toggle = document.querySelector(".admin-mobile-sidebar-toggle");
+      return Boolean(
+        workspace && workspace.classList.contains("nav-open") ||
+        sidebar && sidebar.classList.contains("mobile-open") ||
+        document.body.classList.contains("sway-mobile-nav-open") ||
+        toggle && toggle.getAttribute("aria-expanded") === "true"
+      );
+    });
+    if (mobileMenuIsOpen) {
       await mobileToggle.click();
       await page.waitForFunction(() => {
-        const element = document.getElementById("sway-admin-workspace");
-        return !element || !element.classList.contains("nav-open");
+        const workspace = document.getElementById("sway-admin-workspace");
+        const sidebar = workspace && workspace.querySelector(".sway-workspace-sidebar");
+        const toggle = document.querySelector(".admin-mobile-sidebar-toggle");
+        return !(
+          workspace && workspace.classList.contains("nav-open") ||
+          sidebar && sidebar.classList.contains("mobile-open") ||
+          document.body.classList.contains("sway-mobile-nav-open") ||
+          toggle && toggle.getAttribute("aria-expanded") === "true"
+        );
       });
     }
     const controls = page.locator('#sway-workspace-main .sway-admin-table-control-grid');
