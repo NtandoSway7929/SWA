@@ -180,5 +180,9 @@ assert.match(invoiceSaveSource, /let savedId = pendingInvoiceId;/,
     "retrying a partially completed invoice save should update the existing invoice");
 assert.match(invoiceSaveSource, /pendingInvoiceId = savedId;/,
     "a newly created invoice ID should be retained before subsequent steps can fail");
+assert.ok(
+    invoiceSaveSource.indexOf("await refreshData();") < invoiceSaveSource.indexOf("closeModal();"),
+    "the invoice form should remain open until refresh completes successfully"
+);
 
 console.log("Admin table controls tests passed.");
