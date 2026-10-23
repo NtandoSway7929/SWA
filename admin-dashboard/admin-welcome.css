@@ -463,6 +463,24 @@
     }
 }
 
+/* A temporary soft-focus layer keeps the center greeting dominant without
+   blocking taps. The WebKit property is required for Safari/iPhone rendering. */
+.swayphics-welcome-backdrop {
+    position: fixed !important;
+    z-index: 2147483645 !important;
+    inset: 0 !important;
+    background: rgba(5, 16, 42, 0.16);
+    -webkit-backdrop-filter: blur(8px) saturate(0.88);
+    backdrop-filter: blur(8px) saturate(0.88);
+    opacity: 0;
+    pointer-events: none !important;
+    will-change: opacity;
+}
+
+.sway-dark-mode .swayphics-welcome-backdrop {
+    background: rgba(0, 0, 0, 0.28);
+}
+
 /* The transient center-screen copy flies into the real header greeting.
    The real grid item remains mounted underneath it, preserving header layout. */
 .swayphics-welcome-flight {
@@ -507,8 +525,17 @@
     box-shadow: 0 18px 60px rgba(0, 0, 0, 0.38) !important;
 }
 
+@media (max-width: 600px) {
+    /* A slightly lighter blur keeps iPhone Safari responsive while maintaining focus. */
+    .swayphics-welcome-backdrop {
+        -webkit-backdrop-filter: blur(6px) saturate(0.9);
+        backdrop-filter: blur(6px) saturate(0.9);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .swayphics-welcome-flight {
+    .swayphics-welcome-flight,
+    .swayphics-welcome-backdrop {
         display: none !important;
     }
 }
