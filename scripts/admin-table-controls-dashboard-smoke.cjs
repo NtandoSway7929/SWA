@@ -70,6 +70,47 @@ const followups = [
   }
 ];
 
+function dateOffset(days) {
+  const value = new Date();
+  value.setDate(value.getDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+const todayTimestamp = new Date().toISOString();
+
+const clients = [
+  { id: "client-alpha", business_name: "Alpha Client", contact_name: "Alex", email: "billing@alpha.example", status: "active", created_at: todayTimestamp },
+  { id: "client-bravo", business_name: "Bravo Cafe", contact_name: "Ana", email: "accounts@bravo.example", status: "active", created_at: todayTimestamp },
+  { id: "client-zulu", business_name: "Zulu Market", contact_name: "Lee", email: "finance@zulu.example", status: "active", created_at: todayTimestamp }
+];
+
+const invoices = [
+  {
+    id: "invoice-draft", invoice_number: "INV-CI-100", client_id: "client-alpha",
+    status: "draft", total: 650, amount_paid: 0, amount_outstanding: 650,
+    issue_date: dateOffset(0), due_date: dateOffset(7), archived: false,
+    email: "billing@alpha.example", email_status: "draft", created_at: todayTimestamp
+  },
+  {
+    id: "invoice-sent", invoice_number: "INV-CI-200", client_id: "client-zulu",
+    status: "sent", total: 1500, amount_paid: 0, amount_outstanding: 1500,
+    issue_date: dateOffset(0), due_date: dateOffset(21), archived: false,
+    email: "finance@zulu.example", email_status: "sent", created_at: todayTimestamp
+  },
+  {
+    id: "invoice-paid", invoice_number: "INV-CI-300", client_id: "client-bravo",
+    status: "paid", total: 900, amount_paid: 900, amount_outstanding: 0,
+    issue_date: dateOffset(0), due_date: dateOffset(14), archived: false,
+    email: "accounts@bravo.example", email_status: "sent", created_at: todayTimestamp
+  },
+  {
+    id: "invoice-archived", invoice_number: "INV-CI-ARCH", client_id: "client-alpha",
+    status: "paid", total: 500, amount_paid: 500, amount_outstanding: 0,
+    issue_date: dateOffset(-30), due_date: dateOffset(-4), archived: true,
+    email: "billing@alpha.example", email_status: "sent", created_at: dateOffset(-30) + "T12:00:00Z"
+  }
+];
+
 const metrics = {
   apiReads: 0,
   apiMutationsBlocked: [],
@@ -127,14 +168,14 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/leads") return leads;
   if (url.pathname === "/rest/v1/tasks") return tasks;
   if (url.pathname === "/rest/v1/follow_ups") return followups;
-  if (url.pathname === "/rest/v1/clients") return [];
+  if (url.pathname === "/rest/v1/clients") return clients;
   if (url.pathname === "/rest/v1/client_projects") return [];
   if (url.pathname === "/rest/v1/quotes") return [];
   if (url.pathname === "/rest/v1/payments") return [];
   if (url.pathname === "/rest/v1/website_enquiries") return [];
   if (url.pathname === "/rest/v1/activity_log") return mockActivityLog;
   if (url.pathname === "/rest/v1/site_announcements") return [];
-  if (url.pathname === "/rest/v1/invoices") return [];
+  if (url.pathname === "/rest/v1/invoices") return invoices;
   if (url.pathname === "/rest/v1/services") {
     // Supply the dashboard's existing catalogue so startup does not try to
     // create default services against any real backend.
@@ -377,6 +418,71 @@ async function main() {
       "the actual Tasks view should filter pending tasks");
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-desktop.png"), fullPage: true });
 
+    // Phase 3: invoice table controls must affect rows only, not billing totals.
+    await navigate("invoices", "billing");
+    const invoiceRows = page.locator('#sway-workspace-main [data-admin-table-row="invoices"]');
+    assert.equal(await invoiceRows.count(), 3,
+      "the active invoice table should exclude archived synthetic invoices");
+
+    const invoiceStats = page.locator("#sway-workspace-main .sway-workspace-grid .sway-stat-card");
+    const invoiceStatsBefore = await invoiceStats.allInnerTexts();
+    assert.equal(invoiceStatsBefore.length, 4, "the invoice summary should keep its four full-set KPI cards");
+
+    await page.locator('[data-admin-table-filter="invoices"]').selectOption("sent");
+    assert.equal(await invoiceRows.filter({ visible: true }).count(), 1,
+      "invoice status filter should show only sent active invoices");
+    assert.ok((await invoiceRows.filter({ visible: true }).first().innerText()).includes("INV-CI-200"),
+      "invoice status filter should return the sent synthetic invoice");
+
+    await page.locator('[data-admin-table-filter="invoices"]').selectOption("all");
+    await page.locator('[data-admin-table-search-input="invoices"]').fill("INV-CI-200");
+    assert.equal(await invoiceRows.filter({ visible: true }).count(), 1,
+      "invoice search should match invoice numbers");
+    assert.ok((await invoiceRows.filter({ visible: true }).first().innerText()).includes("Zulu Market"),
+      "invoice search should retain the matching client detail");
+
+    await page.locator('[data-admin-table-search-input="invoices"]').fill("Zulu Market");
+    assert.equal(await invoiceRows.filter({ visible: true }).count(), 1,
+      "invoice search should also match client names");
+    assert.ok((await invoiceRows.filter({ visible: true }).first().innerText()).includes("INV-CI-200"),
+      "client-name search should return the linked invoice");
+
+    await page.locator('[data-admin-table-search-input="invoices"]').fill("");
+    await page.locator('[data-admin-table-sort="invoices"]').selectOption("invoice_due_asc");
+    assert.ok((await invoiceRows.filter({ visible: true }).first().innerText()).includes("INV-CI-100"),
+      "invoice due-date sorting should put the soonest active invoice first");
+    await page.locator('[data-admin-table-sort="invoices"]').selectOption("invoice_total_desc");
+    assert.ok((await invoiceRows.filter({ visible: true }).first().innerText()).includes("INV-CI-200"),
+      "invoice total sorting should put the largest invoice first");
+
+    const invoiceStatsAfterFiltering = await invoiceStats.allInnerTexts();
+    assert.deepEqual(invoiceStatsAfterFiltering, invoiceStatsBefore,
+      "invoice filtering and sorting must not recalculate the billing KPI cards from filtered rows");
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-invoices-desktop.png"), fullPage: true });
+
+    await page.locator('[data-invoice-filter="archived"]').click();
+    assert.equal(await invoiceRows.count(), 1,
+      "the existing archive toggle should switch the table to archived invoices only");
+    const archivedInvoiceText = await invoiceRows.first().innerText();
+    assert.ok(archivedInvoiceText.includes("INV-CI-ARCH"),
+      "the archive mode should show the archived invoice");
+    assert.ok(/archived/i.test(archivedInvoiceText) && /paid/i.test(archivedInvoiceText),
+      "archived rows should retain both archive status and original invoice status");
+    await page.locator('[data-admin-table-filter="invoices"]').selectOption("paid");
+    assert.equal(await invoiceRows.filter({ visible: true }).count(), 1,
+      "archived mode should still filter by the invoice's original status");
+
+    await page.locator('[data-invoice-filter="archived"]').click();
+    assert.equal(await invoiceRows.count(), 3,
+      "toggling back should restore the active invoice set");
+    assert.equal(await page.locator('[data-admin-table-filter="invoices"]').inputValue(), "all",
+      "switching archive modes should clear a stale status filter");
+    assert.deepEqual(await invoiceStats.allInnerTexts(), invoiceStatsBefore,
+      "restoring active mode should preserve the original active billing totals");
+
+    // Return to Tasks after invoice assertions; the taskRows locator resolves against the current view.
+    await navigate("tasks", "delivery");
+
     // Cancelling the confirmation must not mutate either mock records or write logs.
     const writeCountBeforeCancel = metrics.mockedTableActionWrites.length;
     await taskRows.filter({ hasText: "Confirm scope" })
@@ -521,7 +627,12 @@ async function main() {
         "confirmed task completion updates the synthetic task only",
         "confirmed follow-up completion updates the linked synthetic lead",
         "activity log POSTs are intercepted by the in-memory mock",
-        "mobile controls use a single-column layout and fit in viewport"
+        "mobile controls use a single-column layout and fit in viewport",
+        "invoice search by invoice number and client",
+        "invoice status filtering and due-date/total sorting",
+        "archive toggle preserves separate active and archived sets",
+        "invoice filters and sorting do not change KPI totals",
+        "archived invoices retain their original status and can be filtered"
       ]
     };
     fs.writeFileSync(path.join(ARTIFACT_DIR, "dashboard-smoke-summary.json"), JSON.stringify(summary, null, 2));

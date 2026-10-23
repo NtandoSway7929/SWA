@@ -24,10 +24,11 @@
         tableControls: {
             leads: { search: "", filter: "all", sort: "followup_asc" },
             tasks: { search: "", filter: "all", sort: "due_asc" },
-            followups: { search: "", filter: "all", sort: "scheduled_asc" }
+            followups: { search: "", filter: "all", sort: "scheduled_asc" },
+            invoices: { search: "", filter: "all", sort: "invoice_due_asc" }
         },
-        tableSelection: { leads: [], tasks: [], followups: [] },
-        tableFeedback: { leads: "", tasks: "", followups: "" },
+        tableSelection: { leads: [], tasks: [], followups: [], invoices: [] },
+        tableFeedback: { leads: "", tasks: "", followups: "", invoices: "" },
         tableBulkActionRunning: false,
         currentUser: null,
         currentAdmin: null,
@@ -12079,7 +12080,16 @@ function simpleBars(items, color) {
         completeFollowup: completeFollowup,
         renderView: renderView,
         swayAlert: swayAlert,
-        swayConfirm: swayConfirm
+        swayConfirm: swayConfirm,
+        invoiceStatus: function (item) {
+            if (item.archived !== true &&
+                item.status !== "paid" &&
+                item.status !== "cancelled" &&
+                item.due_date &&
+                isOverdue(item.due_date)
+            ) return "overdue";
+            return String(item.status || "").toLowerCase();
+        }
     });
 
     function renderTasks() {
@@ -17280,8 +17290,11 @@ function simpleBars(items, color) {
                 );
             });
 
+        const tableItems =
+            adminTableControls.items("invoices", visibleInvoices);
+
         const rows =
-            visibleInvoices.map(function (item) {
+            tableItems.map(function (item) {
                 const overdueNow =
                     !item.archived &&
                     item.status !== "paid" &&
@@ -17296,7 +17309,10 @@ function simpleBars(items, color) {
                     );
 
                 return (
-                    '<tr data-ai-record="invoices:' + esc(item.id) + '">' +
+                    '<tr data-admin-table-row="invoices" data-admin-table-id="' + esc(item.id) +
+                        '" data-admin-table-search="' + esc(adminTableControls.searchText("invoices", item)) +
+                        '" data-admin-table-filter="' + esc(adminTableControls.statusValue("invoices", item)) +
+                        '" data-ai-record="invoices:' + esc(item.id) + '">' +
                         "<td>" +
                             "<strong>" +
                                 esc(item.invoice_number) +
@@ -17327,7 +17343,7 @@ function simpleBars(items, color) {
                         "<td>" +
                             (
                                 item.archived
-                                    ? chip("archived")
+                                    ? chip("archived") + " " + chip(item.status)
                                     : chip(
                                         overdueNow
                                             ? "overdue"
@@ -17470,15 +17486,18 @@ function simpleBars(items, color) {
                 showArchived
                     ? "Historical invoices kept out of the active billing workspace."
                     : "Branded invoice records connected to clients and the finance layer.",
-                visibleInvoices.length
+                adminTableControls.renderControls("invoices", visibleInvoices) +
+                (visibleInvoices.length
                     ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Invoice</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Due</th><th>Email</th><th></th></tr></thead><tbody>' +
                       rows +
+                      '<tr data-admin-table-no-results="invoices" hidden><td colspan="8">No invoices match these controls. Try another search or status.</td></tr>' +
                       "</tbody></table></div>"
                     : empty(
                         showArchived
                             ? "No archived invoices."
                             : "No active invoices yet. Create the first invoice from the button above."
                     )
+                )
             )
         );
     }
@@ -26807,6 +26826,9 @@ function simpleBars(items, color) {
                     function () {
                         state.showArchivedInvoices =
                             !state.showArchivedInvoices;
+                        if (state.tableControls.invoices) {
+                            state.tableControls.invoices.filter = "all";
+                        }
 
                         renderView();
                     }

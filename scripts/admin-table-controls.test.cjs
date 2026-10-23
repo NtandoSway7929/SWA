@@ -40,10 +40,11 @@ const state = {
     tableControls: {
         leads: { search: "", filter: "all", sort: "value_desc" },
         tasks: { search: "", filter: "all", sort: "priority_desc" },
-        followups: { search: "", filter: "all", sort: "scheduled_asc" }
+        followups: { search: "", filter: "all", sort: "scheduled_asc" },
+        invoices: { search: "", filter: "all", sort: "invoice_due_asc" }
     },
-    tableSelection: { leads: ["lead-mid"], tasks: [], followups: [] },
-    tableFeedback: { leads: "", tasks: "", followups: "" },
+    tableSelection: { leads: ["lead-mid"], tasks: [], followups: [], invoices: [] },
+    tableFeedback: { leads: "", tasks: "", followups: "", invoices: "" },
     tableBulkActionRunning: false,
     leads: [
         { id: "lead-low", business_name: "Alpha", contact_name: "Sam", email: "sam@example.com", status: "new", estimated_value: 250, next_follow_up: "2026-11-03" },
@@ -59,6 +60,12 @@ const state = {
         { id: "followup-later", lead_id: "lead-low", channel: "Email", status: "pending", scheduled_for: "2026-11-02", note: "call later" },
         { id: "followup-sooner", lead_id: "lead-mid", channel: "WhatsApp", status: "pending", scheduled_for: "2026-10-24" },
         { id: "followup-done", lead_id: "lead-high", channel: "Email", status: "completed", scheduled_for: "2026-10-23" }
+    ],
+    invoices: [
+        { id: "inv-sent", invoice_number: "INV-100", client_id: "client-zulu", status: "sent", display_status: "sent", total: 1500, amount_paid: 0, amount_outstanding: 1500, due_date: "2026-11-10", issue_date: "2026-10-10", created_at: "2026-10-10T12:00:00Z", archived: false, email: "finance@zulu.example", email_status: "sent" },
+        { id: "inv-paid", invoice_number: "INV-101", client_id: "client-alpha", status: "paid", display_status: "paid", total: 900, amount_paid: 900, amount_outstanding: 0, due_date: "2026-10-30", issue_date: "2026-10-05", created_at: "2026-10-05T12:00:00Z", archived: false, email: "billing@alpha.example", email_status: "sent" },
+        { id: "inv-archived", invoice_number: "INV-ARCH", client_id: "client-alpha", status: "paid", display_status: "paid", total: 650, amount_paid: 650, amount_outstanding: 0, due_date: "2026-10-01", issue_date: "2026-09-15", created_at: "2026-09-15T12:00:00Z", archived: true, email: "billing@alpha.example", email_status: "sent" },
+        { id: "inv-overdue", invoice_number: "INV-099", client_id: "client-bravo", status: "sent", display_status: "overdue", total: 2100, amount_paid: 0, amount_outstanding: 2100, due_date: "2026-10-10", issue_date: "2026-09-10", created_at: "2026-09-10T12:00:00Z", archived: false, email: "accounts@bravo.example", email_status: "sent" }
     ],
     clients: [],
     admins: []
@@ -86,7 +93,8 @@ const controls = global.window.createSwayphicsAdminTableControls({
     completeFollowup: async () => {},
     renderView: () => {},
     swayAlert: () => {},
-    swayConfirm: async () => true
+    swayConfirm: async () => true,
+    invoiceStatus: item => item.archived ? item.status : (item.display_status || item.status)
 });
 
 assert.deepEqual(
@@ -148,6 +156,61 @@ assert.match(controlsMarkup, /data-admin-table-search-input="leads"/);
 assert.match(controlsMarkup, /data-admin-table-filter="leads"/);
 assert.match(controlsMarkup, /data-admin-table-sort="leads"/);
 assert.match(controlsMarkup, /Export selected CSV/);
+
+state.tableControls.invoices.sort = "invoice_due_asc";
+assert.deepEqual(
+    controls.items("invoices", state.invoices).map(item => item.id),
+    ["inv-archived", "inv-overdue", "inv-paid", "inv-sent"],
+    "invoice due-date sorting should put earliest due dates first"
+);
+
+state.tableControls.invoices.sort = "invoice_total_desc";
+assert.deepEqual(
+    controls.items("invoices", state.invoices).map(item => item.id),
+    ["inv-overdue", "inv-sent", "inv-paid", "inv-archived"],
+    "invoice total sorting should be highest to lowest"
+);
+
+state.tableControls.invoices.sort = "invoice_client_asc";
+assert.deepEqual(
+    controls.items("invoices", state.invoices).map(item => item.id),
+    ["inv-paid", "inv-archived", "inv-overdue", "inv-sent"],
+    "invoice client sorting should be alphabetical with an invoice-number tie-breaker"
+);
+
+state.tableControls.invoices.sort = "invoice_issued_desc";
+assert.deepEqual(
+    controls.items("invoices", state.invoices).map(item => item.id),
+    ["inv-sent", "inv-paid", "inv-archived", "inv-overdue"],
+    "invoice issue-date sorting should put the newest invoice first"
+);
+
+assert.match(controls.searchText("invoices", state.invoices[0]), /inv-100/i);
+assert.match(controls.searchText("invoices", state.invoices[0]), /client client-zulu/i);
+assert.match(controls.searchText("invoices", state.invoices[2]), /archived/);
+
+state.tableControls.invoices.filter = "overdue";
+assert.deepEqual(
+    controls.items("invoices", state.invoices).map(item => item.id),
+    ["inv-overdue"],
+    "invoice status filtering should support the displayed overdue status"
+);
+
+const activeInvoices = state.invoices.filter(item => item.archived !== true);
+state.tableControls.invoices.filter = "all";
+const invoiceControlsMarkup = controls.renderControls("invoices", activeInvoices);
+assert.match(invoiceControlsMarkup, /data-admin-table-search-input="invoices"/);
+assert.match(invoiceControlsMarkup, /data-admin-table-filter="invoices"/);
+assert.match(invoiceControlsMarkup, /data-admin-table-sort="invoices"/);
+assert.doesNotMatch(invoiceControlsMarkup, /data-admin-table-select-all="invoices"/);
+assert.doesNotMatch(invoiceControlsMarkup, /data-admin-table-bulk-action/);
+assert.doesNotMatch(invoiceControlsMarkup, /value="archived"/,
+    "active invoice status options should not leak archived records into the active mode");
+
+const archivedInvoices = state.invoices.filter(item => item.archived === true);
+const archivedControlsMarkup = controls.renderControls("invoices", archivedInvoices);
+assert.match(archivedControlsMarkup, /value="paid"/,
+    "archived mode should filter by the underlying invoice status");
 assert.match(moduleSource, /const selectedIds = new Set\(\(state\.tableSelection\[view\] \|\| \[\]\)\.map\(String\)\)/,
     "the UI should re-sync checkbox visuals from the selected-record state");
 assert.ok(moduleSource.includes("const formulaLike = /^[\\s\\uFEFF]*[=+\\-@]/.test(raw);"),
@@ -221,5 +284,9 @@ assert.ok(
 );
 assert.match(invoiceSaveSource, /if \(!selectedClient \|\| !selectedClient\.email\)/,
     "the direct send path must still validate that the selected client has an email address");
+
+assert.ok(moduleSource.includes('["leads", "tasks", "followups", "invoices"].forEach(function (view)'),
+    "invoice search should be reapplied after control-driven rerenders and archive-mode changes");
+
 
 console.log("Admin table controls tests passed.");

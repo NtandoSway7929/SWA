@@ -33,6 +33,12 @@
                     ["scheduled_asc", "Scheduled date (soonest first)"],
                     ["contact_asc", "Contact (A–Z)"],
                     ["status_asc", "Status (A–Z)"]
+                ],
+                invoices: [
+                    ["invoice_due_asc", "Due date (soonest first)"],
+                    ["invoice_total_desc", "Invoice total (high to low)"],
+                    ["invoice_client_asc", "Client name (A–Z)"],
+                    ["invoice_issued_desc", "Newest issued"]
                 ]
             };
             return options[view] || [];
@@ -51,6 +57,14 @@
             return state.tableControls[view];
         }
 
+        function statusValue(view, item) {
+            if (view === "invoices" && typeof context.invoiceStatus === "function") {
+                return String(context.invoiceStatus(item) || "").trim().toLowerCase();
+            }
+            if (view === "invoices" && item.archived === true) return "archived";
+            return String(item.status || "").trim().toLowerCase();
+        }
+
         function searchText(view, item) {
             let fields = [];
             if (view === "leads") {
@@ -62,6 +76,11 @@
             } else if (view === "followups") {
                 fields = [item.lead_id ? leadName(item.lead_id) : clientName(item.client_id),
                     item.channel, item.status, adminName(item.assigned_to), item.scheduled_for, item.note];
+            } else if (view === "invoices") {
+                fields = [item.invoice_number, clientName(item.client_id), item.email, item.status,
+                    statusValue(view, item), item.email_status, item.issue_date, item.due_date,
+                    item.total, item.amount_paid, item.amount_outstanding,
+                    item.archived === true ? "archived" : "active"];
             }
             return fields.filter(function (value) {
                 return value !== null && typeof value !== "undefined";
@@ -72,8 +91,7 @@
             const controls = settings(view);
             const filterValue = String(controls.filter || "all").toLowerCase();
             const result = (sourceItems || []).filter(function (item) {
-                return filterValue === "all" ||
-                    String(item.status || "").toLowerCase() === filterValue;
+                return filterValue === "all" || statusValue(view, item) === filterValue;
             }).slice();
 
             function dateValue(value) {
@@ -89,6 +107,13 @@
             function dateCompare(a, b) {
                 const left = dateValue(a), right = dateValue(b);
                 return left === right ? 0 : left < right ? -1 : 1;
+            }
+            function reverseDateCompare(a, b) {
+                const left = dateValue(a), right = dateValue(b);
+                if (left === right) return 0;
+                if (!Number.isFinite(left)) return 1;
+                if (!Number.isFinite(right)) return -1;
+                return right - left;
             }
             const priority = { urgent: 4, high: 3, normal: 2, medium: 2, low: 1 };
             result.sort(function (a, b) {
@@ -117,6 +142,18 @@
                             b.lead_id ? leadName(b.lead_id) : clientName(b.client_id));
                     case "status_asc":
                         return textCompare(a.status, b.status) || dateCompare(a.scheduled_for, b.scheduled_for);
+                    case "invoice_due_asc":
+                        return dateCompare(a.due_date, b.due_date) ||
+                            textCompare(a.invoice_number, b.invoice_number);
+                    case "invoice_total_desc":
+                        return ((Number(b.total) || 0) - (Number(a.total) || 0)) ||
+                            textCompare(a.invoice_number, b.invoice_number);
+                    case "invoice_client_asc":
+                        return textCompare(clientName(a.client_id), clientName(b.client_id)) ||
+                            textCompare(a.invoice_number, b.invoice_number);
+                    case "invoice_issued_desc":
+                        return reverseDateCompare(a.issue_date || a.created_at, b.issue_date || b.created_at) ||
+                            textCompare(a.invoice_number, b.invoice_number);
                     case "created_desc":
                         return (Date.parse(b.created_at || "") || 0) - (Date.parse(a.created_at || "") || 0);
                     default:
@@ -140,11 +177,13 @@
                 (checked ? " checked" : "") + "></td>";
         }
 
-        function renderControls(view) {
+        function renderControls(view, sourceItems) {
             const controls = settings(view);
-            const records = Array.isArray(state[view]) ? state[view] : [];
+            const records = Array.isArray(sourceItems)
+                ? sourceItems
+                : Array.isArray(state[view]) ? state[view] : [];
             const statuses = Array.from(new Set(records.map(function (item) {
-                return String(item.status || "").trim().toLowerCase();
+                return statusValue(view, item);
             }).filter(Boolean)));
             const currentFilter = String(controls.filter || "all").trim().toLowerCase();
             // Keep a selected status available even when a refresh leaves no rows in that status.
@@ -166,9 +205,12 @@
             }).join("");
             const bulk = view === "leads"
                 ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>'
-                : '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="complete">Complete selected</button>';
+                : view === "invoices" ? "" :
+                '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="complete">Complete selected</button>';
             const placeholder = view === "leads" ? "Business, contact, service or email" :
-                view === "tasks" ? "Task, client, assignee or description" : "Contact, channel or assignee";
+                view === "tasks" ? "Task, client, assignee or description" :
+                view === "invoices" ? "Invoice number, client, status or date" :
+                "Contact, channel or assignee";
             return '<div class="sway-admin-table-tools" data-admin-table-tools="' + esc(view) + '">' +
                 '<div class="sway-admin-table-control-grid">' +
                     '<label class="sway-admin-table-search-label"><span>Search</span>' +
@@ -184,11 +226,12 @@
                             sortHtml + '</select></label>' +
                     '<div class="sway-admin-table-count" data-admin-table-count="' + esc(view) + '" aria-live="polite"></div>' +
                 '</div>' +
-                '<div class="sway-admin-table-bulk-toolbar" data-admin-table-bulk-toolbar="' + esc(view) + '" hidden>' +
-                    '<span class="sway-admin-table-selected-count" data-admin-table-selected-count="' + esc(view) + '">0 selected</span>' +
-                    bulk +
-                    '<button type="button" class="sway-admin-table-clear-selection" data-admin-table-clear-selection="' + esc(view) + '">Clear selection</button>' +
-                '</div>' +
+                (view === "invoices" ? "" :
+                    '<div class="sway-admin-table-bulk-toolbar" data-admin-table-bulk-toolbar="' + esc(view) + '" hidden>' +
+                        '<span class="sway-admin-table-selected-count" data-admin-table-selected-count="' + esc(view) + '">0 selected</span>' +
+                        bulk +
+                        '<button type="button" class="sway-admin-table-clear-selection" data-admin-table-clear-selection="' + esc(view) + '">Clear selection</button>' +
+                    '</div>') +
                 '<p class="sway-admin-table-feedback" data-admin-table-feedback="' + esc(view) +
                 '" role="status" aria-live="polite"' + (state.tableFeedback[view] ? "" : " hidden") + ">" +
                     esc(state.tableFeedback[view] || "") + "</p>" +
@@ -418,7 +461,7 @@
                         button.getAttribute("data-admin-table-bulk-action"));
                 });
             });
-            ["leads", "tasks", "followups"].forEach(function (view) {
+            ["leads", "tasks", "followups", "invoices"].forEach(function (view) {
                 if (workspace.querySelector('[data-admin-table-tools="' + view + '"]')) applySearch(view);
             });
         }
@@ -426,6 +469,7 @@
         return {
             items: items,
             searchText: searchText,
+            statusValue: statusValue,
             selectionCell: selectionCell,
             renderControls: renderControls,
             bind: bind
