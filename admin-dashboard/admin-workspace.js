@@ -6515,10 +6515,6 @@ function renderShell() {
                 "</aside>" +
                 '<div class="sway-workspace-main" id="sway-workspace-main"></div>' +
                 '<div class="sway-quick-create">' +
-                    '<button type="button" class="sway-floating-innerme" id="sway-floating-innerme" aria-label="Ask InnerMe">' +
-                        '<span aria-hidden="true">✦</span>' +
-                        '<span>Ask InnerMe</span>' +
-                    '</button>' +
                     '<button type="button" class="sway-quick-create-toggle" aria-expanded="false" aria-controls="sway-quick-create-menu">' +
                         '<span class="sway-quick-create-plus" aria-hidden="true">+</span>' +
                         '<span>New</span>' +
