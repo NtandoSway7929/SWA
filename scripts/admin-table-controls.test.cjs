@@ -46,12 +46,12 @@ const state = {
         { id: "lead-mid", business_name: "Bravo", contact_name: "Ana", email: "ana@example.com", status: "new", estimated_value: 900, next_follow_up: "2026-10-26" }
     ],
     tasks: [
-        { id: "task-low", title: "Low priority task", priority: "low", status: "pending", due_date: "2026-11-01" },
-        { id: "task-urgent", title: "Urgent task", priority: "urgent", status: "pending", due_date: "2026-11-03" },
+        { id: "task-low", title: "Low priority task", priority: "low", status: "todo", due_date: "2026-11-01" },
+        { id: "task-urgent", title: "Urgent task", priority: "urgent", status: "todo", due_date: "2026-11-03" },
         { id: "task-high", title: "High priority task", priority: "high", status: "completed", due_date: "2026-10-25" }
     ],
     followups: [
-        { id: "followup-later", lead_id: "lead-low", channel: "Email", status: "pending", scheduled_for: "2026-11-02" },
+        { id: "followup-later", lead_id: "lead-low", channel: "Email", status: "pending", scheduled_for: "2026-11-02", note: "call later" },
         { id: "followup-sooner", lead_id: "lead-mid", channel: "WhatsApp", status: "pending", scheduled_for: "2026-10-24" },
         { id: "followup-done", lead_id: "lead-high", channel: "Email", status: "completed", scheduled_for: "2026-10-23" }
     ],
@@ -117,17 +117,23 @@ assert.deepEqual(
     "follow-up status filtering and scheduled-date ordering should work together"
 );
 
+assert.match(
+    controls.searchText("followups", state.followups[0]),
+    /call later/,
+    "follow-up search text should read the database's singular note field"
+);
+
 const selectedCheckbox = controls.selectionCell("leads", state.leads[2], "A&B");
 assert.match(selectedCheckbox, /data-admin-table-select="leads"/);
 assert.match(selectedCheckbox, /checked/);
 assert.match(selectedCheckbox, /A&amp;B/);
 
-state.tableControls.tasks.filter = "pending";
+state.tableControls.tasks.filter = "todo";
 const pendingFilterMarkup = controls.renderControls("tasks");
-assert.match(pendingFilterMarkup, /<option value="pending" selected>pending<\/option>/);
-state.tasks = state.tasks.filter(item => item.status !== "pending");
-const stalePendingFilterMarkup = controls.renderControls("tasks");
-assert.match(stalePendingFilterMarkup, /<option value="pending" selected>pending<\/option>/,
+assert.match(pendingFilterMarkup, /<option value="todo" selected>todo<\/option>/);
+state.tasks = state.tasks.filter(item => item.status !== "todo");
+const staleTodoFilterMarkup = controls.renderControls("tasks");
+assert.match(staleTodoFilterMarkup, /<option value="todo" selected>todo<\/option>/,
     "the active filter must stay represented when no records currently match it");
 assert.deepEqual(controls.items("tasks", state.tasks), [],
     "preserving a stale filter must not silently reset the actual record filter");
