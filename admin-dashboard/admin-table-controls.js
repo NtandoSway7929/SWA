@@ -202,8 +202,13 @@
         function applySearch(view) {
             const query = String(settings(view).search || "").trim().toLowerCase();
             const rows = Array.from(workspace.querySelectorAll('[data-admin-table-row="' + view + '"]'));
+            const selectedIds = new Set((state.tableSelection[view] || []).map(String));
             let visible = 0;
             rows.forEach(function (row) {
+                const rowCheckbox = row.querySelector('[data-admin-table-select="' + view + '"]');
+                if (rowCheckbox) {
+                    rowCheckbox.checked = selectedIds.has(String(rowCheckbox.getAttribute("data-id") || ""));
+                }
                 row.hidden = !!query && !String(row.getAttribute("data-admin-table-search") || "").includes(query);
                 if (!row.hidden) visible += 1;
             });
