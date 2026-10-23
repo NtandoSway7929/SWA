@@ -12448,6 +12448,14 @@ html.dark-mode .sway-ai-revenue-opportunity {
 
     let adminSessionRefreshPromise = null;
 
+    function clearSwayphicsAdminWelcomeMarker() {
+        try {
+            window.sessionStorage.removeItem("swayphics_admin_welcome_pending");
+        } catch (storageError) {
+            // Cleanup must never prevent session invalidation or logout.
+        }
+    }
+
     function adminAccessTokenExpiresSoon() {
         if (!accessToken) {
             return true;
@@ -14559,8 +14567,9 @@ portfolioForm.addEventListener(
     async function verifyAdminSession() {
 
         if (!accessToken) {
+            clearSwayphicsAdminWelcomeMarker();
             window.location.href = "../admin/";
-            return;
+            return false;
         }
 
         try {
@@ -14600,6 +14609,8 @@ portfolioForm.addEventListener(
             if (!response.ok) {
                 throw new Error("Session is no longer valid.");
             }
+
+            return true;
         } catch (error) {
             console.error(
                 "Admin session verification failed:",
@@ -14612,8 +14623,10 @@ portfolioForm.addEventListener(
             localStorage.removeItem(
                 "swayphics_admin_refresh_token"
             );
+            clearSwayphicsAdminWelcomeMarker();
 
             window.location.href = "../admin/";
+            return false;
         }
     }
 
@@ -14667,6 +14680,7 @@ portfolioForm.addEventListener(
                         "swayphics_admin_refresh_token"
                     );
 
+                    clearSwayphicsAdminWelcomeMarker();
 
                     window.location.href =
                         "../admin/";
@@ -14681,13 +14695,13 @@ portfolioForm.addEventListener(
        START
        ========================================================= */
 
-    verifyAdminSession();
+    window.swayphicsAdminSessionReady = verifyAdminSession();
 
 </script>
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=20261023-mobile-sidebar-toggle-1"></script>
+<script src="admin-workspace.js?v=20261023-admin-welcome-auth-handshake-1"></script>
 <script src="innerme-knowledge-intelligence.js?v=20261015-run-controller-1"></script>
 <script src="innerme-predictive-intelligence.js?v=20261008-innerme-nav-polish-2"></script>
 <script src="innerme-autonomy.js?v=20261008-innerme-nav-polish-2"></script>
