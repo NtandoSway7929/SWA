@@ -754,6 +754,25 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     assert.equal(firstWelcome.fullName, "Isolated UI Test", "welcome event must use the active admin full name");
     assert.equal(firstWelcome.pendingMarker, null, "dashboard must consume the marker");
 
+    const welcomeToast = page.locator("#swayphics-admin-welcome");
+    await welcomeToast.waitFor({ state: "attached", timeout: 5000 });
+    const welcomeVisual = await welcomeToast.evaluate(node => ({
+      headline: node.querySelector(".swayphics-welcome-title")?.textContent || "",
+      subtitle: node.querySelector(".swayphics-welcome-subtitle")?.textContent || "",
+      particles: node.querySelectorAll(".swayphics-welcome-particle").length,
+      trails: node.querySelectorAll(".swayphics-welcome-light-trails span").length,
+      pointerEvents: getComputedStyle(node).pointerEvents,
+      accessibleRole: node.getAttribute("role"),
+      ariaLive: node.getAttribute("aria-live")
+    }));
+    assert.match(welcomeVisual.headline, /Isolated UI Test/, "visual greeting must use the active admin full name");
+    assert.ok(welcomeVisual.subtitle.length > 0, "visual greeting must include its time-specific supporting line");
+    assert.equal(welcomeVisual.particles, 14, "welcome visual must include the abstract particle layer");
+    assert.equal(welcomeVisual.trails, 3, "welcome visual must include three light-trail elements");
+    assert.equal(welcomeVisual.pointerEvents, "none", "welcome visual must not block dashboard controls");
+    assert.equal(welcomeVisual.accessibleRole, "status", "welcome message must expose a status role");
+    assert.equal(welcomeVisual.ariaLive, "polite", "welcome message must announce politely to assistive technology");
+
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
     await page.waitForTimeout(700);
@@ -807,6 +826,9 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       loginCreatesOneWelcomeEvent: true,
       activeAdminFullName: firstWelcome.fullName,
       markerConsumed: true,
+      welcomeAnimationRendered: true,
+      greetingUsesActiveAdminName: true,
+      particleAndLightTrailLayersPresent: true,
       refreshDoesNotReplay: true,
       logoutClearsMarkerAndTokens: true,
       failedLoginClearsStaleMarker: true
