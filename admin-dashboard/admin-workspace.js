@@ -14857,11 +14857,12 @@ function simpleBars(items, color) {
                     );
                 }
 
-                closeModal();
-
+                // Keep the form available unless the save/send and refresh
+                // sequence finishes, so refresh failures do not discard the draft.
                 await refreshData();
                 renderShell();
                 renderView();
+                closeModal();
 
             } catch (error) {
                 // Keep the form open so the user can review and retry.
