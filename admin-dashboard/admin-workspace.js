@@ -6211,6 +6211,14 @@
                 "aria-expanded",
                 String(isOpen)
             );
+            toggle.setAttribute(
+                "aria-label",
+                isOpen ? "Close navigation" : "Open navigation"
+            );
+            toggle.setAttribute(
+                "title",
+                isOpen ? "Close navigation" : "Open navigation"
+            );
         }
     }
 
