@@ -1053,6 +1053,8 @@ async function main() {
     await mobileWelcome.waitFor({ state: "attached", timeout: 10000 });
     const mobileWelcomeLayout = await mobilePage.evaluate(() => {
       const header = document.querySelector(".admin-header-inner");
+      const outerHeader = document.querySelector(".admin-header");
+      const main = document.querySelector(".admin-main");
       const greeting = document.querySelector("#swayphics-admin-welcome");
       const search = header && header.querySelector(".admin-global-search");
       const controls = header && header.querySelector(".admin-header-right");
@@ -1063,6 +1065,9 @@ async function main() {
       return {
         bodyClass: document.body.className,
         header: rect(header),
+        outerHeader: rect(outerHeader),
+        main: rect(main),
+        outerHeaderPaddingBottom: getComputedStyle(outerHeader).paddingBottom,
         greeting: rect(greeting),
         search: rect(search),
         controls: rect(controls),
@@ -1080,6 +1085,12 @@ async function main() {
     assert.ok(mobileWelcomeLayout.search.width > 0, "mobile search must have a non-zero layout width");
     assert.ok(mobileWelcomeLayout.greeting.bottom <= mobileWelcomeLayout.search.top + 1, "mobile greeting and search must occupy separate rows");
     assert.ok(mobileWelcomeLayout.controls.right <= mobileWelcomeLayout.header.right + 1, "mobile header controls must stay inside the header");
+    assert.equal(mobileWelcomeLayout.outerHeaderPaddingBottom, "12px", "welcome-aware mobile header must remove the legacy 62px search spacer");
+    assert.ok(
+      mobileWelcomeLayout.main.top - mobileWelcomeLayout.outerHeader.bottom <= 2,
+      "mobile main content must begin directly after the expanded header, without a reserved search spacer: " +
+        JSON.stringify({ header: mobileWelcomeLayout.outerHeader, main: mobileWelcomeLayout.main })
+    );
     const mobileSize = await assertNoHorizontalOverflow(mobilePage, "Mobile with welcome greeting");
     const mobileLayout = await mobilePage.locator(".sway-ai-panel").evaluate(el => {
       const rect = el.getBoundingClientRect();
@@ -1114,6 +1125,8 @@ async function main() {
     const narrowMobileSize = await assertNoHorizontalOverflow(mobilePage, "Narrow mobile with welcome greeting");
     const narrowGeometry = await mobilePage.evaluate(() => {
       const header = document.querySelector(".admin-header-inner");
+      const outerHeader = document.querySelector(".admin-header");
+      const main = document.querySelector(".admin-main");
       const greeting = document.querySelector("#swayphics-admin-welcome");
       const search = header && header.querySelector(".admin-global-search");
       const controls = header && header.querySelector(".admin-header-right");
@@ -1121,11 +1134,21 @@ async function main() {
         const r = node.getBoundingClientRect();
         return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
       };
-      return { header: rect(header), greeting: rect(greeting), search: rect(search), controls: rect(controls) };
+      return {
+        header: rect(header),
+        outerHeader: rect(outerHeader),
+        main: rect(main),
+        outerHeaderPaddingBottom: getComputedStyle(outerHeader).paddingBottom,
+        greeting: rect(greeting),
+        search: rect(search),
+        controls: rect(controls)
+      };
     });
     assert.ok(narrowGeometry.greeting.width > 0 && narrowGeometry.search.width > 0, "greeting and search must remain visible at 320px");
     assert.ok(narrowGeometry.greeting.bottom <= narrowGeometry.search.top + 1, "greeting and search must not overlap at 320px");
     assert.ok(narrowGeometry.controls.right <= narrowGeometry.header.right + 1, "header controls must stay inside the 320px header");
+    assert.equal(narrowGeometry.outerHeaderPaddingBottom, "12px", "320px welcome header must not retain the legacy spacer");
+    assert.ok(narrowGeometry.main.top - narrowGeometry.outerHeader.bottom <= 2, "320px content must start directly after the header");
 
     const mobileInteractions = await askMockedQuestion(mobilePage);
     const composerStatusLayout = await mobilePage.evaluate(() => {
