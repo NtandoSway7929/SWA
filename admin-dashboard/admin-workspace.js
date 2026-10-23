@@ -28182,7 +28182,7 @@ function simpleBars(items, color) {
             return;
         }
 
-        // A pending marker authorizes motion; a verified active session always receives static greeting copy.
+        // A marker from a different identity must never authorize motion or copy.
         if (
             marker &&
             marker.userId !== String(state.currentUser.id)
@@ -28195,13 +28195,39 @@ function simpleBars(items, color) {
                 ? state.currentAdmin.full_name.trim()
                 : "";
 
+        // Animate once for the first verified dashboard view in this tab/user session,
+        // even if the login-page marker was unavailable. Remember the user before the
+        // event dispatch so rerenders/reloads cannot restart the sequence.
+        let shouldAnimateWelcome = Boolean(marker);
+
+        try {
+            const seenUserId = window.sessionStorage.getItem(
+                "swayphics_admin_welcome_seen_user"
+            );
+
+            if (!marker) {
+                shouldAnimateWelcome =
+                    seenUserId !== String(state.currentUser.id);
+            }
+
+            if (shouldAnimateWelcome) {
+                window.sessionStorage.setItem(
+                    "swayphics_admin_welcome_seen_user",
+                    String(state.currentUser.id)
+                );
+            }
+        } catch (storageError) {
+            // If storage is blocked, animate only for a validated one-time login marker.
+            shouldAnimateWelcome = Boolean(marker);
+        }
+
         window.dispatchEvent(
             new CustomEvent(
                 "swayphics:admin-welcome-authorized",
                 {
                     detail: {
                         fullName: fullName,
-                        animate: Boolean(marker)
+                        animate: shouldAnimateWelcome
                     }
                 }
             )
