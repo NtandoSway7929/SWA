@@ -883,7 +883,7 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
         backdropFilter: backdropStyle && (backdropStyle.backdropFilter || backdropStyle.webkitBackdropFilter),
         backdropBlurRadius: parseFloat(
           String(backdropStyle && (backdropStyle.backdropFilter || backdropStyle.webkitBackdropFilter) || "")
-            .match(/blur\\(([-+]?\\d*\\.?\\d+)px\\)/i)?.[1] || "0"
+            .match(/blur\(([-+]?\d*\.?\d+)px\)/i)?.[1] || "0"
         ),
         backdropOpacity: Number(backdropStyle && backdropStyle.opacity),
         backdropPointerEvents: backdropStyle && backdropStyle.pointerEvents
@@ -912,7 +912,7 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       "the background blur must be clearly visible while the greeting is centered");
     assert.match(
       welcomeCssSource,
-      /@media \\(max-width: 600px\\)[\\s\\S]*?-webkit-backdrop-filter: blur\\(12px\\)[\\s\\S]*?backdrop-filter: blur\\(12px\\)/,
+      /@media \(max-width: 600px\)[\s\S]*?-webkit-backdrop-filter: blur\(12px\)[\s\S]*?backdrop-filter: blur\(12px\)/,
       "iPhone-width layouts must use the strengthened Safari-compatible 12px blur"
     );
     assert.equal(flightAtCenter.backdropPointerEvents, "none",
