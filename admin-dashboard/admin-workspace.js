@@ -6162,6 +6162,9 @@
             );
 
         const toggle =
+            document.querySelector(
+                ".admin-mobile-sidebar-toggle"
+            ) ||
             workspace.querySelector(
                 ".sway-workspace-mobile-toggle"
             );
@@ -6550,6 +6553,9 @@ function renderShell() {
         }
 
         const mobileToggle =
+            document.querySelector(
+                ".admin-mobile-sidebar-toggle"
+            ) ||
             workspace.querySelector(
                 ".sway-workspace-mobile-toggle"
             );
