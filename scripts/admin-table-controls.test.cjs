@@ -152,5 +152,11 @@ assert.match(moduleSource, /const selectedIds = new Set\(\(state\.tableSelection
     "the UI should re-sync checkbox visuals from the selected-record state");
 assert.ok(moduleSource.includes("const formulaLike = /^[\\s\\uFEFF]*[=+\\-@]/.test(raw);"),
     "CSV values that can be interpreted as spreadsheet formulas must be neutralised");
+assert.match(moduleSource, /announceFeedback\(view, "Completing " \+ eligible\.length/,
+    "bulk actions should announce their in-progress state through the existing live feedback region");
+assert.match(moduleSource, /The next update failed\. Remaining records stay selected/,
+    "partial failures should retain a safe retry path and explain what happened");
+assert.doesNotMatch(moduleSource, /error && error\.message \? error\.message/,
+    "raw backend/provider error details must not be surfaced directly in the dashboard UI");
 
 console.log("Admin table controls tests passed.");
