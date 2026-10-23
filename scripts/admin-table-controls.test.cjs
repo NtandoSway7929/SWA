@@ -194,6 +194,10 @@ assert.match(invoiceSaveSource, /await invokeInvoiceFunction\(savedId, "send"\);
     "the sent flag must be set immediately after the send endpoint succeeds, before later logging or refresh work");
 assert.match(workspaceSource, /let pendingInvoiceActivityLogged = false;/,
     "invoice activity logging should have independent retry state");
+assert.match(workspaceSource, /let pendingInvoiceChangeActivityLogged = false;/,
+    "invoice create/update activity logging should retain retry state");
+assert.match(invoiceSaveSource, /if \(!pendingInvoiceChangeActivityLogged\) \{\s*await logActivity\([\s\S]*?pendingInvoiceChangeActivityLogged = true;/,
+    "a successful create/update activity entry must not be duplicated when a later step fails");
 assert.match(invoiceSaveSource, /if \(shouldSend && pendingInvoiceSent && !pendingInvoiceActivityLogged\)/,
     "a retry after activity logging fails must log the activity without resending the invoice");
 assert.match(invoiceSaveSource, /await logActivity\([\s\S]*?\);\s*pendingInvoiceActivityLogged = true;/,

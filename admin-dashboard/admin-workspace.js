@@ -14252,6 +14252,8 @@ function simpleBars(items, color) {
         let pendingInvoiceSent = false;
         // Track activity logging separately so a failed log can be retried without resending.
         let pendingInvoiceActivityLogged = false;
+        // Avoid duplicate create/update activity entries after a later step fails.
+        let pendingInvoiceChangeActivityLogged = false;
 
         function closeModal() {
             root.remove();
@@ -14826,22 +14828,25 @@ function simpleBars(items, color) {
                     }
                 );
 
-                await logActivity(
-                    (
-                        invoice
-                            ? "Updated "
-                            : "Created "
-                    ) +
-                    "invoice " +
-                    (
-                        savedInvoice &&
-                        savedInvoice.invoice_number
-                            ? savedInvoice.invoice_number
-                            : savedId
-                    ),
-                    "invoices",
-                    savedId
-                );
+                if (!pendingInvoiceChangeActivityLogged) {
+                    await logActivity(
+                        (
+                            invoice
+                                ? "Updated "
+                                : "Created "
+                        ) +
+                        "invoice " +
+                        (
+                            savedInvoice &&
+                            savedInvoice.invoice_number
+                                ? savedInvoice.invoice_number
+                                : savedId
+                        ),
+                        "invoices",
+                        savedId
+                    );
+                    pendingInvoiceChangeActivityLogged = true;
+                }
 
                 if (shouldSend && !pendingInvoiceSent) {
                     const selectedClient = state.clients.find(function (item) {
@@ -14863,8 +14868,7 @@ function simpleBars(items, color) {
                     await logActivity(
                         "Sent invoice " +
                         (
-                            savedInvoice &&
-                            savedInvoice.invoice_number
+                            savedInvoice && savedInvoice.invoice_number
                                 ? savedInvoice.invoice_number
                                 : savedId
                         ),
@@ -14874,16 +14878,13 @@ function simpleBars(items, color) {
                     pendingInvoiceActivityLogged = true;
                 }
 
-                // Keep the form available unless the save/send and refresh
-                // sequence finishes, so refresh failures do not discard the draft.
                 await refreshData();
                 renderShell();
                 renderView();
                 closeModal();
 
             } catch (error) {
-                // Keep the form open so the user can review and retry.
-                // Do not surface raw API/provider details in the interface.
+                // Keep raw API/provider details out of the dashboard UI.
                 swayAlert(
                     "Unable to complete the invoice action. The form is still open. Review the invoice and try again; if the invoice was sent, check its status before retrying."
                 );
