@@ -159,4 +159,20 @@ assert.match(moduleSource, /The next update failed\. Remaining records stay sele
 assert.doesNotMatch(moduleSource, /error && error\.message \? error\.message/,
     "raw backend/provider error details must not be surfaced directly in the dashboard UI");
 
+const invoiceSaveStart = workspaceSource.indexOf("async function saveInvoice(");
+const invoiceSaveEnd = workspaceSource.indexOf("\\n    function base64ToBytes", invoiceSaveStart);
+assert.ok(invoiceSaveStart >= 0 && invoiceSaveEnd > invoiceSaveStart,
+    "invoice save handler should remain available for regression checks");
+const invoiceSaveSource = workspaceSource.slice(invoiceSaveStart, invoiceSaveEnd);
+assert.match(invoiceSaveSource, /saveButton\.setAttribute\("aria-busy", "true"\)/,
+    "invoice actions should expose an accessible busy state while saving");
+assert.match(invoiceSaveSource, /Saving & sending…/,
+    "the send action should clearly announce its in-progress state");
+assert.match(invoiceSaveSource, /finally \{[\s\S]*saveButton\.removeAttribute\("aria-busy"\)/,
+    "invoice action buttons must always have their busy state cleared");
+assert.match(invoiceSaveSource, /The form is still open[\s\S]*check its status before retrying/,
+    "invoice failures should preserve the form and warn users to verify send status before retrying");
+assert.doesNotMatch(invoiceSaveSource, /swayAlert\(\s*error\.message/,
+    "invoice save errors should not expose raw backend exception text");
+
 console.log("Admin table controls tests passed.");
