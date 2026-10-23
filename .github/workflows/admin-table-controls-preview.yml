@@ -57,7 +57,7 @@ jobs:
           mkdir -p artifacts
           node scripts/admin-table-controls-browser.test.cjs
 
-      - name: Exercise the actual dashboard with mocked auth and read-only synthetic data
+      - name: Exercise the actual dashboard with in-memory mocked API data
         shell: bash
         run: |
           set -euo pipefail
