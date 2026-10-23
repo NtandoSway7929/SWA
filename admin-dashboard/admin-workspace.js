@@ -14244,8 +14244,29 @@ function simpleBars(items, color) {
                 };
             });
 
+        // Retain a newly-created invoice ID across retries if a later item,
+        // activity-log, refresh, or send step fails after the invoice POST.
+        let pendingInvoiceId = invoice && invoice.id ? invoice.id : null;
+        // Once the send endpoint confirms success, retries must not send again
+        // just because a later activity-log or refresh step failed.
+        let pendingInvoiceSent = false;
+        // Track activity logging separately so a failed log can be retried without resending.
+        let pendingInvoiceActivityLogged = false;
+        // Avoid duplicate create/update activity entries after a later step fails.
+        let pendingInvoiceChangeActivityLogged = false;
+        // Track the exact invoice payload and item set already persisted by this modal.
+        let pendingInvoiceDataSignature = null;
+
         function closeModal() {
             root.remove();
+        }
+
+        function lockInvoiceAfterSuccessfulSend() {
+            // After delivery succeeds, keep this modal as the retry handle for
+            // activity logging/refresh only; do not let the emailed invoice be edited.
+            root.querySelectorAll("input, select, textarea, button").forEach(function (control) {
+                control.disabled = true;
+            });
         }
 
         function serviceOptions(selectedId) {
@@ -14695,6 +14716,18 @@ function simpleBars(items, color) {
                     state.currentUser.id
             };
 
+            const invoiceDataSignature = JSON.stringify({
+                invoice: invoicePayload,
+                lines: localLines.map(function (line) {
+                    return {
+                        service_id: line.service_id || null,
+                        description: line.description.trim(),
+                        quantity: Number(line.quantity),
+                        unit_price: Number(line.unit_price)
+                    };
+                })
+            });
+
             const saveButton =
                 root.querySelector(
                     "#sway-invoice-save"
@@ -14705,137 +14738,108 @@ function simpleBars(items, color) {
                     "#sway-invoice-send"
                 );
 
+            // Lock both actions together so a double-click cannot create
+            // overlapping invoice saves or send requests.
+            const saveLabel = saveButton.textContent;
+            const sendLabel = sendButton.textContent;
             saveButton.disabled = true;
             sendButton.disabled = true;
+            saveButton.setAttribute("aria-busy", "true");
+            sendButton.setAttribute("aria-busy", "true");
+            saveButton.textContent = "Saving…";
+            sendButton.textContent = shouldSend ? "Saving & sending…" : "Working…";
 
             try {
-                let savedId =
-                    invoice
-                        ? invoice.id
-                        : null;
+                let savedId = pendingInvoiceId;
 
                 let savedInvoice =
                     invoice;
 
-                if (savedId) {
-                    await api(
-                        "/rest/v1/invoices?id=eq." +
-                        encodeURIComponent(savedId),
-                        {
-                            method: "PATCH",
-                            headers: headers({
-                                "Prefer":
-                                    "return=representation"
-                            }),
-                            body:
-                                JSON.stringify(
-                                    invoicePayload
-                                )
-                        }
-                    );
+                if (pendingInvoiceDataSignature !== invoiceDataSignature) {
+                    if (pendingInvoiceDataSignature !== null) {
+                        // The user changed invoice details after an earlier successful save.
+                        // Record the updated data once after it is persisted successfully.
+                        pendingInvoiceChangeActivityLogged = false;
+                    }
 
-                    await api(
-                        "/rest/v1/invoice_items?invoice_id=eq." +
-                        encodeURIComponent(savedId),
-                        {
-                            method: "DELETE",
-                            headers: headers({
-                                "Prefer":
-                                    "return=minimal"
-                            })
-                        }
-                    );
-                } else {
-                    const created =
+                    if (savedId) {
                         await api(
+                            "/rest/v1/invoices?id=eq." +
+                            encodeURIComponent(savedId),
+                            {
+                                method: "PATCH",
+                                headers: headers({
+                                    "Prefer": "return=representation"
+                                }),
+                                body: JSON.stringify(invoicePayload)
+                            }
+                        );
+
+                        await api(
+                            "/rest/v1/invoice_items?invoice_id=eq." +
+                            encodeURIComponent(savedId),
+                            {
+                                method: "DELETE",
+                                headers: headers({
+                                    "Prefer": "return=minimal"
+                                })
+                            }
+                        );
+                    } else {
+                        const created = await api(
                             "/rest/v1/invoices",
                             {
                                 method: "POST",
                                 headers: headers({
-                                    "Prefer":
-                                        "return=representation"
+                                    "Prefer": "return=representation"
                                 }),
-                                body:
-                                    JSON.stringify(
-                                        invoicePayload
-                                    )
+                                body: JSON.stringify(invoicePayload)
                             }
                         );
 
-                    savedInvoice =
-                        Array.isArray(created)
-                            ? created[0]
-                            : created;
+                        savedInvoice = Array.isArray(created) ? created[0] : created;
+                        savedId = savedInvoice && savedInvoice.id;
 
-                    savedId =
-                        savedInvoice &&
-                        savedInvoice.id;
-
-                    if (!savedId) {
-                        throw new Error(
-                            "Invoice could not be created."
-                        );
+                        if (!savedId) {
+                            throw new Error("Invoice could not be created.");
+                        }
+                        pendingInvoiceId = savedId;
                     }
-                }
 
-                await api(
-                    "/rest/v1/invoice_items",
-                    {
-                        method: "POST",
-                        headers: headers({
-                            "Prefer":
-                                "return=minimal"
-                        }),
-                        body:
-                            JSON.stringify(
+                    await api(
+                        "/rest/v1/invoice_items",
+                        {
+                            method: "POST",
+                            headers: headers({
+                                "Prefer": "return=minimal"
+                            }),
+                            body: JSON.stringify(
                                 localLines.map(function (line) {
                                     return {
-                                        invoice_id:
-                                            savedId,
-                                        service_id:
-                                            line.service_id ||
-                                            null,
-                                        description:
-                                            line.description.trim(),
-                                        quantity:
-                                            Number(
-                                                line.quantity
-                                            ),
-                                        unit_price:
-                                            Number(
-                                                line.unit_price
-                                            )
+                                        invoice_id: savedId,
+                                        service_id: line.service_id || null,
+                                        description: line.description.trim(),
+                                        quantity: Number(line.quantity),
+                                        unit_price: Number(line.unit_price)
                                     };
                                 })
                             )
-                    }
-                );
-
-                await logActivity(
-                    (
-                        invoice
-                            ? "Updated "
-                            : "Created "
-                    ) +
-                    "invoice " +
-                    (
-                        savedInvoice &&
-                        savedInvoice.invoice_number
-                            ? savedInvoice.invoice_number
-                            : savedId
-                    ),
-                    "invoices",
-                    savedId
-                );
-
-                if (shouldSend) {
-                    await sendInvoiceById(
-                        savedId,
-                        false
+                        }
                     );
 
+                    // Save the signature only after both invoice and item writes succeed.
+                    pendingInvoiceId = savedId;
+                    pendingInvoiceDataSignature = invoiceDataSignature;
+                }
+
+                if (!pendingInvoiceChangeActivityLogged) {
                     await logActivity(
-                        "Sent invoice " +
+                        (
+                            invoice
+                                ? "Updated "
+                                : "Created "
+                        ) +
+                        "invoice " +
                         (
                             savedInvoice &&
                             savedInvoice.invoice_number
@@ -14845,22 +14849,57 @@ function simpleBars(items, color) {
                         "invoices",
                         savedId
                     );
+                    pendingInvoiceChangeActivityLogged = true;
                 }
 
-                closeModal();
+                if (shouldSend && !pendingInvoiceSent) {
+                    const selectedClient = state.clients.find(function (item) {
+                        return item.id === clientId;
+                    });
+
+                    if (!selectedClient || !selectedClient.email) {
+                        throw new Error("This client does not have an email address.");
+                    }
+
+                    // Record successful delivery before any later operation can fail.
+                    await invokeInvoiceFunction(savedId, "send");
+                    pendingInvoiceSent = true;
+                    lockInvoiceAfterSuccessfulSend();
+                }
+
+                // Logging is an independent retryable step: if it fails after send,
+                // a later attempt records the activity without sending another email.
+                if (shouldSend && pendingInvoiceSent && !pendingInvoiceActivityLogged) {
+                    await logActivity(
+                        "Sent invoice " +
+                        (
+                            savedInvoice && savedInvoice.invoice_number
+                                ? savedInvoice.invoice_number
+                                : savedId
+                        ),
+                        "invoices",
+                        savedId
+                    );
+                    pendingInvoiceActivityLogged = true;
+                }
 
                 await refreshData();
                 renderShell();
                 renderView();
+                closeModal();
 
             } catch (error) {
+                // Keep raw API/provider details out of the dashboard UI.
                 swayAlert(
-                    error.message ||
-                    "Unable to save invoice."
+                    "Unable to complete the invoice action. The form is still open. Review the invoice and try again; if the invoice was sent, check its status before retrying."
                 );
-
-                saveButton.disabled = false;
+            } finally {
+                saveButton.disabled = pendingInvoiceSent;
                 sendButton.disabled = false;
+                saveButton.removeAttribute("aria-busy");
+                sendButton.removeAttribute("aria-busy");
+                saveButton.textContent = saveLabel;
+                sendButton.textContent = sendLabel;
             }
         }
 

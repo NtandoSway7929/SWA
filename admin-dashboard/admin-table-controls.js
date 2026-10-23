@@ -286,6 +286,14 @@
             }
         }
 
+        function announceFeedback(view, message) {
+            state.tableFeedback[view] = String(message || "");
+            const feedback = workspace.querySelector('[data-admin-table-feedback="' + view + '"]');
+            if (!feedback) return;
+            feedback.textContent = state.tableFeedback[view];
+            feedback.hidden = !state.tableFeedback[view];
+        }
+
         async function bulkAction(view, action) {
             if (state.tableBulkActionRunning) return;
             if (action === "export") {
@@ -313,6 +321,8 @@
 
             state.tableBulkActionRunning = true;
             syncSelection(view);
+            announceFeedback(view, "Completing " + eligible.length + " selected " + noun +
+                (eligible.length === 1 ? "" : "s") + "…");
             let completed = 0;
             try {
                 for (const item of eligible) {
@@ -326,13 +336,14 @@
                 state.tableSelection[view] = (state.tableSelection[view] || []).filter(function (id) {
                     return !eligible.some(function (item) { return String(item.id) === String(id); });
                 });
-                state.tableFeedback[view] = "Completed " + completed + " selected " + noun +
-                    (completed === 1 ? "" : "s") + ".";
+                announceFeedback(view, "Completed " + completed + " selected " + noun +
+                    (completed === 1 ? "" : "s") + ".");
             } catch (error) {
-                state.tableFeedback[view] = "Completed " + completed + " of " + eligible.length +
+                // Keep raw provider/database error details out of the dashboard UI.
+                // The selected records remain available for a safe retry after refresh.
+                announceFeedback(view, "Completed " + completed + " of " + eligible.length +
                     " selected " + noun + (eligible.length === 1 ? "" : "s") +
-                    ". Remaining records stay selected. " +
-                    (error && error.message ? error.message : "The next update failed.");
+                    ". The next update failed. Remaining records stay selected; review the affected records and try again.");
             } finally {
                 state.tableBulkActionRunning = false;
                 renderView();

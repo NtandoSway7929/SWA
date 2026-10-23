@@ -152,5 +152,74 @@ assert.match(moduleSource, /const selectedIds = new Set\(\(state\.tableSelection
     "the UI should re-sync checkbox visuals from the selected-record state");
 assert.ok(moduleSource.includes("const formulaLike = /^[\\s\\uFEFF]*[=+\\-@]/.test(raw);"),
     "CSV values that can be interpreted as spreadsheet formulas must be neutralised");
+assert.match(moduleSource, /announceFeedback\(view, "Completing " \+ eligible\.length/,
+    "bulk actions should announce their in-progress state through the existing live feedback region");
+assert.match(moduleSource, /The next update failed\. Remaining records stay selected/,
+    "partial failures should retain a safe retry path and explain what happened");
+assert.doesNotMatch(moduleSource, /error && error\.message \? error\.message/,
+    "raw backend/provider error details must not be surfaced directly in the dashboard UI");
+
+const invoiceSaveStart = workspaceSource.indexOf("async function saveInvoice(");
+const invoiceSaveEnd = workspaceSource.indexOf("\n    function base64ToBytes", invoiceSaveStart);
+assert.ok(invoiceSaveStart >= 0 && invoiceSaveEnd > invoiceSaveStart,
+    "invoice save handler should remain available for regression checks");
+const invoiceSaveSource = workspaceSource.slice(invoiceSaveStart, invoiceSaveEnd);
+assert.match(invoiceSaveSource, /saveButton\.setAttribute\("aria-busy", "true"\)/,
+    "invoice actions should expose an accessible busy state while saving");
+assert.match(invoiceSaveSource, /Saving & sending…/,
+    "the send action should clearly announce its in-progress state");
+assert.match(invoiceSaveSource, /finally \{[\s\S]*saveButton\.removeAttribute\("aria-busy"\)/,
+    "invoice action buttons must always have their busy state cleared");
+assert.match(invoiceSaveSource, /The form is still open[\s\S]*check its status before retrying/,
+    "invoice failures should preserve the form and warn users to verify send status before retrying");
+assert.doesNotMatch(invoiceSaveSource, /swayAlert\(\s*error\.message/,
+    "invoice save errors should not expose raw backend exception text");
+assert.match(workspaceSource, /let pendingInvoiceId = invoice && invoice\.id \? invoice\.id : null;/,
+    "the invoice modal should retain the invoice ID across retry attempts");
+assert.match(invoiceSaveSource, /let savedId = pendingInvoiceId;/,
+    "retrying a partially completed invoice save should update the existing invoice");
+assert.match(invoiceSaveSource, /pendingInvoiceId = savedId;/,
+    "a newly created invoice ID should be retained before subsequent steps can fail");
+assert.ok(
+    invoiceSaveSource.indexOf("await refreshData();") < invoiceSaveSource.indexOf("closeModal();"),
+    "the invoice form should remain open until refresh completes successfully"
+);
+
+
+assert.match(workspaceSource, /let pendingInvoiceSent = false;/,
+    "the invoice modal should remember when the send endpoint has already succeeded");
+assert.match(invoiceSaveSource, /if \(shouldSend && !pendingInvoiceSent\)/,
+    "retrying a post-send failure must not dispatch the invoice send action again");
+assert.match(invoiceSaveSource, /await invokeInvoiceFunction\(savedId, "send"\);\s*pendingInvoiceSent = true;/,
+    "the sent flag must be set immediately after the send endpoint succeeds, before later logging or refresh work");
+assert.match(workspaceSource, /let pendingInvoiceActivityLogged = false;/,
+    "invoice activity logging should have independent retry state");
+assert.match(workspaceSource, /let pendingInvoiceChangeActivityLogged = false;/,
+    "invoice create/update activity logging should retain retry state");
+assert.match(workspaceSource, /let pendingInvoiceDataSignature = null;/,
+    "the invoice modal should retain the signature of data already saved");
+assert.match(invoiceSaveSource, /if \(pendingInvoiceDataSignature !== invoiceDataSignature\)/,
+    "a retry with unchanged invoice data must skip duplicate invoice and item writes");
+assert.match(invoiceSaveSource, /pendingInvoiceDataSignature = invoiceDataSignature;/,
+    "the persisted data signature must update only after invoice and item writes succeed");
+assert.match(workspaceSource, /function lockInvoiceAfterSuccessfulSend\(\)/,
+    "a successfully sent invoice must keep its retry form from being edited");
+assert.match(invoiceSaveSource, /pendingInvoiceSent = true;\s*lockInvoiceAfterSuccessfulSend\(\);/,
+    "the invoice form must lock immediately after the send endpoint succeeds");
+assert.match(invoiceSaveSource, /saveButton\.disabled = pendingInvoiceSent;/,
+    "after a successful send, retries should be limited to the send action rather than re-saving or re-sending invoice data");
+assert.match(invoiceSaveSource, /if \(!pendingInvoiceChangeActivityLogged\) \{\s*await logActivity\([\s\S]*?pendingInvoiceChangeActivityLogged = true;/,
+    "a successful create/update activity entry must not be duplicated when a later step fails");
+assert.match(invoiceSaveSource, /if \(shouldSend && pendingInvoiceSent && !pendingInvoiceActivityLogged\)/,
+    "a retry after activity logging fails must log the activity without resending the invoice");
+assert.match(invoiceSaveSource, /await logActivity\([\s\S]*?\);\s*pendingInvoiceActivityLogged = true;/,
+    "the activity-logged flag must only be set after the log operation succeeds");
+assert.ok(
+    invoiceSaveSource.indexOf("pendingInvoiceSent = true;") <
+    invoiceSaveSource.indexOf("if (shouldSend && pendingInvoiceSent && !pendingInvoiceActivityLogged)"),
+    "delivery state must be recorded before the independently retryable activity log"
+);
+assert.match(invoiceSaveSource, /if \(!selectedClient \|\| !selectedClient\.email\)/,
+    "the direct send path must still validate that the selected client has an email address");
 
 console.log("Admin table controls tests passed.");

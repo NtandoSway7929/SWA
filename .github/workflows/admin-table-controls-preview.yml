@@ -19,6 +19,11 @@ on:
 permissions:
   contents: read
 
+# Avoid multiple PR commits consuming runners while each downloads Chromium.
+concurrency:
+  group: admin-table-controls-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   isolated-browser-preview:
     name: Test Phase 2 controls with synthetic data
@@ -27,6 +32,11 @@ jobs:
     steps:
       - name: Check out PR branch
         uses: actions/checkout@v4
+
+      - name: Record exact validation revision
+        run: |
+          echo "Validating commit: $GITHUB_SHA"
+          git log -1 --format='%h %s'
 
       - name: Set up Node
         uses: actions/setup-node@v4
