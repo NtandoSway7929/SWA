@@ -29,6 +29,11 @@ import {
   validateInnerMeExecutionContract,
 } from "./innerme-execution-contracts.mjs";
 import { selectRelevantKnowledgeMatches } from "./innerme-retrieval-ranking.mjs";
+import {
+  consumeInnerMeSseStream,
+  extractInnerMeGeminiDelta,
+  formatInnerMeSseEvent,
+} from "./innerme-sse-streaming.mjs";
 
 // Supabase Edge Runtime provides this embedding API at runtime; declare its surface for Deno checks.
 declare const Supabase: {
@@ -722,6 +727,7 @@ Deno.serve(async (req) => {
 
   let body: {
     action?: string;
+    stream_response?: boolean;
     message?: string;
     history?: Array<{
       role?: string;
@@ -11305,6 +11311,14 @@ ${innermeRoadmapContext}
 
 ${INNERME_EVIDENCE_TRACEABILITY_RULES}
 
+INLINE KNOWLEDGE CITATIONS FOR CHAT:
+- When one of the first six retrieved knowledge records directly supports a material factual claim, add a compact numbered citation such as [1] immediately after that claim.
+- The citation number refers to the numbered VERIFIED INNERME KNOWLEDGE EVIDENCE list above: [1] is the first retrieved record, [2] is the second, and so on. The displayed order matches the retrieval panel.
+- Cite only a record that directly supports the specific claim. Do not cite records that are merely related to the topic, do not cite a workspace-only fact with a knowledge citation, and do not invent or guess citation numbers.
+- If no retrieved record supports the claim, omit the citation. Never manufacture a source or citation to make an answer look more authoritative.
+- Keep citations compact; source titles, attribution reasons, confidence and source links are available from the expandable evidence panel. Do not repeat full knowledge record IDs in the answer solely to cite them.
+- Do not add numeric knowledge citations to creative copy or a client-facing deliverable unless the admin explicitly requests citations.
+
 OPERATING MANDATE:
 - Think like an internal growth operator for Swayphics, not merely a reporting assistant.
 - Your work should help the admin create, capture, convert, retain, and collect revenue while protecting client relationships and the Swayphics brand.
@@ -11551,7 +11565,9 @@ Answer the admin's question directly.
     return await guardedGeminiFetch(model, 
       "https://generativelanguage.googleapis.com/v1beta/models/" +
         encodeURIComponent(model) +
-        ":generateContent",
+        (body.stream_response === true && !cloudflareWritingEligible
+          ? ":streamGenerateContent?alt=sse"
+          : ":generateContent"),
       {
         method: "POST",
         headers: {
@@ -11617,7 +11633,9 @@ Answer the admin's question directly.
           },
         }),
         // Bound each provider attempt so failover cannot hang the chat request.
-        signal: AbortSignal.timeout(8000),
+        signal: body.stream_response === true && !cloudflareWritingEligible
+          ? AbortSignal.any([req.signal, AbortSignal.timeout(20000)])
+          : AbortSignal.timeout(8000),
       },
     );
   }
@@ -11659,6 +11677,212 @@ Answer the admin's question directly.
         signal: AbortSignal.timeout(10000),
       },
     );
+  }
+
+
+  function normalizeInnerMeAnswer(value: unknown): string {
+    return String(value || "")
+      .replace(/\\([#*_[\]()>+.!-])/g, "$1")
+      .replace(/\\@/g, "@")
+      .replace(/\r\n?/g, "\n")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/(^|\s)(\*)\s+/g, "$1• ")
+      .replace(/(^|\s)•\s+/g, "\n• ")
+      .replace(/\n\s*•/g, "\n•")
+      .replace(/\s+(?=(?:Overdue Follow-ups|Due Today|Due Tomorrow|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)\b)/g, "\n")
+      .replace(/^(Leads Needing Follow-Up|Maisha's Touch Lead Overview)\s+/g, "$1\n\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  function buildInnerMeKnowledgeRetrievalPayload() {
+    return {
+      used: innermeKnowledgeMatches.length > 0,
+      match_count: innermeKnowledgeMatches.length,
+      matches: innermeKnowledgeMatches.map(function (item: any) {
+        return {
+          id: item?.id || null,
+          title: item?.title || null,
+          similarity:
+            Number.isFinite(Number(item?.similarity))
+              ? Number(Number(item.similarity).toFixed(3))
+              : null,
+          evidence_level: item?.evidence_level || null,
+          source_name: item?.source_name || null,
+          source_publisher: item?.source_publisher || null,
+          source_url: item?.source_url || null,
+        };
+      }),
+      retrieval_error: innermeKnowledgeRetrievalError || null,
+    };
+  }
+
+  async function buildInnerMeKnowledgeAttribution(cleanAnswer: string) {
+    let innermeKnowledgeAttribution: {
+      attributed: boolean;
+      matches: Array<{
+        id: string;
+        reason: string;
+        confidence: "high" | "medium" | "low";
+      }>;
+      provider_model: string | null;
+      error: string | null;
+    } = {
+      attributed: false,
+      matches: [],
+      provider_model: null,
+      error: null,
+    };
+  
+    if (innermeKnowledgeMatches.length > 0) {
+      const attributionCandidates = innermeKnowledgeMatches.map(function (item: any) {
+        return {
+          id: String(item?.id || ""),
+          title: cleanForModel(item?.title || "", 180),
+          evidence_level: cleanForModel(item?.evidence_level || "", 40),
+          statement: cleanForModel(item?.statement || "", 900),
+          application: cleanForModel(item?.application || "", 700),
+        };
+      }).filter(function (item: any) {
+        return Boolean(item.id);
+      });
+  
+      if (attributionCandidates.length > 0) {
+        const attributionPrompt = [
+          "You are verifying evidence attribution for an internal Swayphics answer.",
+          "Do not rewrite or improve the answer.",
+          "Identify only the retrieved knowledge records that materially support claims, reasoning, or recommendations actually present in the answer.",
+          "Do not select a record merely because it is related to the topic.",
+          "You may select only IDs present in the supplied candidate list.",
+          "Return JSON only in this exact shape:",
+          '{"supported_ids":[{"id":"...","reason":"brief factual reason","confidence":"high"}]}',
+          'confidence must be exactly "high", "medium", or "low".',
+          "ADMIN QUESTION:",
+          cleanForModel(message, 1200),
+          "INNERME ANSWER:",
+          cleanForModel(cleanAnswer, 5000),
+          "RETRIEVED KNOWLEDGE CANDIDATES:",
+          JSON.stringify(attributionCandidates),
+        ].join("\n\n");
+  
+        async function requestKnowledgeAttribution(model: string) {
+          return await guardedGeminiFetch(model, 
+            "https://generativelanguage.googleapis.com/v1beta/models/" +
+              encodeURIComponent(model) +
+              ":generateContent",
+            {
+              method: "POST",
+              headers: {
+                "x-goog-api-key": geminiKey,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: "user",
+                    parts: [{ text: attributionPrompt }],
+                  },
+                ],
+                generationConfig: {
+                  maxOutputTokens: 500,
+                  responseMimeType: "application/json",
+                },
+              }),
+            },
+          );
+        }
+  
+        try {
+          let attributionResponse =
+            await requestKnowledgeAttribution(PRIMARY_MODEL);
+          let attributionModel = PRIMARY_MODEL;
+  
+          if (
+            (attributionResponse.status === 503 ||
+              attributionResponse.status === 429) &&
+            PRIMARY_MODEL !== FALLBACK_MODEL
+          ) {
+            attributionModel = FALLBACK_MODEL;
+            attributionResponse =
+              await requestKnowledgeAttribution(FALLBACK_MODEL);
+          }
+  
+          if (!attributionResponse.ok) {
+            throw new Error(
+              "Knowledge attribution provider returned HTTP " +
+                String(attributionResponse.status) +
+                ".",
+            );
+          }
+  
+          const attributionResult =
+            await attributionResponse.json();
+  
+          const rawAttribution =
+            attributionResult?.candidates?.[0]?.content?.parts
+              ?.filter((part: any) => typeof part?.text === "string")
+              ?.map((part: any) => part.text)
+              ?.join("") ||
+            "";
+  
+          const parsedAttribution =
+            JSON.parse(rawAttribution || "{}");
+  
+          const allowedIds = new Set(
+            attributionCandidates.map(function (item: any) {
+              return item.id;
+            }),
+          );
+  
+          const attributedMatches =
+            Array.isArray(parsedAttribution?.supported_ids)
+              ? parsedAttribution.supported_ids
+                  .map(function (item: any) {
+                    const id = String(item?.id || "").trim();
+                    const confidence =
+                      ["high", "medium", "low"].includes(
+                        String(item?.confidence || "").trim(),
+                      )
+                        ? String(item.confidence).trim()
+                        : "medium";
+  
+                    return {
+                      id,
+                      reason: cleanForModel(
+                        item?.reason || "",
+                        260,
+                      ),
+                      confidence: confidence as "high" | "medium" | "low",
+                    };
+                  })
+                  .filter(function (item: any) {
+                    return allowedIds.has(item.id) && item.reason;
+                  })
+                  .slice(0, 6)
+              : [];
+  
+          innermeKnowledgeAttribution = {
+            attributed: attributedMatches.length > 0,
+            matches: attributedMatches,
+            provider_model: attributionModel,
+            error: null,
+          };
+        } catch (error) {
+          innermeKnowledgeAttribution.error =
+            error instanceof Error
+              ? error.message.slice(0, 500)
+              : String(error).slice(0, 500);
+  
+          console.error(
+            "InnerMe knowledge attribution error:",
+            innermeKnowledgeAttribution.error,
+          );
+        }
+      }
+    }
+
+    return innermeKnowledgeAttribution;
   }
 
   let activeModel = PRIMARY_MODEL;
@@ -12457,6 +12681,239 @@ Answer the admin's question directly.
       }
     }
 
+    if (
+      body.stream_response === true &&
+      activeProvider === "gemini" &&
+      /text\/event-stream/i.test(geminiResponse.headers.get("content-type") || "")
+    ) {
+      const providerStream = geminiResponse.body;
+      const downstreamCancellation = new AbortController();
+      let downstreamClosed = false;
+
+      const streamingBody = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const encoder = new TextEncoder();
+
+          function emit(eventName: string, payload: unknown) {
+            if (downstreamClosed) return false;
+            try {
+              controller.enqueue(
+                encoder.encode(formatInnerMeSseEvent(eventName, payload)),
+              );
+              return true;
+            } catch {
+              downstreamClosed = true;
+              downstreamCancellation.abort();
+              return false;
+            }
+          }
+
+          void (async function () {
+            let streamedAnswer = "";
+            let latestProviderPayload: any = null;
+            let usagePayload: any = null;
+
+            try {
+              if (!providerStream) {
+                throw new Error("The AI provider returned no readable stream.");
+              }
+
+              await consumeInnerMeSseStream(
+                providerStream,
+                async function (payload: any) {
+                  latestProviderPayload = payload;
+                  if (payload && payload.usageMetadata) {
+                    usagePayload = payload;
+                  }
+
+                  const delta = extractInnerMeGeminiDelta(payload);
+                  if (!delta) return;
+
+                  streamedAnswer += delta;
+                  emit("delta", { text: delta });
+                },
+                {
+                  signal: AbortSignal.any([
+                    req.signal,
+                    downstreamCancellation.signal,
+                  ]),
+                },
+              );
+
+              if (downstreamCancellation.signal.aborted || req.signal.aborted) {
+                return;
+              }
+
+              if (!streamedAnswer.trim()) {
+                await recordInnerMeProviderUsage({
+                  request_id: providerRequestId,
+                  attempt_number: geminiAttemptNumber,
+                  task_category: providerTaskCategory,
+                  provider: "gemini",
+                  model: activeModel,
+                  outcome: "error",
+                  http_status: geminiResponse.status,
+                  latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+                  ...readProviderTokenMetrics(usagePayload || latestProviderPayload, "gemini"),
+                  error_code: "empty_response",
+                  fallback_reason: geminiAttemptFallbackReason,
+                });
+                emit("error", {
+                  error: "InnerMe received no usable text from the AI provider. Please try again.",
+                  retryable: true,
+                });
+                return;
+              }
+
+              const providerLatency = Math.max(
+                0,
+                Math.round(performance.now() - geminiAttemptStartedAt),
+              );
+              await recordInnerMeProviderUsage({
+                request_id: providerRequestId,
+                attempt_number: geminiAttemptNumber,
+                task_category: providerTaskCategory,
+                provider: "gemini",
+                model: activeModel,
+                outcome: "success",
+                http_status: geminiResponse.status,
+                latency_ms: providerLatency,
+                ...readProviderTokenMetrics(usagePayload || latestProviderPayload, "gemini"),
+                error_code: null,
+                fallback_reason: geminiAttemptFallbackReason,
+              });
+
+              const cleanAnswer = normalizeInnerMeAnswer(streamedAnswer);
+              emit("phase", {
+                status: innermeKnowledgeMatches.length
+                  ? "Checking supporting sources…"
+                  : "Finishing your answer…",
+              });
+              const innermeKnowledgeAttribution =
+                await buildInnerMeKnowledgeAttribution(cleanAnswer);
+
+              const requestTotalLatencyMs = Math.max(
+                0,
+                Math.round(performance.now() - requestStartedAt),
+              );
+              console.info("InnerMe streaming request performance breakdown.", {
+                request_id: requestId,
+                retrieval_profile: workspaceQueryPlan.profile,
+                workspace_data_read_call_count: workspaceDataReadCallCount,
+                workspace_retrieval_ms: workspaceRetrievalLatencyMs,
+                workspace_context_assembly_ms: workspaceContextAssemblyLatencyMs,
+                progressive_context_assembly_ms: progressiveWorkspaceAssemblyLatencyMsForRequest,
+                progressive_workspace_json_bytes: progressiveWorkspaceJsonBytesForRequest,
+                total_server_ms: requestTotalLatencyMs,
+                provider_stream_ms: providerLatency,
+              });
+
+              emit("done", {
+                answer: cleanAnswer,
+                model: activeModel,
+                read_only: true,
+                knowledge_retrieval: buildInnerMeKnowledgeRetrievalPayload(),
+                knowledge_attribution: innermeKnowledgeAttribution,
+                server_metrics: {
+                  workspace_read_ms: workspaceRetrievalLatencyMs,
+                  context_assembly_ms: workspaceContextAssemblyLatencyMs,
+                  progressive_context_assembly_ms:
+                    progressiveWorkspaceAssemblyLatencyMsForRequest,
+                  progressive_workspace_json_bytes:
+                    progressiveWorkspaceJsonBytesForRequest,
+                  workspace_data_read_call_count: workspaceDataReadCallCount,
+                  provider_stream_ms: providerLatency,
+                  total_server_ms: requestTotalLatencyMs,
+                },
+              });
+            } catch (error) {
+              if (downstreamCancellation.signal.aborted || req.signal.aborted) {
+                return;
+              }
+
+              const errorCode = error instanceof Error &&
+                (error.name === "TimeoutError" || error.name === "AbortError")
+                ? "timeout"
+                : "stream_interrupted";
+              console.error("InnerMe response stream failed.", {
+                request_id: requestId,
+                error_code: errorCode,
+              });
+              await recordInnerMeProviderUsage({
+                request_id: providerRequestId,
+                attempt_number: geminiAttemptNumber,
+                task_category: providerTaskCategory,
+                provider: "gemini",
+                model: activeModel,
+                outcome: "error",
+                http_status: geminiResponse.status,
+                latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+                ...readProviderTokenMetrics(usagePayload || latestProviderPayload, "gemini"),
+                error_code: errorCode,
+                fallback_reason: geminiAttemptFallbackReason,
+              });
+              emit("error", {
+                error: errorCode === "timeout"
+                  ? "InnerMe’s response timed out before it could finish. Please retry."
+                  : "InnerMe’s response was interrupted before it could finish. Please retry.",
+                retryable: true,
+              });
+            } finally {
+              if (!downstreamClosed) {
+                downstreamClosed = true;
+                try {
+                  controller.close();
+                } catch {
+                  // The browser may have disconnected while completion was being flushed.
+                }
+              }
+            }
+          })();
+        },
+        cancel(reason) {
+          downstreamClosed = true;
+          if (!downstreamCancellation.signal.aborted) {
+            downstreamCancellation.abort(reason);
+          }
+        },
+      });
+
+      // Streaming headers are committed before the provider stream finishes.
+      // Expose pre-stream stages here, and include final total/provider timings
+      // in the terminal "done" event once those values can be measured.
+      const streamSetupLatencyMs = Math.max(
+        0,
+        Math.round(performance.now() - requestStartedAt),
+      );
+      const streamingServerTiming = [
+        `innerme_workspace_read;dur=${workspaceRetrievalLatencyMs}`,
+        `innerme_context_assembly;dur=${workspaceContextAssemblyLatencyMs}`,
+        ...(progressiveWorkspaceAssemblyLatencyMsForRequest === null
+          ? []
+          : [
+              `innerme_progressive_context;dur=${progressiveWorkspaceAssemblyLatencyMsForRequest}`,
+            ]),
+        `innerme_stream_setup;dur=${streamSetupLatencyMs}`,
+      ].join(", ");
+
+      return new Response(streamingBody, {
+        status: 200,
+        headers: {
+          ...corsHeaders(origin),
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Accel-Buffering": "no",
+          "X-InnerMe-Request-ID": requestId,
+          "X-InnerMe-Workspace-Read-Calls": String(workspaceDataReadCallCount),
+          "X-InnerMe-Progressive-Workspace-JSON-Bytes":
+            progressiveWorkspaceJsonBytesForRequest === null
+              ? "unmeasured"
+              : String(progressiveWorkspaceJsonBytesForRequest),
+          "Server-Timing": streamingServerTiming,
+        },
+      });
+    }
+
     let geminiPayload: any;
     try {
       geminiPayload = await geminiResponse.json();
@@ -12556,189 +13013,10 @@ Answer the admin's question directly.
     pendingGeminiUsage = null;
   }
 
-  const cleanAnswer = String(answer)
-    .replace(/\\([#*_[\]()>+.!-])/g, "$1")
-    .replace(/\\@/g, "@")
-    .replace(/\r\n?/g, "\n")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/(^|\s)(\*)\s+/g, "$1• ")
-    .replace(/(^|\s)•\s+/g, "\n• ")
-    .replace(/\n\s*•/g, "\n•")
-    .replace(/\s+(?=(?:Overdue Follow-ups|Due Today|Due Tomorrow|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)\b)/g, "\n")
-    .replace(/^(Leads Needing Follow-Up|Maisha's Touch Lead Overview)\s+/g, "$1\n\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const cleanAnswer = normalizeInnerMeAnswer(answer);
 
-  /*
-   * PHASE 4E · EVIDENCE ATTRIBUTION
-   * A separate, small verification pass identifies which retrieved records
-   * materially support the final answer. This never changes the answer.
-   * The model can only select IDs that were actually retrieved for this turn.
-   */
-  let innermeKnowledgeAttribution: {
-    attributed: boolean;
-    matches: Array<{
-      id: string;
-      reason: string;
-      confidence: "high" | "medium" | "low";
-    }>;
-    provider_model: string | null;
-    error: string | null;
-  } = {
-    attributed: false,
-    matches: [],
-    provider_model: null,
-    error: null,
-  };
-
-  if (innermeKnowledgeMatches.length > 0) {
-    const attributionCandidates = innermeKnowledgeMatches.map(function (item: any) {
-      return {
-        id: String(item?.id || ""),
-        title: cleanForModel(item?.title || "", 180),
-        evidence_level: cleanForModel(item?.evidence_level || "", 40),
-        statement: cleanForModel(item?.statement || "", 900),
-        application: cleanForModel(item?.application || "", 700),
-      };
-    }).filter(function (item: any) {
-      return Boolean(item.id);
-    });
-
-    if (attributionCandidates.length > 0) {
-      const attributionPrompt = [
-        "You are verifying evidence attribution for an internal Swayphics answer.",
-        "Do not rewrite or improve the answer.",
-        "Identify only the retrieved knowledge records that materially support claims, reasoning, or recommendations actually present in the answer.",
-        "Do not select a record merely because it is related to the topic.",
-        "You may select only IDs present in the supplied candidate list.",
-        "Return JSON only in this exact shape:",
-        '{"supported_ids":[{"id":"...","reason":"brief factual reason","confidence":"high"}]}',
-        'confidence must be exactly "high", "medium", or "low".',
-        "ADMIN QUESTION:",
-        cleanForModel(message, 1200),
-        "INNERME ANSWER:",
-        cleanForModel(cleanAnswer, 5000),
-        "RETRIEVED KNOWLEDGE CANDIDATES:",
-        JSON.stringify(attributionCandidates),
-      ].join("\n\n");
-
-      async function requestKnowledgeAttribution(model: string) {
-        return await guardedGeminiFetch(model, 
-          "https://generativelanguage.googleapis.com/v1beta/models/" +
-            encodeURIComponent(model) +
-            ":generateContent",
-          {
-            method: "POST",
-            headers: {
-              "x-goog-api-key": geminiKey,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-                  parts: [{ text: attributionPrompt }],
-                },
-              ],
-              generationConfig: {
-                maxOutputTokens: 500,
-                responseMimeType: "application/json",
-              },
-            }),
-          },
-        );
-      }
-
-      try {
-        let attributionResponse =
-          await requestKnowledgeAttribution(PRIMARY_MODEL);
-        let attributionModel = PRIMARY_MODEL;
-
-        if (
-          (attributionResponse.status === 503 ||
-            attributionResponse.status === 429) &&
-          PRIMARY_MODEL !== FALLBACK_MODEL
-        ) {
-          attributionModel = FALLBACK_MODEL;
-          attributionResponse =
-            await requestKnowledgeAttribution(FALLBACK_MODEL);
-        }
-
-        if (!attributionResponse.ok) {
-          throw new Error(
-            "Knowledge attribution provider returned HTTP " +
-              String(attributionResponse.status) +
-              ".",
-          );
-        }
-
-        const attributionResult =
-          await attributionResponse.json();
-
-        const rawAttribution =
-          attributionResult?.candidates?.[0]?.content?.parts
-            ?.filter((part: any) => typeof part?.text === "string")
-            ?.map((part: any) => part.text)
-            ?.join("") ||
-          "";
-
-        const parsedAttribution =
-          JSON.parse(rawAttribution || "{}");
-
-        const allowedIds = new Set(
-          attributionCandidates.map(function (item: any) {
-            return item.id;
-          }),
-        );
-
-        const attributedMatches =
-          Array.isArray(parsedAttribution?.supported_ids)
-            ? parsedAttribution.supported_ids
-                .map(function (item: any) {
-                  const id = String(item?.id || "").trim();
-                  const confidence =
-                    ["high", "medium", "low"].includes(
-                      String(item?.confidence || "").trim(),
-                    )
-                      ? String(item.confidence).trim()
-                      : "medium";
-
-                  return {
-                    id,
-                    reason: cleanForModel(
-                      item?.reason || "",
-                      260,
-                    ),
-                    confidence: confidence as "high" | "medium" | "low",
-                  };
-                })
-                .filter(function (item: any) {
-                  return allowedIds.has(item.id) && item.reason;
-                })
-                .slice(0, 6)
-            : [];
-
-        innermeKnowledgeAttribution = {
-          attributed: attributedMatches.length > 0,
-          matches: attributedMatches,
-          provider_model: attributionModel,
-          error: null,
-        };
-      } catch (error) {
-        innermeKnowledgeAttribution.error =
-          error instanceof Error
-            ? error.message.slice(0, 500)
-            : String(error).slice(0, 500);
-
-        console.error(
-          "InnerMe knowledge attribution error:",
-          innermeKnowledgeAttribution.error,
-        );
-      }
-    }
-  }
-
+  const innermeKnowledgeAttribution =
+    await buildInnerMeKnowledgeAttribution(cleanAnswer);
 
 
   const requestTotalLatencyMs = Math.max(
@@ -12769,25 +13047,7 @@ Answer the admin's question directly.
       answer: cleanAnswer,
       model: activeModel,
       read_only: true,
-      knowledge_retrieval: {
-        used: innermeKnowledgeMatches.length > 0,
-        match_count: innermeKnowledgeMatches.length,
-        matches: innermeKnowledgeMatches.map(function (item: any) {
-          return {
-            id: item?.id || null,
-            title: item?.title || null,
-            similarity:
-              Number.isFinite(Number(item?.similarity))
-                ? Number(Number(item.similarity).toFixed(3))
-                : null,
-            evidence_level: item?.evidence_level || null,
-            source_name: item?.source_name || null,
-            source_publisher: item?.source_publisher || null,
-            source_url: item?.source_url || null,
-          };
-        }),
-        retrieval_error: innermeKnowledgeRetrievalError || null,
-      },
+      knowledge_retrieval: buildInnerMeKnowledgeRetrievalPayload(),
       knowledge_attribution: innermeKnowledgeAttribution,
     }),
     {

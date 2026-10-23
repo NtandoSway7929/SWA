@@ -611,6 +611,8 @@
                 },
                 options || {}
             );
+        const returnRawResponse = requestOptions.returnRawResponse === true;
+        delete requestOptions.returnRawResponse;
 
         requestOptions.headers =
             Object.assign(
@@ -646,6 +648,10 @@
                         requestOptions
                     );
             }
+        }
+
+        if (returnRawResponse && response.ok) {
+            return response;
         }
 
         const responseText = await response.text();
@@ -1386,145 +1392,336 @@
         }
     }
 
-    function formatAIAnswer(value) {
-        let text = String(
-            value == null
-                ? ""
-                : value
-        )
+    function formatAIAnswer(value, retrieval, attribution) {
+        const citationUIEnabled = arguments.length > 1;
+        const sourceMatches =
+            retrieval && Array.isArray(retrieval.matches)
+                ? retrieval.matches.slice(0, 6)
+                : [];
+        const attributedIds = new Set(
+            attribution &&
+            !attribution.error &&
+            Array.isArray(attribution.matches)
+                ? attribution.matches.map(function (item) {
+                    return String(item && item.id || "");
+                }).filter(Boolean)
+                : []
+        );
+
+        function renderInlineCitation(indexValue) {
+            const index = Number(indexValue);
+            const source = Number.isInteger(index) && index >= 1 && index <= 6
+                ? sourceMatches[index - 1]
+                : null;
+            const sourceId = String(source && source.id || "");
+            const sourceTitle = String(source && source.title || "Knowledge record").trim() || "Knowledge record";
+            if (!sourceId || !attributedIds.has(sourceId)) {
+                return '<span class="sway-ai-inline-citation-unavailable" title="No verified supporting source was returned for citation ' +
+                    esc(String(indexValue)) +
+                    '" aria-label="Citation ' + esc(String(indexValue)) + ' unavailable">[' +
+                    esc(String(indexValue)) + ']</span>';
+            }
+            return '<button type="button" class="sway-ai-inline-citation" data-ai-citation-id="' +
+                esc(sourceId) +
+                '" data-ai-citation-index="' + esc(String(index)) +
+                '" title="Open supporting evidence: ' + esc(sourceTitle) +
+                '" aria-label="Open supporting source ' + esc(String(index)) + ': ' +
+                esc(sourceTitle) + '">[' + esc(String(index)) + ']</button>';
+        }
+
+        let text = String(value == null ? "" : value)
             .replace(/\\n/g, "\n")
             .replace(/\\r\\n/g, "\n")
             .replace(/\\@/g, "@")
             .replace(/\r\n?/g, "\n")
             .trim();
 
-        /*
-         * Normalise common Gemini output variations first. The visual
-         * hierarchy is then rendered by the dashboard so InnerMe remains
-         * consistent even when the model's raw spacing varies.
-         */
         text = text
-            .replace(
-                /\s+(?=(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)\b)/g,
-                "\n\n"
-            )
-            .replace(
-                /\s+(?=•\s)/g,
-                "\n"
-            )
-            .replace(
-                /(^|\n)\s*\*\s+/g,
-                "$1• "
-            )
-            .replace(
-                /\n\s*•\s*/g,
-                "\n• "
-            )
-            .replace(
-                /\n{3,}/g,
-                "\n\n"
-            )
+            .replace(/\s+(?=(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)\b)/g, "\n\n")
+            .replace(/\s+(?=•\s)/g, "\n")
+            .replace(/(^|\n)\s*\*\s+/g, "$1• ")
+            .replace(/\n\s*•\s*/g, "\n• ")
+            .replace(/\n{3,}/g, "\n\n")
             .trim();
 
-        if (!text) {
-            return "";
+        if (!text) return "";
+
+        function inlineMarkdown(source) {
+            let safe = esc(String(source || ""));
+            const protectedParts = [];
+            safe = safe.replace(/\x60([^\x60]+)\x60/g, function (_, code) {
+                const token = "IMECODETOKEN" + protectedParts.length + "END";
+                protectedParts.push('<code class="sway-ai-inline-code">' + code + '</code>');
+                return token;
+            });
+            safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, function (_, label, url) {
+                let parsedUrl;
+                try {
+                    // Decode HTML-escaped ampersands only for URL parsing; keep
+                    // the final attribute escaped after canonicalization.
+                    parsedUrl = new URL(String(url).replace(/&amp;/g, "&"));
+                } catch (urlError) {
+                    return label + " (" + url + ")";
+                }
+
+                if (
+                    (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") ||
+                    parsedUrl.username ||
+                    parsedUrl.password
+                ) {
+                    // Show the destination as inert text rather than making
+                    // credential-bearing or malformed URLs look trustworthy.
+                    return label + " (" + url + ")";
+                }
+
+                return '<a href="' + esc(parsedUrl.href) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+            });
+            safe = safe
+                .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+                .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+                .replace(/~~([^~]+)~~/g, "<del>$1</del>")
+                .replace(/(^|[^\*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+                .replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
+
+            if (citationUIEnabled) {
+                // Keep links intact, including bracket characters inside URLs.
+                safe = safe.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, function (anchor) {
+                    const token = "IMECODETOKEN" + protectedParts.length + "END";
+                    protectedParts.push(anchor);
+                    return token;
+                });
+                safe = safe.replace(/\[(\d{1,2})\]/g, function (_, indexValue) {
+                    return renderInlineCitation(indexValue);
+                });
+            }
+
+            protectedParts.forEach(function (html, index) {
+                safe = safe.replace("IMECODETOKEN" + index + "END", html);
+            });
+            return safe;
         }
 
         const lines = text.split("\n");
-        const headingPattern =
-            /^(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)$/;
-
         const html = [];
         let firstContentSeen = false;
+        let inCodeFence = false;
+        let codeLanguage = "";
+        let codeLines = [];
+        let listType = "";
 
-        lines.forEach(function (rawLine, index) {
+        function closeList() {
+            if (listType) {
+                html.push("</" + listType + ">");
+                listType = "";
+            }
+        }
+
+        function closeCodeFence() {
+            const codeText = codeLines.join("\n");
+            const languageLabel = codeLanguage || "Code";
+            const copyControl = codeText.trim()
+                ? '<button type="button" class="sway-ai-copy sway-ai-code-copy" aria-label="Copy code block" data-ai-copy="' +
+                    esc(codeText) + '">Copy code</button>'
+                : "";
+            html.push(
+                '<div class="sway-ai-code-block-wrap">' +
+                    '<div class="sway-ai-code-toolbar">' +
+                        '<span class="sway-ai-code-language">' + esc(languageLabel) + '</span>' +
+                        copyControl +
+                    '</div>' +
+                    '<pre class="sway-ai-code-block"><code' +
+                        (codeLanguage ? ' data-language="' + esc(codeLanguage) + '"' : "") +
+                    '>' + esc(codeText) + '</code></pre>' +
+                '</div>'
+            );
+            codeLines = [];
+            codeLanguage = "";
+            inCodeFence = false;
+            firstContentSeen = true;
+        }
+
+        function splitMarkdownTableRow(value) {
+            let source = String(value || "").trim();
+            if (source.startsWith("|")) source = source.slice(1);
+            if (source.endsWith("|") && !source.endsWith("\\|")) {
+                source = source.slice(0, -1);
+            }
+
+            const cells = [];
+            let current = "";
+            for (let index = 0; index < source.length; index += 1) {
+                const character = source[index];
+                if (character === "\\" && source[index + 1] === "|") {
+                    current += "|";
+                    index += 1;
+                } else if (character === "|") {
+                    cells.push(current.trim());
+                    current = "";
+                } else {
+                    current += character;
+                }
+            }
+            cells.push(current.trim());
+            return cells;
+        }
+
+        const handledTableRows = new Set();
+
+        lines.forEach(function (rawLine, lineIndex) {
+            if (handledTableRows.has(lineIndex)) return;
             const line = String(rawLine || "").trim();
 
+            if (/^\x60\x60\x60/.test(line)) {
+                closeList();
+                if (inCodeFence) {
+                    closeCodeFence();
+                } else {
+                    inCodeFence = true;
+                    codeLanguage = line.slice(3).trim().replace(/[^a-zA-Z0-9_+#.-]/g, "").slice(0, 30);
+                    codeLines = [];
+                }
+                return;
+            }
+
+            if (inCodeFence) {
+                codeLines.push(String(rawLine || ""));
+                return;
+            }
+
             if (!line) {
+                closeList();
                 html.push('<div class="sway-ai-answer-spacer" aria-hidden="true"></div>');
+                return;
+            }
+
+            const possibleTableHeader = line.includes("|");
+            const followingLine = String(lines[lineIndex + 1] || "").trim();
+            if (possibleTableHeader && followingLine.includes("|")) {
+                const headers = splitMarkdownTableRow(line);
+                const separators = splitMarkdownTableRow(followingLine);
+                const alignments = separators.map(function (cell) {
+                    const separator = cell.trim();
+                    if (!/^:?-{3,}:?$/.test(separator)) return "";
+                    if (separator.startsWith(":") && separator.endsWith(":")) return "center";
+                    if (separator.endsWith(":")) return "right";
+                    return "left";
+                });
+
+                if (
+                    headers.length > 0 &&
+                    headers.length === separators.length &&
+                    alignments.every(function (alignment) { return Boolean(alignment); })
+                ) {
+                    closeList();
+                    handledTableRows.add(lineIndex + 1);
+                    const bodyRows = [];
+                    let tableLineIndex = lineIndex + 2;
+
+                    while (
+                        tableLineIndex < lines.length &&
+                        String(lines[tableLineIndex] || "").trim().includes("|")
+                    ) {
+                        bodyRows.push(splitMarkdownTableRow(lines[tableLineIndex]));
+                        handledTableRows.add(tableLineIndex);
+                        tableLineIndex += 1;
+                    }
+
+                    const headerHtml = headers.map(function (cell, cellIndex) {
+                        return '<th scope="col" style="text-align:' + alignments[cellIndex] + '">' +
+                            inlineMarkdown(cell) + '</th>';
+                    }).join("");
+
+                    const bodyHtml = bodyRows.map(function (row) {
+                        const cells = headers.map(function (_, cellIndex) {
+                            const value = row[cellIndex] == null ? "" : row[cellIndex];
+                            return '<td style="text-align:' + alignments[cellIndex] + '">' +
+                                inlineMarkdown(value) + '</td>';
+                        }).join("");
+                        return '<tr>' + cells + '</tr>';
+                    }).join("");
+
+                    html.push(
+                        '<div class="sway-ai-table-wrap" role="region" aria-label="Answer table" tabindex="0">' +
+                            '<table class="sway-ai-markdown-table">' +
+                                '<thead><tr>' + headerHtml + '</tr></thead>' +
+                                (bodyRows.length ? '<tbody>' + bodyHtml + '</tbody>' : '') +
+                            '</table>' +
+                        '</div>'
+                    );
+                    firstContentSeen = true;
+                    return;
+                }
+            }
+
+            const markdownHeading = line.match(/^(#{1,3})\s+(.+)$/);
+            if (markdownHeading) {
+                closeList();
+                const level = markdownHeading[1].length;
+                html.push('<div class="sway-ai-answer-heading sway-ai-markdown-heading sway-ai-markdown-h' + level + '">' + inlineMarkdown(markdownHeading[2]) + '</div>');
+                firstContentSeen = true;
+                return;
+            }
+
+            if (/^(?:---+|\*\*\*+|___+)$/.test(line)) {
+                closeList();
+                html.push('<hr class="sway-ai-answer-divider">');
+                firstContentSeen = true;
+                return;
+            }
+
+            const unordered = line.match(/^(?:[-*+] |•\s+)(.+)$/);
+            const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+            if (unordered || ordered) {
+                const nextType = unordered ? "ul" : "ol";
+                if (listType !== nextType) {
+                    closeList();
+                    listType = nextType;
+                    html.push("<" + listType + ' class="sway-ai-markdown-list">');
+                }
+                html.push("<li>" + inlineMarkdown((unordered || ordered)[1]) + "</li>");
+                firstContentSeen = true;
+                return;
+            }
+            closeList();
+
+            if (/^>\s?/.test(line)) {
+                html.push('<blockquote class="sway-ai-answer-quote">' + inlineMarkdown(line.replace(/^>\s?/, "")) + '</blockquote>');
+                firstContentSeen = true;
+                return;
+            }
+
+            const customHeading = /^(?:Overdue Follow-ups|Due Today(?:\s*\([^)]*\))?|Due Tomorrow(?:\s*\([^)]*\))?|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)$/;
+            if (customHeading.test(line)) {
+                html.push('<div class="sway-ai-answer-heading">' + inlineMarkdown(line) + '</div>');
+                firstContentSeen = true;
                 return;
             }
 
             if (!firstContentSeen) {
                 firstContentSeen = true;
-                html.push(
-                    '<div class="sway-ai-answer-title">' +
-                        esc(line) +
-                    '</div>'
-                );
-                return;
-            }
-
-            if (headingPattern.test(line)) {
-                html.push(
-                    '<div class="sway-ai-answer-heading">' +
-                        esc(line) +
-                    '</div>'
-                );
+                html.push('<div class="sway-ai-answer-title">' + inlineMarkdown(line.replace(/^#\s*/, "")) + '</div>');
                 return;
             }
 
             if (/^•\s+/.test(line)) {
                 const bulletText = line.replace(/^•\s+/, "").trim();
                 const colonIndex = bulletText.indexOf(":");
-
-                if (
-                    colonIndex > 0 &&
-                    colonIndex < 80
-                ) {
-                    const label = bulletText
-                        .slice(0, colonIndex)
-                        .trim();
-                    const detail = bulletText
-                        .slice(colonIndex + 1)
-                        .trim();
-
-                    html.push(
-                        '<div class="sway-ai-answer-item">' +
-                            '<span class="sway-ai-answer-bullet" aria-hidden="true">•</span>' +
-                            '<div class="sway-ai-answer-item-text">' +
-                                '<strong>' +
-                                    esc(label) +
-                                '</strong>' +
-                                (
-                                    detail
-                                        ? ': ' + esc(detail)
-                                        : ''
-                                ) +
-                            '</div>' +
-                        '</div>'
-                    );
-
-                    return;
+                if (colonIndex > 0 && colonIndex < 80) {
+                    html.push('<div class="sway-ai-answer-item"><span class="sway-ai-answer-bullet" aria-hidden="true">•</span><div class="sway-ai-answer-item-text"><strong>' + inlineMarkdown(bulletText.slice(0, colonIndex).trim()) + '</strong>' + (bulletText.slice(colonIndex + 1).trim() ? ': ' + inlineMarkdown(bulletText.slice(colonIndex + 1).trim()) : '') + '</div></div>');
+                } else {
+                    html.push('<div class="sway-ai-answer-item"><span class="sway-ai-answer-bullet" aria-hidden="true">•</span><div class="sway-ai-answer-item-text">' + inlineMarkdown(bulletText) + '</div></div>');
                 }
-
-                html.push(
-                    '<div class="sway-ai-answer-item">' +
-                        '<span class="sway-ai-answer-bullet" aria-hidden="true">•</span>' +
-                        '<div class="sway-ai-answer-item-text">' +
-                            esc(bulletText) +
-                        '</div>' +
-                    '</div>'
-                );
-
                 return;
             }
 
-            html.push(
-                '<div class="sway-ai-answer-paragraph">' +
-                    esc(line) +
-                '</div>'
-            );
+            html.push('<div class="sway-ai-answer-paragraph">' + inlineMarkdown(line) + '</div>');
         });
 
-        return (
-            '<div class="sway-ai-answer">' +
-                html.join("") +
-                renderAIRecordActions(text) +
-            '</div>'
-        );
-    }
+        closeList();
+        if (inCodeFence) closeCodeFence();
 
+        return '<div class="sway-ai-answer">' + html.join("") + renderAIRecordActions(text) + '</div>';
+    }
 
     function renderAIKnowledgeTrace(retrieval, attribution) {
         if (
@@ -1558,13 +1755,26 @@
                 String(match.source_publisher || "").trim() ||
                 "Verified source";
 
-            const sourceLink =
-                String(match.source_url || "").trim();
+            let sourceLink = "";
+            try {
+                const parsedSourceUrl = new URL(String(match.source_url || "").trim());
+                if (
+                    (parsedSourceUrl.protocol === "https:" ||
+                        parsedSourceUrl.protocol === "http:") &&
+                    !parsedSourceUrl.username &&
+                    !parsedSourceUrl.password
+                ) {
+                    sourceLink = parsedSourceUrl.href;
+                }
+            } catch (sourceUrlError) {
+                // A malformed source URL remains visible as source metadata, not a link.
+            }
             const attributionMatch =
                 attributedById.get(String(match.id || "")) || null;
 
             return (
-                '<div class="sway-ai-knowledge-trace-row">' +
+                '<div class="sway-ai-knowledge-trace-row" data-ai-knowledge-id="' +
+                    esc(String(match.id || "")) + '">' +
                     '<div class="sway-ai-knowledge-trace-copy">' +
                         '<strong>' +
                             esc(match.title || "Knowledge record") +
@@ -1592,7 +1802,9 @@
                         sourceLink
                             ? '<a class="sway-ai-knowledge-trace-link" href="' +
                                 esc(sourceLink) +
-                                '" target="_blank" rel="noopener noreferrer">Source</a>'
+                                '" target="_blank" rel="noopener noreferrer" aria-label="Open source: ' +
+                                esc(match.title || "Knowledge record") +
+                                '">Open source ↗</a>'
                             : ""
                     ) +
                 '</div>'
@@ -2621,17 +2833,24 @@
     function copyAIMessage(button) {
         if (!button) return;
 
-        const message = String(button.getAttribute("data-ai-copy") || "").trim();
-        if (!message) return;
+        const rawMessage = String(button.getAttribute("data-ai-copy") || "");
+        const isCodeCopy = button.classList.contains("sway-ai-code-copy");
+        const message = isCodeCopy ? rawMessage : rawMessage.trim();
+        if (!message.trim()) return;
 
         const originalText = button.textContent;
+        const originalLabel = button.getAttribute("aria-label") ||
+            (isCodeCopy ? "Copy code block" : "Copy InnerMe response");
 
         function showCopied() {
-            button.textContent = "Copied";
+            button.textContent = isCodeCopy ? "Copied code" : "Copied";
+            button.setAttribute("aria-label", isCodeCopy ? "Code copied to clipboard" : "Response copied to clipboard");
+            button.setAttribute("aria-live", "polite");
             button.disabled = true;
 
             window.setTimeout(function () {
                 button.textContent = originalText;
+                button.setAttribute("aria-label", originalLabel);
                 button.disabled = false;
             }, 1400);
         }
@@ -2665,7 +2884,7 @@
                         return;
                     }
 
-                    swayAlert("InnerMe could not copy that response.");
+                    swayAlert("InnerMe could not copy this content.");
                 });
             return;
         }
@@ -2675,7 +2894,7 @@
             return;
         }
 
-        swayAlert("InnerMe could not copy that response.");
+        swayAlert("InnerMe could not copy this content.");
     }
 
     function dateInput(value) {
@@ -24819,7 +25038,7 @@ function simpleBars(items, color) {
                     item.role === "assistant" &&
                     !item.loading &&
                     String(item.content || "").trim()
-                        ? '<button type="button" class="sway-ai-copy" data-ai-copy="' +
+                        ? '<button type="button" class="sway-ai-copy" aria-label="Copy InnerMe response" data-ai-copy="' +
                             esc(String(item.content || "")) +
                           '">Copy</button>'
                         : "";
@@ -24827,7 +25046,7 @@ function simpleBars(items, color) {
                 const knowledgeHtml =
                     item.role === "assistant" &&
                     !item.loading
-                        ? renderAIKnowledgeTrace(item.knowledge_retrieval)
+                        ? renderAIKnowledgeTrace(item.knowledge_retrieval, item.knowledge_attribution)
                         : "";
 
                 const contentHtml =
@@ -24837,7 +25056,11 @@ function simpleBars(items, color) {
                           '</span>'
                         : (
                             item.role === "assistant"
-                                ? formatAIAnswer(String(item.content || ""))
+                                ? formatAIAnswer(
+                                    String(item.content || ""),
+                                    item.knowledge_retrieval || { matches: [] },
+                                    item.knowledge_attribution || { matches: [] }
+                                )
                                 : esc(String(item.content || ""))
                           );
 
@@ -24941,8 +25164,9 @@ function simpleBars(items, color) {
                             '<span aria-hidden="true">↑</span>' +
                         '</button>' +
                     '</div>' +
+                    '<div class="sway-ai-composer-status" id="sway-ai-composer-status" role="status" aria-live="polite" aria-atomic="true"></div>' +
                 '</form>' +
-                '<small class="sway-ai-note">InnerMe can analyse Swayphics workspace data and help you think through the next step. Nothing is sent or changed automatically. Enter to send · Shift+Enter for a new line.</small>' +
+                '<small class="sway-ai-note" id="sway-ai-composer-note">InnerMe can analyse Swayphics workspace data and help you think through the next step. Nothing is sent or changed automatically. Enter to send · Shift+Enter for a new line.</small>' +
             '</section>' +
             '</section>' +
             '<section class="sway-innerme-subview sway-innerme-actions-view" data-innerme-section="actions"' +
@@ -25039,6 +25263,163 @@ function simpleBars(items, color) {
         );
     }
 
+    async function readInnerMeChatStream(response, loading, conversation, composerStatus) {
+        if (!response || !response.body || typeof response.body.getReader !== "function") {
+            throw new Error("InnerMe returned a stream that this browser cannot read. Please retry.");
+        }
+
+        const contentNode = loading.querySelector(".sway-ai-message-content");
+        if (!contentNode) {
+            try {
+                await response.body.cancel();
+            } catch (cancelError) {
+                // The chat node may have been removed while the request was opening.
+            }
+            throw new Error("InnerMe's response area is no longer available.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let doneResult = null;
+        let streamedText = "";
+
+        contentNode.classList.add("sway-ai-streaming-content");
+        contentNode.setAttribute("aria-live", "off");
+
+        function keepConversationInView() {
+            const remaining = conversation.scrollHeight -
+                conversation.scrollTop -
+                conversation.clientHeight;
+            if (remaining < 120) {
+                conversation.scrollTop = conversation.scrollHeight;
+            }
+        }
+
+        function parseFrame(frame) {
+            const lines = String(frame || "").split("\n");
+            let eventName = "message";
+            const dataLines = [];
+
+            lines.forEach(function (line) {
+                if (!line || line.startsWith(":")) return;
+
+                if (line.startsWith("event:")) {
+                    eventName = line.slice(6).trim() || "message";
+                    return;
+                }
+
+                if (line.startsWith("data:")) {
+                    dataLines.push(line.slice(5).replace(/^ /, ""));
+                }
+            });
+
+            if (!dataLines.length) return;
+
+            let payload;
+            try {
+                payload = JSON.parse(dataLines.join("\n"));
+            } catch (error) {
+                throw new Error("InnerMe received an invalid streaming event. Please retry.");
+            }
+
+            if (eventName === "delta") {
+                const text = payload && typeof payload.text === "string"
+                    ? payload.text
+                    : "";
+                if (!text) return;
+
+                if (!streamedText) {
+                    const thinking = contentNode.querySelector(".sway-ai-thinking");
+                    if (thinking) thinking.remove();
+                    loading.classList.remove("sway-ai-loading");
+                }
+
+                streamedText += text;
+                contentNode.textContent = streamedText;
+                keepConversationInView();
+
+                if (composerStatus) {
+                    composerStatus.textContent = "InnerMe is responding…";
+                }
+                return;
+            }
+
+            if (eventName === "phase") {
+                if (composerStatus && payload && typeof payload.status === "string") {
+                    composerStatus.textContent = payload.status;
+                }
+                return;
+            }
+
+            if (eventName === "done") {
+                if (!payload || typeof payload.answer !== "string" || !payload.answer.trim()) {
+                    throw new Error("InnerMe finished without a usable answer. Please retry.");
+                }
+                doneResult = payload;
+                return;
+            }
+
+            if (eventName === "error") {
+                throw new Error(
+                    payload && typeof payload.error === "string"
+                        ? payload.error
+                        : "InnerMe's response was interrupted. Please retry."
+                );
+            }
+        }
+
+        async function dispatch(frame) {
+            if (!String(frame || "").trim()) return;
+            parseFrame(frame);
+        }
+
+        try {
+            while (true) {
+                const item = await reader.read();
+                buffer += decoder.decode(item.value || new Uint8Array(), {
+                    stream: !item.done
+                });
+                buffer = buffer.replace(/\r\n/g, "\n");
+
+                let separator = buffer.indexOf("\n\n");
+                while (separator >= 0) {
+                    const frame = buffer.slice(0, separator);
+                    buffer = buffer.slice(separator + 2);
+                    await dispatch(frame);
+                    separator = buffer.indexOf("\n\n");
+                }
+
+                if (item.done) break;
+            }
+
+            if (buffer.trim()) await dispatch(buffer);
+
+            if (!doneResult) {
+                throw new Error(
+                    streamedText
+                        ? "InnerMe's response ended before final verification completed. Please retry."
+                        : "InnerMe closed the response stream before answering. Please retry."
+                );
+            }
+
+            return doneResult;
+        } catch (error) {
+            try {
+                await reader.cancel(error);
+            } catch (cancelError) {
+                // The server may already have ended the stream.
+            }
+            throw error;
+        } finally {
+            try {
+                reader.releaseLock();
+            } catch (releaseError) {
+                // Some browsers release a failed stream reader automatically.
+            }
+        }
+    }
+
     async function askSwayphicsAI(message) {
         if (state.aiRequestInFlight) {
             return;
@@ -25067,6 +25448,7 @@ function simpleBars(items, color) {
                 return (
                     item &&
                     !item.loading &&
+                    !item.cancelled &&
                     (item.role === "user" ||
                         item.role === "assistant") &&
                     String(item.content || "").trim()
@@ -25155,6 +25537,8 @@ function simpleBars(items, color) {
         );
 
         state.aiRequestInFlight = true;
+        const requestAbortController = new AbortController();
+        state.aiRequestAbortController = requestAbortController;
 
         state.aiConversation =
             state.aiConversation.slice(-40);
@@ -25202,11 +25586,33 @@ function simpleBars(items, color) {
             conversation.scrollHeight;
 
         input.value = "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
         input.disabled = true;
-        send.disabled = true;
+        send.disabled = false;
+        send.type = "button";
+        send.classList.add("sway-ai-send-stop");
+        send.setAttribute("data-ai-stop-generation", "true");
+        send.setAttribute("title", "Stop response");
+        send.setAttribute("aria-label", "Stop generating response");
+        send.removeAttribute("aria-busy");
+        const sendGlyph = send.querySelector("span");
+        if (sendGlyph) sendGlyph.textContent = "■";
+        send.onclick = function (event) {
+            event.preventDefault();
+            if (requestAbortController.signal.aborted) return;
+            send.disabled = true;
+            send.setAttribute("aria-label", "Stopping response");
+            const stoppingStatus = document.getElementById("sway-ai-composer-status");
+            if (stoppingStatus) stoppingStatus.textContent = "Stopping response…";
+            requestAbortController.abort();
+        };
+        const composerStatus = document.getElementById("sway-ai-composer-status");
+        const composerForm = document.getElementById("sway-ai-form");
+        if (composerForm) composerForm.setAttribute("aria-busy", "true");
+        if (composerStatus) composerStatus.textContent = "InnerMe is thinking…";
 
         try {
-            const result = await api(
+            const response = await api(
                 "/functions/v1/swayphics-ai",
                 {
                     method: "POST",
@@ -25239,10 +25645,25 @@ function simpleBars(items, color) {
                                 type: state.aiFocusedRecord.type,
                                 id: state.aiFocusedRecord.id
                             }
-                            : null
-                    })
+                            : null,
+                        stream_response: true
+                    }),
+                    signal: requestAbortController.signal,
+                    returnRawResponse: true
                 }
             );
+
+            const responseContentType = String(
+                response.headers.get("content-type") || ""
+            ).toLowerCase();
+            const result = responseContentType.includes("text/event-stream")
+                ? await readInnerMeChatStream(
+                    response,
+                    loading,
+                    conversation,
+                    composerStatus
+                )
+                : await response.json();
 
             const answer =
                 result && result.answer
@@ -25266,13 +25687,17 @@ function simpleBars(items, color) {
             loading.innerHTML =
                 '<span class="sway-ai-message-label">InnerMe</span>' +
                 '<div class="sway-ai-message-content">' +
-                    formatAIAnswer(answer) +
+                    formatAIAnswer(
+                        answer,
+                        assistantEntry.knowledge_retrieval || { matches: [] },
+                        assistantEntry.knowledge_attribution || { matches: [] }
+                    ) +
                 '</div>' +
                 '<div class="sway-ai-message-meta">' +
                     '<span class="sway-ai-message-time">' +
                         esc(formatAIMessageTime(assistantEntry.createdAt)) +
                     '</span>' +
-                    '<button type="button" class="sway-ai-copy" data-ai-copy="' +
+                    '<button type="button" class="sway-ai-copy" aria-label="Copy InnerMe response" data-ai-copy="' +
                         esc(answer) +
                     '">Copy</button>' +
                     renderAIKnowledgeTrace(
@@ -25283,41 +25708,116 @@ function simpleBars(items, color) {
                 '</div>';
 
         } catch (error) {
-            const errorMessage =
-                (
-                    error &&
+            const wasCancelled = requestAbortController.signal.aborted ||
+                (error && error.name === "AbortError");
+
+            if (wasCancelled) {
+                const contentNode = loading.querySelector(".sway-ai-message-content");
+                const partialAnswer = String(contentNode ? contentNode.textContent || "" : "").trim();
+                const stoppedAnswer = partialAnswer || "Response stopped before any text was received.";
+                assistantEntry.content = stoppedAnswer;
+                assistantEntry.cancelled = true;
+                assistantEntry.createdAt = new Date().toISOString();
+                assistantEntry.loading = false;
+                saveAIConversation();
+
+                loading.classList.remove("sway-ai-loading");
+                loading.classList.add("sway-ai-response-stopped");
+                loading.innerHTML =
+                    '<span class="sway-ai-message-label">InnerMe</span>' +
+                    '<div class="sway-ai-message-content">' +
+                        (partialAnswer
+                            ? formatAIAnswer(partialAnswer)
+                            : '<p class="sway-ai-answer-paragraph">Response stopped before any text was received.</p>') +
+                    '</div>' +
+                    '<div class="sway-ai-message-meta">' +
+                        '<span class="sway-ai-message-time">' +
+                            esc(formatAIMessageTime(assistantEntry.createdAt)) +
+                        '</span>' +
+                        '<span class="sway-ai-stopped-label" role="status">Stopped</span>' +
+                    '</div>';
+            } else {
+                const errorMessage =
                     (
-                        error.name === "TypeError" ||
-                        String(error.message || "").toLowerCase() === "failed to fetch"
-                    ) &&
-                    String(error.message || "").toLowerCase().includes("fetch")
-                )
-                    ? "InnerMe could not reach its AI service. The Swayphics AI Edge Function may need to be redeployed in Supabase, or its CORS settings may be blocking this dashboard."
-                    : (
-                        error.message ||
-                        "InnerMe could not complete the request."
-                    );
+                        error &&
+                        (
+                            error.name === "TypeError" ||
+                            String(error.message || "").toLowerCase() === "failed to fetch"
+                        ) &&
+                        String(error.message || "").toLowerCase().includes("fetch")
+                    )
+                        ? "InnerMe could not reach its AI service. The Swayphics AI Edge Function may need to be redeployed in Supabase, or its CORS settings may be blocking this dashboard."
+                        : (
+                            error.message ||
+                            "InnerMe could not complete the request."
+                        );
 
-            assistantEntry.content = errorMessage;
-            assistantEntry.createdAt = new Date().toISOString();
-            assistantEntry.loading = false;
-            saveAIConversation();
+                assistantEntry.content = errorMessage;
+                assistantEntry.createdAt = new Date().toISOString();
+                assistantEntry.loading = false;
+                saveAIConversation();
 
-            loading.classList.remove("sway-ai-loading");
-            loading.innerHTML =
-                '<span class="sway-ai-message-label">InnerMe</span>' +
-                '<div class="sway-ai-message-content">' +
-                    esc(errorMessage) +
-                '</div>' +
-                '<div class="sway-ai-message-meta">' +
-                    '<span class="sway-ai-message-time">' +
-                        esc(formatAIMessageTime(assistantEntry.createdAt)) +
-                    '</span>' +
-                '</div>';
+                loading.classList.remove("sway-ai-loading");
+                loading.classList.add("sway-ai-response-error");
+                loading.innerHTML =
+                    '<span class="sway-ai-message-label">InnerMe</span>' +
+                    '<div class="sway-ai-message-content">' +
+                        esc(errorMessage) +
+                    '</div>' +
+                    '<div class="sway-ai-message-meta">' +
+                        '<span class="sway-ai-message-time">' +
+                            esc(formatAIMessageTime(assistantEntry.createdAt)) +
+                        '</span>' +
+                        '<button type="button" class="sway-ai-retry" aria-label="Retry last InnerMe request">Retry</button>' +
+                    '</div>';
+
+                const retryButton = loading.querySelector(".sway-ai-retry");
+                if (retryButton) {
+                    retryButton.addEventListener("click", function () {
+                        if (state.aiRequestInFlight) return;
+
+                        /* Replace the failed attempt rather than duplicating its user turn. */
+                        state.aiConversation = state.aiConversation.filter(function (entry) {
+                            return entry !== userEntry && entry !== assistantEntry;
+                        });
+                        saveAIConversation();
+                        userBubble.remove();
+                        loading.remove();
+
+                        input.value = clean;
+                        input.dispatchEvent(new Event("input", { bubbles: true }));
+                        if (composerForm && typeof composerForm.requestSubmit === "function") {
+                            composerForm.requestSubmit(send);
+                        } else if (composerForm) {
+                            composerForm.dispatchEvent(new Event("submit", {
+                                bubbles: true,
+                                cancelable: true
+                            }));
+                        }
+                    });
+                }
+            }
         } finally {
             state.aiRequestInFlight = false;
+            if (state.aiRequestAbortController === requestAbortController) {
+                state.aiRequestAbortController = null;
+            }
             input.disabled = false;
+            send.type = "submit";
+            send.classList.remove("sway-ai-send-stop");
+            send.removeAttribute("data-ai-stop-generation");
+            send.removeAttribute("title");
+            send.onclick = null;
             send.disabled = false;
+            input.removeAttribute("aria-disabled");
+            send.setAttribute("aria-label", "Ask InnerMe");
+            send.removeAttribute("aria-busy");
+            const restoredSendGlyph = send.querySelector("span");
+            if (restoredSendGlyph) restoredSendGlyph.textContent = "↑";
+            const restoredComposerForm = document.getElementById("sway-ai-form");
+            if (restoredComposerForm) restoredComposerForm.removeAttribute("aria-busy");
+            const restoredComposerStatus = document.getElementById("sway-ai-composer-status");
+            if (restoredComposerStatus) restoredComposerStatus.textContent = "Ready for your next message.";
             input.focus();
             conversation.scrollTop =
                 conversation.scrollHeight;
@@ -25911,10 +26411,72 @@ function simpleBars(items, color) {
         });
     }
 
+    function bindAIMessageActions() {
+        if (workspace.__swayInnerMeMessageActionsBound) {
+            return;
+        }
+
+        workspace.__swayInnerMeMessageActionsBound = true;
+
+        workspace.addEventListener("click", function (event) {
+            const target = event.target && typeof event.target.closest === "function"
+                ? event.target
+                : null;
+            const citation = target
+                ? target.closest(".sway-ai-inline-citation[data-ai-citation-id]")
+                : null;
+
+            if (citation && workspace.contains(citation)) {
+                event.preventDefault();
+                const message = citation.closest(".sway-ai-message");
+                const trace = message
+                    ? message.querySelector(".sway-ai-knowledge-trace")
+                    : null;
+                const sourceId = String(citation.getAttribute("data-ai-citation-id") || "");
+                const rows = trace ? Array.from(trace.querySelectorAll(".sway-ai-knowledge-trace-row")) : [];
+                const row = rows.find(function (item) {
+                    return String(item.getAttribute("data-ai-knowledge-id") || "") === sourceId;
+                });
+
+                if (!trace || !row) {
+                    citation.disabled = true;
+                    citation.classList.add("sway-ai-inline-citation-unavailable");
+                    citation.setAttribute("aria-label", "The cited source is no longer available");
+                    citation.title = "The cited source is no longer available";
+                    return;
+                }
+
+                trace.open = true;
+                rows.forEach(function (item) {
+                    item.classList.remove("sway-ai-knowledge-trace-row-highlight");
+                });
+                row.classList.add("sway-ai-knowledge-trace-row-highlight");
+                row.setAttribute("tabindex", "-1");
+                row.scrollIntoView({
+                    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                    block: "center"
+                });
+                row.focus({ preventScroll: true });
+                return;
+            }
+
+            const button = target
+                ? target.closest(".sway-ai-copy[data-ai-copy]")
+                : null;
+            if (!button || !workspace.contains(button)) {
+                return;
+            }
+
+            event.preventDefault();
+            copyAIMessage(button);
+        });
+    }
+
     function bindViewActions() {
 
         bindSwayActionDropdowns();
         bindAIFeedbackEvents();
+        bindAIMessageActions();
 
         workspace
             .querySelectorAll("[data-refresh-workspace]")
@@ -27312,14 +27874,34 @@ function simpleBars(items, color) {
             workspace.querySelector("#sway-ai-input");
 
         if (aiInput) {
+            const resizeInnerMeComposer = function () {
+                aiInput.style.height = "auto";
+                const maxHeight = 220;
+                const nextHeight = Math.min(aiInput.scrollHeight, maxHeight);
+                aiInput.style.height = nextHeight + "px";
+                aiInput.style.overflowY =
+                    aiInput.scrollHeight > maxHeight ? "auto" : "hidden";
+            };
+
+            aiInput.setAttribute("aria-label", "Message InnerMe");
+            aiInput.setAttribute("aria-describedby", "sway-ai-composer-note");
+            aiInput.style.maxHeight = "220px";
+            aiInput.style.boxSizing = "border-box";
+            aiInput.style.overflowY = "hidden";
+            aiInput.oninput = resizeInnerMeComposer;
+            resizeInnerMeComposer();
+
             aiInput.onkeydown = function (event) {
                 if (
                     event.key === "Enter" &&
                     !event.shiftKey &&
-                    !event.isComposing
+                    !event.isComposing &&
+                    event.keyCode !== 229
                 ) {
                     event.preventDefault();
-                    askSwayphicsAI(aiInput.value);
+                    if (!state.aiRequestInFlight) {
+                        askSwayphicsAI(aiInput.value);
+                    }
                 }
             };
         }

@@ -1,0 +1,488 @@
+import assert from "node:assert/strict";
+import { writeFile } from "node:fs/promises";
+
+const SUPABASE_URL = "https://ofqofhnlzbouclvvrmzd.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_p4UqpaLvEx_93XJSWvzo6Q_loju0xzW";
+const RESULT_PATH = "innerme-test-corpus-embedding-smoke-result.json";
+const SEED_CONFIRMATION = String(process.env.CONFIRM_TEST_ONLY_CORPUS || "").toLowerCase() === "true";
+const RUN_CHAT_CHECKS = String(process.env.RUN_CHAT_CHECKS || "false").toLowerCase() === "true";
+
+const sources = [
+  {
+    slug: "innerme-test-source-retrieval-contract",
+    url: "https://github.com/NtandoSway7929/SWA/blob/eff74f40549838491cb23dfb58989fc15b83dbad/supabase/migrations/20261015224500_innerme_knowledge_retrieval_schema_baseline.sql",
+  },
+  {
+    slug: "innerme-test-source-retrieval-runbook",
+    url: "https://github.com/NtandoSway7929/SWA/blob/eff74f40549838491cb23dfb58989fc15b83dbad/docs/innerme-semantic-retrieval-e2e-smoke-test.md",
+  },
+];
+
+const records = [
+  {
+    slug: "innerme-test-retrieval-eligibility-contract-20261019",
+    title: "InnerMe verified knowledge retrieval eligibility contract",
+    domain: "innerme-test-architecture",
+    knowledge_type: "framework",
+    statement: "The InnerMe match_innerme_knowledge retrieval RPC returns only knowledge records whose status is active, verification_status is verified, review_after is in the future, embedding_status is ready, and an embedding vector is present. Optional filters can narrow results by domain, jurisdiction, and knowledge type; the similarity must meet the requested threshold.",
+    application: "Use this contract when debugging zero-match retrieval. Check each eligibility gate and distinguish a retrieval execution error from a successful query with no matching records.",
+    constraints: "Isolated test-only internal code reference. It is not business, tax, legal, or financial guidance.",
+    do_not_use_when: "Do not cite this record as public product documentation or as evidence of production state. It describes a versioned repository artifact only.",
+    source_slug: sources[0].slug,
+  },
+  {
+    slug: "innerme-test-retrieval-only-runbook-20261019",
+    title: "InnerMe retrieval-only semantic regression contract",
+    domain: "innerme-test-validation",
+    knowledge_type: "framework",
+    statement: "The isolated InnerMe semantic retrieval regression suite has a retrieval-only mode that evaluates twenty-four retrieval and eligibility cases, intentionally skips four normal-chat grounding cases, makes zero Gemini normal-chat requests, and removes its six temporary synthetic fixtures after the run.",
+    application: "Use this statement to interpret the isolated workflow result. A retrieval-only pass tests its fixed synthetic corpus and does not establish real-corpus chat grounding or production readiness.",
+    constraints: "Isolated test-only operational reference derived from the versioned regression test documentation.",
+    do_not_use_when: "Do not describe a retrieval-only pass as a successful normal-chat grounding test or production validation.",
+    source_slug: sources[1].slug,
+  },
+];
+
+function assertTestOnlyConfiguration() {
+  if (!SEED_CONFIRMATION) {
+    throw new Error("Safety stop: confirm_test_only_corpus must be true before test records can be created.");
+  }
+  if (RUN_CHAT_CHECKS) {
+    throw new Error("Safety stop: corpus embedding smoke must run with normal-chat checks disabled.");
+  }
+  for (const name of ["INNERME_TEST_ADMIN_EMAIL", "INNERME_TEST_ADMIN_PASSWORD"]) {
+    if (!process.env[name]) throw new Error("Missing required isolated test-project secret: " + name);
+  }
+}
+
+function authHeaders(accessToken) {
+  return {
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    Authorization: "Bearer " + accessToken,
+    "Content-Type": "application/json",
+  };
+}
+
+async function readJson(response, context) {
+  const raw = await response.text();
+  let payload;
+  try {
+    payload = raw ? JSON.parse(raw) : null;
+  } catch {
+    throw new Error(context + " returned non-JSON HTTP " + response.status + ".");
+  }
+  if (!response.ok) {
+    const detail = payload && (payload.message || payload.error || payload.hint);
+    throw new Error(context + " failed with HTTP " + response.status + (detail ? ": " + String(detail).slice(0, 300) : "."));
+  }
+  return payload;
+}
+
+async function apiRequest(accessToken, url, options = {}, context = "Supabase test request") {
+  const response = await fetch(url, {
+    ...options,
+    headers: { ...authHeaders(accessToken), ...(options.headers || {}) },
+  });
+  return await readJson(response, context);
+}
+
+async function getBySlugs(accessToken, table, slugs, columns) {
+  const params = new URLSearchParams({
+    select: columns,
+    slug: "in.(" + slugs.join(",") + ")",
+  });
+  return await apiRequest(
+    accessToken,
+    SUPABASE_URL + "/rest/v1/" + table + "?" + params.toString(),
+    { method: "GET" },
+    "Read test-only " + table,
+  );
+}
+
+async function cleanupCreatedKnowledge(accessToken, createdIds) {
+  if (!createdIds.length) return;
+  const params = new URLSearchParams({
+    id: "in.(" + createdIds.join(",") + ")",
+  });
+  const response = await fetch(SUPABASE_URL + "/rest/v1/innerme_knowledge?" + params.toString(), {
+    method: "DELETE",
+    headers: {
+      ...authHeaders(accessToken),
+      Prefer: "return=minimal",
+    },
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error("Failed to remove temporary test-only knowledge rows (HTTP " + response.status + "): " + text.slice(0, 300));
+  }
+}
+
+async function cleanupVerificationLogs(accessToken, knowledgeIds) {
+  if (!knowledgeIds.length) return;
+  const params = new URLSearchParams({
+    knowledge_id: "in.(" + knowledgeIds.join(",") + ")",
+  });
+  const response = await fetch(SUPABASE_URL + "/rest/v1/innerme_knowledge_verification_log?" + params.toString(), {
+    method: "DELETE",
+    headers: {
+      ...authHeaders(accessToken),
+      Prefer: "return=minimal",
+    },
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error("Failed to remove TEST ONLY verification log rows (HTTP " + response.status + "): " + text.slice(0, 300));
+  }
+}
+
+async function main() {
+  assertTestOnlyConfiguration();
+
+  let accessToken = "";
+  const createdIds = [];
+  let insertionMayHaveCommitted = false;
+  let approvedSourceIds = new Set();
+  const expectedRecordSlugs = new Set(records.map((record) => record.slug));
+  const result = {
+    project_ref: "ofqofhnlzbouclvvrmzd",
+    mode: "isolated-test-only-governance-embedding-and-retrieval",
+    normal_chat_requests: 0,
+    verification_rpc_exercised: false,
+    verification_audit_checked: false,
+    results: [],
+    cleanup: {
+      attempted: false,
+      passed: false,
+      remaining_knowledge_rows: null,
+      remaining_verification_logs: null,
+    },
+  };
+
+  try {
+    const loginResponse = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: process.env.INNERME_TEST_ADMIN_EMAIL,
+        password: process.env.INNERME_TEST_ADMIN_PASSWORD,
+      }),
+    });
+    const login = await readJson(loginResponse, "Isolated test-admin sign-in");
+    assert.equal(typeof login.access_token, "string", "Isolated sign-in must return an access token.");
+    accessToken = login.access_token;
+    process.stdout.write("::add-mask::" + accessToken + "\n");
+
+    const sourceRows = await getBySlugs(accessToken, "innerme_knowledge_sources", sources.map((s) => s.slug), "id,slug,status,verification_status,url");
+    assert.equal(sourceRows.length, sources.length, "Both reviewed test-only source records must already exist.");
+    approvedSourceIds = new Set(sourceRows.map((source) => String(source.id)));
+    for (const expected of sources) {
+      const source = sourceRows.find((row) => row.slug === expected.slug);
+      assert.ok(source, "Missing test-only source " + expected.slug);
+      assert.equal(source.status, "active", "Test source must be active.");
+      assert.equal(source.verification_status, "verified", "Test source must be marked verified after source review.");
+      assert.equal(source.url, expected.url, "Test source URL must match the reviewed repository source.");
+    }
+
+    const corpusNow = await apiRequest(
+      accessToken,
+      SUPABASE_URL + "/rest/v1/innerme_knowledge?select=id,slug&limit=1000",
+      { method: "GET" },
+      "Preflight isolated knowledge corpus",
+    );
+    assert.ok(Array.isArray(corpusNow), "Knowledge corpus preflight must return a row array.");
+    assert.equal(corpusNow.length, 0, "Safety stop: the isolated knowledge table is not empty. Refusing to seed alongside existing rows.");
+    const existing = await getBySlugs(accessToken, "innerme_knowledge", records.map((r) => r.slug), "id,slug");
+    assert.equal(existing.length, 0, "A matching test-only record already exists. Refusing to overwrite or delete pre-existing data.");
+
+    const now = new Date();
+    const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const sourceBySlug = new Map(sourceRows.map((source) => [source.slug, source]));
+    const payload = records.map((record) => {
+      const source = sourceBySlug.get(record.source_slug);
+      assert.ok(source, "Missing source link for " + record.slug);
+      return {
+        source_id: source.id,
+        slug: record.slug,
+        title: record.title,
+        domain: record.domain,
+        knowledge_type: record.knowledge_type,
+        statement: record.statement,
+        application: record.application,
+        constraints: record.constraints,
+        do_not_use_when: record.do_not_use_when,
+        evidence_level: "internal",
+        confidence: "high",
+        jurisdiction: "Global",
+        tags: ["test-only", "source-backed", "innerme-qa"],
+        priority: 90,
+        status: "active",
+        last_verified_at: null,
+        review_after: null,
+        verification_status: "unverified",
+        verification_method: null,
+        verification_notes: "TEST ONLY: created as an unverified fixture so the isolated governance RPC must verify it before retrieval.",
+        verified_source_url: null,
+        embedding_status: "pending",
+      };
+    });
+
+    // A connection can fail after Postgres commits the insert but before the
+    // client receives its representation. Mark this as potentially committed
+    // before issuing the request so finally can rediscover the reserved slugs.
+    insertionMayHaveCommitted = true;
+    const inserted = await apiRequest(
+      accessToken,
+      SUPABASE_URL + "/rest/v1/innerme_knowledge",
+      { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload) },
+      "Create temporary source-backed test corpus",
+    );
+    if (Array.isArray(inserted)) {
+      for (const row of inserted) {
+        if (
+          row &&
+          typeof row.id === "string" &&
+          row.id &&
+          expectedRecordSlugs.has(String(row.slug || "")) &&
+          approvedSourceIds.has(String(row.source_id || "")) &&
+          String(row.verification_notes || "").startsWith("TEST ONLY:")
+        ) {
+          if (!createdIds.includes(row.id)) createdIds.push(row.id);
+        }
+      }
+    }
+    assert.ok(Array.isArray(inserted) && inserted.length === records.length, "Both temporary test records must be created.");
+    inserted.forEach((row) => {
+      assert.ok(row.id && row.slug, "Inserted test row must have an id and slug.");
+    });
+
+    for (const row of inserted) {
+      const source = sourceBySlug.get(records.find((record) => record.slug === row.slug).source_slug);
+      assert.ok(source, "Missing source for governance verification of " + row.slug);
+      const verified = await apiRequest(
+        accessToken,
+        SUPABASE_URL + "/rest/v1/rpc/verify_innerme_knowledge",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            p_knowledge_id: row.id,
+            p_verification_method: "internal_review",
+            p_verification_notes: "TEST ONLY: linked internal source reviewed for isolated verification workflow testing.",
+            p_verified_source_url: source.url,
+          }),
+        },
+        "Exercise InnerMe knowledge source-verification RPC",
+      );
+      assert.equal(verified.verification_status, "verified", row.slug + " must become verified through the governance RPC.");
+      assert.equal(verified.verification_method, "internal_review", row.slug + " must persist the verification method.");
+      assert.equal(verified.verified_source_url, source.url, row.slug + " must persist the verified source URL.");
+      assert.ok(verified.review_after && new Date(verified.review_after).getTime() > Date.now(), row.slug + " must receive a future review deadline.");
+    }
+    result.verification_rpc_exercised = true;
+
+    const auditParams = new URLSearchParams({
+      select: "id,knowledge_id,source_id,verification_status,verification_method,verification_notes,verified_source_url,verified_at",
+      knowledge_id: "in.(" + createdIds.join(",") + ")",
+    });
+    const auditRows = await apiRequest(
+      accessToken,
+      SUPABASE_URL + "/rest/v1/innerme_knowledge_verification_log?" + auditParams.toString(),
+      { method: "GET" },
+      "Read back InnerMe verification audit records",
+    );
+    assert.equal(auditRows.length, records.length, "Every governed test record must have one audit entry.");
+    for (const row of auditRows) {
+      assert.equal(row.verification_status, "verified", "Audit status must say verified.");
+      assert.equal(row.verification_method, "internal_review", "Audit method must be preserved.");
+      assert.ok(String(row.verification_notes || "").startsWith("TEST ONLY:"), "Audit record must carry the cleanup-safe test marker.");
+      assert.ok(String(row.verified_source_url || "").startsWith("https://") || String(row.verified_source_url || "").startsWith("http://"), "Audit record must retain an HTTP(S) source URL.");
+    }
+    result.verification_audit_checked = true;
+
+    await apiRequest(
+      accessToken,
+      SUPABASE_URL + "/functions/v1/swayphics-ai",
+      {
+        method: "POST",
+        body: JSON.stringify({ action: "embed_knowledge", knowledge_ids: createdIds }),
+      },
+      "Generate isolated gte-small embeddings after governance verification",
+    );
+
+    const statusRows = await getBySlugs(accessToken, "innerme_knowledge", records.map((r) => r.slug), "id,slug,source_id,verification_status,verification_method,verified_source_url,review_after,embedding_status,embedded_at");
+    assert.equal(statusRows.length, records.length, "Both test rows must remain available after embedding.");
+    for (const row of statusRows) {
+      assert.equal(row.verification_status, "verified", row.slug + " must meet the governance verification gate.");
+      assert.equal(row.verification_method, "internal_review", row.slug + " must be verified via the expected RPC.");
+      assert.ok(row.review_after && new Date(row.review_after).getTime() > Date.now(), row.slug + " must have a future review deadline.");
+      assert.equal(row.embedding_status, "ready", row.slug + " must be indexed and ready.");
+      assert.ok(row.embedded_at, row.slug + " must have an embedding timestamp.");
+    }
+
+    for (const record of records) {
+      const row = statusRows.find((item) => item.slug === record.slug);
+      const query = record.title + "\n" + record.statement;
+      const search = await apiRequest(
+        accessToken,
+        SUPABASE_URL + "/functions/v1/swayphics-ai",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "search_knowledge",
+            query,
+            match_threshold: 0.8,
+            match_count: 10,
+          }),
+        },
+        "Search temporary source-backed test knowledge",
+      );
+      const matches = Array.isArray(search.matches) ? search.matches : [];
+      const found = matches.find((match) => String(match.id || "") === String(row.id));
+      assert.ok(found, "The exact test record was not returned by semantic retrieval: " + record.slug);
+      assert.ok(Number(found.similarity) >= 0.8, "Retrieved test record did not meet the 0.80 similarity threshold: " + record.slug);
+      assert.equal(found.source_url, sources.find((source) => source.slug === record.source_slug).url, "Retrieved evidence must retain its source URL.");
+
+      result.results.push({
+        slug: record.slug,
+        title: record.title,
+        similarity: Number(found.similarity),
+        source_url: found.source_url,
+        verification_status: row.verification_status,
+        verification_method: row.verification_method,
+        review_after: row.review_after,
+        verification_audit_checked: result.verification_audit_checked,
+        embedding_status: row.embedding_status,
+        retrieved: true,
+      });
+    }
+    result.status = "passed";
+  } catch (error) {
+    result.status = "failed";
+    result.error = error instanceof Error ? error.message : String(error);
+    process.exitCode = 1;
+  } finally {
+    if (accessToken) {
+      let cleanupIds = Array.from(new Set(createdIds));
+      result.cleanup.attempted = insertionMayHaveCommitted || cleanupIds.length > 0;
+
+      // Recover any rows whose insert committed but whose HTTP representation
+      // was lost. Never delete by slug alone: require the reserved slug, a
+      // reviewed test source ID, and the explicit TEST ONLY marker.
+      if (insertionMayHaveCommitted) {
+        try {
+          const discoveredRows = await getBySlugs(
+            accessToken,
+            "innerme_knowledge",
+            records.map((r) => r.slug),
+            "id,slug,source_id,verification_notes",
+          );
+          for (const row of discoveredRows) {
+            if (
+              row &&
+              typeof row.id === "string" &&
+              expectedRecordSlugs.has(String(row.slug || "")) &&
+              approvedSourceIds.has(String(row.source_id || "")) &&
+              String(row.verification_notes || "").startsWith("TEST ONLY:")
+            ) {
+              if (!cleanupIds.includes(row.id)) cleanupIds.push(row.id);
+              if (!createdIds.includes(row.id)) createdIds.push(row.id);
+            }
+          }
+        } catch (error) {
+          result.cleanup.discovery_error = error instanceof Error ? error.message : String(error);
+        }
+      }
+
+      try {
+        await cleanupVerificationLogs(accessToken, cleanupIds);
+      } catch (error) {
+        result.cleanup.verification_log_error = error instanceof Error ? error.message : String(error);
+      }
+      try {
+        await cleanupCreatedKnowledge(accessToken, cleanupIds);
+        const leftovers = await getBySlugs(
+          accessToken,
+          "innerme_knowledge",
+          records.map((r) => r.slug),
+          "id,slug,source_id,verification_notes",
+        );
+        const remainingLogIds = Array.from(new Set([
+          ...cleanupIds,
+          ...leftovers
+            .filter((row) =>
+              row &&
+              expectedRecordSlugs.has(String(row.slug || "")) &&
+              approvedSourceIds.has(String(row.source_id || "")) &&
+              String(row.verification_notes || "").startsWith("TEST ONLY:")
+            )
+            .map((row) => String(row.id || ""))
+            .filter(Boolean),
+        ]));
+        const auditParams = new URLSearchParams({
+          select: "id,knowledge_id",
+          knowledge_id: "in.(" + remainingLogIds.join(",") + ")",
+        });
+        const remainingLogs = remainingLogIds.length
+          ? await apiRequest(
+              accessToken,
+              SUPABASE_URL + "/rest/v1/innerme_knowledge_verification_log?" + auditParams.toString(),
+              { method: "GET" },
+              "Verify temporary audit-log cleanup",
+            )
+          : [];
+        result.cleanup.remaining_knowledge_rows = leftovers.length;
+        result.cleanup.remaining_verification_logs = remainingLogs.length;
+        result.cleanup.passed =
+          leftovers.length === 0 &&
+          remainingLogs.length === 0 &&
+          !result.cleanup.verification_log_error &&
+          !result.cleanup.discovery_error;
+        if (leftovers.length !== 0) {
+          throw new Error("Temporary corpus cleanup left " + leftovers.length + " test-only knowledge row(s).");
+        }
+        if (remainingLogs.length !== 0) {
+          throw new Error("Temporary governance cleanup left " + remainingLogs.length + " test-only audit row(s).");
+        }
+        if (result.cleanup.discovery_error) {
+          throw new Error("Could not rediscover rows for safe cleanup after a potentially committed insert: " + result.cleanup.discovery_error);
+        }
+      } catch (error) {
+        result.cleanup.error = error instanceof Error ? error.message : String(error);
+        result.status = "failed";
+        process.exitCode = 1;
+      }
+      if (!result.cleanup.passed) {
+        result.status = "failed";
+        process.exitCode = 1;
+      }
+    }
+    result.finished_at = new Date().toISOString();
+    await writeFile(RESULT_PATH, JSON.stringify(result, null, 2) + "\n", "utf8");
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      const lines = [
+        "## Source-backed test-only corpus smoke",
+        "",
+        "**Status:** " + String(result.status || "failed").toUpperCase(),
+        "",
+        "- Isolated project: `ofqofhnlzbouclvvrmzd`",
+        "- Normal-chat/Gemini requests: 0",
+        "- Temporary records created: " + createdIds.length,
+        "- Governance RPC exercised: " + String(result.verification_rpc_exercised),
+        "- Verification audit read back: " + String(result.verification_audit_checked),
+        "- Cleanup verified: " + String(result.cleanup.passed),
+        "- Remaining knowledge rows with test slugs: " + String(result.cleanup.remaining_knowledge_rows),
+        "- Remaining test verification-log rows: " + String(result.cleanup.remaining_verification_logs),
+        "",
+        "| Test record | Governance verified | Audit checked | Retrieved | Similarity | Source URL |",
+        "|---|---:|---:|---:|---:|---|",
+        ...result.results.map((item) => "| " + item.slug + " | " + item.verification_status + " | " + item.verification_audit_checked + " | " + item.retrieved + " | " + item.similarity.toFixed(4) + " | " + item.source_url + " |"),
+      ];
+      if (result.error) lines.push("", "**Failure:** " + result.error);
+      if (result.cleanup.error) lines.push("", "**Cleanup failure:** " + result.cleanup.error);
+      await import("node:fs/promises").then(({ appendFile }) => appendFile(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n", "utf8"));
+    }
+    process.stdout.write("INNERME_TEST_CORPUS_SMOKE_STATUS=" + String(result.status || "failed") + "\n");
+    process.stdout.write("INNERME_TEST_CORPUS_CLEANUP_PASSED=" + String(result.cleanup.passed) + "\n");
+  }
+}
+
+await main();

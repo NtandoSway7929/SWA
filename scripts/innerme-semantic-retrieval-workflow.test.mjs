@@ -11,6 +11,10 @@ const endpointPath = fileURLToPath(
   new URL("../supabase/functions/innerme-retrieval-smoke-test/index.ts", import.meta.url)
 );
 const endpoint = readFileSync(endpointPath, "utf8");
+const seederPath = fileURLToPath(
+  new URL("../scripts/innerme-test-corpus-embedding-smoke.mjs", import.meta.url)
+);
+const seeder = readFileSync(seederPath, "utf8");
 
 function workflowInput(name) {
   const marker = "      " + name + ":\n";
@@ -20,6 +24,36 @@ function workflowInput(name) {
   const nextInput = rest.match(/\n      [a-z_]+:\n/);
   return nextInput ? rest.slice(0, nextInput.index) : rest;
 }
+
+test("streaming acceptance mode is isolated, explicitly confirmed, and runs alone", () => {
+  const input = workflowInput("run_stream_smoke");
+  assert.ok(input.includes("        type: boolean"));
+  assert.ok(input.includes("        default: false"));
+  assert.ok(
+    workflow.includes('if [[ "${RUN_STREAM_SMOKE}" == "true" && "${CONFIRM_NO_BILLING}" != "true" ]]; then'),
+    "The dedicated streaming path must require no-billing confirmation."
+  );
+  assert.ok(
+    workflow.includes("inputs.run_stream_smoke == true"),
+    "The provider-backed stream test must be opt-in."
+  );
+  assert.ok(
+    workflow.includes("inputs.run_stream_smoke != true"),
+    "The retrieval regression must not run alongside the dedicated streaming request."
+  );
+  const smokePath = fileURLToPath(
+    new URL("../scripts/innerme-streaming-provider-smoke.mjs", import.meta.url)
+  );
+  const smoke = readFileSync(smokePath, "utf8");
+  assert.ok(smoke.includes('const SUPABASE_URL = "https://ofqofhnlzbouclvvrmzd.supabase.co";'));
+  assert.ok(smoke.includes("stream_response: true"));
+  assert.ok(smoke.includes('action: "assistant_chat"'));
+  assert.equal(
+    smoke.split('fetch(SUPABASE_URL + "/functions/v1/swayphics-ai"').length - 1,
+    1,
+    "The runner must make only one assistant_chat request and must not retry it."
+  );
+});
 
 test("manual semantic retrieval workflow defaults to retrieval-only mode", () => {
   const chatInput = workflowInput("run_chat_checks");
@@ -58,6 +92,33 @@ test("full chat mode requires a separate explicit no-billing confirmation", () =
   assert.ok(
     workflow.includes('payload["run_chat_case_id"] = os.environ["RUN_CHAT_CASE_ID"].strip()'),
     "The selected grounding case must be forwarded to the isolated endpoint."
+  );
+});
+
+test("the workflow rejects a dispatch that selects no test task", () => {
+  const regressionInput = workflowInput("run_retrieval_regression");
+  const corpusInput = workflowInput("seed_test_only_corpus");
+  assert.ok(regressionInput.includes("        default: true"));
+  assert.ok(corpusInput.includes("        default: false"));
+  assert.ok(
+    workflow.includes('if [[ "${RUN_RETRIEVAL_REGRESSION}" != "true" && "${SEED_TEST_ONLY_CORPUS}" != "true" && "${RUN_STREAM_SMOKE}" != "true" ]]; then'),
+    "At least one test mode must be selected; a no-op workflow must fail closed."
+  );
+});
+
+test("ambiguous test-corpus insertion outcomes still discover and clean owned test rows", () => {
+  assert.ok(
+    seeder.includes("insertionMayHaveCommitted = true;"),
+    "Mark the insert as potentially committed before sending the HTTP request."
+  );
+  assert.ok(
+    seeder.includes("const discoveredRows = await getBySlugs(") &&
+      seeder.includes('records.map((r) => r.slug),\n            "id,slug,source_id,verification_notes"'),
+    "Cleanup must rediscover the fixed test slugs if the insert response is lost or malformed."
+  );
+  assert.ok(
+    seeder.includes('String(row.verification_notes || "").startsWith("TEST ONLY:")'),
+    "Cleanup must be restricted to explicitly marked test-only rows."
   );
 });
 
