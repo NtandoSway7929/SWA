@@ -174,5 +174,11 @@ assert.match(invoiceSaveSource, /The form is still open[\s\S]*check its status b
     "invoice failures should preserve the form and warn users to verify send status before retrying");
 assert.doesNotMatch(invoiceSaveSource, /swayAlert\(\s*error\.message/,
     "invoice save errors should not expose raw backend exception text");
+assert.match(workspaceSource, /let pendingInvoiceId = invoice && invoice\.id \? invoice\.id : null;/,
+    "the invoice modal should retain the invoice ID across retry attempts");
+assert.match(invoiceSaveSource, /let savedId = pendingInvoiceId;/,
+    "retrying a partially completed invoice save should update the existing invoice");
+assert.match(invoiceSaveSource, /pendingInvoiceId = savedId;/,
+    "a newly created invoice ID should be retained before subsequent steps can fail");
 
 console.log("Admin table controls tests passed.");
