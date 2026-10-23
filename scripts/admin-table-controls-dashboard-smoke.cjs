@@ -20,6 +20,13 @@ const leads = [
     created_at: "2026-10-01T12:00:00Z"
   },
   {
+    id: "lead-contact-toggle", business_name: "Contact Toggle Fixture", contact_name: "Test Contact",
+    email: "contact-toggle@example.invalid", phone: "0000000003",
+    service_interest: "Website", status: "new", source: "Synthetic Test",
+    estimated_value: 1200, next_follow_up: "2026-10-28",
+    contacted_manually: false, created_at: "2026-10-04T12:00:00Z"
+  },
+  {
     id: "lead-zulu", business_name: "Zulu Market", contact_name: "Lee Mokoena",
     email: "lee@example.invalid", phone: "0000000001", service_interest: "Branding",
     status: "interested", source: "Website", estimated_value: 4500,
@@ -372,19 +379,19 @@ async function main() {
     await navigate("leads", "crm");
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
-    assert.equal(await leadRows.count(), 3, "the actual Leads view should render all synthetic lead records");
+    assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
 
-    const alphaLeadRow = leadRows.filter({ hasText: "Alpha Studio" });
-    await alphaLeadRow.locator(".sway-lead-actions-menu > summary").click();
-    const alphaContactToggle = alphaLeadRow.locator('[data-toggle-lead-contacted="lead-alpha"]');
-    assert.equal((await alphaContactToggle.textContent()).trim(), "Mark as contacted",
+    const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
+    await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
+    const contactToggle = contactToggleLeadRow.locator('[data-toggle-lead-contacted="lead-contact-toggle"]');
+    assert.equal((await contactToggle.textContent()).trim(), "Mark as contacted",
       "the lead Actions dropdown should offer a manual contacted mark when no outbound log exists");
-    await alphaContactToggle.click();
+    await contactToggle.click();
     await page.waitForFunction(() => {
-      const button = document.querySelector('[data-toggle-lead-contacted="lead-alpha"]');
+      const button = document.querySelector('[data-toggle-lead-contacted="lead-contact-toggle"]');
       return button && button.textContent.trim() === "Undo contacted mark";
     });
-    assert.equal(leads.find(item => item.id === "lead-alpha").contacted_manually, true,
+    assert.equal(leads.find(item => item.id === "lead-contact-toggle").contacted_manually, true,
       "marking a lead as contacted should update only the in-memory mocked lead");
 
     await leadView.locator('[data-admin-table-search-input="leads"]').fill("lee@example.invalid");
@@ -398,7 +405,7 @@ async function main() {
 
     await leadView.locator('[data-admin-table-search-input="leads"]').fill("");
     await leadView.locator('[data-admin-table-filter="leads"]').selectOption("new");
-    assert.equal(await leadRows.filter({ visible: true }).count(), 2,
+    assert.equal(await leadRows.filter({ visible: true }).count(), 3,
       "the actual dashboard should filter leads by status");
     await leadView.locator('[data-admin-table-filter="leads"]').selectOption("all");
     await leadView.locator('[data-admin-table-sort="leads"]').selectOption("business_asc");
