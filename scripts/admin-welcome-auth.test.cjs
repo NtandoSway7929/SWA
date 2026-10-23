@@ -461,6 +461,31 @@ test("workspace boot stops safely when session readiness is missing, false or re
   }
 });
 
+test("startup failure helper renders before the workspace shell exists", () => {
+  const state = { initialDataLoading: true, initialDataError: null };
+  const root = { innerHTML: "" };
+  const helper = compileFunction(
+    workspaceSource,
+    "showSwayphicsWorkspaceStartupFailure",
+    {
+      state,
+      document: {
+        getElementById(id) {
+          if (id === "sway-workspace-main") return null;
+          if (id === "sway-admin-workspace") return root;
+          return null;
+        }
+      },
+      esc: value => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;"),
+      console: { error() {} }
+    }
+  );
+
+  helper("Admin session verification could not start. Please sign in again.");
+  assert.match(root.innerHTML, /Admin session verification could not start/);
+  assert.equal(state.initialDataLoading, false);
+});
+
 test("startup failure helper renders a visible error without leaking internals", () => {
   const state = { initialDataLoading: true, initialDataError: null };
   const main = { innerHTML: "" };
