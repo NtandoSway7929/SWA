@@ -256,6 +256,8 @@
     .admin-header-inner.swayphics-has-welcome > .admin-mobile-sidebar-toggle {
         display: flex !important;
         grid-area: toggle !important;
+        flex-direction: column;
+        gap: 3px;
         align-items: center;
         justify-content: center;
         justify-self: start;
