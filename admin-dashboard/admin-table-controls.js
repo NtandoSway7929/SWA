@@ -145,7 +145,13 @@
             const records = Array.isArray(state[view]) ? state[view] : [];
             const statuses = Array.from(new Set(records.map(function (item) {
                 return String(item.status || "").trim().toLowerCase();
-            }).filter(Boolean))).sort();
+            }).filter(Boolean)));
+            const currentFilter = String(controls.filter || "all").trim().toLowerCase();
+            // Keep a selected status available even when a refresh leaves no rows in that status.
+            if (currentFilter !== "all" && !statuses.includes(currentFilter)) {
+                statuses.push(currentFilter);
+            }
+            statuses.sort();
             const filterOptions = ['<option value="all"' +
                 (controls.filter === "all" ? " selected" : "") + '>All statuses</option>']
                 .concat(statuses.map(function (status) {
@@ -253,7 +259,12 @@
                 });
             }
             function cell(value) {
-                return '"' + String(value === null || typeof value === "undefined" ? "" : value).replace(/"/g, '""') + '"';
+                const raw = String(value === null || typeof value === "undefined" ? "" : value);
+                // Quoting alone does not stop spreadsheet formula execution in CSV exports.
+                const formulaLike = /^[\s\uFEFF]*[=+\-@]/.test(raw);
+                const startsWithControl = /^[\t\r\n]/.test(raw);
+                const safe = formulaLike || startsWithControl ? "'" + raw : raw;
+                return '"' + safe.replace(/"/g, '""') + '"';
             }
             const csv = [headings].concat(rows).map(function (row) {
                 return row.map(cell).join(",");
