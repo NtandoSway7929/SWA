@@ -12,6 +12,7 @@ on:
       - "admin-dashboard/admin-welcome.css"
       - "admin-dashboard/admin-welcome.js"
       - "scripts/innerme-chat-browser-smoke.cjs"
+      - "scripts/admin-welcome-auth.test.cjs"
       - ".github/workflows/innerme-chat-browser-smoke.yml"
   pull_request:
     branches:
@@ -21,6 +22,7 @@ on:
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/admin-workspace.js"
       - "scripts/innerme-chat-browser-smoke.cjs"
+      - "scripts/admin-welcome-auth.test.cjs"
       - ".github/workflows/innerme-chat-browser-smoke.yml"
   workflow_dispatch:
     inputs:
@@ -51,6 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check admin-dashboard/admin-welcome.js
+          node scripts/admin-welcome-auth.test.cjs
           test -s admin-dashboard/admin-welcome.css
           grep -q 'admin-welcome.css' admin-dashboard/index.html
           grep -q 'admin-welcome.js' admin-dashboard/index.html
