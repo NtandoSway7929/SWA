@@ -364,6 +364,9 @@ async function main() {
         );
       });
     }
+    // Wait for the drawer's CSS translate transition to finish, not just for
+    // its open-state classes to clear.
+    await page.waitForTimeout(350);
     const controls = page.locator('#sway-workspace-main .sway-admin-table-control-grid');
     await controls.waitFor({ state: "visible" });
     const bounds = await controls.boundingBox();
