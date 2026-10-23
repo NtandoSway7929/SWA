@@ -20,6 +20,9 @@ jobs:
           node --check admin-dashboard/admin-workspace.js
           node --check admin-dashboard/innerme-provider-usage.js
 
+      - name: Test admin welcome authentication handshake
+        run: node scripts/admin-welcome-auth.test.cjs
+
       - name: Validate inline JavaScript
         shell: bash
         run: |
