@@ -18,10 +18,14 @@ jobs:
         run: |
           set -e
           node --check admin-dashboard/admin-workspace.js
+          node --check admin-dashboard/admin-table-controls.js
           node --check admin-dashboard/innerme-provider-usage.js
 
       - name: Test admin welcome authentication handshake
         run: node scripts/admin-welcome-auth.test.cjs
+
+      - name: Test admin table controls
+        run: node scripts/admin-table-controls.test.cjs
 
       - name: Validate inline JavaScript
         shell: bash
