@@ -161,6 +161,11 @@
         greeting.appendChild(content);
         headerInner.classList.add("swayphics-has-welcome");
 
+        var header = headerInner.closest(".admin-header");
+        if (header) {
+            header.classList.add("swayphics-has-welcome");
+        }
+
         var brand = headerInner.querySelector(".admin-brand");
         if (brand && brand.parentNode === headerInner) {
             brand.insertAdjacentElement("afterend", greeting);
