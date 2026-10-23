@@ -12126,7 +12126,7 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            clientHealthChip(item.id) +
+                            (item.client_id ? clientHealthChip(item.client_id) : "—") +
                         "</td>" +
                         "<td>" +
                             chip(item.status) +
