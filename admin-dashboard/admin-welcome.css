@@ -260,17 +260,52 @@
 
 @media (max-width: 760px) {
     .admin-header-inner.swayphics-has-welcome {
-        gap: 8px 10px;
+        display: grid !important;
+        grid-template-columns: 38px auto minmax(0, 1fr) !important;
+        grid-template-rows: auto auto auto !important;
+        grid-template-areas:
+            "toggle brand controls"
+            "welcome welcome welcome"
+            "search search search" !important;
+        gap: 8px 10px !important;
         border-radius: 22px;
     }
 
+    .admin-header-inner.swayphics-has-welcome > .admin-mobile-sidebar-toggle {
+        grid-area: toggle !important;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .admin-brand {
+        grid-area: brand !important;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .admin-header-right {
+        grid-area: controls !important;
+    }
+
     .admin-header-inner.swayphics-has-welcome > .swayphics-welcome-toast {
+        grid-area: welcome !important;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
         min-height: 38px;
         padding: 3px 5px;
     }
 
+    /* The legacy mobile rule hides/absolutely positions search. With the
+       welcome layout active, restore it as an explicit third grid row. */
     .admin-header-inner.swayphics-has-welcome > .admin-global-search {
-        min-width: 0;
+        display: block !important;
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        grid-area: search !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        margin: 0 !important;
+        z-index: 120;
     }
 }
 
