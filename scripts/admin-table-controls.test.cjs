@@ -160,7 +160,7 @@ assert.doesNotMatch(moduleSource, /error && error\.message \? error\.message/,
     "raw backend/provider error details must not be surfaced directly in the dashboard UI");
 
 const invoiceSaveStart = workspaceSource.indexOf("async function saveInvoice(");
-const invoiceSaveEnd = workspaceSource.indexOf("\\n    function base64ToBytes", invoiceSaveStart);
+const invoiceSaveEnd = workspaceSource.indexOf("\n    function base64ToBytes", invoiceSaveStart);
 assert.ok(invoiceSaveStart >= 0 && invoiceSaveEnd > invoiceSaveStart,
     "invoice save handler should remain available for regression checks");
 const invoiceSaveSource = workspaceSource.slice(invoiceSaveStart, invoiceSaveEnd);
