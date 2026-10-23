@@ -302,6 +302,49 @@ test("session verification records the server-returned user ID", async () => {
   assert.equal(removed.length, 0);
 });
 
+test("session verification retries after a 401 and records the refreshed identity", async () => {
+  const window = {
+    sessionStorage: makeStorage(),
+    location: { href: "" },
+    swayphicsVerifiedAdminUserId: null
+  };
+  const refreshCalls = [];
+  const requestHeaders = [];
+  let requestCount = 0;
+  const sandbox = {
+    accessToken: "old-access-token",
+    refreshToken: "refresh-token",
+    SUPABASE_URL: "https://supabase.example.invalid",
+    SUPABASE_PUBLISHABLE_KEY: "test-key",
+    window,
+    localStorage: { removeItem() {} },
+    refreshAdminSession: async force => {
+      refreshCalls.push(force);
+      if (force) sandbox.accessToken = "refreshed-access-token";
+      return true;
+    },
+    fetch: async (url, init) => {
+      requestCount += 1;
+      requestHeaders.push(init.headers.Authorization);
+      if (requestCount === 1) {
+        return { ok: false, status: 401, json: async () => ({}) };
+      }
+      return { ok: true, status: 200, json: async () => ({ id: "refreshed-server-user" }) };
+    },
+    console: { error() {}, warn() {} }
+  };
+  sandbox.clearSwayphicsAdminWelcomeMarker = compileFunction(
+    dashboardHtml, "clearSwayphicsAdminWelcomeMarker", { window }
+  );
+
+  const verify = compileFunction(dashboardHtml, "verifyAdminSession", sandbox);
+  assert.equal(await verify(), true);
+  assert.deepEqual(refreshCalls, [false, true]);
+  assert.equal(requestCount, 2);
+  assert.deepEqual(requestHeaders, ["Bearer old-access-token", "Bearer refreshed-access-token"]);
+  assert.equal(window.swayphicsVerifiedAdminUserId, "refreshed-server-user");
+});
+
 test("failed session verification clears marker, tokens and verified identity", async () => {
   const storage = makeStorage({ [MARKER_KEY]: "pending" });
   const removed = [];
@@ -331,6 +374,22 @@ test("failed session verification clears marker, tokens and verified identity", 
   assert.equal(storage.getItem(MARKER_KEY), null);
   assert.deepEqual(removed.sort(), ["swayphics_admin_access_token", "swayphics_admin_refresh_token"]);
   assert.equal(window.location.href, "../admin/");
+});
+
+test("logout cleanup clears the pending marker and verified identity", () => {
+  const logoutStart = dashboardHtml.indexOf('document\n        .getElementById("logout-button")');
+  const logoutEnd = dashboardHtml.indexOf("/* =========================================================\n       START", logoutStart);
+  assert.ok(logoutStart >= 0 && logoutEnd > logoutStart, "logout handler is present");
+  const logoutSource = dashboardHtml.slice(logoutStart, logoutEnd);
+  const removeAccessAt = logoutSource.indexOf('"swayphics_admin_access_token"');
+  const removeRefreshAt = logoutSource.indexOf('"swayphics_admin_refresh_token"');
+  const clearMarkerAt = logoutSource.indexOf("clearSwayphicsAdminWelcomeMarker();");
+  const clearIdentityAt = logoutSource.indexOf("window.swayphicsVerifiedAdminUserId = null;");
+  const redirectAt = logoutSource.indexOf('window.location.href =');
+  assert.ok(removeAccessAt >= 0 && removeRefreshAt > removeAccessAt);
+  assert.ok(clearMarkerAt > removeRefreshAt);
+  assert.ok(clearIdentityAt > clearMarkerAt);
+  assert.ok(redirectAt > clearIdentityAt);
 });
 
 test("missing server user ID fails verification", async () => {
@@ -375,6 +434,31 @@ test("workspace startup orders session verification and identity checks before e
   assert.ok(initializeAt < loadStateAt, "workspace initializes after verification");
   assert.ok(loadStateAt < identityCheckAt, "loaded user is checked against verified identity");
   assert.ok(identityCheckAt < eventAt, "event is emitted after identity match");
+});
+
+test("workspace boot stops safely when session readiness is missing, false or rejected", async (t) => {
+  const cases = [
+    ["missing readiness", undefined],
+    ["verification false", Promise.resolve(false)],
+    ["verification rejected", Promise.reject(new Error("verification failed"))]
+  ];
+
+  for (const [label, readiness] of cases) {
+    await t.test(label, async () => {
+      const failures = [];
+      const boot = compileFunction(workspaceSource, "boot", {
+        window: { swayphicsAdminSessionReady: readiness },
+        claimSwayphicsAdminWelcomeMarker: () => null,
+        showSwayphicsWorkspaceStartupFailure(message) {
+          failures.push(message);
+        },
+        console: { error() {}, warn() {} }
+      });
+      await boot();
+      assert.equal(failures.length, 1);
+      assert.match(failures[0], /sign in again/i);
+    });
+  }
 });
 
 test("startup failure helper renders a visible error without leaking internals", () => {
