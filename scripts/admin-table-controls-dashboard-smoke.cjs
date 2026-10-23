@@ -278,7 +278,7 @@ async function main() {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await navigate("leads", "crm");
-    const controls = page.locator('#sway-workspace-main [data-admin-table-control-grid]');
+    const controls = page.locator('#sway-workspace-main .sway-admin-table-control-grid');
     await controls.waitFor({ state: "visible" });
     const bounds = await controls.boundingBox();
     assert.ok(bounds && bounds.x >= 0 && bounds.x + bounds.width <= 392,
