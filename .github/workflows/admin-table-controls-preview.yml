@@ -1,0 +1,72 @@
+name: Admin Table Controls Isolated Browser Preview
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "admin-dashboard/admin-table-controls.js"
+      - "admin-dashboard/admin-workspace.css"
+      - "tests/admin-table-controls-preview/**"
+      - "scripts/admin-table-controls-browser.test.cjs"
+      - ".github/workflows/admin-table-controls-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-browser-preview:
+    name: Test Phase 2 controls with synthetic data
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install isolated browser-test dependency
+        run: npm install --no-save --no-package-lock playwright
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local-only preview server
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/admin-table-preview-server.log 2>&1 &
+          echo $! > /tmp/admin-table-preview-server.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/tests/admin-table-controls-preview/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/admin-table-preview-server.log
+          exit 1
+
+      - name: Run desktop and mobile browser checks
+        run: |
+          mkdir -p artifacts
+          node scripts/admin-table-controls-browser.test.cjs
+
+      - name: Upload preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-table-controls-isolated-preview
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop local preview server
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f /tmp/admin-table-preview-server.pid ]]; then
+            kill "$(cat /tmp/admin-table-preview-server.pid)" || true
+          fi
