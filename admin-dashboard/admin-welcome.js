@@ -19,9 +19,9 @@
             var hour = hourPart ? Number(hourPart.value) : NaN;
             return Number.isInteger(hour) && hour >= 0 && hour <= 23
                 ? hour
-                : 12;
+                : null;
         } catch (error) {
-            return 12;
+            return null;
         }
     }
 
@@ -29,6 +29,13 @@
         var hour = getJohannesburgHour();
         var greeting;
         var subtitle;
+
+        if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+            return {
+                greeting: fullName ? "Welcome back, " + fullName : "Welcome back",
+                subtitle: "Let’s make this session count."
+            };
+        }
 
         if (hour >= 5 && hour < 12) {
             greeting = "Good morning";
@@ -45,7 +52,7 @@
         }
 
         return {
-            greeting: fullName ? greeting + ", " + fullName : greeting,
+            greeting: fullName ? greeting + ", " + fullName : "Welcome back",
             subtitle: subtitle
         };
     }
@@ -75,7 +82,16 @@
     }
 
     function showWelcome(event) {
-        if (hasShownWelcome || !event || !event.detail || !document.body) {
+        if (
+            hasShownWelcome ||
+            !event ||
+            !event.detail
+        ) {
+            return;
+        }
+
+        var headerInner = document.querySelector(".admin-header-inner");
+        if (!headerInner || document.getElementById("swayphics-admin-welcome")) {
             return;
         }
 
@@ -85,32 +101,21 @@
             ? event.detail.fullName.trim()
             : "";
         var copy = getWelcomeCopy(fullName);
+        var prefersReducedMotion = Boolean(
+            window.matchMedia &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        );
+        var shouldAnimate = event.detail.animate === true && !prefersReducedMotion;
 
-        var toast = document.createElement("section");
-        toast.id = "swayphics-admin-welcome";
-        toast.className = "swayphics-welcome-toast";
-        toast.setAttribute("role", "status");
-        toast.setAttribute("aria-live", "polite");
-        toast.setAttribute("aria-atomic", "true");
-
-        var trails = document.createElement("div");
-        trails.className = "swayphics-welcome-light-trails";
-        trails.setAttribute("aria-hidden", "true");
-        for (var i = 0; i < 3; i += 1) {
-            trails.appendChild(document.createElement("span"));
-        }
-
-        var particles = document.createElement("div");
-        particles.className = "swayphics-welcome-particles";
-        particles.setAttribute("aria-hidden", "true");
-        addParticles(particles);
+        var greeting = document.createElement("section");
+        greeting.id = "swayphics-admin-welcome";
+        greeting.className = "swayphics-welcome-toast";
+        greeting.setAttribute("role", "status");
+        greeting.setAttribute("aria-live", "polite");
+        greeting.setAttribute("aria-atomic", "true");
 
         var content = document.createElement("div");
         content.className = "swayphics-welcome-copy";
-
-        var eyebrow = document.createElement("span");
-        eyebrow.className = "swayphics-welcome-eyebrow";
-        eyebrow.textContent = "Swayphics · Admin workspace";
 
         var title = document.createElement("h2");
         title.className = "swayphics-welcome-title";
@@ -120,20 +125,48 @@
         subtitle.className = "swayphics-welcome-subtitle";
         subtitle.textContent = copy.subtitle;
 
-        content.appendChild(eyebrow);
         content.appendChild(title);
         content.appendChild(subtitle);
-        toast.appendChild(trails);
-        toast.appendChild(particles);
-        toast.appendChild(content);
 
-        document.body.appendChild(toast);
+        if (shouldAnimate) {
+            greeting.classList.add("swayphics-welcome-animate");
 
-        window.setTimeout(function () {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
+            var trails = document.createElement("div");
+            trails.className = "swayphics-welcome-light-trails";
+            trails.setAttribute("aria-hidden", "true");
+
+            for (var i = 0; i < 3; i += 1) {
+                trails.appendChild(document.createElement("span"));
             }
-        }, WELCOME_DURATION_MS);
+
+            var particles = document.createElement("div");
+            particles.className = "swayphics-welcome-particles";
+            particles.setAttribute("aria-hidden", "true");
+            addParticles(particles);
+
+            greeting.appendChild(trails);
+            greeting.appendChild(particles);
+
+            window.setTimeout(function () {
+                if (trails.parentNode === greeting) {
+                    greeting.removeChild(trails);
+                }
+                if (particles.parentNode === greeting) {
+                    greeting.removeChild(particles);
+                }
+                greeting.classList.remove("swayphics-welcome-animate");
+            }, WELCOME_DURATION_MS);
+        }
+
+        greeting.appendChild(content);
+        headerInner.classList.add("swayphics-has-welcome");
+
+        var brand = headerInner.querySelector(".admin-brand");
+        if (brand && brand.parentNode === headerInner) {
+            brand.insertAdjacentElement("afterend", greeting);
+        } else {
+            headerInner.insertBefore(greeting, headerInner.firstChild);
+        }
     }
 
     window.addEventListener("swayphics:admin-welcome-authorized", showWelcome);
