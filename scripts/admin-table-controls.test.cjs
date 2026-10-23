@@ -102,6 +102,16 @@ assert.match(selectedCheckbox, /data-admin-table-select="leads"/);
 assert.match(selectedCheckbox, /checked/);
 assert.match(selectedCheckbox, /A&amp;B/);
 
+state.tableControls.tasks.filter = "pending";
+const pendingFilterMarkup = controls.renderControls("tasks");
+assert.match(pendingFilterMarkup, /<option value="pending" selected>pending<\/option>/);
+state.tasks = state.tasks.filter(item => item.status !== "pending");
+const stalePendingFilterMarkup = controls.renderControls("tasks");
+assert.match(stalePendingFilterMarkup, /<option value="pending" selected>pending<\/option>/,
+    "the active filter must stay represented when no records currently match it");
+assert.deepEqual(controls.items("tasks", state.tasks), [],
+    "preserving a stale filter must not silently reset the actual record filter");
+
 const controlsMarkup = controls.renderControls("leads");
 assert.match(controlsMarkup, /data-admin-table-search-input="leads"/);
 assert.match(controlsMarkup, /data-admin-table-filter="leads"/);
@@ -109,5 +119,7 @@ assert.match(controlsMarkup, /data-admin-table-sort="leads"/);
 assert.match(controlsMarkup, /Export selected CSV/);
 assert.match(moduleSource, /const selectedIds = new Set\(\(state\.tableSelection\[view\] \|\| \[\]\)\.map\(String\)\)/,
     "the UI should re-sync checkbox visuals from the selected-record state");
+assert.ok(moduleSource.includes("const formulaLike = /^[\\s\\uFEFF]*[=+\\-@]/.test(raw);"),
+    "CSV values that can be interpreted as spreadsheet formulas must be neutralised");
 
 console.log("Admin table controls tests passed.");
