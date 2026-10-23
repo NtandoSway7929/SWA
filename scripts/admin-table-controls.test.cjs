@@ -185,4 +185,14 @@ assert.ok(
     "the invoice form should remain open until refresh completes successfully"
 );
 
+
+assert.match(workspaceSource, /let pendingInvoiceSent = false;/,
+    "the invoice modal should remember when the send endpoint has already succeeded");
+assert.match(invoiceSaveSource, /if \(shouldSend && !pendingInvoiceSent\)/,
+    "retrying a post-send failure must not dispatch the invoice send action again");
+assert.match(invoiceSaveSource, /await invokeInvoiceFunction\(savedId, "send"\);\s*pendingInvoiceSent = true;/,
+    "the sent flag must be set immediately after the send endpoint succeeds, before later logging or refresh work");
+assert.match(invoiceSaveSource, /if \(!selectedClient \|\| !selectedClient\.email\)/,
+    "the direct send path must still validate that the selected client has an email address");
+
 console.log("Admin table controls tests passed.");
