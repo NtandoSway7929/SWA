@@ -85,11 +85,11 @@ jobs:
           cp "$GITHUB_WORKSPACE/tests/admin-table-controls-db/schema.sql" \
             "supabase/migrations/20261023000000_admin_table_controls_test_schema.sql"
           "$CLI" start
-          "$CLI" status --output env > "$GITHUB_WORKSPACE/artifacts/local-supabase.env"
+          "$CLI" status --output env > "$RUNNER_TEMP/local-supabase.env"
 
           set -a
           # status --output env contains only local endpoint/key variables.
-          source "$GITHUB_WORKSPACE/artifacts/local-supabase.env"
+          source "$RUNNER_TEMP/local-supabase.env"
           set +a
           export SUPABASE_LOCAL_API_URL="$API_URL"
           cd "$GITHUB_WORKSPACE"
