@@ -143,7 +143,12 @@ async function configureIsolatedContext(context, initialView, theme, welcomeTest
       window.addEventListener("swayphics:admin-welcome-authorized", function (event) {
         const countKey = "__swayphicsWelcomeEventCount";
         const count = Number(sessionStorage.getItem(countKey) || "0") + 1;
+        const animationCountKey = "__swayphicsWelcomeAnimationCount";
+        const hasReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const animationCount = Number(sessionStorage.getItem(animationCountKey) || "0") +
+          (event.detail && event.detail.animate === true && !hasReducedMotion ? 1 : 0);
         sessionStorage.setItem(countKey, String(count));
+        sessionStorage.setItem(animationCountKey, String(animationCount));
         sessionStorage.setItem(
           "__swayphicsWelcomeFullName",
           String(event.detail && event.detail.fullName || "")
@@ -365,6 +370,31 @@ async function configureIsolatedContext(context, initialView, theme, welcomeTest
         user: {
           id: TEST_USER_ID,
           email: loginPayload.email || "welcome-test@example.invalid",
+          role: "authenticated"
+        }
+      }));
+    }
+
+    if (
+      welcomeTest &&
+      welcomeTest.simulateLogin === true &&
+      url.pathname === "/auth/v1/token" &&
+      url.searchParams.get("grant_type") === "refresh_token" &&
+      method === "POST"
+    ) {
+      const refreshPayload = request.postDataJSON() || {};
+      if (!String(refreshPayload.refresh_token || "").startsWith("isolated-welcome-test-refresh-token")) {
+        return route.fulfill(responseJson({ message: "Unexpected test refresh token." }, 401));
+      }
+
+      return route.fulfill(responseJson({
+        access_token: makeTestAccessToken(TEST_USER_ID, "welcome-test@example.invalid"),
+        refresh_token: "isolated-welcome-test-refresh-token-refreshed",
+        token_type: "bearer",
+        expires_in: 3600,
+        user: {
+          id: TEST_USER_ID,
+          email: "welcome-test@example.invalid",
           role: "authenticated"
         }
       }));
@@ -748,19 +778,103 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     const firstWelcome = await page.evaluate(() => ({
       count: Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0"),
       fullName: sessionStorage.getItem("__swayphicsWelcomeFullName"),
-      pendingMarker: sessionStorage.getItem("swayphics_admin_welcome_pending")
+      pendingMarker: sessionStorage.getItem("swayphics_admin_welcome_pending"),
+      animationCount: sessionStorage.getItem("__swayphicsWelcomeAnimationCount")
     }));
     assert.equal(firstWelcome.count, 1, "successful login must authorize exactly one welcome event");
     assert.equal(firstWelcome.fullName, "Isolated UI Test", "welcome event must use the active admin full name");
     assert.equal(firstWelcome.pendingMarker, null, "dashboard must consume the marker");
+    assert.equal(firstWelcome.animationCount, "1", "new login must authorize one motion sequence");
+
+    const welcomeToast = page.locator("#swayphics-admin-welcome");
+    await welcomeToast.waitFor({ state: "attached", timeout: 5000 });
+    const welcomeVisual = await welcomeToast.evaluate(node => ({
+      headline: node.querySelector(".swayphics-welcome-title")?.textContent || "",
+      subtitle: node.querySelector(".swayphics-welcome-subtitle")?.textContent || "",
+      particles: node.querySelectorAll(".swayphics-welcome-particle").length,
+      trails: node.querySelectorAll(".swayphics-welcome-light-trails span").length,
+      pointerEvents: getComputedStyle(node).pointerEvents,
+      position: getComputedStyle(node).position,
+      isInsideHeader: node.parentElement?.classList.contains("admin-header-inner") === true,
+      isAnimated: node.classList.contains("swayphics-welcome-animate"),
+      accessibleRole: node.getAttribute("role"),
+      ariaLive: node.getAttribute("aria-live")
+    }));
+    assert.match(welcomeVisual.headline, /Isolated UI Test/, "visual greeting must use the active admin full name");
+    assert.ok(welcomeVisual.subtitle.length > 0, "visual greeting must include its time-specific supporting line");
+    assert.equal(welcomeVisual.particles, 14, "welcome visual must include the abstract particle layer");
+    assert.equal(welcomeVisual.trails, 3, "welcome visual must include three light-trail elements");
+    assert.equal(welcomeVisual.pointerEvents, "none", "welcome greeting must not block dashboard controls");
+    assert.equal(welcomeVisual.isInsideHeader, true, "welcome greeting must be mounted inside the existing header");
+    assert.notEqual(welcomeVisual.position, "fixed", "welcome greeting must not render as a separate viewport overlay");
+    assert.equal(welcomeVisual.isAnimated, true, "a new login should animate when reduced motion is not requested");
+    assert.equal(welcomeVisual.accessibleRole, "status", "welcome message must expose a status role");
+    assert.equal(welcomeVisual.ariaLive, "polite", "welcome message must announce politely to assistive technology");
+
+    // Verify readable copy in dark mode without depending on a screenshot.
+    await page.locator("#admin-theme-toggle").click();
+    await page.waitForFunction(() => document.body.classList.contains("sway-dark-mode"), undefined, { timeout: 5000 });
+    const darkWelcomeColors = await welcomeToast.evaluate(node => ({
+      title: getComputedStyle(node.querySelector(".swayphics-welcome-title")).color,
+      subtitle: getComputedStyle(node.querySelector(".swayphics-welcome-subtitle")).color
+    }));
+    assert.equal(darkWelcomeColors.title, "rgb(247, 250, 255)", "dark-mode greeting title must stay light and readable");
+    assert.equal(darkWelcomeColors.subtitle, "rgb(192, 203, 224)", "dark-mode supporting message must stay readable");
+    await page.locator("#admin-theme-toggle").click();
+    await page.waitForFunction(() => !document.body.classList.contains("sway-dark-mode"), undefined, { timeout: 5000 });
+
+    // A routine token refresh must not emit or animate the welcome again.
+    const refreshOutcome = await page.evaluate(async () => {
+      if (typeof window.swayphicsRefreshAdminSession !== "function") {
+        return { available: false, ok: false };
+      }
+      return {
+        available: true,
+        ok: await window.swayphicsRefreshAdminSession(true)
+      };
+    });
+    assert.equal(refreshOutcome.available, true, "dashboard must expose the existing session refresh function");
+    assert.equal(refreshOutcome.ok, true, "mocked refresh-token flow should succeed");
+    const afterTokenRefresh = await page.evaluate(() => ({
+      eventCount: Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0"),
+      animationCount: Number(sessionStorage.getItem("__swayphicsWelcomeAnimationCount") || "0")
+    }));
+    assert.equal(afterTokenRefresh.eventCount, 1, "token refresh must not emit another welcome event");
+    assert.equal(afterTokenRefresh.animationCount, 1, "token refresh must not replay the animation");
+
+    // Routine SPA navigation must preserve the greeting without replaying its effects.
+    const innerMeGroup = page.locator('[data-nav-group-toggle="innerme"]');
+    if ((await innerMeGroup.getAttribute("aria-expanded")) !== "true") {
+      await innerMeGroup.click();
+    }
+    await page.locator('[data-view="swayphics-ai"]').first().click();
+    await page.locator("#sway-admin-workspace .sway-ai-panel").waitFor({ state: "visible", timeout: 15000 });
+    const afterSpaNavigation = await page.evaluate(() => ({
+      eventCount: Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0"),
+      animationCount: Number(sessionStorage.getItem("__swayphicsWelcomeAnimationCount") || "0"),
+      greetingVisible: Boolean(document.querySelector("#swayphics-admin-welcome")),
+      effectsPresent: Boolean(document.querySelector("#swayphics-admin-welcome .swayphics-welcome-light-trails, #swayphics-admin-welcome .swayphics-welcome-particles"))
+    }));
+    assert.equal(afterSpaNavigation.eventCount, 1, "SPA navigation must not emit another welcome event");
+    assert.equal(afterSpaNavigation.animationCount, 1, "SPA navigation must not replay the animation");
+    assert.equal(afterSpaNavigation.greetingVisible, true, "greeting should remain in the persistent dashboard header");
+    assert.equal(afterSpaNavigation.animationCount, 1, "SPA navigation must not create another animation even if the original effects have already cleaned up");
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
     await page.waitForTimeout(700);
-    const afterRefresh = await page.evaluate(() =>
-      Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0")
-    );
-    assert.equal(afterRefresh, 1, "refresh must not replay the welcome event");
+    const afterRefresh = await page.evaluate(() => ({
+      eventCount: Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0"),
+      animationCount: Number(sessionStorage.getItem("__swayphicsWelcomeAnimationCount") || "0"),
+      headline: document.querySelector("#swayphics-admin-welcome .swayphics-welcome-title")?.textContent || "",
+      isInsideHeader: document.querySelector("#swayphics-admin-welcome")?.parentElement?.classList.contains("admin-header-inner") === true,
+      motionLayersPresent: Boolean(document.querySelector("#swayphics-admin-welcome .swayphics-welcome-light-trails, #swayphics-admin-welcome .swayphics-welcome-particles"))
+    }));
+    assert.equal(afterRefresh.eventCount, 2, "a validated refresh may render static greeting copy again");
+    assert.equal(afterRefresh.animationCount, 1, "refresh must not replay the welcome animation");
+    assert.match(afterRefresh.headline, /Isolated UI Test/, "static greeting remains visible after refresh");
+    assert.equal(afterRefresh.isInsideHeader, true, "static greeting remains inside the existing header");
+    assert.equal(afterRefresh.motionLayersPresent, false, "refresh should not recreate animation layers without a new login marker");
 
     await page.evaluate(() => {
       sessionStorage.setItem(
@@ -801,13 +915,42 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     assert.equal(failedLogin.pendingMarker, null, "failed login must not retain a stale marker");
     assert.match(failedLogin.status, /Synthetic invalid login/i);
 
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.locator("#admin-email").fill("welcome-test@example.invalid");
+    await page.locator("#admin-password").fill("mocked-password");
+    await Promise.all([
+      page.waitForURL(url => url.pathname.startsWith("/admin-dashboard/"), { timeout: 15000 }),
+      page.locator("#login-button").click()
+    ]);
+    await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
+    const reducedMotionGreeting = page.locator("#swayphics-admin-welcome");
+    await reducedMotionGreeting.waitFor({ state: "attached", timeout: 5000 });
+    const reducedMotionVisual = await reducedMotionGreeting.evaluate(node => ({
+      headline: node.querySelector(".swayphics-welcome-title")?.textContent || "",
+      isInsideHeader: node.parentElement?.classList.contains("admin-header-inner") === true,
+      isAnimated: node.classList.contains("swayphics-welcome-animate"),
+      particles: node.querySelectorAll(".swayphics-welcome-particle").length,
+      trails: node.querySelectorAll(".swayphics-welcome-light-trails span").length
+    }));
+    assert.match(reducedMotionVisual.headline, /Isolated UI Test/, "reduced-motion mode still shows greeting copy");
+    assert.equal(reducedMotionVisual.isInsideHeader, true, "reduced-motion greeting stays in the header");
+    assert.equal(reducedMotionVisual.isAnimated, false, "reduced-motion mode must suppress the animation class");
+    assert.equal(reducedMotionVisual.particles, 0, "reduced-motion mode must omit particles");
+    assert.equal(reducedMotionVisual.trails, 0, "reduced-motion mode must omit light trails");
+
     metrics.scenarios.push({
       name: "admin-welcome-authentication",
       status: "passed",
       loginCreatesOneWelcomeEvent: true,
       activeAdminFullName: firstWelcome.fullName,
       markerConsumed: true,
+      welcomeAnimationRendered: true,
+      greetingUsesActiveAdminName: true,
+      particleAndLightTrailLayersPresent: true,
       refreshDoesNotReplay: true,
+      staticGreetingPersistsAfterRefresh: true,
+      headerPlacementVerified: true,
+      reducedMotionSuppressesEffects: true,
       logoutClearsMarkerAndTokens: true,
       failedLoginClearsStaleMarker: true
     });
@@ -906,7 +1049,49 @@ async function main() {
     });
 
     await openChat(mobilePage, "swayphics-ai");
-    const mobileSize = await assertNoHorizontalOverflow(mobilePage, "Mobile");
+    const mobileWelcome = mobilePage.locator("#swayphics-admin-welcome");
+    await mobileWelcome.waitFor({ state: "attached", timeout: 10000 });
+    const mobileWelcomeLayout = await mobilePage.evaluate(() => {
+      const header = document.querySelector(".admin-header-inner");
+      const outerHeader = document.querySelector(".admin-header");
+      const main = document.querySelector(".admin-main");
+      const greeting = document.querySelector("#swayphics-admin-welcome");
+      const search = header && header.querySelector(".admin-global-search");
+      const controls = header && header.querySelector(".admin-header-right");
+      const rect = node => {
+        const r = node.getBoundingClientRect();
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+      };
+      return {
+        bodyClass: document.body.className,
+        header: rect(header),
+        outerHeader: rect(outerHeader),
+        main: rect(main),
+        outerHeaderPaddingBottom: getComputedStyle(outerHeader).paddingBottom,
+        greeting: rect(greeting),
+        search: rect(search),
+        controls: rect(controls),
+        searchDisplay: getComputedStyle(search).display,
+        searchPosition: getComputedStyle(search).position,
+        searchInputDisplay: getComputedStyle(search.querySelector("#admin-global-search-input")).display,
+        insideHeader: greeting.parentElement === header
+      };
+    });
+    assert.equal(mobileWelcomeLayout.insideHeader, true, "mobile greeting must remain in the existing header");
+    assert.notEqual(mobileWelcomeLayout.searchDisplay, "none", "global search must remain visible with the welcome greeting on mobile");
+    assert.notEqual(mobileWelcomeLayout.searchInputDisplay, "none", "mobile search input must remain visible");
+    assert.notEqual(mobileWelcomeLayout.searchPosition, "absolute", "mobile search must participate in the greeting-aware header layout");
+    assert.ok(mobileWelcomeLayout.greeting.width > 0, "mobile greeting must have a non-zero layout width");
+    assert.ok(mobileWelcomeLayout.search.width > 0, "mobile search must have a non-zero layout width");
+    assert.ok(mobileWelcomeLayout.greeting.bottom <= mobileWelcomeLayout.search.top + 1, "mobile greeting and search must occupy separate rows");
+    assert.ok(mobileWelcomeLayout.controls.right <= mobileWelcomeLayout.header.right + 1, "mobile header controls must stay inside the header");
+    assert.equal(mobileWelcomeLayout.outerHeaderPaddingBottom, "12px", "welcome-aware mobile header must remove the legacy 62px search spacer");
+    assert.ok(
+      mobileWelcomeLayout.main.top - mobileWelcomeLayout.outerHeader.bottom <= 2,
+      "mobile main content must begin directly after the expanded header, without a reserved search spacer: " +
+        JSON.stringify({ header: mobileWelcomeLayout.outerHeader, main: mobileWelcomeLayout.main })
+    );
+    const mobileSize = await assertNoHorizontalOverflow(mobilePage, "Mobile with welcome greeting");
     const mobileLayout = await mobilePage.locator(".sway-ai-panel").evaluate(el => {
       const rect = el.getBoundingClientRect();
       const composer = document.querySelector("#sway-ai-form");
@@ -924,6 +1109,47 @@ async function main() {
     assert.ok(mobileLayout.panelLeft >= -1 && mobileLayout.panelRight <= 391, "Mobile chat panel should fit its viewport");
     assert.ok(mobileLayout.inputWidth > 100, "Mobile composer input should remain usable");
     assert.ok(mobileLayout.composerVisible, "Mobile composer should remain visible");
+
+    await mobilePage.locator("#admin-theme-toggle").click();
+    await mobilePage.waitForFunction(() => document.body.classList.contains("sway-dark-mode"), undefined, { timeout: 5000 });
+    const mobileDarkColors = await mobileWelcome.evaluate(node => ({
+      title: getComputedStyle(node.querySelector(".swayphics-welcome-title")).color,
+      subtitle: getComputedStyle(node.querySelector(".swayphics-welcome-subtitle")).color
+    }));
+    assert.equal(mobileDarkColors.title, "rgb(247, 250, 255)", "mobile dark-mode greeting title must remain readable");
+    assert.equal(mobileDarkColors.subtitle, "rgb(192, 203, 224)", "mobile dark-mode supporting text must remain readable");
+    await mobilePage.locator("#admin-theme-toggle").click();
+    await mobilePage.waitForFunction(() => !document.body.classList.contains("sway-dark-mode"), undefined, { timeout: 5000 });
+
+    await mobilePage.setViewportSize({ width: 320, height: 780 });
+    const narrowMobileSize = await assertNoHorizontalOverflow(mobilePage, "Narrow mobile with welcome greeting");
+    const narrowGeometry = await mobilePage.evaluate(() => {
+      const header = document.querySelector(".admin-header-inner");
+      const outerHeader = document.querySelector(".admin-header");
+      const main = document.querySelector(".admin-main");
+      const greeting = document.querySelector("#swayphics-admin-welcome");
+      const search = header && header.querySelector(".admin-global-search");
+      const controls = header && header.querySelector(".admin-header-right");
+      const rect = node => {
+        const r = node.getBoundingClientRect();
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+      };
+      return {
+        header: rect(header),
+        outerHeader: rect(outerHeader),
+        main: rect(main),
+        outerHeaderPaddingBottom: getComputedStyle(outerHeader).paddingBottom,
+        greeting: rect(greeting),
+        search: rect(search),
+        controls: rect(controls)
+      };
+    });
+    assert.ok(narrowGeometry.greeting.width > 0 && narrowGeometry.search.width > 0, "greeting and search must remain visible at 320px");
+    assert.ok(narrowGeometry.greeting.bottom <= narrowGeometry.search.top + 1, "greeting and search must not overlap at 320px");
+    assert.ok(narrowGeometry.controls.right <= narrowGeometry.header.right + 1, "header controls must stay inside the 320px header");
+    assert.equal(narrowGeometry.outerHeaderPaddingBottom, "12px", "320px welcome header must not retain the legacy spacer");
+    assert.ok(narrowGeometry.main.top - narrowGeometry.outerHeader.bottom <= 2, "320px content must start directly after the header");
+
     const mobileInteractions = await askMockedQuestion(mobilePage);
     const composerStatusLayout = await mobilePage.evaluate(() => {
       const form = document.querySelector("#sway-ai-form");
@@ -960,6 +1186,9 @@ async function main() {
       name: "mobile-light",
       status: "passed",
       viewport: "390x844",
+      welcomeHeaderLayout: mobileWelcomeLayout,
+      narrowViewport: { width: 320, overflow: narrowMobileSize, geometry: narrowGeometry },
+      darkModeGreetingReadable: true,
       overflow: mobileSize,
       layout: mobileLayout,
       interactions: mobileInteractions,

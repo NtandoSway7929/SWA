@@ -13,6 +13,7 @@ const MARKER_TTL_MS = 120000;
 const loginHtml = fs.readFileSync(path.join(root, "admin/index.html"), "utf8");
 const dashboardHtml = fs.readFileSync(path.join(root, "admin-dashboard/index.html"), "utf8");
 const workspaceSource = fs.readFileSync(path.join(root, "admin-dashboard/admin-workspace.js"), "utf8");
+const welcomeVisualSource = fs.readFileSync(path.join(root, "admin-dashboard/admin-welcome.js"), "utf8");
 
 function extractFunction(source, name) {
   const signature = new RegExp("\\b(?:async\\s+)?function\\s+" + name + "\\s*\\(");
@@ -238,9 +239,10 @@ test("welcome event requires the matching server-verified active admin identity"
     const publish = compileFunction(workspaceSource, "publishAuthorizedSwayphicsAdminWelcome", {
       state, window, CustomEvent: TestCustomEvent
     });
-    publish(overrides.marker || {
-      version: 1, userId: "admin-123", issuedAt: 1800000000000
-    });
+    const marker = Object.prototype.hasOwnProperty.call(overrides, "marker")
+      ? overrides.marker
+      : { version: 1, userId: "admin-123", issuedAt: 1800000000000 };
+    publish(marker);
     return events;
   }
 
@@ -248,7 +250,17 @@ test("welcome event requires the matching server-verified active admin identity"
     const events = runPublisher({});
     assert.equal(events.length, 1);
     assert.equal(events[0].type, "swayphics:admin-welcome-authorized");
-    assert.deepEqual(JSON.parse(JSON.stringify(events[0].detail)), { fullName: "Alex Admin" });
+    assert.deepEqual(JSON.parse(JSON.stringify(events[0].detail)), { fullName: "Alex Admin", animate: true });
+  });
+
+  await t.test("verified identity without a pending marker emits a static greeting signal", () => {
+    const events = runPublisher({ marker: null });
+    assert.equal(events.length, 1);
+    assert.equal(events[0].type, "swayphics:admin-welcome-authorized");
+    assert.deepEqual(JSON.parse(JSON.stringify(events[0].detail)), {
+      fullName: "Alex Admin",
+      animate: false
+    });
   });
 
   for (const [label, overrides] of [
@@ -271,6 +283,62 @@ test("welcome event requires the matching server-verified active admin identity"
     assert.equal(events.length, 1);
     assert.equal(events[0].detail.fullName, "");
   });
+});
+
+test("greeting copy matches the South African time boundaries and neutral fallback", async (t) => {
+  const cases = [
+    [0, "Alex", "Welcome back, Alex", "Let’s make this session count."],
+    [4, "Alex", "Welcome back, Alex", "Let’s make this session count."],
+    [5, "Alex", "Good morning, Alex", "Let’s make something great today."],
+    [11, "Alex", "Good morning, Alex", "Let’s make something great today."],
+    [12, "Alex", "Good afternoon, Alex", "Let’s keep the momentum going."],
+    [16, "Alex", "Good afternoon, Alex", "Let’s keep the momentum going."],
+    [17, "Alex", "Good evening, Alex", "Let’s bring today’s ideas to life."],
+    [20, "Alex", "Good evening, Alex", "Let’s bring today’s ideas to life."],
+    [21, "Alex", "Welcome back, Alex", "Let’s make this session count."],
+    [23, "Alex", "Welcome back, Alex", "Let’s make this session count."],
+    [5, "", "Welcome back", "Let’s make something great today."],
+    [12, "", "Welcome back", "Let’s keep the momentum going."],
+    [17, "", "Welcome back", "Let’s bring today’s ideas to life."],
+    [0, "", "Welcome back", "Let’s make this session count."]
+  ];
+
+  for (const [hour, fullName, expectedGreeting, expectedSubtitle] of cases) {
+    await t.test("hour " + hour + ", name " + (fullName || "(missing)"), () => {
+      const getCopy = compileFunction(welcomeVisualSource, "getWelcomeCopy", {
+        getJohannesburgHour: () => hour
+      });
+      assert.deepEqual(JSON.parse(JSON.stringify(getCopy(fullName))), {
+        greeting: expectedGreeting,
+        subtitle: expectedSubtitle
+      });
+    });
+  }
+
+  await t.test("invalid timezone calculation uses a neutral fallback", () => {
+    const getCopy = compileFunction(welcomeVisualSource, "getWelcomeCopy", {
+      getJohannesburgHour: () => null
+    });
+    assert.deepEqual(JSON.parse(JSON.stringify(getCopy(""))), {
+      greeting: "Welcome back",
+      subtitle: "Let’s make this session count."
+    });
+  });
+});
+
+test("greeting hour explicitly requests the Africa/Johannesburg timezone", () => {
+  let requestedOptions = null;
+  const FakeDateTimeFormat = function (_locale, options) {
+    requestedOptions = options;
+    this.formatToParts = () => [{ type: "hour", value: "05" }];
+  };
+  const getHour = compileFunction(welcomeVisualSource, "getJohannesburgHour", {
+    Intl: { DateTimeFormat: FakeDateTimeFormat },
+    Date: class extends Date {}
+  });
+  assert.equal(getHour(), 5);
+  assert.equal(requestedOptions.timeZone, "Africa/Johannesburg");
+  assert.equal(requestedOptions.hourCycle, "h23");
 });
 
 test("session verification records the server-returned user ID", async () => {

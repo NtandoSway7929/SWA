@@ -1,0 +1,346 @@
+/* Swayphics authenticated-session welcome animation.
+   Greeting copy remains in the existing header; only decorative effects are temporary. */
+
+.admin-header-inner.swayphics-has-welcome {
+    position: relative;
+    gap: 12px;
+}
+
+.admin-header-inner.swayphics-has-welcome > .admin-brand {
+    flex: 0 0 auto;
+}
+
+.admin-header-inner.swayphics-has-welcome > .swayphics-welcome-toast {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: 0 1 245px;
+    align-items: center;
+    justify-content: flex-start;
+    width: 245px;
+    max-width: 260px;
+    min-width: 165px;
+    min-height: 46px;
+    margin: 0;
+    padding: 4px 8px;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    pointer-events: none;
+}
+
+.admin-header-inner.swayphics-has-welcome > .admin-global-search {
+    flex: 1 1 240px;
+    width: 100%;
+    min-width: 165px;
+    max-width: 360px;
+}
+
+.swayphics-welcome-toast,
+.swayphics-welcome-toast * {
+    box-sizing: border-box;
+}
+
+.swayphics-welcome-copy {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+}
+
+.swayphics-welcome-title {
+    margin: 0;
+    color: #081533;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: clamp(0.74rem, 0.95vw, 0.90rem);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+}
+
+.swayphics-welcome-subtitle {
+    margin: 3px 0 0;
+    color: #56627A;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: clamp(0.55rem, 0.70vw, 0.66rem);
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.swayphics-welcome-light-trails,
+.swayphics-welcome-particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.swayphics-welcome-light-trails {
+    z-index: 1;
+    opacity: 0.74;
+}
+
+.swayphics-welcome-light-trails span {
+    position: absolute;
+    left: -45%;
+    width: 76%;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent 0%, rgba(44,145,252,0.04) 18%, rgba(1,82,244,0.52) 64%, rgba(119,193,252,0.6) 78%, transparent 100%);
+    filter: drop-shadow(0 0 5px rgba(1,82,244,0.42));
+    transform: rotate(-13deg) translateX(-120%);
+    animation: swayphics-welcome-sweep 1750ms cubic-bezier(0.17,0.67,0.24,1) both;
+}
+
+.swayphics-welcome-light-trails span:nth-child(1) {
+    top: 26%;
+}
+
+.swayphics-welcome-light-trails span:nth-child(2) {
+    top: 72%;
+    width: 65%;
+    height: 1px;
+    animation-delay: 120ms;
+    animation-duration: 1900ms;
+    transform: rotate(-9deg) translateX(-135%);
+}
+
+.swayphics-welcome-light-trails span:nth-child(3) {
+    top: 46%;
+    width: 48%;
+    height: 1px;
+    opacity: 0.56;
+    animation-delay: 240ms;
+    animation-duration: 1600ms;
+    transform: rotate(8deg) translateX(-145%);
+}
+
+.swayphics-welcome-particles {
+    z-index: 2;
+}
+
+.swayphics-welcome-particle {
+    position: absolute;
+    left: var(--welcome-x, 50%);
+    top: var(--welcome-y, 50%);
+    width: var(--welcome-size, 3px);
+    height: var(--welcome-size, 3px);
+    border-radius: 50%;
+    background: #2C91FC;
+    box-shadow: 0 0 9px rgba(1,82,244,0.42);
+    opacity: 0;
+    animation: swayphics-welcome-particle 1800ms ease-out var(--welcome-delay, 0ms) both;
+}
+
+.swayphics-welcome-particle:nth-child(3n) {
+    background: #77C1FC;
+    box-shadow: 0 0 11px rgba(119,193,252,0.65);
+}
+
+.swayphics-welcome-animate {
+    border-color: rgba(1,82,244,0.12) !important;
+    background:
+        radial-gradient(ellipse at 12% 110%, rgba(119,193,252,0.25), transparent 48%),
+        radial-gradient(ellipse at 92% -4%, rgba(1,82,244,0.13), transparent 43%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.62);
+    animation: swayphics-welcome-enter 520ms cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.sway-dark-mode .swayphics-welcome-title {
+    color: #F7FAFF;
+}
+
+.sway-dark-mode .swayphics-welcome-subtitle {
+    color: #C0CBE0;
+}
+
+.sway-dark-mode .swayphics-welcome-animate {
+    border-color: rgba(119,193,252,0.20) !important;
+    background:
+        radial-gradient(ellipse at 12% 110%, rgba(44,145,252,0.18), transparent 48%),
+        radial-gradient(ellipse at 92% -4%, rgba(1,82,244,0.22), transparent 43%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+@keyframes swayphics-welcome-enter {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+        filter: blur(3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+@keyframes swayphics-welcome-sweep {
+    0% {
+        opacity: 0;
+        transform: rotate(-13deg) translateX(-120%);
+    }
+    18% {
+        opacity: 0.9;
+    }
+    76% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 0;
+        transform: rotate(-13deg) translateX(250%);
+    }
+}
+
+@keyframes swayphics-welcome-particle {
+    0% {
+        opacity: 0;
+        transform: translate3d(0,8px,0) scale(0.65);
+    }
+    28% {
+        opacity: 0.74;
+    }
+    100% {
+        opacity: 0;
+        transform: translate3d(var(--welcome-drift,12px),-14px,0) scale(1.2);
+    }
+}
+
+@media (max-width: 1100px) {
+    .admin-header-inner.swayphics-has-welcome {
+        display: grid;
+        grid-template-columns: auto auto minmax(0,1fr) auto;
+        grid-template-rows: auto auto;
+        align-items: center;
+        gap: 8px 12px;
+        border-radius: 24px;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .admin-mobile-sidebar-toggle {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .admin-brand {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .admin-global-search {
+        grid-column: 3;
+        grid-row: 1;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .admin-header-right {
+        grid-column: 4;
+        grid-row: 1;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .swayphics-welcome-toast {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        min-height: 40px;
+        padding: 4px 6px;
+    }
+}
+
+@media (max-width: 760px) {
+    /* The legacy mobile header reserves 62px for its old absolutely-positioned
+       search field. The greeting-aware layout puts search in the grid, so remove
+       that obsolete spacer only while this layout is active. */
+    .admin-header.swayphics-has-welcome {
+        padding-bottom: 12px !important;
+    }
+
+    .admin-header-inner.swayphics-has-welcome {
+        display: grid !important;
+        grid-template-columns: 38px auto minmax(0, 1fr) !important;
+        grid-template-rows: auto auto auto !important;
+        grid-template-areas:
+            "toggle brand controls"
+            "welcome welcome welcome"
+            "search search search" !important;
+        gap: 8px 10px !important;
+        border-radius: 22px;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .admin-mobile-sidebar-toggle {
+        grid-area: toggle !important;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .admin-brand {
+        grid-area: brand !important;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .admin-header-right {
+        grid-area: controls !important;
+    }
+
+    .admin-header-inner.swayphics-has-welcome > .swayphics-welcome-toast {
+        grid-area: welcome !important;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        min-height: 38px;
+        padding: 3px 5px;
+    }
+
+    /* The legacy mobile rule hides/absolutely positions search. With the
+       welcome layout active, restore it as an explicit third grid row. */
+    .admin-header-inner.swayphics-has-welcome > .admin-global-search {
+        display: block !important;
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        grid-area: search !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        margin: 0 !important;
+        z-index: 120;
+    }
+}
+
+@media (max-width: 420px) {
+    .admin-header-inner.swayphics-has-welcome > .swayphics-welcome-toast {
+        min-height: 36px;
+    }
+
+    .swayphics-welcome-title {
+        font-size: 0.72rem;
+    }
+
+    .swayphics-welcome-subtitle {
+        font-size: 0.55rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .swayphics-welcome-animate,
+    .swayphics-welcome-light-trails span,
+    .swayphics-welcome-particle {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .swayphics-welcome-animate {
+        border-color: transparent !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+}
