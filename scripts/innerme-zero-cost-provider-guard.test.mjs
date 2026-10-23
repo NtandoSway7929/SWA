@@ -99,7 +99,7 @@ test("Gemini daily quota exhaustion alone may invoke the guarded Cloudflare work
   assert.ok(recoveryStart >= 0, "the Gemini guard-recovery decision must exist");
 
   const responseHandlingEnd = innermeFunctionSource.indexOf(
-    "if (\n      body.stream_response === true,",
+    "if (\n      body.stream_response === true &&",
     recoveryStart,
   );
   assert.ok(responseHandlingEnd > recoveryStart, "the quota fallback decision block must have a bounded end");
