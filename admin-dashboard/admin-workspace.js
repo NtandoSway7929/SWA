@@ -14705,8 +14705,16 @@ function simpleBars(items, color) {
                     "#sway-invoice-send"
                 );
 
+            // Lock both actions together so a double-click cannot create
+            // overlapping invoice saves or send requests.
+            const saveLabel = saveButton.textContent;
+            const sendLabel = sendButton.textContent;
             saveButton.disabled = true;
             sendButton.disabled = true;
+            saveButton.setAttribute("aria-busy", "true");
+            sendButton.setAttribute("aria-busy", "true");
+            saveButton.textContent = "Saving…";
+            sendButton.textContent = shouldSend ? "Saving & sending…" : "Working…";
 
             try {
                 let savedId =
@@ -14854,13 +14862,18 @@ function simpleBars(items, color) {
                 renderView();
 
             } catch (error) {
+                // Keep the form open so the user can review and retry.
+                // Do not surface raw API/provider details in the interface.
                 swayAlert(
-                    error.message ||
-                    "Unable to save invoice."
+                    "Unable to complete the invoice action. The form is still open. Review the invoice and try again; if the invoice was sent, check its status before retrying."
                 );
-
+            } finally {
                 saveButton.disabled = false;
                 sendButton.disabled = false;
+                saveButton.removeAttribute("aria-busy");
+                sendButton.removeAttribute("aria-busy");
+                saveButton.textContent = saveLabel;
+                sendButton.textContent = sendLabel;
             }
         }
 
