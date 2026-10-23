@@ -288,8 +288,10 @@ async function main() {
       "the actual Tasks view should filter pending tasks");
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-desktop.png"), fullPage: true });
 
+    // Keep the real Tasks view open while shrinking the viewport. The dashboard
+    // sidebar intentionally becomes off-canvas on mobile, so this isolates the
+    // table-control layout without forcing navigation behind the mobile menu.
     await page.setViewportSize({ width: 390, height: 844 });
-    await navigate("leads", "crm");
     const controls = page.locator('#sway-workspace-main .sway-admin-table-control-grid');
     await controls.waitFor({ state: "visible" });
     const bounds = await controls.boundingBox();
@@ -297,7 +299,7 @@ async function main() {
       "table controls should fit within the mobile viewport: " + JSON.stringify(bounds));
     const gridColumns = await controls.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length);
     assert.equal(gridColumns, 1, "mobile table controls should stack in one column");
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-leads-mobile.png"), fullPage: true });
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-mobile.png"), fullPage: true });
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "dashboard interactions must not attempt API writes during this read-only test: " +
