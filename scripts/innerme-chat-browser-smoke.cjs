@@ -128,7 +128,11 @@ async function configureIsolatedContext(context, initialView, theme, welcomeTest
       .replace(/=/g, "")
       .replace(/\+/g, "-")
       .replace(/\//g, "_");
-    localStorage.setItem("swayphics_admin_access_token", header + "." + encoded + ".ui-smoke-signature");
+    // Seed the fake access token only on dashboard documents. If this test
+    // navigates to the login screen after logout, do not silently restore it.
+    if (window.location.pathname.startsWith("/admin-dashboard/")) {
+      localStorage.setItem("swayphics_admin_access_token", header + "." + encoded + ".ui-smoke-signature");
+    }
     localStorage.setItem("swayphics_admin_current_view", view);
     localStorage.setItem("swayphics_admin_theme", storedTheme);
     localStorage.removeItem("swayphics_admin_workspace_snapshot_" + testUserId);
