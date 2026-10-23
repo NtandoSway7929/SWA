@@ -4,10 +4,13 @@ on:
   push:
     branches:
       - feature/innerme-chat-layout-v1
+      - feature/admin-welcome-animation
     paths:
       - "admin-dashboard/index.html"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/admin-welcome.css"
+      - "admin-dashboard/admin-welcome.js"
       - "scripts/innerme-chat-browser-smoke.cjs"
       - ".github/workflows/innerme-chat-browser-smoke.yml"
   pull_request:
@@ -43,6 +46,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Validate welcome animation script and assets
+        run: |
+          set -euo pipefail
+          node --check admin-dashboard/admin-welcome.js
+          test -s admin-dashboard/admin-welcome.css
+          grep -q 'admin-welcome.css' admin-dashboard/index.html
+          grep -q 'admin-welcome.js' admin-dashboard/index.html
 
       - name: Install pinned Playwright
         run: npm install --prefix /tmp/innerme-playwright playwright@1.55.0 --no-audit --no-fund
