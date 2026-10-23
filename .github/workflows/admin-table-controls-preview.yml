@@ -1,0 +1,113 @@
+name: Admin Table Controls Isolated Browser Preview
+
+on:
+  pull_request:
+    branches: ["main", "feature/admin-table-controls-phase-2"]
+    paths:
+      - "admin-dashboard/admin-table-controls.js"
+      - "admin-dashboard/admin-workspace.css"
+      - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/index.html"
+      - "scripts/admin-table-controls-dashboard-smoke.cjs"
+      - "scripts/admin-table-controls-db-smoke.cjs"
+      - "tests/admin-table-controls-preview/**"
+      - "tests/admin-table-controls-db/**"
+      - "scripts/admin-table-controls-browser.test.cjs"
+      - ".github/workflows/admin-table-controls-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-browser-preview:
+    name: Test Phase 2 controls with synthetic data
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install isolated browser and local Supabase test dependencies
+        run: npm install --no-save --no-package-lock playwright supabase@2.121.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local-only preview server
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/admin-table-preview-server.log 2>&1 &
+          echo $! > /tmp/admin-table-preview-server.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/tests/admin-table-controls-preview/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/admin-table-preview-server.log
+          exit 1
+
+      - name: Run desktop and mobile browser checks
+        run: |
+          mkdir -p artifacts
+          node scripts/admin-table-controls-browser.test.cjs
+
+      - name: Exercise the actual dashboard with in-memory mocked API data
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/admin-table-controls-dashboard-smoke.cjs
+
+      - name: Verify authenticated persistence against disposable local Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLI="$GITHUB_WORKSPACE/node_modules/.bin/supabase"
+          TEST_DIR="$(mktemp -d)"
+          cleanup() {
+            (cd "$TEST_DIR" && "$CLI" stop --no-backup) >/dev/null 2>&1 || true
+            rm -rf "$TEST_DIR"
+          }
+          trap cleanup EXIT
+
+          # Start an unlinked, throwaway stack. This step has no Supabase
+          # access token, project reference, or hosted database credentials.
+          cd "$TEST_DIR"
+          "$CLI" init
+          mkdir -p supabase/migrations
+          cp "$GITHUB_WORKSPACE/tests/admin-table-controls-db/schema.sql" \
+            "supabase/migrations/20261023000000_admin_table_controls_test_schema.sql"
+          "$CLI" start
+          "$CLI" status --output env > "$RUNNER_TEMP/local-supabase.env"
+
+          set -a
+          # status --output env contains only local endpoint/key variables.
+          source "$RUNNER_TEMP/local-supabase.env"
+          set +a
+          export SUPABASE_LOCAL_API_URL="$API_URL"
+          cd "$GITHUB_WORKSPACE"
+          node scripts/admin-table-controls-db-smoke.cjs
+
+      - name: Upload isolated test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-table-controls-isolated-preview
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop local preview server
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f /tmp/admin-table-preview-server.pid ]]; then
+            kill "$(cat /tmp/admin-table-preview-server.pid)" || true
+          fi

@@ -21,6 +21,14 @@
 
     const state = {
         currentView: "overview",
+        tableControls: {
+            leads: { search: "", filter: "all", sort: "followup_asc" },
+            tasks: { search: "", filter: "all", sort: "due_asc" },
+            followups: { search: "", filter: "all", sort: "scheduled_asc" }
+        },
+        tableSelection: { leads: [], tasks: [], followups: [] },
+        tableFeedback: { leads: "", tasks: "", followups: "" },
+        tableBulkActionRunning: false,
         currentUser: null,
         currentAdmin: null,
         admins: [],
@@ -12059,11 +12067,28 @@ function simpleBars(items, color) {
         );
     }
 
+    const adminTableControls = window.createSwayphicsAdminTableControls({
+        state: state,
+        workspace: workspace,
+        esc: esc,
+        adminName: adminName,
+        clientName: clientName,
+        leadName: leadName,
+        formatDisplayText: formatDisplayText,
+        completeTask: completeTask,
+        completeFollowup: completeFollowup,
+        renderView: renderView,
+        swayAlert: swayAlert,
+        swayConfirm: swayConfirm
+    });
+
     function renderTasks() {
+        const tableItems = adminTableControls.items("tasks", state.tasks);
         const rows =
-            state.tasks.map(function (item) {
+            tableItems.map(function (item) {
                 return (
-                    '<tr data-ai-record="tasks:' + esc(item.id) + '">' +
+                    '<tr data-admin-table-row="tasks" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableControls.searchText("tasks", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="tasks:' + esc(item.id) + '">' +
+                        adminTableControls.selectionCell("tasks", item, item.title || "task") +
                         "<td>" +
                             "<strong>" +
                                 esc(item.title) +
@@ -12101,7 +12126,7 @@ function simpleBars(items, color) {
                             ) +
                         "</td>" +
                         "<td>" +
-                            clientHealthChip(item.id) +
+                            (item.client_id ? clientHealthChip(item.client_id) : "—") +
                         "</td>" +
                         "<td>" +
                             chip(item.status) +
@@ -12137,11 +12162,13 @@ function simpleBars(items, color) {
             panel(
                 "All tasks",
                 "Assignments, deadlines and delivery status.",
-                state.tasks.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Task</th><th>Assigned</th><th>Client</th><th>Priority</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>' +
+                adminTableControls.renderControls("tasks") +
+                (state.tasks.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="tasks" aria-label="Select all visible tasks"></th><th>Task</th><th>Assigned</th><th>Client</th><th>Priority</th><th>Due</th><th>Client health</th><th>Status</th><th></th></tr></thead><tbody>' +
                       rows +
+                      '<tr data-admin-table-no-results="tasks" hidden><td colspan="9">No tasks match these controls. Try another search or status.</td></tr>' +
                       "</tbody></table></div>"
-                    : empty("No tasks yet.")
+                    : empty("No tasks yet."))
             )
         );
     }
@@ -12296,12 +12323,13 @@ function simpleBars(items, color) {
          * Not Interested leads still need to be reviewable and actionable
          * (including the option to return a lead to the active pipeline).
          */
-        const visibleLeads = state.leads;
+        const visibleLeads = adminTableControls.items("leads", state.leads);
 
         const rows =
             visibleLeads.map(function (item) {
                 return (
-                    '<tr data-ai-record="leads:' + esc(item.id) + '">' +
+                    '<tr data-admin-table-row="leads" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableControls.searchText("leads", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="leads:' + esc(item.id) + '">' +
+                        adminTableControls.selectionCell("leads", item, item.business_name || item.contact_name || "lead") +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -12411,25 +12439,29 @@ function simpleBars(items, color) {
             panel(
                 "Lead pipeline",
                 "All lead records, including follow-up and long-term re-engagement stages. Scheduled follow-up tasks are managed in Follow-ups.",
-                state.leads.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
+                adminTableControls.renderControls("leads") +
+                (state.leads.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="leads" aria-label="Select all visible leads"></th><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
                       rows +
+                      '<tr data-admin-table-no-results="leads" hidden><td colspan="8">No leads match these controls. Try another search or status.</td></tr>' +
                       "</tbody></table></div>"
-                    : empty("No leads yet.")
+                    : empty("No leads yet."))
             )
         );
     }
 
     function renderFollowups() {
+        const tableItems = adminTableControls.items("followups", state.followups);
         const rows =
-            state.followups.map(function (item) {
+            tableItems.map(function (item) {
                 const subject =
                     item.lead_id
                         ? leadName(item.lead_id)
                         : clientName(item.client_id);
 
                 return (
-                    '<tr data-ai-record="followups:' + esc(item.id) + '">' +
+                    '<tr data-admin-table-row="followups" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableControls.searchText("followups", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="followups:' + esc(item.id) + '">' +
+                        adminTableControls.selectionCell("followups", item, item.lead_id ? leadName(item.lead_id) : clientName(item.client_id)) +
                         "<td>" +
                             "<strong>" +
                                 esc(subject) +
@@ -12492,11 +12524,13 @@ function simpleBars(items, color) {
             panel(
                 "Follow-up queue",
                 "Keep outreach and client communication from falling through the cracks.",
-                state.followups.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Scheduled</th><th>Assigned</th><th>Status</th><th></th></tr></thead><tbody>' +
+                adminTableControls.renderControls("followups") +
+                (state.followups.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="followups" aria-label="Select all visible follow-ups"></th><th>Contact</th><th>Scheduled</th><th>Assigned</th><th>Status</th><th></th></tr></thead><tbody>' +
                       rows +
+                      '<tr data-admin-table-no-results="followups" hidden><td colspan="6">No follow-ups match these controls. Try another search or status.</td></tr>' +
                       "</tbody></table></div>"
-                    : empty("No follow-ups scheduled.")
+                    : empty("No follow-ups scheduled."))
             )
         );
     }
@@ -26487,6 +26521,7 @@ function simpleBars(items, color) {
         bindSwayActionDropdowns();
         bindAIFeedbackEvents();
         bindAIMessageActions();
+        adminTableControls.bind();
 
         workspace
             .querySelectorAll("[data-refresh-workspace]")

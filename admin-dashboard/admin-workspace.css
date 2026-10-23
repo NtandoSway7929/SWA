@@ -9442,3 +9442,154 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
 body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry:focus-visible {
   outline-color: #77C1FC;
 }
+
+
+/* =========================================================
+   PHASE 2: PRIORITY ADMIN TABLE CONTROLS
+   ========================================================= */
+.sway-admin-table-tools {
+    display: grid;
+    gap: 12px;
+    margin: 0 0 16px;
+}
+.sway-admin-table-control-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.7fr) minmax(140px, .8fr) minmax(190px, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+}
+.sway-admin-table-search-label,
+.sway-admin-table-field {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
+    color: var(--text-muted, #687385);
+    font-size: .78rem;
+    font-weight: 650;
+}
+.sway-admin-table-search-label input,
+.sway-admin-table-field select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid rgba(0, 32, 150, .16);
+    border-radius: 10px;
+    background: var(--surface, #fff);
+    color: var(--text, #1f2937);
+    font: inherit;
+    font-size: .86rem;
+}
+.sway-admin-table-search-label input:focus-visible,
+.sway-admin-table-field select:focus-visible,
+.sway-admin-table-tools button:focus-visible,
+.sway-admin-table-select-cell input:focus-visible,
+.sway-admin-table-select-heading input:focus-visible {
+    outline: 3px solid rgba(1, 82, 244, .28);
+    outline-offset: 2px;
+}
+.sway-admin-table-count {
+    padding: 0 0 11px;
+    color: var(--text-muted, #687385);
+    font-size: .77rem;
+    white-space: nowrap;
+}
+.sway-admin-table-bulk-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid rgba(1, 82, 244, .18);
+    border-radius: 12px;
+    background: rgba(1, 82, 244, .045);
+}
+.sway-admin-table-bulk-toolbar[hidden],
+.sway-admin-table-feedback[hidden] {
+    display: none !important;
+}
+.sway-admin-table-selected-count {
+    margin-right: auto;
+    color: var(--text, #1f2937);
+    font-size: .82rem;
+    font-weight: 700;
+}
+.sway-admin-table-tools button {
+    min-height: 36px;
+    padding: 7px 11px;
+    border: 1px solid rgba(0, 32, 150, .18);
+    border-radius: 9px;
+    background: var(--surface, #fff);
+    color: var(--text, #1f2937);
+    font: inherit;
+    font-size: .8rem;
+    font-weight: 650;
+    cursor: pointer;
+}
+.sway-admin-table-tools button:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+.sway-admin-table-tools .sway-admin-table-bulk-button {
+    border-color: rgba(1, 82, 244, .25);
+    background: rgba(1, 82, 244, .08);
+}
+.sway-admin-table-feedback {
+    margin: 0;
+    color: var(--text-muted, #687385);
+    font-size: .8rem;
+}
+.sway-admin-table-select-heading,
+.sway-admin-table-select-cell {
+    width: 34px;
+    min-width: 34px;
+    text-align: center !important;
+}
+.sway-admin-table-select-heading input,
+.sway-admin-table-select-cell input {
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: #0152f4;
+    cursor: pointer;
+}
+.sway-table tr[hidden] {
+    display: none !important;
+}
+.sway-table [data-admin-table-no-results] td {
+    padding: 18px 12px;
+    color: var(--text-muted, #687385);
+    text-align: center;
+}
+@media (max-width: 1100px) {
+    .sway-admin-table-control-grid {
+        grid-template-columns: minmax(200px, 1.4fr) minmax(130px, .8fr);
+    }
+    .sway-admin-table-count {
+        padding-bottom: 0;
+    }
+}
+@media (max-width: 640px) {
+    .sway-admin-table-control-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+    .sway-admin-table-search-label input,
+    .sway-admin-table-field select {
+        min-height: 44px;
+    }
+    .sway-admin-table-count {
+        white-space: normal;
+    }
+    .sway-admin-table-bulk-toolbar {
+        align-items: stretch;
+    }
+    .sway-admin-table-selected-count {
+        width: 100%;
+        margin: 0 0 3px;
+    }
+    .sway-admin-table-bulk-toolbar button {
+        flex: 1 1 auto;
+    }
+}
