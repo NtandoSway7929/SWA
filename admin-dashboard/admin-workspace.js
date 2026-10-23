@@ -28097,7 +28097,111 @@ function simpleBars(items, color) {
         return null;
     }
 
+    function claimSwayphicsAdminWelcomeMarker() {
+        const markerKey = "swayphics_admin_welcome_pending";
+        let rawMarker = null;
+
+        try {
+            rawMarker = window.sessionStorage.getItem(markerKey);
+            // Claim before any asynchronous work so refreshes cannot replay it.
+            window.sessionStorage.removeItem(markerKey);
+        } catch (storageError) {
+            try {
+                window.sessionStorage.removeItem(markerKey);
+            } catch (cleanupError) {
+                // A blocked storage API means the greeting is safely skipped.
+            }
+            return null;
+        }
+
+        if (!rawMarker) {
+            return null;
+        }
+
+        try {
+            const marker = JSON.parse(rawMarker);
+            const now = Date.now();
+
+            if (
+                !marker ||
+                marker.version !== 1 ||
+                typeof marker.userId !== "string" ||
+                !marker.userId.trim() ||
+                typeof marker.issuedAt !== "number" ||
+                !Number.isFinite(marker.issuedAt)
+            ) {
+                return null;
+            }
+
+            const age = now - marker.issuedAt;
+            if (age < 0 || age > 120000) {
+                return null;
+            }
+
+            return marker;
+        } catch (parseError) {
+            return null;
+        }
+    }
+
+    function publishAuthorizedSwayphicsAdminWelcome(marker) {
+        if (
+            !marker ||
+            !state.currentUser ||
+            !state.currentUser.id ||
+            !state.currentAdmin ||
+            state.currentAdmin.active !== true
+        ) {
+            return;
+        }
+
+        if (marker.userId !== String(state.currentUser.id)) {
+            return;
+        }
+
+        const fullName =
+            typeof state.currentAdmin.full_name === "string"
+                ? state.currentAdmin.full_name.trim()
+                : "";
+
+        // Presentation is deliberately separate: the visual component listens for this event.
+        window.dispatchEvent(
+            new CustomEvent(
+                "swayphics:admin-welcome-authorized",
+                {
+                    detail: {
+                        fullName: fullName
+                    }
+                }
+            )
+        );
+    }
+
     async function boot() {
+        // Claim synchronously, before verification or workspace loading can yield.
+        const welcomeMarker = claimSwayphicsAdminWelcomeMarker();
+        const sessionReady = window.swayphicsAdminSessionReady;
+
+        if (!sessionReady || typeof sessionReady.then !== "function") {
+            console.error(
+                "Admin session readiness was unavailable; workspace startup was blocked."
+            );
+            return;
+        }
+
+        try {
+            const sessionVerified = await sessionReady;
+            if (sessionVerified !== true) {
+                return;
+            }
+        } catch (sessionError) {
+            console.error(
+                "Admin session readiness failed; workspace startup was blocked.",
+                sessionError
+            );
+            return;
+        }
+
         initialiseSwayButtonLoadingObserver();
 
         const requestedNotificationTarget =
@@ -28143,6 +28247,8 @@ function simpleBars(items, color) {
             );
             setupGlobalSearch();
             setupRealtime();
+
+            publishAuthorizedSwayphicsAdminWelcome(welcomeMarker);
 
             if (requestedNotificationTarget) {
                 window.setTimeout(
