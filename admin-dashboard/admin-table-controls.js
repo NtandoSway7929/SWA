@@ -61,7 +61,7 @@
                     adminName(item.assigned_to), clientName(item.client_id), item.due_date];
             } else if (view === "followups") {
                 fields = [item.lead_id ? leadName(item.lead_id) : clientName(item.client_id),
-                    item.channel, item.status, adminName(item.assigned_to), item.scheduled_for, item.notes];
+                    item.channel, item.status, adminName(item.assigned_to), item.scheduled_for, item.note];
             }
             return fields.filter(function (value) {
                 return value !== null && typeof value !== "undefined";
@@ -255,7 +255,7 @@
                 headings = ["Contact", "Channel", "Scheduled for", "Assigned to", "Status", "Notes"];
                 rows = selected.map(function (item) {
                     return [item.lead_id ? leadName(item.lead_id) : clientName(item.client_id), item.channel,
-                        item.scheduled_for, adminName(item.assigned_to), item.status, item.notes];
+                        item.scheduled_for, adminName(item.assigned_to), item.status, item.note];
                 });
             }
             function cell(value) {
