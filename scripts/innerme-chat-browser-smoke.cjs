@@ -143,7 +143,12 @@ async function configureIsolatedContext(context, initialView, theme, welcomeTest
       window.addEventListener("swayphics:admin-welcome-authorized", function (event) {
         const countKey = "__swayphicsWelcomeEventCount";
         const count = Number(sessionStorage.getItem(countKey) || "0") + 1;
+        const animationCountKey = "__swayphicsWelcomeAnimationCount";
+        const hasReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const animationCount = Number(sessionStorage.getItem(animationCountKey) || "0") +
+          (event.detail && event.detail.animate === true && !hasReducedMotion ? 1 : 0);
         sessionStorage.setItem(countKey, String(count));
+        sessionStorage.setItem(animationCountKey, String(animationCount));
         sessionStorage.setItem(
           "__swayphicsWelcomeFullName",
           String(event.detail && event.detail.fullName || "")
@@ -748,11 +753,13 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     const firstWelcome = await page.evaluate(() => ({
       count: Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0"),
       fullName: sessionStorage.getItem("__swayphicsWelcomeFullName"),
-      pendingMarker: sessionStorage.getItem("swayphics_admin_welcome_pending")
+      pendingMarker: sessionStorage.getItem("swayphics_admin_welcome_pending"),
+      animationCount: sessionStorage.getItem("__swayphicsWelcomeAnimationCount")
     }));
     assert.equal(firstWelcome.count, 1, "successful login must authorize exactly one welcome event");
     assert.equal(firstWelcome.fullName, "Isolated UI Test", "welcome event must use the active admin full name");
     assert.equal(firstWelcome.pendingMarker, null, "dashboard must consume the marker");
+    assert.equal(firstWelcome.animationCount, "1", "new login must authorize one motion sequence");
 
     const welcomeToast = page.locator("#swayphics-admin-welcome");
     await welcomeToast.waitFor({ state: "attached", timeout: 5000 });
@@ -762,6 +769,9 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       particles: node.querySelectorAll(".swayphics-welcome-particle").length,
       trails: node.querySelectorAll(".swayphics-welcome-light-trails span").length,
       pointerEvents: getComputedStyle(node).pointerEvents,
+      position: getComputedStyle(node).position,
+      isInsideHeader: node.parentElement?.classList.contains("admin-header-inner") === true,
+      isAnimated: node.classList.contains("swayphics-welcome-animate"),
       accessibleRole: node.getAttribute("role"),
       ariaLive: node.getAttribute("aria-live")
     }));
@@ -769,17 +779,28 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     assert.ok(welcomeVisual.subtitle.length > 0, "visual greeting must include its time-specific supporting line");
     assert.equal(welcomeVisual.particles, 14, "welcome visual must include the abstract particle layer");
     assert.equal(welcomeVisual.trails, 3, "welcome visual must include three light-trail elements");
-    assert.equal(welcomeVisual.pointerEvents, "none", "welcome visual must not block dashboard controls");
+    assert.equal(welcomeVisual.pointerEvents, "none", "welcome greeting must not block dashboard controls");
+    assert.equal(welcomeVisual.isInsideHeader, true, "welcome greeting must be mounted inside the existing header");
+    assert.notEqual(welcomeVisual.position, "fixed", "welcome greeting must not render as a separate viewport overlay");
+    assert.equal(welcomeVisual.isAnimated, true, "a new login should animate when reduced motion is not requested");
     assert.equal(welcomeVisual.accessibleRole, "status", "welcome message must expose a status role");
     assert.equal(welcomeVisual.ariaLive, "polite", "welcome message must announce politely to assistive technology");
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
     await page.waitForTimeout(700);
-    const afterRefresh = await page.evaluate(() =>
-      Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0")
-    );
-    assert.equal(afterRefresh, 1, "refresh must not replay the welcome event");
+    const afterRefresh = await page.evaluate(() => ({
+      eventCount: Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0"),
+      animationCount: Number(sessionStorage.getItem("__swayphicsWelcomeAnimationCount") || "0"),
+      headline: document.querySelector("#swayphics-admin-welcome .swayphics-welcome-title")?.textContent || "",
+      isInsideHeader: document.querySelector("#swayphics-admin-welcome")?.parentElement?.classList.contains("admin-header-inner") === true,
+      motionLayersPresent: Boolean(document.querySelector("#swayphics-admin-welcome .swayphics-welcome-light-trails, #swayphics-admin-welcome .swayphics-welcome-particles"))
+    }));
+    assert.equal(afterRefresh.eventCount, 2, "a validated refresh may render static greeting copy again");
+    assert.equal(afterRefresh.animationCount, 1, "refresh must not replay the welcome animation");
+    assert.match(afterRefresh.headline, /Isolated UI Test/, "static greeting remains visible after refresh");
+    assert.equal(afterRefresh.isInsideHeader, true, "static greeting remains inside the existing header");
+    assert.equal(afterRefresh.motionLayersPresent, false, "refresh should not recreate animation layers without a new login marker");
 
     await page.evaluate(() => {
       sessionStorage.setItem(
@@ -820,6 +841,29 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     assert.equal(failedLogin.pendingMarker, null, "failed login must not retain a stale marker");
     assert.match(failedLogin.status, /Synthetic invalid login/i);
 
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.locator("#admin-email").fill("welcome-test@example.invalid");
+    await page.locator("#admin-password").fill("mocked-password");
+    await Promise.all([
+      page.waitForURL(url => url.pathname.startsWith("/admin-dashboard/"), { timeout: 15000 }),
+      page.locator("#login-button").click()
+    ]);
+    await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
+    const reducedMotionGreeting = page.locator("#swayphics-admin-welcome");
+    await reducedMotionGreeting.waitFor({ state: "attached", timeout: 5000 });
+    const reducedMotionVisual = await reducedMotionGreeting.evaluate(node => ({
+      headline: node.querySelector(".swayphics-welcome-title")?.textContent || "",
+      isInsideHeader: node.parentElement?.classList.contains("admin-header-inner") === true,
+      isAnimated: node.classList.contains("swayphics-welcome-animate"),
+      particles: node.querySelectorAll(".swayphics-welcome-particle").length,
+      trails: node.querySelectorAll(".swayphics-welcome-light-trails span").length
+    }));
+    assert.match(reducedMotionVisual.headline, /Isolated UI Test/, "reduced-motion mode still shows greeting copy");
+    assert.equal(reducedMotionVisual.isInsideHeader, true, "reduced-motion greeting stays in the header");
+    assert.equal(reducedMotionVisual.isAnimated, false, "reduced-motion mode must suppress the animation class");
+    assert.equal(reducedMotionVisual.particles, 0, "reduced-motion mode must omit particles");
+    assert.equal(reducedMotionVisual.trails, 0, "reduced-motion mode must omit light trails");
+
     metrics.scenarios.push({
       name: "admin-welcome-authentication",
       status: "passed",
@@ -830,6 +874,9 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       greetingUsesActiveAdminName: true,
       particleAndLightTrailLayersPresent: true,
       refreshDoesNotReplay: true,
+      staticGreetingPersistsAfterRefresh: true,
+      headerPlacementVerified: true,
+      reducedMotionSuppressesEffects: true,
       logoutClearsMarkerAndTokens: true,
       failedLoginClearsStaleMarker: true
     });
