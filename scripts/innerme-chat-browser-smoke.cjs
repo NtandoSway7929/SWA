@@ -828,11 +828,6 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
         const r = node.getBoundingClientRect();
         return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
       };
-      const welcomeLink = document.querySelector('link[href*="admin-welcome.css"]');
-      const headChildren = Array.from(document.head.children);
-      const welcomeLinkIndex = headChildren.indexOf(welcomeLink);
-      const lastStyleIndex = headChildren.reduce((last, node, index) =>
-        node.tagName === "STYLE" ? index : last, -1);
       return {
         header: rect(header),
         brand: rect(header.querySelector(".admin-brand")),
@@ -841,13 +836,14 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
         controls: rect(header.querySelector(".admin-header-right")),
         toggleDisplay: getComputedStyle(header.querySelector(".admin-mobile-sidebar-toggle")).display,
         gridTemplateAreas: getComputedStyle(header).gridTemplateAreas,
-        gridTemplateColumns: getComputedStyle(header).gridTemplateColumns,
-        welcomeLinkIndex,
-        lastStyleIndex
+        gridTemplateColumns: getComputedStyle(header).gridTemplateColumns
       };
     });
-    assert.ok(desktopHeaderLayout.welcomeLinkIndex > desktopHeaderLayout.lastStyleIndex,
-      "welcome stylesheet must load after the dashboard's inline layout rules");
+    assert.ok(
+      dashboardHtmlSource.indexOf('admin-welcome.css?v=20261023-admin-welcome-layout-hotfix-1') >
+        dashboardHtmlSource.lastIndexOf("<style"),
+      "welcome stylesheet reference must follow all dashboard inline style blocks"
+    );
     assert.equal(desktopHeaderLayout.toggleDisplay, "none",
       "mobile sidebar toggle must not become an extra desktop grid item");
     assert.ok(desktopHeaderLayout.gridTemplateAreas.includes("welcome"),
