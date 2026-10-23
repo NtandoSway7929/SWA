@@ -72,10 +72,18 @@ const followups = [
 const metrics = {
   apiReads: 0,
   apiMutationsBlocked: [],
+  mockedStartupCalls: [],
   unexpectedExternalRequests: [],
   pageErrors: [],
   consoleErrors: []
 };
+
+const defaultServiceNames = [
+  "Logo", "Flyer / Poster", "Letterhead", "Company Registration",
+  "Business Identity Kit", "Packaging", "Apparel", "Business Card",
+  "Social Media Management", "Google Business Profile Setup",
+  "Professional Email Setup", "Appointment / Booking Setup", "Website Design"
+];
 
 function jsonResponse(body, status = 200, extraHeaders = {}) {
   return {
@@ -123,7 +131,16 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/activity_log") return [];
   if (url.pathname === "/rest/v1/site_announcements") return [];
   if (url.pathname === "/rest/v1/invoices") return [];
-  if (url.pathname === "/rest/v1/services") return [];
+  if (url.pathname === "/rest/v1/services") {
+    // Supply the dashboard's existing catalogue so startup does not try to
+    // create default services against any real backend.
+    return defaultServiceNames.map((name, index) => ({
+      id: "service-ui-test-" + (index + 1), name, active: true,
+      category: "Synthetic test data", pricing_type: "fixed",
+      default_price: 0, minimum_price: 0, maximum_price: 0,
+      price_label: "Test only", recurring_interval: "none"
+    }));
+  }
   if (url.pathname === "/rest/v1/invoice_settings") return [];
   if (url.pathname === "/rest/v1/client_portal_requests") return [];
   if (url.pathname === "/rest/v1/lead_proposals") return [];
@@ -192,8 +209,32 @@ async function main() {
     }
 
     if (method !== "GET" && method !== "HEAD") {
+      // These three dashboard startup routines normally make a POST call.
+      // Intercept and stub them before the request can reach Supabase. They
+      // are not part of table-control interactions and must never touch data
+      // in this isolated browser run.
+      if (method === "POST" && url.pathname === "/rest/v1/rpc/generate_admin_due_notifications") {
+        metrics.mockedStartupCalls.push({ method, path: url.pathname });
+        return route.fulfill({
+          status: 204,
+          headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" },
+          body: ""
+        });
+      }
+      if (method === "POST" && url.pathname === "/rest/v1/rpc/process_swayphics_stale_leads") {
+        metrics.mockedStartupCalls.push({ method, path: url.pathname });
+        return route.fulfill(jsonResponse([]));
+      }
+      if (method === "POST" && url.pathname === "/rest/v1/services") {
+        metrics.mockedStartupCalls.push({ method, path: url.pathname });
+        return route.fulfill({
+          status: 204,
+          headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" },
+          body: ""
+        });
+      }
       metrics.apiMutationsBlocked.push({ method, path: url.pathname });
-      return route.fulfill(jsonResponse({ error: "Read-only dashboard browser test: mutations are disabled." }, 405));
+      return route.fulfill(jsonResponse({ error: "Read-only dashboard browser test: unexpected mutations are disabled." }, 405));
     }
 
     metrics.apiReads += 1;
@@ -315,7 +356,8 @@ async function main() {
       authentication: "mocked test admin identity; no live credentials",
       data: "synthetic records only",
       apiReadsMocked: metrics.apiReads,
-      apiWritesAttempted: metrics.apiMutationsBlocked.length,
+      unexpectedApiWritesBlocked: metrics.apiMutationsBlocked.length,
+      startupCallsInterceptedBeforeNetwork: metrics.mockedStartupCalls,
       externalRequestsBlocked: metrics.unexpectedExternalRequests.length,
       pageErrors: metrics.pageErrors.length,
       checks: [
