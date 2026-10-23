@@ -3,6 +3,15 @@
 
     var hasShownWelcome = false;
     var WELCOME_DURATION_MS = 2920;
+    var WELCOME_CENTER_POP_MS = 700;
+    var WELCOME_CENTER_SETTLE_MS = 180;
+    var WELCOME_CENTER_HOLD_MS = 6200;
+    var WELCOME_TRAVEL_DURATION_MS = 2700;
+    var WELCOME_FLIGHT_DURATION_MS =
+        WELCOME_CENTER_POP_MS +
+        WELCOME_CENTER_SETTLE_MS +
+        WELCOME_CENTER_HOLD_MS +
+        WELCOME_TRAVEL_DURATION_MS;
 
     function getJohannesburgHour() {
         try {
@@ -118,12 +127,26 @@
             ? window.getComputedStyle(targetSubtitle).fontSize
             : "9px";
         var flight = greeting.cloneNode(true);
+        var backdrop = document.createElement("div");
         var flightTitle;
         var flightSubtitle;
-        var flightDuration = 2700;
-        var travelDelay = Math.round(flightDuration * 0.24);
-        var travelDuration = flightDuration - travelDelay;
         var animation;
+        var backdropAnimation;
+        var popEndOffset = WELCOME_CENTER_POP_MS / WELCOME_FLIGHT_DURATION_MS;
+        var settleEndOffset =
+            (WELCOME_CENTER_POP_MS + WELCOME_CENTER_SETTLE_MS) /
+            WELCOME_FLIGHT_DURATION_MS;
+        var holdEndOffset =
+            (WELCOME_CENTER_POP_MS +
+                WELCOME_CENTER_SETTLE_MS +
+                WELCOME_CENTER_HOLD_MS) /
+            WELCOME_FLIGHT_DURATION_MS;
+        var travelDelay =
+            WELCOME_CENTER_POP_MS +
+            WELCOME_CENTER_SETTLE_MS +
+            WELCOME_CENTER_HOLD_MS;
+        var travelDuration = WELCOME_TRAVEL_DURATION_MS;
+        var flightDuration = WELCOME_FLIGHT_DURATION_MS;
 
         flight.id = "swayphics-admin-welcome-flight";
         flight.setAttribute("aria-hidden", "true");
@@ -172,11 +195,33 @@
             flightSubtitle.style.lineHeight = "1.25";
         }
 
+        backdrop.id = "swayphics-admin-welcome-backdrop";
+        backdrop.className = "swayphics-welcome-backdrop";
+        backdrop.setAttribute("aria-hidden", "true");
+        backdrop.setAttribute("data-blur-state", "active");
+
+        document.body.appendChild(backdrop);
         document.body.appendChild(flight);
         greeting.setAttribute("data-flight-state", "in-progress");
         greeting.style.setProperty("opacity", "0", "important");
 
         try {
+            // Blur and softly dim the dashboard while the enlarged greeting is held
+            // in the center. The overlay then fades as the card returns to the header.
+            backdropAnimation = backdrop.animate(
+                [
+                    { offset: 0, opacity: 0 },
+                    { offset: 0.06, opacity: 0.92, easing: "ease-out" },
+                    { offset: holdEndOffset, opacity: 0.92 },
+                    { offset: 1, opacity: 0, easing: "ease-in-out" }
+                ],
+                {
+                    duration: flightDuration,
+                    easing: "linear",
+                    fill: "both"
+                }
+            );
+
             animation = flight.animate(
                 [
                     {
@@ -191,7 +236,7 @@
                         opacity: 0
                     },
                     {
-                        offset: 0.12,
+                        offset: popEndOffset,
                         left: centerX + "px",
                         top: centerY + "px",
                         width: startWidth + "px",
@@ -203,16 +248,28 @@
                         easing: "cubic-bezier(0.16, 1, 0.3, 1)"
                     },
                     {
-                        offset: 0.24,
+                        offset: settleEndOffset,
                         left: centerX + "px",
                         top: centerY + "px",
                         width: startWidth + "px",
                         height: startHeight + "px",
                         padding: "12px 16px",
-                        borderRadius: "16px",
+                        borderRadius: "18px",
                         transform: "translate(-50%, -50%) scale(1)",
                         opacity: 1,
-                        easing: "ease-in-out"
+                        easing: "linear"
+                    },
+                    {
+                        offset: holdEndOffset,
+                        left: centerX + "px",
+                        top: centerY + "px",
+                        width: startWidth + "px",
+                        height: startHeight + "px",
+                        padding: "12px 16px",
+                        borderRadius: "18px",
+                        transform: "translate(-50%, -50%) scale(1)",
+                        opacity: 1,
+                        easing: "cubic-bezier(0.22, 0.7, 0.25, 1)"
                     },
                     {
                         offset: 1,
@@ -261,6 +318,7 @@
                 greeting.style.removeProperty("opacity");
                 greeting.removeAttribute("data-flight-state");
                 flight.remove();
+                backdrop.remove();
             }
 
             animation.addEventListener("finish", revealHeaderGreeting, { once: true });
@@ -270,6 +328,7 @@
             greeting.style.removeProperty("opacity");
             greeting.removeAttribute("data-flight-state");
             flight.remove();
+            backdrop.remove();
             return false;
         }
     }
