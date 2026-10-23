@@ -529,6 +529,7 @@
             // A new login attempt invalidates any unconsumed welcome marker.
             try {
                 sessionStorage.removeItem("swayphics_admin_welcome_pending");
+                sessionStorage.removeItem("swayphics_admin_welcome_seen_user");
             } catch (storageError) {
                 // Storage may be unavailable; login must still be allowed.
             }

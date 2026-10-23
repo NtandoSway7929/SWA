@@ -800,7 +800,10 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       position: getComputedStyle(node).position,
       isInsideHeader: node.parentElement?.classList.contains("admin-header-inner") === true,
       isAnimated: node.classList.contains("swayphics-welcome-animate"),
+      motionState: node.getAttribute("data-motion-state"),
       entryAnimation: getComputedStyle(node).animationName,
+      glintAnimation: getComputedStyle(node, "::before").animationName,
+      glintDuration: getComputedStyle(node, "::before").animationDuration,
       trailAnimation: getComputedStyle(node.querySelector(".swayphics-welcome-light-trails span")).animationName,
       trailAnimationDuration: getComputedStyle(node.querySelector(".swayphics-welcome-light-trails span")).animationDuration,
       accessibleRole: node.getAttribute("role"),
@@ -814,9 +817,34 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     assert.equal(welcomeVisual.isInsideHeader, true, "welcome greeting must be mounted inside the existing header");
     assert.notEqual(welcomeVisual.position, "fixed", "welcome greeting must not render as a separate viewport overlay");
     assert.equal(welcomeVisual.isAnimated, true, "a new login should animate when reduced motion is not requested");
+    assert.equal(welcomeVisual.motionState, "animated", "welcome should report an active motion state");
     assert.notEqual(welcomeVisual.entryAnimation, "none", "welcome entry must have a real CSS animation");
+    assert.notEqual(welcomeVisual.glintAnimation, "none", "welcome must include the broad animated glint sweep");
+    assert.notEqual(welcomeVisual.glintDuration, "0s", "glint sweep must have a visible duration");
     assert.notEqual(welcomeVisual.trailAnimation, "none", "blue light trails must have a real CSS animation");
     assert.notEqual(welcomeVisual.trailAnimationDuration, "0s", "light-trail animation must have a visible duration");
+
+    const getActiveWelcomeAnimations = () => welcomeToast.evaluate(node =>
+      node.getAnimations({ subtree: true }).map(animation => ({
+        name: animation.animationName,
+        state: animation.playState,
+        currentTime: Number(animation.currentTime || 0)
+      }))
+    );
+    const animationsBefore = await getActiveWelcomeAnimations();
+    assert.ok(
+      animationsBefore.some(animation =>
+        animation.name === "swayphics-welcome-glint" &&
+        animation.state === "running"
+      ),
+      "the glint animation must actually be running, not merely declared in CSS"
+    );
+    await page.waitForTimeout(160);
+    const animationsAfter = await getActiveWelcomeAnimations();
+    const glintBefore = animationsBefore.find(animation => animation.name === "swayphics-welcome-glint");
+    const glintAfter = animationsAfter.find(animation => animation.name === "swayphics-welcome-glint");
+    assert.ok(glintBefore && glintAfter && glintAfter.currentTime > glintBefore.currentTime,
+      "the glint animation timeline must advance while the greeting is visible");
     assert.equal(welcomeVisual.accessibleRole, "status", "welcome message must expose a status role");
     assert.equal(welcomeVisual.ariaLive, "polite", "welcome message must announce politely to assistive technology");
 

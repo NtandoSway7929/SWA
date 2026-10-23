@@ -74,7 +74,7 @@
             dot.setAttribute("aria-hidden", "true");
             dot.style.setProperty("--welcome-x", particle[0] + "%");
             dot.style.setProperty("--welcome-y", particle[1] + "%");
-            dot.style.setProperty("--welcome-size", particle[2] + "px");
+            dot.style.setProperty("--welcome-size", Math.max(3, particle[2]) + "px");
             dot.style.setProperty("--welcome-delay", particle[3] + "ms");
             dot.style.setProperty("--welcome-drift", particle[4] + "px");
             particleLayer.appendChild(dot);
@@ -110,6 +110,14 @@
         var greeting = document.createElement("section");
         greeting.id = "swayphics-admin-welcome";
         greeting.className = "swayphics-welcome-toast";
+        greeting.setAttribute(
+            "data-motion-state",
+            prefersReducedMotion
+                ? "reduced-motion"
+                : shouldAnimate
+                    ? "animated"
+                    : "static-session"
+        );
         greeting.setAttribute("role", "status");
         greeting.setAttribute("aria-live", "polite");
         greeting.setAttribute("aria-atomic", "true");

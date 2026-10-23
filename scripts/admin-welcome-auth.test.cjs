@@ -227,6 +227,7 @@ test("welcome event requires the matching server-verified active admin identity"
     };
     const window = {
       swayphicsVerifiedAdminUserId: "admin-123",
+      sessionStorage: makeStorage(),
       dispatchEvent(event) { events.push(event); },
       ...(overrides.window || {})
     };
@@ -253,10 +254,33 @@ test("welcome event requires the matching server-verified active admin identity"
     assert.deepEqual(JSON.parse(JSON.stringify(events[0].detail)), { fullName: "Alex Admin", animate: true });
   });
 
-  await t.test("verified identity without a pending marker emits a static greeting signal", () => {
-    const events = runPublisher({ marker: null });
+  await t.test("verified identity without a marker animates once on the first dashboard view", () => {
+    const seenStorage = makeStorage();
+    const events = runPublisher({
+      marker: null,
+      window: { sessionStorage: seenStorage }
+    });
     assert.equal(events.length, 1);
-    assert.equal(events[0].type, "swayphics:admin-welcome-authorized");
+    assert.deepEqual(JSON.parse(JSON.stringify(events[0].detail)), {
+      fullName: "Alex Admin",
+      animate: true
+    });
+    assert.equal(
+      seenStorage.getItem("swayphics_admin_welcome_seen_user"),
+      "admin-123",
+      "the seen-session guard is recorded before publishing the welcome"
+    );
+  });
+
+  await t.test("refresh without a marker stays static after the greeting was shown", () => {
+    const seenStorage = makeStorage({
+      swayphics_admin_welcome_seen_user: "admin-123"
+    });
+    const events = runPublisher({
+      marker: null,
+      window: { sessionStorage: seenStorage }
+    });
+    assert.equal(events.length, 1);
     assert.deepEqual(JSON.parse(JSON.stringify(events[0].detail)), {
       fullName: "Alex Admin",
       animate: false
