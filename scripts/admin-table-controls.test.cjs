@@ -27,6 +27,11 @@ for (const view of ["leads", "followups", "tasks"]) {
 assert.ok(workspaceSource.includes("adminTableControls.bind();"),
     "dashboard view lifecycle must bind the table controls after rendering");
 
+assert.ok(
+    workspaceSource.includes('(item.client_id ? clientHealthChip(item.client_id) : "—")'),
+    "task Client health should use the linked client's ID and stay neutral when no client is linked"
+);
+
 global.window = {};
 require(modulePath);
 assert.equal(typeof global.window.createSwayphicsAdminTableControls, "function");
