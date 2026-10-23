@@ -73,6 +73,7 @@ const metrics = {
   apiReads: 0,
   apiMutationsBlocked: [],
   mockedStartupCalls: [],
+  mockedTableActionWrites: [],
   unexpectedExternalRequests: [],
   pageErrors: [],
   consoleErrors: []
@@ -84,6 +85,8 @@ const defaultServiceNames = [
   "Social Media Management", "Google Business Profile Setup",
   "Professional Email Setup", "Appointment / Booking Setup", "Website Design"
 ];
+
+const mockActivityLog = [];
 
 function jsonResponse(body, status = 200, extraHeaders = {}) {
   return {
@@ -128,7 +131,7 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/quotes") return [];
   if (url.pathname === "/rest/v1/payments") return [];
   if (url.pathname === "/rest/v1/website_enquiries") return [];
-  if (url.pathname === "/rest/v1/activity_log") return [];
+  if (url.pathname === "/rest/v1/activity_log") return mockActivityLog;
   if (url.pathname === "/rest/v1/site_announcements") return [];
   if (url.pathname === "/rest/v1/invoices") return [];
   if (url.pathname === "/rest/v1/services") {
@@ -209,6 +212,48 @@ async function main() {
     }
 
     if (method !== "GET" && method !== "HEAD") {
+      // Completion requests are applied to in-memory test arrays only.
+      // Playwright intercepts them before a request can leave this browser.
+      if (method === "PATCH" && url.pathname === "/rest/v1/tasks") {
+        const filter = String(url.searchParams.get("id") || "");
+        const id = filter.startsWith("eq.") ? filter.slice(3) : "";
+        const body = JSON.parse(request.postData() || "{}");
+        const record = tasks.find(item => String(item.id) === id);
+        if (record && body.status === "completed") {
+          Object.assign(record, body);
+          metrics.mockedTableActionWrites.push({ method, path: url.pathname, id, status: body.status });
+          return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
+        }
+      }
+      if (method === "PATCH" && url.pathname === "/rest/v1/follow_ups") {
+        const filter = String(url.searchParams.get("id") || "");
+        const id = filter.startsWith("eq.") ? filter.slice(3) : "";
+        const body = JSON.parse(request.postData() || "{}");
+        const record = followups.find(item => String(item.id) === id);
+        if (record && body.status === "completed") {
+          Object.assign(record, body);
+          metrics.mockedTableActionWrites.push({ method, path: url.pathname, id, status: body.status });
+          return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
+        }
+      }
+      if (method === "PATCH" && url.pathname === "/rest/v1/leads") {
+        const filter = String(url.searchParams.get("id") || "");
+        const id = filter.startsWith("eq.") ? filter.slice(3) : "";
+        const body = JSON.parse(request.postData() || "{}");
+        const record = leads.find(item => String(item.id) === id);
+        if (record && body.status === "contacted") {
+          Object.assign(record, body);
+          metrics.mockedTableActionWrites.push({ method, path: url.pathname, id, status: body.status });
+          return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
+        }
+      }
+      if (method === "POST" && url.pathname === "/rest/v1/activity_log") {
+        const body = JSON.parse(request.postData() || "{}");
+        mockActivityLog.push(Object.assign({ id: "activity-ui-test-" + (mockActivityLog.length + 1) }, body));
+        metrics.mockedTableActionWrites.push({ method, path: url.pathname, entity_type: body.entity_type, entity_id: body.entity_id });
+        return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
+      }
+
       // These three dashboard startup routines normally make a POST call.
       // Intercept and stub them before the request can reach Supabase. They
       // are not part of table-control interactions and must never touch data
@@ -331,6 +376,72 @@ async function main() {
       "the actual Tasks view should filter pending tasks");
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-desktop.png"), fullPage: true });
 
+    // Cancelling the confirmation must not mutate either mock records or write logs.
+    const writeCountBeforeCancel = metrics.mockedTableActionWrites.length;
+    await taskRows.filter({ hasText: "Confirm scope" })
+      .locator('[data-admin-table-select="tasks"]').check();
+    await page.locator('[data-admin-table-bulk-action="complete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, writeCountBeforeCancel,
+      "cancelled completion must not write to the mock API");
+    assert.equal(tasks.find(item => item.id === "task-urgent").status, "pending",
+      "cancelled completion must preserve the pending task");
+
+    // The positive confirmation path only updates the synthetic in-memory task.
+    await page.locator('[data-admin-table-bulk-action="complete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() =>
+      document.querySelectorAll('#sway-workspace-main [data-admin-table-row="tasks"]').length === 1
+    );
+    assert.equal(tasks.find(item => item.id === "task-urgent").status, "completed",
+      "confirmed completion should update the in-memory task");
+    assert.equal(metrics.mockedTableActionWrites.filter(item =>
+      item.method === "PATCH" && item.path === "/rest/v1/tasks" && item.id === "task-urgent"
+    ).length, 1, "the confirmed task patch should be intercepted once");
+
+    // Confirm a lead-linked follow-up and verify its linked lead update in memory.
+    await navigate("followups", "crm");
+    const completionFollowupRows = page.locator('#sway-workspace-main [data-admin-table-row="followups"]');
+    await page.locator('[data-admin-table-filter="followups"]').selectOption("pending");
+    assert.equal(await completionFollowupRows.filter({ visible: true }).count(), 2,
+      "two pending follow-ups should remain before the completion test");
+    await completionFollowupRows.filter({ hasText: "Bravo Cafe" })
+      .locator('[data-admin-table-select="followups"]').check();
+    await page.locator('[data-admin-table-bulk-action="complete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() =>
+      document.querySelectorAll('#sway-workspace-main [data-admin-table-row="followups"]').length === 1
+    );
+    assert.equal(followups.find(item => item.id === "follow-sooner").status, "completed",
+      "confirmed completion should update the in-memory follow-up");
+    assert.equal(leads.find(item => item.id === "lead-bravo").status, "contacted",
+      "the linked lead should be marked contacted in the mock");
+    assert.equal(leads.find(item => item.id === "lead-bravo").next_follow_up, null,
+      "the linked lead's next follow-up should be cleared in the mock");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "PATCH" && item.path === "/rest/v1/leads" && item.id === "lead-bravo"
+    ), "the linked-lead patch should be intercepted by the mock");
+    assert.equal(metrics.mockedTableActionWrites.filter(item =>
+      item.method === "POST" && item.path === "/rest/v1/activity_log"
+    ).length, 2, "both confirmed actions should log activity to the in-memory mock");
+
+    await navigate("leads", "crm");
+    const updatedLeadRows = page.locator('#sway-workspace-main [data-admin-table-row="leads"]');
+    await page.locator('[data-admin-table-filter="leads"]').selectOption("contacted");
+    assert.equal(await updatedLeadRows.count(), 1,
+      "only the linked contacted lead should match the Contacted filter");
+    assert.ok((await updatedLeadRows.first().innerText()).includes("Bravo Cafe"),
+      "the linked lead row should reflect the update");
+
+    await navigate("tasks", "delivery");
+    await page.locator('[data-admin-table-filter="tasks"]').selectOption("all");
+    assert.equal(await page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').count(), 3,
+      "all task records should remain available after mock completion");
+
     // Keep the real Tasks view open while shrinking the viewport. The dashboard
     // sidebar intentionally becomes off-canvas on mobile, so this isolates the
     // table-control layout without forcing navigation behind the mobile menu.
@@ -377,8 +488,12 @@ async function main() {
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-mobile.png"), fullPage: true });
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
-      "dashboard interactions must not attempt API writes during this read-only test: " +
-      JSON.stringify(metrics.apiMutationsBlocked));
+      "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
+    assert.equal(metrics.mockedTableActionWrites.length, 5,
+      "only the expected task/follow-up action writes should be captured by the in-memory mock");
+    assert.equal(tasks.find(item => item.id === "task-urgent").status, "completed");
+    assert.equal(followups.find(item => item.id === "follow-sooner").status, "completed");
+    assert.equal(leads.find(item => item.id === "lead-bravo").status, "contacted");
     assert.equal(metrics.unexpectedExternalRequests.length, 0,
       "unexpected outbound requests were blocked: " + JSON.stringify(metrics.unexpectedExternalRequests));
     assert.equal(metrics.pageErrors.length, 0,
@@ -391,6 +506,7 @@ async function main() {
       data: "synthetic records only",
       apiReadsMocked: metrics.apiReads,
       unexpectedApiWritesBlocked: metrics.apiMutationsBlocked.length,
+      inMemoryActionWritesIntercepted: metrics.mockedTableActionWrites,
       startupCallsInterceptedBeforeNetwork: metrics.mockedStartupCalls,
       externalRequestsBlocked: metrics.unexpectedExternalRequests.length,
       pageErrors: metrics.pageErrors.length,
@@ -400,6 +516,10 @@ async function main() {
         "lead email search, status filter and business-name sort",
         "visible-row selection, clear selection and formula-safe CSV download",
         "follow-up status filter and task priority sort/status filter",
+        "cancelled task completion makes no in-memory updates",
+        "confirmed task completion updates the synthetic task only",
+        "confirmed follow-up completion updates the linked synthetic lead",
+        "activity log POSTs are intercepted by the in-memory mock",
         "mobile controls use a single-column layout and fit in viewport"
       ]
     };
