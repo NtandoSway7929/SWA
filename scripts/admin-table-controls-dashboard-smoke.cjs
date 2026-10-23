@@ -232,9 +232,12 @@ async function main() {
     assert.equal(await leadRows.count(), 3, "the actual Leads view should render all synthetic lead records");
 
     await leadView.locator('[data-admin-table-search-input="leads"]').fill("lee@example.invalid");
-    assert.equal(await leadRows.filter({ hasText: "Zulu Market" }).count(), 1,
+    const visibleLeadRows = leadView.locator('[data-admin-table-row="leads"]:visible');
+    assert.equal(await visibleLeadRows.count(), 1,
+      "the actual dashboard should show only one lead after email search");
+    assert.equal(await visibleLeadRows.filter({ hasText: "Zulu Market" }).count(), 1,
       "the actual dashboard should search lead emails");
-    assert.equal(await leadRows.filter({ hasText: "Alpha Studio" }).count(), 0,
+    assert.equal(await visibleLeadRows.filter({ hasText: "Alpha Studio" }).count(), 0,
       "the actual dashboard should hide non-matching lead rows");
 
     await leadView.locator('[data-admin-table-search-input="leads"]').fill("");
