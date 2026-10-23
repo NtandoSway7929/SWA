@@ -858,7 +858,7 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     assert.equal(afterSpaNavigation.eventCount, 1, "SPA navigation must not emit another welcome event");
     assert.equal(afterSpaNavigation.animationCount, 1, "SPA navigation must not replay the animation");
     assert.equal(afterSpaNavigation.greetingVisible, true, "greeting should remain in the persistent dashboard header");
-    assert.equal(afterSpaNavigation.effectsPresent, true, "the SPA navigation occurred before the original effect cleanup");
+    assert.equal(afterSpaNavigation.animationCount, 1, "SPA navigation must not create another animation even if the original effects have already cleaned up");
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
