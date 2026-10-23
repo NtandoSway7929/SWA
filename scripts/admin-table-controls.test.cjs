@@ -192,6 +192,17 @@ assert.match(invoiceSaveSource, /if \(shouldSend && !pendingInvoiceSent\)/,
     "retrying a post-send failure must not dispatch the invoice send action again");
 assert.match(invoiceSaveSource, /await invokeInvoiceFunction\(savedId, "send"\);\s*pendingInvoiceSent = true;/,
     "the sent flag must be set immediately after the send endpoint succeeds, before later logging or refresh work");
+assert.match(workspaceSource, /let pendingInvoiceActivityLogged = false;/,
+    "invoice activity logging should have independent retry state");
+assert.match(invoiceSaveSource, /if \(shouldSend && pendingInvoiceSent && !pendingInvoiceActivityLogged\)/,
+    "a retry after activity logging fails must log the activity without resending the invoice");
+assert.match(invoiceSaveSource, /await logActivity\([\s\S]*?\);\s*pendingInvoiceActivityLogged = true;/,
+    "the activity-logged flag must only be set after the log operation succeeds");
+assert.ok(
+    invoiceSaveSource.indexOf("pendingInvoiceSent = true;") <
+    invoiceSaveSource.indexOf("if (shouldSend && pendingInvoiceSent && !pendingInvoiceActivityLogged)"),
+    "delivery state must be recorded before the independently retryable activity log"
+);
 assert.match(invoiceSaveSource, /if \(!selectedClient \|\| !selectedClient\.email\)/,
     "the direct send path must still validate that the selected client has an email address");
 

@@ -14250,6 +14250,8 @@ function simpleBars(items, color) {
         // Once the send endpoint confirms success, retries must not send again
         // just because a later activity-log or refresh step failed.
         let pendingInvoiceSent = false;
+        // Track activity logging separately so a failed log can be retried without resending.
+        let pendingInvoiceActivityLogged = false;
 
         function closeModal() {
             root.remove();
@@ -14850,12 +14852,14 @@ function simpleBars(items, color) {
                         throw new Error("This client does not have an email address.");
                     }
 
-                    // Separate the send request from refreshData(): once the send
-                    // endpoint succeeds, remember that fact before any later step
-                    // can fail and expose a retry path.
+                    // Record successful delivery before any later operation can fail.
                     await invokeInvoiceFunction(savedId, "send");
                     pendingInvoiceSent = true;
+                }
 
+                // Logging is an independent retryable step: if it fails after send,
+                // a later attempt records the activity without sending another email.
+                if (shouldSend && pendingInvoiceSent && !pendingInvoiceActivityLogged) {
                     await logActivity(
                         "Sent invoice " +
                         (
@@ -14867,6 +14871,7 @@ function simpleBars(items, color) {
                         "invoices",
                         savedId
                     );
+                    pendingInvoiceActivityLogged = true;
                 }
 
                 // Keep the form available unless the save/send and refresh
