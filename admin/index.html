@@ -526,6 +526,12 @@
             loginStatus.hidden =
                 true;
 
+            // A new login attempt invalidates any unconsumed welcome marker.
+            try {
+                sessionStorage.removeItem("swayphics_admin_welcome_pending");
+            } catch (storageError) {
+                // Storage may be unavailable; login must still be allowed.
+            }
 
             try {
 
@@ -588,6 +594,31 @@
                     data.refresh_token
                 );
 
+                // This marker is a one-time UI signal, never an auth credential.
+                // The dashboard must validate the actual Supabase session and admin record.
+                try {
+                    const authenticatedUserId =
+                        data.user && data.user.id;
+
+                    if (
+                        typeof authenticatedUserId === "string" &&
+                        authenticatedUserId.trim()
+                    ) {
+                        sessionStorage.setItem(
+                            "swayphics_admin_welcome_pending",
+                            JSON.stringify({
+                                version: 1,
+                                userId: authenticatedUserId,
+                                issuedAt: Date.now()
+                            })
+                        );
+                    }
+                } catch (markerError) {
+                    console.warn(
+                        "Welcome marker unavailable; continuing login without the greeting.",
+                        markerError
+                    );
+                }
 
                 loginStatus.textContent =
                     "Login successful. Opening the admin dashboard...";

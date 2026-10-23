@@ -28097,7 +28097,158 @@ function simpleBars(items, color) {
         return null;
     }
 
+    function claimSwayphicsAdminWelcomeMarker() {
+        const markerKey = "swayphics_admin_welcome_pending";
+        let rawMarker = null;
+
+        try {
+            rawMarker = window.sessionStorage.getItem(markerKey);
+            // Claim before any asynchronous work so refreshes cannot replay it.
+            window.sessionStorage.removeItem(markerKey);
+        } catch (storageError) {
+            try {
+                window.sessionStorage.removeItem(markerKey);
+            } catch (cleanupError) {
+                // A blocked storage API means the greeting is safely skipped.
+            }
+            return null;
+        }
+
+        if (!rawMarker) {
+            return null;
+        }
+
+        try {
+            const marker = JSON.parse(rawMarker);
+            const now = Date.now();
+
+            if (
+                !marker ||
+                marker.version !== 1 ||
+                typeof marker.userId !== "string" ||
+                !marker.userId.trim() ||
+                typeof marker.issuedAt !== "number" ||
+                !Number.isFinite(marker.issuedAt)
+            ) {
+                return null;
+            }
+
+            const age = now - marker.issuedAt;
+            if (age < 0 || age > 120000) {
+                return null;
+            }
+
+            return marker;
+        } catch (parseError) {
+            return null;
+        }
+    }
+
+    function showSwayphicsWorkspaceStartupFailure(message, error) {
+        state.initialDataLoading = false;
+        state.initialDataError = message;
+
+        const main =
+            document.getElementById("sway-workspace-main");
+
+        const workspaceRoot =
+            document.getElementById("sway-admin-workspace");
+
+        const errorTarget =
+            main || workspaceRoot;
+
+        if (errorTarget) {
+            errorTarget.innerHTML =
+                '<div class="sway-error">' +
+                    esc(message) +
+                "</div>";
+        }
+
+        console.error(
+            "Swayphics workspace startup could not continue:",
+            error || message
+        );
+    }
+
+    function publishAuthorizedSwayphicsAdminWelcome(marker) {
+        if (
+            !marker ||
+            !state.currentUser ||
+            !state.currentUser.id ||
+            !state.currentAdmin ||
+            state.currentAdmin.active !== true ||
+            typeof window.swayphicsVerifiedAdminUserId !== "string" ||
+            String(state.currentUser.id) !== window.swayphicsVerifiedAdminUserId
+        ) {
+            return;
+        }
+
+        if (marker.userId !== String(state.currentUser.id)) {
+            return;
+        }
+
+        const fullName =
+            typeof state.currentAdmin.full_name === "string"
+                ? state.currentAdmin.full_name.trim()
+                : "";
+
+        // Presentation is deliberately separate: the visual component listens for this event.
+        window.dispatchEvent(
+            new CustomEvent(
+                "swayphics:admin-welcome-authorized",
+                {
+                    detail: {
+                        fullName: fullName
+                    }
+                }
+            )
+        );
+    }
+
     async function boot() {
+        // Claim synchronously, before verification or workspace loading can yield.
+        const welcomeMarker = claimSwayphicsAdminWelcomeMarker();
+        const sessionReady = window.swayphicsAdminSessionReady;
+
+        if (!sessionReady || typeof sessionReady.then !== "function") {
+            showSwayphicsWorkspaceStartupFailure(
+                "Admin session verification could not start. Please sign in again.",
+                new Error("Admin session readiness promise is missing.")
+            );
+            return;
+        }
+
+        try {
+            const sessionVerified = await sessionReady;
+
+            if (sessionVerified !== true) {
+                showSwayphicsWorkspaceStartupFailure(
+                    "Your admin session could not be verified. Please sign in again.",
+                    new Error("Admin session verification did not succeed.")
+                );
+                return;
+            }
+        } catch (sessionError) {
+            showSwayphicsWorkspaceStartupFailure(
+                "Your admin session could not be verified. Please sign in again.",
+                sessionError
+            );
+            return;
+        }
+
+        const verifiedSessionUserId =
+            typeof window.swayphicsVerifiedAdminUserId === "string"
+                ? window.swayphicsVerifiedAdminUserId
+                : "";
+
+        if (!verifiedSessionUserId) {
+            showSwayphicsWorkspaceStartupFailure(
+                "Your admin identity could not be confirmed. Please sign in again.",
+                new Error("Verified Supabase user ID is missing.")
+            );
+            return;
+        }
+
         initialiseSwayButtonLoadingObserver();
 
         const requestedNotificationTarget =
@@ -28125,6 +28276,16 @@ function simpleBars(items, color) {
                 refreshData()
             ]);
 
+            if (
+                !state.currentUser ||
+                !state.currentUser.id ||
+                String(state.currentUser.id) !== verifiedSessionUserId
+            ) {
+                throw new Error(
+                    "The verified Supabase identity does not match the loaded workspace user."
+                );
+            }
+
             restoreAIConversation();
         restoreAIFocusedRecord();
 
@@ -28143,6 +28304,8 @@ function simpleBars(items, color) {
             );
             setupGlobalSearch();
             setupRealtime();
+
+            publishAuthorizedSwayphicsAdminWelcome(welcomeMarker);
 
             if (requestedNotificationTarget) {
                 window.setTimeout(

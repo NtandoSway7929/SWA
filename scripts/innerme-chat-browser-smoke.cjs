@@ -48,6 +48,18 @@ function responseJson(body, status) {
   };
 }
 
+function makeTestAccessToken(userId, email) {
+  const encode = value => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const header = encode({ alg: "HS256", typ: "JWT" });
+  const payload = encode({
+    sub: userId,
+    email: email || "welcome-test@example.invalid",
+    role: "authenticated",
+    exp: Math.floor(Date.now() / 1000) + 3600
+  });
+  return header + "." + payload + ".ui-smoke-signature";
+}
+
 function sseFrame(name, payload) {
   return "event: " + name + "\ndata: " + JSON.stringify(payload) + "\n\n";
 }
@@ -100,8 +112,8 @@ function buildSseResponse() {
   return frames.join("");
 }
 
-async function configureIsolatedContext(context, initialView, theme) {
-  await context.addInitScript(({ testUserId, view, storedTheme }) => {
+async function configureIsolatedContext(context, initialView, theme, welcomeTest) {
+  await context.addInitScript(({ testUserId, view, storedTheme, welcomeTest }) => {
     const payload = {
       sub: testUserId,
       email: "innerme-ui-smoke@example.invalid",
@@ -116,12 +128,43 @@ async function configureIsolatedContext(context, initialView, theme) {
       .replace(/=/g, "")
       .replace(/\+/g, "-")
       .replace(/\//g, "_");
-    localStorage.setItem("swayphics_admin_access_token", header + "." + encoded + ".ui-smoke-signature");
+    // Seed the fake access token only on dashboard documents. If this test
+    // navigates to the login screen after logout, do not silently restore it.
+    if (window.location.pathname.startsWith("/admin-dashboard/")) {
+      localStorage.setItem("swayphics_admin_access_token", header + "." + encoded + ".ui-smoke-signature");
+    }
     localStorage.setItem("swayphics_admin_current_view", view);
     localStorage.setItem("swayphics_admin_theme", storedTheme);
     localStorage.removeItem("swayphics_admin_workspace_snapshot_" + testUserId);
     localStorage.removeItem("swayphics_admin_innerme_conversation_" + testUserId);
     localStorage.removeItem("swayphics_admin_innerme_sessions_" + testUserId);
+
+    if (welcomeTest) {
+      window.addEventListener("swayphics:admin-welcome-authorized", function (event) {
+        const countKey = "__swayphicsWelcomeEventCount";
+        const count = Number(sessionStorage.getItem(countKey) || "0") + 1;
+        sessionStorage.setItem(countKey, String(count));
+        sessionStorage.setItem(
+          "__swayphicsWelcomeFullName",
+          String(event.detail && event.detail.fullName || "")
+        );
+      });
+
+      if (
+        welcomeTest.seedMarker === true &&
+        sessionStorage.getItem("__swayphicsWelcomeMarkerSeeded") !== "true"
+      ) {
+        sessionStorage.setItem(
+          "swayphics_admin_welcome_pending",
+          JSON.stringify({
+            version: 1,
+            userId: welcomeTest.markerUserId,
+            issuedAt: Date.now()
+          })
+        );
+        sessionStorage.setItem("__swayphicsWelcomeMarkerSeeded", "true");
+      }
+    }
 
     // Produce one deterministic, browser-native partial SSE response for the
     // Stop-response test. It never reaches Supabase or an AI provider.
@@ -194,7 +237,11 @@ async function configureIsolatedContext(context, initialView, theme) {
   }, {
     testUserId: TEST_USER_ID,
     view: initialView,
-    storedTheme: theme
+    storedTheme: theme,
+    welcomeTest: welcomeTest ? {
+      markerUserId: welcomeTest.markerUserId || null,
+      seedMarker: welcomeTest.seedMarker === true
+    } : null
   });
 
   await context.route(SUPABASE_ORIGIN + "/**", async (route) => {
@@ -296,6 +343,33 @@ async function configureIsolatedContext(context, initialView, theme) {
       return route.fulfill(responseJson({ answer: markdownAnswer, read_only: true }));
     }
 
+    if (
+      welcomeTest &&
+      welcomeTest.simulateLogin === true &&
+      url.pathname === "/auth/v1/token" &&
+      url.searchParams.get("grant_type") === "password" &&
+      method === "POST"
+    ) {
+      const loginPayload = request.postDataJSON() || {};
+      if (loginPayload.email === "invalid-login@example.invalid") {
+        return route.fulfill(responseJson({
+          message: "Synthetic invalid login for welcome smoke test."
+        }, 401));
+      }
+
+      return route.fulfill(responseJson({
+        access_token: makeTestAccessToken(TEST_USER_ID, loginPayload.email),
+        refresh_token: "isolated-welcome-test-refresh-token",
+        token_type: "bearer",
+        expires_in: 3600,
+        user: {
+          id: TEST_USER_ID,
+          email: loginPayload.email || "welcome-test@example.invalid",
+          role: "authenticated"
+        }
+      }));
+    }
+
     if (url.pathname === "/auth/v1/user") {
       return route.fulfill(responseJson({
         id: TEST_USER_ID,
@@ -310,7 +384,7 @@ async function configureIsolatedContext(context, initialView, theme) {
         full_name: "Isolated UI Test",
         email: "innerme-ui-smoke@example.invalid",
         role: "owner",
-        active: true,
+        active: !(welcomeTest && welcomeTest.adminActive === false),
         created_at: "2026-01-01T00:00:00Z"
       }]));
     }
@@ -633,6 +707,115 @@ async function verifyKeyboardAndFallbackPaths(page, metrics) {
   };
 }
 
+async function testWelcomeAuthBrowserFlow(browser, metrics) {
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    serviceWorkers: "block"
+  });
+  await configureIsolatedContext(context, "overview", "light", {
+    simulateLogin: true,
+    markerUserId: TEST_USER_ID,
+    seedMarker: false,
+    adminActive: true
+  });
+
+  const page = await context.newPage();
+  page.on("pageerror", error => metrics.pageErrors.push("welcome-auth: " + error.message));
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (!["127.0.0.1", "localhost", "sqifhribgsqfaxgtobsa.supabase.co", "cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"].includes(url.hostname)) {
+      metrics.unexpectedExternalRequests.push(request.url());
+    }
+  });
+
+  try {
+    await page.goto("http://127.0.0.1:4173/admin/", { waitUntil: "domcontentloaded" });
+    await page.locator("#admin-email").fill("welcome-test@example.invalid");
+    await page.locator("#admin-password").fill("mocked-password");
+
+    await Promise.all([
+      page.waitForURL(url => url.pathname.startsWith("/admin-dashboard/"), { timeout: 15000 }),
+      page.locator("#login-button").click()
+    ]);
+
+    await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
+    await page.waitForFunction(
+      () => Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0") === 1,
+      undefined,
+      { timeout: 15000 }
+    );
+
+    const firstWelcome = await page.evaluate(() => ({
+      count: Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0"),
+      fullName: sessionStorage.getItem("__swayphicsWelcomeFullName"),
+      pendingMarker: sessionStorage.getItem("swayphics_admin_welcome_pending")
+    }));
+    assert.equal(firstWelcome.count, 1, "successful login must authorize exactly one welcome event");
+    assert.equal(firstWelcome.fullName, "Isolated UI Test", "welcome event must use the active admin full name");
+    assert.equal(firstWelcome.pendingMarker, null, "dashboard must consume the marker");
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
+    await page.waitForTimeout(700);
+    const afterRefresh = await page.evaluate(() =>
+      Number(sessionStorage.getItem("__swayphicsWelcomeEventCount") || "0")
+    );
+    assert.equal(afterRefresh, 1, "refresh must not replay the welcome event");
+
+    await page.evaluate(() => {
+      sessionStorage.setItem(
+        "swayphics_admin_welcome_pending",
+        JSON.stringify({
+          version: 1,
+          userId: "11111111-1111-4111-8111-111111111111",
+          issuedAt: Date.now()
+        })
+      );
+    });
+    await page.locator("#logout-button").click();
+    await page.waitForURL(url => url.pathname === "/admin/" || url.pathname === "/admin", { timeout: 10000 });
+
+    const afterLogout = await page.evaluate(() => ({
+      pendingMarker: sessionStorage.getItem("swayphics_admin_welcome_pending"),
+      accessToken: localStorage.getItem("swayphics_admin_access_token"),
+      refreshToken: localStorage.getItem("swayphics_admin_refresh_token")
+    }));
+    assert.equal(afterLogout.pendingMarker, null, "logout must clear any pending marker");
+    assert.equal(afterLogout.accessToken, null, "logout must clear the access token");
+    assert.equal(afterLogout.refreshToken, null, "logout must clear the refresh token");
+
+    await page.evaluate(() => {
+      sessionStorage.setItem("swayphics_admin_welcome_pending", "stale-marker");
+    });
+    await page.locator("#admin-email").fill("invalid-login@example.invalid");
+    await page.locator("#admin-password").fill("bad-password");
+    await page.locator("#login-button").click();
+    await page.locator("#login-status").waitFor({ state: "visible", timeout: 5000 });
+
+    const failedLogin = await page.evaluate(() => ({
+      currentPath: window.location.pathname,
+      pendingMarker: sessionStorage.getItem("swayphics_admin_welcome_pending"),
+      status: document.getElementById("login-status").textContent
+    }));
+    assert.equal(failedLogin.currentPath, "/admin/", "failed login must not redirect to dashboard");
+    assert.equal(failedLogin.pendingMarker, null, "failed login must not retain a stale marker");
+    assert.match(failedLogin.status, /Synthetic invalid login/i);
+
+    metrics.scenarios.push({
+      name: "admin-welcome-authentication",
+      status: "passed",
+      loginCreatesOneWelcomeEvent: true,
+      activeAdminFullName: firstWelcome.fullName,
+      markerConsumed: true,
+      refreshDoesNotReplay: true,
+      logoutClearsMarkerAndTokens: true,
+      failedLoginClearsStaleMarker: true
+    });
+  } finally {
+    await context.close();
+  }
+}
+
 async function main() {
   fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   const browser = await chromium.launch({ headless: true });
@@ -784,6 +967,8 @@ async function main() {
       reducedMotionPreference: reducedMotion
     });
     await mobileContext.close();
+
+    await testWelcomeAuthBrowserFlow(browser, metrics);
 
     assert.equal(metrics.pageErrors.length, 0, "Browser must not produce uncaught page errors: " + metrics.pageErrors.join("; "));
     assert.equal(metrics.unexpectedExternalRequests.length, 0, "Browser attempted an unapproved external request: " + metrics.unexpectedExternalRequests.join(", "));

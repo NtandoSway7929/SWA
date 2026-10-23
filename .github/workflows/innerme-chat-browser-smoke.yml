@@ -33,7 +33,7 @@ permissions:
 jobs:
   browser-smoke:
     if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || inputs.confirm_mocked_network == true }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out isolated UI branch
