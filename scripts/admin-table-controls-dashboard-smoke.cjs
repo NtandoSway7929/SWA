@@ -335,6 +335,16 @@ async function main() {
     // sidebar intentionally becomes off-canvas on mobile, so this isolates the
     // table-control layout without forcing navigation behind the mobile menu.
     await page.setViewportSize({ width: 390, height: 844 });
+    const mobileWorkspace = page.locator("#sway-admin-workspace");
+    if (await mobileWorkspace.evaluate(el => el.classList.contains("nav-open"))) {
+      const mobileToggle = page.locator(".admin-mobile-sidebar-toggle").first();
+      await mobileToggle.waitFor({ state: "visible" });
+      await mobileToggle.click();
+      await page.waitForFunction(() => {
+        const element = document.getElementById("sway-admin-workspace");
+        return !element || !element.classList.contains("nav-open");
+      });
+    }
     const controls = page.locator('#sway-workspace-main .sway-admin-table-control-grid');
     await controls.waitFor({ state: "visible" });
     const bounds = await controls.boundingBox();
