@@ -1,0 +1,261 @@
+/* Swayphics authenticated-session welcome animation.
+   Kept separate from the dashboard shell so the animation can be reviewed
+   and disabled without changing authentication behavior. */
+
+.swayphics-welcome-toast {
+    position: fixed;
+    z-index: 140;
+    top: clamp(96px, 12vh, 128px);
+    left: 50%;
+    width: min(740px, calc(100vw - 32px));
+    min-height: 142px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 25px 34px;
+    overflow: hidden;
+    isolation: isolate;
+    transform: translateX(-50%);
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    border-radius: 26px;
+    background:
+        radial-gradient(ellipse at 12% 110%, rgba(119, 193, 252, 0.26), transparent 48%),
+        radial-gradient(ellipse at 92% -4%, rgba(1, 82, 244, 0.15), transparent 43%),
+        linear-gradient(118deg, rgba(255, 255, 255, 0.97), rgba(246, 250, 255, 0.94) 55%, rgba(255, 255, 255, 0.96));
+    box-shadow:
+        0 24px 70px rgba(0, 32, 150, 0.17),
+        0 5px 18px rgba(0, 32, 150, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(24px) saturate(145%);
+    -webkit-backdrop-filter: blur(24px) saturate(145%);
+    pointer-events: none;
+    animation:
+        swayphics-welcome-enter 620ms cubic-bezier(0.16, 1, 0.3, 1) both,
+        swayphics-welcome-exit 620ms ease-in 2180ms both;
+}
+
+.swayphics-welcome-toast,
+.swayphics-welcome-toast * {
+    box-sizing: border-box;
+}
+
+.swayphics-welcome-copy {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    max-width: 610px;
+    text-align: center;
+}
+
+.swayphics-welcome-eyebrow {
+    display: block;
+    margin: 0 0 9px;
+    color: #0152F4;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.21em;
+    line-height: 1.4;
+    text-transform: uppercase;
+}
+
+.swayphics-welcome-title {
+    margin: 0;
+    color: #081533;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: clamp(1.35rem, 3.5vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.055em;
+    line-height: 1.14;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+}
+
+.swayphics-welcome-subtitle {
+    margin: 9px 0 0;
+    color: #56627A;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: clamp(0.72rem, 1.6vw, 0.82rem);
+    font-weight: 600;
+    line-height: 1.55;
+    text-wrap: balance;
+}
+
+.swayphics-welcome-light-trails,
+.swayphics-welcome-particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.swayphics-welcome-light-trails {
+    z-index: 1;
+    opacity: 0.74;
+}
+
+.swayphics-welcome-light-trails span {
+    position: absolute;
+    left: -45%;
+    width: 76%;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent 0%, rgba(44, 145, 252, 0.04) 18%, rgba(1, 82, 244, 0.52) 64%, rgba(119, 193, 252, 0.6) 78%, transparent 100%);
+    filter: drop-shadow(0 0 5px rgba(1, 82, 244, 0.42));
+    transform: rotate(-13deg) translateX(-120%);
+    animation: swayphics-welcome-sweep 1750ms cubic-bezier(0.17, 0.67, 0.24, 1) both;
+}
+
+.swayphics-welcome-light-trails span:nth-child(1) {
+    top: 26%;
+}
+
+.swayphics-welcome-light-trails span:nth-child(2) {
+    top: 72%;
+    width: 65%;
+    height: 1px;
+    animation-delay: 120ms;
+    animation-duration: 1900ms;
+    transform: rotate(-9deg) translateX(-135%);
+}
+
+.swayphics-welcome-light-trails span:nth-child(3) {
+    top: 46%;
+    width: 48%;
+    height: 1px;
+    opacity: 0.56;
+    animation-delay: 240ms;
+    animation-duration: 1600ms;
+    transform: rotate(8deg) translateX(-145%);
+}
+
+.swayphics-welcome-particles {
+    z-index: 2;
+}
+
+.swayphics-welcome-particle {
+    position: absolute;
+    left: var(--welcome-x, 50%);
+    top: var(--welcome-y, 50%);
+    width: var(--welcome-size, 3px);
+    height: var(--welcome-size, 3px);
+    border-radius: 50%;
+    background: #2C91FC;
+    box-shadow: 0 0 9px rgba(1, 82, 244, 0.42);
+    opacity: 0;
+    animation: swayphics-welcome-particle 1800ms ease-out var(--welcome-delay, 0ms) both;
+}
+
+.swayphics-welcome-particle:nth-child(3n) {
+    background: #77C1FC;
+    box-shadow: 0 0 11px rgba(119, 193, 252, 0.65);
+}
+
+.sway-dark-mode .swayphics-welcome-toast {
+    border-color: rgba(119, 193, 252, 0.22);
+    background:
+        radial-gradient(ellipse at 12% 110%, rgba(44, 145, 252, 0.2), transparent 48%),
+        radial-gradient(ellipse at 92% -4%, rgba(1, 82, 244, 0.26), transparent 43%),
+        linear-gradient(118deg, rgba(9, 19, 43, 0.97), rgba(13, 28, 58, 0.96) 55%, rgba(8, 21, 51, 0.97));
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, 0.34),
+        0 5px 18px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.sway-dark-mode .swayphics-welcome-title {
+    color: #F7FAFF;
+}
+
+.sway-dark-mode .swayphics-welcome-subtitle {
+    color: #C0CBE0;
+}
+
+@keyframes swayphics-welcome-enter {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -10px) scale(0.985);
+        filter: blur(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+        filter: blur(0);
+    }
+}
+
+@keyframes swayphics-welcome-exit {
+    to {
+        opacity: 0;
+        transform: translate(-50%, -7px) scale(0.99);
+        filter: blur(2px);
+    }
+}
+
+@keyframes swayphics-welcome-sweep {
+    0% {
+        opacity: 0;
+        transform: rotate(-13deg) translateX(-120%);
+    }
+    18% {
+        opacity: 0.9;
+    }
+    76% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 0;
+        transform: rotate(-13deg) translateX(250%);
+    }
+}
+
+@keyframes swayphics-welcome-particle {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 8px, 0) scale(0.65);
+    }
+    28% {
+        opacity: 0.74;
+    }
+    100% {
+        opacity: 0;
+        transform: translate3d(var(--welcome-drift, 12px), -14px, 0) scale(1.2);
+    }
+}
+
+@media (max-width: 600px) {
+    .swayphics-welcome-toast {
+        top: 136px;
+        width: calc(100vw - 24px);
+        min-height: 126px;
+        padding: 21px 19px;
+        border-radius: 21px;
+    }
+
+    .swayphics-welcome-eyebrow {
+        font-size: 0.52rem;
+        letter-spacing: 0.16em;
+    }
+
+    .swayphics-welcome-title {
+        font-size: clamp(1.18rem, 6vw, 1.55rem);
+    }
+
+    .swayphics-welcome-subtitle {
+        margin-top: 7px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .swayphics-welcome-toast,
+    .swayphics-welcome-light-trails span,
+    .swayphics-welcome-particle {
+        animation: none !important;
+    }
+
+    .swayphics-welcome-light-trails span {
+        opacity: 0.14;
+        transform: none;
+    }
+}
