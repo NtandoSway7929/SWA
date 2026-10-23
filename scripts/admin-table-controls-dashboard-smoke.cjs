@@ -309,6 +309,8 @@ async function main() {
     assert.equal(await leadView.locator('[data-admin-table-bulk-toolbar="leads"]').isVisible(), false,
       "clear selection should hide the bulk toolbar");
     await leadView.locator('[data-admin-table-search-input="leads"]').fill("");
+    // Allow the dashboard's initial visual intro to finish before saving screenshots.
+    await page.waitForTimeout(11000);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-leads-desktop.png"), fullPage: true });
 
     await navigate("followups", "crm");
