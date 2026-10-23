@@ -871,9 +871,12 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     const headSource = headEndIndex >= 0
       ? dashboardHtmlSource.slice(0, headEndIndex)
       : "";
+    const welcomeCssLinkMatch = headSource.match(
+      /<link\b[^>]*href=["']admin-welcome\.css\?v=[^"']+["'][^>]*>/i
+    );
     assert.ok(
-      headSource.indexOf('admin-welcome.css?v=20261023-admin-welcome-layout-hotfix-1') >
-        headSource.lastIndexOf("<style"),
+      welcomeCssLinkMatch &&
+        welcomeCssLinkMatch.index > headSource.lastIndexOf("<style"),
       "welcome stylesheet reference must follow the dashboard inline style blocks in the head"
     );
     assert.equal(desktopHeaderLayout.toggleDisplay, "none",
