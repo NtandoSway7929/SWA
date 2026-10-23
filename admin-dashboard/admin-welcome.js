@@ -81,6 +81,199 @@
         });
     }
 
+    function animateWelcomeFromCenter(greeting) {
+        if (
+            !greeting ||
+            typeof Element === "undefined" ||
+            typeof Element.prototype.animate !== "function" ||
+            !document.body
+        ) {
+            return false;
+        }
+
+        var targetRect = greeting.getBoundingClientRect();
+        if (!targetRect.width || !targetRect.height) {
+            return false;
+        }
+
+        var viewportWidth = Math.max(1, window.innerWidth || document.documentElement.clientWidth);
+        var viewportHeight = Math.max(1, window.innerHeight || document.documentElement.clientHeight);
+        var centerX = viewportWidth / 2;
+        var centerY = viewportHeight / 2;
+        var startWidth = Math.min(
+            Math.max(targetRect.width * 1.42, 320),
+            Math.max(220, viewportWidth - 28)
+        );
+        var startHeight = Math.min(
+            Math.max(targetRect.height * 2.15, 96),
+            Math.max(72, viewportHeight - 40)
+        );
+        var targetStyle = window.getComputedStyle(greeting);
+        var targetTitle = greeting.querySelector(".swayphics-welcome-title");
+        var targetSubtitle = greeting.querySelector(".swayphics-welcome-subtitle");
+        var targetTitleSize = targetTitle
+            ? window.getComputedStyle(targetTitle).fontSize
+            : "12px";
+        var targetSubtitleSize = targetSubtitle
+            ? window.getComputedStyle(targetSubtitle).fontSize
+            : "9px";
+        var flight = greeting.cloneNode(true);
+        var flightTitle;
+        var flightSubtitle;
+        var flightDuration = 2700;
+        var travelDelay = Math.round(flightDuration * 0.24);
+        var travelDuration = flightDuration - travelDelay;
+        var animation;
+
+        flight.id = "swayphics-admin-welcome-flight";
+        flight.setAttribute("aria-hidden", "true");
+        flight.setAttribute("data-flight-state", "in-progress");
+        flight.removeAttribute("role");
+        flight.removeAttribute("aria-live");
+        flight.removeAttribute("aria-atomic");
+        flight.classList.add("swayphics-welcome-flight");
+
+        // The traveling copy is a visual duplicate. Keep the accessible status
+        // message and grid item in place so the header never reflows mid-flight.
+        flight.style.setProperty("position", "fixed", "important");
+        flight.style.setProperty("z-index", "2147483647", "important");
+        flight.style.setProperty("display", "flex", "important");
+        flight.style.setProperty("flex", "none", "important");
+        flight.style.setProperty("align-items", "center", "important");
+        flight.style.setProperty("justify-content", "flex-start", "important");
+        flight.style.setProperty("overflow", "hidden", "important");
+        flight.style.setProperty("isolation", "isolate", "important");
+        flight.style.setProperty("pointer-events", "none", "important");
+        flight.style.setProperty("margin", "0", "important");
+        flight.style.setProperty("min-width", "0", "important");
+        flight.style.setProperty("min-height", "0", "important");
+        flight.style.setProperty("max-width", "none", "important");
+        flight.style.setProperty("transform-origin", "center center", "important");
+        flight.style.left = centerX + "px";
+        flight.style.top = centerY + "px";
+        flight.style.width = startWidth + "px";
+        flight.style.height = startHeight + "px";
+        flight.style.opacity = "0";
+        flight.style.transform = "translate(-50%, -50%) scale(0.58)";
+        flight.style.padding = "12px 16px";
+        flight.style.border = "1px solid rgba(44,145,252,0.30)";
+        flight.style.borderRadius = "18px";
+        flight.style.boxShadow = "0 18px 60px rgba(0,32,150,0.18)";
+        flight.style.willChange = "left, top, width, height, transform, opacity";
+
+        flightTitle = flight.querySelector(".swayphics-welcome-title");
+        flightSubtitle = flight.querySelector(".swayphics-welcome-subtitle");
+        if (flightTitle) {
+            flightTitle.style.fontSize = "clamp(1.05rem, 2vw, 1.45rem)";
+            flightTitle.style.lineHeight = "1.18";
+        }
+        if (flightSubtitle) {
+            flightSubtitle.style.fontSize = "clamp(0.78rem, 1.2vw, 0.9rem)";
+            flightSubtitle.style.lineHeight = "1.25";
+        }
+
+        document.body.appendChild(flight);
+        greeting.setAttribute("data-flight-state", "in-progress");
+        greeting.style.setProperty("opacity", "0", "important");
+
+        try {
+            animation = flight.animate(
+                [
+                    {
+                        offset: 0,
+                        left: centerX + "px",
+                        top: centerY + "px",
+                        width: startWidth + "px",
+                        height: startHeight + "px",
+                        padding: "12px 16px",
+                        borderRadius: "18px",
+                        transform: "translate(-50%, -50%) scale(0.58)",
+                        opacity: 0
+                    },
+                    {
+                        offset: 0.12,
+                        left: centerX + "px",
+                        top: centerY + "px",
+                        width: startWidth + "px",
+                        height: startHeight + "px",
+                        padding: "12px 16px",
+                        borderRadius: "18px",
+                        transform: "translate(-50%, -50%) scale(1.06)",
+                        opacity: 1,
+                        easing: "cubic-bezier(0.16, 1, 0.3, 1)"
+                    },
+                    {
+                        offset: 0.24,
+                        left: centerX + "px",
+                        top: centerY + "px",
+                        width: startWidth + "px",
+                        height: startHeight + "px",
+                        padding: "12px 16px",
+                        borderRadius: "16px",
+                        transform: "translate(-50%, -50%) scale(1)",
+                        opacity: 1,
+                        easing: "ease-in-out"
+                    },
+                    {
+                        offset: 1,
+                        left: targetRect.left + "px",
+                        top: targetRect.top + "px",
+                        width: targetRect.width + "px",
+                        height: targetRect.height + "px",
+                        padding: targetStyle.padding,
+                        borderRadius: targetStyle.borderRadius,
+                        transform: "translate(0, 0) scale(1)",
+                        opacity: 1
+                    }
+                ],
+                {
+                    duration: flightDuration,
+                    easing: "linear",
+                    fill: "both"
+                }
+            );
+
+            if (flightTitle) {
+                flightTitle.animate(
+                    [{ fontSize: flightTitle.style.fontSize }, { fontSize: targetTitleSize }],
+                    {
+                        delay: travelDelay,
+                        duration: travelDuration,
+                        easing: "cubic-bezier(0.22, 0.7, 0.25, 1)",
+                        fill: "both"
+                    }
+                );
+            }
+
+            if (flightSubtitle) {
+                flightSubtitle.animate(
+                    [{ fontSize: flightSubtitle.style.fontSize }, { fontSize: targetSubtitleSize }],
+                    {
+                        delay: travelDelay,
+                        duration: travelDuration,
+                        easing: "cubic-bezier(0.22, 0.7, 0.25, 1)",
+                        fill: "both"
+                    }
+                );
+            }
+
+            function revealHeaderGreeting() {
+                greeting.style.removeProperty("opacity");
+                greeting.removeAttribute("data-flight-state");
+                flight.remove();
+            }
+
+            animation.addEventListener("finish", revealHeaderGreeting, { once: true });
+            animation.addEventListener("cancel", revealHeaderGreeting, { once: true });
+            return true;
+        } catch (error) {
+            greeting.style.removeProperty("opacity");
+            greeting.removeAttribute("data-flight-state");
+            flight.remove();
+            return false;
+        }
+    }
+
     function showWelcome(event) {
         if (
             hasShownWelcome ||
@@ -179,6 +372,10 @@
             brand.insertAdjacentElement("afterend", greeting);
         } else {
             headerInner.insertBefore(greeting, headerInner.firstChild);
+        }
+
+        if (shouldAnimate) {
+            animateWelcomeFromCenter(greeting);
         }
     }
 
