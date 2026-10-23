@@ -6,6 +6,26 @@ const path = require("node:path");
 
 const modulePath = path.join(__dirname, "..", "admin-dashboard", "admin-table-controls.js");
 const moduleSource = fs.readFileSync(modulePath, "utf8");
+const workspaceSource = fs.readFileSync(
+    path.join(__dirname, "..", "admin-dashboard", "admin-workspace.js"), "utf8"
+);
+const dashboardHtml = fs.readFileSync(
+    path.join(__dirname, "..", "admin-dashboard", "index.html"), "utf8"
+);
+const controlsScriptIndex = dashboardHtml.indexOf('src="admin-table-controls.js');
+const workspaceScriptIndex = dashboardHtml.indexOf('src="admin-workspace.js');
+assert.ok(controlsScriptIndex >= 0 && workspaceScriptIndex > controlsScriptIndex,
+    "the table controls module must load before the dashboard workspace");
+for (const view of ["leads", "followups", "tasks"]) {
+    assert.ok(workspaceSource.includes('adminTableControls.renderControls("' + view + '")'),
+        view + " view must render the table controls");
+    assert.ok(workspaceSource.includes('adminTableControls.items("' + view + '", state.' + view + ")"),
+        view + " view must use the shared filter/sort pipeline");
+    assert.ok(workspaceSource.includes('adminTableControls.selectionCell("' + view + '"'),
+        view + " view must render selection checkboxes");
+}
+assert.ok(workspaceSource.includes("adminTableControls.bind();"),
+    "dashboard view lifecycle must bind the table controls after rendering");
 
 global.window = {};
 require(modulePath);
