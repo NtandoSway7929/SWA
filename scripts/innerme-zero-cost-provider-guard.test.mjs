@@ -90,3 +90,67 @@ test("Gemini copywriting fallback omits deprecated Gemini 3.x sampling controls"
   assert.ok(generationConfig, "Gemini fallback must have a generationConfig");
   assert.doesNotMatch(generationConfig[1], /\b(?:temperature|top_p|top_k)\s*:/i);
 });
+
+
+test("Gemini daily quota exhaustion alone may invoke the guarded Cloudflare workspace fallback", () => {
+  const recoveryStart = innermeFunctionSource.indexOf(
+    "let recoveredByCloudflareQuotaFallback = false;",
+  );
+  assert.ok(recoveryStart >= 0, "the Gemini guard-recovery decision must exist");
+
+  const responseHandlingEnd = innermeFunctionSource.indexOf(
+    "if (\n      body.stream_response === true,",
+    recoveryStart,
+  );
+  assert.ok(responseHandlingEnd > recoveryStart, "the quota fallback decision block must have a bounded end");
+  const recoveryBlock = innermeFunctionSource.slice(recoveryStart, responseHandlingEnd);
+
+  assert.match(
+    recoveryBlock,
+    /if \(guardReason === "daily_quota_reached"\)\s*\{\s*const quotaFallbackResponse = await requestCloudflareWorkspaceFallback\(\s*"gemini_daily_quota_reached",\s*\);/,
+    "Cloudflare must be considered only for Gemini's explicit daily-quota exhaustion reason",
+  );
+  assert.match(
+    recoveryBlock,
+    /if \(quotaFallbackResponse\)\s*\{\s*geminiResponse = quotaFallbackResponse;\s*recoveredByCloudflareQuotaFallback = true;/,
+    "a successful Cloudflare fallback must replace the blocked Gemini response",
+  );
+  assert.match(
+    recoveryBlock,
+    /if \(!recoveredByCloudflareQuotaFallback\)\s*\{\s*return json\([\s\S]*?quota_guarded: true,[\s\S]*?\}, 429, origin\);/,
+    "exhausted Gemini quota must remain a guarded 429 if Cloudflare cannot recover the request",
+  );
+  assert.match(
+    recoveryBlock,
+    /if \(!recoveredByCloudflareQuotaFallback\)\s*\{\s*await recordInnerMeProviderUsage\(/,
+    "successful Cloudflare recovery must not be treated as a failed Gemini request",
+  );
+});
+
+test("the quota fallback still honours Cloudflare credentials, quota reservation, and bounded context", () => {
+  const fallbackStart = innermeFunctionSource.indexOf(
+    "async function requestCloudflareWorkspaceFallback(reason: string): Promise<Response | null> {",
+  );
+  assert.ok(fallbackStart >= 0, "the existing Cloudflare workspace fallback must exist");
+
+  const quotaRouteStart = innermeFunctionSource.indexOf(
+    "if (cloudflareWritingEligible && !cloudflareCredentialsConfigured)",
+    fallbackStart,
+  );
+  assert.ok(quotaRouteStart > fallbackStart, "the Cloudflare fallback function must have a bounded end");
+  const fallbackSource = innermeFunctionSource.slice(fallbackStart, quotaRouteStart);
+
+  assert.match(fallbackSource, /if \(!cloudflareCredentialsConfigured\) return null/);
+  assert.match(
+    fallbackSource,
+    /reserveInnerMeProviderQuota\("cloudflare", CLOUDFLARE_MODEL, new TextEncoder\(\)\.encode\(body\)\.byteLength\)/,
+    "Cloudflare fallback must reserve its own guarded quota before sending the request",
+  );
+  assert.match(
+    fallbackSource,
+    /if \(!reservation\.allowed\)\s*\{[\s\S]*?return null;/,
+    "Cloudflare quota exhaustion or guard failure must stop the fallback",
+  );
+  assert.match(fallbackSource, /MINIMUM RELEVANT WORKSPACE CONTEXT|MINIMUM RELEVANT WORKSPACE CONTEXT \(JSON\)/);
+  assert.match(fallbackSource, /recent_history: conversationHistory\.slice\(-2\)/);
+});
