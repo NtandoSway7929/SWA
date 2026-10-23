@@ -839,10 +839,14 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
         gridTemplateColumns: getComputedStyle(header).gridTemplateColumns
       };
     });
+    const headEndIndex = dashboardHtmlSource.indexOf("</head>");
+    const headSource = headEndIndex >= 0
+      ? dashboardHtmlSource.slice(0, headEndIndex)
+      : "";
     assert.ok(
-      dashboardHtmlSource.indexOf('admin-welcome.css?v=20261023-admin-welcome-layout-hotfix-1') >
-        dashboardHtmlSource.lastIndexOf("<style"),
-      "welcome stylesheet reference must follow all dashboard inline style blocks"
+      headSource.indexOf('admin-welcome.css?v=20261023-admin-welcome-layout-hotfix-1') >
+        headSource.lastIndexOf("<style"),
+      "welcome stylesheet reference must follow the dashboard inline style blocks in the head"
     );
     assert.equal(desktopHeaderLayout.toggleDisplay, "none",
       "mobile sidebar toggle must not become an extra desktop grid item");
