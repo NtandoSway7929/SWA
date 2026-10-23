@@ -28151,8 +28151,14 @@ function simpleBars(items, color) {
         const main =
             document.getElementById("sway-workspace-main");
 
-        if (main) {
-            main.innerHTML =
+        const workspaceRoot =
+            document.getElementById("sway-admin-workspace");
+
+        const errorTarget =
+            main || workspaceRoot;
+
+        if (errorTarget) {
+            errorTarget.innerHTML =
                 '<div class="sway-error">' +
                     esc(message) +
                 "</div>";
