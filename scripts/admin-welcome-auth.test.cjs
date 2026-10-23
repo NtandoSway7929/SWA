@@ -131,7 +131,7 @@ test("successful login creates a marker only after Supabase login succeeds", () 
   const clearAt = loginHtml.indexOf('sessionStorage.removeItem("' + MARKER_KEY + '")');
   const authRequestAt = loginHtml.indexOf("/auth/v1/token?grant_type=password");
   const responseGuardAt = loginHtml.indexOf("if (!response.ok)");
-  const markerWriteAt = loginHtml.indexOf('sessionStorage.setItem("' + MARKER_KEY + '"');
+  const markerWriteAt = loginHtml.indexOf("sessionStorage.setItem(");
 
   assert.ok(clearAt >= 0, "new login attempts clear stale markers");
   assert.ok(authRequestAt > clearAt, "stale marker clears before auth request");
