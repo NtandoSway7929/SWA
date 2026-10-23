@@ -152,5 +152,5 @@ test("the quota fallback still honours Cloudflare credentials, quota reservation
     "Cloudflare quota exhaustion or guard failure must stop the fallback",
   );
   assert.match(fallbackSource, /MINIMUM RELEVANT WORKSPACE CONTEXT|MINIMUM RELEVANT WORKSPACE CONTEXT \(JSON\)/);
-  assert.match(fallbackSource, /recent_history: conversationHistory\.slice\(-2\)/);
+  assert.match(fallbackSource, /selected\.recent_history = conversationHistory\.slice\(-2\)/);
 });
