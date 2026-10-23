@@ -28144,13 +28144,35 @@ function simpleBars(items, color) {
         }
     }
 
+    function showSwayphicsWorkspaceStartupFailure(message, error) {
+        state.initialDataLoading = false;
+        state.initialDataError = message;
+
+        const main =
+            document.getElementById("sway-workspace-main");
+
+        if (main) {
+            main.innerHTML =
+                '<div class="sway-error">' +
+                    esc(message) +
+                "</div>";
+        }
+
+        console.error(
+            "Swayphics workspace startup could not continue:",
+            error || message
+        );
+    }
+
     function publishAuthorizedSwayphicsAdminWelcome(marker) {
         if (
             !marker ||
             !state.currentUser ||
             !state.currentUser.id ||
             !state.currentAdmin ||
-            state.currentAdmin.active !== true
+            state.currentAdmin.active !== true ||
+            typeof window.swayphicsVerifiedAdminUserId !== "string" ||
+            String(state.currentUser.id) !== window.swayphicsVerifiedAdminUserId
         ) {
             return;
         }
@@ -28183,21 +28205,40 @@ function simpleBars(items, color) {
         const sessionReady = window.swayphicsAdminSessionReady;
 
         if (!sessionReady || typeof sessionReady.then !== "function") {
-            console.error(
-                "Admin session readiness was unavailable; workspace startup was blocked."
+            showSwayphicsWorkspaceStartupFailure(
+                "Admin session verification could not start. Please sign in again.",
+                new Error("Admin session readiness promise is missing.")
             );
             return;
         }
 
         try {
             const sessionVerified = await sessionReady;
+
             if (sessionVerified !== true) {
+                showSwayphicsWorkspaceStartupFailure(
+                    "Your admin session could not be verified. Please sign in again.",
+                    new Error("Admin session verification did not succeed.")
+                );
                 return;
             }
         } catch (sessionError) {
-            console.error(
-                "Admin session readiness failed; workspace startup was blocked.",
+            showSwayphicsWorkspaceStartupFailure(
+                "Your admin session could not be verified. Please sign in again.",
                 sessionError
+            );
+            return;
+        }
+
+        const verifiedSessionUserId =
+            typeof window.swayphicsVerifiedAdminUserId === "string"
+                ? window.swayphicsVerifiedAdminUserId
+                : "";
+
+        if (!verifiedSessionUserId) {
+            showSwayphicsWorkspaceStartupFailure(
+                "Your admin identity could not be confirmed. Please sign in again.",
+                new Error("Verified Supabase user ID is missing.")
             );
             return;
         }
@@ -28228,6 +28269,16 @@ function simpleBars(items, color) {
                 loadState(),
                 refreshData()
             ]);
+
+            if (
+                !state.currentUser ||
+                !state.currentUser.id ||
+                String(state.currentUser.id) !== verifiedSessionUserId
+            ) {
+                throw new Error(
+                    "The verified Supabase identity does not match the loaded workspace user."
+                );
+            }
 
             restoreAIConversation();
         restoreAIFocusedRecord();
