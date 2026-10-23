@@ -14244,6 +14244,10 @@ function simpleBars(items, color) {
                 };
             });
 
+        // Retain a newly-created invoice ID across retries if a later item,
+        // activity-log, refresh, or send step fails after the invoice POST.
+        let pendingInvoiceId = invoice && invoice.id ? invoice.id : null;
+
         function closeModal() {
             root.remove();
         }
@@ -14717,10 +14721,7 @@ function simpleBars(items, color) {
             sendButton.textContent = shouldSend ? "Saving & sending…" : "Working…";
 
             try {
-                let savedId =
-                    invoice
-                        ? invoice.id
-                        : null;
+                let savedId = pendingInvoiceId;
 
                 let savedInvoice =
                     invoice;
@@ -14784,6 +14785,7 @@ function simpleBars(items, color) {
                             "Invoice could not be created."
                         );
                     }
+                    pendingInvoiceId = savedId;
                 }
 
                 await api(
