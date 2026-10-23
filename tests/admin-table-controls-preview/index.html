@@ -24,21 +24,21 @@ main{max-width:1180px;margin:auto}.preview-note{padding:14px;background:#fff;bor
 (function(){
   const state={
     tableControls:{leads:{search:"",filter:"all",sort:"value_desc"},tasks:{search:"",filter:"all",sort:"priority_desc"},followups:{search:"",filter:"all",sort:"scheduled_asc"}},
-    tableSelection:{leads:[],tasks:[],followups:[]},tableFeedback:{leads:"",tasks:"",followups:[]},tableBulkActionRunning:false,
+    tableSelection:{leads:[],tasks:[],followups:[]},tableFeedback:{leads:"",tasks:"",followups:""},tableBulkActionRunning:false,
     leads:[
       {id:"lead-a",business_name:"Alpha Studio",contact_name:"Sam Dube",email:'=HYPERLINK("https://example.invalid","Open")',service_interest:"Website",status:"new",source:"Referral",estimated_value:1500,next_follow_up:"2026-11-03"},
-      {id:"lead-b",business_name:"Zulu Market",contact_name:"Lee Mokoena",email:"lee@example.test",service_interest:"Branding",status:"qualified",source:"Website",estimated_value:4500,next_follow_up:"2026-10-25"},
+      {id:"lead-b",business_name:"Zulu Market",contact_name:"Lee Mokoena",email:"lee@example.test",service_interest:"Branding",status:"interested",source:"Website",estimated_value:4500,next_follow_up:"2026-10-25"},
       {id:"lead-c",business_name:"Bravo Cafe",contact_name:"Ana Ndlovu",email:"ana@example.test",service_interest:"Logo",status:"new",source:"Instagram",estimated_value:900,next_follow_up:"2026-10-27"}
     ],
     tasks:[
-      {id:"task-a",title:"Prepare proposal",description:"Draft a website proposal",status:"pending",priority:"low",due_date:"2026-11-01"},
-      {id:"task-b",title:"Confirm scope",description:"Confirm project scope",status:"pending",priority:"urgent",due_date:"2026-10-26"},
+      {id:"task-a",title:"Prepare proposal",description:"Draft a website proposal",status:"todo",priority:"low",due_date:"2026-11-01"},
+      {id:"task-b",title:"Confirm scope",description:"Confirm project scope",status:"todo",priority:"urgent",due_date:"2026-10-26"},
       {id:"task-c",title:"Send invoice",description:"Prepare invoice draft",status:"completed",priority:"high",due_date:"2026-10-24"}
     ],
     followups:[
-      {id:"follow-a",lead_id:"lead-a",channel:"Email",status:"pending",scheduled_for:"2026-11-02",notes:"Send follow-up"},
-      {id:"follow-b",lead_id:"lead-c",channel:"WhatsApp",status:"pending",scheduled_for:"2026-10-24",notes:"Check interest"},
-      {id:"follow-c",lead_id:"lead-b",channel:"Email",status:"completed",scheduled_for:"2026-10-23",notes:"Already contacted"}
+      {id:"follow-a",lead_id:"lead-a",channel:"Email",status:"pending",scheduled_for:"2026-11-02",note:"Send follow-up"},
+      {id:"follow-b",lead_id:"lead-c",channel:"WhatsApp",status:"pending",scheduled_for:"2026-10-24",note:"Check interest"},
+      {id:"follow-c",lead_id:"lead-b",channel:"Email",status:"completed",scheduled_for:"2026-10-23",note:"Already contacted"}
     ],clients:[],admins:[]
   };
   const root=document.getElementById("preview-root");
