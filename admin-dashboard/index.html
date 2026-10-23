@@ -14566,6 +14566,9 @@ portfolioForm.addEventListener(
 
     async function verifyAdminSession() {
 
+        // Reset identity each time verification begins; never retain a prior result.
+        window.swayphicsVerifiedAdminUserId = null;
+
         if (!accessToken) {
             clearSwayphicsAdminWelcomeMarker();
             window.location.href = "../admin/";
@@ -14610,8 +14613,24 @@ portfolioForm.addEventListener(
                 throw new Error("Session is no longer valid.");
             }
 
+            const verifiedUser = await response.json();
+
+            if (
+                !verifiedUser ||
+                typeof verifiedUser.id !== "string" ||
+                !verifiedUser.id.trim()
+            ) {
+                throw new Error(
+                    "Supabase returned no valid identity for the admin session."
+                );
+            }
+
+            window.swayphicsVerifiedAdminUserId = verifiedUser.id;
+
             return true;
         } catch (error) {
+            window.swayphicsVerifiedAdminUserId = null;
+
             console.error(
                 "Admin session verification failed:",
                 error
@@ -14681,6 +14700,7 @@ portfolioForm.addEventListener(
                     );
 
                     clearSwayphicsAdminWelcomeMarker();
+                    window.swayphicsVerifiedAdminUserId = null;
 
                     window.location.href =
                         "../admin/";
@@ -14701,7 +14721,7 @@ portfolioForm.addEventListener(
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin-workspace.js?v=20261023-admin-welcome-auth-handshake-1"></script>
+<script src="admin-workspace.js?v=20261023-admin-welcome-auth-handshake-2"></script>
 <script src="innerme-knowledge-intelligence.js?v=20261015-run-controller-1"></script>
 <script src="innerme-predictive-intelligence.js?v=20261008-innerme-nav-polish-2"></script>
 <script src="innerme-autonomy.js?v=20261008-innerme-nav-polish-2"></script>
