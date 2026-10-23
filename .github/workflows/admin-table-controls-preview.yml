@@ -28,6 +28,11 @@ jobs:
       - name: Check out PR branch
         uses: actions/checkout@v4
 
+      - name: Record exact validation revision
+        run: |
+          echo "Validating commit: $GITHUB_SHA"
+          git log -1 --format='%h %s'
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
