@@ -22,7 +22,7 @@ const leads = [
   {
     id: "lead-zulu", business_name: "Zulu Market", contact_name: "Lee Mokoena",
     email: "lee@example.invalid", phone: "0000000001", service_interest: "Branding",
-    status: "qualified", source: "Website", estimated_value: 4500,
+    status: "interested", source: "Website", estimated_value: 4500,
     next_follow_up: "2026-10-25", created_at: "2026-10-02T12:00:00Z"
   },
   {
@@ -36,12 +36,12 @@ const leads = [
 const tasks = [
   {
     id: "task-low", title: "Prepare proposal", description: "Draft a website proposal",
-    status: "pending", priority: "low", due_date: "2026-11-01",
+    status: "todo", priority: "low", due_date: "2026-11-01",
     assigned_to: TEST_USER_ID, client_id: null, created_at: "2026-10-01T12:00:00Z"
   },
   {
     id: "task-urgent", title: "Confirm scope", description: "Confirm project scope",
-    status: "pending", priority: "urgent", due_date: "2026-10-26",
+    status: "todo", priority: "urgent", due_date: "2026-10-26",
     assigned_to: TEST_USER_ID, client_id: null, created_at: "2026-10-02T12:00:00Z"
   },
   {
@@ -55,17 +55,17 @@ const followups = [
   {
     id: "follow-later", lead_id: "lead-alpha", client_id: null, channel: "Email",
     status: "pending", scheduled_for: "2026-11-02", assigned_to: TEST_USER_ID,
-    notes: "Send follow-up"
+    note: "Send follow-up"
   },
   {
     id: "follow-sooner", lead_id: "lead-bravo", client_id: null, channel: "WhatsApp",
     status: "pending", scheduled_for: "2026-10-24", assigned_to: TEST_USER_ID,
-    notes: "Check interest"
+    note: "Check interest"
   },
   {
     id: "follow-done", lead_id: "lead-zulu", client_id: null, channel: "Email",
     status: "completed", scheduled_for: "2026-10-23", assigned_to: TEST_USER_ID,
-    notes: "Already contacted"
+    note: "Already contacted"
   }
 ];
 
@@ -371,7 +371,7 @@ async function main() {
     await page.locator('[data-admin-table-sort="tasks"]').selectOption("priority_desc");
     assert.ok((await taskRows.first().innerText()).includes("Confirm scope"),
       "the actual Tasks view should sort urgent priority first");
-    await page.locator('[data-admin-table-filter="tasks"]').selectOption("pending");
+    await page.locator('[data-admin-table-filter="tasks"]').selectOption("todo");
     assert.equal(await taskRows.filter({ visible: true }).count(), 2,
       "the actual Tasks view should filter pending tasks");
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-desktop.png"), fullPage: true });
@@ -386,8 +386,8 @@ async function main() {
     await page.locator(".sway-dialog").waitFor({ state: "detached" });
     assert.equal(metrics.mockedTableActionWrites.length, writeCountBeforeCancel,
       "cancelled completion must not write to the mock API");
-    assert.equal(tasks.find(item => item.id === "task-urgent").status, "pending",
-      "cancelled completion must preserve the pending task");
+    assert.equal(tasks.find(item => item.id === "task-urgent").status, "todo",
+      "cancelled completion must preserve the task status");
 
     // The positive confirmation path only updates the synthetic in-memory task.
     await page.locator('[data-admin-table-bulk-action="complete"]').click();
