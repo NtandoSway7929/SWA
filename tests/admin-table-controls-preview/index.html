@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swayphics Phase 2 Table Controls Preview</title>
+<link rel="stylesheet" href="../admin-dashboard/admin-workspace.css">
+<style>
+body{font-family:Arial,sans-serif;background:#f7f9ff;color:#081533;margin:0;padding:24px}
+main{max-width:1180px;margin:auto}.preview-note{padding:14px;background:#fff;border:1px solid #dbe5ff;border-radius:12px;margin-bottom:20px}
+.preview-view{background:#fff;border:1px solid #e1e7f5;border-radius:14px;padding:18px;margin:18px 0;overflow:hidden}
+.preview-view h2{margin:0 0 14px}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:620px}th,td{text-align:left;padding:10px;border-bottom:1px solid #e8edf7}button,input,select{font:inherit}
+[data-admin-table-row][hidden]{display:none!important}
+@media(max-width:640px){body{padding:12px}.preview-view{padding:12px}.preview-note{font-size:14px}}
+</style>
+</head>
+<body>
+<main>
+<div class="preview-note"><strong>Isolated UI preview only.</strong> Synthetic records; no Supabase client, production credentials, live data, or network mutations.</div>
+<div id="preview-root"></div>
+</main>
+<script src="../admin-dashboard/admin-table-controls.js"></script>
+<script>
+(function(){
+  const state={
+    tableControls:{leads:{search:"",filter:"all",sort:"value_desc"},tasks:{search:"",filter:"all",sort:"priority_desc"},followups:{search:"",filter:"all",sort:"scheduled_asc"}},
+    tableSelection:{leads:[],tasks:[],followups:[]},tableFeedback:{leads:"",tasks:"",followups:[]},tableBulkActionRunning:false,
+    leads:[
+      {id:"lead-a",business_name:"Alpha Studio",contact_name:"Sam Dube",email:"sam@example.test",service_interest:"Website",status:"new",source:"Referral",estimated_value:1500,next_follow_up:"2026-11-03"},
+      {id:"lead-b",business_name:"Zulu Market",contact_name:"Lee Mokoena",email:"lee@example.test",service_interest:"Branding",status:"qualified",source:"Website",estimated_value:4500,next_follow_up:"2026-10-25"},
+      {id:"lead-c",business_name:"Bravo Cafe",contact_name:"Ana Ndlovu",email:"ana@example.test",service_interest:"Logo",status:"new",source:"Instagram",estimated_value:900,next_follow_up:"2026-10-27"}
+    ],
+    tasks:[
+      {id:"task-a",title:"Prepare proposal",description:"Draft a website proposal",status:"pending",priority:"low",due_date:"2026-11-01"},
+      {id:"task-b",title:"Confirm scope",description:"Confirm project scope",status:"pending",priority:"urgent",due_date:"2026-10-26"},
+      {id:"task-c",title:"Send invoice",description:"Prepare invoice draft",status:"completed",priority:"high",due_date:"2026-10-24"}
+    ],
+    followups:[
+      {id:"follow-a",lead_id:"lead-a",channel:"Email",status:"pending",scheduled_for:"2026-11-02",notes:"Send follow-up"},
+      {id:"follow-b",lead_id:"lead-c",channel:"WhatsApp",status:"pending",scheduled_for:"2026-10-24",notes:"Check interest"},
+      {id:"follow-c",lead_id:"lead-b",channel:"Email",status:"completed",scheduled_for:"2026-10-23",notes:"Already contacted"}
+    ],clients:[],admins:[]
+  };
+  const root=document.getElementById("preview-root");
+  const esc=value=>String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const leadName=id=>({ "lead-a":"Alpha Studio","lead-b":"Zulu Market","lead-c":"Bravo Cafe"}[id]||"Unknown lead");
+  const controls=window.createSwayphicsAdminTableControls({
+    state,workspace:root,esc,adminName:()=> "Test Admin",clientName:id=>"Test Client "+id,leadName,
+    formatDisplayText:value=>String(value).replace(/_/g," "),
+    completeTask:async()=>{throw new Error("Preview blocks business mutations")},
+    completeFollowup:async()=>{throw new Error("Preview blocks business mutations")},
+    renderView:render,swayAlert:message=>{root.dataset.alert=message},swayConfirm:async()=>false
+  });
+  function render(){
+    root.innerHTML=["leads","followups","tasks"].map(view=>{
+      const title={leads:"Leads",followups:"Follow-ups",tasks:"Tasks"}[view];
+      const rows=controls.items(view,state[view]).map(item=>{
+        const label=view==="leads"?item.business_name:view==="tasks"?item.title:leadName(item.lead_id);
+        const search=controls.searchText(view,item);
+        const date=view==="leads"?item.next_follow_up:view==="tasks"?item.due_date:item.scheduled_for;
+        return '<tr data-admin-table-row="'+view+'" data-admin-table-search="'+esc(search)+'">'+
+          controls.selectionCell(view,item,label)+
+          '<td>'+esc(label)+'</td><td>'+esc(item.status)+'</td><td>'+esc(date||"")+'</td></tr>';
+      }).join("");
+      return '<section class="preview-view" data-preview-view="'+view+'"><h2>'+title+'</h2>'+
+        controls.renderControls(view)+'<div class="table-wrap"><table><thead><tr>'+
+        '<th><input type="checkbox" data-admin-table-select-all="'+view+'" aria-label="Select all '+view+'"></th>'+
+        '<th>Record</th><th>Status</th><th>Date</th></tr></thead><tbody>'+rows+
+        '</tbody></table></div><p data-admin-table-no-results="'+view+'" hidden>No matching records.</p></section>';
+    }).join("");
+    controls.bind();
+  }
+  render();
+})();
+</script>
+</body>
+</html>
