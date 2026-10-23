@@ -45,14 +45,17 @@ const path = require("node:path");
     await leads.locator('[data-admin-table-search-input="leads"]').fill("");
 
     const followups = page.locator('[data-preview-view="followups"]');
+    await followups.locator('[data-admin-table-search-input="followups"]').fill("send follow-up");
+    if (await followups.locator('[data-admin-table-row="followups"]:visible').count() !== 1) throw new Error("Follow-up note search failed against schema field `note`.");
+    await followups.locator('[data-admin-table-search-input="followups"]').fill("");
     await followups.locator('[data-admin-table-filter="followups"]').selectOption("pending");
     if (await followups.locator('[data-admin-table-row="followups"]:visible').count() !== 2) throw new Error("Follow-up pending filter failed.");
 
     const tasks = page.locator('[data-preview-view="tasks"]');
     await tasks.locator('[data-admin-table-sort="tasks"]').selectOption("priority_desc");
     if (!(await tasks.locator('[data-admin-table-row="tasks"]:visible').first().innerText()).includes("Confirm scope")) throw new Error("Task priority sort failed.");
-    await tasks.locator('[data-admin-table-filter="tasks"]').selectOption("pending");
-    if (await tasks.locator('[data-admin-table-row="tasks"]:visible').count() !== 2) throw new Error("Task pending filter failed.");
+    await tasks.locator('[data-admin-table-filter="tasks"]').selectOption("todo");
+    if (await tasks.locator('[data-admin-table-row="tasks"]:visible').count() !== 2) throw new Error("Task todo filter failed.");
 
     await page.screenshot({ path: "artifacts/admin-table-controls-desktop.png", fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
