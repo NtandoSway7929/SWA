@@ -8,6 +8,7 @@ import {
   CLOUDFLARE_MODEL,
   isCloudflareEligibleWritingRequest,
   selectInnerMeChatRoute,
+  tryCloudflareFallbackForGeminiQuota,
 } from "./innerme-provider-routing.mjs";
 import {
   buildInnerMeWorkspaceContextForModel,
@@ -12644,14 +12645,13 @@ Answer the admin's question directly.
         // Gemini's daily budget can be exhausted while Cloudflare still has
         // capacity. Try the existing independently guarded, context-bounded
         // Cloudflare path only for that specific guard reason.
-        if (guardReason === "daily_quota_reached") {
-          const quotaFallbackResponse = await requestCloudflareWorkspaceFallback(
-            "gemini_daily_quota_reached",
-          );
-          if (quotaFallbackResponse) {
-            geminiResponse = quotaFallbackResponse;
-            recoveredByCloudflareQuotaFallback = true;
-          }
+        const quotaFallbackResponse = await tryCloudflareFallbackForGeminiQuota(
+          guardReason,
+          requestCloudflareWorkspaceFallback,
+        );
+        if (quotaFallbackResponse) {
+          geminiResponse = quotaFallbackResponse;
+          recoveredByCloudflareQuotaFallback = true;
         }
 
         if (!recoveredByCloudflareQuotaFallback) {
