@@ -2,7 +2,7 @@ name: Admin Table Controls Isolated Browser Preview
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ["main", "feature/admin-table-controls-phase-2"]
     paths:
       - "admin-dashboard/admin-table-controls.js"
       - "admin-dashboard/admin-workspace.css"
