@@ -134,7 +134,7 @@ test("the quota fallback still honours Cloudflare credentials, quota reservation
   assert.ok(fallbackStart >= 0, "the existing Cloudflare workspace fallback must exist");
 
   const quotaRouteStart = innermeFunctionSource.indexOf(
-    "if (cloudflareWritingEligible && !cloudflareCredentialsConfigured)",
+    "cloudflareWritingEligible && !cloudflareCredentialsConfigured",
     fallbackStart,
   );
   assert.ok(quotaRouteStart > fallbackStart, "the Cloudflare fallback function must have a bounded end");
