@@ -28172,7 +28172,6 @@ function simpleBars(items, color) {
 
     function publishAuthorizedSwayphicsAdminWelcome(marker) {
         if (
-            !marker ||
             !state.currentUser ||
             !state.currentUser.id ||
             !state.currentAdmin ||
@@ -28183,7 +28182,11 @@ function simpleBars(items, color) {
             return;
         }
 
-        if (marker.userId !== String(state.currentUser.id)) {
+        // A pending marker authorizes motion; a verified active session always receives static greeting copy.
+        if (
+            marker &&
+            marker.userId !== String(state.currentUser.id)
+        ) {
             return;
         }
 
@@ -28192,13 +28195,13 @@ function simpleBars(items, color) {
                 ? state.currentAdmin.full_name.trim()
                 : "";
 
-        // Presentation is deliberately separate: the visual component listens for this event.
         window.dispatchEvent(
             new CustomEvent(
                 "swayphics:admin-welcome-authorized",
                 {
                     detail: {
-                        fullName: fullName
+                        fullName: fullName,
+                        animate: Boolean(marker)
                     }
                 }
             )
