@@ -28,6 +28,18 @@ const path = require("node:path");
     await leads.locator('[data-admin-table-search-input="leads"]').fill("alpha");
     await leads.locator('[data-admin-table-select-all="leads"]').check();
     if (!(await leads.locator('[data-admin-table-selected-count="leads"]').innerText()).includes("1 selected")) throw new Error("Select-all did not select only the visible search result.");
+
+    const [csvDownload] = await Promise.all([
+      page.waitForEvent("download"),
+      leads.locator('[data-admin-table-bulk-action="export"]').click()
+    ]);
+    const csvPath = await csvDownload.path();
+    if (!csvPath) throw new Error("Selected-lead CSV download did not produce a file.");
+    const exportedCsv = fs.readFileSync(csvPath, "utf8");
+    if (!exportedCsv.includes("\"'=HYPERLINK(\"\"https://example.invalid\"\",\"\"Open\"\")\"")) {
+      throw new Error("CSV export did not neutralise a formula-like email value.");
+    }
+
     await leads.locator('[data-admin-table-clear-selection="leads"]').click();
     if (await leads.locator('[data-admin-table-bulk-toolbar="leads"]').isVisible()) throw new Error("Clear selection did not hide the bulk toolbar.");
     await leads.locator('[data-admin-table-search-input="leads"]').fill("");
