@@ -847,13 +847,16 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       "the glint animation timeline must advance while the greeting is visible");
 
     const centerFlight = page.locator("#swayphics-admin-welcome-flight");
+    const focusBackdrop = page.locator("#swayphics-admin-welcome-backdrop");
     await centerFlight.waitFor({ state: "attached", timeout: 5000 });
+    await focusBackdrop.waitFor({ state: "attached", timeout: 5000 });
     await page.waitForFunction(() => {
       const flight = document.getElementById("swayphics-admin-welcome-flight");
       return flight && flight.getAnimations().some(animation =>
         animation.effect &&
-        Number(animation.effect.getTiming().duration) === 2700 &&
-        Number(animation.currentTime || 0) >= 400
+        Number(animation.effect.getTiming().duration) === 9780 &&
+        animation.effect.getKeyframes().length === 5 &&
+        Number(animation.currentTime || 0) >= 900
       );
     }, undefined, { timeout: 5000 });
 
@@ -863,9 +866,11 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       const targetRect = target.getBoundingClientRect();
       const primary = node.getAnimations().find(animation =>
         animation.effect &&
-        Number(animation.effect.getTiming().duration) === 2700 &&
-        animation.effect.getKeyframes().length === 4
+        Number(animation.effect.getTiming().duration) === 9780 &&
+        animation.effect.getKeyframes().length === 5
       );
+      const backdrop = document.querySelector("#swayphics-admin-welcome-backdrop");
+      const backdropStyle = backdrop ? getComputedStyle(backdrop) : null;
       return {
         position: getComputedStyle(node).position,
         ariaHidden: node.getAttribute("aria-hidden"),
@@ -874,7 +879,10 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
         viewportHeight: window.innerHeight,
         rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
         targetRect: { left: targetRect.left, top: targetRect.top, width: targetRect.width, height: targetRect.height },
-        animationTime: Number(primary && primary.currentTime || 0)
+        animationTime: Number(primary && primary.currentTime || 0),
+        backdropFilter: backdropStyle && (backdropStyle.backdropFilter || backdropStyle.webkitBackdropFilter),
+        backdropOpacity: Number(backdropStyle && backdropStyle.opacity),
+        backdropPointerEvents: backdropStyle && backdropStyle.pointerEvents
       };
     });
     assert.equal(flightAtCenter.position, "fixed",
@@ -892,41 +900,93 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       "the greeting must start visibly larger than its final header size");
     assert.ok(flightAtCenter.rect.height > flightAtCenter.targetRect.height + 18,
       "the greeting must start visibly taller than its final header size");
+    assert.match(String(flightAtCenter.backdropFilter), /blur\(/i,
+      "the dashboard backdrop must use a real blur filter");
+    assert.ok(flightAtCenter.backdropOpacity >= 0.8,
+      "the background blur must be clearly visible while the greeting is centered");
+    assert.equal(flightAtCenter.backdropPointerEvents, "none",
+      "the visual focus layer must not intercept taps or dashboard controls");
 
-    await page.waitForTimeout(1050);
+    // Hold in the middle for about six seconds after the pop has settled.
+    await page.waitForTimeout(4300);
+    const duringCenterHold = await centerFlight.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const primary = node.getAnimations().find(animation =>
+        animation.effect &&
+        Number(animation.effect.getTiming().duration) === 9780 &&
+        animation.effect.getKeyframes().length === 5
+      );
+      const backdrop = document.querySelector("#swayphics-admin-welcome-backdrop");
+      const backdropStyle = backdrop ? getComputedStyle(backdrop) : null;
+      return {
+        animationTime: Number(primary && primary.currentTime || 0),
+        rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+        targetRect: (() => {
+          const targetRect = document.querySelector("#swayphics-admin-welcome").getBoundingClientRect();
+          return { left: targetRect.left, top: targetRect.top, width: targetRect.width, height: targetRect.height };
+        })(),
+        backdropExists: Boolean(backdrop),
+        backdropFilter: backdropStyle && (backdropStyle.backdropFilter || backdropStyle.webkitBackdropFilter),
+        backdropOpacity: Number(backdropStyle && backdropStyle.opacity)
+      };
+    });
+    assert.ok(duringCenterHold.animationTime >= flightAtCenter.animationTime + 4000,
+      "the centered hold must last several seconds before the card minimizes");
+    assert.ok(
+      Math.abs(duringCenterHold.rect.left + duringCenterHold.rect.width / 2 - flightAtCenter.viewportWidth / 2) < 12 &&
+      Math.abs(duringCenterHold.rect.top + duringCenterHold.rect.height / 2 - flightAtCenter.viewportHeight / 2) < 12,
+      "the greeting must stay in the viewport center during its readable hold"
+    );
+    assert.ok(Math.abs(duringCenterHold.rect.width - flightAtCenter.rect.width) < 5,
+      "the greeting must remain large and stable during the center hold");
+    assert.equal(duringCenterHold.backdropExists, true,
+      "the focus blur must remain active throughout the centered hold");
+    assert.match(String(duringCenterHold.backdropFilter), /blur\(/i,
+      "the dashboard should remain softly blurred during the hold");
+    assert.ok(duringCenterHold.backdropOpacity >= 0.8,
+      "the background must not clear before the greeting begins to travel");
+
+    await page.waitForFunction(() => {
+      const flight = document.getElementById("swayphics-admin-welcome-flight");
+      const primary = flight && flight.getAnimations().find(animation =>
+        animation.effect &&
+        Number(animation.effect.getTiming().duration) === 9780 &&
+        animation.effect.getKeyframes().length === 5
+      );
+      return Boolean(primary && Number(primary.currentTime || 0) >= 7600);
+    }, undefined, { timeout: 5000 });
     const flightInMotion = await centerFlight.evaluate(node => {
       const rect = node.getBoundingClientRect();
       const targetRect = document.querySelector("#swayphics-admin-welcome").getBoundingClientRect();
       const primary = node.getAnimations().find(animation =>
         animation.effect &&
-        Number(animation.effect.getTiming().duration) === 2700 &&
-        animation.effect.getKeyframes().length === 4
+        Number(animation.effect.getTiming().duration) === 9780 &&
+        animation.effect.getKeyframes().length === 5
       );
-      const initial = {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height
-      };
+      const backdrop = document.querySelector("#swayphics-admin-welcome-backdrop");
       return {
         animationTime: Number(primary && primary.currentTime || 0),
-        rect: initial,
+        rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
         targetRect: { left: targetRect.left, top: targetRect.top, width: targetRect.width, height: targetRect.height },
-        distanceToTarget: Math.hypot(initial.left - targetRect.left, initial.top - targetRect.top)
+        distanceToTarget: Math.hypot(rect.left - targetRect.left, rect.top - targetRect.top),
+        backdropExists: Boolean(backdrop)
       };
     });
-    assert.ok(flightInMotion.animationTime > flightAtCenter.animationTime,
-      "the center-to-header flight timeline must advance");
+    assert.ok(flightInMotion.animationTime > duringCenterHold.animationTime,
+      "the center-to-header flight timeline must advance after the hold");
     assert.ok(flightInMotion.distanceToTarget <
       Math.hypot(
-        flightAtCenter.rect.left - flightAtCenter.targetRect.left,
-        flightAtCenter.rect.top - flightAtCenter.targetRect.top
+        duringCenterHold.rect.left - duringCenterHold.targetRect.left,
+        duringCenterHold.rect.top - duringCenterHold.targetRect.top
       ),
       "the greeting must move from the viewport center toward its header destination");
-    assert.ok(flightInMotion.rect.width < flightAtCenter.rect.width - 8,
-      "the greeting must gradually shrink as it travels toward the header");
+    assert.ok(flightInMotion.rect.width < duringCenterHold.rect.width - 8,
+      "the greeting must gradually shrink after its centered hold");
+    assert.equal(flightInMotion.backdropExists, true,
+      "the blur layer should remain until the card approaches the header");
 
     await centerFlight.waitFor({ state: "detached", timeout: 4000 });
+    await focusBackdrop.waitFor({ state: "detached", timeout: 1000 });
     const settledGreeting = await welcomeToast.evaluate(node => ({
       flightState: node.getAttribute("data-flight-state"),
       opacity: getComputedStyle(node).opacity,
@@ -938,7 +998,6 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
       "the original greeting must become visible after the traveling copy arrives");
     assert.equal(settledGreeting.isInsideHeader, true,
       "the original greeting must remain in its existing header position after the flight");
-
     assert.equal(welcomeVisual.accessibleRole, "status", "welcome message must expose a status role");
     assert.equal(welcomeVisual.ariaLive, "polite", "welcome message must announce politely to assistive technology");
 
