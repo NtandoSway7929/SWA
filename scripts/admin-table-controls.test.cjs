@@ -196,6 +196,18 @@ assert.match(workspaceSource, /let pendingInvoiceActivityLogged = false;/,
     "invoice activity logging should have independent retry state");
 assert.match(workspaceSource, /let pendingInvoiceChangeActivityLogged = false;/,
     "invoice create/update activity logging should retain retry state");
+assert.match(workspaceSource, /let pendingInvoiceDataSignature = null;/,
+    "the invoice modal should retain the signature of data already saved");
+assert.match(invoiceSaveSource, /if \(pendingInvoiceDataSignature !== invoiceDataSignature\)/,
+    "a retry with unchanged invoice data must skip duplicate invoice and item writes");
+assert.match(invoiceSaveSource, /pendingInvoiceDataSignature = invoiceDataSignature;/,
+    "the persisted data signature must update only after invoice and item writes succeed");
+assert.match(workspaceSource, /function lockInvoiceAfterSuccessfulSend\(\)/,
+    "a successfully sent invoice must keep its retry form from being edited");
+assert.match(invoiceSaveSource, /pendingInvoiceSent = true;\s*lockInvoiceAfterSuccessfulSend\(\);/,
+    "the invoice form must lock immediately after the send endpoint succeeds");
+assert.match(invoiceSaveSource, /saveButton\.disabled = pendingInvoiceSent;/,
+    "after a successful send, retries should be limited to the send action rather than re-saving or re-sending invoice data");
 assert.match(invoiceSaveSource, /if \(!pendingInvoiceChangeActivityLogged\) \{\s*await logActivity\([\s\S]*?pendingInvoiceChangeActivityLogged = true;/,
     "a successful create/update activity entry must not be duplicated when a later step fails");
 assert.match(invoiceSaveSource, /if \(shouldSend && pendingInvoiceSent && !pendingInvoiceActivityLogged\)/,
