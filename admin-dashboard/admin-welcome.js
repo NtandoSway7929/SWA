@@ -179,9 +179,17 @@
         flight.style.opacity = "0";
         flight.style.transform = "translate(-50%, -50%) scale(0.58)";
         flight.style.padding = "12px 16px";
-        flight.style.border = "1px solid rgba(44,145,252,0.30)";
+        var prefersDarkMode = document.body.classList.contains("sway-dark-mode");
+        flight.style.border = prefersDarkMode
+            ? "1px solid rgba(119,193,252,0.28)"
+            : "1px solid rgba(44,145,252,0.30)";
+        flight.style.background = prefersDarkMode
+            ? "linear-gradient(145deg, rgba(13,25,46,0.98), rgba(8,17,34,0.97))"
+            : "linear-gradient(145deg, rgba(255,255,255,0.985), rgba(244,248,255,0.97))";
         flight.style.borderRadius = "18px";
-        flight.style.boxShadow = "0 18px 60px rgba(0,32,150,0.18)";
+        flight.style.boxShadow = prefersDarkMode
+            ? "0 18px 60px rgba(0,0,0,0.42)"
+            : "0 18px 60px rgba(0,32,150,0.22)";
         flight.style.willChange = "left, top, width, height, transform, opacity";
 
         flightTitle = flight.querySelector(".swayphics-welcome-title");
