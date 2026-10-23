@@ -165,7 +165,16 @@ async function main() {
     }
 
     if (url.origin !== SUPABASE_ORIGIN) {
-      metrics.unexpectedExternalRequests.push({ method, url: request.url() });
+      // The admin shell references these static providers for fonts and the
+      // optional Supabase browser bundle. Block them rather than fetching.
+      const knownStaticOrigins = new Set([
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com",
+        "https://cdn.jsdelivr.net"
+      ]);
+      if (!knownStaticOrigins.has(url.origin)) {
+        metrics.unexpectedExternalRequests.push({ method, url: request.url() });
+      }
       return route.abort();
     }
 
