@@ -21,6 +21,14 @@
 
     const state = {
         currentView: "overview",
+        tableControls: {
+            leads: { search: "", filter: "all", sort: "followup_asc" },
+            tasks: { search: "", filter: "all", sort: "due_asc" },
+            followups: { search: "", filter: "all", sort: "scheduled_asc" }
+        },
+        tableSelection: { leads: [], tasks: [], followups: [] },
+        tableFeedback: { leads: "", tasks: "", followups: "" },
+        tableBulkActionRunning: false,
         currentUser: null,
         currentAdmin: null,
         admins: [],
@@ -12059,11 +12067,527 @@ function simpleBars(items, color) {
         );
     }
 
+
+    /*
+     * Phase 2 admin table controls:
+     * keep search/filter/sort local to the current loaded workspace data.
+     * These controls do not issue database writes unless an explicit bulk
+     * completion action is confirmed by the administrator.
+     */
+    function adminTableSortOptions(view) {
+        const options = {
+            leads: [
+                ["followup_asc", "Next follow-up (soonest first)"],
+                ["value_desc", "Estimated value (high to low)"],
+                ["business_asc", "Business name (A–Z)"],
+                ["created_desc", "Newest added"]
+            ],
+            tasks: [
+                ["due_asc", "Due date (soonest first)"],
+                ["priority_desc", "Priority (highest first)"],
+                ["title_asc", "Task title (A–Z)"],
+                ["created_desc", "Newest added"]
+            ],
+            followups: [
+                ["scheduled_asc", "Scheduled date (soonest first)"],
+                ["contact_asc", "Contact (A–Z)"],
+                ["status_asc", "Status (A–Z)"]
+            ]
+        };
+        return options[view] || [];
+    }
+
+    function adminTableSettings(view) {
+        if (!state.tableControls[view]) {
+            state.tableControls[view] = {
+                search: "",
+                filter: "all",
+                sort: (adminTableSortOptions(view)[0] || ["", ""])[0]
+            };
+        }
+        if (!Array.isArray(state.tableSelection[view])) {
+            state.tableSelection[view] = [];
+        }
+        if (typeof state.tableFeedback[view] !== "string") {
+            state.tableFeedback[view] = "";
+        }
+        return state.tableControls[view];
+    }
+
+    function adminTableSearchText(view, item) {
+        const fields = [];
+        if (view === "leads") {
+            fields.push(
+                item.business_name, item.contact_name, item.service_interest,
+                item.status, item.source, item.email, item.phone,
+                item.estimated_value, item.next_follow_up
+            );
+        } else if (view === "tasks") {
+            fields.push(
+                item.title, item.description, item.status, item.priority,
+                adminName(item.assigned_to), clientName(item.client_id),
+                item.due_date
+            );
+        } else if (view === "followups") {
+            fields.push(
+                item.lead_id ? leadName(item.lead_id) : clientName(item.client_id),
+                item.channel, item.status, adminName(item.assigned_to),
+                item.scheduled_for, item.notes
+            );
+        }
+        return fields
+            .filter(function (value) {
+                return value !== null && typeof value !== "undefined";
+            })
+            .join(" ")
+            .toLowerCase();
+    }
+
+    function adminTableItems(view, sourceItems) {
+        const controls = adminTableSettings(view);
+        const filterValue = String(controls.filter || "all").toLowerCase();
+        const items = (sourceItems || []).filter(function (item) {
+            return filterValue === "all" ||
+                String(item.status || "").toLowerCase() === filterValue;
+        }).slice();
+
+        function dateValue(value) {
+            if (!value) return Number.POSITIVE_INFINITY;
+            const parsed = Date.parse(value);
+            return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+        }
+
+        function compareText(a, b) {
+            return String(a || "").localeCompare(String(b || ""), undefined, {
+                sensitivity: "base",
+                numeric: true
+            });
+        }
+
+        function compareDates(a, b) {
+            const left = dateValue(a);
+            const right = dateValue(b);
+            if (left === right) return 0;
+            return left < right ? -1 : 1;
+        }
+
+        const priorityRank = {
+            urgent: 4,
+            high: 3,
+            normal: 2,
+            medium: 2,
+            low: 1
+        };
+
+        items.sort(function (a, b) {
+            switch (controls.sort) {
+                case "followup_asc":
+                    return compareDates(a.next_follow_up, b.next_follow_up) ||
+                        compareText(a.business_name, b.business_name);
+                case "value_desc":
+                    return (Number(b.estimated_value) || 0) -
+                        (Number(a.estimated_value) || 0);
+                case "business_asc":
+                    return compareText(a.business_name, b.business_name);
+                case "due_asc":
+                    return compareDates(a.due_date, b.due_date) ||
+                        compareText(a.title, b.title);
+                case "priority_desc":
+                    return (priorityRank[String(b.priority || "").toLowerCase()] || 0) -
+                        (priorityRank[String(a.priority || "").toLowerCase()] || 0) ||
+                        compareDates(a.due_date, b.due_date);
+                case "title_asc":
+                    return compareText(a.title, b.title);
+                case "scheduled_asc":
+                    return compareDates(a.scheduled_for, b.scheduled_for) ||
+                        compareText(
+                            a.lead_id ? leadName(a.lead_id) : clientName(a.client_id),
+                            b.lead_id ? leadName(b.lead_id) : clientName(b.client_id)
+                        );
+                case "contact_asc":
+                    return compareText(
+                        a.lead_id ? leadName(a.lead_id) : clientName(a.client_id),
+                        b.lead_id ? leadName(b.lead_id) : clientName(b.client_id)
+                    );
+                case "status_asc":
+                    return compareText(a.status, b.status) ||
+                        compareDates(a.scheduled_for, b.scheduled_for);
+                case "created_desc": {
+                    const left = Date.parse(a.created_at || "") || 0;
+                    const right = Date.parse(b.created_at || "") || 0;
+                    return right - left;
+                }
+                default:
+                    return 0;
+            }
+        });
+
+        return items;
+    }
+
+    function adminTableSelectedItems(view) {
+        const selectedIds = new Set(
+            (state.tableSelection[view] || []).map(function (id) {
+                return String(id);
+            })
+        );
+        return (state[view] || []).filter(function (item) {
+            return selectedIds.has(String(item.id));
+        });
+    }
+
+    function adminTableSelectionCell(view, item, label) {
+        const selected = (state.tableSelection[view] || []).some(function (id) {
+            return String(id) === String(item.id);
+        });
+        return '<td class="sway-admin-table-select-cell">' +
+            '<input type="checkbox" data-admin-table-select="' + esc(view) +
+            '" data-id="' + esc(item.id) + '" aria-label="Select ' + esc(label || "record") + '"' +
+            (selected ? ' checked' : '') + '>' +
+            '</td>';
+    }
+
+    function renderAdminTableControls(view) {
+        const controls = adminTableSettings(view);
+        const records = Array.isArray(state[view]) ? state[view] : [];
+        const statuses = Array.from(new Set(
+            records.map(function (item) {
+                return String(item.status || "").trim().toLowerCase();
+            }).filter(Boolean)
+        )).sort();
+        const filterOptions = ['<option value="all"' +
+            (controls.filter === "all" ? ' selected' : '') + '>All statuses</option>']
+            .concat(statuses.map(function (status) {
+                return '<option value="' + esc(status) + '"' +
+                    (controls.filter === status ? ' selected' : '') + '>' +
+                    esc(formatDisplayText(status)) + '</option>';
+            })).join("");
+        const sortOptions = adminTableSortOptions(view).map(function (option) {
+            return '<option value="' + esc(option[0]) + '"' +
+                (controls.sort === option[0] ? ' selected' : '') + '>' +
+                esc(option[1]) + '</option>';
+        }).join("");
+        const bulkAction = view === "leads"
+            ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>'
+            : '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="complete">Complete selected</button>';
+
+        return '<div class="sway-admin-table-tools" data-admin-table-tools="' + esc(view) + '">' +
+            '<div class="sway-admin-table-control-grid">' +
+                '<label class="sway-admin-table-search-label">' +
+                    '<span>Search</span>' +
+                    '<input type="search" data-admin-table-search-input="' + esc(view) +
+                    '" value="' + esc(controls.search) + '" placeholder="' +
+                    (view === "leads" ? 'Business, contact, service or email' :
+                        view === "tasks" ? 'Task, client, assignee or description' :
+                            'Contact, channel or assignee') +
+                    '" aria-label="Search ' + esc(view) + '">' +
+                '</label>' +
+                '<label class="sway-admin-table-field">' +
+                    '<span>Status</span>' +
+                    '<select data-admin-table-filter="' + esc(view) + '" aria-label="Filter ' + esc(view) + ' by status">' +
+                        filterOptions +
+                    '</select>' +
+                '</label>' +
+                '<label class="sway-admin-table-field">' +
+                    '<span>Sort by</span>' +
+                    '<select data-admin-table-sort="' + esc(view) + '" aria-label="Sort ' + esc(view) + '">' +
+                        sortOptions +
+                    '</select>' +
+                '</label>' +
+                '<div class="sway-admin-table-count" data-admin-table-count="' + esc(view) + '" aria-live="polite"></div>' +
+            '</div>' +
+            '<div class="sway-admin-table-bulk-toolbar" data-admin-table-bulk-toolbar="' + esc(view) + '" hidden>' +
+                '<span class="sway-admin-table-selected-count" data-admin-table-selected-count="' + esc(view) + '">0 selected</span>' +
+                bulkAction +
+                '<button type="button" class="sway-admin-table-clear-selection" data-admin-table-clear-selection="' + esc(view) + '">Clear selection</button>' +
+            '</div>' +
+            '<p class="sway-admin-table-feedback" data-admin-table-feedback="' + esc(view) +
+            '" role="status" aria-live="polite"' + (state.tableFeedback[view] ? '' : ' hidden') + '>' +
+                esc(state.tableFeedback[view] || '') +
+            '</p>' +
+        '</div>';
+    }
+
+    function syncAdminTableSelectionUI(view) {
+        const selected = adminTableSelectedItems(view);
+        const toolbar = workspace.querySelector('[data-admin-table-bulk-toolbar="' + view + '"]');
+        const count = workspace.querySelector('[data-admin-table-selected-count="' + view + '"]');
+        if (toolbar) toolbar.hidden = selected.length === 0;
+        if (count) count.textContent = selected.length + ' selected';
+
+        workspace.querySelectorAll('[data-admin-table-bulk-action]').forEach(function (button) {
+            button.disabled = state.tableBulkActionRunning;
+        });
+        workspace.querySelectorAll('[data-admin-table-clear-selection]').forEach(function (button) {
+            button.disabled = state.tableBulkActionRunning;
+        });
+    }
+
+    function applyAdminTableSearch(view) {
+        const controls = adminTableSettings(view);
+        const query = String(controls.search || "").trim().toLowerCase();
+        const rows = Array.from(workspace.querySelectorAll('[data-admin-table-row="' + view + '"]'));
+        let visibleCount = 0;
+        rows.forEach(function (row) {
+            const rowSearch = String(row.getAttribute("data-admin-table-search") || "");
+            const visible = !query || rowSearch.includes(query);
+            row.hidden = !visible;
+            if (visible) visibleCount += 1;
+        });
+
+        const count = workspace.querySelector('[data-admin-table-count="' + view + '"]');
+        if (count) {
+            count.textContent = 'Showing ' + visibleCount + ' of ' + rows.length + ' records';
+        }
+
+        const noResults = workspace.querySelector('[data-admin-table-no-results="' + view + '"]');
+        if (noResults) noResults.hidden = visibleCount > 0;
+
+        const selectAll = workspace.querySelector('[data-admin-table-select-all="' + view + '"]');
+        const visibleCheckboxes = rows.filter(function (row) {
+            return !row.hidden;
+        }).map(function (row) {
+            return row.querySelector('[data-admin-table-select="' + view + '"]');
+        }).filter(Boolean);
+        if (selectAll) {
+            const checkedCount = visibleCheckboxes.filter(function (box) {
+                return box.checked;
+            }).length;
+            selectAll.checked = visibleCheckboxes.length > 0 &&
+                checkedCount === visibleCheckboxes.length;
+            selectAll.indeterminate = checkedCount > 0 &&
+                checkedCount < visibleCheckboxes.length;
+            selectAll.disabled = visibleCheckboxes.length === 0;
+        }
+        syncAdminTableSelectionUI(view);
+    }
+
+    function exportAdminTableSelection(view) {
+        const items = adminTableSelectedItems(view);
+        if (!items.length) return;
+
+        let headings;
+        let rows;
+        if (view === "leads") {
+            headings = ["Business", "Contact", "Email", "Service", "Status", "Source", "Estimated value", "Next follow-up"];
+            rows = items.map(function (item) {
+                return [
+                    item.business_name, item.contact_name, item.email,
+                    item.service_interest, item.status, item.source,
+                    item.estimated_value, item.next_follow_up
+                ];
+            });
+        } else if (view === "tasks") {
+            headings = ["Task", "Description", "Assigned to", "Client", "Priority", "Due date", "Status"];
+            rows = items.map(function (item) {
+                return [
+                    item.title, item.description, adminName(item.assigned_to),
+                    clientName(item.client_id), item.priority, item.due_date, item.status
+                ];
+            });
+        } else {
+            headings = ["Contact", "Channel", "Scheduled for", "Assigned to", "Status", "Notes"];
+            rows = items.map(function (item) {
+                return [
+                    item.lead_id ? leadName(item.lead_id) : clientName(item.client_id),
+                    item.channel, item.scheduled_for, adminName(item.assigned_to),
+                    item.status, item.notes
+                ];
+            });
+        }
+
+        function csvCell(value) {
+            return '"' + String(value === null || typeof value === "undefined" ? "" : value)
+                .replace(/"/g, '""') + '"';
+        }
+
+        const csv = [headings].concat(rows).map(function (row) {
+            return row.map(csvCell).join(",");
+        }).join("\r\n");
+        const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "swayphics-selected-" + view + ".csv";
+        anchor.style.display = "none";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(function () {
+            URL.revokeObjectURL(url);
+        }, 1000);
+
+        state.tableFeedback[view] = "Exported " + items.length + " selected records to CSV.";
+        const feedback = workspace.querySelector('[data-admin-table-feedback="' + view + '"]');
+        if (feedback) {
+            feedback.textContent = state.tableFeedback[view];
+            feedback.hidden = false;
+        }
+    }
+
+    async function runAdminTableBulkAction(view, action) {
+        if (state.tableBulkActionRunning) return;
+        if (action === "export") {
+            exportAdminTableSelection(view);
+            return;
+        }
+        if (action !== "complete") return;
+
+        const selected = adminTableSelectedItems(view);
+        const eligible = selected.filter(function (item) {
+            const status = String(item.status || "").toLowerCase();
+            return view === "tasks"
+                ? status !== "completed"
+                : status === "pending";
+        });
+
+        if (!eligible.length) {
+            swayAlert(view === "tasks"
+                ? "Select at least one task that is not already completed."
+                : "Select at least one pending follow-up to complete.");
+            return;
+        }
+
+        const description = view === "tasks" ? "task" : "follow-up";
+        const extra = view === "followups"
+            ? " Lead-linked follow-ups will also update the lead's contact status and next follow-up, matching the existing Complete action."
+            : "";
+        const confirmed = await swayConfirm(
+            "Mark " + eligible.length + " selected " + description +
+            (eligible.length === 1 ? "" : "s") + " as completed?" + extra
+        );
+        if (!confirmed) return;
+
+        state.tableBulkActionRunning = true;
+        syncAdminTableSelectionUI(view);
+        let completed = 0;
+
+        try {
+            for (const item of eligible) {
+                if (view === "tasks") {
+                    await completeTask(item.id);
+                } else {
+                    await completeFollowup(item.id);
+                }
+                completed += 1;
+                state.tableSelection[view] = (state.tableSelection[view] || []).filter(function (id) {
+                    return String(id) !== String(item.id);
+                });
+            }
+
+            state.tableFeedback[view] = "Completed " + completed + " selected " +
+                description + (completed === 1 ? "" : "s") + ".";
+            state.tableSelection[view] = (state.tableSelection[view] || []).filter(function (id) {
+                return !eligible.some(function (item) {
+                    return String(item.id) === String(id);
+                });
+            });
+        } catch (error) {
+            state.tableFeedback[view] = "Completed " + completed + " of " + eligible.length +
+                " selected " + description + (eligible.length === 1 ? "" : "s") +
+                ". Remaining records stay selected. " +
+                (error && error.message ? error.message : "The next update failed.");
+        } finally {
+            state.tableBulkActionRunning = false;
+            renderView();
+        }
+    }
+
+    function bindAdminTableControls() {
+        workspace.querySelectorAll("[data-admin-table-search-input]").forEach(function (input) {
+            input.addEventListener("input", function () {
+                const view = input.getAttribute("data-admin-table-search-input");
+                adminTableSettings(view).search = input.value;
+                applyAdminTableSearch(view);
+            });
+        });
+
+        workspace.querySelectorAll("[data-admin-table-filter]").forEach(function (select) {
+            select.addEventListener("change", function () {
+                const view = select.getAttribute("data-admin-table-filter");
+                adminTableSettings(view).filter = select.value;
+                renderView();
+                const replacement = workspace.querySelector('[data-admin-table-filter="' + view + '"]');
+                if (replacement) replacement.focus();
+            });
+        });
+
+        workspace.querySelectorAll("[data-admin-table-sort]").forEach(function (select) {
+            select.addEventListener("change", function () {
+                const view = select.getAttribute("data-admin-table-sort");
+                adminTableSettings(view).sort = select.value;
+                renderView();
+                const replacement = workspace.querySelector('[data-admin-table-sort="' + view + '"]');
+                if (replacement) replacement.focus();
+            });
+        });
+
+        workspace.querySelectorAll("[data-admin-table-select]").forEach(function (checkbox) {
+            checkbox.addEventListener("change", function () {
+                const view = checkbox.getAttribute("data-admin-table-select");
+                const id = String(checkbox.getAttribute("data-id") || "");
+                const ids = new Set((state.tableSelection[view] || []).map(String));
+                if (checkbox.checked) ids.add(id);
+                else ids.delete(id);
+                state.tableSelection[view] = Array.from(ids);
+                applyAdminTableSearch(view);
+            });
+        });
+
+        workspace.querySelectorAll("[data-admin-table-select-all]").forEach(function (checkbox) {
+            checkbox.addEventListener("change", function () {
+                const view = checkbox.getAttribute("data-admin-table-select-all");
+                const ids = new Set((state.tableSelection[view] || []).map(String));
+                const rows = Array.from(workspace.querySelectorAll('[data-admin-table-row="' + view + '"]'))
+                    .filter(function (row) { return !row.hidden; });
+                rows.forEach(function (row) {
+                    const rowCheckbox = row.querySelector('[data-admin-table-select="' + view + '"]');
+                    if (!rowCheckbox) return;
+                    const id = String(rowCheckbox.getAttribute("data-id") || "");
+                    if (checkbox.checked) {
+                        ids.add(id);
+                        rowCheckbox.checked = true;
+                    } else {
+                        ids.delete(id);
+                        rowCheckbox.checked = false;
+                    }
+                });
+                state.tableSelection[view] = Array.from(ids);
+                applyAdminTableSearch(view);
+            });
+        });
+
+        workspace.querySelectorAll("[data-admin-table-clear-selection]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const view = button.getAttribute("data-admin-table-clear-selection");
+                state.tableSelection[view] = [];
+                applyAdminTableSearch(view);
+            });
+        });
+
+        workspace.querySelectorAll("[data-admin-table-bulk-action]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                runAdminTableBulkAction(
+                    button.closest("[data-admin-table-tools]").getAttribute("data-admin-table-tools"),
+                    button.getAttribute("data-admin-table-bulk-action")
+                );
+            });
+        });
+
+        ["leads", "tasks", "followups"].forEach(function (view) {
+            if (workspace.querySelector('[data-admin-table-tools="' + view + '"]')) {
+                applyAdminTableSearch(view);
+            }
+        });
+    }
+
     function renderTasks() {
+        const tableItems = adminTableItems("tasks", state.tasks);
         const rows =
-            state.tasks.map(function (item) {
+            tableItems.map(function (item) {
                 return (
-                    '<tr data-ai-record="tasks:' + esc(item.id) + '">' +
+                    '<tr data-admin-table-row="tasks" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableSearchText("tasks", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="tasks:' + esc(item.id) + '">' +
+                        adminTableSelectionCell("tasks", item, item.title || "task") +
                         "<td>" +
                             "<strong>" +
                                 esc(item.title) +
@@ -12137,11 +12661,13 @@ function simpleBars(items, color) {
             panel(
                 "All tasks",
                 "Assignments, deadlines and delivery status.",
-                state.tasks.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Task</th><th>Assigned</th><th>Client</th><th>Priority</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>' +
+                renderAdminTableControls("tasks") +
+                (state.tasks.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="tasks" aria-label="Select all visible tasks"></th><th>Task</th><th>Assigned</th><th>Client</th><th>Priority</th><th>Due</th><th>Client health</th><th>Status</th><th></th></tr></thead><tbody>' +
                       rows +
+                      '<tr data-admin-table-no-results="tasks" hidden><td colspan="9">No tasks match these controls. Try another search or status.</td></tr>' +
                       "</tbody></table></div>"
-                    : empty("No tasks yet.")
+                    : empty("No tasks yet."))
             )
         );
     }
@@ -12296,12 +12822,13 @@ function simpleBars(items, color) {
          * Not Interested leads still need to be reviewable and actionable
          * (including the option to return a lead to the active pipeline).
          */
-        const visibleLeads = state.leads;
+        const visibleLeads = adminTableItems("leads", state.leads);
 
         const rows =
             visibleLeads.map(function (item) {
                 return (
-                    '<tr data-ai-record="leads:' + esc(item.id) + '">' +
+                    '<tr data-admin-table-row="leads" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableSearchText("leads", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="leads:' + esc(item.id) + '">' +
+                        adminTableSelectionCell("leads", item, item.business_name || item.contact_name || "lead") +
                         "<td>" +
                             "<strong>" +
                                 esc(
@@ -12411,25 +12938,29 @@ function simpleBars(items, color) {
             panel(
                 "Lead pipeline",
                 "All lead records, including follow-up and long-term re-engagement stages. Scheduled follow-up tasks are managed in Follow-ups.",
-                state.leads.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
+                renderAdminTableControls("leads") +
+                (state.leads.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="leads" aria-label="Select all visible leads"></th><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
                       rows +
+                      '<tr data-admin-table-no-results="leads" hidden><td colspan="8">No leads match these controls. Try another search or status.</td></tr>' +
                       "</tbody></table></div>"
-                    : empty("No leads yet.")
+                    : empty("No leads yet."))
             )
         );
     }
 
     function renderFollowups() {
+        const tableItems = adminTableItems("followups", state.followups);
         const rows =
-            state.followups.map(function (item) {
+            tableItems.map(function (item) {
                 const subject =
                     item.lead_id
                         ? leadName(item.lead_id)
                         : clientName(item.client_id);
 
                 return (
-                    '<tr data-ai-record="followups:' + esc(item.id) + '">' +
+                    '<tr data-admin-table-row="followups" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableSearchText("followups", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="followups:' + esc(item.id) + '">' +
+                        adminTableSelectionCell("followups", item, item.lead_id ? leadName(item.lead_id) : clientName(item.client_id)) +
                         "<td>" +
                             "<strong>" +
                                 esc(subject) +
@@ -12492,11 +13023,13 @@ function simpleBars(items, color) {
             panel(
                 "Follow-up queue",
                 "Keep outreach and client communication from falling through the cracks.",
-                state.followups.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Scheduled</th><th>Assigned</th><th>Status</th><th></th></tr></thead><tbody>' +
+                renderAdminTableControls("followups") +
+                (state.followups.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="followups" aria-label="Select all visible follow-ups"></th><th>Contact</th><th>Scheduled</th><th>Assigned</th><th>Status</th><th></th></tr></thead><tbody>' +
                       rows +
+                      '<tr data-admin-table-no-results="followups" hidden><td colspan="6">No follow-ups match these controls. Try another search or status.</td></tr>' +
                       "</tbody></table></div>"
-                    : empty("No follow-ups scheduled.")
+                    : empty("No follow-ups scheduled."))
             )
         );
     }
@@ -26487,6 +27020,7 @@ function simpleBars(items, color) {
         bindSwayActionDropdowns();
         bindAIFeedbackEvents();
         bindAIMessageActions();
+        bindAdminTableControls();
 
         workspace
             .querySelectorAll("[data-refresh-workspace]")
