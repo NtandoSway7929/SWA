@@ -11575,6 +11575,36 @@ html.dark-mode .sway-ai-revenue-opportunity {
             }
         }
 
+        /* Keep the toggle and logo in the same top row on narrow screens. */
+        @media (max-width: 760px) {
+            .admin-header-inner {
+                grid-template-columns: 38px auto minmax(0, 1fr) !important;
+                grid-template-areas:
+                    "toggle brand controls"
+                    "search search search" !important;
+                column-gap: 8px !important;
+            }
+
+            .admin-mobile-sidebar-toggle {
+                grid-area: toggle !important;
+                margin: 0 !important;
+            }
+
+            .admin-brand {
+                grid-area: brand !important;
+                margin-right: 0 !important;
+            }
+
+            .admin-header-right {
+                grid-area: controls !important;
+                margin-left: 0 !important;
+            }
+
+            .admin-global-search {
+                grid-area: search !important;
+            }
+        }
+
         @media (min-width: 981px) {
             .admin-mobile-sidebar-toggle {
                 display: none !important;
