@@ -176,7 +176,7 @@
         {
             id: "settings",
             label: "Settings",
-            icon: "sliders",
+            icon: "settings",
             items: [
                 ["settings", "Greeting name"]
             ]
