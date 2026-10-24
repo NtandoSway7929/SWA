@@ -35,6 +35,22 @@ const markdownAnswer = [
   "Unsafe link: [blocked](javascript:alert(1))"
 ].join("\n");
 
+const structuredUiAnswer = JSON.stringify({
+  innerme_ui: {
+    version: 1,
+    kind: "metrics",
+    title: "Synthetic structured metrics",
+    summary: "Illustrative only. Next Steps: verify units before using these sample figures.",
+    metrics: [
+      { label: "Marketing reach", value: "1,500 impressions" },
+      { label: "Conversion rate", value: "3.5 percent" }
+    ],
+    sections: [
+      { title: "Recommended check", body: "Confirm the measurement period and source before relying on either illustrative metric." }
+    ]
+  }
+});
+
 const metrics = {
   scenarios: [],
   mockedChatRequests: 0,
@@ -331,6 +347,22 @@ async function configureIsolatedContext(context, initialView, theme, welcomeTest
           contentType: "text/event-stream; charset=utf-8",
           headers: { "Cache-Control": "no-cache, no-transform" },
           body: buildSourceTraceResponse(sourceUrl)
+        });
+      }
+
+      if (message.includes("[test-structured-ui]")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "text/event-stream; charset=utf-8",
+          headers: { "Cache-Control": "no-cache, no-transform" },
+          body: sseFrame("phase", { status: "Preparing a read-only answer…" }) +
+            sseFrame("delta", { text: structuredUiAnswer }) +
+            sseFrame("done", {
+              answer: structuredUiAnswer,
+              read_only: true,
+              knowledge_retrieval: { match_count: 0, retrieval_error: null },
+              knowledge_attribution: []
+            })
         });
       }
 
@@ -643,6 +675,49 @@ async function askMockedQuestion(page) {
     untrustedHtmlEscaped: true,
     unsafeLinkBlocked: true,
     codeCopyPreservedWhitespace: true
+  };
+}
+
+async function verifyStructuredUiResponse(page) {
+  const beforeRequests = metrics.mockedChatRequests;
+  await page.locator("#sway-ai-input").fill("Use the isolated structured UI fixture [test-structured-ui].");
+  await page.locator("#sway-ai-send").click();
+
+  const message = page.locator(".sway-ai-message.sway-ai-assistant").filter({
+    hasText: "Synthetic structured metrics"
+  }).last();
+  await message.locator(".innerme-iu-card").waitFor({ state: "visible", timeout: 10000 });
+  await page.waitForFunction(() => Array.from(
+    document.querySelectorAll(".sway-ai-message.sway-ai-assistant")
+  ).some(node => node.dataset.innermeUiStructured === "1"));
+
+  const card = message.locator(".innerme-iu-card");
+  assert.equal((await card.locator(".innerme-iu-title").textContent()).trim(), "Synthetic structured metrics");
+  assert.equal((await card.locator(".innerme-iu-summary").textContent()).trim(),
+    "Illustrative only. Next Steps: verify units before using these sample figures.",
+    "Structured JSON strings must survive answer normalization unchanged");
+  assert.deepEqual(
+    await card.locator(".innerme-iu-metric-label").allTextContents(),
+    ["Marketing reach", "Conversion rate"],
+    "Structured metrics should render their supplied labels"
+  );
+  assert.deepEqual(
+    await card.locator(".innerme-iu-metric-value").allTextContents(),
+    ["1,500 impressions", "3.5 percent"],
+    "Structured metric values and units should be displayed verbatim"
+  );
+  assert.equal((await card.locator(".innerme-iu-section h4").textContent()).trim(), "Recommended check");
+  assert.equal(await message.locator(".innerme-iu-original").count(), 1,
+    "The original structured response should remain available in the disclosure");
+  assert.equal(metrics.mockedChatRequests, beforeRequests + 1,
+    "Structured UI rendering must not trigger an additional provider request");
+
+  return {
+    structuredEnvelopeRecognized: true,
+    metricCards: 2,
+    sectionBlocks: 1,
+    originalPayloadDisclosure: true,
+    extraProviderRequests: 0
   };
 }
 
@@ -1400,6 +1475,7 @@ async function main() {
 
     const desktopInteractions = await askMockedQuestion(desktopPage);
     const edgeCaseInteractions = await verifyKeyboardAndFallbackPaths(desktopPage, metrics);
+    const structuredUiInteractions = await verifyStructuredUiResponse(desktopPage);
     await desktopPage.screenshot({ path: path.join(ARTIFACT_DIR, "desktop-light-response.png") });
 
     await desktopPage.locator("#sway-ai-more-toggle").click();
@@ -1426,6 +1502,7 @@ async function main() {
       layout: desktopLayout,
       interactions: desktopInteractions,
       edgeCases: edgeCaseInteractions,
+      structuredUi: structuredUiInteractions,
       newChatClearsTranscript: true,
       darkModeToggle: true
     });
