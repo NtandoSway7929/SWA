@@ -107,8 +107,22 @@ test("Gemini daily quota exhaustion alone may invoke the guarded Cloudflare work
 
   assert.match(
     recoveryBlock,
-    /if \(guardReason === "daily_quota_reached"\)\s*\{\s*const quotaFallbackResponse = await requestCloudflareWorkspaceFallback\(\s*"gemini_daily_quota_reached",\s*\);/,
-    "Cloudflare must be considered only for Gemini's explicit daily-quota exhaustion reason",
+    /tryCloudflareFallbackForGeminiQuota\(\s*guardReason,\s*requestCloudflareWorkspaceFallback,\s*\)/,
+    "guard recovery must delegate to the testable quota-fallback policy",
+  );
+  const providerRoutingSource = readFileSync(
+    new URL("../supabase/functions/swayphics-ai/innerme-provider-routing.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    providerRoutingSource,
+    /if \(guardReason !== "daily_quota_reached"\) return null;/,
+    "only daily_quota_reached may invoke the Cloudflare fallback",
+  );
+  assert.match(
+    providerRoutingSource,
+    /return await fallback\("gemini_daily_quota_reached"\);/,
+    "the fallback must receive an explicit reason for telemetry",
   );
   assert.match(
     recoveryBlock,
