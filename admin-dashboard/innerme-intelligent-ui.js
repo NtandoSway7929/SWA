@@ -263,11 +263,12 @@
     workspace.dataset.innermeUiBooted = "1";
     const observer = new MutationObserver(records => records.forEach(record => {
       record.addedNodes.forEach(node => {
-        if (node.nodeType !== 1) return;
-        const parentMessage = node.closest && node.closest(".sway-ai-assistant");
+        const element = node.nodeType === 1 ? node : node.parentElement;
+        if (!element) return;
+        const parentMessage = element.closest && element.closest(".sway-ai-assistant");
         if (parentMessage) enhanceMessage(doc, parentMessage);
-        if (node.matches && node.matches(".sway-ai-assistant")) enhanceMessage(doc, node);
-        if (node.querySelectorAll) node.querySelectorAll(".sway-ai-assistant").forEach(message => enhanceMessage(doc, message));
+        if (element.matches && element.matches(".sway-ai-assistant")) enhanceMessage(doc, element);
+        if (element.querySelectorAll) element.querySelectorAll(".sway-ai-assistant").forEach(message => enhanceMessage(doc, message));
       });
     }));
     observer.observe(workspace, { childList: true, subtree: true });
