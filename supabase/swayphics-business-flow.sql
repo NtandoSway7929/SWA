@@ -1957,20 +1957,22 @@ create trigger trg_audit_swayphics_invoice_settings
 after insert or update on public.invoice_settings
 for each row execute function public.audit_swayphics_settings_change();
 
-drop trigger if exists trg_audit_swayphics_admin_notification_preferences on public.admin_notification_preferences;
-create trigger trg_audit_swayphics_admin_notification_preferences
-after insert or update on public.admin_notification_preferences
-for each row execute function public.audit_swayphics_settings_change();
-
-drop trigger if exists trg_audit_swayphics_admin_dashboard_preferences on public.admin_dashboard_preferences;
-create trigger trg_audit_swayphics_admin_dashboard_preferences
-after insert or update on public.admin_dashboard_preferences
-for each row execute function public.audit_swayphics_settings_change();
-
-drop trigger if exists trg_audit_swayphics_communication_templates on public.communication_templates;
-create trigger trg_audit_swayphics_communication_templates
-after insert or update on public.communication_templates
-for each row execute function public.audit_swayphics_settings_change();
+do $$
+begin
+    if to_regclass('public.admin_notification_preferences') is not null then
+        execute 'drop trigger if exists trg_audit_swayphics_admin_notification_preferences on public.admin_notification_preferences';
+        execute 'create trigger trg_audit_swayphics_admin_notification_preferences after insert or update on public.admin_notification_preferences for each row execute function public.audit_swayphics_settings_change()';
+    end if;
+    if to_regclass('public.admin_dashboard_preferences') is not null then
+        execute 'drop trigger if exists trg_audit_swayphics_admin_dashboard_preferences on public.admin_dashboard_preferences';
+        execute 'create trigger trg_audit_swayphics_admin_dashboard_preferences after insert or update on public.admin_dashboard_preferences for each row execute function public.audit_swayphics_settings_change()';
+    end if;
+    if to_regclass('public.communication_templates') is not null then
+        execute 'drop trigger if exists trg_audit_swayphics_communication_templates on public.communication_templates';
+        execute 'create trigger trg_audit_swayphics_communication_templates after insert or update on public.communication_templates for each row execute function public.audit_swayphics_settings_change()';
+    end if;
+end;
+$$;
 
 -- Expose only a bounded, allowlisted view of scheduled-job health to active admins.
 create or replace function public.get_swayphics_automation_status()
