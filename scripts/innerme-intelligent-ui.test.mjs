@@ -58,7 +58,8 @@ const structuredEnvelope = JSON.stringify({
 assert.equal(isInnerMeIntelligentUiEnvelope(structuredEnvelope), true);
 assert.equal(normalizeInnerMeAnswer(structuredEnvelope), structuredEnvelope,
   "Normalization must not insert newlines into JSON strings or otherwise mutate a valid UI envelope");
-const fencedStructuredEnvelope = "```json\\n" + structuredEnvelope + "\\n```";
+const fence = String.fromCharCode(96).repeat(3);
+const fencedStructuredEnvelope = fence + "json\n" + structuredEnvelope + "\n" + fence;
 assert.equal(isInnerMeIntelligentUiEnvelope(fencedStructuredEnvelope), true,
   "A valid fenced structured envelope should be recognized consistently with the frontend parser");
 assert.equal(normalizeInnerMeAnswer(fencedStructuredEnvelope), fencedStructuredEnvelope,
@@ -69,11 +70,11 @@ assert.equal(isInnerMeIntelligentUiEnvelope(JSON.stringify({
 assert.equal(isInnerMeIntelligentUiEnvelope(JSON.stringify({
   innerme_ui: { version: 1, kind: "chart", chart: { points: [{ label: "bad", value: "12" }] } }
 })), false, "Chart values must be finite JSON numbers");
-assert.equal(normalizeInnerMeAnswer("Line one\\r\\nLine two   "), "Line one\\nLine two",
+assert.equal(normalizeInnerMeAnswer("Line one\r\nLine two   "), "Line one\nLine two",
   "Plain-text normalization must retain its legacy whitespace behavior");
 assert.match(INNERME_INTELLIGENT_UI_FORMAT_RULES, /Use the existing concise natural-language format by default/);
 assert.match(INNERME_INTELLIGENT_UI_FORMAT_RULES, /Never combine unlike measures/);
-assert.match(INNERME_INTELLIGENT_UI_FORMAT_RULES, /inline source\\/citation formatting/);
+assert.match(INNERME_INTELLIGENT_UI_FORMAT_RULES, /inline source\/citation formatting/);
 
 assert.match(css,/prefers-reduced-motion/);
 assert.match(css,/:focus-visible/);
