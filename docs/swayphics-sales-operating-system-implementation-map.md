@@ -1,6 +1,6 @@
 # Sales Operating System — Implementation Map
 
-Status: Phase 3 implementation design
+Status: Phase 4 implementation in progress (batches A and B)
 Branch: `feature/swayphics-sales-operating-system`
 Base: `main`
 Related specification: `docs/swayphics-sales-operating-system.md`
@@ -57,7 +57,25 @@ The initial sales system should keep descriptive current-pipeline counts and int
 - Test sorting, navigation, mobile layout, opt-out/disqualified exclusion, duplicate detection, RLS, lead conversion idempotence and payment reconciliation.
 - Open a draft PR for review after tests; do not merge or deploy without explicit approval.
 
-## 4. First-batch acceptance criteria
+## Implementation progress — 2026-10-24
+
+### Batch A — completed on the feature branch
+
+- Added the read-only Sales Work Queue to the current admin workspace.
+- Queue prioritises due/overdue follow-ups, sent quotes awaiting a response, and active leads without a next action.
+- Added a static regression test; site validation and isolated desktop/mobile admin tests with disposable Supabase persistence/access-control checks passed for the batch-A commit.
+- No merge, deployment, production database write or external message was performed.
+
+### Batch B — qualification fields implemented, awaiting CI review
+
+- Added structured business segment, website need, contactability, buying signal, qualification priority and primary evidence URL fields to the lead editor.
+- Added reviewer timestamp and reviewer identity fields. They are updated only when a qualification field actually changes.
+- Defaults are explicitly Unknown/Unassessed. Priority is human-set and its definitions are displayed in the form; no opaque AI score is introduced.
+- Clarified that `leads.source` means original acquisition source/channel, not campaign membership, campaign spend or contact attempts.
+- Added forward-only SQL and aligned the bootstrap and disposable local test schemas. The migration is not applied to production by this PR.
+- Added static tests for form fields, migration, bootstrap schema, and disposable test schema. Full CI and browser validation must pass before considering this batch ready for review.
+
+## 4. Batch A acceptance criteria
 
 1. Sales queue uses existing records and displays a helpful empty state.
 2. Due and overdue follow-ups sort deterministically by urgency/date.
@@ -68,7 +86,7 @@ The initial sales system should keep descriptive current-pipeline counts and int
 7. Mobile layout remains usable and labels have accessible names.
 8. The feature can be disabled/reverted without changing database schema.
 
-## 5. Unresolved before implementation
+## 5. Remaining unresolved items before outcome logging
 
 - Whether inbound email replies can be reliably joined to a lead without false matching.
 - Whether the current follow-up editor can represent all needed outreach outcomes.
