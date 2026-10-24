@@ -14,6 +14,8 @@
 
     var SECTION_NAMES = [
         ["sales", "Sales workflow"],
+        ["performance", "Performance targets"],
+        ["commercial", "Commercial rules"],
         ["business", "Business & invoices"],
         ["notifications", "Notifications"],
         ["templates", "Communication templates"],
@@ -285,9 +287,41 @@
             field("vat_number", "VAT number", "text", "Required when VAT registration is enabled.");
 
         var salesFields =
-            field("lead_no_response_days", "Days before follow-up is due", "number",
-                "The existing lead follow-up clock reads this value.", 'min="1" max="365" step="1" required') +
-            '<div class="swe-notice swe-wide"><strong>Current workflow:</strong> this changes the existing follow-up interval. It does not send messages automatically.</div>';
+            field("new_lead_response_hours", "New enquiry response target (hours)", "number",
+                "Flag new leads that have waited longer than this target.", 'min="1" max="720" step="1" required') +
+            field("lead_no_response_days", "Fallback follow-up interval (days)", "number",
+                "Used only when a stage-specific interval has not been configured.", 'min="1" max="365" step="1" required') +
+            field("stage_days_contacted", "Contacted stage interval (days)", "number",
+                "Time without a response before a follow-up task is created.", 'min="1" max="365" step="1" required') +
+            field("stage_days_interested", "Interested stage interval (days)", "number",
+                "Follow-up interval while the prospect is interested.", 'min="1" max="365" step="1" required') +
+            field("stage_days_proposal_sent", "Proposal sent interval (days)", "number",
+                "Follow-up interval after a proposal is sent.", 'min="1" max="365" step="1" required') +
+            field("stage_days_negotiating", "Negotiating stage interval (days)", "number",
+                "Follow-up interval while terms are being discussed.", 'min="1" max="365" step="1" required') +
+            field("stage_days_follow_up", "Follow-up stage interval (days)", "number",
+                "Repeat interval after an earlier follow-up task is completed.", 'min="1" max="365" step="1" required') +
+            field("max_followup_attempts", "Maximum follow-up attempts", "number",
+                "After this many completed or pending attempts, flag the lead for owner review instead of creating more tasks.", 'min="1" max="20" step="1" required') +
+            '<div class="swe-notice swe-wide"><strong>Manual outreach remains protected:</strong> these rules schedule tasks and in-dashboard alerts. They do not automatically send emails or WhatsApp messages.</div>';
+
+        var performanceFields =
+            field("monthly_revenue_target", "Monthly invoiced revenue target (R)", "number",
+                "Use 0 when no target is set.", 'min="0" max="1000000000" step="0.01" required') +
+            field("monthly_new_leads_target", "Monthly new leads target", "number",
+                "Count of leads created this month. Use 0 to leave unset.", 'min="0" max="1000000" step="1" required') +
+            field("monthly_proposals_target", "Monthly proposals target", "number",
+                "Quotes issued this month. Use 0 to leave unset.", 'min="0" max="1000000" step="1" required') +
+            field("monthly_wins_target", "Monthly wins target", "number",
+                "Leads marked won this month. Use 0 to leave unset.", 'min="0" max="1000000" step="1" required') +
+            field("target_conversion_rate", "Target lead-to-win conversion (%)", "number",
+                "Target percentage from new leads created this month to leads marked won this month.", 'min="0" max="100" step="0.01" required');
+
+        var commercialFields =
+            field("quote_validity_days", "Default quote validity (days)", "number",
+                "Applied to new quotes only when an expiry date is not explicitly supplied.", 'min="1" max="365" step="1" required') +
+            field("invoice_payment_terms_days", "Default invoice payment terms (days)", "number",
+                "Applied to new invoices only when a due date is not explicitly supplied. Zero means due on issue date.", 'min="0" max="365" step="1" required');
 
         var preferencesFields =
             selectField("default_landing_view", "Default landing page", [
@@ -347,6 +381,34 @@
             formCard("sales", "Lead follow-up rules", "Control the existing workflow clock without changing individual lead records.", salesFields, "Save workflow", true) +
             '<div class="swe-card"><h3>Workflow boundary</h3><p>These settings change the follow-up interval used by the current database workflow. Email and WhatsApp outreach still require the existing manual or approved sending steps.</p></div></section>';
 
+        var performancePanel =
+            '<section class="swe-panel" role="tabpanel" id="swe-panel-performance" aria-labelledby="swe-tab-performance" data-settings-panel="performance" hidden>' +
+            formCard("performance", "Monthly performance targets", "Set the outcomes you want to measure. Actuals are calculated from the current month’s lead, quote and invoice records.", performanceFields, "Save performance targets", true) +
+            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Current month scorecard</h3><p>Figures refresh from live records. Draft and archived invoices are excluded from invoiced revenue.</p></div><button type="button" class="swe-button" data-action="refresh-performance">Refresh figures</button></div>' +
+            '<div class="swe-performance-grid">' +
+            '<div class="swe-stat"><span>Invoiced revenue</span><strong data-performance-actual="revenue">Loading…</strong><small data-performance-target="revenue">Target not set</small><div class="swe-progress"><span data-performance-bar="revenue"></span></div></div>' +
+            '<div class="swe-stat"><span>New leads</span><strong data-performance-actual="leads">Loading…</strong><small data-performance-target="leads">Target not set</small><div class="swe-progress"><span data-performance-bar="leads"></span></div></div>' +
+            '<div class="swe-stat"><span>Proposals issued</span><strong data-performance-actual="proposals">Loading…</strong><small data-performance-target="proposals">Target not set</small><div class="swe-progress"><span data-performance-bar="proposals"></span></div></div>' +
+            '<div class="swe-stat"><span>Deals won</span><strong data-performance-actual="wins">Loading…</strong><small data-performance-target="wins">Target not set</small><div class="swe-progress"><span data-performance-bar="wins"></span></div></div>' +
+            '<div class="swe-stat"><span>Lead-to-win conversion</span><strong data-performance-actual="conversion">Loading…</strong><small data-performance-target="conversion">Target not set</small><div class="swe-progress"><span data-performance-bar="conversion"></span></div></div>' +
+            '</div><p class="swe-status" data-performance-status role="status" aria-live="polite"></p></div></section>';
+
+        var commercialPanel =
+            '<section class="swe-panel" role="tabpanel" id="swe-panel-commercial" aria-labelledby="swe-tab-commercial" data-settings-panel="commercial" hidden>' +
+            formCard("commercial", "Default commercial terms", "These defaults affect newly created documents only. Existing quotes, invoice due dates and issued documents are not rewritten.", commercialFields, "Save commercial rules", true) +
+            '<div class="swe-card"><h3>Document safety</h3><p>Existing explicit expiry and due dates are preserved. The defaults apply only when a new quote or invoice is saved without a date.</p></div></section>';
+
+        var governancePanel =
+            '<section class="swe-panel" role="tabpanel" id="swe-panel-governance" aria-labelledby="swe-tab-governance" data-settings-panel="governance" hidden>' +
+            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Scheduled automation health</h3><p>Latest recorded run for each Swayphics background job. No run history is reported as “Not run yet”, not as a success.</p></div><button type="button" class="swe-button" data-action="refresh-governance">Refresh status</button></div>' +
+            '<div data-governance-automation><p class="swe-muted">Loading automation status…</p></div>' +
+            '<p class="swe-status" data-governance-status role="status" aria-live="polite"></p></div>' +
+            '<div class="swe-card"><h3>Settings audit history</h3><p>Records who changed a settings area and which field names changed. Previous and new values are deliberately not stored here, so banking details and template contents are not copied into the audit trail.</p>' +
+            '<div data-governance-audit><p class="swe-muted">Loading settings history…</p></div>' +
+            '<p class="swe-status" data-audit-status role="status" aria-live="polite"></p></div>' +
+            '<div class="swe-card"><h3>Backup and recovery boundary</h3><p>Backup retention and restore-test status are not exposed by the dashboard database API. Verify those directly in the Supabase project controls; this page will not label backups healthy without a verified signal.</p></div>' +
+            '<div class="swe-card"><h3>InnerMe approval boundary</h3><p>Settings here do not grant InnerMe new action permissions. Sensitive actions remain subject to the existing InnerMe autonomy and action-approval controls.</p></div></section>';
+
         var businessPanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-business" aria-labelledby="swe-tab-business" data-settings-panel="business" hidden>' +
             formCard("business", "Business identity and invoice details", "Values are saved to the existing invoice_settings record. Treat banking details as confidential.", businessFields, "Save business details", true) +
@@ -382,8 +444,8 @@
             '<header class="swe-header"><div><span class="swe-eyebrow">Swayphics workspace</span>' +
             '<h2>Settings</h2><p class="swe-description">Control the business workflow, invoice identity, alerts, reusable communication and your administrator experience from one place.</p></div></header>' +
             '<div class="swe-tabs" role="tablist" aria-label="Settings sections">' + nav + '</div>' +
-            '<div class="swe-panels">' + salesPanel + businessPanel + notificationsPanel +
-            templatesPanel + securityPanel + preferencesPanel + websitePanel + innermePanel + '</div>' +
+            '<div class="swe-panels">' + salesPanel + performancePanel + commercialPanel + businessPanel + notificationsPanel +
+            templatesPanel + securityPanel + preferencesPanel + websitePanel + innermePanel + governancePanel + '</div>' +
             '<p class="swe-status" data-settings-global-status role="status" aria-live="polite"></p></div>';
     }
 
@@ -572,10 +634,24 @@
     }
 
     async function loadWorkflow(root) {
-        var rows = await getRows("workflow_settings", { select: "id,lead_no_response_days,review_link,updated_at", id: "eq.1", limit: "1" });
+        var rows = await getRows("workflow_settings", {
+            select: "id,lead_no_response_days,new_lead_response_hours,followup_stage_days,max_followup_attempts,monthly_revenue_target,monthly_new_leads_target,monthly_proposals_target,monthly_wins_target,target_conversion_rate,quote_validity_days,invoice_payment_terms_days,review_link,updated_at",
+            id: "eq.1",
+            limit: "1"
+        });
         var row = rows[0];
         if (!row) throw new Error("The workflow_settings row is missing. Apply the existing business-flow SQL before using these controls.");
-        setFormValues(root.querySelector('[data-settings-form="sales"]'), row);
+        var stageDays = row.followup_stage_days && typeof row.followup_stage_days === "object" ? row.followup_stage_days : {};
+        var salesValues = Object.assign({}, row, {
+            stage_days_contacted: stageDays.contacted || row.lead_no_response_days || 7,
+            stage_days_interested: stageDays.interested || row.lead_no_response_days || 7,
+            stage_days_proposal_sent: stageDays["proposal sent"] || row.lead_no_response_days || 7,
+            stage_days_negotiating: stageDays.negotiating || row.lead_no_response_days || 7,
+            stage_days_follow_up: stageDays["follow-up"] || row.lead_no_response_days || 7
+        });
+        setFormValues(root.querySelector('[data-settings-form="sales"]'), salesValues);
+        setFormValues(root.querySelector('[data-settings-form="performance"]'), row);
+        setFormValues(root.querySelector('[data-settings-form="commercial"]'), row);
         setFormValues(root.querySelector('[data-settings-form="website"]'), row);
     }
 
@@ -618,6 +694,206 @@
         }
     }
 
+    function monthWindow() {
+        var now = new Date();
+        var start = new Date(now.getFullYear(), now.getMonth(), 1);
+        var end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        return {
+            startDate: start.toISOString().slice(0, 10),
+            endDate: end.toISOString().slice(0, 10),
+            startIso: start.toISOString(),
+            endIso: end.toISOString()
+        };
+    }
+
+    function setText(root, selector, value) {
+        var node = root.querySelector(selector);
+        if (node) node.textContent = value == null ? "" : String(value);
+    }
+
+    function renderSimpleTable(container, columns, rows, emptyMessage) {
+        if (!container) return;
+        container.replaceChildren();
+        if (!rows || !rows.length) {
+            var empty = document.createElement("p");
+            empty.className = "swe-muted";
+            empty.textContent = emptyMessage || "No records to display.";
+            container.appendChild(empty);
+            return;
+        }
+        var table = document.createElement("table");
+        table.className = "swe-table";
+        var thead = document.createElement("thead");
+        var headRow = document.createElement("tr");
+        columns.forEach(function (column) {
+            var th = document.createElement("th");
+            th.scope = "col";
+            th.textContent = column.label;
+            headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+        var tbody = document.createElement("tbody");
+        rows.forEach(function (row) {
+            var tr = document.createElement("tr");
+            columns.forEach(function (column) {
+                var td = document.createElement("td");
+                var value = column.value(row);
+                td.textContent = value == null || value === "" ? "—" : String(value);
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        container.appendChild(table);
+    }
+
+    function formatMetricCurrency(value) {
+        return new Intl.NumberFormat("en-ZA", {
+            style: "currency", currency: "ZAR", maximumFractionDigits: 0
+        }).format(Number(value) || 0);
+    }
+
+    async function loadPerformance(root) {
+        var status = root.querySelector("[data-performance-status]");
+        setStatus(status, "Refreshing current-month figures…", "");
+        try {
+            var bounds = monthWindow();
+            var result = await Promise.all([
+                getRows("leads", {
+                    select: "id,status,created_at,updated_at",
+                    created_at: "gte." + bounds.startIso,
+                    limit: "1000"
+                }),
+                getRows("quotes", {
+                    select: "id,status,created_at,amount",
+                    created_at: "gte." + bounds.startIso,
+                    limit: "1000"
+                }),
+                getRows("invoices", {
+                    select: "id,status,issue_date,total,archived",
+                    issue_date: "gte." + bounds.startDate,
+                    archived: "eq.false",
+                    limit: "1000"
+                })
+            ]);
+            var leads = result[0].filter(function (row) {
+                return row.created_at < bounds.endIso;
+            });
+            var quotes = result[1].filter(function (row) {
+                return row.created_at < bounds.endIso && String(row.status || "").toLowerCase() !== "draft";
+            });
+            var invoices = result[2].filter(function (row) {
+                return row.issue_date >= bounds.startDate && row.issue_date < bounds.endDate &&
+                    row.archived !== true &&
+                    !["draft", "cancelled", "void"].includes(String(row.status || "").toLowerCase());
+            });
+            var newLeads = leads.length;
+            var wins = leads.filter(function (row) {
+                return String(row.status || "").toLowerCase() === "won" &&
+                    row.updated_at >= bounds.startIso && row.updated_at < bounds.endIso;
+            }).length;
+            var revenue = invoices.reduce(function (sum, row) {
+                return sum + (Number(row.total) || 0);
+            }, 0);
+            var proposals = quotes.length;
+            var conversion = newLeads ? wins / newLeads * 100 : 0;
+            var form = root.querySelector('[data-settings-form="performance"]');
+            var targets = {
+                revenue: Number(form.querySelector('[name="monthly_revenue_target"]').value) || 0,
+                leads: Number(form.querySelector('[name="monthly_new_leads_target"]').value) || 0,
+                proposals: Number(form.querySelector('[name="monthly_proposals_target"]').value) || 0,
+                wins: Number(form.querySelector('[name="monthly_wins_target"]').value) || 0,
+                conversion: Number(form.querySelector('[name="target_conversion_rate"]').value) || 0
+            };
+            var actuals = { revenue: revenue, leads: newLeads, proposals: proposals, wins: wins, conversion: conversion };
+            Object.keys(actuals).forEach(function (key) {
+                var actualNode = root.querySelector('[data-performance-actual="' + key + '"]');
+                var targetNode = root.querySelector('[data-performance-target="' + key + '"]');
+                var bar = root.querySelector('[data-performance-bar="' + key + '"]');
+                var formatted = key === "revenue" ? formatMetricCurrency(actuals[key]) :
+                    key === "conversion" ? actuals[key].toFixed(1) + "%" : String(actuals[key]);
+                if (actualNode) actualNode.textContent = formatted;
+                if (targetNode) {
+                    targetNode.textContent = targets[key] > 0
+                        ? "Target: " + (key === "revenue" ? formatMetricCurrency(targets[key]) :
+                            key === "conversion" ? targets[key].toFixed(1) + "%" : String(targets[key]))
+                        : "Target not set";
+                }
+                if (bar) {
+                    var progress = targets[key] > 0 ? Math.max(0, Math.min(100, actuals[key] / targets[key] * 100)) : 0;
+                    bar.style.width = progress + "%";
+                    bar.setAttribute("aria-label", targets[key] > 0 ? Math.round(progress) + "% of target" : "Target not set");
+                }
+            });
+            setStatus(status, "Figures for " + bounds.startDate + " to " + bounds.endDate + " loaded from current records.", "success");
+        } catch (error) {
+            setStatus(status, "Unable to load the scorecard: " + (error.message || "request failed"), "error");
+        }
+    }
+
+    async function loadGovernance(root) {
+        var status = root.querySelector("[data-governance-status]");
+        var auditStatus = root.querySelector("[data-audit-status]");
+        setStatus(status, "Checking scheduled jobs…", "");
+        setStatus(auditStatus, "Loading audit records…", "");
+        var results = await Promise.allSettled([
+            request("/rest/v1/rpc/get_swayphics_automation_status", { method: "POST", body: {} }),
+            getRows("admin_settings_audit_log", {
+                select: "id,actor_id,setting_area,changed_fields,created_at",
+                order: "created_at.desc",
+                limit: "30"
+            }),
+            getRows("admin_users", {
+                select: "user_id,full_name,email,role,active",
+                limit: "100"
+            })
+        ]);
+        var jobs = results[0].status === "fulfilled" && Array.isArray(results[0].value) ? results[0].value : null;
+        if (jobs) {
+            renderSimpleTable(root.querySelector("[data-governance-automation]"), [
+                { label: "Automation", value: function (row) { return row.job_name; } },
+                { label: "Schedule", value: function (row) { return row.schedule; } },
+                { label: "Active", value: function (row) { return row.active ? "Yes" : "No"; } },
+                { label: "Last run (SAST)", value: function (row) {
+                    return row.last_run ? new Date(row.last_run).toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" }) : "Not run yet";
+                } },
+                { label: "Last result", value: function (row) {
+                    return row.last_status ? row.last_status + (row.last_message ? " · " + row.last_message : "") : "No run recorded";
+                } }
+            ], jobs, "No allowlisted automation jobs were found.");
+            setStatus(status, jobs.length + " scheduled jobs inspected.", "success");
+        } else {
+            renderSimpleTable(root.querySelector("[data-governance-automation]"), [], [], "Automation status unavailable. Confirm the dashboard migration was applied.");
+            setStatus(status, results[0].reason && results[0].reason.message ? results[0].reason.message : "Unable to inspect automation jobs.", "error");
+        }
+
+        var auditRows = results[1].status === "fulfilled" ? results[1].value : null;
+        var admins = results[2].status === "fulfilled" ? results[2].value : [];
+        if (auditRows) {
+            var byId = Object.create(null);
+            admins.forEach(function (admin) {
+                byId[admin.user_id] = admin.full_name || admin.email || admin.user_id;
+            });
+            renderSimpleTable(root.querySelector("[data-governance-audit]"), [
+                { label: "Changed at (SAST)", value: function (row) {
+                    return row.created_at ? new Date(row.created_at).toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" }) : "";
+                } },
+                { label: "Changed by", value: function (row) {
+                    return row.actor_id ? (byId[row.actor_id] || row.actor_id.slice(0, 8)) : "System / migration";
+                } },
+                { label: "Settings area", value: function (row) { return row.setting_area; } },
+                { label: "Fields changed", value: function (row) {
+                    return Array.isArray(row.changed_fields) ? row.changed_fields.join(", ") : "";
+                } }
+            ], auditRows, "No settings changes have been recorded yet.");
+            setStatus(auditStatus, auditRows.length + " audit records loaded.", "success");
+        } else {
+            renderSimpleTable(root.querySelector("[data-governance-audit]"), [], [], "Settings audit history unavailable.");
+            setStatus(auditStatus, results[1].reason && results[1].reason.message ? results[1].reason.message : "Unable to load audit history.", "error");
+        }
+    }
+
     function loadAccount(root, identity) {
         var email = root.querySelector("[data-account-email]");
         var role = root.querySelector("[data-account-role]");
@@ -640,7 +916,9 @@
                 loadBusiness(root),
                 loadNotifications(root, identity.user.id),
                 loadPreferences(root, identity.user.id),
-                loadTemplates(root)
+                loadTemplates(root),
+                loadPerformance(root),
+                loadGovernance(root)
             ]);
             var errors = results.filter(function (result) { return result.status === "rejected"; });
             if (errors.length) {
@@ -694,10 +972,75 @@
     function bindForms(root, identity) {
         bindForm(root, "sales", async function (form) {
             if (!isOwner) throw new Error("Only the Swayphics owner can change workflow timing.");
-            var days = Number(form.querySelector('[name="lead_no_response_days"]').value);
-            if (!Number.isInteger(days) || days < 1 || days > 365) throw new Error("Enter a whole number from 1 to 365.");
+            function wholeNumber(name, min, max, label) {
+                var value = Number(form.querySelector('[name="' + name + '"]').value);
+                if (!Number.isInteger(value) || value < min || value > max) {
+                    throw new Error(label + " must be a whole number from " + min + " to " + max + ".");
+                }
+                return value;
+            }
+            var days = wholeNumber("lead_no_response_days", 1, 365, "Fallback interval");
+            var responseHours = wholeNumber("new_lead_response_hours", 1, 720, "New lead response target");
+            var maxAttempts = wholeNumber("max_followup_attempts", 1, 20, "Maximum follow-up attempts");
+            var stageDays = {
+                contacted: wholeNumber("stage_days_contacted", 1, 365, "Contacted interval"),
+                interested: wholeNumber("stage_days_interested", 1, 365, "Interested interval"),
+                "proposal sent": wholeNumber("stage_days_proposal_sent", 1, 365, "Proposal-sent interval"),
+                negotiating: wholeNumber("stage_days_negotiating", 1, 365, "Negotiating interval"),
+                "follow-up": wholeNumber("stage_days_follow_up", 1, 365, "Follow-up interval")
+            };
             await updateRow("workflow_settings", "id=eq.1", {
                 lead_no_response_days: days,
+                new_lead_response_hours: responseHours,
+                followup_stage_days: stageDays,
+                max_followup_attempts: maxAttempts,
+                updated_at: new Date().toISOString()
+            });
+            await loadWorkflow(root);
+            await loadPerformance(root);
+        });
+
+        bindForm(root, "performance", async function (form) {
+            if (!isOwner) throw new Error("Only the Swayphics owner can change business targets.");
+            function countValue(name, label) {
+                var value = Number(form.querySelector('[name="' + name + '"]').value);
+                if (!Number.isInteger(value) || value < 0 || value > 1000000) {
+                    throw new Error(label + " must be a whole number from 0 to 1,000,000.");
+                }
+                return value;
+            }
+            var revenue = Number(form.querySelector('[name="monthly_revenue_target"]').value);
+            var conversion = Number(form.querySelector('[name="target_conversion_rate"]').value);
+            if (!Number.isFinite(revenue) || revenue < 0 || revenue > 1000000000) {
+                throw new Error("Monthly revenue target must be between R0 and R1,000,000,000.");
+            }
+            if (!Number.isFinite(conversion) || conversion < 0 || conversion > 100) {
+                throw new Error("Conversion target must be between 0% and 100%.");
+            }
+            await updateRow("workflow_settings", "id=eq.1", {
+                monthly_revenue_target: revenue,
+                monthly_new_leads_target: countValue("monthly_new_leads_target", "New leads target"),
+                monthly_proposals_target: countValue("monthly_proposals_target", "Proposals target"),
+                monthly_wins_target: countValue("monthly_wins_target", "Wins target"),
+                target_conversion_rate: conversion,
+                updated_at: new Date().toISOString()
+            });
+            await loadPerformance(root);
+        });
+
+        bindForm(root, "commercial", async function (form) {
+            if (!isOwner) throw new Error("Only the Swayphics owner can change commercial defaults.");
+            var quoteDays = Number(form.querySelector('[name="quote_validity_days"]').value);
+            var paymentDays = Number(form.querySelector('[name="invoice_payment_terms_days"]').value);
+            if (!Number.isInteger(quoteDays) || quoteDays < 1 || quoteDays > 365) {
+                throw new Error("Quote validity must be a whole number from 1 to 365 days.");
+            }
+            if (!Number.isInteger(paymentDays) || paymentDays < 0 || paymentDays > 365) {
+                throw new Error("Invoice payment terms must be a whole number from 0 to 365 days.");
+            }
+            await updateRow("workflow_settings", "id=eq.1", {
+                quote_validity_days: quoteDays,
+                invoice_payment_terms_days: paymentDays,
                 updated_at: new Date().toISOString()
             });
         });
@@ -901,6 +1244,18 @@
         if (healthButton) healthButton.addEventListener("click", function () {
             runInnerMeHealth(root);
         });
+
+        var governanceButton = root.querySelector('[data-action="refresh-governance"]');
+        if (governanceButton) governanceButton.addEventListener("click", function () {
+            governanceButton.disabled = true;
+            loadGovernance(root).finally(function () { governanceButton.disabled = false; });
+        });
+
+        var performanceButton = root.querySelector('[data-action="refresh-performance"]');
+        if (performanceButton) performanceButton.addEventListener("click", function () {
+            performanceButton.disabled = true;
+            loadPerformance(root).finally(function () { performanceButton.disabled = false; });
+        });
     }
 
     function normalizeSettingsSidebar() {
@@ -951,7 +1306,7 @@
         );
         if (headingDescription) {
             headingDescription.textContent =
-                "Manage sales workflows, notifications, shared templates and your dashboard preferences.";
+                "Manage sales rules, performance targets, commercial defaults, notifications and operational governance.";
         }
 
         root.querySelectorAll("button[type='submit']").forEach(function (button) { button.disabled = true; });
