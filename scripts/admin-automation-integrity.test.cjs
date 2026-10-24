@@ -31,6 +31,15 @@ const dueTodayMigration = fs.readFileSync(
   "utf8"
 );
 
+const quoteExpiryMigration = fs.readFileSync(
+  path.join(root, "supabase/migrations/20261024220000_swayphics_quote_expiry_notifications.sql"),
+  "utf8"
+);
+const notificationsSchema = fs.readFileSync(
+  path.join(root, "supabase/swayphics-admin-notifications.sql"),
+  "utf8"
+);
+
 
 function mustMatch(source, pattern, message) {
   assert.match(source, pattern, message);
@@ -145,6 +154,36 @@ mustMatch(
   "the baseline flow SQL must include the overdue status scheduler"
 );
 mustMatch(
+  quoteExpiryMigration,
+  /q\.status = 'sent'[\s\S]*?q\.valid_until <= v_today/i,
+  "quote expiry reminders must cover sent quotes due today or already expired"
+);
+mustMatch(
+  quoteExpiryMigration,
+  /quote\.expiry_due[\s\S]*?quote\.expired/i,
+  "quote reminders must distinguish due-today and expired states"
+);
+mustMatch(
+  quoteExpiryMigration,
+  /swayphics-quote-validity:[\s\S]*?r\.valid_until::text/i,
+  "quote expiry reminders must be deduplicated per quote validity window"
+);
+mustMatch(
+  quoteExpiryMigration,
+  /swayphics-quote-expiry-reminders[\s\S]*?'\*\/15 \* \* \* \*'/i,
+  "quote expiry reminders must run on a recurring schedule"
+);
+mustMatch(
+  notificationsSchema,
+  /or v_event like 'quote\.%'/i,
+  "quote events must respect the sales notification preference"
+);
+mustMatch(
+  baseline,
+  /generate_swayphics_quote_expiry_notifications_internal/i,
+  "the baseline flow SQL must include scheduled quote expiry reminders"
+);
+mustMatch(
   dueTodayMigration,
   /'lead\.due_today'/i,
   "due-today reminders must use the standard sales event prefix so notification preferences apply"
@@ -182,7 +221,7 @@ mustMatch(
 
 console.log(JSON.stringify({
   result: "PASS",
-  checks: 29,
+  checks: 35,
   verified: [
     "cron uses a private, no-user-auth worker",
     "dashboard RPC remains admin-authenticated",
@@ -197,6 +236,7 @@ console.log(JSON.stringify({
     "daily local-date overdue sweep is defined in migration and baseline SQL",
     "base and follow-on schemas accept invoice drafted status",
     "due-today first-contact reminders are scheduled, deduplicated and respect sales notification preferences",
+    "quote expiry reminders are scheduled, deduplicated and respect sales notification preferences",
     "dashboard smoke test models scalar RPC results and asserts startup invocation"
   ]
 }, null, 2));
