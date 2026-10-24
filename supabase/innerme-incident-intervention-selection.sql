@@ -285,29 +285,31 @@ begin
         end loop;
 
         with ranked as (
-            select id,
+            select source_row.id,
+                   source_row.conflict_status,
+                   source_row.expected_priority_reduction,
                    row_number() over(
                        order by
-                           case when id=v_best_id then 0 else 1 end,
-                           selection_score desc,
-                           expected_priority_reduction desc,
-                           risk_score asc,
-                           id
+                           case when source_row.id=v_best_id then 0 else 1 end,
+                           source_row.selection_score desc,
+                           source_row.expected_priority_reduction desc,
+                           source_row.risk_score asc,
+                           source_row.id
                    )::integer as rank
-            from public.innerme_incident_intervention_options
-            where incident_id=r.id
+            from public.innerme_incident_intervention_options source_row
+            where source_row.incident_id=r.id
         )
-        update public.innerme_incident_intervention_options opt_row
+        update public.innerme_incident_intervention_options
         set sequence_rank=ranked.rank,
             recommendation_status=case
-                when ranked.rank=1 and opt_row.id=v_best_id then 'recommended'
-                when opt_row.conflict_status='blocked' then 'not_recommended'
-                when ranked.rank<=3 and opt_row.expected_priority_reduction>0 then 'alternative'
+                when ranked.rank=1 and ranked.id=v_best_id then 'recommended'
+                when ranked.conflict_status='blocked' then 'not_recommended'
+                when ranked.rank<=3 and ranked.expected_priority_reduction>0 then 'alternative'
                 else 'deferred'
             end,
             updated_at=now()
         from ranked
-        where opt_row.id=ranked.id;
+        where innerme_incident_intervention_options.id=ranked.id;
 
         select jsonb_agg(
             jsonb_build_object(
