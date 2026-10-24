@@ -9901,6 +9901,135 @@ function simpleBars(items, color) {
         );
     }
 
+    function renderSalesOutcomeAnalytics() {
+        const now = Date.now();
+        const windowStart = now - 30 * 24 * 60 * 60 * 1000;
+        const timestamp = function (entry) {
+            const parsed = Date.parse(entry.contacted_at || entry.created_at || "");
+            return Number.isFinite(parsed) ? parsed : null;
+        };
+
+        const firstOutboundByLead = new Map();
+        const outboundInWindow = state.communications.filter(function (entry) {
+            const time = timestamp(entry);
+            return Boolean(entry.lead_id) &&
+                entry.direction === "outbound" &&
+                time !== null &&
+                time >= windowStart &&
+                time <= now;
+        });
+
+        outboundInWindow.forEach(function (entry) {
+            const id = String(entry.lead_id);
+            const time = timestamp(entry);
+            if (!firstOutboundByLead.has(id) || time < firstOutboundByLead.get(id)) {
+                firstOutboundByLead.set(id, time);
+            }
+        });
+
+        const responsesByLead = new Map();
+        state.communications.forEach(function (entry) {
+            if (!entry.lead_id || entry.direction !== "inbound") return;
+            const id = String(entry.lead_id);
+            const firstOutbound = firstOutboundByLead.get(id);
+            const time = timestamp(entry);
+            if (firstOutbound == null || time == null || time < firstOutbound || time > now) return;
+            if (!responsesByLead.has(id)) responsesByLead.set(id, []);
+            responsesByLead.get(id).push(entry);
+        });
+
+        const uniqueWithOutcome = function (outcome) {
+            const ids = new Set();
+            responsesByLead.forEach(function (entries, id) {
+                if (entries.some(function (entry) {
+                    return String(entry.outcome || "") === outcome;
+                })) {
+                    ids.add(id);
+                }
+            });
+            return ids.size;
+        };
+
+        const prospectsContacted = firstOutboundByLead.size;
+        const recordedReplies = responsesByLead.size;
+        const positiveReplies = uniqueWithOutcome("positive_reply");
+        const meetingsAgreed = uniqueWithOutcome("meeting_agreed");
+        const proposalsRequested = uniqueWithOutcome("proposal_requested");
+        const followUpsRequested = uniqueWithOutcome("follow_up_requested");
+        const optedOut = uniqueWithOutcome("opt_out");
+        const rate = function (count) {
+            return prospectsContacted ? (count / prospectsContacted * 100).toFixed(0) + "%" : "—";
+        };
+
+        const metrics = [
+            {
+                label: "Outbound attempts",
+                value: outboundInWindow.length,
+                hint: "Lead communications manually logged in the last 30 days."
+            },
+            {
+                label: "Unique prospects contacted",
+                value: prospectsContacted,
+                hint: "Distinct leads with an outbound log in the rolling 30-day window."
+            },
+            {
+                label: "Recorded replies",
+                value: recordedReplies + " · " + rate(recordedReplies),
+                hint: "Distinct prospects with an inbound log at or after the cohort's first outbound attempt."
+            },
+            {
+                label: "Positive replies",
+                value: positiveReplies + " · " + rate(positiveReplies),
+                hint: "Only explicit inbound outcomes marked Positive reply."
+            },
+            {
+                label: "Meetings agreed",
+                value: meetingsAgreed,
+                hint: "Distinct prospects with an inbound Meeting agreed outcome."
+            },
+            {
+                label: "Proposals requested",
+                value: proposalsRequested,
+                hint: "Distinct prospects with an inbound Proposal requested outcome."
+            },
+            {
+                label: "Follow-ups requested",
+                value: followUpsRequested,
+                hint: "Distinct prospects with an inbound Follow-up requested outcome."
+            },
+            {
+                label: "Opt-outs recorded",
+                value: optedOut,
+                hint: "Distinct prospects whose recorded response includes an opt-out outcome."
+            }
+        ];
+
+        return (
+            '<section class="sway-lead-source-panel sway-sales-outcome-panel">' +
+                '<div class="sway-lead-source-head"><div>' +
+                    '<span class="admin-label">Sales activity · rolling 30 days</span>' +
+                    "<h3>Outreach outcomes</h3>" +
+                    "<p>Use the Communication Log to record results. These are manually recorded events, not email delivery or read receipts.</p>" +
+                "</div></div>" +
+                '<div class="sway-workspace-grid">' +
+                    metrics.map(function (metric) {
+                        return (
+                            '<div class="sway-stat-card">' +
+                                '<span class="label">' + esc(metric.label) + "</span>" +
+                                '<div class="value">' + esc(String(metric.value)) + "</div>" +
+                                '<div class="hint">' + esc(metric.hint) + "</div>" +
+                            "</div>"
+                        );
+                    }).join("") +
+                "</div>" +
+                '<div class="sway-insight-note"><strong>Measurement rule:</strong> ' +
+                    "Each prospect is counted once. Reply and outcome counts require a recorded inbound message on or after that prospect's first outbound contact in the 30-day cohort. Unrecorded outcomes remain unknown; no reply is not treated as rejection. " +
+                    "No campaign-attributed conversion or revenue metric is reported until campaign membership and event dates are recorded consistently." +
+                "</div>" +
+            "</section>"
+        );
+    }
+
     function renderInsights() {
         const data = insightData();
         const labels =
@@ -10178,6 +10307,8 @@ function simpleBars(items, color) {
 
             renderRevenuePipeline() +
 
+            renderSalesOutcomeAnalytics() +
+
             '<div class="sway-insight-grid sway-bi-grid">' +
                 insightPanel(
                     "Lead-source trend",
@@ -10233,9 +10364,8 @@ function simpleBars(items, color) {
 
             '<div class="sway-insight-note">' +
                 "<strong>Data note:</strong> " +
-                "Charts update from the records currently stored in Swayphics. " +
-                "Because the current lead table stores the latest stage rather than a stage-history timeline, " +
-                "conversion movement is a current-record view, not a historical stage-change audit." +
+                "Charts update from the records currently stored in Swayphics. Outreach metrics use manually logged lead contacts and inbound outcomes; they are not send/delivery receipts. " +
+                "Lead-source and current-stage ratios remain descriptive snapshots, not acquisition-cohort conversion rates, and campaign membership is not yet separately attributed." +
             "</div>"
         );
     }
@@ -10872,6 +11002,8 @@ function simpleBars(items, color) {
             if (
                 quote.status !== "sent" ||
                 !quote.client_id ||
+                isContactOptedOut("client", quote.client_id) ||
+                (quote.lead_id && isContactOptedOut("lead", quote.lead_id)) ||
                 hasPendingFollowupForContact(
                     quote.client_id,
                     quote.lead_id
@@ -12328,13 +12460,89 @@ function simpleBars(items, color) {
     }
 
 
+    function contactCommunicationLogs(contactType, contactId) {
+        const id = String(contactId || "");
+        if (!id) return [];
+        return state.communications.filter(function (entry) {
+            return contactType === "lead"
+                ? String(entry.lead_id || "") === id
+                : contactType === "client"
+                    ? String(entry.client_id || "") === id
+                    : false;
+        });
+    }
+
+    function isContactOptedOut(contactType, contactId) {
+        const events = contactCommunicationLogs(contactType, contactId)
+            .filter(function (entry) {
+                return ["opt_out", "opt_in_confirmed"].includes(
+                    String(entry.outcome || "")
+                );
+            })
+            .sort(function (a, b) {
+                const aTime = Date.parse(a.contacted_at || a.created_at || "") || 0;
+                const bTime = Date.parse(b.contacted_at || b.created_at || "") || 0;
+                return aTime - bTime;
+            });
+        return events.length > 0 &&
+            String(events[events.length - 1].outcome || "") === "opt_out";
+    }
+
+    function contactOutreachSuppressionReason(contactType, contactId, channel) {
+        const id = String(contactId || "");
+        if (!id) return "";
+        if (isContactOptedOut(contactType, id)) {
+            return "This contact is recorded as opted out. Do not send further outreach unless a later explicit opt-in is recorded.";
+        }
+
+        if (contactType === "lead") {
+            const lead = state.leads.find(function (entry) {
+                return String(entry.id || "") === id;
+            });
+            if (lead && String(lead.contactability || "") === "invalid") {
+                return "This lead's contact route is marked invalid. Verify the route and update the qualification record before composing an email.";
+            }
+        }
+
+        if (String(channel || "").toLowerCase() === "email") {
+            const emailLogs = contactCommunicationLogs(contactType, id)
+                .filter(function (entry) {
+                    return String(entry.channel || "").toLowerCase() === "email";
+                })
+                .sort(function (a, b) {
+                    const aTime = Date.parse(a.contacted_at || a.created_at || "") || 0;
+                    const bTime = Date.parse(b.contacted_at || b.created_at || "") || 0;
+                    return aTime - bTime;
+                });
+            const latestInvalid = emailLogs.filter(function (entry) {
+                return String(entry.outcome || "") === "invalid_contact";
+            }).slice(-1)[0];
+            if (latestInvalid) {
+                const invalidAt = Date.parse(
+                    latestInvalid.contacted_at || latestInvalid.created_at || ""
+                ) || 0;
+                const laterInbound = emailLogs.some(function (entry) {
+                    const contactedAt = Date.parse(
+                        entry.contacted_at || entry.created_at || ""
+                    ) || 0;
+                    return entry.direction === "inbound" && contactedAt > invalidAt;
+                });
+                if (!laterInbound) {
+                    return "The latest recorded email outcome marks this email route as invalid. Verify the address before trying again.";
+                }
+            }
+        }
+
+        return "";
+    }
+
     function renderSalesWorkQueue() {
         const today = dashboardTodayISO();
         const items = [];
         const activeLeadStatus = function (lead) {
             return !["won", "lost", "not interested"].includes(
                 String(lead.status || "").toLowerCase()
-            );
+            ) && !isContactOptedOut("lead", lead.id);
         };
         const pendingLeadFollowups = new Set();
 
@@ -16580,16 +16788,28 @@ function simpleBars(items, color) {
         contactId,
         threadId
     ) {
+        const isReply =
+            contactType ===
+            "email-thread";
+
+        if (!isReply && (contactType === "lead" || contactType === "client") && contactId) {
+            const suppressionReason = contactOutreachSuppressionReason(
+                contactType,
+                contactId,
+                "Email"
+            );
+            if (suppressionReason) {
+                swayAlert(suppressionReason);
+                return;
+            }
+        }
+
         const modalId =
             "sway-email-composer";
 
         document.getElementById(
             modalId
         )?.remove();
-
-        const isReply =
-            contactType ===
-            "email-thread";
 
         let replyThread =
             null;
@@ -16659,6 +16879,18 @@ function simpleBars(items, color) {
                 matchingContactForEmailMessage(
                     replyInbound
                 );
+
+            if (replyContact) {
+                const suppressionReason = contactOutreachSuppressionReason(
+                    replyContact.type,
+                    replyContact.id,
+                    "Email"
+                );
+                if (suppressionReason) {
+                    swayAlert(suppressionReason);
+                    return;
+                }
+            }
         }
 
         let selectedType =
@@ -17193,6 +17425,16 @@ function simpleBars(items, color) {
                                 : null
                         )
                         : selectedContact();
+
+                const suppressionReason = contactOutreachSuppressionReason(
+                    isReply ? replyContact?.type : selectedTypeState,
+                    isReply ? replyContact?.id : contact?.id,
+                    "Email"
+                );
+                if (suppressionReason) {
+                    swayAlert(suppressionReason);
+                    return;
+                }
 
                 const message =
                     messageInput.value.trim();
@@ -18277,6 +18519,9 @@ function simpleBars(items, color) {
                             chip(item.direction || "outbound") +
                         "</td>" +
                         "<td>" +
+                            esc(String(item.outcome || "not_recorded").replace(/_/g, " ")) +
+                        "</td>" +
+                        "<td>" +
                             esc(dateTime(item.contacted_at)) +
                         "</td>" +
                         "<td>" +
@@ -18310,7 +18555,7 @@ function simpleBars(items, color) {
                 "Communication log",
                 "Keep a durable record of important client and lead conversations across every channel.",
                 state.communications.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Channel</th><th>Direction</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Channel</th><th>Direction</th><th>Outcome</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No communications logged yet. Use “Log communication” to start the relationship history.")
@@ -18620,7 +18865,7 @@ function simpleBars(items, color) {
                     '<div>' +
                         '<span class="admin-label">Acquisition</span>' +
                         "<h3>Lead source intelligence</h3>" +
-                        "<p>Compare volume, current conversion and estimated value by recorded lead source.</p>" +
+                        "<p>Pipeline snapshot by original lead source. Won share is descriptive, not a cohort conversion rate; campaign membership is not yet tracked separately.</p>" +
                     "</div>" +
                 "</div>" +
                 '<div class="sway-bi-source-overview">' +
@@ -22707,6 +22952,41 @@ function simpleBars(items, color) {
                                     "</option>"
                                 );
                             }).join("")
+                    },
+                    {
+                        key: "outcome",
+                        label: "Recorded outcome",
+                        type: "select",
+                        options:
+                            [
+                                { value: "not_recorded", label: "Not recorded" },
+                                { value: "no_reply_yet", label: "No reply yet" },
+                                { value: "positive_reply", label: "Positive reply" },
+                                { value: "neutral_reply", label: "Neutral reply" },
+                                { value: "negative_reply", label: "Negative reply" },
+                                { value: "meeting_agreed", label: "Meeting agreed" },
+                                { value: "proposal_requested", label: "Proposal requested" },
+                                { value: "follow_up_requested", label: "Follow-up requested" },
+                                { value: "opt_out", label: "Opt-out — do not contact" },
+                                { value: "opt_in_confirmed", label: "Explicit opt-in confirmed" },
+                                { value: "invalid_contact", label: "Invalid contact route" },
+                                { value: "other", label: "Other recorded outcome" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.outcome || "not_recorded")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Record only what was actually observed. Use No reply yet only after a reasonable response window; silence is not rejection. Opt-out suppresses further sales outreach unless a later explicit opt-in is logged."
                     },
                     {
                         key: "subject",
