@@ -19,6 +19,7 @@ const markdownAnswer = [
   "",
   "- First step",
   "- Second step",
+  "- Third step",
   "",
   "\u0060\u0060\u0060js",
   "const ready = true;",
@@ -486,7 +487,7 @@ async function askMockedQuestion(page) {
   }).last();
 
   assert.equal(await response.locator(".sway-ai-answer-heading").count(), 1, "Markdown heading should render");
-  assert.equal(await response.locator("ul li").count(), 2, "Markdown list items should render");
+  assert.equal(await response.locator("ul li").count(), 3, "Markdown list items should render");
   assert.equal(await response.locator('a[href="https://example.com/docs"]').count(), 1, "HTTPS link should render");
   assert.equal(await response.locator('a[href*="evil.example"]').count(), 0, "Credential-bearing URLs must not become clickable links");
   assert.ok((await response.textContent()).includes("https://trusted.example@evil.example/path"), "Rejected destinations should remain visible as inert text");
@@ -514,9 +515,9 @@ async function askMockedQuestion(page) {
   await checklistToggle.click();
   const checklist = assistantMessage.locator(".innerme-iu-checklist");
   await checklist.waitFor({ state: "visible" });
-  assert.equal(await checklist.locator('input[type="checkbox"]').count(), 2, "Action plans should offer a local checklist");
+  assert.equal(await checklist.locator('input[type="checkbox"]').count(), 3, "Action plans should offer a local checklist");
   await checklist.locator('input[type="checkbox"]').first().check();
-  assert.equal((await checklist.locator(".innerme-iu-checklist-count").textContent()).trim(), "1 of 2 complete", "Checklist should count locally checked items");
+  assert.equal((await checklist.locator(".innerme-iu-checklist-count").textContent()).trim(), "1 of 3 complete", "Checklist should count locally checked items");
   await checklistToggle.click();
   await checklist.waitFor({ state: "hidden" });
 
@@ -540,7 +541,7 @@ async function askMockedQuestion(page) {
 
   return {
     renderedHeading: true,
-    renderedListItems: 2,
+    renderedListItems: 3,
     renderedSafeLink: true,
     credentialBearingLinkBlocked: true,
     renderedCodeBlock: true,
