@@ -16,6 +16,7 @@ import {
   shouldLoadInnerMeEmailBodies,
 } from "./innerme-workspace-intelligence.mjs";
 import { compactInnerMeContextForModel, compactInnerMeContextToByteBudget, INNERME_WORKSPACE_CONTEXT_MARKER } from "./innerme-context-compaction.mjs";
+import { INNERME_INTELLIGENT_UI_FORMAT_RULES, normalizeInnerMeAnswer } from "./innerme-intelligent-ui-format.mjs";
 import {
   buildInnerMeProgressiveContext,
   planInnerMeWorkspaceRetrieval,
@@ -11528,11 +11529,9 @@ Swayphics currently operates through leads, clients, enquiries, communications, 
 - Do not treat conversation history as a substitute for current workspace data. Re-check the current workspace data on every turn.
 
 Answer the admin's question directly.
-- Format the answer for a compact chat interface: put every section heading on its own line, leave one blank line between sections, and put every list item on its own line.
-- Use the bullet character "• " for list items. Do not use asterisks for bullets.
-- Do not join a heading and its content on the same line.
-- Do not join multiple list items on one line.
-- Do not use Markdown heading markers, bold markers, code fences, or escaped Markdown characters.`;
+- Default to compact natural-language text. In plain-text mode, put each section heading and list item on its own line, use the bullet character "• ", and avoid Markdown heading markers, bold markers and code fences.
+- Follow the optional structured answer contract below only when its explicit criteria are met. It is an alternative presentation format, not a different answer or permission to invent data.
+${INNERME_INTELLIGENT_UI_FORMAT_RULES}`;
 
   async function requestGemini(model: string) {
     const progressiveWorkspaceAssemblyStartedAt = performance.now();
@@ -11680,22 +11679,6 @@ Answer the admin's question directly.
     );
   }
 
-
-  function normalizeInnerMeAnswer(value: unknown): string {
-    return String(value || "")
-      .replace(/\\([#*_[\]()>+.!-])/g, "$1")
-      .replace(/\\@/g, "@")
-      .replace(/\r\n?/g, "\n")
-      .replace(/[ \t]+\n/g, "\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .replace(/(^|\s)(\*)\s+/g, "$1• ")
-      .replace(/(^|\s)•\s+/g, "\n• ")
-      .replace(/\n\s*•/g, "\n•")
-      .replace(/\s+(?=(?:Overdue Follow-ups|Due Today|Due Tomorrow|Status and Value|Contact Information|Follow-Up Status|Communication History|Key Communication History|Proposed Scope and Recommendations|Current Status|Next Steps|Suggested Next Step)\b)/g, "\n")
-      .replace(/^(Leads Needing Follow-Up|Maisha's Touch Lead Overview)\s+/g, "$1\n\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-  }
 
   function buildInnerMeKnowledgeRetrievalPayload() {
     return {
