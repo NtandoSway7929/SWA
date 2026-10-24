@@ -23343,6 +23343,18 @@ function simpleBars(items, color) {
                     field.required && !field.disabled
                         ? " required"
                         : "";
+                const minAttribute =
+                    field.min != null
+                        ? ' min="' + esc(field.min) + '"'
+                        : "";
+                const maxAttribute =
+                    field.max != null
+                        ? ' max="' + esc(field.max) + '"'
+                        : "";
+                const stepAttribute =
+                    field.step != null
+                        ? ' step="' + esc(field.step) + '"'
+                        : "";
 
                 if (field.type === "section") {
                     return (
@@ -23373,6 +23385,7 @@ function simpleBars(items, color) {
                         '<select id="sway-field-' +
                         esc(field.key) +
                         '"' +
+                        requiredAttribute +
                         disabledAttribute +
                         ">" +
                         field.options +
@@ -23389,6 +23402,9 @@ function simpleBars(items, color) {
                         '" value="' +
                         esc(value) +
                         '"' +
+                        minAttribute +
+                        maxAttribute +
+                        stepAttribute +
                         requiredAttribute +
                         disabledAttribute +
                         ">";
@@ -23641,6 +23657,102 @@ function simpleBars(items, color) {
 
                     payload.updated_at =
                         new Date().toISOString();
+                }
+
+                if (type === "salesCampaigns") {
+                    const now = new Date().toISOString();
+                    payload.name = String(payload.name || "").trim();
+                    payload.channel = String(payload.channel || "").trim().toLowerCase();
+                    payload.target_segment = String(payload.target_segment || "unknown");
+                    payload.status = String(payload.status || "draft");
+                    payload.start_date = String(payload.start_date || dashboardTodayISO());
+                    payload.end_date = String(payload.end_date || "").trim() || null;
+                    payload.currency = String(payload.currency || "ZAR").toUpperCase();
+                    payload.budget_amount =
+                        payload.budget_amount == null || payload.budget_amount === ""
+                            ? null
+                            : Number(payload.budget_amount);
+
+                    if (!payload.name) throw new Error("Enter a campaign name.");
+                    if (!["email", "whatsapp", "facebook", "instagram", "tiktok", "website", "referral", "networking", "other"].includes(payload.channel)) {
+                        throw new Error("Select a supported campaign channel.");
+                    }
+                    if (!["unknown", "professional_services", "creative", "beauty_wellness", "food_hospitality", "retail_ecommerce", "events_entertainment", "education", "other"].includes(payload.target_segment)) {
+                        throw new Error("Select a supported target segment.");
+                    }
+                    if (!["draft", "active", "paused", "completed", "archived"].includes(payload.status)) {
+                        throw new Error("Select a supported campaign status.");
+                    }
+                    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.start_date) ||
+                        (payload.end_date && !/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.end_date))) {
+                        throw new Error("Enter valid campaign dates.");
+                    }
+                    if (payload.end_date && payload.end_date < payload.start_date) {
+                        throw new Error("The campaign end date cannot be before its start date.");
+                    }
+                    if (!["ZAR", "USD", "EUR", "GBP"].includes(payload.currency)) {
+                        throw new Error("Select a supported budget currency.");
+                    }
+                    if (payload.budget_amount != null &&
+                        (!Number.isFinite(payload.budget_amount) || payload.budget_amount < 0)) {
+                        throw new Error("Budget must be blank or a non-negative amount.");
+                    }
+                    payload.created_by = item.created_by || state.currentUser.id;
+                    payload.updated_at = now;
+                }
+
+                if (type === "salesCampaignLeads") {
+                    const campaign = state.salesCampaigns.find(function (entry) {
+                        return String(entry.id) === String(payload.campaign_id || "");
+                    });
+                    const lead = state.leads.find(function (entry) {
+                        return String(entry.id) === String(payload.lead_id || "");
+                    });
+                    if (!campaign) throw new Error("Select an existing campaign.");
+                    if (!lead) throw new Error("Select an existing lead.");
+                    payload.attribution_type = String(payload.attribution_type || "assisted");
+                    if (!["primary", "assisted"].includes(payload.attribution_type)) {
+                        throw new Error("Choose Primary acquisition or Assisted attribution.");
+                    }
+                    const linkedDate = payload.linked_at ? new Date(payload.linked_at) : new Date();
+                    if (!Number.isFinite(linkedDate.getTime())) throw new Error("Enter a valid attribution date.");
+                    payload.linked_at = linkedDate.toISOString();
+                    payload.linked_by = item.linked_by || state.currentUser.id;
+                    payload.notes = String(payload.notes || "").trim() || null;
+                }
+
+                if (type === "salesCampaignSpend") {
+                    const campaign = state.salesCampaigns.find(function (entry) {
+                        return String(entry.id) === String(payload.campaign_id || "");
+                    });
+                    if (!campaign) throw new Error("Select an existing campaign before logging spend.");
+                    payload.amount = Number(payload.amount);
+                    payload.currency = String(payload.currency || "ZAR").toUpperCase();
+                    payload.spent_on = String(payload.spent_on || "");
+                    if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+                        throw new Error("Actual campaign spend must be greater than zero.");
+                    }
+                    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.spent_on)) {
+                        throw new Error("Enter a valid spend date.");
+                    }
+                    if (!["paid_ads", "creative_production", "printing", "event_or_networking", "software", "transport", "other"].includes(String(payload.category || ""))) {
+                        throw new Error("Select a supported spend category.");
+                    }
+                    if (!["ZAR", "USD", "EUR", "GBP"].includes(payload.currency)) {
+                        throw new Error("Select a supported spend currency.");
+                    }
+                    payload.description = String(payload.description || "").trim() || null;
+                    payload.evidence_url = String(payload.evidence_url || "").trim() || null;
+                    if (payload.evidence_url) {
+                        try {
+                            const evidence = new URL(payload.evidence_url);
+                            if (!["http:", "https:"].includes(evidence.protocol)) throw new Error("Invalid URL scheme.");
+                        } catch (error) {
+                            throw new Error("Evidence URL must be a valid HTTP or HTTPS URL.");
+                        }
+                    }
+                    payload.created_by = item.created_by || state.currentUser.id;
+                    payload.updated_at = new Date().toISOString();
                 }
 
                 if (type === "leads") {
@@ -28179,6 +28291,31 @@ function simpleBars(items, color) {
                         );
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-campaign-link-lead]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    createOrEdit("salesCampaignLeads", null, {
+                        campaign_id: button.dataset.campaignLinkLead || "",
+                        attribution_type: "assisted"
+                    });
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-campaign-log-spend]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    const campaign = state.salesCampaigns.find(function (entry) {
+                        return String(entry.id) === String(button.dataset.campaignLogSpend || "");
+                    });
+                    createOrEdit("salesCampaignSpend", null, {
+                        campaign_id: button.dataset.campaignLogSpend || "",
+                        currency: campaign ? campaign.currency : "ZAR"
+                    });
+                });
             });
 
         workspace
