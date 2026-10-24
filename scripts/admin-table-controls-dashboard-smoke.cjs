@@ -736,9 +736,6 @@ async function main() {
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.method === "PATCH" && item.path === "/rest/v1/leads" && item.id === "lead-bravo"
     ), "the linked-lead patch should be intercepted by the mock");
-    assert.equal(metrics.mockedTableActionWrites.filter(item =>
-      item.method === "POST" && item.path === "/rest/v1/activity_log"
-    ).length, 8, "qualification, opt-out, campaign creation/link/spend, manual contact and confirmed bulk actions should log activity to the in-memory mock");
     assert.ok(mockActivityLog.some(item =>
       item.entity_type === "leads" && item.entity_id === "lead-contact-toggle" &&
       String(item.action || item.description || "").toLowerCase().includes("contacted")
@@ -810,6 +807,10 @@ async function main() {
     assert.ok(spendFixture, "campaign spend must persist only in the in-memory fixture");
     assert.equal(Number(spendFixture.amount), 275.5);
     assert.equal(spendFixture.currency, "ZAR");
+
+    assert.equal(metrics.mockedTableActionWrites.filter(item =>
+      item.method === "POST" && item.path === "/rest/v1/activity_log"
+    ).length, 8, "qualification, opt-out, campaign creation/link/spend, manual contact and confirmed bulk actions should log activity to the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.method === "POST" && item.path === "/rest/v1/sales_campaign_spend" &&
       item.campaign_id === campaignFixture.id && Number(item.amount) === 275.5
