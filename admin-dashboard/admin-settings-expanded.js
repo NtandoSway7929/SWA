@@ -293,15 +293,15 @@
             field("lead_no_response_days", "Fallback follow-up interval (days)", "number",
                 "Used only when a stage-specific interval has not been configured.", 'min="1" max="365" step="1" required') +
             field("stage_days_contacted", "Contacted stage interval (days)", "number",
-                "Time without a response before a follow-up task is created.", 'min="1" max="365" step="1" required') +
+                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
             field("stage_days_interested", "Interested stage interval (days)", "number",
-                "Follow-up interval while the prospect is interested.", 'min="1" max="365" step="1" required') +
+                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
             field("stage_days_proposal_sent", "Proposal sent interval (days)", "number",
-                "Follow-up interval after a proposal is sent.", 'min="1" max="365" step="1" required') +
+                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
             field("stage_days_negotiating", "Negotiating stage interval (days)", "number",
-                "Follow-up interval while terms are being discussed.", 'min="1" max="365" step="1" required') +
+                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
             field("stage_days_follow_up", "Follow-up stage interval (days)", "number",
-                "Repeat interval after an earlier follow-up task is completed.", 'min="1" max="365" step="1" required') +
+                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
             field("max_followup_attempts", "Maximum follow-up attempts", "number",
                 "After this many completed or pending attempts, flag the lead for owner review instead of creating more tasks.", 'min="1" max="20" step="1" required') +
             '<div class="swe-notice swe-wide"><strong>Manual outreach remains protected:</strong> these rules schedule tasks and in-dashboard alerts. They do not automatically send emails or WhatsApp messages.</div>';
@@ -644,11 +644,11 @@
         if (!row) throw new Error("The workflow_settings row is missing. Apply the existing business-flow SQL before using these controls.");
         var stageDays = row.followup_stage_days && typeof row.followup_stage_days === "object" ? row.followup_stage_days : {};
         var salesValues = Object.assign({}, row, {
-            stage_days_contacted: stageDays.contacted || row.lead_no_response_days || 7,
-            stage_days_interested: stageDays.interested || row.lead_no_response_days || 7,
-            stage_days_proposal_sent: stageDays["proposal sent"] || row.lead_no_response_days || 7,
-            stage_days_negotiating: stageDays.negotiating || row.lead_no_response_days || 7,
-            stage_days_follow_up: stageDays["follow-up"] || row.lead_no_response_days || 7
+            stage_days_contacted: stageDays.contacted == null ? "" : stageDays.contacted,
+            stage_days_interested: stageDays.interested == null ? "" : stageDays.interested,
+            stage_days_proposal_sent: stageDays["proposal sent"] == null ? "" : stageDays["proposal sent"],
+            stage_days_negotiating: stageDays.negotiating == null ? "" : stageDays.negotiating,
+            stage_days_follow_up: stageDays["follow-up"] == null ? "" : stageDays["follow-up"]
         });
         setFormValues(root.querySelector('[data-settings-form="sales"]'), salesValues);
         setFormValues(root.querySelector('[data-settings-form="performance"]'), row);
@@ -993,13 +993,22 @@
             var days = wholeNumber("lead_no_response_days", 1, 365, "Fallback interval");
             var responseHours = wholeNumber("new_lead_response_hours", 1, 720, "New lead response target");
             var maxAttempts = wholeNumber("max_followup_attempts", 1, 20, "Maximum follow-up attempts");
-            var stageDays = {
-                contacted: wholeNumber("stage_days_contacted", 1, 365, "Contacted interval"),
-                interested: wholeNumber("stage_days_interested", 1, 365, "Interested interval"),
-                "proposal sent": wholeNumber("stage_days_proposal_sent", 1, 365, "Proposal-sent interval"),
-                negotiating: wholeNumber("stage_days_negotiating", 1, 365, "Negotiating interval"),
-                "follow-up": wholeNumber("stage_days_follow_up", 1, 365, "Follow-up interval")
-            };
+            function optionalStageInterval(name, label) {
+                var raw = String(form.querySelector('[name="' + name + '"]').value || "").trim();
+                if (!raw) return null;
+                return wholeNumber(name, 1, 365, label);
+            }
+            var stageDays = {};
+            [
+                ["contacted", "stage_days_contacted", "Contacted interval"],
+                ["interested", "stage_days_interested", "Interested interval"],
+                ["proposal sent", "stage_days_proposal_sent", "Proposal-sent interval"],
+                ["negotiating", "stage_days_negotiating", "Negotiating interval"],
+                ["follow-up", "stage_days_follow_up", "Follow-up interval"]
+            ].forEach(function (entry) {
+                var value = optionalStageInterval(entry[1], entry[2]);
+                if (value !== null) stageDays[entry[0]] = value;
+            });
             await updateRow("workflow_settings", "id=eq.1", {
                 lead_no_response_days: days,
                 new_lead_response_hours: responseHours,
