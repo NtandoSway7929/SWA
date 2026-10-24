@@ -112,6 +112,26 @@ create table public.follow_ups (
   constraint follow_up_contact_check check (lead_id is not null or client_id is not null)
 );
 
+create table public.communication_logs (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid references public.clients(id) on delete cascade,
+  lead_id uuid references public.leads(id) on delete cascade,
+  channel text not null default 'WhatsApp'
+    check (channel in ('Email', 'WhatsApp', 'Phone', 'Meeting', 'SMS', 'Other')),
+  direction text not null default 'outbound'
+    check (direction in ('inbound', 'outbound')),
+  outcome text not null default 'not_recorded'
+    check (outcome in ('not_recorded','no_reply_yet','positive_reply','neutral_reply','negative_reply','meeting_agreed','proposal_requested','follow_up_requested','opt_out','opt_in_confirmed','invalid_contact','other')),
+  subject text,
+  message text not null,
+  contacted_at timestamptz not null default now(),
+  created_by uuid references public.admin_users(user_id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint communication_logs_contact_check
+    check (client_id is not null or lead_id is not null)
+);
+
 create table public.activity_log (
   id uuid primary key default gen_random_uuid(),
   actor_id uuid references public.admin_users(user_id) on delete set null,
@@ -158,6 +178,7 @@ alter table public.admin_users enable row level security;
 alter table public.leads enable row level security;
 alter table public.tasks enable row level security;
 alter table public.follow_ups enable row level security;
+alter table public.communication_logs enable row level security;
 alter table public.activity_log enable row level security;
 
 create policy "Local test admins can view admin users"
@@ -192,6 +213,11 @@ on public.follow_ups for all to authenticated
 using (public.is_swayphics_admin())
 with check (public.is_swayphics_admin());
 
+create policy "Local test admins can manage communication logs"
+on public.communication_logs for all to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
 create policy "Local test admins can manage activity"
 on public.activity_log for all to authenticated
 using (public.is_swayphics_admin())
@@ -199,6 +225,6 @@ with check (public.is_swayphics_admin());
 
 grant usage on schema public to anon, authenticated, service_role;
 grant select, insert, update, delete
-on public.admin_users, public.leads, public.tasks, public.follow_ups, public.activity_log
+on public.admin_users, public.leads, public.tasks, public.follow_ups, public.communication_logs, public.activity_log
 to authenticated;
 grant all privileges on all tables in schema public to service_role;
