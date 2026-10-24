@@ -533,11 +533,11 @@ async function askMockedQuestion(page) {
   const focusState = await chartToggle.evaluate(node => ({
     matches: node.matches(":focus-visible"),
     outlineStyle: getComputedStyle(node).outlineStyle,
-    outlineWidth: getComputedStyle(node).outlineWidth
+    boxShadow: getComputedStyle(node).boxShadow
   }));
   assert.equal(focusState.matches, true, "Keyboard-focused chart toggle must use :focus-visible");
-  assert.equal(focusState.outlineStyle, "solid", "Chart toggle must expose a visible keyboard focus outline");
-  assert.equal(focusState.outlineWidth, "2px", "Chart toggle focus outline must be at least two CSS pixels");
+  assert.notEqual(focusState.boxShadow, "none", "Chart toggle must expose the dashboard's visible keyboard focus ring");
+  assert.match(focusState.boxShadow, /3px/, "Chart toggle focus ring must retain the dashboard's three-pixel spread");
 
   const barRows = chart.locator(".innerme-iu-bar-row");
   assert.equal(await barRows.count(), 2, "Numeric markdown tables should have a chart view");
