@@ -385,7 +385,7 @@
         var performancePanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-performance" aria-labelledby="swe-tab-performance" data-settings-panel="performance" hidden>' +
             formCard("performance", "Monthly performance targets", "Set the outcomes you want to measure. Actuals are calculated from the current month’s lead, quote and invoice records.", performanceFields, "Save performance targets", true) +
-            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Current month scorecard</h3><p>Figures refresh from live records. Draft and archived invoices are excluded from invoiced revenue.</p></div><button type="button" class="swe-button" data-action="refresh-performance">Refresh figures</button></div>' +
+            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Current month scorecard</h3><p>Figures refresh from live records. Draft and archived invoices are excluded from invoiced revenue. Conversion is the share of this month’s new leads that are currently marked won.</p></div><button type="button" class="swe-button" data-action="refresh-performance">Refresh figures</button></div>' +
             '<div class="swe-performance-grid">' +
             '<div class="swe-stat"><span>Invoiced revenue</span><strong data-performance-actual="revenue">Loading…</strong><small data-performance-target="revenue">Target not set</small><div class="swe-progress"><span data-performance-bar="revenue"></span></div></div>' +
             '<div class="swe-stat"><span>New leads</span><strong data-performance-actual="leads">Loading…</strong><small data-performance-target="leads">Target not set</small><div class="swe-progress"><span data-performance-bar="leads"></span></div></div>' +
@@ -804,7 +804,10 @@
                 return sum + (Number(row.total) || 0);
             }, 0);
             var proposals = quotes.length;
-            var conversion = newLeads ? wins / newLeads * 100 : 0;
+            var convertedFromThisMonth = leads.filter(function (row) {
+                return String(row.status || "").toLowerCase() === "won";
+            }).length;
+            var conversion = newLeads ? convertedFromThisMonth / newLeads * 100 : 0;
             var form = root.querySelector('[data-settings-form="performance"]');
             var targets = {
                 revenue: Number(form.querySelector('[name="monthly_revenue_target"]').value) || 0,
