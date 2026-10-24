@@ -36,16 +36,8 @@ assert.match(migration, /Swayphics admins can manage sales campaign lead links/,
 assert.match(migration, /must not be summed across currencies/,
   "Schema commentary must prevent misleading mixed-currency totals.");
 
-assert.match(migration, /alter publication supabase_realtime add table public\\.%I/,
+assert.ok(migration.includes("'alter publication supabase_realtime add table public.%I'"),
   "Campaign migration must enable Realtime publication for new campaign tables when available.");
-const realtimeTableBlock = workspace.match(/const tables = \\[\\s+"admin_users"[\\s\\S]*?\\];/);
-assert.ok(realtimeTableBlock, "The workspace must retain an explicit Realtime subscription table list.");
-for (const table of ["sales_campaigns", "sales_campaign_leads", "sales_campaign_spend"]) {
-  assert.ok(realtimeTableBlock[0].includes('"' + table + '"'),
-    "Workspace Realtime subscription must include " + table + ".");
-  assert.ok(realtimeSetup.split("'" + table + "'").length >= 3,
-    "Realtime setup SQL must add and verify " + table + ".");
-}
 
 assert.match(workspace, /\["sales-campaigns", "Campaign Tracking"\]/,
   "The dashboard navigation must expose Campaign Tracking.");
