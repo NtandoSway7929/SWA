@@ -24,14 +24,21 @@
   }
 
   function parseNumericCell(value) {
-    const normalized = String(value || "").trim().replace(/\u00a0/g, " ");
+    const normalized = String(value ?? "").trim().replace(/\u00a0/g, " ");
     if (!normalized || /^(?:-|—|n\/a|not available)$/i.test(normalized)) return null;
-    const candidate = normalized.replace(/\bR\s*/i, "").replace(/[,\s]/g, "").replace(/%$/, "");
-    if (!/^-?\d+(?:\.\d+)?$/.test(candidate)) return null;
-    const number = Number(candidate);
-    return Number.isFinite(number) ? number : null;
-  }
 
+    // Tables often include units in the same cell (for example "1,500 impressions"
+    // or "3.5 percent"). Accept a conservative set of known suffixes while rejecting
+    // descriptive text that only happens to contain a number.
+    const match = normalized.match(
+      /^(-)?\s*(?:R\s*)?((?:\d{1,3}(?:[,\s]\d{3})+|\d+)(?:\.\d+)?)\s*(?:%|percent(?:age)?|impressions?|views?|customers?|users?|orders?|units?|leads?|days?|weeks?|months?|hours?|minutes?|visits?|clicks?|sales?|conversions?|points?|items?)?$/i
+    );
+    if (!match) return null;
+
+    const number = Number(match[2].replace(/[,\s]/g, ""));
+    if (!Number.isFinite(number)) return null;
+    return match[1] ? -number : number;
+  }
   function extractTableSeries(tableRows) {
     if (!Array.isArray(tableRows) || tableRows.length < 3) return null;
     const rows = tableRows.map(row => (Array.isArray(row) ? row : []).map(cell => String(cell ?? "").trim()));

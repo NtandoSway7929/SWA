@@ -10,6 +10,25 @@ assert.equal(ui.classifyText("It is not specified in the source."), "evidence");
 assert.equal(ui.parseNumericCell("R5,700"), 5700);
 assert.equal(ui.parseNumericCell("-R 300"), -300);
 assert.equal(ui.parseNumericCell("N/A"), null);
+assert.equal(ui.parseNumericCell("1,500 impressions"), 1500);
+assert.equal(ui.parseNumericCell("3.5 percent"), 3.5);
+assert.equal(ui.parseNumericCell("92%"), 92);
+assert.equal(ui.parseNumericCell("1 500 users"), 1500);
+assert.equal(ui.parseNumericCell("-2.5 percentage"), -2.5);
+assert.equal(ui.parseNumericCell("approximately 1,500"), null);
+assert.deepEqual(ui.extractTableSeries([
+  ["Metric", "Illustrative value"],
+  ["Marketing reach", "1,500 impressions"],
+  ["Conversion rate", "3.5 percent"],
+  ["Customer satisfaction", "92 percent"]
+]), {
+  title: "Illustrative value",
+  points: [
+    { label: "Marketing reach", value: 1500 },
+    { label: "Conversion rate", value: 3.5 },
+    { label: "Customer satisfaction", value: 92 }
+  ]
+});
 assert.deepEqual(ui.extractTableSeries([["Period","Subtotal"],["Discounted","R1,200"],["Full price","R4,500"],["Total","R5,700"]]), {
   title:"Subtotal", points:[{label:"Discounted",value:1200},{label:"Full price",value:4500},{label:"Total",value:5700}]
 });
