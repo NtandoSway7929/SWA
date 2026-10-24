@@ -61,7 +61,7 @@ create table if not exists public.client_projects (
     value numeric(12,2) default 0,
     due_date date,
     assigned_to uuid references public.admin_users(user_id) on delete set null,
-    payment_status text not null default 'not invoiced' check (payment_status in ('not invoiced','invoice sent','partially paid','paid','overdue')),
+    payment_status text not null default 'not invoiced' check (payment_status in ('not invoiced','invoice drafted','invoice sent','partially paid','paid','overdue')),
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
