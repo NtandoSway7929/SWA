@@ -237,7 +237,7 @@
     if (!message || message.dataset.innermeUiStructured === "1") return;
     const content = message.querySelector(".sway-ai-message-content");
     if (!content) return;
-    const rawText = (content.textContent || "").trim();
+    const rawText = String(content.innerText || content.textContent || "").trim();
     if (!rawText && !content.querySelector("table,ol,ul,pre,code")) return;
     message.dataset.innermeUiEnhanced = "1";
     const payload = parseOptInPayload(rawText);
