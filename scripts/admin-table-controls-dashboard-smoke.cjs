@@ -119,6 +119,9 @@ const invoices = [
 ];
 
 const communications = [];
+const salesCampaigns = [];
+const salesCampaignLeads = [];
+const salesCampaignSpend = [];
 
 const metrics = {
   apiReads: 0,
@@ -200,6 +203,9 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/lead_proposals") return [];
   if (url.pathname === "/rest/v1/client_documents") return [];
   if (url.pathname === "/rest/v1/communication_logs") return communications;
+  if (url.pathname === "/rest/v1/sales_campaigns") return salesCampaigns;
+  if (url.pathname === "/rest/v1/sales_campaign_leads") return salesCampaignLeads;
+  if (url.pathname === "/rest/v1/sales_campaign_spend") return salesCampaignSpend;
   if (url.pathname === "/rest/v1/lead_stage_history") return [];
   if (url.pathname === "/rest/v1/client_portal_tokens") return [];
   if (url.pathname === "/rest/v1/admin_notifications") return [];
@@ -335,6 +341,37 @@ async function main() {
           method, path: url.pathname, id: record.id,
           lead_id: record.lead_id, outcome: record.outcome
         });
+        return route.fulfill(jsonResponse([record]));
+      }
+
+      if (method === "POST" && url.pathname === "/rest/v1/sales_campaigns") {
+        const body = JSON.parse(request.postData() || "{}");
+        const record = Object.assign({
+          id: "sales-campaign-ui-test-" + (salesCampaigns.length + 1),
+          created_at: new Date().toISOString()
+        }, body);
+        salesCampaigns.push(record);
+        metrics.mockedTableActionWrites.push({ method, path: url.pathname, id: record.id, name: record.name });
+        return route.fulfill(jsonResponse([record]));
+      }
+      if (method === "POST" && url.pathname === "/rest/v1/sales_campaign_leads") {
+        const body = JSON.parse(request.postData() || "{}");
+        const record = Object.assign({
+          id: "sales-campaign-lead-ui-test-" + (salesCampaignLeads.length + 1),
+          created_at: new Date().toISOString()
+        }, body);
+        salesCampaignLeads.push(record);
+        metrics.mockedTableActionWrites.push({ method, path: url.pathname, id: record.id, campaign_id: record.campaign_id, lead_id: record.lead_id, attribution_type: record.attribution_type });
+        return route.fulfill(jsonResponse([record]));
+      }
+      if (method === "POST" && url.pathname === "/rest/v1/sales_campaign_spend") {
+        const body = JSON.parse(request.postData() || "{}");
+        const record = Object.assign({
+          id: "sales-campaign-spend-ui-test-" + (salesCampaignSpend.length + 1),
+          created_at: new Date().toISOString()
+        }, body);
+        salesCampaignSpend.push(record);
+        metrics.mockedTableActionWrites.push({ method, path: url.pathname, id: record.id, campaign_id: record.campaign_id, amount: record.amount, currency: record.currency });
         return route.fulfill(jsonResponse([record]));
       }
 
@@ -701,7 +738,7 @@ async function main() {
     ), "the linked-lead patch should be intercepted by the mock");
     assert.equal(metrics.mockedTableActionWrites.filter(item =>
       item.method === "POST" && item.path === "/rest/v1/activity_log"
-    ).length, 5, "the qualification edit, communication opt-out, manual contacted mark and confirmed bulk actions should log activity to the in-memory mock");
+    ).length, 8, "qualification, opt-out, campaign creation/link/spend, manual contact and confirmed bulk actions should log activity to the in-memory mock");
     assert.ok(mockActivityLog.some(item =>
       item.entity_type === "leads" && item.entity_id === "lead-contact-toggle" &&
       String(item.action || item.description || "").toLowerCase().includes("contacted")
@@ -719,6 +756,77 @@ async function main() {
     await page.locator('[data-admin-table-filter="tasks"]').selectOption("all");
     assert.equal(await page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').count(), 3,
       "all task records should remain available after mock completion");
+
+    // Exercise the campaign editor, lead attribution, and actual-spend ledger
+    // through the live dashboard UI. Every write remains in synthetic arrays.
+    await page.locator('[data-view="sales-campaigns"]').first().click();
+    await page.locator('#sway-workspace-main button[data-add="salesCampaigns"]').waitFor({ state: "visible", timeout: 10000 });
+    await page.locator('#sway-workspace-main button[data-add="salesCampaigns"]').click();
+    const campaignModal = page.locator(".sway-modal");
+    await campaignModal.locator("#sway-field-name").fill("Synthetic Website Outreach");
+    await campaignModal.locator("#sway-field-channel").selectOption("facebook");
+    await campaignModal.locator("#sway-field-target_segment").selectOption("creative");
+    await campaignModal.locator("#sway-field-status").selectOption("active");
+    await campaignModal.locator("#sway-field-start_date").fill(dateOffset(0));
+    await campaignModal.locator("#sway-field-currency").selectOption("ZAR");
+    await campaignModal.locator("#sway-field-budget_amount").fill("1500.50");
+    await campaignModal.locator("#sway-field-objective").fill("Synthetic test of website-proposal outreach.");
+    await campaignModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-name"), { timeout: 15000 });
+    const campaignFixture = salesCampaigns.find(item => item.name === "Synthetic Website Outreach");
+    assert.ok(campaignFixture, "campaign creation must save only to the in-memory test fixture");
+    assert.equal(campaignFixture.channel, "facebook");
+    assert.equal(campaignFixture.status, "active");
+    assert.equal(Number(campaignFixture.budget_amount), 1500.5);
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "POST" && item.path === "/rest/v1/sales_campaigns" && item.name === "Synthetic Website Outreach"
+    ), "campaign creation must be intercepted by the in-memory mock");
+
+    await page.locator('#sway-workspace-main button[data-add="salesCampaignLeads"]').click();
+    const linkModal = page.locator(".sway-modal");
+    await linkModal.locator("#sway-field-campaign_id").selectOption(campaignFixture.id);
+    await linkModal.locator("#sway-field-lead_id").selectOption("lead-bravo");
+    await linkModal.locator("#sway-field-attribution_type").selectOption("primary");
+    await linkModal.locator("#sway-field-notes").fill("Synthetic fixture: campaign is the recorded primary acquisition source.");
+    await linkModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-campaign_id"), { timeout: 15000 });
+    const campaignLeadFixture = salesCampaignLeads.find(item =>
+      item.campaign_id === campaignFixture.id && item.lead_id === "lead-bravo"
+    );
+    assert.ok(campaignLeadFixture, "campaign-to-lead attribution must persist only in the in-memory fixture");
+    assert.equal(campaignLeadFixture.attribution_type, "primary");
+
+    await page.locator('#sway-workspace-main button[data-add="salesCampaignSpend"]').click();
+    const spendModal = page.locator(".sway-modal");
+    await spendModal.locator("#sway-field-campaign_id").selectOption(campaignFixture.id);
+    await spendModal.locator("#sway-field-spent_on").fill(dateOffset(0));
+    await spendModal.locator("#sway-field-category").selectOption("paid_ads");
+    await spendModal.locator("#sway-field-amount").fill("275.50");
+    await spendModal.locator("#sway-field-currency").selectOption("ZAR");
+    await spendModal.locator("#sway-field-description").fill("Synthetic paid-ad spend fixture.");
+    await spendModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-amount"), { timeout: 15000 });
+    const spendFixture = salesCampaignSpend.find(item => item.campaign_id === campaignFixture.id);
+    assert.ok(spendFixture, "campaign spend must persist only in the in-memory fixture");
+    assert.equal(Number(spendFixture.amount), 275.5);
+    assert.equal(spendFixture.currency, "ZAR");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "POST" && item.path === "/rest/v1/sales_campaign_spend" &&
+      item.campaign_id === campaignFixture.id && Number(item.amount) === 275.5
+    ), "spend creation must be intercepted by the in-memory mock");
+
+    const campaignWorkspaceText = await page.locator("#sway-workspace-main").innerText();
+    assert.match(campaignWorkspaceText, /Synthetic Website Outreach/);
+    assert.match(campaignWorkspaceText, /Primary/);
+    assert.match(campaignWorkspaceText, /275\.50/);
+    assert.match(campaignWorkspaceText, /currently won|Current won status/i,
+      "campaign page must label present CRM status separately from historical cohort conversion");
+    assert.match(campaignWorkspaceText, /not proof that a campaign caused a sale/i,
+      "campaign attribution page must disclose the limits of causal conversion claims");
+
+    await navigate("tasks", "delivery");
+    assert.equal(await page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').count(), 3,
+      "campaign workflow should return to the task table without altering task fixtures");
 
     // Keep the real Tasks view open while shrinking the viewport. The dashboard
     // sidebar intentionally becomes off-canvas on mobile, so this isolates the
@@ -767,8 +875,8 @@ async function main() {
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
-    assert.equal(metrics.mockedTableActionWrites.length, 11,
-      "only expected qualification, communication, lead-contact, task, follow-up and activity-log writes should be captured by the in-memory mock");
+    assert.equal(metrics.mockedTableActionWrites.length, 17,
+      "only expected qualification, communication, campaign, lead-contact, task, follow-up and activity-log writes should be captured by the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
       item.id === "lead-contact-toggle" && item.contacted_manually === true),
@@ -797,6 +905,8 @@ async function main() {
         "actual Leads, Follow-ups and Tasks views render synthetic records",
         "qualification editor shows Unknown/Unassessed defaults and stores human-reviewed fields only in the in-memory mock",
         "communication outcome defaults to Not recorded, opt-out persists to synthetic data and suppresses the lead email composer",
+        "campaign creation, primary lead attribution and per-currency spend ledger persist only to synthetic data",
+        "campaign page distinguishes current lead status from verified cohort conversion",
         "lead email search, status filter and business-name sort",
         "visible-row selection, clear selection and formula-safe CSV download",
         "follow-up status filter and task priority sort/status filter",
