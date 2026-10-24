@@ -9392,6 +9392,7 @@ function simpleBars(items, color) {
         const stages = [
             "new",
             "contacted",
+            "follow-up",
             "interested",
             "proposal sent",
             "negotiating",
@@ -9970,6 +9971,7 @@ function simpleBars(items, color) {
         const leadStages = [
             "new",
             "contacted",
+            "follow-up",
             "interested",
             "proposal sent",
             "negotiating",
@@ -18357,6 +18359,7 @@ function simpleBars(items, color) {
         const stages = [
             "new",
             "contacted",
+            "follow-up",
             "interested",
             "proposal sent",
             "negotiating",
@@ -21082,6 +21085,7 @@ function simpleBars(items, color) {
                             [
                                 "new",
                                 "contacted",
+                                "follow-up",
                                 "interested",
                                 "proposal sent",
                                 "negotiating",
@@ -23213,7 +23217,6 @@ function simpleBars(items, color) {
                     }),
                     body:
                         JSON.stringify({
-                            status: "contacted",
                             last_contacted_at:
                                 new Date().toISOString(),
                             next_follow_up:
@@ -23225,7 +23228,7 @@ function simpleBars(items, color) {
 
         await logActivity(
             followup && followup.lead_id
-                ? "Completed lead follow-up and returned lead to active pipeline"
+                ? "Completed lead follow-up; retained current lead status"
                 : "Completed follow-up",
             "follow_ups",
             id

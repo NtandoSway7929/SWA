@@ -32,6 +32,24 @@ assert.match(workspaceSource, /contactStatus\.source === "communication"[\s\S]*?
     "leads with outbound communication records should be distinguished from manual contact marks");
 assert.match(workspaceSource, /contactStatus\.contacted \? "Undo contacted mark" : "Mark as contacted"/,
     "the lead contact action should offer the correct mark or undo label");
+
+const leadServiceFieldIndex = workspaceSource.indexOf('key: "service_interest"');
+const leadStatusFieldIndex = workspaceSource.indexOf('key: "status"', leadServiceFieldIndex);
+assert.ok(leadServiceFieldIndex >= 0 && leadStatusFieldIndex > leadServiceFieldIndex,
+    "the lead editor must expose an explicit status selector");
+const leadStatusEditorSource = workspaceSource.slice(leadStatusFieldIndex, leadStatusFieldIndex + 900);
+assert.match(leadStatusEditorSource, /"follow-up"/,
+    "the lead status selector must preserve the existing follow-up status instead of defaulting to new");
+const followupCompletionSource = workspaceSource.slice(
+    workspaceSource.indexOf("async function completeFollowup"),
+    workspaceSource.indexOf("async function markLeadNotInterested")
+);
+assert.ok(followupCompletionSource.includes("last_contacted_at"),
+    "completing a lead follow-up must record when contact happened");
+assert.match(followupCompletionSource, /next_follow_up:[\s\S]{0,80}null/,
+    "completing a scheduled follow-up should clear its now-completed lead-level due date");
+assert.doesNotMatch(followupCompletionSource, /status:\s*"contacted"/,
+    "completing a follow-up task must not overwrite the lead's sales status");
 assert.match(workspaceSource, /querySelectorAll\("\[data-toggle-lead-contacted\]"\)/,
     "the existing lead-contact click handler should bind the restored action");
 
