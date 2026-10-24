@@ -34,6 +34,8 @@ test("sales controls expose response SLA, stage intervals and an attempt cap", (
   assert.ok(migration.includes("'lead.followup_limit'"));
   assert.ok(migration.includes("'lead.response_overdue'"));
   assert.ok(migration.includes("l.created_at <= now() - make_interval(hours => v_response_hours)"));
+  assert.ok(migration.includes("l.last_contacted_at <= now() - make_interval("), "stage-specific scheduling must preserve the full elapsed no-response interval");
+  assert.ok(baseline.includes("l.last_contacted_at <= now() - make_interval("), "baseline worker must preserve the full elapsed no-response interval");
 });
 
 test("monthly targets are saved and current-month actuals use live leads, quotes and invoices", () => {
