@@ -21179,6 +21179,33 @@ function simpleBars(items, color) {
                         help: "Choose the best-evidenced segment. Keep Unknown when public information is insufficient."
                     },
                     {
+                        key: "service_fit",
+                        label: "Service fit and capacity",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown / not assessed" },
+                                { value: "fits_current_capacity", label: "Fits current scope and capacity" },
+                                { value: "capacity_limited", label: "Fits scope, but capacity is constrained" },
+                                { value: "outside_scope", label: "Outside current scope" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.service_fit || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Use Fits only when the requested work matches Swayphics capabilities and available capacity. If timing/capacity is uncertain, keep Unknown or mark Capacity limited."
+                    },
+                    {
                         key: "website_need",
                         label: "Website need",
                         type: "select",
@@ -23063,6 +23090,7 @@ function simpleBars(items, color) {
 
                     const qualificationDefaults = {
                         business_segment: "unknown",
+                        service_fit: "unknown",
                         website_need: "unknown",
                         contactability: "unknown",
                         buying_signal: "unknown",
