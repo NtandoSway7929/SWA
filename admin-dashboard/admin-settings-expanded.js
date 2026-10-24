@@ -22,7 +22,8 @@
         ["security", "Account & security"],
         ["preferences", "Dashboard preferences"],
         ["website", "Website & reputation"],
-        ["innerme", "InnerMe operations"]
+        ["innerme", "InnerMe operations"],
+        ["governance", "Governance & audit"]
     ];
 
     var DEFAULT_NOTIFICATIONS = {
