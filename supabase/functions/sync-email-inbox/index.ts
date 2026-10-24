@@ -108,7 +108,7 @@ function stripHtml(value: string) {
     .trim();
 }
 
-function findMimePart(node: any, types: string[]) {
+function findMimePart(node: any, types: string[]): any | null {
   if (!node) return null;
 
   const nodeType =
