@@ -122,7 +122,7 @@ async function main() {
       gemini_key_configured: configured === true,
       health_response: health ?? { error: "Response body was not valid JSON." },
     };
-    process.stdout.write(JSON.stringify(report, null, 2) + "\\n");
+    process.stdout.write(JSON.stringify(report, null, 2) + "\n");
     if (report.status !== "passed") process.exitCode = 1;
     return;
   }
