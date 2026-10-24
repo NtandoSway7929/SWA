@@ -68,6 +68,22 @@ Deno.test("query planning skips unrelated tables for routine chat", () => {
   );
 });
 
+Deno.test("workspace-health probe loads operational collections without business-brain reads", () => {
+  const plan = planInnerMeWorkspaceRetrieval({
+    action: "innerme_workspace_read_health",
+    message: "Read-only preflight for the isolated structured-answer evaluation.",
+  });
+  assert(plan.profile === "health_probe", "health probe must use its dedicated query profile");
+  assert(plan.collections.length === 13, "health probe must query all bounded operational collections");
+  for (const collection of ["leads", "projects", "email_messages"]) {
+    assert(plan.collections.includes(collection), "health probe must validate " + collection);
+  }
+  assert(
+    plan.businessBrainCollections.length === 0,
+    "health probe must not query business-brain collections",
+  );
+});
+
 Deno.test("query planning loads only an invoice topic and its linked evidence", () => {
   const plan = planInnerMeWorkspaceRetrieval({
     action: "assistant_chat",
