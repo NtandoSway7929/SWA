@@ -23683,8 +23683,8 @@ function simpleBars(items, color) {
                     if (!["draft", "active", "paused", "completed", "archived"].includes(payload.status)) {
                         throw new Error("Select a supported campaign status.");
                     }
-                    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.start_date) ||
-                        (payload.end_date && !/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.end_date))) {
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.start_date) ||
+                        (payload.end_date && !/^\d{4}-\d{2}-\d{2}$/.test(payload.end_date))) {
                         throw new Error("Enter valid campaign dates.");
                     }
                     if (payload.end_date && payload.end_date < payload.start_date) {
@@ -23732,7 +23732,7 @@ function simpleBars(items, color) {
                     if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
                         throw new Error("Actual campaign spend must be greater than zero.");
                     }
-                    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.spent_on)) {
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.spent_on)) {
                         throw new Error("Enter a valid spend date.");
                     }
                     if (!["paid_ads", "creative_production", "printing", "event_or_networking", "software", "transport", "other"].includes(String(payload.category || ""))) {
