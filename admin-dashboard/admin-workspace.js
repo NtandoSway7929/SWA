@@ -12421,10 +12421,10 @@ function simpleBars(items, color) {
         });
 
         const queue = items.map(function (item) {
-            return '<article class="sway-sales-queue-item">' +
-                '<div class="sway-sales-queue-copy"><strong>' + esc(item.title) +
-                '</strong><span>' + esc(item.detail) + '</span></div>' +
-                '<div class="sway-sales-queue-action">' + item.action + '</div></article>';
+            return '<article class="sway-sales-queue-item" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid var(--border,rgba(0,32,150,.14));border-radius:14px;background:var(--surface,#fff);margin-bottom:10px;">' +
+                '<div class="sway-sales-queue-copy" style="display:grid;gap:5px;min-width:0;overflow-wrap:anywhere;"><strong>' + esc(item.title) +
+                '</strong><span style="color:var(--text-muted,#667085);font-size:.82rem;line-height:1.5;">' + esc(item.detail) + '</span></div>' +
+                '<div class="sway-sales-queue-action" style="flex:0 0 auto;">' + item.action + '</div></article>';
         }).join("");
 
         return heading(
@@ -12434,7 +12434,7 @@ function simpleBars(items, color) {
             "Sales work queue",
             "A read-only daily view of overdue follow-ups, proposals awaiting a response, and active prospects without a recorded next action. Opening this view does not send messages or change records.",
             items.length
-                ? '<div class="sway-sales-queue">' + queue + '</div>'
+                ? '<div class="sway-sales-queue" style="display:grid;gap:10px;">' + queue + '</div>'
                 : empty("No sales actions are due based on the records currently loaded. Check Leads and Follow-ups if you expected an item here.")
         ) + '<div class="sway-inline-note">Priority is based on recorded status and dates, not an AI prediction of who will buy. Keep each lead\'s next action and follow-up date current.</div>';
     }
