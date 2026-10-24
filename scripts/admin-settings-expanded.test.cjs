@@ -27,7 +27,8 @@ test("all eight settings sections are mounted and navigable", () => {
     "security", "preferences", "website", "innerme"
   ]) {
     assert.match(settingsScript, new RegExp('data-settings-panel="' + section + '"'));
-    assert.match(settingsScript, new RegExp('data-settings-tab="' + section + '"'));
+    assert.match(settingsScript, /data-settings-tab=.*section\[0\]/);
+    assert.ok(settingsScript.includes('["' + section + '"'), "missing navigation entry for " + section);
   }
   assert.match(settingsScript, /sway-admin-greeting-form/);
   assert.match(settingsScript, /MutationObserver/);
