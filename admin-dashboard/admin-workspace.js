@@ -12379,7 +12379,7 @@ function simpleBars(items, color) {
                                 )
                             ) +
                         "</td>" +
-                        "<td>" +
+                        '<td class="sway-lead-value-cell">' +
                             esc(
                                 money(
                                     item.estimated_value
