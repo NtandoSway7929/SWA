@@ -585,11 +585,11 @@ async function main() {
 
     await navigate("leads", "crm");
     const updatedLeadRows = page.locator('#sway-workspace-main [data-admin-table-row="leads"]');
-    await page.locator('[data-admin-table-filter="leads"]').selectOption("contacted");
+    await page.locator('[data-admin-table-filter="leads"]').selectOption("follow-up");
     assert.equal(await updatedLeadRows.count(), 1,
-      "only the linked contacted lead should match the Contacted filter");
+      "only the linked follow-up-stage lead should match the Follow-up filter");
     assert.ok((await updatedLeadRows.first().innerText()).includes("Bravo Cafe"),
-      "the linked lead row should reflect the update");
+      "the linked lead row should retain its follow-up status after task completion");
 
     await navigate("tasks", "delivery");
     await page.locator('[data-admin-table-filter="tasks"]').selectOption("all");
