@@ -108,6 +108,9 @@ jobs:
           cp "$GITHUB_WORKSPACE/supabase/swayphics-sales-campaign-attribution.sql" \
             "supabase/migrations/20261024030000_sales_campaign_attribution.sql"
           "$CLI" start
+          # Explicitly reset the throwaway local database so the migration files
+          # above are actually applied before authenticated persistence/RLS tests.
+          "$CLI" db reset --local --yes
           "$CLI" status --output env > "$RUNNER_TEMP/local-supabase.env"
 
           set -a
