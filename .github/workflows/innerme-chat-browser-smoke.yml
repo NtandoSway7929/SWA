@@ -9,6 +9,9 @@ on:
       - "admin-dashboard/index.html"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/innerme-intelligent-ui.js"
+      - "admin-dashboard/innerme-intelligent-ui.css"
+      - "scripts/innerme-intelligent-ui.test.mjs"
       - "admin-dashboard/admin-welcome.css"
       - "admin-dashboard/admin-welcome.js"
       - "scripts/innerme-chat-browser-smoke.cjs"
@@ -21,6 +24,9 @@ on:
       - "admin-dashboard/index.html"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/innerme-intelligent-ui.js"
+      - "admin-dashboard/innerme-intelligent-ui.css"
+      - "scripts/innerme-intelligent-ui.test.mjs"
       - "scripts/innerme-chat-browser-smoke.cjs"
       - "scripts/admin-welcome-auth.test.cjs"
       - ".github/workflows/innerme-chat-browser-smoke.yml"
@@ -57,6 +63,12 @@ jobs:
           test -s admin-dashboard/admin-welcome.css
           grep -q 'admin-welcome.css' admin-dashboard/index.html
           grep -q 'admin-welcome.js' admin-dashboard/index.html
+
+      - name: Test InnerMe Intelligent UI contract and adaptive rendering
+        run: |
+          set -euo pipefail
+          node --check admin-dashboard/innerme-intelligent-ui.js
+          node scripts/innerme-intelligent-ui.test.mjs
 
       - name: Install pinned Playwright
         run: npm install --prefix /tmp/innerme-playwright playwright@1.55.0 --no-audit --no-fund
