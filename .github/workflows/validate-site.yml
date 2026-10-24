@@ -33,6 +33,9 @@ jobs:
       - name: Test dashboard automation integrity
         run: node scripts/admin-automation-integrity.test.cjs
 
+      - name: Test dashboard business controls and governance
+        run: node scripts/admin-dashboard-business-controls.test.cjs
+
       - name: Test admin table controls
         run: node scripts/admin-table-controls.test.cjs
 
