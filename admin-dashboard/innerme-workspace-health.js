@@ -203,7 +203,7 @@
       }
 
       const data = await response.json().catch(() => null);
-      const requestId = response.headers.get("x-innerme-request-id") || "";
+      const requestId = response.headers.get("x-innerme-request-id") || (data && data.request_id) || "";
       if (!data || typeof data !== "object") {
         showError(response.status, "The health endpoint returned a non-JSON response (HTTP " + response.status + ").");
         return;
