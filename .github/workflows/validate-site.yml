@@ -27,6 +27,9 @@ jobs:
       - name: Test admin table controls
         run: node scripts/admin-table-controls.test.cjs
 
+      - name: Test sales work queue
+        run: node scripts/sales-work-queue-static.test.cjs
+
       - name: Validate inline JavaScript
         shell: bash
         run: |
