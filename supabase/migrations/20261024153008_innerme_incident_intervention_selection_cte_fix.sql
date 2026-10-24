@@ -11,7 +11,8 @@ BEGIN
   )
   INTO function_ddl;
 
-  IF position('update public.innerme_incident_intervention_options opt_rowpt_row' IN function_ddl) = 0 THEN
+  IF position('update public.innerme_incident_intervention_options opt_rowpt_row' IN function_ddl) = 0
+     AND position('update public.innerme_incident_intervention_options opt_row' IN function_ddl) = 0 THEN
     RAISE EXCEPTION 'Expected stale intervention-selection alias was not found; aborting repair.';
   END IF;
 
@@ -45,6 +46,11 @@ BEGIN
   function_ddl := replace(
     function_ddl,
     'update public.innerme_incident_intervention_options opt_rowpt_row',
+    'update public.innerme_incident_intervention_options'
+  );
+  function_ddl := replace(
+    function_ddl,
+    'update public.innerme_incident_intervention_options opt_row',
     'update public.innerme_incident_intervention_options'
   );
   function_ddl := replace(
