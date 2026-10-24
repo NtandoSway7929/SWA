@@ -168,7 +168,7 @@ async function main() {
       token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
       body: [
         { id: ids.campaignId, name: "CI Campaign One", channel: "facebook", target_segment: "creative", status: "active", start_date: "2026-10-01", currency: "ZAR", budget_amount: 500, created_by: admin.id },
-        { id: ids.secondCampaignId, name: "CI Campaign Two", channel: "email", target_segment: "unknown", status: "draft", start_date: "2026-10-10", currency: "ZAR", created_by: admin.id }
+        { id: ids.secondCampaignId, name: "CI Campaign Two", channel: "email", target_segment: "unknown", status: "draft", start_date: "2026-10-10", currency: "ZAR", budget_amount: null, created_by: admin.id }
       ]
     });
     await rest("POST", "sales_campaign_leads", "", {
