@@ -765,6 +765,12 @@
                     created_at: "gte." + bounds.startIso,
                     limit: "1000"
                 }),
+                getRows("leads", {
+                    select: "id,status,updated_at",
+                    status: "eq.won",
+                    updated_at: "gte." + bounds.startIso,
+                    limit: "1000"
+                }),
                 getRows("quotes", {
                     select: "id,status,created_at,amount",
                     created_at: "gte." + bounds.startIso,
@@ -780,19 +786,19 @@
             var leads = result[0].filter(function (row) {
                 return row.created_at < bounds.endIso;
             });
-            var quotes = result[1].filter(function (row) {
+            var winsThisMonth = result[1].filter(function (row) {
+                return row.updated_at >= bounds.startIso && row.updated_at < bounds.endIso;
+            }).length;
+            var quotes = result[2].filter(function (row) {
                 return row.created_at < bounds.endIso && String(row.status || "").toLowerCase() !== "draft";
             });
-            var invoices = result[2].filter(function (row) {
+            var invoices = result[3].filter(function (row) {
                 return row.issue_date >= bounds.startDate && row.issue_date < bounds.endDate &&
                     row.archived !== true &&
                     !["draft", "cancelled", "void"].includes(String(row.status || "").toLowerCase());
             });
             var newLeads = leads.length;
-            var wins = leads.filter(function (row) {
-                return String(row.status || "").toLowerCase() === "won" &&
-                    row.updated_at >= bounds.startIso && row.updated_at < bounds.endIso;
-            }).length;
+            var wins = winsThisMonth;
             var revenue = invoices.reduce(function (sum, row) {
                 return sum + (Number(row.total) || 0);
             }, 0);
@@ -917,9 +923,9 @@
                 loadNotifications(root, identity.user.id),
                 loadPreferences(root, identity.user.id),
                 loadTemplates(root),
-                loadPerformance(root),
                 loadGovernance(root)
             ]);
+            await loadPerformance(root);
             var errors = results.filter(function (result) { return result.status === "rejected"; });
             if (errors.length) {
                 var details = errors.map(function (result) {
