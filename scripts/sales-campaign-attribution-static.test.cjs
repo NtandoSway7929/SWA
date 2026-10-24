@@ -15,7 +15,7 @@ const dbTest = fs.readFileSync(path.join(root, "scripts", "admin-table-controls-
 for (const table of ["sales_campaigns", "sales_campaign_leads", "sales_campaign_spend"]) {
   assert.match(migration, new RegExp("create table if not exists public\\." + table), "Migration must create " + table + ".");
   assert.match(bootstrap, new RegExp("create table if not exists public\\." + table), "Bootstrap schema must include " + table + ".");
-  assert.match(localSchema, new RegExp("create table public\\." + table), "Disposable schema must include " + table + ".");
+  assert.match(localSchema, new RegExp("create table(?: if not exists)? public\\." + table), "Disposable schema must include " + table + ".");
   assert.match(migration, new RegExp("alter table public\\." + table + " enable row level security"), table + " must enable RLS in migration.");
   assert.match(localSchema, new RegExp("alter table public\\." + table + " enable row level security"), table + " must enable RLS in disposable schema.");
 }
