@@ -71,8 +71,15 @@ create or replace function public.create_admin_notification(
 returns void
 language plpgsql
 security definer
-set search_path = public
-as $$
+set search_path = ''
+as $
+declare
+    v_in_app_enabled boolean;
+    v_sales_enabled boolean;
+    v_finance_enabled boolean;
+    v_delivery_enabled boolean;
+    v_innerme_enabled boolean;
+    v_event text := lower(coalesce(p_event_type, ''));
 begin
     if p_recipient_id is null then
         return;
@@ -91,35 +98,77 @@ begin
         return;
     end if;
 
+    select
+        in_app_notifications_enabled,
+        notify_sales,
+        notify_finance,
+        notify_delivery,
+        notify_innerme
+    into
+        v_in_app_enabled,
+        v_sales_enabled,
+        v_finance_enabled,
+        v_delivery_enabled,
+        v_innerme_enabled
+    from public.admin_notification_preferences
+    where user_id = p_recipient_id;
+
+    if coalesce(v_in_app_enabled, true) is false then
+        return;
+    end if;
+
+    if (
+        v_event like 'lead.%'
+        or v_event like 'enquiry.%'
+        or v_event like 'website_enquiry.%'
+        or v_event like 'followup.%'
+        or v_event like 'task.%'
+        or v_event like 'quote.%'
+    ) and coalesce(v_sales_enabled, true) is false then
+        return;
+    end if;
+
+    if (
+        v_event like 'invoice.%'
+        or v_event like 'payment.%'
+        or v_event like 'finance.%'
+    ) and coalesce(v_finance_enabled, true) is false then
+        return;
+    end if;
+
+    if (
+        v_event like 'email.%'
+        or v_event like 'review.%'
+        or v_event like 'delivery.%'
+        or v_event like 'project.%'
+        or v_event like 'document.%'
+        or v_event like 'portal.%'
+    ) and coalesce(v_delivery_enabled, true) is false then
+        return;
+    end if;
+
+    if (
+        v_event like 'innerme.%'
+        or v_event like 'provider.%'
+        or v_event like 'ai.%'
+    ) and coalesce(v_innerme_enabled, true) is false then
+        return;
+    end if;
+
     insert into public.admin_notifications (
-        recipient_id,
-        actor_id,
-        type,
-        event_type,
-        title,
-        message,
-        entity_type,
-        entity_id,
-        view,
-        dedupe_key
+        recipient_id, actor_id, type, event_type, title, message,
+        entity_type, entity_id, view, dedupe_key
     )
     values (
-        p_recipient_id,
-        p_actor_id,
-        coalesce(p_type, 'info'),
-        p_event_type,
-        p_title,
-        coalesce(p_message, ''),
-        p_entity_type,
-        p_entity_id,
-        p_view,
-        p_dedupe_key
+        p_recipient_id, p_actor_id, coalesce(p_type, 'info'), p_event_type,
+        p_title, coalesce(p_message, ''), p_entity_type, p_entity_id,
+        p_view, p_dedupe_key
     )
     on conflict (recipient_id, dedupe_key)
     where dedupe_key is not null
     do nothing;
 end;
-$$;
+$;
 
 create or replace function public.notify_admins(
     p_actor_id uuid,
