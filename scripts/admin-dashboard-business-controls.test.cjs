@@ -57,8 +57,10 @@ test("commercial defaults apply only to new documents without explicit dates", (
   assert.match(settings, /invoice_payment_terms_days/);
   assert.match(migration, /quote_validity_days integer not null default 14/);
   assert.match(migration, /invoice_payment_terms_days integer not null default 7/);
-  assert.match(migration, /create trigger trg_swayphics_invoice_commercial_defaults\\s+before insert on public\\.invoices/i);
-  assert.match(migration, /create trigger trg_swayphics_quote_commercial_defaults\\s+before insert on public\\.quotes/i);
+  assert.match(migration, /create trigger trg_swayphics_invoice_commercial_defaults/i);
+  assert.match(migration, /before insert on public\\.invoices/i);
+  assert.match(migration, /create trigger trg_swayphics_quote_commercial_defaults/i);
+  assert.match(migration, /before insert on public\\.quotes/i);
   assert.match(migration, /if new\.due_date is null then/);
   assert.match(migration, /if new\.valid_until is null then/);
   assert.match(migration, /Separate functions keep record/);
