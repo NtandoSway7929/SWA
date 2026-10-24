@@ -332,7 +332,7 @@ async function main() {
       }
       if (method === "POST" && url.pathname === "/rest/v1/rpc/process_swayphics_stale_leads") {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });
-        return route.fulfill(jsonResponse([]));
+        return route.fulfill(jsonResponse(0));
       }
       if (method === "POST" && url.pathname === "/rest/v1/services") {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });
@@ -664,6 +664,9 @@ async function main() {
       "unexpected outbound requests were blocked: " + JSON.stringify(metrics.unexpectedExternalRequests));
     assert.equal(metrics.pageErrors.length, 0,
       "uncaught browser errors were observed: " + JSON.stringify(metrics.pageErrors));
+
+    assert.ok(metrics.mockedStartupCalls.some(item => item.path === "/rest/v1/rpc/process_swayphics_stale_leads"),
+      "dashboard startup must invoke the stale-lead automation against the isolated mock");
 
     const summary = {
       result: "PASS",
