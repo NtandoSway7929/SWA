@@ -526,7 +526,13 @@ async function askMockedQuestion(page) {
   await chartToggle.click();
   const chart = assistantMessage.locator(".innerme-iu-chart");
   await chart.waitFor({ state: "visible" });
-  assert.equal(await chart.locator(".innerme-iu-bar-row").count(), 2, "Numeric markdown tables should have a chart view");
+  const barRows = chart.locator(".innerme-iu-bar-row");
+  assert.equal(await barRows.count(), 2, "Numeric markdown tables should have a chart view");
+  assert.deepEqual(
+    await barRows.locator(".innerme-iu-bar-label").allTextContents(),
+    ["SSE", "Markdown"],
+    "Chart bars must preserve the metric labels from the first table column"
+  );
   await chartToggle.click();
   await chart.waitFor({ state: "hidden" });
 
