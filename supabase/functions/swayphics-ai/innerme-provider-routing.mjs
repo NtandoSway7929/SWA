@@ -69,3 +69,21 @@ export function isCloudflareEligibleWritingRequest(value, history, focusedRecord
   if (/\b(?:R\s?\d|ZAR|invoice|payment|financial|lead|client|customer record|proposal|follow-up|strategy|analyse|analyze|forecast|calculate|roadmap|workspace|private|confidential)\b/i.test(value)) return false;
   return /\b(?:rewrite|rephrase|polish|proofread|fix the grammar|improve the wording|write a caption|caption for|social media caption|tagline|slogan|headline|short bio|product description|meta description|call to action|CTA)\b/i.test(value);
 }
+
+
+/**
+ * Permit the existing guarded Cloudflare workspace fallback only when Gemini's
+ * own daily request budget is exhausted. Other guard failures must fail closed.
+ *
+ * The callback is injected so this decision can be tested without provider
+ * credentials or network requests.
+ *
+ * @template T
+ * @param {string | null | undefined} guardReason
+ * @param {(reason: string) => Promise<T | null> | T | null} fallback
+ * @returns {Promise<T | null>}
+ */
+export async function tryCloudflareFallbackForGeminiQuota(guardReason, fallback) {
+  if (guardReason !== "daily_quota_reached") return null;
+  return await fallback("gemini_daily_quota_reached");
+}

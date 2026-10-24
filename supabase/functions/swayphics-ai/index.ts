@@ -8,6 +8,7 @@ import {
   CLOUDFLARE_MODEL,
   isCloudflareEligibleWritingRequest,
   selectInnerMeChatRoute,
+  tryCloudflareFallbackForGeminiQuota,
 } from "./innerme-provider-routing.mjs";
 import {
   buildInnerMeWorkspaceContextForModel,
@@ -11914,7 +11915,13 @@ Answer the admin's question directly.
 
   // Last-resort Cloudflare failover: only intent-relevant compact workspace data is sent.
   async function requestCloudflareWorkspaceFallback(reason: string): Promise<Response | null> {
-    if (!cloudflareCredentialsConfigured) return null;
+    if (!cloudflareCredentialsConfigured) {
+      console.warn("InnerMe Cloudflare workspace fallback skipped: required credentials are not configured.", {
+        api_token_configured: Boolean(cloudflareToken),
+        account_id_configured: Boolean(cloudflareAccountId),
+      });
+      return null;
+    }
     const q = String(message || "").toLowerCase();
     const isBroadBusinessPlanningRequest =
       /\b(?:today|daily|priorit(?:y|ies|ize|ise)|what should i do|next moves|next steps|recommend(?:ation|ations)?|plan my day|business growth|grow (?:the )?business|improve (?:the )?business|action plan|highest.value moves)\b/i.test(message);
@@ -12633,51 +12640,69 @@ Answer the admin's question directly.
         providerError = null;
       }
 
+      let recoveredByCloudflareQuotaFallback = false;
       if (geminiResponse.headers.get("X-InnerMe-Guard") === "blocked") {
         const guardReason =
           typeof providerError?.code === "string"
             ? providerError.code
             : "zero_cost_guard";
         console.warn("InnerMe request blocked before reaching Gemini.", guardReason);
-        return json({
-          error:
-            typeof providerError?.message === "string"
-              ? providerError.message
-              : "InnerMe stopped the request to protect the free-tier budget. No Gemini request was sent.",
-          quota_guarded: true,
-          guard_reason: guardReason,
-        }, 429, origin);
+
+        // Gemini's daily budget can be exhausted while Cloudflare still has
+        // capacity. Try the existing independently guarded, context-bounded
+        // Cloudflare path only for that specific guard reason.
+        const quotaFallbackResponse = await tryCloudflareFallbackForGeminiQuota(
+          guardReason,
+          requestCloudflareWorkspaceFallback,
+        );
+        if (quotaFallbackResponse) {
+          geminiResponse = quotaFallbackResponse;
+          recoveredByCloudflareQuotaFallback = true;
+        }
+
+        if (!recoveredByCloudflareQuotaFallback) {
+          return json({
+            error:
+              typeof providerError?.message === "string"
+                ? providerError.message
+                : "InnerMe stopped the request to protect the free-tier budget. No Gemini request was sent.",
+            quota_guarded: true,
+            guard_reason: guardReason,
+          }, 429, origin);
+        }
       }
 
-      await recordInnerMeProviderUsage({
-        request_id: providerRequestId,
-        attempt_number: geminiAttemptNumber,
-        task_category: providerTaskCategory,
-        provider: "gemini",
-        model: activeModel,
-        outcome: "error",
-        http_status: geminiResponse.status,
-        latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
-        input_tokens: null,
-        output_tokens: null,
-        total_tokens: null,
-        error_code: "http_" + geminiResponse.status,
-        fallback_reason: geminiAttemptFallbackReason,
-      });
+      if (!recoveredByCloudflareQuotaFallback) {
+        await recordInnerMeProviderUsage({
+          request_id: providerRequestId,
+          attempt_number: geminiAttemptNumber,
+          task_category: providerTaskCategory,
+          provider: "gemini",
+          model: activeModel,
+          outcome: "error",
+          http_status: geminiResponse.status,
+          latency_ms: Math.max(0, Math.round(performance.now() - geminiAttemptStartedAt)),
+          input_tokens: null,
+          output_tokens: null,
+          total_tokens: null,
+          error_code: "http_" + geminiResponse.status,
+          fallback_reason: geminiAttemptFallbackReason,
+        });
 
-      console.error("InnerMe Gemini provider unavailable.", {
-        status: geminiResponse.status,
-        model: activeModel,
-        provider_code: providerError?.status || null,
-      });
-      const cloudflareFallbackResponse = await requestCloudflareWorkspaceFallback("gemini_http_" + geminiResponse.status);
-      if (cloudflareFallbackResponse) {
-        geminiResponse = cloudflareFallbackResponse;
-      } else {
-        return json({
-          error: "InnerMe is temporarily unable to reach its AI providers. Your request was not completed. Please try again shortly.",
-          retryable: true,
-        }, 503, origin);
+        console.error("InnerMe Gemini provider unavailable.", {
+          status: geminiResponse.status,
+          model: activeModel,
+          provider_code: providerError?.status || null,
+        });
+        const cloudflareFallbackResponse = await requestCloudflareWorkspaceFallback("gemini_http_" + geminiResponse.status);
+        if (cloudflareFallbackResponse) {
+          geminiResponse = cloudflareFallbackResponse;
+        } else {
+          return json({
+            error: "InnerMe is temporarily unable to reach its AI providers. Your request was not completed. Please try again shortly.",
+            retryable: true,
+          }, 503, origin);
+        }
       }
     }
 

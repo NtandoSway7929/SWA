@@ -4,6 +4,7 @@ import {
   INNERME_CHAT_REASONING_MODEL,
   isCloudflareEligibleWritingRequest,
   selectInnerMeChatRoute,
+  tryCloudflareFallbackForGeminiQuota,
 } from "./innerme-provider-routing.mjs";
 
 function assertEqual(actual: unknown, expected: unknown, message: string) {
@@ -176,5 +177,60 @@ Deno.test("InnerMe low-cost provider routing policy", async (t) => {
       false,
       "Generic-assistant exclusion",
     );
+  });
+});
+
+
+Deno.test("Gemini daily-quota fallback decision is bounded and mockable", async (t) => {
+  await t.step("tries the existing Cloudflare fallback when Gemini daily quota is reached", async () => {
+    const fallbackResponse = { status: 200, provider: "cloudflare" };
+    const calls: string[] = [];
+    const response = await tryCloudflareFallbackForGeminiQuota(
+      "daily_quota_reached",
+      async (reason: string) => {
+        calls.push(reason);
+        return fallbackResponse;
+      },
+    );
+
+    assertEqual(response, fallbackResponse, "Successful fallback response");
+    assertEqual(calls.length, 1, "Fallback invocation count");
+    assertEqual(calls[0], "gemini_daily_quota_reached", "Fallback reason");
+  });
+
+  await t.step("does not call Cloudflare for other guard failures", async () => {
+    for (const guardReason of [
+      "quota_guard_unavailable",
+      "quota_guard_invalid_response",
+      "model_not_approved",
+      "request_too_large",
+      "daily_request_limit",
+      "unknown_guard_failure",
+    ]) {
+      let calls = 0;
+      const response = await tryCloudflareFallbackForGeminiQuota(
+        guardReason,
+        async () => {
+          calls += 1;
+          return { status: 200 };
+        },
+      );
+      assertEqual(response, null, "Denied fallback result for " + guardReason);
+      assertEqual(calls, 0, "Fallback invocation count for " + guardReason);
+    }
+  });
+
+  await t.step("preserves the blocked result when Cloudflare cannot recover", async () => {
+    let calls = 0;
+    const response = await tryCloudflareFallbackForGeminiQuota(
+      "daily_quota_reached",
+      async (reason: string) => {
+        calls += 1;
+        assertEqual(reason, "gemini_daily_quota_reached", "Cloudflare failure reason");
+        return null;
+      },
+    );
+    assertEqual(response, null, "Failed Cloudflare fallback result");
+    assertEqual(calls, 1, "Failed fallback should be attempted once");
   });
 });
