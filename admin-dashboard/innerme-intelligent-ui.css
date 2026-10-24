@@ -1,0 +1,43 @@
+/* InnerMe Intelligent UI: progressive enhancement over existing safe answer rendering. */
+#sway-admin-workspace .innerme-iu-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:12px 0 0;padding-top:10px;border-top:1px solid rgba(119,193,252,.18)}
+#sway-admin-workspace .innerme-iu-kind{margin-right:auto;font-size:10px;font-weight:700;letter-spacing:.045em;color:#c4d1e4;text-transform:uppercase}
+#sway-admin-workspace .innerme-iu-button{display:inline-flex;align-items:center;justify-content:center;min-height:31px;padding:6px 10px;border:1px solid rgba(119,193,252,.4);border-radius:999px;background:rgba(1,82,244,.14);color:#eff6ff;font:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:background .18s ease,border-color .18s ease}
+#sway-admin-workspace .innerme-iu-button:hover{background:rgba(1,82,244,.28);border-color:#77c1fc}
+#sway-admin-workspace .innerme-iu-button:focus-visible,#sway-admin-workspace .innerme-iu-checklist input:focus-visible{outline:2px solid #77c1fc;outline-offset:3px}
+#sway-admin-workspace .innerme-iu-chart[hidden],#sway-admin-workspace .innerme-iu-checklist[hidden]{display:none!important}
+#sway-admin-workspace .innerme-iu-chart,#sway-admin-workspace .innerme-iu-checklist,#sway-admin-workspace .innerme-iu-card{box-sizing:border-box;width:100%;margin:12px 0 0;padding:14px;border:1px solid rgba(119,193,252,.24);border-radius:14px;background:rgba(9,24,46,.32);color:#f8fbff}
+#sway-admin-workspace .innerme-iu-chart-title,#sway-admin-workspace .innerme-iu-title{margin:0 0 12px;color:inherit;font-size:13px;font-weight:800}
+#sway-admin-workspace .innerme-iu-bar-row{display:grid;grid-template-columns:minmax(70px,1fr) minmax(60px,2fr) auto;gap:8px;align-items:center;margin:10px 0}
+#sway-admin-workspace .innerme-iu-bar-label{min-width:0;overflow-wrap:anywhere;font-size:11px}
+#sway-admin-workspace .innerme-iu-bar-track{display:block;height:10px;overflow:hidden;border-radius:999px;background:rgba(180,198,222,.15)}
+#sway-admin-workspace .innerme-iu-bar{display:block;height:100%;min-width:2px;border-radius:999px;background:linear-gradient(90deg,#0152f4,#77c1fc);transition:width .22s ease}
+#sway-admin-workspace .innerme-iu-bar.is-negative{background:linear-gradient(90deg,#f59e0b,#fca5a5)}
+#sway-admin-workspace .innerme-iu-bar-value{font-size:11px;font-variant-numeric:tabular-nums}
+#sway-admin-workspace .innerme-iu-checklist-note{margin:0 0 10px;color:#c4d1e4;font-size:11px}
+#sway-admin-workspace .innerme-iu-checklist-items{margin:0;padding:0;list-style:none}
+#sway-admin-workspace .innerme-iu-checklist-item{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid rgba(119,193,252,.12)}
+#sway-admin-workspace .innerme-iu-checklist-item:last-child{border-bottom:0}
+#sway-admin-workspace .innerme-iu-checklist-item input{flex:0 0 auto;margin-top:3px;accent-color:#77c1fc}
+#sway-admin-workspace .innerme-iu-checklist-item label{flex:1;min-width:0;font-size:12px;line-height:1.5;cursor:pointer}
+#sway-admin-workspace .innerme-iu-checklist-item input:checked+label{opacity:.65;text-decoration:line-through}
+#sway-admin-workspace .innerme-iu-checklist-count{margin:10px 0 0;color:#c4d1e4;font-size:11px;font-weight:700}
+#sway-admin-workspace .innerme-iu-original{margin-top:12px;font-size:11px;color:inherit}
+#sway-admin-workspace .innerme-iu-original summary{cursor:pointer;font-weight:700}
+#sway-admin-workspace .innerme-iu-original pre{max-width:100%;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+#sway-admin-workspace .innerme-iu-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+#sway-admin-workspace .innerme-iu-metric{display:flex;flex-direction:column;gap:5px;padding:11px;border-radius:10px;background:rgba(119,193,252,.08)}
+#sway-admin-workspace .innerme-iu-metric-label{color:#c4d1e4;font-size:10px;font-weight:700}
+#sway-admin-workspace .innerme-iu-metric-value{color:#fff;font-size:20px;overflow-wrap:anywhere}
+#sway-admin-workspace .innerme-iu-summary{margin:0 0 12px;line-height:1.6}
+#sway-admin-workspace .innerme-iu-list{padding:0;margin:0;list-style:none}
+#sway-admin-workspace .innerme-iu-list-item{display:flex;gap:8px;padding:6px 0}
+#sway-admin-workspace .innerme-iu-dot{color:#77c1fc}
+#sway-admin-workspace .innerme-iu-list-body{display:flex;flex-direction:column;gap:3px}
+#sway-admin-workspace .innerme-iu-list-body small{color:#c4d1e4;line-height:1.5}
+#sway-admin-workspace .innerme-iu-section{margin-top:12px}
+#sway-admin-workspace .innerme-iu-section h4{margin:0 0 5px;font-size:12px}
+#sway-admin-workspace .innerme-iu-section p{margin:0;line-height:1.55}
+@media(max-width:600px){#sway-admin-workspace .innerme-iu-chart,#sway-admin-workspace .innerme-iu-checklist,#sway-admin-workspace .innerme-iu-card{padding:11px}#sway-admin-workspace .innerme-iu-bar-row{grid-template-columns:minmax(62px,1fr) minmax(45px,1.2fr) auto;gap:6px}#sway-admin-workspace .innerme-iu-bar-label,#sway-admin-workspace .innerme-iu-bar-value{font-size:10px}}
+@media(prefers-reduced-motion:reduce){#sway-admin-workspace .innerme-iu-button,#sway-admin-workspace .innerme-iu-bar{transition:none}}
+body.sway-dark-mode #sway-admin-workspace .innerme-iu-kind{color:#b4c6e2}
+body.sway-dark-mode #sway-admin-workspace .innerme-iu-chart,body.sway-dark-mode #sway-admin-workspace .innerme-iu-checklist,body.sway-dark-mode #sway-admin-workspace .innerme-iu-card{background:#101a2c;border-color:#2a3a58}
