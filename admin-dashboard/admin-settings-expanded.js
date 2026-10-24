@@ -631,6 +631,7 @@
         var globalStatus = root.querySelector("[data-settings-global-status]");
         try {
             var identity = await getIdentity();
+            root.querySelectorAll("button[type='submit']").forEach(function (button) { button.disabled = false; });
             loadAccount(root, identity);
             ownerGatedControls(root);
 
@@ -913,6 +914,7 @@
         root = root.firstElementChild;
         if (!root) return;
         anchor.insertAdjacentElement("afterend", root);
+        root.querySelectorAll("button[type='submit']").forEach(function (button) { button.disabled = true; });
 
         selectTab(root, "sales");
         getIdentity().then(function (identity) {
