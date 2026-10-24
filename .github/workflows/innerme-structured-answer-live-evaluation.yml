@@ -8,6 +8,11 @@ on:
         required: true
         type: boolean
         default: false
+      health_only:
+        description: "Run only the read-only workspace-health diagnostic; do not send a chat request"
+        required: true
+        type: boolean
+        default: false
   pull_request:
     branches: ["main"]
     paths:
@@ -71,9 +76,10 @@ jobs:
       - name: Validate evaluation script without contacting providers
         run: node --check scripts/innerme-structured-answer-live-evaluation.mjs
 
-      - name: Send one isolated synthetic chat request
+      - name: Run health-only diagnostics or one isolated synthetic chat request
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
           CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
+          INNERME_HEALTH_ONLY: ${{ inputs.health_only }}
         run: node scripts/innerme-structured-answer-live-evaluation.mjs

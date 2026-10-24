@@ -101,6 +101,31 @@ async function main() {
   );
   const health = await healthResponse.json().catch(() => null);
   const configured = health?.provider_configuration?.gemini_key_configured;
+
+  // Provider-free diagnostic mode. It prints the safe health response and exits
+  // before the synthetic assistant_chat POST, regardless of the health result.
+  const healthOnly = String(process.env.INNERME_HEALTH_ONLY || "").toLowerCase() === "true";
+  if (healthOnly) {
+    const report = {
+      evaluation: "innerme_workspace_health_diagnostic_v1",
+      status: health?.ok === true && health?.read_only === true && configured === true
+        ? "passed" : "failed",
+      project: "isolated_test_only",
+      project_ref: PROJECT_REF,
+      chat_requests_sent: 0,
+      provider_requests_confirmed: 0,
+      retries: 0,
+      preflight_http_status: healthResponse.status,
+      preflight_error_code: healthResponse.headers.get("sb-error-code") ||
+        healthResponse.headers.get("x-sb-error-code") || null,
+      read_only: health?.read_only === true,
+      gemini_key_configured: configured === true,
+      health_response: health ?? { error: "Response body was not valid JSON." },
+    };
+    process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+    if (report.status !== "passed") process.exitCode = 1;
+    return;
+  }
   // This endpoint returns HTTP 503 when the separate workspace aggregate is not
   // healthy; its safe key/read-only fields remain usable as provider-free gates.
   // Do not require business-workspace aggregation to be healthy for this
