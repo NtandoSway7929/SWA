@@ -572,7 +572,11 @@ async function main() {
     ), "the linked-lead patch should be intercepted by the mock");
     assert.equal(metrics.mockedTableActionWrites.filter(item =>
       item.method === "POST" && item.path === "/rest/v1/activity_log"
-    ).length, 2, "both confirmed actions should log activity to the in-memory mock");
+    ).length, 3, "the manual contacted mark and both confirmed bulk actions should log activity to the in-memory mock");
+    assert.ok(mockActivityLog.some(item =>
+      item.entity_type === "leads" && item.entity_id === "lead-contact-toggle" &&
+      String(item.action || item.description || "").toLowerCase().includes("contacted")
+    ), "the manual contacted mark should write a lead activity record to the in-memory mock");
 
     await navigate("leads", "crm");
     const updatedLeadRows = page.locator('#sway-workspace-main [data-admin-table-row="leads"]');
