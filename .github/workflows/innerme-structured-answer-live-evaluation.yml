@@ -1,0 +1,60 @@
+name: InnerMe Structured Answer Live Evaluation (isolated test only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_no_billing:
+        description: "Confirm the test Gemini key belongs to a separate Google project with billing disabled"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: innerme-structured-answer-live-evaluation
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require isolated credentials and no-billing confirmation
+        shell: bash
+        env:
+          INNERME_TEST_ADMIN_EMAIL: \${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: \${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+          CONFIRM_NO_BILLING: \${{ inputs.confirm_no_billing }}
+        run: |
+          set -euo pipefail
+          if [[ "\${CONFIRM_NO_BILLING}" != "true" ]]; then
+            echo "::error::Stopped before any request because the isolated no-billing confirmation was not selected."
+            exit 1
+          fi
+          for name in INNERME_TEST_ADMIN_EMAIL INNERME_TEST_ADMIN_PASSWORD; do
+            if [[ -z "\${!name}" ]]; then
+              echo "::error::Missing isolated test-project repository secret \${name}; no provider request was sent."
+              exit 1
+            fi
+          done
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate evaluation script without contacting providers
+        run: node --check scripts/innerme-structured-answer-live-evaluation.mjs
+
+      - name: Send one isolated synthetic chat request
+        env:
+          INNERME_TEST_ADMIN_EMAIL: \${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
+          INNERME_TEST_ADMIN_PASSWORD: \${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
+          CONFIRM_NO_BILLING: \${{ inputs.confirm_no_billing }}
+        run: node scripts/innerme-structured-answer-live-evaluation.mjs
