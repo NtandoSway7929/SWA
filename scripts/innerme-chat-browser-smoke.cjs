@@ -19,15 +19,16 @@ const markdownAnswer = [
   "",
   "- First step",
   "- Second step",
+  "- Third step",
   "",
   "\u0060\u0060\u0060js",
   "const ready = true;",
   "\u0060\u0060\u0060",
   "",
-  "| Check | Result |",
-  "| --- | --- |",
-  "| SSE | Pass |",
-  "| Markdown | Pass |",
+  "| Check | Result | Score |",
+  "| --- | --- | ---: |",
+  "| SSE | Pass | 1 |",
+  "| Markdown | Pass | 2 |",
   "",
   "Raw HTML: <img src=x onerror=alert(1)>.",
   "",
@@ -486,7 +487,7 @@ async function askMockedQuestion(page) {
   }).last();
 
   assert.equal(await response.locator(".sway-ai-answer-heading").count(), 1, "Markdown heading should render");
-  assert.equal(await response.locator("ul li").count(), 2, "Markdown list items should render");
+  assert.equal(await response.locator("ul li").count(), 3, "Markdown list items should render");
   assert.equal(await response.locator('a[href="https://example.com/docs"]').count(), 1, "HTTPS link should render");
   assert.equal(await response.locator('a[href*="evil.example"]').count(), 0, "Credential-bearing URLs must not become clickable links");
   assert.ok((await response.textContent()).includes("https://trusted.example@evil.example/path"), "Rejected destinations should remain visible as inert text");
@@ -508,6 +509,27 @@ async function askMockedQuestion(page) {
   const assistantMessage = page.locator(".sway-ai-message.sway-ai-assistant").filter({
     hasText: "Browser smoke answer"
   }).last();
+
+  const checklistToggle = assistantMessage.locator("button.innerme-iu-checklist-toggle");
+  await checklistToggle.waitFor({ state: "visible", timeout: 5000 });
+  await checklistToggle.click();
+  const checklist = assistantMessage.locator(".innerme-iu-checklist");
+  await checklist.waitFor({ state: "visible" });
+  assert.equal(await checklist.locator('input[type="checkbox"]').count(), 3, "Action plans should offer a local checklist");
+  await checklist.locator('input[type="checkbox"]').first().check();
+  assert.equal((await checklist.locator(".innerme-iu-checklist-count").textContent()).trim(), "1 of 3 complete", "Checklist should count locally checked items");
+  await checklistToggle.click();
+  await checklist.waitFor({ state: "hidden" });
+
+  const chartToggle = assistantMessage.locator("button.innerme-iu-chart-toggle");
+  await chartToggle.waitFor({ state: "visible", timeout: 5000 });
+  await chartToggle.click();
+  const chart = assistantMessage.locator(".innerme-iu-chart");
+  await chart.waitFor({ state: "visible" });
+  assert.equal(await chart.locator(".innerme-iu-bar-row").count(), 2, "Numeric markdown tables should have a chart view");
+  await chartToggle.click();
+  await chart.waitFor({ state: "hidden" });
+
   const copyResponse = assistantMessage.locator("button.sway-ai-copy:not(.sway-ai-code-copy)");
   await copyResponse.click();
   await page.waitForFunction(() => {
@@ -519,7 +541,7 @@ async function askMockedQuestion(page) {
 
   return {
     renderedHeading: true,
-    renderedListItems: 2,
+    renderedListItems: 3,
     renderedSafeLink: true,
     credentialBearingLinkBlocked: true,
     renderedCodeBlock: true,

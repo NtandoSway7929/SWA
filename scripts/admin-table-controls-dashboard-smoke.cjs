@@ -383,7 +383,10 @@ async function main() {
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
-    const contactToggle = contactToggleLeadRow.locator('[data-toggle-lead-contacted="lead-contact-toggle"]');
+    // Lead action menus are portalled to document.body to escape table clipping,
+    // so locate this unique fixture action globally rather than under its source row.
+    const contactToggle = page.locator('[data-toggle-lead-contacted="lead-contact-toggle"]');
+    await contactToggle.waitFor({ state: "visible", timeout: 5000 });
     assert.equal((await contactToggle.textContent()).trim(), "Mark as contacted",
       "the lead Actions dropdown should offer a manual contacted mark when no outbound log exists");
     await contactToggle.click();
@@ -569,7 +572,11 @@ async function main() {
     ), "the linked-lead patch should be intercepted by the mock");
     assert.equal(metrics.mockedTableActionWrites.filter(item =>
       item.method === "POST" && item.path === "/rest/v1/activity_log"
-    ).length, 2, "both confirmed actions should log activity to the in-memory mock");
+    ).length, 3, "the manual contacted mark and both confirmed bulk actions should log activity to the in-memory mock");
+    assert.ok(mockActivityLog.some(item =>
+      item.entity_type === "leads" && item.entity_id === "lead-contact-toggle" &&
+      String(item.action || item.description || "").toLowerCase().includes("contacted")
+    ), "the manual contacted mark should write a lead activity record to the in-memory mock");
 
     await navigate("leads", "crm");
     const updatedLeadRows = page.locator('#sway-workspace-main [data-admin-table-row="leads"]');
@@ -635,7 +642,7 @@ async function main() {
       "only the expected lead-contact, task and follow-up action writes should be captured by the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
-      item.id === "lead-alpha" && item.contacted_manually === true),
+      item.id === "lead-contact-toggle" && item.contacted_manually === true),
       "the contacted toggle should call the existing manual-contact RPC against synthetic lead data");
     assert.equal(tasks.find(item => item.id === "task-urgent").status, "completed");
     assert.equal(followups.find(item => item.id === "follow-sooner").status, "completed");
