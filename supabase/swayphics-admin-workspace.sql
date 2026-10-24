@@ -183,6 +183,56 @@ create table if not exists public.communication_logs (
         check (client_id is not null or lead_id is not null)
 );
 
+create table if not exists public.sales_campaigns (
+    id uuid primary key default gen_random_uuid(),
+    name text not null check (length(trim(name)) > 0),
+    channel text not null check (channel in ('email','whatsapp','facebook','instagram','tiktok','website','referral','networking','other')),
+    target_segment text not null default 'unknown'
+        check (target_segment in ('unknown','professional_services','creative','beauty_wellness','food_hospitality','retail_ecommerce','events_entertainment','education','other')),
+    status text not null default 'draft'
+        check (status in ('draft','active','paused','completed','archived')),
+    start_date date not null default current_date,
+    end_date date,
+    currency text not null default 'ZAR' check (currency in ('ZAR','USD','EUR','GBP')),
+    budget_amount numeric(12,2) check (budget_amount is null or budget_amount >= 0),
+    objective text,
+    notes text,
+    created_by uuid references public.admin_users(user_id) on delete set null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    constraint sales_campaigns_date_check check (end_date is null or end_date >= start_date)
+);
+
+create table if not exists public.sales_campaign_leads (
+    id uuid primary key default gen_random_uuid(),
+    campaign_id uuid not null references public.sales_campaigns(id) on delete cascade,
+    lead_id uuid not null references public.leads(id) on delete cascade,
+    attribution_type text not null default 'assisted' check (attribution_type in ('primary','assisted')),
+    linked_at timestamptz not null default now(),
+    linked_by uuid references public.admin_users(user_id) on delete set null,
+    notes text,
+    created_at timestamptz not null default now(),
+    constraint sales_campaign_leads_pair_unique unique (campaign_id, lead_id)
+);
+
+create unique index if not exists sales_campaign_leads_primary_unique_idx
+    on public.sales_campaign_leads(lead_id)
+    where attribution_type = 'primary';
+
+create table if not exists public.sales_campaign_spend (
+    id uuid primary key default gen_random_uuid(),
+    campaign_id uuid not null references public.sales_campaigns(id) on delete cascade,
+    spent_on date not null default current_date,
+    category text not null check (category in ('paid_ads','creative_production','printing','event_or_networking','software','transport','other')),
+    amount numeric(12,2) not null check (amount > 0),
+    currency text not null default 'ZAR' check (currency in ('ZAR','USD','EUR','GBP')),
+    description text,
+    evidence_url text,
+    created_by uuid references public.admin_users(user_id) on delete set null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
 create table if not exists public.social_accounts (
     id uuid primary key default gen_random_uuid(),
     platform text not null check (platform in ('Instagram','Facebook','TikTok')),
@@ -247,6 +297,10 @@ create index if not exists followups_scheduled_idx on public.follow_ups(schedule
 create index if not exists projects_assignee_idx on public.client_projects(assigned_to);
 create index if not exists enquiries_status_idx on public.website_enquiries(status);
 create index if not exists activity_created_idx on public.activity_log(created_at desc);
+create index if not exists sales_campaigns_status_start_idx on public.sales_campaigns(status, start_date desc);
+create index if not exists sales_campaign_leads_campaign_idx on public.sales_campaign_leads(campaign_id, linked_at desc);
+create index if not exists sales_campaign_leads_lead_idx on public.sales_campaign_leads(lead_id, linked_at desc);
+create index if not exists sales_campaign_spend_campaign_date_idx on public.sales_campaign_spend(campaign_id, spent_on desc);
 create index if not exists social_posts_status_idx on public.social_posts(status);
 create index if not exists social_posts_scheduled_idx on public.social_posts(scheduled_for);
 create index if not exists social_metrics_account_date_idx on public.social_metrics(social_account_id, metric_date desc);
@@ -269,6 +323,9 @@ alter table public.social_accounts enable row level security;
 alter table public.social_posts enable row level security;
 alter table public.social_metrics enable row level security;
 alter table public.communication_logs enable row level security;
+alter table public.sales_campaigns enable row level security;
+alter table public.sales_campaign_leads enable row level security;
+alter table public.sales_campaign_spend enable row level security;
 
 drop policy if exists "Swayphics admins can manage admin users" on public.admin_users;
 create policy "Swayphics admins can manage admin users"
@@ -369,6 +426,27 @@ create policy "Swayphics admins can manage activity"
 on public.activity_log for all to authenticated
 using (exists (select 1 from public.admin_users where user_id = auth.uid() and active = true))
 with check (exists (select 1 from public.admin_users where user_id = auth.uid() and active = true));
+
+drop policy if exists "Swayphics admins can manage sales campaigns" on public.sales_campaigns;
+create policy "Swayphics admins can manage sales campaigns"
+on public.sales_campaigns for all to authenticated
+using (exists (select 1 from public.admin_users where user_id = auth.uid() and active = true))
+with check (exists (select 1 from public.admin_users where user_id = auth.uid() and active = true));
+
+drop policy if exists "Swayphics admins can manage sales campaign lead links" on public.sales_campaign_leads;
+create policy "Swayphics admins can manage sales campaign lead links"
+on public.sales_campaign_leads for all to authenticated
+using (exists (select 1 from public.admin_users where user_id = auth.uid() and active = true))
+with check (exists (select 1 from public.admin_users where user_id = auth.uid() and active = true));
+
+drop policy if exists "Swayphics admins can manage sales campaign spend" on public.sales_campaign_spend;
+create policy "Swayphics admins can manage sales campaign spend"
+on public.sales_campaign_spend for all to authenticated
+using (exists (select 1 from public.admin_users where user_id = auth.uid() and active = true))
+with check (exists (select 1 from public.admin_users where user_id = auth.uid() and active = true));
+
+grant select, insert, update, delete on public.sales_campaigns, public.sales_campaign_leads, public.sales_campaign_spend to authenticated;
+grant all privileges on public.sales_campaigns, public.sales_campaign_leads, public.sales_campaign_spend to service_role;
 
 -- Seed the currently known owner. The UUID is the existing owner from the
 -- portfolio RLS policy. Run this statement only if that Auth user still exists.
