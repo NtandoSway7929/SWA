@@ -9598,3 +9598,11 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
         flex: 1 1 auto;
     }
 }
+
+
+/* Keep grouped ZAR lead values on one line (e.g. R 3 000). */
+#sway-admin-workspace .sway-table td.sway-lead-value-cell {
+    white-space: nowrap !important;
+    min-width: 6.5rem;
+    font-variant-numeric: tabular-nums;
+}
