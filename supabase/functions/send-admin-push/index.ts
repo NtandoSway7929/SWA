@@ -147,27 +147,31 @@ Deno.serve(async request => {
             );
 
         if (!preferencesResponse.ok) {
-            throw new Error(
-                "Unable to load notification preferences: " +
-                preferencesResponse.status
-            );
-        }
-
-        const notificationPreferences = await preferencesResponse.json();
-        if (
-            notificationPreferences[0] &&
-            notificationPreferences[0].browser_push_enabled === false
-        ) {
-            return new Response(
-                JSON.stringify({
-                    ok: true,
-                    sent: 0,
-                    removed: 0,
-                    subscriptions: 0,
-                    reason: "Browser push notifications are disabled for this administrator."
-                }),
-                { status: 200, headers: jsonHeaders }
-            );
+            // Keep current delivery working until the settings migration has
+            // been applied. Other response failures remain actionable errors.
+            if (preferencesResponse.status !== 400 && preferencesResponse.status !== 404) {
+                throw new Error(
+                    "Unable to load notification preferences: " +
+                    preferencesResponse.status
+                );
+            }
+        } else {
+            const notificationPreferences = await preferencesResponse.json();
+            if (
+                notificationPreferences[0] &&
+                notificationPreferences[0].browser_push_enabled === false
+            ) {
+                return new Response(
+                    JSON.stringify({
+                        ok: true,
+                        sent: 0,
+                        removed: 0,
+                        subscriptions: 0,
+                        reason: "Browser push notifications are disabled for this administrator."
+                    }),
+                    { status: 200, headers: jsonHeaders }
+                );
+            }
         }
 
         const subscriptionsResponse =
