@@ -254,7 +254,9 @@
     }
     const classification = classifyMessage(rawText, content);
     const kindLabels = { plan: "Action plan", calculation: "Calculation", summary: "Summary", evidence: "Evidence-aware answer", answer: "Answer" };
-    getToolbar(doc, message).querySelector(".innerme-iu-kind").textContent = kindLabels[classification.kind] || "Answer";
+    const kindNode = getToolbar(doc, message).querySelector(".innerme-iu-kind");
+    const kindLabel = kindLabels[classification.kind] || "Answer";
+    if (kindNode.textContent !== kindLabel) kindNode.textContent = kindLabel;
     if (classification.chart) enhanceChart(doc, message, classification.chart);
     if (classification.checklist) enhanceChecklist(doc, message);
     message.dataset.innermeUiEnhanced = "1";
