@@ -1,6 +1,6 @@
 # Sales Operating System — Implementation Map
 
-Status: Phase 4 implementation in progress (batches A and B)
+Status: Phase 4 implementation in progress (batches A-D; latest revision validation pending)
 Branch: `feature/swayphics-sales-operating-system`
 Base: `main`
 Related specification: `docs/swayphics-sales-operating-system.md`
@@ -75,7 +75,7 @@ The initial sales system should keep descriptive current-pipeline counts and int
 - Added forward-only SQL and aligned the bootstrap and disposable local test schemas. The migration is not applied to production by this PR.
 - Added static tests for form fields, migration, bootstrap schema, and disposable test schema. Full CI and browser validation must pass before considering this batch ready for review.
 
-### Batch C — communication outcomes implemented, awaiting full CI review
+### Batch C — communication outcomes implemented (2026-10-24)
 
 - Added explicit communication outcomes with a `not_recorded` default; the data model does not infer results from missing fields.
 - Added a rolling 30-day prospect-contact cohort in Insights. The denominator is distinct leads with a manually logged outbound communication in that window; each lead is counted once, and only inbound records on/after the first in-window outbound attempt count as replies.
@@ -83,6 +83,15 @@ The initial sales system should keep descriptive current-pipeline counts and int
 - Added opt-out safeguards to the Sales Work Queue, automated quote-follow-up suggestions and the email composer. A later explicit opt-in record can restore eligibility; invalid lead contactability and the latest invalid email-route outcome also block email composition.
 - Added a forward-only migration, bootstrap/disposable schema changes, RLS rules and tests for persistence, invalid values, synthetic browser save and email suppression.
 - The migration has not been applied to production. Full static, browser, local Supabase and regression CI must pass before the batch is ready for review.
+
+### Batch D — campaign attribution and spend tracking implemented on the feature branch (2026-10-24)
+
+- Added `sales_campaigns`, `sales_campaign_leads` and `sales_campaign_spend`, with forward-only migration, bootstrap alignment, disposable test schema, admin-only RLS and integrity constraints.
+- Primary versus assisted attribution is a manually recorded claim. A lead may have one primary campaign; duplicate campaign/lead links are rejected.
+- Campaign budgets and actual spend remain separate. Actual spend totals are grouped by currency, never combined across unlike currencies. The UI labels current won status as present CRM state, not proof of campaign-caused sales or historical conversion.
+- Added date, amount, currency, segment and evidence-URL validation. The migration and workspace subscription list now include Realtime handling for campaign tables; rollout must still apply SQL in the right order.
+- The isolated browser workflow covers synthetic campaign creation, primary lead attribution and spend entry. The local Supabase workflow covers persistence, constraints and RLS. The latest revision must pass all validation before this PR is ready for review.
+- No campaign, qualification or communication migration has been applied to production; no outbound communication has been sent.
 
 ## 4. Batch A acceptance criteria
 
@@ -95,12 +104,11 @@ The initial sales system should keep descriptive current-pipeline counts and int
 7. Mobile layout remains usable and labels have accessible names.
 8. The feature can be disabled/reverted without changing database schema.
 
-## 5. Remaining unresolved items before campaign attribution
+## 5. Remaining items before live rollout
 
-- Whether inbound email replies can be reliably joined to a lead without false matching.
-- Whether the current follow-up editor can represent all needed outreach outcomes.
-- Whether lead stage history is complete enough for historical conversion cohorts.
-- Whether campaign spend exists in a current table or must be added.
-- Whether production RLS policies and the current deployed migration set match the repository.
+- Email reply-to-lead association remains manual; automatic matching must not be enabled without evidence that it avoids false joins.
+- Reliable historical stage timestamps are still required before reporting closed-won cohort conversion, campaign ROI or cost per acquired client.
+- Before applying SQL, verify the live Supabase schema, existing policies and applied migration set against the repository. The new migration files are forward-only but have not been applied to production.
+- The current PR is intentionally unmerged and undeployed. Merge, production SQL application and deployment require explicit approval.
 
-These must be checked rather than assumed. The first UI batch should not depend on any unresolved item.
+Unknown results remain unknown; silence is not rejection, manually recorded events are not provider delivery/read receipts, and campaign association is not proof of causation.
