@@ -35,7 +35,7 @@
     flex: 0 0 auto; min-height: 38px; padding: 9px 12px;
     border: 1px solid var(--swe-border); border-radius: 10px;
     background: rgba(255,255,255,.76); color: #52627B;
-    font: 750 .72rem/1.35 inherit; cursor: pointer;
+    font-family: inherit; font-size: .72rem; font-weight: 750; line-height: 1.35; cursor: pointer;
     transition: background .18s ease, color .18s ease, border-color .18s ease;
 }
 #sway-settings-expanded .swe-tab[aria-selected="true"] {
@@ -101,7 +101,7 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     min-height: 41px; padding: 10px 14px; border: 1px solid var(--swe-border);
     border-radius: 10px; background: #fff; color: #24344F;
-    font: 800 .72rem/1.35 inherit; cursor: pointer;
+    font-family: inherit; font-size: .72rem; font-weight: 800; line-height: 1.35; cursor: pointer;
 }
 #sway-settings-expanded .swe-button-primary {
     border-color: transparent; background: linear-gradient(135deg, #002096, #0152F4);
