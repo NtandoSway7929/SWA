@@ -13,8 +13,8 @@ const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "202
 const pushFunction = fs.readFileSync(path.join(root, "supabase", "functions", "send-admin-push", "index.ts"), "utf8");
 
 test("dashboard loads the expanded settings stylesheet and module after workspace initialization", () => {
-  assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261024-settings-sections-1/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261024-settings-sections-1/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261024-settings-greeting-preferences-1/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261024-settings-greeting-preferences-1/);
   assert.ok(
     dashboardHtml.indexOf("admin-workspace.js") < dashboardHtml.indexOf("admin-settings-expanded.js"),
     "settings integration must load after the core workspace"
