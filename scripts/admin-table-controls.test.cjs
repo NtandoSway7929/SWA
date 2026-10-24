@@ -33,10 +33,12 @@ assert.match(workspaceSource, /contactStatus\.source === "communication"[\s\S]*?
 assert.match(workspaceSource, /contactStatus\.contacted \? "Undo contacted mark" : "Mark as contacted"/,
     "the lead contact action should offer the correct mark or undo label");
 
-const leadStatusEditorMatch = workspaceSource.match(/key: "status",[\s\S]{0,600}\]\.map\(function \(value\)/);
-assert.ok(leadStatusEditorMatch,
+const leadServiceFieldIndex = workspaceSource.indexOf('key: "service_interest"');
+const leadStatusFieldIndex = workspaceSource.indexOf('key: "status"', leadServiceFieldIndex);
+assert.ok(leadServiceFieldIndex >= 0 && leadStatusFieldIndex > leadServiceFieldIndex,
     "the lead editor must expose an explicit status selector");
-assert.match(leadStatusEditorMatch[0], /"follow-up"/,
+const leadStatusEditorSource = workspaceSource.slice(leadStatusFieldIndex, leadStatusFieldIndex + 900);
+assert.match(leadStatusEditorSource, /"follow-up"/,
     "the lead status selector must preserve the existing follow-up status instead of defaulting to new");
 const followupCompletionSource = workspaceSource.slice(
     workspaceSource.indexOf("async function completeFollowup"),
