@@ -384,17 +384,6 @@ async function main() {
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
     const contactToggle = contactToggleLeadRow.locator('[data-toggle-lead-contacted="lead-contact-toggle"]');
-    console.log("CONTACT_TOGGLE_DIAGNOSTIC=" + JSON.stringify({
-      fixtureRowCount: await contactToggleLeadRow.count(),
-      rowText: await contactToggleLeadRow.innerText().catch(error => "ROW_TEXT_ERROR: " + error.message),
-      rowHtml: await contactToggleLeadRow.evaluate(row => row.outerHTML).catch(error => "ROW_HTML_ERROR: " + error.message),
-      menuCount: await contactToggleLeadRow.locator(".sway-lead-actions-menu").count(),
-      dropdownCount: await contactToggleLeadRow.locator(".sway-lead-actions-dropdown").count(),
-      toggleCountInRow: await contactToggle.count(),
-      togglesInDocument: await page.locator('[data-toggle-lead-contacted="lead-contact-toggle"]').count(),
-      pageErrors: metrics.pageErrors,
-      consoleErrors: metrics.consoleErrors
-    }));
     assert.equal((await contactToggle.textContent()).trim(), "Mark as contacted",
       "the lead Actions dropdown should offer a manual contacted mark when no outbound log exists");
     await contactToggle.click();
