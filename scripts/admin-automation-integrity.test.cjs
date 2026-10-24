@@ -120,12 +120,12 @@ mustMatch(
   "the overdue sweep must only transition active, unpaid invoices past their local due date"
 );
 mustMatch(
-  flow,
-  /alter table public\.client_projects[\s\S]*?add constraint client_projects_payment_status_check[\s\S]*?'invoice drafted'/i,
+  baseline,
+  /alter table public\\.client_projects[\s\S]*?add constraint client_projects_payment_status_check[\s\S]*?'invoice drafted'/i,
   "the baseline flow SQL must support the draft invoice project status"
 );
 mustMatch(
-  flow,
+  baseline,
   /create trigger trg_sync_swayphics_project_after_invoice_change/i,
   "the baseline flow SQL must include invoice-to-project synchronization"
 );
