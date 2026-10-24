@@ -1503,7 +1503,6 @@ declare
     v_raw_days text;
 begin
     if new.last_contacted_at is not null
-       and new.next_follow_up is null
        and new.status in (
            'contacted',
            'interested',
@@ -1512,8 +1511,21 @@ begin
            'follow-up'
        )
        and (
-           tg_op = 'INSERT'
-           or new.last_contacted_at is distinct from old.last_contacted_at
+           (
+               new.next_follow_up is null
+               and (
+                   tg_op = 'INSERT'
+                   or new.last_contacted_at is distinct from old.last_contacted_at
+               )
+           )
+           or (
+               tg_op = 'UPDATE'
+               and new.next_follow_up is not distinct from old.next_follow_up
+               and (
+                   new.last_contacted_at is distinct from old.last_contacted_at
+                   or new.status is distinct from old.status
+               )
+           )
        )
     then
         select ws.followup_stage_days ->> new.status,
