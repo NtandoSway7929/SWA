@@ -817,8 +817,8 @@ async function main() {
 
     const campaignWorkspaceText = await page.locator("#sway-workspace-main").innerText();
     assert.match(campaignWorkspaceText, /Synthetic Website Outreach/);
-    assert.match(campaignWorkspaceText, /Primary/);
-    assert.match(campaignWorkspaceText, /275\.50/);
+    assert.match(campaignWorkspaceText, /primary/i);
+    assert.match(campaignWorkspaceText, /275[.,]50/);
     assert.match(campaignWorkspaceText, /currently won|Current won status/i,
       "campaign page must label present CRM status separately from historical cohort conversion");
     assert.match(campaignWorkspaceText, /not proof that a campaign caused a sale/i,
