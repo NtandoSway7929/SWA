@@ -188,7 +188,7 @@
       button.setAttribute("aria-expanded", chart.hidden ? "false" : "true");
     });
     toolbar.appendChild(button);
-    content.appendChild(chart);
+    message.appendChild(chart);
   }
 
   function enhanceChecklist(doc, message) {
