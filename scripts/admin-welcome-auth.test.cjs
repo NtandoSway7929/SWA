@@ -676,7 +676,7 @@ test("clearing a greeting name deletes only the authenticated admin preference",
 test("greeting settings include an ownership-protected preferences table", () => {
   const migrationPath = path.join(
     root,
-    "supabase/migrations/20261024194000_admin_greeting_preferences.sql"
+    "supabase/migrations/20261024175248_admin_greeting_preferences.sql"
   );
   const migration = fs.readFileSync(migrationPath, "utf8");
 
