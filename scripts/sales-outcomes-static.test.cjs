@@ -54,7 +54,7 @@ assert.match(workspace, /function isContactOptedOut\(/, "Opt-out state must be c
 assert.match(workspace, /isContactOptedOut\("lead", lead\.id\)/, "Opted-out leads must be excluded from the sales work queue.");
 assert.match(workspace, /contactOutreachSuppressionReason\(/, "Email composer must check recorded suppression state.");
 assert.match(workspace, /This contact is recorded as opted out/, "Suppression must provide an explicit reason.");
-assert.match(workspace, /<th>Outcome<\\/th>/, "Communication table must display each recorded outcome.");
+assert.match(workspace, /<th>Outcome<\/th>/, "Communication table must display each recorded outcome.");
 assert.match(browserTest, /Synthetic opt-out fixture/, "Browser test must create a synthetic opt-out record through the UI.");
 assert.match(browserTest, /must prevent opening a new email composer/, "Browser test must verify the email suppression safeguard.");
 assert.match(dbTest, /explicit opt-out outcome should persist/, "Database test must verify authenticated outcome persistence.");
