@@ -394,9 +394,9 @@ async function main() {
 
     // Exercise structured qualification through the real editor, but persist only
     // to the in-memory lead fixture intercepted by this test browser.
-    const qualificationLeadRow = leadRows.filter({ hasText: "Alpha Studio" });
+    const qualificationLeadRow = leadRows.filter({ hasText: "Zulu Market" });
     await qualificationLeadRow.locator(".sway-lead-actions-menu > summary").click();
-    const qualificationEdit = page.locator('[data-edit="leads"][data-id="lead-alpha"]');
+    const qualificationEdit = page.locator('[data-edit="leads"][data-id="lead-zulu"]');
     await qualificationEdit.waitFor({ state: "visible", timeout: 5000 });
     await qualificationEdit.click();
     const qualificationModal = page.locator(".sway-modal");
@@ -426,7 +426,7 @@ async function main() {
     await qualificationModal.locator('button[type="submit"]').click();
     await page.waitForFunction(() => !document.querySelector("#sway-field-qualification_priority"), { timeout: 15000 });
 
-    const qualifiedFixture = leads.find(item => item.id === "lead-alpha");
+    const qualifiedFixture = leads.find(item => item.id === "lead-zulu");
     assert.equal(qualifiedFixture.business_segment, "creative", "business segment should persist to the synthetic fixture");
     assert.equal(qualifiedFixture.service_fit, "fits_current_capacity", "service fit should persist to the synthetic fixture");
     assert.equal(qualifiedFixture.website_need, "verified_improvement", "website need should persist to the synthetic fixture");
@@ -439,7 +439,7 @@ async function main() {
     assert.equal(qualifiedFixture.qualification_reviewed_by, TEST_USER_ID,
       "qualification edits must record the authenticated synthetic reviewer");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
-      item.id === "lead-alpha" && item.qualificationUpdate === true
+      item.id === "lead-zulu" && item.qualificationUpdate === true
     ), "the qualification save must be intercepted and stored only in the in-memory mock");
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
