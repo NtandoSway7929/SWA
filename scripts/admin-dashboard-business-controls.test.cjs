@@ -90,7 +90,7 @@ test("automation-health RPC requires an active admin and limits exposed jobs", (
   assert.ok(migration.includes("grant execute on function public.get_swayphics_automation_status() to authenticated"));
   assert.ok(settings.includes("get_swayphics_automation_status"));
   assert.ok(settings.includes("Not run yet"));
-  assert.ok(settings.includes("backup retention and restore-test status are not exposed"));
+  assert.ok(settings.includes("Backup retention and restore-test status are not exposed"));
 });
 
 test("business-flow baseline includes the new columns and governance controls", () => {
