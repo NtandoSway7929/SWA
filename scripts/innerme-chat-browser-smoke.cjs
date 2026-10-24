@@ -510,6 +510,23 @@ async function askMockedQuestion(page) {
     hasText: "Browser smoke answer"
   }).last();
 
+  const uiDebug = await page.evaluate(() => {
+    const workspace = document.querySelector("#sway-admin-workspace");
+    const message = Array.from(document.querySelectorAll(".sway-ai-message.sway-ai-assistant"))
+      .find(node => (node.textContent || "").includes("Browser smoke answer"));
+    return {
+      rendererLoaded: typeof window.InnerMeIntelligentUI === "object",
+      workspaceBooted: workspace ? workspace.dataset.innermeUiBooted || null : null,
+      messageFound: !!message,
+      contentFound: !!(message && message.querySelector(".sway-ai-message-content")),
+      enhanced: message ? message.dataset.innermeUiEnhanced || null : null,
+      structured: message ? message.dataset.innermeUiStructured || null : null,
+      toolbarCount: message ? message.querySelectorAll(".innerme-iu-toolbar").length : 0,
+      listCount: message ? message.querySelectorAll(".sway-ai-message-content ul li").length : 0,
+      messageText: message ? (message.querySelector(".sway-ai-message-content")?.textContent || "").slice(0, 300) : ""
+    };
+  });
+  console.log("INNERME_INTELLIGENT_UI_DIAGNOSTIC=" + JSON.stringify(uiDebug));
   const checklistToggle = assistantMessage.locator("button.innerme-iu-checklist-toggle");
   await checklistToggle.waitFor({ state: "visible", timeout: 5000 });
   await checklistToggle.click();
