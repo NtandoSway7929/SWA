@@ -24,10 +24,10 @@ const markdownAnswer = [
   "const ready = true;",
   "\u0060\u0060\u0060",
   "",
-  "| Check | Result |",
-  "| --- | --- |",
-  "| SSE | Pass |",
-  "| Markdown | Pass |",
+  "| Check | Result | Score |",
+  "| --- | --- | ---: |",
+  "| SSE | Pass | 1 |",
+  "| Markdown | Pass | 2 |",
   "",
   "Raw HTML: <img src=x onerror=alert(1)>.",
   "",
@@ -508,6 +508,27 @@ async function askMockedQuestion(page) {
   const assistantMessage = page.locator(".sway-ai-message.sway-ai-assistant").filter({
     hasText: "Browser smoke answer"
   }).last();
+
+  const checklistToggle = assistantMessage.locator("button.innerme-iu-checklist-toggle");
+  await checklistToggle.waitFor({ state: "visible", timeout: 5000 });
+  await checklistToggle.click();
+  const checklist = assistantMessage.locator(".innerme-iu-checklist");
+  await checklist.waitFor({ state: "visible" });
+  assert.equal(await checklist.locator('input[type="checkbox"]').count(), 2, "Action plans should offer a local checklist");
+  await checklist.locator('input[type="checkbox"]').first().check();
+  assert.equal((await checklist.locator(".innerme-iu-checklist-count").textContent()).trim(), "1 of 2 complete", "Checklist should count locally checked items");
+  await checklistToggle.click();
+  await checklist.waitFor({ state: "hidden" });
+
+  const chartToggle = assistantMessage.locator("button.innerme-iu-chart-toggle");
+  await chartToggle.waitFor({ state: "visible", timeout: 5000 });
+  await chartToggle.click();
+  const chart = assistantMessage.locator(".innerme-iu-chart");
+  await chart.waitFor({ state: "visible" });
+  assert.equal(await chart.locator(".innerme-iu-bar-row").count(), 2, "Numeric markdown tables should have a chart view");
+  await chartToggle.click();
+  await chart.waitFor({ state: "hidden" });
+
   const copyResponse = assistantMessage.locator("button.sway-ai-copy:not(.sway-ai-code-copy)");
   await copyResponse.click();
   await page.waitForFunction(() => {
