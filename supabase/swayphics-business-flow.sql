@@ -1597,7 +1597,11 @@ begin
           and l.last_contacted_at is not null
           and l.last_contacted_at <= now() - make_interval(
               days => case
-                  when coalesce(settings.stage_days, '') ~ '^[0-9]{1,3}
+                  when coalesce(settings.stage_days, '') ~ '^[0-9]{1,3}$'
+                    then greatest(1, least(365, settings.stage_days::integer))
+                  else coalesce(settings.lead_no_response_days, 7)
+              end
+          )
           and not exists (
               select 1
               from public.follow_ups f

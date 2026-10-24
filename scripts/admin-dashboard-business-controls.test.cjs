@@ -36,10 +36,14 @@ test("sales controls expose response SLA, stage intervals and an attempt cap", (
   assert.ok(migration.includes("'lead.followup_limit'"));
   assert.ok(migration.includes("'lead.response_overdue'"));
   assert.ok(migration.includes("l.created_at <= now() - make_interval(hours => v_response_hours)"));
-  assert.ok(migration.includes("l.last_contacted_at <= now() - make_interval("), "stage-specific scheduling must preserve the full elapsed no-response interval");
-  assert.ok(baseline.includes("l.last_contacted_at <= now() - make_interval("), "baseline worker must preserve the full elapsed no-response interval");
-  assert.ok(migration.includes("new.status is distinct from old.status"), "changing a lead stage must recalculate its configured next follow-up date");
-  assert.ok(migration.includes("new.next_follow_up is not distinct from old.next_follow_up"), "an explicitly changed due date must not be overwritten by the stage trigger");
+  assert.ok(migration.includes("l.last_contacted_at <= now() - make_interval("));
+  assert.ok(migration.includes("when coalesce(settings.stage_days, '') ~ '^[0-9]{1,3}$'"),
+    "migration must contain the complete stage-interval regex literal");
+  assert.ok(baseline.includes("l.last_contacted_at <= now() - make_interval("));
+  assert.ok(baseline.includes("when coalesce(settings.stage_days, '') ~ '^[0-9]{1,3}$'"),
+    "baseline must contain the complete stage-interval regex literal");
+  assert.ok(migration.includes("new.status is distinct from old.status"));
+  assert.ok(migration.includes("new.next_follow_up is not distinct from old.next_follow_up"));
 });
 
 test("monthly targets are saved and current-month actuals use live leads, quotes and invoices", () => {
@@ -103,12 +107,12 @@ test("automation-health RPC requires an active admin and limits exposed jobs", (
 
 test("the migration and baseline use balanced PL/pgSQL dollar delimiters", () => {
   function delimiterStats(source) {
-    const lines = source.split(/\\r?\\n/);
+    const lines = source.split(/\r?\n/);
     return {
       malformedOpen: lines.filter(line => line === "as $" || line === "do $").length,
       malformedClose: lines.filter(line => line === "$;").length,
-      opens: lines.filter(line => line === "as $" || line === "do $").length,
-      closes: lines.filter(line => line === "$;").length
+      opens: lines.filter(line => line === "as $$" || line === "do $$").length,
+      closes: lines.filter(line => line === "$$;").length
     };
   }
   for (const [name, source] of [["migration", migration], ["baseline", baseline]]) {
