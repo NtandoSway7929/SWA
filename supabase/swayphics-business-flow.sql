@@ -2016,3 +2016,5 @@ $$;
 revoke all privileges on function public.get_swayphics_automation_status() from public, anon;
 grant execute on function public.get_swayphics_automation_status() to authenticated;
 
+
+notify pgrst, 'reload schema';
