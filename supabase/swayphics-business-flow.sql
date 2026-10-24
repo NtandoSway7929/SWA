@@ -1060,7 +1060,7 @@ create trigger trg_z_ensure_swayphics_next_followup_date
     for each row
     execute function public.ensure_swayphics_next_followup_date();
 
--- Ensure the stale-lead processor runs even when the dashboard is closed.
+-- Ensure the stale-lead processor runs every 15 minutes, even when the dashboard is closed.
 create extension if not exists pg_cron;
 do $$
 declare
@@ -1076,7 +1076,7 @@ begin
 
     perform cron.schedule(
         'swayphics-stale-lead-followups',
-        '20 6 * * *',
+        '*/15 * * * *',
         'select innerme_private.process_swayphics_stale_leads_internal();'
     );
 end;
