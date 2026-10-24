@@ -640,6 +640,20 @@ begin
 end;
 $;
 
+-- Keep draft invoices distinct from invoices that have actually been sent.
+alter table public.client_projects
+    drop constraint if exists client_projects_payment_status_check;
+alter table public.client_projects
+    add constraint client_projects_payment_status_check
+    check (payment_status in (
+        'not invoiced',
+        'invoice drafted',
+        'invoice sent',
+        'partially paid',
+        'paid',
+        'overdue'
+    ));
+
 create or replace function public.sync_swayphics_project_payment_status(
     p_project_id uuid
 )
