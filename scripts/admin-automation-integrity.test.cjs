@@ -66,8 +66,8 @@ mustMatch(
 );
 mustMatch(
   migration,
-  /cron\.schedule\(\s*'swayphics-stale-lead-followups'\s*,\s*'20 6 \* \* \*'/i,
-  "the stale-lead automation must run on a background schedule"
+  /cron\.schedule\(\s*'swayphics-stale-lead-followups'\s*,\s*'\*\/15 \* \* \* \*'/i,
+  "the stale-lead automation must run every 15 minutes in the background"
 );
 mustMatch(
   baseline,
