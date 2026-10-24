@@ -33,6 +33,9 @@ jobs:
       - name: Test structured sales qualification
         run: node scripts/sales-qualification-static.test.cjs
 
+      - name: Test structured sales communication outcomes
+        run: node scripts/sales-outcomes-static.test.cjs
+
       - name: Validate inline JavaScript
         shell: bash
         run: |
