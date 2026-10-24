@@ -234,7 +234,7 @@
   }
 
   function enhanceMessage(doc, message) {
-    if (!message || message.dataset.innermeUiEnhanced === "1") return;
+    if (!message || message.dataset.innermeUiStructured === "1") return;
     const content = message.querySelector(".sway-ai-message-content");
     if (!content) return;
     const rawText = (content.textContent || "").trim();
@@ -248,6 +248,8 @@
       raw.textContent = rawText;
       original.appendChild(raw);
       content.replaceChildren(renderPayload(doc, payload), original);
+      message.dataset.innermeUiStructured = "1";
+      message.dataset.innermeUiEnhanced = "1";
       return;
     }
     const classification = classifyMessage(rawText, content);
@@ -255,6 +257,7 @@
     getToolbar(doc, message).querySelector(".innerme-iu-kind").textContent = kindLabels[classification.kind] || "Answer";
     if (classification.chart) enhanceChart(doc, message, classification.chart);
     if (classification.checklist) enhanceChecklist(doc, message);
+    message.dataset.innermeUiEnhanced = "1";
   }
 
   function boot(doc) {
