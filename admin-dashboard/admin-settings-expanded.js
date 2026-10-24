@@ -908,7 +908,6 @@
         if (!greetingForm || document.getElementById(ROOT_ID)) return;
 
         var anchor = greetingForm;
-        if (greetingForm.parentElement) anchor = greetingForm.parentElement;
         var root = document.createElement("div");
         root.innerHTML = buildMarkup();
         root = root.firstElementChild;
