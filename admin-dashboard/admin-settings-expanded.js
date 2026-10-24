@@ -390,7 +390,7 @@
             '<div class="swe-stat"><span>Invoiced revenue</span><strong data-performance-actual="revenue">Loading…</strong><small data-performance-target="revenue">Target not set</small><div class="swe-progress"><span data-performance-bar="revenue"></span></div></div>' +
             '<div class="swe-stat"><span>New leads</span><strong data-performance-actual="leads">Loading…</strong><small data-performance-target="leads">Target not set</small><div class="swe-progress"><span data-performance-bar="leads"></span></div></div>' +
             '<div class="swe-stat"><span>Proposals issued</span><strong data-performance-actual="proposals">Loading…</strong><small data-performance-target="proposals">Target not set</small><div class="swe-progress"><span data-performance-bar="proposals"></span></div></div>' +
-            '<div class="swe-stat"><span>Deals won</span><strong data-performance-actual="wins">Loading…</strong><small data-performance-target="wins">Target not set</small><div class="swe-progress"><span data-performance-bar="wins"></span></div></div>' +
+            '<div class="swe-stat"><span>New leads won</span><strong data-performance-actual="wins">Loading…</strong><small data-performance-target="wins">Target not set</small><div class="swe-progress"><span data-performance-bar="wins"></span></div></div>' +
             '<div class="swe-stat"><span>Lead-to-win conversion</span><strong data-performance-actual="conversion">Loading…</strong><small data-performance-target="conversion">Target not set</small><div class="swe-progress"><span data-performance-bar="conversion"></span></div></div>' +
             '</div><p class="swe-status" data-performance-status role="status" aria-live="polite"></p></div></section>';
 
@@ -766,12 +766,6 @@
                     created_at: "gte." + bounds.startIso,
                     limit: "1000"
                 }),
-                getRows("leads", {
-                    select: "id,status,updated_at",
-                    status: "eq.won",
-                    updated_at: "gte." + bounds.startIso,
-                    limit: "1000"
-                }),
                 getRows("quotes", {
                     select: "id,status,created_at,amount",
                     created_at: "gte." + bounds.startIso,
@@ -787,27 +781,23 @@
             var leads = result[0].filter(function (row) {
                 return row.created_at < bounds.endIso;
             });
-            var winsThisMonth = result[1].filter(function (row) {
-                return row.updated_at >= bounds.startIso && row.updated_at < bounds.endIso;
-            }).length;
-            var quotes = result[2].filter(function (row) {
+            var quotes = result[1].filter(function (row) {
                 return row.created_at < bounds.endIso && String(row.status || "").toLowerCase() !== "draft";
             });
-            var invoices = result[3].filter(function (row) {
+            var invoices = result[2].filter(function (row) {
                 return row.issue_date >= bounds.startDate && row.issue_date < bounds.endDate &&
                     row.archived !== true &&
                     !["draft", "cancelled", "void"].includes(String(row.status || "").toLowerCase());
             });
             var newLeads = leads.length;
-            var wins = winsThisMonth;
+            var wins = leads.filter(function (row) {
+                return String(row.status || "").toLowerCase() === "won";
+            }).length;
             var revenue = invoices.reduce(function (sum, row) {
                 return sum + (Number(row.total) || 0);
             }, 0);
             var proposals = quotes.length;
-            var convertedFromThisMonth = leads.filter(function (row) {
-                return String(row.status || "").toLowerCase() === "won";
-            }).length;
-            var conversion = newLeads ? convertedFromThisMonth / newLeads * 100 : 0;
+            var conversion = newLeads ? wins / newLeads * 100 : 0;
             var form = root.querySelector('[data-settings-form="performance"]');
             var targets = {
                 revenue: Number(form.querySelector('[name="monthly_revenue_target"]').value) || 0,
