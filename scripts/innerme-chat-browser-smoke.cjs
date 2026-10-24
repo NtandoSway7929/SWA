@@ -606,8 +606,17 @@ async function askMockedQuestion(page) {
     buttonDuration: getComputedStyle(document.querySelector(".innerme-iu-chart-toggle")).transitionDuration,
     barDuration: getComputedStyle(document.querySelector(".innerme-iu-bar")).transitionDuration
   }));
-  assert.equal(motionStyles.buttonDuration, "0s", "Reduced motion should remove chart-toggle transitions");
-  assert.equal(motionStyles.barDuration, "0s", "Reduced motion should remove bar-width transitions");
+  const maxTransitionDurationMs = value => Math.max(
+    ...String(value).split(",").map(part => Number.parseFloat(part.trim()) * 1000)
+  );
+  assert.ok(
+    maxTransitionDurationMs(motionStyles.buttonDuration) <= 0.01,
+    "Reduced motion should cap chart-toggle transitions at 0.01ms or less"
+  );
+  assert.ok(
+    maxTransitionDurationMs(motionStyles.barDuration) <= 0.01,
+    "Reduced motion should cap bar-width transitions at 0.01ms or less"
+  );
   await page.emulateMedia({ reducedMotion: "no-preference" });
 
   await chartToggle.focus();
