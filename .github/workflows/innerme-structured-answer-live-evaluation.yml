@@ -8,6 +8,11 @@ on:
         required: true
         type: boolean
         default: false
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/innerme-structured-answer-live-evaluation.yml"
+      - "scripts/innerme-structured-answer-live-evaluation.mjs"
 
 permissions:
   contents: read
@@ -17,6 +22,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate evaluator syntax without contacting any provider
+        run: node --check scripts/innerme-structured-answer-live-evaluation.mjs
+
   evaluate:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
