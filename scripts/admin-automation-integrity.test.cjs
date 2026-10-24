@@ -146,6 +146,11 @@ mustMatch(
 );
 mustMatch(
   dueTodayMigration,
+  /'lead\.due_today'/i,
+  "due-today reminders must use the standard sales event prefix so notification preferences apply"
+);
+mustMatch(
+  dueTodayMigration,
   /l\.next_follow_up = v_today/i,
   "scheduled first-contact and follow-up reminders must include items due today"
 );
@@ -177,7 +182,7 @@ mustMatch(
 
 console.log(JSON.stringify({
   result: "PASS",
-  checks: 28,
+  checks: 29,
   verified: [
     "cron uses a private, no-user-auth worker",
     "dashboard RPC remains admin-authenticated",
@@ -191,7 +196,7 @@ console.log(JSON.stringify({
     "draft invoices are not mislabeled as sent",
     "daily local-date overdue sweep is defined in migration and baseline SQL",
     "base and follow-on schemas accept invoice drafted status",
-    "due-today first-contact reminders are scheduled and deduplicated",
+    "due-today first-contact reminders are scheduled, deduplicated and respect sales notification preferences",
     "dashboard smoke test models scalar RPC results and asserts startup invocation"
   ]
 }, null, 2));
