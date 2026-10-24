@@ -123,6 +123,9 @@ async function main() {
   }
 
   // Exactly one chat POST. No retry occurs in this script.
+  // Record a bounded timestamp window so failed HTTP responses without a request
+  // ID can still be reconciled against isolated-project provider telemetry.
+  const telemetryWindowStart = new Date(Date.now() - 2000).toISOString();
   const startedAt = performance.now();
   let response;
   try {
@@ -137,6 +140,7 @@ async function main() {
     throw new Error("The one isolated chat request failed at transport level (" + reason + "). No retry was attempted.");
   }
   const elapsedMs = Math.round(performance.now() - startedAt);
+  const telemetryWindowEnd = new Date(Date.now() + 2000).toISOString();
   const requestId = response.headers.get("x-innerme-request-id") || "";
   let body;
   try {
@@ -146,19 +150,62 @@ async function main() {
   }
 
   if (!response.ok || !body || typeof body.answer !== "string" || !body.answer.trim()) {
+    // A provider failure may omit X-InnerMe-Request-ID. Reconcile the single
+    // chat POST against telemetry created inside its isolated, bounded window.
+    const query = new URL(SUPABASE_URL + "/rest/v1/innerme_provider_usage");
+    query.searchParams.set("select", "request_id,attempt_number,task_category,provider,model,outcome,http_status,latency_ms,error_code,fallback_reason,created_at");
+    query.searchParams.set("task_category", "eq.assistant_chat");
+    query.searchParams.set("created_at", "gte." + telemetryWindowStart);
+    query.searchParams.set("and", "(created_at.lte." + telemetryWindowEnd + ")");
+    query.searchParams.set("order", "created_at.asc,attempt_number.asc");
+    let attempts = null;
+    let telemetryError = null;
+    try {
+      const telemetry = await fetch(query, {
+        method: "GET",
+        headers,
+        signal: AbortSignal.timeout(15000),
+      });
+      if (telemetry.ok) {
+        const rows = await telemetry.json();
+        if (Array.isArray(rows)) attempts = rows;
+        else telemetryError = "Telemetry response was not an array.";
+      } else {
+        telemetryError = "Telemetry query returned HTTP " + telemetry.status + ".";
+      }
+    } catch (error) {
+      telemetryError = error instanceof Error ? error.name : "unknown_error";
+    }
+    const providerAttemptCount = Array.isArray(attempts) ? attempts.length : null;
     process.stdout.write(JSON.stringify({
       evaluation: "innerme_structured_answer_live_evaluation_v1",
       status: body?.quota_guarded ? "blocked_before_provider" : "request_failed",
       project: "isolated_test_only",
       project_ref: PROJECT_REF,
       chat_requests_sent: 1,
-      provider_requests_confirmed: 0,
+      provider_requests_confirmed: providerAttemptCount,
+      provider_attempts: Array.isArray(attempts) ? attempts.map((row) => ({
+        request_id: row.request_id,
+        attempt: row.attempt_number,
+        provider: row.provider,
+        model: row.model,
+        outcome: row.outcome,
+        http_status: row.http_status,
+        latency_ms: row.latency_ms,
+        error_code: row.error_code,
+        fallback_reason: row.fallback_reason,
+        created_at: row.created_at,
+      })) : null,
       http_status: response.status,
       quota_guarded: body?.quota_guarded === true,
       guard_reason: typeof body?.guard_reason === "string" ? body.guard_reason : null,
-      request_id: requestId || null,
-      elapsed_ms: elapsedMs,
+      request_id: requestId || (Array.isArray(attempts) && attempts.length === 1 ? attempts[0].request_id : null),
+      telemetry_window_start: telemetryWindowStart,
+      telemetry_window_end: telemetryWindowEnd,
+      telemetry_error: telemetryError,
+      exactly_one_provider_attempt: providerAttemptCount === 1,
       retries: 0,
+      elapsed_ms: elapsedMs,
       answer: typeof body?.error === "string" ? body.error.slice(0, 500) : null,
     }, null, 2) + "\n");
     process.exitCode = 1;
