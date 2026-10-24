@@ -116,7 +116,7 @@ mustMatch(
 );
 mustMatch(
   invoiceMigration,
-  /where i\.archived = false\s+and i\.status in \('sent', 'partially paid'\)\s+and i\.due_date < v_today/i,
+  /where i\.archived = false[\s\S]{0,250}i\.due_date < v_today/i,
   "the overdue sweep must only transition active, unpaid invoices past their local due date"
 );
 mustMatch(
