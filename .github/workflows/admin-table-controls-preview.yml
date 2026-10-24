@@ -12,6 +12,10 @@ on:
       - "scripts/admin-table-controls-db-smoke.cjs"
       - "tests/admin-table-controls-preview/**"
       - "tests/admin-table-controls-db/**"
+      - "supabase/swayphics-sales-qualification.sql"
+      - "supabase/swayphics-sales-communication-outcomes.sql"
+      - "supabase/swayphics-sales-campaign-attribution.sql"
+      - "supabase/swayphics-admin-workspace-realtime.sql"
       - "scripts/admin-table-controls-browser.test.cjs"
       - ".github/workflows/admin-table-controls-preview.yml"
   workflow_dispatch:
