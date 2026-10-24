@@ -268,7 +268,7 @@
     workspace.dataset.innermeUiBooted = "1";
 
     function observeConversation(conversation) {
-      if (!conversation || conversation.dataset.innermeUiObserved === "1") return null;
+      if (!conversation || conversation.dataset.innermeUiObserved === "1") return;
       conversation.dataset.innermeUiObserved = "1";
       const observer = new MutationObserver(records => records.forEach(record => {
         const changedNodes = Array.from(record.addedNodes || []);
@@ -284,14 +284,29 @@
       }));
       observer.observe(conversation, { childList: true, subtree: true, characterData: true });
       conversation.querySelectorAll(".sway-ai-assistant").forEach(message => enhanceMessage(doc, message));
-      return observer;
     }
 
-    if (observeConversation(workspace.querySelector("#sway-ai-conversation"))) return;
-    const waitForConversation = new MutationObserver(() => {
-      if (observeConversation(workspace.querySelector("#sway-ai-conversation"))) waitForConversation.disconnect();
+    function activateChat() {
+      const conversation = workspace.querySelector("#sway-ai-conversation");
+      if (conversation) {
+        observeConversation(conversation);
+        return;
+      }
+      const waitForConversation = new MutationObserver(() => {
+        const found = workspace.querySelector("#sway-ai-conversation");
+        if (found) {
+          observeConversation(found);
+          waitForConversation.disconnect();
+        }
+      });
+      waitForConversation.observe(workspace, { childList: true, subtree: true });
+    }
+
+    activateChat();
+    workspace.addEventListener("click", function (event) {
+      const target = event.target && event.target.nodeType === 1 ? event.target : event.target && event.target.parentElement;
+      if (target && target.closest && target.closest('[data-view="swayphics-ai"]')) activateChat();
     });
-    waitForConversation.observe(workspace, { childList: true, subtree: true });
   }
   return { VERSION, classifyText, parseNumericCell, extractTableSeries, parseOptInPayload, classifyMessage, renderPayload, renderBars, enhanceMessage, boot };
 });
