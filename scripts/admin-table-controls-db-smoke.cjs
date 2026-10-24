@@ -92,6 +92,10 @@ async function bestEffortCleanup(userIds, recordIds) {
   }
   if (recordIds.followupId) await clean("follow_ups", "id=eq." + recordIds.followupId);
   if (recordIds.taskId) await clean("tasks", "id=eq." + recordIds.taskId);
+  if (recordIds.communicationId) {
+    await clean("activity_log", "entity_id=eq." + recordIds.communicationId);
+    await clean("communication_logs", "id=eq." + recordIds.communicationId);
+  }
   for (const id of [recordIds.leadAlphaId, recordIds.leadBravoId]) {
     if (id) await clean("leads", "id=eq." + id);
   }
@@ -114,6 +118,7 @@ async function main() {
   const ids = {
     leadAlphaId: randomUUID(),
     leadBravoId: randomUUID(),
+    communicationId: randomUUID(),
     taskId: randomUUID(),
     followupId: randomUUID()
   };
@@ -138,6 +143,15 @@ async function main() {
         { id: ids.leadBravoId, business_name: "CI Bravo Cafe", contact_name: "Local Test", email: "bravo@example.invalid", service_interest: "Branding", source: "CI Fixture", status: "new", estimated_value: 900, assigned_to: admin.id, next_follow_up: "2026-10-27" }
       ]
     });
+    await rest("POST", "communication_logs", "", {
+      token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
+      body: [{
+        id: ids.communicationId, lead_id: ids.leadAlphaId, channel: "Email",
+        direction: "inbound", outcome: "not_recorded", subject: "CI-only outcome test",
+        message: "Synthetic communication outcome persistence fixture.",
+        contacted_at: new Date().toISOString(), created_by: admin.id
+      }]
+    });
     await rest("POST", "tasks", "", {
       token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
       body: [{ id: ids.taskId, title: "CI confirm scope", description: "Isolated local persistence test", assigned_to: admin.id, lead_id: ids.leadBravoId, priority: "urgent", status: "todo", due_date: "2026-10-26" }]
@@ -152,6 +166,41 @@ async function main() {
     const leadBefore = await rest("GET", "leads", "select=id,status,next_follow_up&id=eq." + ids.leadBravoId, { token: adminToken });
     assert.equal(leadBefore.data.length, 1, "authenticated admin should read the seeded lead through RLS");
     assert.equal(leadBefore.data[0].status, "new");
+
+    const communicationBefore = await rest("GET", "communication_logs",
+      "select=id,outcome,lead_id&id=eq." + ids.communicationId, { token: adminToken });
+    assert.equal(communicationBefore.data.length, 1,
+      "authenticated admin should read the communication outcome fixture through RLS");
+    assert.equal(communicationBefore.data[0].outcome, "not_recorded",
+      "new communication records must default to an explicitly unrecorded outcome");
+
+    const communicationWrite = await rest("PATCH", "communication_logs",
+      "id=eq." + ids.communicationId, {
+        token: adminToken,
+        body: { outcome: "opt_out", updated_at: new Date().toISOString() }
+      });
+    assert.equal(communicationWrite.data.length, 1,
+      "authenticated admin should update a structured communication outcome");
+    writes.push("PATCH communication_logs (opt_out)");
+
+    const communicationAfter = await rest("GET", "communication_logs",
+      "select=id,outcome&id=eq." + ids.communicationId, { token: adminToken });
+    assert.equal(communicationAfter.data.length, 1);
+    assert.equal(communicationAfter.data[0].outcome, "opt_out",
+      "explicit opt-out outcome should persist for the authenticated admin");
+
+    const invalidOutcome = await rest("PATCH", "communication_logs",
+      "id=eq." + ids.communicationId, {
+        token: adminToken,
+        body: { outcome: "qualified" },
+        allowError: true
+      });
+    assert.ok(invalidOutcome.status >= 400,
+      "database constraint must reject unsupported communication outcomes");
+    const communicationAfterInvalid = await rest("GET", "communication_logs",
+      "select=id,outcome&id=eq." + ids.communicationId, { token: adminToken });
+    assert.equal(communicationAfterInvalid.data[0].outcome, "opt_out",
+      "rejected communication outcome must not overwrite the recorded opt-out");
 
     // A rejected/cancelled UI confirmation makes no request. The companion UI
     // smoke test checks that cancellation path; here we prove the row is still
@@ -227,6 +276,10 @@ async function main() {
     const nonAdminToken = await signIn(nonAdminEmail, password);
     const hiddenLeads = await rest("GET", "leads", "select=id&id=eq." + ids.leadBravoId, { token: nonAdminToken });
     assert.equal(hiddenLeads.data.length, 0, "a signed-in user without an admin row must not read CRM leads through RLS");
+    const hiddenCommunications = await rest("GET", "communication_logs",
+      "select=id&id=eq." + ids.communicationId, { token: nonAdminToken });
+    assert.equal(hiddenCommunications.data.length, 0,
+      "a signed-in user without an admin row must not read communication outcomes through RLS");
 
     summary = {
       result: "PASS",
@@ -237,6 +290,7 @@ async function main() {
       seed: "synthetic UUID records only; created in local database and cleaned up",
       authenticatedActionWrites: writes,
       readAfterWrite: [
+        "communication outcome default, explicit opt-out update and unsupported outcome rejection persisted",
         "task completion status and timestamp persisted",
         "follow-up completion status and timestamp persisted",
         "linked lead moved to contacted and next_follow_up was cleared",
