@@ -18,6 +18,7 @@ jobs:
         run: |
           set -e
           node --check admin-dashboard/admin-workspace.js
+          node --check admin-dashboard/innerme-workspace-health.js
           node --check admin-dashboard/admin-table-controls.js
           node --check admin-dashboard/innerme-provider-usage.js
 
