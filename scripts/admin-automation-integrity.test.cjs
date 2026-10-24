@@ -31,6 +31,11 @@ const dueTodayMigration = fs.readFileSync(
   "utf8"
 );
 
+const overdueLeadMigration = fs.readFileSync(
+  path.join(root, "supabase/migrations/20261025011700_swayphics_overdue_lead_reminders.sql"),
+  "utf8"
+);
+
 const quoteExpiryMigration = fs.readFileSync(
   path.join(root, "supabase/migrations/20261024220000_swayphics_quote_expiry_notifications.sql"),
   "utf8"
@@ -208,6 +213,42 @@ mustMatch(
   /swayphics-lead-due-today:/i,
   "due-today notifications must have a stable per-lead daily deduplication key"
 );
+
+mustMatch(
+  overdueLeadMigration,
+  /l\.next_follow_up <= v_today/i,
+  "the current notification worker must cover leads due today and overdue"
+);
+mustMatch(
+  overdueLeadMigration,
+  /if r\.next_follow_up < v_today[\s\S]*?First contact overdue[\s\S]*?Lead follow-up overdue[\s\S]*?First contact due today/i,
+  "overdue and same-day first-contact/follow-up reminders must be labeled accurately"
+);
+mustMatch(
+  overdueLeadMigration,
+  /where l\.status not in \('won', 'lost', 'not interested'\)/i,
+  "leads marked not interested must not receive follow-up reminders"
+);
+mustMatch(
+  overdueLeadMigration,
+  /update public\.leads l[\s\S]*?set next_follow_up[\s\S]*?l\.next_follow_up is null[\s\S]*?l\.last_contacted_at is not null[\s\S]*?l\.status in/i,
+  "existing active contacted leads missing a due date must be backfilled"
+);
+mustMatch(
+  overdueLeadMigration,
+  /swayphics-lead-schedule:[\s\S]*?v_today::text/i,
+  "daily due/overdue reminders must be deduplicated per lead and local date"
+);
+mustMatch(
+  baseline,
+  /l\.next_follow_up <= v_today/i,
+  "the baseline flow SQL must include overdue lead reminders"
+);
+mustMatch(
+  baseline,
+  /update public\.leads l[\s\S]*?set next_follow_up[\s\S]*?l\.last_contacted_at is not null[\s\S]*?l\.status in/i,
+  "the baseline flow SQL must backfill existing active contact due dates"
+);
 mustMatch(
   baseline,
   /generate_swayphics_due_lead_notifications_internal/i,
@@ -221,7 +262,7 @@ mustMatch(
 
 console.log(JSON.stringify({
   result: "PASS",
-  checks: 35,
+  checks: 42,
   verified: [
     "cron uses a private, no-user-auth worker",
     "dashboard RPC remains admin-authenticated",
@@ -236,6 +277,9 @@ console.log(JSON.stringify({
     "daily local-date overdue sweep is defined in migration and baseline SQL",
     "base and follow-on schemas accept invoice drafted status",
     "due-today first-contact reminders are scheduled, deduplicated and respect sales notification preferences",
+    "overdue first-contact and follow-up reminders recur once per local day",
+    "existing contacted leads with missing due dates are backfilled",
+    "not-interested leads are excluded from scheduled follow-up reminders",
     "quote expiry reminders are scheduled, deduplicated and respect sales notification preferences",
     "dashboard smoke test models scalar RPC results and asserts startup invocation"
   ]
