@@ -134,6 +134,7 @@
             items: [
                 ["enquiries", "Enquiries"],
                 ["leads", "Leads"],
+                ["sales-work-queue", "Sales Work Queue"],
                 ["clients", "Clients"],
                 ["communications", "Communication log"],
                 ["email", "Inbox"],
@@ -12326,6 +12327,117 @@ function simpleBars(items, color) {
         }
     }
 
+
+    function renderSalesWorkQueue() {
+        const today = dashboardTodayISO();
+        const items = [];
+        const activeLeadStatus = function (lead) {
+            return !["won", "lost", "not interested"].includes(
+                String(lead.status || "").toLowerCase()
+            );
+        };
+        const pendingLeadFollowups = new Set();
+
+        state.followups.forEach(function (followup) {
+            if (followup.status !== "pending" || !followup.lead_id) return;
+            const lead = state.leads.find(function (entry) { return entry.id === followup.lead_id; });
+            if (!lead || !activeLeadStatus(lead)) return;
+            pendingLeadFollowups.add(followup.lead_id);
+            const scheduled = dashboardDateKey(followup.scheduled_for);
+            if (!scheduled || scheduled > today) return;
+            items.push({
+                sort: scheduled < today ? 0 : 1,
+                date: scheduled,
+                title: lead.business_name || lead.contact_name || "Lead follow-up",
+                detail: (scheduled < today ? "Overdue follow-up" : "Follow-up due today") +
+                    " · " + (followup.channel || "Channel not set") +
+                    " · " + (lead.service_interest || "Service not specified"),
+                action: '<button type="button" class="sway-workspace-button" data-edit="leads" data-id="' +
+                    esc(lead.id) + '">Open lead</button>'
+            });
+        });
+
+        state.followups.forEach(function (followup) {
+            if (followup.status !== "pending" || !followup.client_id || !followup.scheduled_for) return;
+            const scheduled = dashboardDateKey(followup.scheduled_for);
+            if (!scheduled || scheduled > today) return;
+            items.push({
+                sort: scheduled < today ? 0 : 1,
+                date: scheduled,
+                title: clientName(followup.client_id) || "Client follow-up",
+                detail: (scheduled < today ? "Overdue client follow-up" : "Client follow-up due today") +
+                    " · " + (followup.channel || "Channel not set"),
+                action: '<button type="button" class="sway-workspace-button" data-view-target="followups">Open follow-ups</button>'
+            });
+        });
+
+        state.quotes.forEach(function (quote) {
+            if (quote.status !== "sent") return;
+            const linkedLead = quote.lead_id
+                ? state.leads.find(function (lead) { return lead.id === quote.lead_id; })
+                : null;
+            if (linkedLead && !activeLeadStatus(linkedLead)) return;
+            const validUntil = dashboardDateKey(quote.valid_until);
+            items.push({
+                sort: validUntil && validUntil < today ? 2 : 3,
+                date: validUntil || "9999-12-31",
+                title: quote.title || quote.quote_number || "Proposal awaiting response",
+                detail: (linkedLead
+                    ? (linkedLead.business_name || linkedLead.contact_name || "Lead")
+                    : (quote.client_id ? clientName(quote.client_id) : "Unlinked proposal")) +
+                    " · " + money(quote.amount) +
+                    (validUntil
+                        ? " · " + (validUntil < today ? "Validity date passed" : "Valid until " + date(quote.valid_until))
+                        : " · No validity date recorded"),
+                action: '<button type="button" class="sway-workspace-button" data-view-target="quotes">Open quotes</button>'
+            });
+        });
+
+        state.leads.forEach(function (lead) {
+            const status = String(lead.status || "").toLowerCase();
+            if (
+                !activeLeadStatus(lead) ||
+                !["new", "contacted", "interested", "negotiating"].includes(status) ||
+                lead.next_follow_up ||
+                pendingLeadFollowups.has(lead.id)
+            ) return;
+            items.push({
+                sort: status === "new" ? 4 : 5,
+                date: dashboardDateKey(lead.created_at) || "9999-12-31",
+                title: lead.business_name || lead.contact_name || "Unnamed prospect",
+                detail: (status === "new"
+                    ? "New prospect has no next action"
+                    : "Active lead has no next follow-up date") +
+                    " · " + (lead.service_interest || "Service not specified") +
+                    " · " + (lead.source || "Source unspecified"),
+                action: '<button type="button" class="sway-workspace-button" data-edit="leads" data-id="' +
+                    esc(lead.id) + '">Set next action</button>'
+            });
+        });
+
+        items.sort(function (a, b) {
+            if (a.sort !== b.sort) return a.sort - b.sort;
+            return String(a.date).localeCompare(String(b.date));
+        });
+
+        const queue = items.map(function (item) {
+            return '<article class="sway-sales-queue-item">' +
+                '<div class="sway-sales-queue-copy"><strong>' + esc(item.title) +
+                '</strong><span>' + esc(item.detail) + '</span></div>' +
+                '<div class="sway-sales-queue-action">' + item.action + '</div></article>';
+        }).join("");
+
+        return heading(
+            '<button type="button" class="sway-workspace-button" data-view-target="leads">Open lead pipeline</button>' +
+            '<button type="button" class="sway-workspace-button" data-view-target="followups">Manage follow-ups</button>'
+        ) + panel(
+            "Sales work queue",
+            "A read-only daily view of overdue follow-ups, proposals awaiting a response, and active prospects without a recorded next action. Opening this view does not send messages or change records.",
+            items.length
+                ? '<div class="sway-sales-queue">' + queue + '</div>'
+                : empty("No sales actions are due based on the records currently loaded. Check Leads and Follow-ups if you expected an item here.")
+        ) + '<div class="sway-inline-note">Priority is based on recorded status and dates, not an AI prediction of who will buy. Keep each lead\'s next action and follow-up date current.</div>';
+    }
 
     function renderLeads() {
         /*
@@ -26022,6 +26134,11 @@ function simpleBars(items, color) {
             if (state.currentView === "leads") {
                 main.innerHTML =
                     renderLeads();
+            }
+
+            if (state.currentView === "sales-work-queue") {
+                main.innerHTML =
+                    renderSalesWorkQueue();
             }
 
             if (state.currentView === "followups") {
