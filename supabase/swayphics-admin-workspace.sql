@@ -171,6 +171,8 @@ create table if not exists public.communication_logs (
         check (channel in ('Email','WhatsApp','Phone','Meeting','SMS','Other')),
     direction text not null default 'outbound'
         check (direction in ('inbound','outbound')),
+    outcome text not null default 'not_recorded'
+        check (outcome in ('not_recorded','no_reply_yet','positive_reply','neutral_reply','negative_reply','meeting_agreed','proposal_requested','follow_up_requested','opt_out','opt_in_confirmed','invalid_contact','other')),
     subject text,
     message text not null,
     contacted_at timestamptz not null default now(),
