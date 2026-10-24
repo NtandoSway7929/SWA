@@ -11915,7 +11915,13 @@ Answer the admin's question directly.
 
   // Last-resort Cloudflare failover: only intent-relevant compact workspace data is sent.
   async function requestCloudflareWorkspaceFallback(reason: string): Promise<Response | null> {
-    if (!cloudflareCredentialsConfigured) return null;
+    if (!cloudflareCredentialsConfigured) {
+      console.warn("InnerMe Cloudflare workspace fallback skipped: required credentials are not configured.", {
+        api_token_configured: Boolean(cloudflareToken),
+        account_id_configured: Boolean(cloudflareAccountId),
+      });
+      return null;
+    }
     const q = String(message || "").toLowerCase();
     const isBroadBusinessPlanningRequest =
       /\b(?:today|daily|priorit(?:y|ies|ize|ise)|what should i do|next moves|next steps|recommend(?:ation|ations)?|plan my day|business growth|grow (?:the )?business|improve (?:the )?business|action plan|highest.value moves)\b/i.test(message);
