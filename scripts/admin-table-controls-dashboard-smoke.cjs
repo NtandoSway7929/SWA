@@ -383,7 +383,10 @@ async function main() {
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
-    const contactToggle = contactToggleLeadRow.locator('[data-toggle-lead-contacted="lead-contact-toggle"]');
+    // Lead action menus are portalled to document.body to escape table clipping,
+    // so locate this unique fixture action globally rather than under its source row.
+    const contactToggle = page.locator('[data-toggle-lead-contacted="lead-contact-toggle"]');
+    await contactToggle.waitFor({ state: "visible", timeout: 5000 });
     assert.equal((await contactToggle.textContent()).trim(), "Mark as contacted",
       "the lead Actions dropdown should offer a manual contacted mark when no outbound log exists");
     await contactToggle.click();
