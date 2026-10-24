@@ -78,8 +78,10 @@ export function isCloudflareEligibleWritingRequest(value, history, focusedRecord
  * The callback is injected so this decision can be tested without provider
  * credentials or network requests.
  *
+ * @template T
  * @param {string | null | undefined} guardReason
- * @param {(reason: string) => Promise<unknown> | unknown} fallback
+ * @param {(reason: string) => Promise<T | null> | T | null} fallback
+ * @returns {Promise<T | null>}
  */
 export async function tryCloudflareFallbackForGeminiQuota(guardReason, fallback) {
   if (guardReason !== "daily_quota_reached") return null;
