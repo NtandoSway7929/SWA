@@ -30,6 +30,9 @@ jobs:
       - name: Test sales work queue
         run: node scripts/sales-work-queue-static.test.cjs
 
+      - name: Test structured sales qualification
+        run: node scripts/sales-qualification-static.test.cjs
+
       - name: Validate inline JavaScript
         shell: bash
         run: |
