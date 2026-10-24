@@ -52,6 +52,8 @@ test("monthly targets are saved and current-month actuals use live leads, quotes
   assert.ok(settings.includes('getRows("quotes"'));
   assert.ok(settings.includes('getRows("invoices"'));
   assert.ok(settings.includes("archived !== true"));
+  assert.ok(settings.includes('timeZone: "Africa/Johannesburg"'));
+  assert.ok(settings.includes('new Date(startDate + "T00:00:00+02:00").toISOString()'));
 });
 
 test("commercial defaults apply only to new documents without explicit dates", () => {
