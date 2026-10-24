@@ -52,6 +52,19 @@ create table public.leads (
   swayphics_solution text,
   recommended_services text,
   research_sources text,
+    business_segment text not null default 'unknown'
+        check (business_segment in ('unknown','professional_services','creative','beauty_wellness','food_hospitality','retail_ecommerce','events_entertainment','education','other')),
+    website_need text not null default 'unknown'
+        check (website_need in ('unknown','no_website','verified_improvement','no_clear_need')),
+    contactability text not null default 'unknown'
+        check (contactability in ('unknown','verified','invalid')),
+    buying_signal text not null default 'unknown'
+        check (buying_signal in ('unknown','present','absent')),
+    qualification_priority text not null default 'unassessed'
+        check (qualification_priority in ('unassessed','A','B','C')),
+    qualification_evidence_url text,
+    qualification_reviewed_at timestamptz,
+    qualification_reviewed_by uuid references public.admin_users(user_id) on delete set null,
   assessment_updated_at timestamptz,
   assessment_updated_by uuid references public.admin_users(user_id) on delete set null,
   converted_client_id uuid references public.clients(id) on delete set null,
