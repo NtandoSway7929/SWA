@@ -118,6 +118,8 @@ const invoices = [
   }
 ];
 
+const communications = [];
+
 const metrics = {
   apiReads: 0,
   apiMutationsBlocked: [],
@@ -197,7 +199,7 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/client_portal_requests") return [];
   if (url.pathname === "/rest/v1/lead_proposals") return [];
   if (url.pathname === "/rest/v1/client_documents") return [];
-  if (url.pathname === "/rest/v1/communication_logs") return [];
+  if (url.pathname === "/rest/v1/communication_logs") return communications;
   if (url.pathname === "/rest/v1/lead_stage_history") return [];
   if (url.pathname === "/rest/v1/client_portal_tokens") return [];
   if (url.pathname === "/rest/v1/admin_notifications") return [];
@@ -322,6 +324,20 @@ async function main() {
         }
       }
 
+      if (method === "POST" && url.pathname === "/rest/v1/communication_logs") {
+        const body = JSON.parse(request.postData() || "{}");
+        const record = Object.assign({
+          id: "communication-ui-test-" + (communications.length + 1),
+          created_at: new Date().toISOString()
+        }, body);
+        communications.push(record);
+        metrics.mockedTableActionWrites.push({
+          method, path: url.pathname, id: record.id,
+          lead_id: record.lead_id, outcome: record.outcome
+        });
+        return route.fulfill(jsonResponse([record]));
+      }
+
       if (method === "POST" && url.pathname === "/rest/v1/activity_log") {
         const body = JSON.parse(request.postData() || "{}");
         mockActivityLog.push(Object.assign({ id: "activity-ui-test-" + (mockActivityLog.length + 1) }, body));
@@ -441,6 +457,48 @@ async function main() {
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.id === "lead-zulu" && item.qualificationUpdate === true
     ), "the qualification save must be intercepted and stored only in the in-memory mock");
+
+    // Record an opt-out through the real Communication Log form. The write is
+    // intercepted above and never reaches a hosted API.
+    const crmNavToggle = page.locator('[data-nav-group-toggle="crm"]').first();
+    if (await crmNavToggle.count() &&
+        (await crmNavToggle.getAttribute("aria-expanded")) !== "true") {
+      await crmNavToggle.click();
+    }
+    await page.locator('[data-view="communications"]').first().click();
+    const addCommunication = page.locator('[data-add="communications"]');
+    await addCommunication.waitFor({ state: "visible", timeout: 10000 });
+    await addCommunication.click();
+    const communicationModal = page.locator(".sway-modal");
+    await communicationModal.locator("#sway-field-outcome").waitFor({ state: "visible" });
+    assert.equal(await communicationModal.locator("#sway-field-outcome").inputValue(), "not_recorded",
+      "communication outcomes must default to explicit Not recorded");
+    await communicationModal.locator("#sway-field-communication_contact").selectOption("lead:lead-zulu");
+    await communicationModal.locator("#sway-field-channel").selectOption("Email");
+    await communicationModal.locator("#sway-field-direction").selectOption("inbound");
+    await communicationModal.locator("#sway-field-outcome").selectOption("opt_out");
+    await communicationModal.locator("#sway-field-subject").fill("Synthetic opt-out fixture");
+    await communicationModal.locator("#sway-field-message").fill("Synthetic test only: contact requests no further sales outreach.");
+    await communicationModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-outcome"), { timeout: 15000 });
+
+    const recordedOptOut = communications.find(item =>
+      item.lead_id === "lead-zulu" && item.outcome === "opt_out"
+    );
+    assert.ok(recordedOptOut, "opt-out outcome should persist only to the in-memory communication fixture");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "POST" && item.path === "/rest/v1/communication_logs" &&
+      item.lead_id === "lead-zulu" && item.outcome === "opt_out"
+    ), "communication log write should be intercepted by synthetic data mock");
+
+    await navigate("leads", "crm");
+    const optedOutRow = page.locator('[data-admin-table-row="leads"]').filter({ hasText: "Zulu Market" });
+    await optedOutRow.locator(".sway-lead-actions-menu > summary").click();
+    const optedOutEmailAction = page.locator('[data-lead-email-id="lead-zulu"]');
+    await optedOutEmailAction.waitFor({ state: "visible", timeout: 5000 });
+    await optedOutEmailAction.click();
+    assert.equal(await page.locator("#sway-email-composer").count(), 0,
+      "a recorded opt-out must prevent opening a new email composer for that lead");
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
@@ -633,7 +691,7 @@ async function main() {
     ), "the linked-lead patch should be intercepted by the mock");
     assert.equal(metrics.mockedTableActionWrites.filter(item =>
       item.method === "POST" && item.path === "/rest/v1/activity_log"
-    ).length, 4, "the qualification edit, manual contacted mark and confirmed bulk actions should log activity to the in-memory mock");
+    ).length, 5, "the qualification edit, communication opt-out, manual contacted mark and confirmed bulk actions should log activity to the in-memory mock");
     assert.ok(mockActivityLog.some(item =>
       item.entity_type === "leads" && item.entity_id === "lead-contact-toggle" &&
       String(item.action || item.description || "").toLowerCase().includes("contacted")
@@ -699,8 +757,8 @@ async function main() {
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
-    assert.equal(metrics.mockedTableActionWrites.length, 9,
-      "only the expected qualification, lead-contact, task, follow-up and activity-log writes should be captured by the in-memory mock");
+    assert.equal(metrics.mockedTableActionWrites.length, 11,
+      "only expected qualification, communication, lead-contact, task, follow-up and activity-log writes should be captured by the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
       item.id === "lead-contact-toggle" && item.contacted_manually === true),
@@ -728,6 +786,7 @@ async function main() {
         "admin session accepted by mocked auth endpoint",
         "actual Leads, Follow-ups and Tasks views render synthetic records",
         "qualification editor shows Unknown/Unassessed defaults and stores human-reviewed fields only in the in-memory mock",
+        "communication outcome defaults to Not recorded, opt-out persists to synthetic data and suppresses the lead email composer",
         "lead email search, status filter and business-name sort",
         "visible-row selection, clear selection and formula-safe CSV download",
         "follow-up status filter and task priority sort/status filter",
