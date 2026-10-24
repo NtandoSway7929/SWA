@@ -237,8 +237,9 @@
     if (!message || message.dataset.innermeUiEnhanced === "1") return;
     const content = message.querySelector(".sway-ai-message-content");
     if (!content) return;
-    message.dataset.innermeUiEnhanced = "1";
     const rawText = (content.textContent || "").trim();
+    if (!rawText && !content.querySelector("table,ol,ul,pre,code")) return;
+    message.dataset.innermeUiEnhanced = "1";
     const payload = parseOptInPayload(rawText);
     if (payload) {
       const original = el(doc, "details", "innerme-iu-original");
@@ -263,6 +264,8 @@
     const observer = new MutationObserver(records => records.forEach(record => {
       record.addedNodes.forEach(node => {
         if (node.nodeType !== 1) return;
+        const parentMessage = node.closest && node.closest(".sway-ai-assistant");
+        if (parentMessage) enhanceMessage(doc, parentMessage);
         if (node.matches && node.matches(".sway-ai-assistant")) enhanceMessage(doc, node);
         if (node.querySelectorAll) node.querySelectorAll(".sway-ai-assistant").forEach(message => enhanceMessage(doc, message));
       });
