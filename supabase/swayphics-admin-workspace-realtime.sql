@@ -1,5 +1,5 @@
 -- SWAYPHICS ADMIN WORKSPACE REALTIME
--- Run once in Supabase SQL Editor.
+-- Run after the core admin workspace and sales campaign attribution SQL are in place.
 -- Enables Postgres Changes for the business tables used by the live
 -- Insights dashboard. RLS still controls which authenticated admins
 -- are allowed to receive row-change events.
