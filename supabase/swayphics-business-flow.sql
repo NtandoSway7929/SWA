@@ -601,7 +601,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
     v_total numeric(12,2);
     v_paid numeric(12,2);
@@ -652,7 +652,7 @@ begin
         updated_at = now()
     where i.id = p_invoice_id;
 end;
-$;
+$$;
 
 -- Keep draft invoices distinct from invoices that have actually been sent.
 alter table public.client_projects
@@ -675,7 +675,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 begin
     if p_project_id is null then
         return;
@@ -725,7 +725,7 @@ begin
     updated_at = now()
     where cp.id = p_project_id;
 end;
-$;
+$$;
 
 create or replace function public.sync_swayphics_payment_after_change()
 returns trigger
@@ -777,7 +777,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
     v_paid numeric(12,2);
     v_total numeric(12,2);
@@ -835,7 +835,7 @@ begin
 
     return new;
 end;
-$;
+$$;
 
 drop trigger if exists trg_sync_swayphics_invoice_before_change
 on public.invoices;
@@ -1196,7 +1196,7 @@ $$;
 notify pgrst, 'reload schema';
 
 -- Repair active contact records created before next-follow-up dates were auto-populated.
-do $
+do $$
 declare
     v_days integer;
 begin
@@ -1221,7 +1221,7 @@ begin
           'follow-up'
       );
 end;
-$;
+$$;
 
 -- Notify admins about first contact/follow-ups due today or already overdue.
 create or replace function innerme_private.generate_swayphics_due_lead_notifications_internal()
@@ -1229,7 +1229,7 @@ returns integer
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
     v_today date := (now() at time zone 'Africa/Johannesburg')::date;
     v_count integer := 0;
@@ -1320,7 +1320,7 @@ begin
 
     return v_count;
 end;
-$;
+$$;
 
 
 revoke all privileges
