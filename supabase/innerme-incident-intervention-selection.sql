@@ -297,17 +297,17 @@ begin
             from public.innerme_incident_intervention_options
             where incident_id=r.id
         )
-        update public.innerme_incident_intervention_options o
+        update public.innerme_incident_intervention_options opt_row
         set sequence_rank=ranked.rank,
             recommendation_status=case
-                when ranked.rank=1 and o.id=v_best_id then 'recommended'
-                when o.conflict_status='blocked' then 'not_recommended'
-                when ranked.rank<=3 and o.expected_priority_reduction>0 then 'alternative'
+                when ranked.rank=1 and opt_row.id=v_best_id then 'recommended'
+                when opt_row.conflict_status='blocked' then 'not_recommended'
+                when ranked.rank<=3 and opt_row.expected_priority_reduction>0 then 'alternative'
                 else 'deferred'
             end,
             updated_at=now()
         from ranked
-        where o.id=ranked.id;
+        where opt_row.id=ranked.id;
 
         select jsonb_agg(
             jsonb_build_object(
