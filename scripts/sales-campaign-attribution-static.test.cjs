@@ -32,7 +32,7 @@ assert.match(migration, /currency in \('ZAR','USD','EUR','GBP'\)/,
   "Campaign and spend currencies must use supported explicit currency codes.");
 assert.match(migration, /Swayphics admins can manage sales campaign lead links/,
   "Campaign lead links must be protected by an admin-only RLS policy.");
-assert.match(migration, /never be summed across currencies/,
+assert.match(migration, /must not be summed across currencies/,
   "Schema commentary must prevent misleading mixed-currency totals.");
 
 assert.match(workspace, /\["sales-campaigns", "Campaign Tracking"\]/,
