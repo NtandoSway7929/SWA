@@ -13,8 +13,8 @@ const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "202
 const pushFunction = fs.readFileSync(path.join(root, "supabase", "functions", "send-admin-push", "index.ts"), "utf8");
 
 test("dashboard loads the expanded settings stylesheet and module after workspace initialization", () => {
-  assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261024-settings-sections-1/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261024-settings-sections-1/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261024-settings-greeting-preferences-1/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261024-settings-greeting-preferences-1/);
   assert.ok(
     dashboardHtml.indexOf("admin-workspace.js") < dashboardHtml.indexOf("admin-settings-expanded.js"),
     "settings integration must load after the core workspace"
@@ -32,6 +32,20 @@ test("all eight settings sections are mounted and navigable", () => {
   }
   assert.match(settingsScript, /sway-admin-greeting-form/);
   assert.match(settingsScript, /MutationObserver/);
+});
+
+test("greeting name is a Settings subpanel and Settings is a direct sidebar destination", () => {
+  assert.match(settingsScript, /function normalizeSettingsSidebar\(\)/);
+  assert.match(settingsScript, /data-nav-group="settings"/);
+  assert.match(settingsScript, /classList\.add\("sway-settings-direct-nav"\)/);
+  assert.match(settingsScript, /setAttribute\("aria-label", "Settings"\)/);
+  assert.match(settingsScript, /greetingForm\.closest\("\.sway-panel"\)/);
+  assert.match(settingsScript, /data-settings-panel="preferences"/);
+  assert.match(settingsScript, /preferencesPanel\.insertBefore\(greetingPanel, preferencesPanel\.firstElementChild\)/);
+  assert.match(settingsCss, /sway-settings-direct-nav/);
+  assert.match(settingsCss, /swe-greeting-settings-panel/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261024-settings-greeting-preferences-1/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261024-settings-greeting-preferences-1/);
 });
 
 test("business-wide edits are owner-gated and use existing workflow and invoice records", () => {
