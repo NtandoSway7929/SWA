@@ -99,13 +99,14 @@ async function main() {
       message: "Read-only preflight for the isolated structured-answer evaluation.",
     },
   );
-  if (!healthResponse.ok) {
-    throw new Error("Provider-free preflight failed (HTTP " + healthResponse.status + "); no chat request was sent.");
-  }
-  const health = await healthResponse.json();
+  const health = await healthResponse.json().catch(() => null);
   const configured = health?.provider_configuration?.gemini_key_configured;
-  if (health?.ok !== true || health?.read_only !== true || configured !== true) {
-    throw new Error("Isolated preflight did not verify a healthy read-only route and configured Gemini key; no chat request was sent.");
+  // This endpoint returns HTTP 503 when the separate workspace aggregate is not
+  // healthy; its safe key/read-only fields remain usable as provider-free gates.
+  // Do not require business-workspace aggregation to be healthy for this
+  // synthetic formatting test, but never continue without a confirmed test key.
+  if (!health || health?.read_only !== true || configured !== true) {
+    throw new Error("Isolated preflight did not verify read-only status and a configured test Gemini key (HTTP " + healthResponse.status + "); no chat request was sent.");
   }
 
   // Confirm telemetry read access before the single chat POST.
@@ -216,6 +217,8 @@ async function main() {
     provider_requests_confirmed: providerAttemptCount,
     exactly_one_successful_provider_attempt: exactlyOneAttempt,
     http_status: response.status,
+    preflight_http_status: healthResponse.status,
+    preflight_workspace_health_ok: health?.ok === true,
     elapsed_ms: elapsedMs,
     retries: 0,
     model: typeof body.model === "string" ? body.model : null,
