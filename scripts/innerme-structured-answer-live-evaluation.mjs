@@ -123,6 +123,7 @@ async function main() {
   }
 
   // Exactly one chat POST. No retry occurs in this script.
+  const startedAtWallClock = new Date().toISOString();
   const startedAt = performance.now();
   let response;
   try {
@@ -146,13 +147,64 @@ async function main() {
   }
 
   if (!response.ok || !body || typeof body.answer !== "string" || !body.answer.trim()) {
+    // Error responses may omit X-InnerMe-Request-ID. Correlate the isolated
+    // synthetic request by its tightly bounded wall-clock window instead of
+    // falsely reporting zero provider attempts. This test project is reserved
+    // for evaluation; the query still filters to assistant_chat telemetry.
+    const endedAtWallClock = new Date().toISOString();
+    const failedQuery = new URL(SUPABASE_URL + "/rest/v1/innerme_provider_usage");
+    failedQuery.searchParams.set("select", "request_id,attempt_number,task_category,provider,model,outcome,http_status,latency_ms,error_code,fallback_reason,created_at");
+    failedQuery.searchParams.set("task_category", "eq.assistant_chat");
+    failedQuery.searchParams.set("created_at", "gte." + startedAtWallClock);
+    failedQuery.searchParams.append("created_at", "lte." + endedAtWallClock);
+    failedQuery.searchParams.set("order", "created_at.asc,attempt_number.asc");
+    let failedAttempts = null;
+    let failedTelemetryError = null;
+    try {
+      const telemetry = await fetch(failedQuery, {
+        method: "GET",
+        headers,
+        signal: AbortSignal.timeout(15000),
+      });
+      if (telemetry.ok) {
+        const rows = await telemetry.json();
+        if (Array.isArray(rows)) failedAttempts = rows;
+        else failedTelemetryError = "Telemetry response was not an array.";
+      } else {
+        failedTelemetryError = "Telemetry query returned HTTP " + telemetry.status + ".";
+      }
+    } catch (error) {
+      failedTelemetryError = error instanceof Error ? error.name : "unknown_error";
+    }
+    const confirmedCount = Array.isArray(failedAttempts) ? failedAttempts.length : null;
+    const distinctRequestIds = Array.isArray(failedAttempts)
+      ? [...new Set(failedAttempts.map((row) => row.request_id).filter(Boolean))]
+      : [];
+    const exactlyOneAttempt = confirmedCount === 1 &&
+      failedAttempts[0]?.attempt_number === 1 &&
+      failedAttempts[0]?.task_category === "assistant_chat";
     process.stdout.write(JSON.stringify({
       evaluation: "innerme_structured_answer_live_evaluation_v1",
       status: body?.quota_guarded ? "blocked_before_provider" : "request_failed",
       project: "isolated_test_only",
       project_ref: PROJECT_REF,
       chat_requests_sent: 1,
-      provider_requests_confirmed: 0,
+      provider_requests_confirmed: confirmedCount,
+      exactly_one_provider_attempt: exactlyOneAttempt,
+      telemetry_request_ids: distinctRequestIds,
+      provider_attempts: Array.isArray(failedAttempts) ? failedAttempts.map((row) => ({
+        request_id: row.request_id,
+        attempt: row.attempt_number,
+        provider: row.provider,
+        model: row.model,
+        outcome: row.outcome,
+        http_status: row.http_status,
+        latency_ms: row.latency_ms,
+        error_code: row.error_code,
+        fallback_reason: row.fallback_reason,
+        created_at: row.created_at,
+      })) : null,
+      telemetry_error: failedTelemetryError,
       http_status: response.status,
       quota_guarded: body?.quota_guarded === true,
       guard_reason: typeof body?.guard_reason === "string" ? body.guard_reason : null,
