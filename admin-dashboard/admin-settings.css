@@ -1,0 +1,89 @@
+/* Swayphics admin Settings: greeting-name preference. */
+.sway-greeting-settings-form {
+    display: grid;
+    gap: 18px;
+    width: 100%;
+    max-width: 720px;
+    box-sizing: border-box;
+    padding: 22px;
+    border: 1px solid rgba(0, 32, 150, 0.10);
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.88));
+}
+
+.sway-greeting-settings-field {
+    display: grid;
+    gap: 8px;
+}
+
+.sway-greeting-settings-field label {
+    color: var(--text-primary, #18243b);
+    font-size: 0.82rem;
+    font-weight: 750;
+}
+
+.sway-greeting-settings-input {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border: 1px solid rgba(0, 32, 150, 0.18);
+    border-radius: 10px;
+    background: #fff;
+    color: #18243b;
+    font: inherit;
+    font-size: 0.9rem;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.sway-greeting-settings-input:focus-visible {
+    border-color: #0152f4;
+    outline: 3px solid rgba(44, 145, 252, 0.18);
+    outline-offset: 1px;
+}
+
+.sway-greeting-settings-hint {
+    margin: 0;
+    color: var(--text-muted, #65738a);
+    font-size: 0.76rem;
+    line-height: 1.6;
+}
+
+.sway-greeting-settings-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sway-greeting-settings-actions button:disabled {
+    cursor: wait;
+    opacity: 0.68;
+}
+
+.sway-greeting-settings-status {
+    min-height: 1.25em;
+    margin: 0;
+    color: var(--text-muted, #65738a);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.sway-greeting-settings-status.is-success {
+    color: #17633a;
+}
+
+.sway-greeting-settings-status.is-error {
+    color: #a12a2a;
+}
+
+@media (max-width: 560px) {
+    .sway-greeting-settings-form {
+        padding: 16px;
+    }
+
+    .sway-greeting-settings-actions,
+    .sway-greeting-settings-actions button {
+        width: 100%;
+    }
+}
