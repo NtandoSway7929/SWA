@@ -21147,8 +21147,154 @@ function simpleBars(items, color) {
                         value: item.service_interest
                     },
                     {
+                        key: "business_segment",
+                        label: "Business segment",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown" },
+                                { value: "professional_services", label: "Professional services" },
+                                { value: "creative", label: "Creative" },
+                                { value: "beauty_wellness", label: "Beauty and wellness" },
+                                { value: "food_hospitality", label: "Food and hospitality" },
+                                { value: "retail_ecommerce", label: "Retail and e-commerce" },
+                                { value: "events_entertainment", label: "Events and entertainment" },
+                                { value: "education", label: "Education" },
+                                { value: "other", label: "Other" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.business_segment || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Choose the best-evidenced segment. Keep Unknown when public information is insufficient."
+                    },
+                    {
+                        key: "website_need",
+                        label: "Website need",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown / not researched" },
+                                { value: "no_website", label: "No website found" },
+                                { value: "verified_improvement", label: "Verified improvement opportunity" },
+                                { value: "no_clear_need", label: "No clear current need" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.website_need || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Select No website only after checking. A verified improvement must name an observable issue in Research findings."
+                    },
+                    {
+                        key: "contactability",
+                        label: "Contactability",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown / not verified" },
+                                { value: "verified", label: "Legitimate public contact route verified" },
+                                { value: "invalid", label: "Invalid or inappropriate contact route" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.contactability || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Verified means the contact route is publicly supplied and relevant to the business; it does not imply buying intent."
+                    },
+                    {
+                        key: "buying_signal",
+                        label: "Buying signal",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown / not observed" },
+                                { value: "present", label: "Meaningful buying or timing signal observed" },
+                                { value: "absent", label: "No buying signal observed" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.buying_signal || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "A weak website alone is not a buying signal. Use Present only for an observed request, referral, expressed need, timing or agreed conversation."
+                    },
+                    {
+                        key: "qualification_priority",
+                        label: "Qualification priority",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unassessed", label: "Unassessed" },
+                                { value: "A", label: "A — Contact first" },
+                                { value: "B", label: "B — Test carefully" },
+                                { value: "C", label: "C — Defer or disqualify" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.qualification_priority || "unassessed")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Human-set, not an AI score. A: verified need, fit, valid contact route and meaningful buying/timing signal. B: verified need and fit, but intent/timing unknown. C: poor fit, no credible use case or invalid route. Leave Unassessed until reviewed."
+                    },
+                    {
+                        key: "qualification_evidence_url",
+                        label: "Primary qualification evidence URL",
+                        type: "url",
+                        full: true,
+                        value: item.qualification_evidence_url,
+                        help: "Optional public URL supporting the website need or other qualification decision. Summarise the actual observation in Research findings and list any additional sources below."
+                    },
+                    {
                         key: "source",
-                        label: "Source",
+                        label: "Lead source / channel",
                         type: "select",
                         options:
                             [
@@ -21175,7 +21321,8 @@ function simpleBars(items, color) {
                                     value +
                                     "</option>"
                                 );
-                            }).join("")
+                            }).join(""),
+                        help: "Record where the lead originally came from. This is not a campaign name or a contact attempt; campaign membership and spend will be tracked separately."
                     },
                     {
                         key: "status",
@@ -22910,11 +23057,35 @@ function simpleBars(items, color) {
                 }
 
                 if (type === "leads") {
-                    payload.assessment_updated_at =
-                        new Date().toISOString();
+                    const now = new Date().toISOString();
+                    payload.assessment_updated_at = now;
+                    payload.assessment_updated_by = state.currentUser.id;
 
-                    payload.assessment_updated_by =
-                        state.currentUser.id;
+                    const qualificationDefaults = {
+                        business_segment: "unknown",
+                        website_need: "unknown",
+                        contactability: "unknown",
+                        buying_signal: "unknown",
+                        qualification_priority: "unassessed",
+                        qualification_evidence_url: ""
+                    };
+                    const qualificationKeys = Object.keys(qualificationDefaults);
+                    const qualificationChanged = qualificationKeys.some(function (key) {
+                        const nextValue =
+                            payload[key] == null
+                                ? qualificationDefaults[key]
+                                : String(payload[key]);
+                        const previousValue =
+                            item[key] == null
+                                ? qualificationDefaults[key]
+                                : String(item[key]);
+                        return nextValue !== previousValue;
+                    });
+
+                    if (qualificationChanged) {
+                        payload.qualification_reviewed_at = now;
+                        payload.qualification_reviewed_by = state.currentUser.id;
+                    }
                 }
 
                 if (
