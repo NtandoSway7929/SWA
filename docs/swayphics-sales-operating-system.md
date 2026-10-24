@@ -98,7 +98,7 @@ All rates must show numerator, denominator, time window, and cohort. Do not mix 
 
 Do not calculate source/industry conversion rates until reliable source and segment values are captured consistently. Show small sample sizes and avoid presenting early results as statistically conclusive.
 
-## 7A. Communication outcomes and opt-out controls
+## 8. Communication outcomes and opt-out controls
 
 Every communication log has an explicit result field. Existing records default to `not_recorded`; missing outcomes must not be retrospectively guessed. Supported outcomes include no reply yet, positive/neutral/negative reply, meeting agreed, proposal requested, follow-up requested, opt-out, explicit opt-in, invalid contact route and other. “No reply yet” is only appropriate after a reasonable response window, and is not a rejection.
 
@@ -106,11 +106,11 @@ An explicit opt-out suppresses routine lead follow-up suggestions and email comp
 
 The rolling 30-day outreach report uses distinct leads with a manually logged outbound communication during the window. Each lead enters the denominator once; a reply counts only when there is a manually logged inbound communication at or after the cohort's first outbound event. Positive replies, meetings, proposals requested, follow-up requests and opt-outs require explicit inbound outcomes. These are not email delivery/read receipts, and the report must disclose incomplete or missing communication history.
 
-## 8. Campaign tracking
+## 9. Campaign tracking
 
 Campaign-level tracking should capture campaign name, channel, industry/segment, start/end dates, spend amount and currency, and the set of leads included. Reuse existing `leads.source` for source attribution, but do not overload it with multiple meanings. If campaign membership cannot be represented safely with current fields, propose a normalized campaign table in a later implementation step instead of storing structured data in free text.
 
-## 9. Won sale and payment truth
+## 10. Won sale and payment truth
 
 - A proposal marked accepted is not, by itself, proof that payment has been received.
 - A lead is won only after the client/project handoff is successfully recorded by the existing conversion flow.
@@ -119,7 +119,7 @@ Campaign-level tracking should capture campaign name, channel, industry/segment,
 - Avoid counting both a paid invoice and its corresponding payment record as separate revenue.
 - Conversion must remain idempotent and must not create duplicate clients.
 
-## 10. Implementation and safety requirements
+## 11. Implementation and safety requirements
 
 - Preserve Vanilla HTML/CSS/JavaScript; no new framework or paid CRM dependency.
 - Reuse current Supabase tables and functions unless a documented gap justifies a schema change.
@@ -130,7 +130,7 @@ Campaign-level tracking should capture campaign name, channel, industry/segment,
 - Add tests for pipeline stage transitions, due/overdue ordering, opt-out suppression, duplicate detection, metric formulas, and payment/revenue reconciliation.
 - Validate desktop and mobile, existing lead actions, current admin workflows, accessibility basics, and relevant CI before merge/deploy.
 
-## 11. Phase gates
+## 12. Phase gates
 
 - **Phase 1 — Audit:** inspect current code/schema/workflows and document confirmed foundations and unknowns.
 - **Phase 2 — Rules/specification:** define statuses, qualification, outreach safeguards, metric formulas, and acceptance criteria. (This document.)
@@ -139,7 +139,7 @@ Campaign-level tracking should capture campaign name, channel, industry/segment,
 - **Phase 5 — Isolated validation:** run unit/static checks and synthetic browser/database tests without contacting real prospects or mutating production data.
 - **Phase 6 — Review and deployment gate:** inspect the diff and CI; deployment requires explicit approval.
 
-## 12. Acceptance criteria for the first usable release
+## 13. Acceptance criteria for the first usable release
 
 1. A lead can be qualified with source evidence and a transparent priority band.
 2. Every outreach attempt and response can be recorded against the correct lead.
