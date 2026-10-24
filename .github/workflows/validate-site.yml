@@ -36,6 +36,9 @@ jobs:
       - name: Test structured sales communication outcomes
         run: node scripts/sales-outcomes-static.test.cjs
 
+      - name: Test sales campaign attribution
+        run: node scripts/sales-campaign-attribution-static.test.cjs
+
       - name: Validate inline JavaScript
         shell: bash
         run: |
