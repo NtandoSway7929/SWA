@@ -36,8 +36,8 @@ const leads = [
   {
     id: "lead-bravo", business_name: "Bravo Cafe", contact_name: "Ana Ndlovu",
     email: "ana@example.invalid", phone: "0000000002", service_interest: "Logo",
-    status: "new", source: "Instagram", estimated_value: 900,
-    next_follow_up: "2026-10-27", created_at: "2026-10-03T12:00:00Z"
+    status: "follow-up", source: "Instagram", estimated_value: 900,
+    next_follow_up: "2026-10-24", created_at: "2026-10-03T12:00:00Z"
   }
 ];
 
@@ -290,9 +290,9 @@ async function main() {
         const id = filter.startsWith("eq.") ? filter.slice(3) : "";
         const body = JSON.parse(request.postData() || "{}");
         const record = leads.find(item => String(item.id) === id);
-        if (record && body.status === "contacted") {
+        if (record && (body.status === "contacted" || Object.prototype.hasOwnProperty.call(body, "last_contacted_at"))) {
           Object.assign(record, body);
-          metrics.mockedTableActionWrites.push({ method, path: url.pathname, id, status: body.status });
+          metrics.mockedTableActionWrites.push({ method, path: url.pathname, id, status: body.status, fields: Object.keys(body) });
           return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
         }
       }
@@ -408,8 +408,8 @@ async function main() {
 
     await leadView.locator('[data-admin-table-search-input="leads"]').fill("");
     await leadView.locator('[data-admin-table-filter="leads"]').selectOption("new");
-    assert.equal(await leadRows.filter({ visible: true }).count(), 3,
-      "the actual dashboard should filter leads by status");
+    assert.equal(await leadRows.filter({ visible: true }).count(), 2,
+      "the actual dashboard should filter leads by status while retaining follow-up-stage leads separately");
     await leadView.locator('[data-admin-table-filter="leads"]').selectOption("all");
     await leadView.locator('[data-admin-table-sort="leads"]').selectOption("business_asc");
     assert.ok((await leadRows.first().innerText()).includes("Alpha Studio"),
@@ -563,13 +563,18 @@ async function main() {
     );
     assert.equal(followups.find(item => item.id === "follow-sooner").status, "completed",
       "confirmed completion should update the in-memory follow-up");
-    assert.equal(leads.find(item => item.id === "lead-bravo").status, "contacted",
-      "the linked lead should be marked contacted in the mock");
+    assert.equal(leads.find(item => item.id === "lead-bravo").status, "follow-up",
+      "completing the task must preserve the linked lead's sales status");
     assert.equal(leads.find(item => item.id === "lead-bravo").next_follow_up, null,
-      "the linked lead's next follow-up should be cleared in the mock");
-    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      "the completed lead-level follow-up due date should be cleared");
+    assert.ok(Number.isFinite(Date.parse(leads.find(item => item.id === "lead-bravo").last_contacted_at)),
+      "the linked lead should record the time the follow-up was completed");
+    const linkedLeadPatch = metrics.mockedTableActionWrites.find(item =>
       item.method === "PATCH" && item.path === "/rest/v1/leads" && item.id === "lead-bravo"
-    ), "the linked-lead patch should be intercepted by the mock");
+    );
+    assert.ok(linkedLeadPatch, "the linked-lead patch should be intercepted by the mock");
+    assert.ok(!linkedLeadPatch.fields.includes("status"),
+      "follow-up completion must not send a sales-status update to the leads table");
     assert.equal(metrics.mockedTableActionWrites.filter(item =>
       item.method === "POST" && item.path === "/rest/v1/activity_log"
     ).length, 3, "the manual contacted mark and both confirmed bulk actions should log activity to the in-memory mock");
@@ -646,7 +651,7 @@ async function main() {
       "the contacted toggle should call the existing manual-contact RPC against synthetic lead data");
     assert.equal(tasks.find(item => item.id === "task-urgent").status, "completed");
     assert.equal(followups.find(item => item.id === "follow-sooner").status, "completed");
-    assert.equal(leads.find(item => item.id === "lead-bravo").status, "contacted");
+    assert.equal(leads.find(item => item.id === "lead-bravo").status, "follow-up");
     assert.equal(metrics.unexpectedExternalRequests.length, 0,
       "unexpected outbound requests were blocked: " + JSON.stringify(metrics.unexpectedExternalRequests));
     assert.equal(metrics.pageErrors.length, 0,
@@ -671,7 +676,7 @@ async function main() {
         "follow-up status filter and task priority sort/status filter",
         "cancelled task completion makes no in-memory updates",
         "confirmed task completion updates the synthetic task only",
-        "confirmed follow-up completion updates the linked synthetic lead",
+        "confirmed follow-up completion records contact and preserves the linked synthetic lead's status",
         "activity log POSTs are intercepted by the in-memory mock",
         "mobile controls use a single-column layout and fit in viewport",
         "invoice search by invoice number and client",
