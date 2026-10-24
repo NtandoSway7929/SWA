@@ -133,6 +133,43 @@ Deno.serve(async request => {
             );
         }
 
+        const preferencesResponse =
+            await fetch(
+                supabaseUrl +
+                    "/rest/v1/admin_notification_preferences?user_id=eq." +
+                    encodeURIComponent(notification.recipient_id) +
+                    "&select=browser_push_enabled",
+                {
+                    headers: {
+                        apikey: backendApiKey
+                    }
+                }
+            );
+
+        if (!preferencesResponse.ok) {
+            throw new Error(
+                "Unable to load notification preferences: " +
+                preferencesResponse.status
+            );
+        }
+
+        const notificationPreferences = await preferencesResponse.json();
+        if (
+            notificationPreferences[0] &&
+            notificationPreferences[0].browser_push_enabled === false
+        ) {
+            return new Response(
+                JSON.stringify({
+                    ok: true,
+                    sent: 0,
+                    removed: 0,
+                    subscriptions: 0,
+                    reason: "Browser push notifications are disabled for this administrator."
+                }),
+                { status: 200, headers: jsonHeaders }
+            );
+        }
+
         const subscriptionsResponse =
             await fetch(
                 supabaseUrl +
