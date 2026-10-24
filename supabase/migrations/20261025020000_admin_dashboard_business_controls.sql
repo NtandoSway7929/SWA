@@ -348,24 +348,39 @@ revoke all privileges
     from public, anon, authenticated, service_role;
 
 -- Default commercial terms apply only to new records and never rewrite existing
--- issued documents or already-entered due dates.
-create or replace function public.apply_swayphics_commercial_defaults()
+-- issued documents or already-entered due dates. Separate functions keep record
+-- fields table-specific so quote triggers never resolve invoice-only columns.
+create or replace function public.apply_swayphics_invoice_payment_defaults()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $
 declare
     v_days integer;
 begin
-    if tg_table_name = 'invoices' and tg_op = 'INSERT' and new.due_date is null then
+    if new.due_date is null then
         select coalesce(ws.invoice_payment_terms_days, 7)
         into v_days
         from public.workflow_settings ws
         where ws.id = 1;
 
         new.due_date := coalesce(new.issue_date, current_date) + coalesce(v_days, 7);
-    elsif tg_table_name = 'quotes' and tg_op = 'INSERT' and new.valid_until is null then
+    end if;
+    return new;
+end;
+$;
+
+create or replace function public.apply_swayphics_quote_validity_defaults()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+    v_days integer;
+begin
+    if new.valid_until is null then
         select coalesce(ws.quote_validity_days, 14)
         into v_days
         from public.workflow_settings ws
@@ -375,22 +390,22 @@ begin
             (coalesce(new.created_at, now()) at time zone 'Africa/Johannesburg')::date
             + coalesce(v_days, 14);
     end if;
-
     return new;
 end;
-$$;
+$;
 
-revoke all privileges on function public.apply_swayphics_commercial_defaults() from public, anon, authenticated;
+revoke all privileges on function public.apply_swayphics_invoice_payment_defaults() from public, anon, authenticated;
+revoke all privileges on function public.apply_swayphics_quote_validity_defaults() from public, anon, authenticated;
 
 drop trigger if exists trg_swayphics_invoice_commercial_defaults on public.invoices;
 create trigger trg_swayphics_invoice_commercial_defaults
 before insert on public.invoices
-for each row execute function public.apply_swayphics_commercial_defaults();
+for each row execute function public.apply_swayphics_invoice_payment_defaults();
 
 drop trigger if exists trg_swayphics_quote_commercial_defaults on public.quotes;
 create trigger trg_swayphics_quote_commercial_defaults
 before insert on public.quotes
-for each row execute function public.apply_swayphics_commercial_defaults();
+for each row execute function public.apply_swayphics_quote_validity_defaults();
 
 -- Audit setting changes by field name only: never store previous/new values,
 -- payment details, template bodies, or other sensitive configuration content.
