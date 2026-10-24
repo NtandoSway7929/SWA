@@ -686,7 +686,22 @@ async function verifyStructuredUiResponse(page) {
   const message = page.locator(".sway-ai-message.sway-ai-assistant").filter({
     hasText: "Synthetic structured metrics"
   }).last();
-  await message.locator(".innerme-iu-card").waitFor({ state: "visible", timeout: 10000 });
+  await page.waitForTimeout(500);
+  const structuredDebug = await message.evaluate(node => {
+    const content = node.querySelector(".sway-ai-message-content");
+    const rawText = String(content?.innerText || content?.textContent || "").trim();
+    return {
+      structuredFlag: node.dataset.innermeUiStructured || null,
+      enhancedFlag: node.dataset.innermeUiEnhanced || null,
+      cardCount: node.querySelectorAll(".innerme-iu-card").length,
+      rawTextStart: rawText.slice(0, 1200),
+      rawTextLength: rawText.length,
+      parserAcceptsEnvelope: Boolean(window.InnerMeIntelligentUI?.parseOptInPayload(rawText)),
+      contentHtmlStart: String(content?.innerHTML || "").slice(0, 1800)
+    };
+  });
+  assert.ok(structuredDebug.cardCount > 0,
+    "Valid structured response was not upgraded to a card: " + JSON.stringify(structuredDebug));
   await page.waitForFunction(() => Array.from(
     document.querySelectorAll(".sway-ai-message.sway-ai-assistant")
   ).some(node => node.dataset.innermeUiStructured === "1"));
