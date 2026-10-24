@@ -32,6 +32,7 @@
         tableBulkActionRunning: false,
         currentUser: null,
         currentAdmin: null,
+        greetingName: "",
         admins: [],
         tasks: [],
         leads: [],
@@ -170,6 +171,14 @@
             items: [
                 ["content", "Website content"],
                 ["testimonials", "Testimonials"]
+            ]
+        },
+        {
+            id: "settings",
+            label: "Settings",
+            icon: "sliders",
+            items: [
+                ["settings", "Greeting name"]
             ]
         },
         {
@@ -4206,6 +4215,23 @@
             );
         }
 
+        const greetingPreferences = await optionalApi(
+            "/rest/v1/admin_user_preferences?select=user_id,greeting_name&user_id=eq." +
+                encodeURIComponent(String(state.currentUser.id)) +
+                "&limit=1",
+            []
+        );
+        const ownGreetingPreference =
+            Array.isArray(greetingPreferences)
+                ? greetingPreferences.find(function (item) {
+                    return String(item.user_id || "") === String(state.currentUser.id);
+                })
+                : null;
+        state.greetingName =
+            ownGreetingPreference && typeof ownGreetingPreference.greeting_name === "string"
+                ? ownGreetingPreference.greeting_name.trim()
+                : "";
+
         // Do not render stale session data during startup. The workspace
         // should load the current Supabase records rather than briefly showing
         // an older snapshot and then replacing it.
@@ -4615,6 +4641,10 @@
             "invoice-settings": [
                 "Invoice settings",
                 "Control the business and payment details shown on invoices."
+            ],
+            settings: [
+                "Settings",
+                "Personalise your Swayphics workspace greeting."
             ],
             enquiries: [
                 "Website enquiries",
@@ -17756,6 +17786,126 @@ function simpleBars(items, color) {
         );
     }
 
+    function saveGreetingName(value) {
+        // The UI passes only the authenticated administrator's own preference.
+        // The database RLS policy independently enforces that same ownership boundary.
+        return (async function () {
+            if (
+                !state.currentUser ||
+                !state.currentUser.id ||
+                !state.currentAdmin ||
+                state.currentAdmin.active !== true
+            ) {
+                throw new Error("Your active admin session could not be verified. Sign in again.");
+            }
+
+            const userId = String(state.currentUser.id);
+            const normalizedName = String(value == null ? "" : value).trim();
+
+            if (normalizedName.length > 60) {
+                throw new Error("Use 60 characters or fewer for your greeting name.");
+            }
+
+            if (normalizedName) {
+                const saved = await api(
+                    "/rest/v1/admin_user_preferences?on_conflict=user_id",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Prefer": "resolution=merge-duplicates,return=representation"
+                        },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            greeting_name: normalizedName,
+                            updated_at: new Date().toISOString()
+                        })
+                    }
+                );
+
+                if (
+                    !Array.isArray(saved) ||
+                    !saved.some(function (item) {
+                        return String(item.user_id || "") === userId;
+                    })
+                ) {
+                    throw new Error("Swayphics did not confirm that your greeting name was saved.");
+                }
+            } else {
+                // An empty field clears the override and restores the account full name.
+                await api(
+                    "/rest/v1/admin_user_preferences?user_id=eq." +
+                        encodeURIComponent(userId),
+                    {
+                        method: "DELETE",
+                        headers: {
+                            "Prefer": "return=minimal"
+                        }
+                    }
+                );
+            }
+
+            state.greetingName = normalizedName;
+            updateWelcomeNameDisplay();
+            return normalizedName;
+        })();
+    }
+
+    function updateWelcomeNameDisplay() {
+        const chosenName = String(
+            state.greetingName ||
+            (state.currentAdmin && state.currentAdmin.full_name) ||
+            ""
+        ).trim();
+
+        document.querySelectorAll(
+            "#swayphics-admin-welcome .swayphics-welcome-title, " +
+            "#swayphics-admin-welcome-flight .swayphics-welcome-title"
+        ).forEach(function (title) {
+            const currentText = String(title.textContent || "").trim();
+            const commaAt = currentText.indexOf(",");
+            const greetingPrefix =
+                commaAt >= 0
+                    ? currentText.slice(0, commaAt).trim()
+                    : currentText;
+
+            title.textContent = chosenName
+                ? greetingPrefix + ", " + chosenName
+                : greetingPrefix;
+        });
+    }
+
+    function renderSettings() {
+        const currentAdmin = state.currentAdmin || {};
+        const greetingName = String(state.greetingName || "");
+        const accountName = String(currentAdmin.full_name || "").trim();
+        const fallbackLabel = accountName || String(currentAdmin.email || "").split("@")[0] || "your account name";
+
+        return (
+            heading() +
+            panel(
+                "Greeting name",
+                "Choose how Swayphics addresses you when you open the admin workspace. This will not change your account name.",
+                '<form id="sway-admin-greeting-form" class="sway-greeting-settings-form" novalidate>' +
+                    '<div class="sway-greeting-settings-field">' +
+                        '<label for="sway-admin-greeting-name">Name shown in your greeting</label>' +
+                        '<input id="sway-admin-greeting-name" name="greeting_name" class="sway-greeting-settings-input" type="text" maxlength="60" autocomplete="nickname" value="' +
+                            esc(greetingName) +
+                        '" placeholder="' +
+                            esc(fallbackLabel) +
+                        '" aria-describedby="sway-admin-greeting-help">' +
+                        '<p id="sway-admin-greeting-help" class="sway-greeting-settings-hint">For example, enter “Sway” to see “Good morning, Sway”. Leave this blank to use your account name (' +
+                            esc(fallbackLabel) +
+                        '). The greeting wording still follows South African time.</p>' +
+                    '</div>' +
+                    '<div class="sway-greeting-settings-actions">' +
+                        '<button type="submit" class="sway-workspace-button primary" data-save-greeting-name>Save greeting name</button>' +
+                    '</div>' +
+                    '<p class="sway-greeting-settings-status" data-greeting-settings-status role="status" aria-live="polite"></p>' +
+                '</form>'
+            )
+        );
+    }
+
     function renderInvoiceSettings() {
         const s =
             state.invoiceSettings || {};
@@ -26076,6 +26226,11 @@ function simpleBars(items, color) {
                     renderInvoiceSettings();
             }
 
+            if (state.currentView === "settings") {
+                main.innerHTML =
+                    renderSettings();
+            }
+
             if (state.currentView === "enquiries") {
                 main.innerHTML =
                     renderEnquiries();
@@ -26602,6 +26757,43 @@ function simpleBars(items, color) {
         bindAIFeedbackEvents();
         bindAIMessageActions();
         adminTableControls.bind();
+
+        const greetingSettingsForm = workspace.querySelector("#sway-admin-greeting-form");
+        if (greetingSettingsForm) {
+            greetingSettingsForm.addEventListener("submit", async function (event) {
+                event.preventDefault();
+
+                const input = greetingSettingsForm.querySelector("#sway-admin-greeting-name");
+                const status = greetingSettingsForm.querySelector("[data-greeting-settings-status]");
+                const saveButton = greetingSettingsForm.querySelector("[data-save-greeting-name]");
+
+                if (!input || !status || !saveButton) return;
+
+                const originalLabel = saveButton.textContent;
+                saveButton.disabled = true;
+                saveButton.textContent = "Saving…";
+                status.classList.remove("is-error", "is-success");
+                status.textContent = "Saving your greeting preference…";
+
+                try {
+                    await saveGreetingName(input.value);
+                    input.value = state.greetingName || "";
+                    status.textContent = state.greetingName
+                        ? "Greeting name saved."
+                        : "Preference cleared. Your account name will be used.";
+                    status.classList.add("is-success");
+                } catch (error) {
+                    status.textContent =
+                        error && error.message
+                            ? error.message
+                            : "Unable to save your greeting name. Please try again.";
+                    status.classList.add("is-error");
+                } finally {
+                    saveButton.disabled = false;
+                    saveButton.textContent = originalLabel;
+                }
+            });
+        }
 
         workspace
             .querySelectorAll("[data-refresh-workspace]")
@@ -28308,10 +28500,17 @@ function simpleBars(items, color) {
             return;
         }
 
-        const fullName =
-            typeof state.currentAdmin.full_name === "string"
-                ? state.currentAdmin.full_name.trim()
+        const preferredGreetingName =
+            typeof state.greetingName === "string"
+                ? state.greetingName.trim()
                 : "";
+        const fullName =
+            preferredGreetingName ||
+            (
+                typeof state.currentAdmin.full_name === "string"
+                    ? state.currentAdmin.full_name.trim()
+                    : ""
+            );
 
         // Animate once for the first verified dashboard view in this tab/user session,
         // even if the login-page marker was unavailable. Remember the user before the
