@@ -7379,6 +7379,11 @@
     isolation: isolate;
 }
 
+.sway-lead-actions-dropdown a.sway-row-action {
+    display: block;
+    text-decoration: none;
+}
+
 .sway-actions-dropdown .sway-row-action,
 .sway-lead-actions-dropdown .sway-row-action {
     width: 100%;
