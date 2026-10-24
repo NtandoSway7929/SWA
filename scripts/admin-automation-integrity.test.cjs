@@ -17,6 +17,15 @@ const smoke = fs.readFileSync(
   path.join(root, "scripts/admin-table-controls-dashboard-smoke.cjs"),
   "utf8"
 );
+const invoiceMigration = fs.readFileSync(
+  path.join(root, "supabase/migrations/20261024213000_invoice_project_automation_integrity.sql"),
+  "utf8"
+);
+const workspaceSchema = fs.readFileSync(
+  path.join(root, "supabase/swayphics-admin-workspace.sql"),
+  "utf8"
+);
+
 
 function mustMatch(source, pattern, message) {
   assert.match(source, pattern, message);
@@ -90,9 +99,50 @@ mustMatch(
   "the browser smoke test must assert that startup invokes the automation"
 );
 
+mustMatch(
+  invoiceMigration,
+  /create trigger trg_sync_swayphics_project_after_invoice_change\s+after insert or update or delete on public\.invoices/i,
+  "invoice changes must synchronize the linked project's payment status"
+);
+mustMatch(
+  invoiceMigration,
+  /when exists \([\s\S]*?i\.status = 'sent'\s*\) then 'invoice sent'\s*when exists \([\s\S]*?i\.status = 'draft'\s*\) then 'invoice drafted'/i,
+  "draft invoices must not be mislabeled as sent"
+);
+mustMatch(
+  invoiceMigration,
+  /cron\.schedule\(\s*'swayphics-invoice-status-refresh'\s*,\s*'5 0 \* \* \*'/i,
+  "invoice due dates must be swept by a daily background job"
+);
+mustMatch(
+  invoiceMigration,
+  /where i\.archived = false\s+and i\.status in \('sent', 'partially paid'\)\s+and i\.due_date < v_today/i,
+  "the overdue sweep must only transition active, unpaid invoices past their local due date"
+);
+mustMatch(
+  flow,
+  /alter table public\.client_projects[\s\S]*?add constraint client_projects_payment_status_check[\s\S]*?'invoice drafted'/i,
+  "the baseline flow SQL must support the draft invoice project status"
+);
+mustMatch(
+  flow,
+  /create trigger trg_sync_swayphics_project_after_invoice_change/i,
+  "the baseline flow SQL must include invoice-to-project synchronization"
+);
+mustMatch(
+  flow,
+  /swayphics-invoice-status-refresh/i,
+  "the baseline flow SQL must include the overdue status scheduler"
+);
+mustMatch(
+  workspaceSchema,
+  /'invoice drafted'/i,
+  "the base admin schema must accept the invoice drafted state"
+);
+
 console.log(JSON.stringify({
   result: "PASS",
-  checks: 12,
+  checks: 22,
   verified: [
     "cron uses a private, no-user-auth worker",
     "dashboard RPC remains admin-authenticated",
@@ -101,6 +151,10 @@ console.log(JSON.stringify({
     "automatic channels do not assume WhatsApp",
     "completed follow-ups receive a next due date",
     "scheduler is defined in migration and baseline SQL",
+    "project status tracks invoice creation, edits, re-association and deletion",
+    "draft invoices are not mislabeled as sent",
+    "daily local-date overdue sweep is defined in migration and baseline SQL",
+    "base and follow-on schemas accept invoice drafted status",
     "dashboard smoke test models scalar RPC results and asserts startup invocation"
   ]
 }, null, 2));
