@@ -28,6 +28,8 @@ test("sales controls expose response SLA, stage intervals and an attempt cap", (
     assert.ok(settings.includes('field("' + field + '"'), "Settings UI missing " + field);
   }
   assert.ok(settings.includes("followup_stage_days: stageDays"));
+  assert.ok(settings.includes('stage_days_contacted: stageDays.contacted == null ? "" : stageDays.contacted'));
+  assert.ok(settings.includes("if (value !== null) stageDays[entry[0]] = value"));
   assert.ok(migration.includes("new_lead_response_hours integer not null default 24"));
   assert.ok(migration.includes("followup_stage_days jsonb not null default '{}'::jsonb"));
   assert.ok(migration.includes("max_followup_attempts integer not null default 5"));
