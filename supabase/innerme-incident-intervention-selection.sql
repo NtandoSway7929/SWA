@@ -80,7 +80,7 @@ with check ((select public.is_swayphics_admin()));
 revoke all on table public.innerme_incident_intervention_options from anon;
 revoke all on table public.innerme_incident_intervention_selection from anon;
 grant select, insert, update, delete on table public.innerme_incident_intervention_options to authenticated;
-grant select, insert, update on table public.innerme_incident_intervention_selection to authenticated;
+grant select, insert, update, delete on table public.innerme_incident_intervention_selection to authenticated;
 
 create or replace function public.refresh_innerme_incident_intervention_selection()
 returns integer
