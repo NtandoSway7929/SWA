@@ -56,6 +56,38 @@ with check (
     and public.is_swayphics_admin()
 );
 
+-- Notification preference storage is created here too so this baseline script
+-- remains self-contained when run before the later dashboard-settings migration.
+create table if not exists public.admin_notification_preferences (
+    user_id uuid primary key
+        references public.admin_users(user_id) on delete cascade,
+    in_app_notifications_enabled boolean not null default true,
+    notify_sales boolean not null default true,
+    notify_finance boolean not null default true,
+    notify_delivery boolean not null default true,
+    notify_innerme boolean not null default true,
+    browser_push_enabled boolean not null default true,
+    updated_at timestamptz not null default now()
+);
+
+alter table public.admin_notification_preferences enable row level security;
+grant select, insert, update, delete
+    on table public.admin_notification_preferences to authenticated;
+
+drop policy if exists "Admins manage own notification preferences"
+    on public.admin_notification_preferences;
+create policy "Admins manage own notification preferences"
+on public.admin_notification_preferences
+for all to authenticated
+using (
+    user_id = (select auth.uid())
+    and public.is_swayphics_admin()
+)
+with check (
+    user_id = (select auth.uid())
+    and public.is_swayphics_admin()
+);
+
 create or replace function public.create_admin_notification(
     p_recipient_id uuid,
     p_actor_id uuid,
