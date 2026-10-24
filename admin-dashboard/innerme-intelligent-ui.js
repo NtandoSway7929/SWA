@@ -266,18 +266,32 @@
     const workspace = doc.querySelector("#sway-admin-workspace");
     if (!workspace || workspace.dataset.innermeUiBooted === "1") return;
     workspace.dataset.innermeUiBooted = "1";
-    const observer = new MutationObserver(records => records.forEach(record => {
-      record.addedNodes.forEach(node => {
-        const element = node.nodeType === 1 ? node : node.parentElement;
-        if (!element) return;
-        const parentMessage = element.closest && element.closest(".sway-ai-assistant");
-        if (parentMessage) enhanceMessage(doc, parentMessage);
-        if (element.matches && element.matches(".sway-ai-assistant")) enhanceMessage(doc, element);
-        if (element.querySelectorAll) element.querySelectorAll(".sway-ai-assistant").forEach(message => enhanceMessage(doc, message));
-      });
-    }));
-    observer.observe(workspace, { childList: true, subtree: true });
-    workspace.querySelectorAll(".sway-ai-assistant").forEach(message => enhanceMessage(doc, message));
+
+    function observeConversation(conversation) {
+      if (!conversation || conversation.dataset.innermeUiObserved === "1") return null;
+      conversation.dataset.innermeUiObserved = "1";
+      const observer = new MutationObserver(records => records.forEach(record => {
+        const changedNodes = Array.from(record.addedNodes || []);
+        if (record.type === "characterData") changedNodes.push(record.target);
+        changedNodes.forEach(node => {
+          const element = node.nodeType === 1 ? node : node.parentElement;
+          if (!element) return;
+          const parentMessage = element.closest && element.closest(".sway-ai-assistant");
+          if (parentMessage) enhanceMessage(doc, parentMessage);
+          if (element.matches && element.matches(".sway-ai-assistant")) enhanceMessage(doc, element);
+          if (element.querySelectorAll) element.querySelectorAll(".sway-ai-assistant").forEach(message => enhanceMessage(doc, message));
+        });
+      }));
+      observer.observe(conversation, { childList: true, subtree: true, characterData: true });
+      conversation.querySelectorAll(".sway-ai-assistant").forEach(message => enhanceMessage(doc, message));
+      return observer;
+    }
+
+    if (observeConversation(workspace.querySelector("#sway-ai-conversation"))) return;
+    const waitForConversation = new MutationObserver(() => {
+      if (observeConversation(workspace.querySelector("#sway-ai-conversation"))) waitForConversation.disconnect();
+    });
+    waitForConversation.observe(workspace, { childList: true, subtree: true });
   }
   return { VERSION, classifyText, parseNumericCell, extractTableSeries, parseOptInPayload, classifyMessage, renderPayload, renderBars, enhanceMessage, boot };
 });
