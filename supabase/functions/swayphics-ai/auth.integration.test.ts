@@ -104,15 +104,26 @@ async function invoke(
       requestUrl.pathname === "/rest/v1/rpc/get_innerme_workspace_summary" &&
       method === "POST"
     ) {
-      // Match the requested finance domains, as the real RPC does.
+      // Return metric groups for the health probe's full operational collection set.
       return jsonResponse(200, {
         generated_date_johannesburg: "2026-10-15",
         timezone: "Africa/Johannesburg",
         summary_source: "database_aggregate",
         metric_scope: "Synthetic aggregate fixture for the authenticated health probe.",
-        client_summary: { total: 1 },
+        lead_counts: { total: 2, open_pipeline: 2, won: 0, lost: 0 },
+        lead_value_zar: { open_pipeline: 4000, active_excluding_follow_up: 4000, won_value: 0 },
+        followup_counts: { pending_total: 1, pending_due_today: 0 },
+        quote_summary: { open_count: 1, open_value_zar: 500 },
         invoice_summary: { total: 2, outstanding_value_zar: 250 },
         payment_summary: { total_paid_value_zar: 100 },
+        enquiry_summary: { total: 1, new: 1 },
+        task_summary: { total: 3, open: 2 },
+        project_summary: { total: 1, active: 1 },
+        client_summary: { total: 1 },
+        portal_request_summary: { total: 0, new: 0 },
+        communication_summary: { total: 2 },
+        activity_summary: { total: 4 },
+        email_summary: { total: 3, unread: 1, inbound: 2, outbound: 1 },
       });
     }
 
@@ -161,19 +172,19 @@ async function invoke(
   }
 }
 
-Deno.test("InnerMe authenticated read-only runtime probe follows focused retrieval", async () => {
+Deno.test("InnerMe authenticated health probe validates all workspace queries without provider calls", async () => {
   const result = await invoke(
     "admin-missing-proposal",
     true,
     "innerme_workspace_read_health",
-    "Show overdue invoices and payments in a read-only runtime check.",
+    "Read-only preflight for the isolated structured-answer evaluation.",
   );
   assertEqual(result.status, 200, "Workspace health status");
   assertEqual(result.body.ok, true, "Workspace health result");
   assertEqual(result.body.read_only, true, "Workspace health must be read-only");
   assertEqual(result.body.summary_source, "database_aggregate", "Aggregate source");
   assertEqual(result.body.summary_query_failed, false, "Aggregate RPC failure flag");
-  assertEqual(result.body.queried_collection_count, 3, "Invoice/payment intent should use three linked domains");
+  assertEqual(result.body.queried_collection_count, 13, "Health probe should query all operational collections");
   const providerConfiguration = (result.body as Record<string, unknown>).provider_configuration as
     | Record<string, unknown>
     | undefined;
@@ -198,25 +209,25 @@ Deno.test("InnerMe authenticated read-only runtime probe follows focused retriev
       "Workspace health probe should provide a non-negative numeric " + metric + ".",
     );
   }
-  assertEqual(result.body.workspace_data_read_call_count, 5, "Focused request should make three domain reads, one preference read, and one aggregate RPC call");
+  assertEqual(result.body.workspace_data_read_call_count, 14, "Health probe should make 13 operational reads and one aggregate RPC call");
   assert(
     typeof result.body.progressive_workspace_json_bytes === "number" &&
       result.body.progressive_workspace_json_bytes > 0 &&
       result.body.progressive_workspace_json_bytes < 50000,
     "Compacted workspace JSON size should be measured and remain bounded in this fixture.",
   );
-  assertEqual(result.body.progressive_detail_collection_count, 3, "Only three relevant detail collections should be expanded");
+  assertEqual(result.body.progressive_detail_collection_count, 0, "Health probe should not expand unrelated business detail");
   const collections = result.body.queried_collections as string[];
   assert(
-    JSON.stringify(collections) === JSON.stringify(["clients", "invoices", "payments"]),
-    "Finance-focused retrieval should load only clients, invoices, and payments.",
+    JSON.stringify(collections) === JSON.stringify(["leads", "followups", "clients", "projects", "tasks", "quotes", "invoices", "payments", "enquiries", "portal_requests", "communications", "email_messages", "activities"]),
+    "Health probe should validate all operational collection queries in deterministic order.",
   );
   const groups = result.body.summary_metric_groups as string[];
-  for (const group of ["invoice_summary", "payment_summary", "client_summary"]) {
+  for (const group of ["lead_counts", "lead_value_zar", "followup_counts", "quote_summary", "invoice_summary", "payment_summary", "enquiry_summary", "task_summary", "project_summary", "client_summary", "portal_request_summary", "communication_summary", "activity_summary", "email_summary"]) {
     assert(groups.includes(group), "Aggregate output must include " + group);
   }
-  assert(!groups.includes("lead_counts"), "Unrequested lead metrics must not be reported as zero or loaded.");
-  assert(!groups.includes("task_summary"), "Unrequested task metrics must not be reported as zero or loaded.");
+  assertEqual(result.body.workspace_query_failure_count, 0, "Successful health probe should have no workspace query failures");
+  assertEqual(result.body.aggregate_ready, true, "Database aggregate should be ready");
   assert(
     result.requests.every((request) =>
       request.method === "GET" ||

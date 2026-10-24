@@ -206,6 +206,17 @@ export function planInnerMeWorkspaceRetrieval(options = {}) {
   const action = String(options?.action ?? "").trim();
   const message = String(options?.message ?? "");
   const history = Array.isArray(options?.history) ? options.history : [];
+  // The health probe is a read-only workspace diagnostic, not a chat turn.
+  // It must query the operational collections so the health response can
+  // detect schema/query failures instead of silently checking zero tables.
+  if (action === "innerme_workspace_read_health") {
+    return {
+      profile: "health_probe",
+      reason: "Read-only health diagnostics validate the workspace queries and database aggregate.",
+      collections: [...CORE_COLLECTIONS],
+      businessBrainCollections: [],
+    };
+  }
   const text = [
     message,
     ...history.slice(-4).map((item) => String(item?.content ?? "")),
