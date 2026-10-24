@@ -92,6 +92,17 @@ async function bestEffortCleanup(userIds, recordIds) {
   }
   if (recordIds.followupId) await clean("follow_ups", "id=eq." + recordIds.followupId);
   if (recordIds.taskId) await clean("tasks", "id=eq." + recordIds.taskId);
+  if (recordIds.communicationId) {
+    await clean("activity_log", "entity_id=eq." + recordIds.communicationId);
+    await clean("communication_logs", "id=eq." + recordIds.communicationId);
+  }
+  if (recordIds.campaignSpendId) await clean("sales_campaign_spend", "id=eq." + recordIds.campaignSpendId);
+  for (const id of [recordIds.campaignLeadId, recordIds.duplicateCampaignLeadId]) {
+    if (id) await clean("sales_campaign_leads", "id=eq." + id);
+  }
+  for (const id of [recordIds.campaignId, recordIds.secondCampaignId]) {
+    if (id) await clean("sales_campaigns", "id=eq." + id);
+  }
   for (const id of [recordIds.leadAlphaId, recordIds.leadBravoId]) {
     if (id) await clean("leads", "id=eq." + id);
   }
@@ -114,6 +125,12 @@ async function main() {
   const ids = {
     leadAlphaId: randomUUID(),
     leadBravoId: randomUUID(),
+    communicationId: randomUUID(),
+    campaignId: randomUUID(),
+    secondCampaignId: randomUUID(),
+    campaignLeadId: randomUUID(),
+    duplicateCampaignLeadId: randomUUID(),
+    campaignSpendId: randomUUID(),
     taskId: randomUUID(),
     followupId: randomUUID()
   };
@@ -138,6 +155,38 @@ async function main() {
         { id: ids.leadBravoId, business_name: "CI Bravo Cafe", contact_name: "Local Test", email: "bravo@example.invalid", service_interest: "Branding", source: "CI Fixture", status: "new", estimated_value: 900, assigned_to: admin.id, next_follow_up: "2026-10-27" }
       ]
     });
+    await rest("POST", "communication_logs", "", {
+      token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
+      body: [{
+        id: ids.communicationId, lead_id: ids.leadAlphaId, channel: "Email",
+        direction: "inbound", outcome: "not_recorded", subject: "CI-only outcome test",
+        message: "Synthetic communication outcome persistence fixture.",
+        contacted_at: new Date().toISOString(), created_by: admin.id
+      }]
+    });
+    await rest("POST", "sales_campaigns", "", {
+      token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
+      body: [
+        { id: ids.campaignId, name: "CI Campaign One", channel: "facebook", target_segment: "creative", status: "active", start_date: "2026-10-01", currency: "ZAR", budget_amount: 500, created_by: admin.id },
+        { id: ids.secondCampaignId, name: "CI Campaign Two", channel: "email", target_segment: "unknown", status: "draft", start_date: "2026-10-10", currency: "ZAR", budget_amount: null, created_by: admin.id }
+      ]
+    });
+    await rest("POST", "sales_campaign_leads", "", {
+      token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
+      body: [{
+        id: ids.campaignLeadId, campaign_id: ids.campaignId, lead_id: ids.leadAlphaId,
+        attribution_type: "primary", linked_at: new Date().toISOString(), linked_by: admin.id,
+        notes: "Synthetic primary attribution fixture"
+      }]
+    });
+    await rest("POST", "sales_campaign_spend", "", {
+      token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
+      body: [{
+        id: ids.campaignSpendId, campaign_id: ids.campaignId, spent_on: "2026-10-20",
+        category: "paid_ads", amount: 125.75, currency: "ZAR",
+        description: "Synthetic CI spend fixture", created_by: admin.id
+      }]
+    });
     await rest("POST", "tasks", "", {
       token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
       body: [{ id: ids.taskId, title: "CI confirm scope", description: "Isolated local persistence test", assigned_to: admin.id, lead_id: ids.leadBravoId, priority: "urgent", status: "todo", due_date: "2026-10-26" }]
@@ -153,9 +202,99 @@ async function main() {
     assert.equal(leadBefore.data.length, 1, "authenticated admin should read the seeded lead through RLS");
     assert.equal(leadBefore.data[0].status, "new");
 
+    const communicationBefore = await rest("GET", "communication_logs",
+      "select=id,outcome,lead_id&id=eq." + ids.communicationId, { token: adminToken });
+    assert.equal(communicationBefore.data.length, 1,
+      "authenticated admin should read the communication outcome fixture through RLS");
+    assert.equal(communicationBefore.data[0].outcome, "not_recorded",
+      "new communication records must default to an explicitly unrecorded outcome");
+
+    const communicationWrite = await rest("PATCH", "communication_logs",
+      "id=eq." + ids.communicationId, {
+        token: adminToken,
+        body: { outcome: "opt_out", updated_at: new Date().toISOString() }
+      });
+    assert.equal(communicationWrite.data.length, 1,
+      "authenticated admin should update a structured communication outcome");
+    writes.push("PATCH communication_logs (opt_out)");
+
+    const communicationAfter = await rest("GET", "communication_logs",
+      "select=id,outcome&id=eq." + ids.communicationId, { token: adminToken });
+    assert.equal(communicationAfter.data.length, 1);
+    assert.equal(communicationAfter.data[0].outcome, "opt_out",
+      "explicit opt-out outcome should persist for the authenticated admin");
+
+    const invalidOutcome = await rest("PATCH", "communication_logs",
+      "id=eq." + ids.communicationId, {
+        token: adminToken,
+        body: { outcome: "qualified" },
+        allowError: true
+      });
+    assert.ok(invalidOutcome.status >= 400,
+      "database constraint must reject unsupported communication outcomes");
+    const communicationAfterInvalid = await rest("GET", "communication_logs",
+      "select=id,outcome&id=eq." + ids.communicationId, { token: adminToken });
+    assert.equal(communicationAfterInvalid.data[0].outcome, "opt_out",
+      "rejected communication outcome must not overwrite the recorded opt-out");
+
     // A rejected/cancelled UI confirmation makes no request. The companion UI
     // smoke test checks that cancellation path; here we prove the row is still
     // untouched before exercising the confirmed update path.
+    const campaignBefore = await rest("GET", "sales_campaigns",
+      "select=id,name,status,budget_amount&id=eq." + ids.campaignId, { token: adminToken });
+    assert.equal(campaignBefore.data.length, 1, "authenticated admin should read a campaign through RLS");
+    assert.equal(campaignBefore.data[0].status, "active");
+    assert.equal(Number(campaignBefore.data[0].budget_amount), 500);
+
+    const campaignWrite = await rest("PATCH", "sales_campaigns", "id=eq." + ids.campaignId, {
+      token: adminToken,
+      body: { status: "paused", updated_at: new Date().toISOString() }
+    });
+    assert.equal(campaignWrite.data.length, 1, "authenticated admin should update a campaign through RLS");
+    writes.push("PATCH sales_campaigns (paused)");
+    const campaignAfter = await rest("GET", "sales_campaigns",
+      "select=id,status&id=eq." + ids.campaignId, { token: adminToken });
+    assert.equal(campaignAfter.data[0].status, "paused", "campaign status update should persist");
+
+    const campaignLinkRead = await rest("GET", "sales_campaign_leads",
+      "select=id,campaign_id,lead_id,attribution_type&id=eq." + ids.campaignLeadId, { token: adminToken });
+    assert.equal(campaignLinkRead.data.length, 1, "authenticated admin should read campaign-to-lead attribution");
+    assert.equal(campaignLinkRead.data[0].attribution_type, "primary");
+
+    const spendBefore = await rest("GET", "sales_campaign_spend",
+      "select=id,amount,currency&id=eq." + ids.campaignSpendId, { token: adminToken });
+    assert.equal(spendBefore.data.length, 1, "authenticated admin should read campaign spend");
+    assert.equal(Number(spendBefore.data[0].amount), 125.75);
+    const spendWrite = await rest("PATCH", "sales_campaign_spend", "id=eq." + ids.campaignSpendId, {
+      token: adminToken,
+      body: { amount: 150.5, updated_at: new Date().toISOString() }
+    });
+    assert.equal(spendWrite.data.length, 1, "authenticated admin should update a spend record");
+    writes.push("PATCH sales_campaign_spend (amount)");
+    const spendAfter = await rest("GET", "sales_campaign_spend",
+      "select=id,amount,currency&id=eq." + ids.campaignSpendId, { token: adminToken });
+    assert.equal(Number(spendAfter.data[0].amount), 150.5, "spend amount should persist under the recorded currency");
+
+    const invalidSpend = await rest("PATCH", "sales_campaign_spend", "id=eq." + ids.campaignSpendId, {
+      token: adminToken, body: { amount: -1 }, allowError: true
+    });
+    assert.ok(invalidSpend.status >= 400, "database constraint must reject negative campaign spend");
+    const spendAfterInvalid = await rest("GET", "sales_campaign_spend",
+      "select=id,amount&id=eq." + ids.campaignSpendId, { token: adminToken });
+    assert.equal(Number(spendAfterInvalid.data[0].amount), 150.5,
+      "rejected negative spend must not overwrite the existing spend amount");
+
+    const duplicatePrimary = await rest("POST", "sales_campaign_leads", "", {
+      token: adminToken,
+      body: [{
+        id: ids.duplicateCampaignLeadId, campaign_id: ids.secondCampaignId, lead_id: ids.leadAlphaId,
+        attribution_type: "primary", linked_at: new Date().toISOString(), linked_by: admin.id
+      }],
+      allowError: true
+    });
+    assert.ok(duplicatePrimary.status >= 400,
+      "a lead cannot have two primary acquisition campaigns");
+
     const taskBefore = await rest("GET", "tasks", "select=id,status,completed_at&id=eq." + ids.taskId, { token: adminToken });
     assert.equal(taskBefore.data[0].status, "todo");
     assert.equal(taskBefore.data[0].completed_at, null);
@@ -227,6 +366,14 @@ async function main() {
     const nonAdminToken = await signIn(nonAdminEmail, password);
     const hiddenLeads = await rest("GET", "leads", "select=id&id=eq." + ids.leadBravoId, { token: nonAdminToken });
     assert.equal(hiddenLeads.data.length, 0, "a signed-in user without an admin row must not read CRM leads through RLS");
+    const hiddenCommunications = await rest("GET", "communication_logs",
+      "select=id&id=eq." + ids.communicationId, { token: nonAdminToken });
+    assert.equal(hiddenCommunications.data.length, 0,
+      "a signed-in user without an admin row must not read communication outcomes through RLS");
+    for (const table of ["sales_campaigns", "sales_campaign_leads", "sales_campaign_spend"]) {
+      const hidden = await rest("GET", table, "select=id", { token: nonAdminToken });
+      assert.equal(hidden.data.length, 0, "non-admin must not read " + table + " through RLS");
+    }
 
     summary = {
       result: "PASS",
@@ -237,6 +384,10 @@ async function main() {
       seed: "synthetic UUID records only; created in local database and cleaned up",
       authenticatedActionWrites: writes,
       readAfterWrite: [
+        "campaign creation, status update, primary lead attribution, spend update and negative spend rejection persisted",
+        "second primary campaign for the same lead was rejected by the unique attribution index",
+        "non-admin reads of campaign, campaign-to-lead and spend tables returned zero rows",
+        "communication outcome default, explicit opt-out update and unsupported outcome rejection persisted",
         "task completion status and timestamp persisted",
         "follow-up completion status and timestamp persisted",
         "linked lead moved to contacted and next_follow_up was cleared",

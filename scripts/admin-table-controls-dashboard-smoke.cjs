@@ -118,6 +118,11 @@ const invoices = [
   }
 ];
 
+const communications = [];
+const salesCampaigns = [];
+const salesCampaignLeads = [];
+const salesCampaignSpend = [];
+
 const metrics = {
   apiReads: 0,
   apiMutationsBlocked: [],
@@ -197,7 +202,10 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/client_portal_requests") return [];
   if (url.pathname === "/rest/v1/lead_proposals") return [];
   if (url.pathname === "/rest/v1/client_documents") return [];
-  if (url.pathname === "/rest/v1/communication_logs") return [];
+  if (url.pathname === "/rest/v1/communication_logs") return communications;
+  if (url.pathname === "/rest/v1/sales_campaigns") return salesCampaigns;
+  if (url.pathname === "/rest/v1/sales_campaign_leads") return salesCampaignLeads;
+  if (url.pathname === "/rest/v1/sales_campaign_spend") return salesCampaignSpend;
   if (url.pathname === "/rest/v1/lead_stage_history") return [];
   if (url.pathname === "/rest/v1/client_portal_tokens") return [];
   if (url.pathname === "/rest/v1/admin_notifications") return [];
@@ -290,9 +298,20 @@ async function main() {
         const id = filter.startsWith("eq.") ? filter.slice(3) : "";
         const body = JSON.parse(request.postData() || "{}");
         const record = leads.find(item => String(item.id) === id);
-        if (record && body.status === "contacted") {
+        const qualificationKeys = [
+          "business_segment", "service_fit", "website_need", "contactability", "buying_signal",
+          "qualification_priority", "qualification_evidence_url",
+          "qualification_reviewed_at", "qualification_reviewed_by"
+        ];
+        const isQualificationUpdate = qualificationKeys.some(key =>
+          Object.prototype.hasOwnProperty.call(body, key)
+        );
+        if (record && (body.status === "contacted" || isQualificationUpdate)) {
           Object.assign(record, body);
-          metrics.mockedTableActionWrites.push({ method, path: url.pathname, id, status: body.status });
+          metrics.mockedTableActionWrites.push({
+            method, path: url.pathname, id, status: body.status || null,
+            qualificationUpdate: isQualificationUpdate
+          });
           return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
         }
       }
@@ -309,6 +328,51 @@ async function main() {
           });
           return route.fulfill(jsonResponse([record]));
         }
+      }
+
+      if (method === "POST" && url.pathname === "/rest/v1/communication_logs") {
+        const body = JSON.parse(request.postData() || "{}");
+        const record = Object.assign({
+          id: "communication-ui-test-" + (communications.length + 1),
+          created_at: new Date().toISOString()
+        }, body);
+        communications.push(record);
+        metrics.mockedTableActionWrites.push({
+          method, path: url.pathname, id: record.id,
+          lead_id: record.lead_id, outcome: record.outcome
+        });
+        return route.fulfill(jsonResponse([record]));
+      }
+
+      if (method === "POST" && url.pathname === "/rest/v1/sales_campaigns") {
+        const body = JSON.parse(request.postData() || "{}");
+        const record = Object.assign({
+          id: "sales-campaign-ui-test-" + (salesCampaigns.length + 1),
+          created_at: new Date().toISOString()
+        }, body);
+        salesCampaigns.push(record);
+        metrics.mockedTableActionWrites.push({ method, path: url.pathname, id: record.id, name: record.name });
+        return route.fulfill(jsonResponse([record]));
+      }
+      if (method === "POST" && url.pathname === "/rest/v1/sales_campaign_leads") {
+        const body = JSON.parse(request.postData() || "{}");
+        const record = Object.assign({
+          id: "sales-campaign-lead-ui-test-" + (salesCampaignLeads.length + 1),
+          created_at: new Date().toISOString()
+        }, body);
+        salesCampaignLeads.push(record);
+        metrics.mockedTableActionWrites.push({ method, path: url.pathname, id: record.id, campaign_id: record.campaign_id, lead_id: record.lead_id, attribution_type: record.attribution_type });
+        return route.fulfill(jsonResponse([record]));
+      }
+      if (method === "POST" && url.pathname === "/rest/v1/sales_campaign_spend") {
+        const body = JSON.parse(request.postData() || "{}");
+        const record = Object.assign({
+          id: "sales-campaign-spend-ui-test-" + (salesCampaignSpend.length + 1),
+          created_at: new Date().toISOString()
+        }, body);
+        salesCampaignSpend.push(record);
+        metrics.mockedTableActionWrites.push({ method, path: url.pathname, id: record.id, campaign_id: record.campaign_id, amount: record.amount, currency: record.currency });
+        return route.fulfill(jsonResponse([record]));
       }
 
       if (method === "POST" && url.pathname === "/rest/v1/activity_log") {
@@ -380,6 +444,108 @@ async function main() {
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
+
+    // Exercise structured qualification through the real editor, but persist only
+    // to the in-memory lead fixture intercepted by this test browser.
+    const qualificationLeadRow = leadRows.filter({ hasText: "Zulu Market" });
+    await qualificationLeadRow.locator(".sway-lead-actions-menu > summary").click();
+    const qualificationEdit = page.locator('[data-edit="leads"][data-id="lead-zulu"]');
+    await qualificationEdit.waitFor({ state: "visible", timeout: 5000 });
+    await qualificationEdit.click();
+    const qualificationModal = page.locator(".sway-modal");
+    await qualificationModal.locator("#sway-field-website_need").waitFor({ state: "visible" });
+    assert.equal(await qualificationModal.locator("#sway-field-business_segment").inputValue(), "unknown",
+      "newly added qualification controls should preserve an explicit Unknown default");
+    assert.equal(await qualificationModal.locator("#sway-field-service_fit").inputValue(), "unknown",
+      "service fit and capacity must remain unknown until assessed");
+    assert.equal(await qualificationModal.locator("#sway-field-website_need").inputValue(), "unknown",
+      "website need must not assume a gap when it has not been researched");
+    assert.equal(await qualificationModal.locator("#sway-field-contactability").inputValue(), "unknown",
+      "contactability must not assume a verified route");
+    assert.equal(await qualificationModal.locator("#sway-field-buying_signal").inputValue(), "unknown",
+      "buying intent must not be inferred from a weak website");
+    assert.equal(await qualificationModal.locator("#sway-field-qualification_priority").inputValue(), "unassessed",
+      "qualification must remain unassessed until a human reviews it");
+    assert.equal(await qualificationModal.locator("#sway-field-qualification_evidence_url").getAttribute("type"), "url",
+      "evidence URL must use browser URL validation");
+
+    await qualificationModal.locator("#sway-field-business_segment").selectOption("creative");
+    await qualificationModal.locator("#sway-field-service_fit").selectOption("fits_current_capacity");
+    await qualificationModal.locator("#sway-field-website_need").selectOption("verified_improvement");
+    await qualificationModal.locator("#sway-field-contactability").selectOption("verified");
+    await qualificationModal.locator("#sway-field-buying_signal").selectOption("present");
+    await qualificationModal.locator("#sway-field-qualification_priority").selectOption("A");
+    await qualificationModal.locator("#sway-field-qualification_evidence_url").fill("https://example.invalid/qualification-test");
+    await qualificationModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-qualification_priority"), { timeout: 15000 });
+
+    const qualifiedFixture = leads.find(item => item.id === "lead-zulu");
+    assert.equal(qualifiedFixture.business_segment, "creative", "business segment should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.service_fit, "fits_current_capacity", "service fit should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.website_need, "verified_improvement", "website need should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.contactability, "verified", "contactability should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.buying_signal, "present", "buying signal should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.qualification_priority, "A", "the human-set priority should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.qualification_evidence_url, "https://example.invalid/qualification-test",
+      "the evidence URL should persist to the synthetic fixture");
+    assert.ok(qualifiedFixture.qualification_reviewed_at, "qualification edits must record a review timestamp");
+    assert.equal(qualifiedFixture.qualification_reviewed_by, TEST_USER_ID,
+      "qualification edits must record the authenticated synthetic reviewer");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.id === "lead-zulu" && item.qualificationUpdate === true
+    ), "the qualification save must be intercepted and stored only in the in-memory mock");
+
+    // Record an opt-out through the real Communication Log form. The write is
+    // intercepted above and never reaches a hosted API.
+    const crmNavToggle = page.locator('[data-nav-group-toggle="crm"]').first();
+    if (await crmNavToggle.count() &&
+        (await crmNavToggle.getAttribute("aria-expanded")) !== "true") {
+      await crmNavToggle.click();
+    }
+    await page.locator('[data-view="communications"]').first().click();
+    const addCommunication = page.locator('[data-add="communications"]');
+    await addCommunication.waitFor({ state: "visible", timeout: 10000 });
+    await addCommunication.click();
+    const communicationModal = page.locator(".sway-modal");
+    await communicationModal.locator("#sway-field-outcome").waitFor({ state: "visible" });
+    assert.equal(await communicationModal.locator("#sway-field-outcome").inputValue(), "not_recorded",
+      "communication outcomes must default to explicit Not recorded");
+    await communicationModal.locator("#sway-field-communication_contact").selectOption("lead:lead-zulu");
+    await communicationModal.locator("#sway-field-channel").selectOption("Email");
+    await communicationModal.locator("#sway-field-direction").selectOption("inbound");
+    await communicationModal.locator("#sway-field-outcome").selectOption("opt_out");
+    await communicationModal.locator("#sway-field-subject").fill("Synthetic opt-out fixture");
+    await communicationModal.locator("#sway-field-message").fill("Synthetic test only: contact requests no further sales outreach.");
+    await communicationModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-outcome"), { timeout: 15000 });
+
+    const recordedOptOut = communications.find(item =>
+      item.lead_id === "lead-zulu" && item.outcome === "opt_out"
+    );
+    assert.ok(recordedOptOut, "opt-out outcome should persist only to the in-memory communication fixture");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "POST" && item.path === "/rest/v1/communication_logs" &&
+      item.lead_id === "lead-zulu" && item.outcome === "opt_out"
+    ), "communication log write should be intercepted by synthetic data mock");
+
+    await navigate("leads", "crm");
+    const optedOutRow = page.locator('[data-admin-table-row="leads"]').filter({ hasText: "Zulu Market" });
+    await optedOutRow.locator(".sway-lead-actions-menu > summary").click();
+    const optedOutEmailAction = page.locator('[data-lead-email-id="lead-zulu"]');
+    await optedOutEmailAction.waitFor({ state: "visible", timeout: 5000 });
+    await optedOutEmailAction.click();
+    assert.equal(await page.locator("#sway-email-composer").count(), 0,
+      "a recorded opt-out must prevent opening a new email composer for that lead");
+
+    // swayAlert is a branded in-page dialog, not a native browser alert.
+    // Dismiss its acknowledgement before continuing the unrelated lead tests.
+    const suppressionNotice = page.locator(".sway-dialog");
+    if (await suppressionNotice.count()) {
+      assert.match(await suppressionNotice.locator(".sway-dialog-message").innerText(), /opted out/i,
+        "the blocked email action should explain the recorded opt-out");
+      await suppressionNotice.locator("[data-dialog-confirm]").click();
+      await suppressionNotice.waitFor({ state: "detached", timeout: 5000 });
+    }
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
@@ -570,9 +736,6 @@ async function main() {
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.method === "PATCH" && item.path === "/rest/v1/leads" && item.id === "lead-bravo"
     ), "the linked-lead patch should be intercepted by the mock");
-    assert.equal(metrics.mockedTableActionWrites.filter(item =>
-      item.method === "POST" && item.path === "/rest/v1/activity_log"
-    ).length, 3, "the manual contacted mark and both confirmed bulk actions should log activity to the in-memory mock");
     assert.ok(mockActivityLog.some(item =>
       item.entity_type === "leads" && item.entity_id === "lead-contact-toggle" &&
       String(item.action || item.description || "").toLowerCase().includes("contacted")
@@ -590,6 +753,81 @@ async function main() {
     await page.locator('[data-admin-table-filter="tasks"]').selectOption("all");
     assert.equal(await page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').count(), 3,
       "all task records should remain available after mock completion");
+
+    // Exercise the campaign editor, lead attribution, and actual-spend ledger
+    // through the live dashboard UI. Every write remains in synthetic arrays.
+    await page.locator('[data-view="sales-campaigns"]').first().click();
+    await page.locator('#sway-workspace-main button[data-add="salesCampaigns"]').waitFor({ state: "visible", timeout: 10000 });
+    await page.locator('#sway-workspace-main button[data-add="salesCampaigns"]').click();
+    const campaignModal = page.locator(".sway-modal");
+    await campaignModal.locator("#sway-field-name").fill("Synthetic Website Outreach");
+    await campaignModal.locator("#sway-field-channel").selectOption("facebook");
+    await campaignModal.locator("#sway-field-target_segment").selectOption("creative");
+    await campaignModal.locator("#sway-field-status").selectOption("active");
+    await campaignModal.locator("#sway-field-start_date").fill(dateOffset(0));
+    await campaignModal.locator("#sway-field-currency").selectOption("ZAR");
+    await campaignModal.locator("#sway-field-budget_amount").fill("1500.50");
+    await campaignModal.locator("#sway-field-objective").fill("Synthetic test of website-proposal outreach.");
+    await campaignModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-name"), { timeout: 15000 });
+    const campaignFixture = salesCampaigns.find(item => item.name === "Synthetic Website Outreach");
+    assert.ok(campaignFixture, "campaign creation must save only to the in-memory test fixture");
+    assert.equal(campaignFixture.channel, "facebook");
+    assert.equal(campaignFixture.status, "active");
+    assert.equal(Number(campaignFixture.budget_amount), 1500.5);
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "POST" && item.path === "/rest/v1/sales_campaigns" && item.name === "Synthetic Website Outreach"
+    ), "campaign creation must be intercepted by the in-memory mock");
+
+    await page.locator('#sway-workspace-main button[data-add="salesCampaignLeads"]').click();
+    const linkModal = page.locator(".sway-modal");
+    await linkModal.locator("#sway-field-campaign_id").selectOption(campaignFixture.id);
+    await linkModal.locator("#sway-field-lead_id").selectOption("lead-bravo");
+    await linkModal.locator("#sway-field-attribution_type").selectOption("primary");
+    await linkModal.locator("#sway-field-notes").fill("Synthetic fixture: campaign is the recorded primary acquisition source.");
+    await linkModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-campaign_id"), { timeout: 15000 });
+    const campaignLeadFixture = salesCampaignLeads.find(item =>
+      item.campaign_id === campaignFixture.id && item.lead_id === "lead-bravo"
+    );
+    assert.ok(campaignLeadFixture, "campaign-to-lead attribution must persist only in the in-memory fixture");
+    assert.equal(campaignLeadFixture.attribution_type, "primary");
+
+    await page.locator('#sway-workspace-main button[data-add="salesCampaignSpend"]').click();
+    const spendModal = page.locator(".sway-modal");
+    await spendModal.locator("#sway-field-campaign_id").selectOption(campaignFixture.id);
+    await spendModal.locator("#sway-field-spent_on").fill(dateOffset(0));
+    await spendModal.locator("#sway-field-category").selectOption("paid_ads");
+    await spendModal.locator("#sway-field-amount").fill("275.50");
+    await spendModal.locator("#sway-field-currency").selectOption("ZAR");
+    await spendModal.locator("#sway-field-description").fill("Synthetic paid-ad spend fixture.");
+    await spendModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-amount"), { timeout: 15000 });
+    const spendFixture = salesCampaignSpend.find(item => item.campaign_id === campaignFixture.id);
+    assert.ok(spendFixture, "campaign spend must persist only in the in-memory fixture");
+    assert.equal(Number(spendFixture.amount), 275.5);
+    assert.equal(spendFixture.currency, "ZAR");
+
+    assert.equal(metrics.mockedTableActionWrites.filter(item =>
+      item.method === "POST" && item.path === "/rest/v1/activity_log"
+    ).length, 8, "qualification, opt-out, campaign creation/link/spend, manual contact and confirmed bulk actions should log activity to the in-memory mock");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "POST" && item.path === "/rest/v1/sales_campaign_spend" &&
+      item.campaign_id === campaignFixture.id && Number(item.amount) === 275.5
+    ), "spend creation must be intercepted by the in-memory mock");
+
+    const campaignWorkspaceText = await page.locator("#sway-workspace-main").innerText();
+    assert.match(campaignWorkspaceText, /Synthetic Website Outreach/);
+    assert.match(campaignWorkspaceText, /primary/i);
+    assert.match(campaignWorkspaceText, /275[.,]50/);
+    assert.match(campaignWorkspaceText, /currently won|Current won status/i,
+      "campaign page must label present CRM status separately from historical cohort conversion");
+    assert.match(campaignWorkspaceText, /not proof that a campaign caused a sale/i,
+      "campaign attribution page must disclose the limits of causal conversion claims");
+
+    await navigate("tasks", "delivery");
+    assert.equal(await page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').count(), 3,
+      "campaign workflow should return to the task table without altering task fixtures");
 
     // Keep the real Tasks view open while shrinking the viewport. The dashboard
     // sidebar intentionally becomes off-canvas on mobile, so this isolates the
@@ -638,8 +876,8 @@ async function main() {
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
-    assert.equal(metrics.mockedTableActionWrites.length, 7,
-      "only the expected lead-contact, task and follow-up action writes should be captured by the in-memory mock");
+    assert.equal(metrics.mockedTableActionWrites.length, 17,
+      "only expected qualification, communication, campaign, lead-contact, task, follow-up and activity-log writes should be captured by the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
       item.id === "lead-contact-toggle" && item.contacted_manually === true),
@@ -666,6 +904,10 @@ async function main() {
       checks: [
         "admin session accepted by mocked auth endpoint",
         "actual Leads, Follow-ups and Tasks views render synthetic records",
+        "qualification editor shows Unknown/Unassessed defaults and stores human-reviewed fields only in the in-memory mock",
+        "communication outcome defaults to Not recorded, opt-out persists to synthetic data and suppresses the lead email composer",
+        "campaign creation, primary lead attribution and per-currency spend ledger persist only to synthetic data",
+        "campaign page distinguishes current lead status from verified cohort conversion",
         "lead email search, status filter and business-name sort",
         "visible-row selection, clear selection and formula-safe CSV download",
         "follow-up status filter and task priority sort/status filter",

@@ -27,6 +27,18 @@ jobs:
       - name: Test admin table controls
         run: node scripts/admin-table-controls.test.cjs
 
+      - name: Test sales work queue
+        run: node scripts/sales-work-queue-static.test.cjs
+
+      - name: Test structured sales qualification
+        run: node scripts/sales-qualification-static.test.cjs
+
+      - name: Test structured sales communication outcomes
+        run: node scripts/sales-outcomes-static.test.cjs
+
+      - name: Test sales campaign attribution
+        run: node scripts/sales-campaign-attribution-static.test.cjs
+
       - name: Validate inline JavaScript
         shell: bash
         run: |

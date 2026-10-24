@@ -57,6 +57,9 @@
         initialDataLoading: false,
         initialDataError: null,
         communications: [],
+        salesCampaigns: [],
+        salesCampaignLeads: [],
+        salesCampaignSpend: [],
         emailMessages: [],
         emailSyncing: false,
         emailSyncError: "",
@@ -134,6 +137,8 @@
             items: [
                 ["enquiries", "Enquiries"],
                 ["leads", "Leads"],
+                ["sales-work-queue", "Sales Work Queue"],
+                ["sales-campaigns", "Campaign Tracking"],
                 ["clients", "Clients"],
                 ["communications", "Communication log"],
                 ["email", "Inbox"],
@@ -4434,7 +4439,10 @@
             api("/rest/v1/client_portal_requests?select=*&order=created_at.desc"),
             optionalApi("/rest/v1/lead_proposals?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", [])
+            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
+            optionalApi("/rest/v1/sales_campaigns?select=*&order=start_date.desc", []),
+            optionalApi("/rest/v1/sales_campaign_leads?select=*&order=linked_at.desc", []),
+            optionalApi("/rest/v1/sales_campaign_spend?select=*&order=spent_on.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -4454,6 +4462,9 @@
         state.leadProposals = results[14] || [];
         state.documents = results[15] || [];
         state.communications = results[16] || [];
+        state.salesCampaigns = results[17] || [];
+        state.salesCampaignLeads = results[18] || [];
+        state.salesCampaignSpend = results[19] || [];
 
         await loadAdminNotifications();
 
@@ -9900,6 +9911,135 @@ function simpleBars(items, color) {
         );
     }
 
+    function renderSalesOutcomeAnalytics() {
+        const now = Date.now();
+        const windowStart = now - 30 * 24 * 60 * 60 * 1000;
+        const timestamp = function (entry) {
+            const parsed = Date.parse(entry.contacted_at || entry.created_at || "");
+            return Number.isFinite(parsed) ? parsed : null;
+        };
+
+        const firstOutboundByLead = new Map();
+        const outboundInWindow = state.communications.filter(function (entry) {
+            const time = timestamp(entry);
+            return Boolean(entry.lead_id) &&
+                entry.direction === "outbound" &&
+                time !== null &&
+                time >= windowStart &&
+                time <= now;
+        });
+
+        outboundInWindow.forEach(function (entry) {
+            const id = String(entry.lead_id);
+            const time = timestamp(entry);
+            if (!firstOutboundByLead.has(id) || time < firstOutboundByLead.get(id)) {
+                firstOutboundByLead.set(id, time);
+            }
+        });
+
+        const responsesByLead = new Map();
+        state.communications.forEach(function (entry) {
+            if (!entry.lead_id || entry.direction !== "inbound") return;
+            const id = String(entry.lead_id);
+            const firstOutbound = firstOutboundByLead.get(id);
+            const time = timestamp(entry);
+            if (firstOutbound == null || time == null || time < firstOutbound || time > now) return;
+            if (!responsesByLead.has(id)) responsesByLead.set(id, []);
+            responsesByLead.get(id).push(entry);
+        });
+
+        const uniqueWithOutcome = function (outcome) {
+            const ids = new Set();
+            responsesByLead.forEach(function (entries, id) {
+                if (entries.some(function (entry) {
+                    return String(entry.outcome || "") === outcome;
+                })) {
+                    ids.add(id);
+                }
+            });
+            return ids.size;
+        };
+
+        const prospectsContacted = firstOutboundByLead.size;
+        const recordedReplies = responsesByLead.size;
+        const positiveReplies = uniqueWithOutcome("positive_reply");
+        const meetingsAgreed = uniqueWithOutcome("meeting_agreed");
+        const proposalsRequested = uniqueWithOutcome("proposal_requested");
+        const followUpsRequested = uniqueWithOutcome("follow_up_requested");
+        const optedOut = uniqueWithOutcome("opt_out");
+        const rate = function (count) {
+            return prospectsContacted ? (count / prospectsContacted * 100).toFixed(0) + "%" : "—";
+        };
+
+        const metrics = [
+            {
+                label: "Outbound attempts",
+                value: outboundInWindow.length,
+                hint: "Lead communications manually logged in the last 30 days."
+            },
+            {
+                label: "Unique prospects contacted",
+                value: prospectsContacted,
+                hint: "Distinct leads with an outbound log in the rolling 30-day window."
+            },
+            {
+                label: "Recorded replies",
+                value: recordedReplies + " · " + rate(recordedReplies),
+                hint: "Distinct prospects with an inbound log at or after the cohort's first outbound attempt."
+            },
+            {
+                label: "Positive replies",
+                value: positiveReplies + " · " + rate(positiveReplies),
+                hint: "Only explicit inbound outcomes marked Positive reply."
+            },
+            {
+                label: "Meetings agreed",
+                value: meetingsAgreed,
+                hint: "Distinct prospects with an inbound Meeting agreed outcome."
+            },
+            {
+                label: "Proposals requested",
+                value: proposalsRequested,
+                hint: "Distinct prospects with an inbound Proposal requested outcome."
+            },
+            {
+                label: "Follow-ups requested",
+                value: followUpsRequested,
+                hint: "Distinct prospects with an inbound Follow-up requested outcome."
+            },
+            {
+                label: "Opt-outs recorded",
+                value: optedOut,
+                hint: "Distinct prospects whose recorded response includes an opt-out outcome."
+            }
+        ];
+
+        return (
+            '<section class="sway-lead-source-panel sway-sales-outcome-panel">' +
+                '<div class="sway-lead-source-head"><div>' +
+                    '<span class="admin-label">Sales activity · rolling 30 days</span>' +
+                    "<h3>Outreach outcomes</h3>" +
+                    "<p>Use the Communication Log to record results. These are manually recorded events, not email delivery or read receipts.</p>" +
+                "</div></div>" +
+                '<div class="sway-workspace-grid">' +
+                    metrics.map(function (metric) {
+                        return (
+                            '<div class="sway-stat-card">' +
+                                '<span class="label">' + esc(metric.label) + "</span>" +
+                                '<div class="value">' + esc(String(metric.value)) + "</div>" +
+                                '<div class="hint">' + esc(metric.hint) + "</div>" +
+                            "</div>"
+                        );
+                    }).join("") +
+                "</div>" +
+                '<div class="sway-insight-note"><strong>Measurement rule:</strong> ' +
+                    "Each prospect is counted once. Reply and outcome counts require a recorded inbound message on or after that prospect's first outbound contact in the 30-day cohort. Unrecorded outcomes remain unknown; no reply is not treated as rejection. " +
+                    "No campaign-attributed conversion or revenue metric is reported until campaign membership and event dates are recorded consistently." +
+                "</div>" +
+            "</section>"
+        );
+    }
+
     function renderInsights() {
         const data = insightData();
         const labels =
@@ -10177,6 +10317,8 @@ function simpleBars(items, color) {
 
             renderRevenuePipeline() +
 
+            renderSalesOutcomeAnalytics() +
+
             '<div class="sway-insight-grid sway-bi-grid">' +
                 insightPanel(
                     "Lead-source trend",
@@ -10232,9 +10374,8 @@ function simpleBars(items, color) {
 
             '<div class="sway-insight-note">' +
                 "<strong>Data note:</strong> " +
-                "Charts update from the records currently stored in Swayphics. " +
-                "Because the current lead table stores the latest stage rather than a stage-history timeline, " +
-                "conversion movement is a current-record view, not a historical stage-change audit." +
+                "Charts update from the records currently stored in Swayphics. Outreach metrics use manually logged lead contacts and inbound outcomes; they are not send/delivery receipts. " +
+                "Lead-source and current-stage ratios remain descriptive snapshots, not acquisition-cohort conversion rates, and campaign membership is not yet separately attributed." +
             "</div>"
         );
     }
@@ -10428,6 +10569,9 @@ function simpleBars(items, color) {
                 "site_announcements",
                 "activity_log",
                 "communication_logs",
+                "sales_campaigns",
+                "sales_campaign_leads",
+                "sales_campaign_spend",
                 "portfolio_projects",
                 "testimonials",
                 "social_accounts",
@@ -10871,6 +11015,8 @@ function simpleBars(items, color) {
             if (
                 quote.status !== "sent" ||
                 !quote.client_id ||
+                isContactOptedOut("client", quote.client_id) ||
+                (quote.lead_id && isContactOptedOut("lead", quote.lead_id)) ||
                 hasPendingFollowupForContact(
                     quote.client_id,
                     quote.lead_id
@@ -12326,6 +12472,360 @@ function simpleBars(items, color) {
         }
     }
 
+
+    function contactCommunicationLogs(contactType, contactId) {
+        const id = String(contactId || "");
+        if (!id) return [];
+        return state.communications.filter(function (entry) {
+            return contactType === "lead"
+                ? String(entry.lead_id || "") === id
+                : contactType === "client"
+                    ? String(entry.client_id || "") === id
+                    : false;
+        });
+    }
+
+    function isContactOptedOut(contactType, contactId) {
+        const events = contactCommunicationLogs(contactType, contactId)
+            .filter(function (entry) {
+                return ["opt_out", "opt_in_confirmed"].includes(
+                    String(entry.outcome || "")
+                );
+            })
+            .sort(function (a, b) {
+                const aTime = Date.parse(a.contacted_at || a.created_at || "") || 0;
+                const bTime = Date.parse(b.contacted_at || b.created_at || "") || 0;
+                return aTime - bTime;
+            });
+        return events.length > 0 &&
+            String(events[events.length - 1].outcome || "") === "opt_out";
+    }
+
+    function contactOutreachSuppressionReason(contactType, contactId, channel) {
+        const id = String(contactId || "");
+        if (!id) return "";
+        if (isContactOptedOut(contactType, id)) {
+            return "This contact is recorded as opted out. Do not send further outreach unless a later explicit opt-in is recorded.";
+        }
+
+        if (contactType === "lead") {
+            const lead = state.leads.find(function (entry) {
+                return String(entry.id || "") === id;
+            });
+            if (lead && String(lead.contactability || "") === "invalid") {
+                return "This lead's contact route is marked invalid. Verify the route and update the qualification record before composing an email.";
+            }
+        }
+
+        if (String(channel || "").toLowerCase() === "email") {
+            const emailLogs = contactCommunicationLogs(contactType, id)
+                .filter(function (entry) {
+                    return String(entry.channel || "").toLowerCase() === "email";
+                })
+                .sort(function (a, b) {
+                    const aTime = Date.parse(a.contacted_at || a.created_at || "") || 0;
+                    const bTime = Date.parse(b.contacted_at || b.created_at || "") || 0;
+                    return aTime - bTime;
+                });
+            const latestInvalid = emailLogs.filter(function (entry) {
+                return String(entry.outcome || "") === "invalid_contact";
+            }).slice(-1)[0];
+            if (latestInvalid) {
+                const invalidAt = Date.parse(
+                    latestInvalid.contacted_at || latestInvalid.created_at || ""
+                ) || 0;
+                const laterInbound = emailLogs.some(function (entry) {
+                    const contactedAt = Date.parse(
+                        entry.contacted_at || entry.created_at || ""
+                    ) || 0;
+                    return entry.direction === "inbound" && contactedAt > invalidAt;
+                });
+                if (!laterInbound) {
+                    return "The latest recorded email outcome marks this email route as invalid. Verify the address before trying again.";
+                }
+            }
+        }
+
+        return "";
+    }
+
+    function renderSalesWorkQueue() {
+        const today = dashboardTodayISO();
+        const items = [];
+        const activeLeadStatus = function (lead) {
+            return !["won", "lost", "not interested"].includes(
+                String(lead.status || "").toLowerCase()
+            ) && !isContactOptedOut("lead", lead.id);
+        };
+        const pendingLeadFollowups = new Set();
+
+        state.followups.forEach(function (followup) {
+            if (followup.status !== "pending" || !followup.lead_id) return;
+            const lead = state.leads.find(function (entry) { return entry.id === followup.lead_id; });
+            if (!lead || !activeLeadStatus(lead)) return;
+            pendingLeadFollowups.add(followup.lead_id);
+            const scheduled = dashboardDateKey(followup.scheduled_for);
+            if (!scheduled || scheduled > today) return;
+            items.push({
+                sort: scheduled < today ? 0 : 1,
+                date: scheduled,
+                title: lead.business_name || lead.contact_name || "Lead follow-up",
+                detail: (scheduled < today ? "Overdue follow-up" : "Follow-up due today") +
+                    " · " + (followup.channel || "Channel not set") +
+                    " · " + (lead.service_interest || "Service not specified"),
+                action: '<button type="button" class="sway-workspace-button" data-edit="leads" data-id="' +
+                    esc(lead.id) + '">Open lead</button>'
+            });
+        });
+
+        state.followups.forEach(function (followup) {
+            if (followup.status !== "pending" || !followup.client_id || !followup.scheduled_for) return;
+            const scheduled = dashboardDateKey(followup.scheduled_for);
+            if (!scheduled || scheduled > today) return;
+            items.push({
+                sort: scheduled < today ? 0 : 1,
+                date: scheduled,
+                title: clientName(followup.client_id) || "Client follow-up",
+                detail: (scheduled < today ? "Overdue client follow-up" : "Client follow-up due today") +
+                    " · " + (followup.channel || "Channel not set"),
+                action: '<button type="button" class="sway-workspace-button" data-view-target="followups">Open follow-ups</button>'
+            });
+        });
+
+        state.quotes.forEach(function (quote) {
+            if (quote.status !== "sent") return;
+            const linkedLead = quote.lead_id
+                ? state.leads.find(function (lead) { return lead.id === quote.lead_id; })
+                : null;
+            if (linkedLead && !activeLeadStatus(linkedLead)) return;
+            const validUntil = dashboardDateKey(quote.valid_until);
+            items.push({
+                sort: validUntil && validUntil < today ? 2 : 3,
+                date: validUntil || "9999-12-31",
+                title: quote.title || quote.quote_number || "Proposal awaiting response",
+                detail: (linkedLead
+                    ? (linkedLead.business_name || linkedLead.contact_name || "Lead")
+                    : (quote.client_id ? clientName(quote.client_id) : "Unlinked proposal")) +
+                    " · " + money(quote.amount) +
+                    (validUntil
+                        ? " · " + (validUntil < today ? "Validity date passed" : "Valid until " + date(quote.valid_until))
+                        : " · No validity date recorded"),
+                action: '<button type="button" class="sway-workspace-button" data-view-target="quotes">Open quotes</button>'
+            });
+        });
+
+        state.leads.forEach(function (lead) {
+            const status = String(lead.status || "").toLowerCase();
+            if (
+                !activeLeadStatus(lead) ||
+                !["new", "contacted", "interested", "negotiating"].includes(status) ||
+                lead.next_follow_up ||
+                pendingLeadFollowups.has(lead.id)
+            ) return;
+            items.push({
+                sort: status === "new" ? 4 : 5,
+                date: dashboardDateKey(lead.created_at) || "9999-12-31",
+                title: lead.business_name || lead.contact_name || "Unnamed prospect",
+                detail: (status === "new"
+                    ? "New prospect has no next action"
+                    : "Active lead has no next follow-up date") +
+                    " · " + (lead.service_interest || "Service not specified") +
+                    " · " + (lead.source || "Source unspecified"),
+                action: '<button type="button" class="sway-workspace-button" data-edit="leads" data-id="' +
+                    esc(lead.id) + '">Set next action</button>'
+            });
+        });
+
+        items.sort(function (a, b) {
+            if (a.sort !== b.sort) return a.sort - b.sort;
+            return String(a.date).localeCompare(String(b.date));
+        });
+
+        const queue = items.map(function (item) {
+            return '<article class="sway-sales-queue-item" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid var(--border,rgba(0,32,150,.14));border-radius:14px;background:var(--surface,#fff);margin-bottom:10px;">' +
+                '<div class="sway-sales-queue-copy" style="display:grid;gap:5px;min-width:0;overflow-wrap:anywhere;"><strong>' + esc(item.title) +
+                '</strong><span style="color:var(--text-muted,#667085);font-size:.82rem;line-height:1.5;">' + esc(item.detail) + '</span></div>' +
+                '<div class="sway-sales-queue-action" style="flex:0 0 auto;">' + item.action + '</div></article>';
+        }).join("");
+
+        return heading(
+            '<button type="button" class="sway-workspace-button" data-view-target="leads">Open lead pipeline</button>' +
+            '<button type="button" class="sway-workspace-button" data-view-target="followups">Manage follow-ups</button>'
+        ) + panel(
+            "Sales work queue",
+            "A read-only daily view of overdue follow-ups, proposals awaiting a response, and active prospects without a recorded next action. Opening this view does not send messages or change records.",
+            items.length
+                ? '<div class="sway-sales-queue" style="display:grid;gap:10px;">' + queue + '</div>'
+                : empty("No sales actions are due based on the records currently loaded. Check Leads and Follow-ups if you expected an item here.")
+        ) + '<div class="sway-inline-note">Priority is based on recorded status and dates, not an AI prediction of who will buy. Keep each lead\'s next action and follow-up date current.</div>';
+    }
+
+    function salesCampaignSelectOptions(options, selectedValue, placeholder) {
+        return '<option value="">' + esc(placeholder || "Select...") + "</option>" +
+            options.map(function (option) {
+                const value = String(option.value);
+                return '<option value="' + esc(value) + '"' +
+                    (value === String(selectedValue == null ? "" : selectedValue) ? " selected" : "") +
+                    ">" + esc(option.label) + "</option>";
+            }).join("");
+    }
+
+    function salesCampaignMoney(amount, currency) {
+        if (amount == null || amount === "") return "Not recorded";
+        const code = ["ZAR", "USD", "EUR", "GBP"].includes(String(currency || "").toUpperCase())
+            ? String(currency).toUpperCase()
+            : "ZAR";
+        try {
+            return new Intl.NumberFormat("en-ZA", {
+                style: "currency",
+                currency: code,
+                maximumFractionDigits: 2
+            }).format(Number(amount));
+        } catch (error) {
+            return code + " " + Number(amount || 0).toFixed(2);
+        }
+    }
+
+    function salesCampaignSpendBreakdown(campaignId) {
+        const totals = {};
+        state.salesCampaignSpend.forEach(function (entry) {
+            if (String(entry.campaign_id) !== String(campaignId)) return;
+            const currency = String(entry.currency || "ZAR").toUpperCase();
+            totals[currency] = (totals[currency] || 0) + Number(entry.amount || 0);
+        });
+        const summary = Object.keys(totals).sort().map(function (currency) {
+            return salesCampaignMoney(totals[currency], currency);
+        });
+        return summary.length ? summary.join(" · ") : "No spend recorded";
+    }
+
+    function renderSalesCampaigns() {
+        const campaigns = state.salesCampaigns.slice().sort(function (a, b) {
+            const dateOrder = String(b.start_date || "").localeCompare(String(a.start_date || ""));
+            return dateOrder || String(a.name || "").localeCompare(String(b.name || ""));
+        });
+        const distinctLeadCount = new Set(state.salesCampaignLeads.map(function (link) {
+            return String(link.lead_id || "");
+        }).filter(Boolean)).size;
+        const primaryLinks = state.salesCampaignLeads.filter(function (link) {
+            return link.attribution_type === "primary";
+        });
+        const currencies = {};
+        state.salesCampaignSpend.forEach(function (entry) {
+            const currency = String(entry.currency || "ZAR").toUpperCase();
+            currencies[currency] = (currencies[currency] || 0) + Number(entry.amount || 0);
+        });
+        const spendTotals = Object.keys(currencies).sort().map(function (currency) {
+            return salesCampaignMoney(currencies[currency], currency);
+        }).join(" · ") || "No spend recorded";
+
+        const campaignRows = campaigns.map(function (campaign) {
+            const links = state.salesCampaignLeads.filter(function (link) {
+                return String(link.campaign_id) === String(campaign.id);
+            });
+            const primary = links.filter(function (link) {
+                return link.attribution_type === "primary";
+            });
+            const primaryCurrentlyWon = primary.filter(function (link) {
+                const lead = state.leads.find(function (entry) {
+                    return String(entry.id) === String(link.lead_id);
+                });
+                return lead && String(lead.status || "").toLowerCase() === "won";
+            }).length;
+            return "<tr>" +
+                "<td><strong>" + esc(campaign.name) + "</strong>" +
+                    (campaign.objective ? '<br><span style="color:var(--text-muted);font-size:.72rem;">' + esc(campaign.objective) + "</span>" : "") +
+                "</td>" +
+                "<td>" + esc(formatDisplayText(campaign.channel || "other")) +
+                    '<br><span style="color:var(--text-muted);font-size:.72rem;">' + esc(formatDisplayText(campaign.target_segment || "unknown")) + "</span></td>" +
+                "<td>" + chip(campaign.status || "draft") + "</td>" +
+                "<td>" + esc(date(campaign.start_date)) +
+                    (campaign.end_date ? '<br><span style="color:var(--text-muted);font-size:.72rem;">to ' + esc(date(campaign.end_date)) + "</span>" : "") + "</td>" +
+                "<td>" + esc(salesCampaignMoney(campaign.budget_amount, campaign.currency || "ZAR")) + "</td>" +
+                "<td>" + esc(salesCampaignSpendBreakdown(campaign.id)) + "</td>" +
+                "<td>" + links.length + " linked" +
+                    '<br><span style="color:var(--text-muted);font-size:.72rem;">' + primary.length + " primary</span></td>" +
+                "<td>" + primaryCurrentlyWon + " currently won</td>" +
+                '<td><div class="sway-row-actions"><button type="button" class="sway-row-action" data-edit="salesCampaigns" data-id="' + esc(campaign.id) + '">Edit</button>' +
+                    '<button type="button" class="sway-row-action" data-campaign-link-lead="' + esc(campaign.id) + '">Link lead</button>' +
+                    '<button type="button" class="sway-row-action" data-campaign-log-spend="' + esc(campaign.id) + '">Log spend</button></div></td>' +
+            "</tr>";
+        }).join("");
+
+        const linkRows = state.salesCampaignLeads.slice().sort(function (a, b) {
+            return String(b.linked_at || "").localeCompare(String(a.linked_at || ""));
+        }).map(function (link) {
+            const campaign = state.salesCampaigns.find(function (item) {
+                return String(item.id) === String(link.campaign_id);
+            });
+            const lead = state.leads.find(function (item) {
+                return String(item.id) === String(link.lead_id);
+            });
+            return "<tr><td>" + esc(campaign ? campaign.name : "Campaign unavailable") + "</td>" +
+                "<td><strong>" + esc(lead ? (lead.business_name || lead.contact_name || "Unnamed lead") : "Lead unavailable") + "</strong>" +
+                    (lead && lead.email ? '<br><span style="color:var(--text-muted);font-size:.72rem;">' + esc(lead.email) + "</span>" : "") + "</td>" +
+                "<td>" + chip(link.attribution_type || "assisted") + "</td>" +
+                "<td>" + esc(dateTime(link.linked_at)) + "</td>" +
+                "<td>" + esc(link.notes || "—") + "</td>" +
+                '<td><div class="sway-row-actions"><button type="button" class="sway-row-action" data-edit="salesCampaignLeads" data-id="' + esc(link.id) + '">Edit</button>' +
+                    '<button type="button" class="sway-row-action danger" data-delete="salesCampaignLeads" data-id="' + esc(link.id) + '">Remove link</button></div></td></tr>';
+        }).join("");
+
+        const spendRows = state.salesCampaignSpend.slice().sort(function (a, b) {
+            return String(b.spent_on || "").localeCompare(String(a.spent_on || ""));
+        }).map(function (entry) {
+            const campaign = state.salesCampaigns.find(function (item) {
+                return String(item.id) === String(entry.campaign_id);
+            });
+            return "<tr><td>" + esc(date(entry.spent_on)) + "</td>" +
+                "<td>" + esc(campaign ? campaign.name : "Campaign unavailable") + "</td>" +
+                "<td>" + esc(formatDisplayText(entry.category || "other")) + "</td>" +
+                "<td><strong>" + esc(salesCampaignMoney(entry.amount, entry.currency || "ZAR")) + "</strong></td>" +
+                "<td>" + esc(entry.description || "—") +
+                    (entry.evidence_url ? '<br><span style="color:var(--text-muted);font-size:.72rem;">Evidence recorded</span>' : "") + "</td>" +
+                '<td><div class="sway-row-actions"><button type="button" class="sway-row-action" data-edit="salesCampaignSpend" data-id="' + esc(entry.id) + '">Edit</button>' +
+                    '<button type="button" class="sway-row-action danger" data-delete="salesCampaignSpend" data-id="' + esc(entry.id) + '">Delete</button></div></td></tr>';
+        }).join("");
+
+        const statCard = function (label, value, hint) {
+            return '<div class="sway-stat-card"><span class="label">' + esc(label) + '</span><div class="value">' +
+                esc(String(value)) + '</div><div class="hint">' + esc(hint) + "</div></div>";
+        };
+
+        return heading(
+            '<button type="button" class="sway-workspace-button primary" data-add="salesCampaigns">+ New campaign</button>' +
+            '<button type="button" class="sway-workspace-button" data-add="salesCampaignLeads">+ Link lead</button>' +
+            '<button type="button" class="sway-workspace-button" data-add="salesCampaignSpend">+ Log spend</button>'
+        ) +
+        '<div class="sway-workspace-grid">' +
+            statCard("Campaigns", campaigns.length, campaigns.filter(function (item) { return item.status === "active"; }).length + " active") +
+            statCard("Distinct leads linked", distinctLeadCount, "Counted once across all campaign links") +
+            statCard("Primary acquisition links", primaryLinks.length, "Manual attribution; one primary campaign per lead") +
+            statCard("Recorded spend", spendTotals, state.salesCampaignSpend.length + " spend entries, grouped by currency") +
+        "</div>" +
+        panel(
+            "Campaigns",
+            "Record campaign purpose, channel, dates, optional budget, linked leads and actual spend. Campaign records are manually maintained.",
+            campaigns.length
+                ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Campaign</th><th>Channel / segment</th><th>Status</th><th>Dates</th><th>Budget</th><th>Actual spend by currency</th><th>Lead links</th><th>Current won status</th><th>Actions</th></tr></thead><tbody>' + campaignRows + "</tbody></table></div>"
+                : empty("No campaigns recorded. Create a campaign before adding spend or attribution links.")
+        ) +
+        panel(
+            "Lead attribution",
+            "Use Primary acquisition only when the campaign originated the lead; use Assisted when it supported existing demand. One lead can have only one primary campaign.",
+            linkRows
+                ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Campaign</th><th>Lead</th><th>Attribution</th><th>Linked at</th><th>Notes</th><th>Actions</th></tr></thead><tbody>' + linkRows + "</tbody></table></div>"
+                : empty("No campaign-to-lead links recorded.")
+        ) +
+        panel(
+            "Campaign spend ledger",
+            "Record actual spend as evidenced entries. Budgets and spending are kept separate; amounts in different currencies are never added together.",
+            spendRows
+                ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Date</th><th>Campaign</th><th>Category</th><th>Amount</th><th>Description / evidence</th><th>Actions</th></tr></thead><tbody>' + spendRows + "</tbody></table></div>"
+                : empty("No spend recorded yet. A budget is not treated as money spent.")
+        ) +
+        '<div class="sway-inline-note"><strong>Attribution and metric limits:</strong> Primary/assisted attribution is entered by a human. “Currently won” is only the lead’s present CRM status, not proof that a campaign caused a sale or a verified conversion cohort. No conversion-rate or revenue-ROI claim is made until reliable stage timestamps and attribution are confirmed.</div>';
+    }
 
     function renderLeads() {
         /*
@@ -16468,16 +16968,28 @@ function simpleBars(items, color) {
         contactId,
         threadId
     ) {
+        const isReply =
+            contactType ===
+            "email-thread";
+
+        if (!isReply && (contactType === "lead" || contactType === "client") && contactId) {
+            const suppressionReason = contactOutreachSuppressionReason(
+                contactType,
+                contactId,
+                "Email"
+            );
+            if (suppressionReason) {
+                swayAlert(suppressionReason);
+                return;
+            }
+        }
+
         const modalId =
             "sway-email-composer";
 
         document.getElementById(
             modalId
         )?.remove();
-
-        const isReply =
-            contactType ===
-            "email-thread";
 
         let replyThread =
             null;
@@ -16547,6 +17059,18 @@ function simpleBars(items, color) {
                 matchingContactForEmailMessage(
                     replyInbound
                 );
+
+            if (replyContact) {
+                const suppressionReason = contactOutreachSuppressionReason(
+                    replyContact.type,
+                    replyContact.id,
+                    "Email"
+                );
+                if (suppressionReason) {
+                    swayAlert(suppressionReason);
+                    return;
+                }
+            }
         }
 
         let selectedType =
@@ -17081,6 +17605,16 @@ function simpleBars(items, color) {
                                 : null
                         )
                         : selectedContact();
+
+                const suppressionReason = contactOutreachSuppressionReason(
+                    isReply ? replyContact?.type : selectedTypeState,
+                    isReply ? replyContact?.id : contact?.id,
+                    "Email"
+                );
+                if (suppressionReason) {
+                    swayAlert(suppressionReason);
+                    return;
+                }
 
                 const message =
                     messageInput.value.trim();
@@ -18165,6 +18699,9 @@ function simpleBars(items, color) {
                             chip(item.direction || "outbound") +
                         "</td>" +
                         "<td>" +
+                            esc(String(item.outcome || "not_recorded").replace(/_/g, " ")) +
+                        "</td>" +
+                        "<td>" +
                             esc(dateTime(item.contacted_at)) +
                         "</td>" +
                         "<td>" +
@@ -18198,7 +18735,7 @@ function simpleBars(items, color) {
                 "Communication log",
                 "Keep a durable record of important client and lead conversations across every channel.",
                 state.communications.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Channel</th><th>Direction</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th></tr></thead><tbody>' +
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Channel</th><th>Direction</th><th>Outcome</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th></tr></thead><tbody>' +
                       rows +
                       "</tbody></table></div>"
                     : empty("No communications logged yet. Use “Log communication” to start the relationship history.")
@@ -18508,7 +19045,7 @@ function simpleBars(items, color) {
                     '<div>' +
                         '<span class="admin-label">Acquisition</span>' +
                         "<h3>Lead source intelligence</h3>" +
-                        "<p>Compare volume, current conversion and estimated value by recorded lead source.</p>" +
+                        "<p>Pipeline snapshot by original lead source. Won share is descriptive, not a cohort conversion rate; campaign membership is not yet tracked separately.</p>" +
                     "</div>" +
                 "</div>" +
                 '<div class="sway-bi-source-overview">' +
@@ -21035,8 +21572,181 @@ function simpleBars(items, color) {
                         value: item.service_interest
                     },
                     {
+                        key: "business_segment",
+                        label: "Business segment",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown" },
+                                { value: "professional_services", label: "Professional services" },
+                                { value: "creative", label: "Creative" },
+                                { value: "beauty_wellness", label: "Beauty and wellness" },
+                                { value: "food_hospitality", label: "Food and hospitality" },
+                                { value: "retail_ecommerce", label: "Retail and e-commerce" },
+                                { value: "events_entertainment", label: "Events and entertainment" },
+                                { value: "education", label: "Education" },
+                                { value: "other", label: "Other" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.business_segment || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Choose the best-evidenced segment. Keep Unknown when public information is insufficient."
+                    },
+                    {
+                        key: "service_fit",
+                        label: "Service fit and capacity",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown / not assessed" },
+                                { value: "fits_current_capacity", label: "Fits current scope and capacity" },
+                                { value: "capacity_limited", label: "Fits scope, but capacity is constrained" },
+                                { value: "outside_scope", label: "Outside current scope" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.service_fit || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Use Fits only when the requested work matches Swayphics capabilities and available capacity. If timing/capacity is uncertain, keep Unknown or mark Capacity limited."
+                    },
+                    {
+                        key: "website_need",
+                        label: "Website need",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown / not researched" },
+                                { value: "no_website", label: "No website found" },
+                                { value: "verified_improvement", label: "Verified improvement opportunity" },
+                                { value: "no_clear_need", label: "No clear current need" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.website_need || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Select No website only after checking. A verified improvement must name an observable issue in Research findings."
+                    },
+                    {
+                        key: "contactability",
+                        label: "Contactability",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown / not verified" },
+                                { value: "verified", label: "Legitimate public contact route verified" },
+                                { value: "invalid", label: "Invalid or inappropriate contact route" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.contactability || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Verified means the contact route is publicly supplied and relevant to the business; it does not imply buying intent."
+                    },
+                    {
+                        key: "buying_signal",
+                        label: "Buying signal",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unknown", label: "Unknown / not observed" },
+                                { value: "present", label: "Meaningful buying or timing signal observed" },
+                                { value: "absent", label: "No buying signal observed" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.buying_signal || "unknown")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "A weak website alone is not a buying signal. Use Present only for an observed request, referral, expressed need, timing or agreed conversation."
+                    },
+                    {
+                        key: "qualification_priority",
+                        label: "Qualification priority",
+                        type: "select",
+                        options:
+                            [
+                                { value: "unassessed", label: "Unassessed" },
+                                { value: "A", label: "A — Contact first" },
+                                { value: "B", label: "B — Test carefully" },
+                                { value: "C", label: "C — Defer or disqualify" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.qualification_priority || "unassessed")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Human-set, not an AI score. A: verified need, fit, valid contact route and meaningful buying/timing signal. B: verified need and fit, but intent/timing unknown. C: poor fit, no credible use case or invalid route. Leave Unassessed until reviewed."
+                    },
+                    {
+                        key: "qualification_evidence_url",
+                        label: "Primary qualification evidence URL",
+                        type: "url",
+                        full: true,
+                        value: item.qualification_evidence_url,
+                        help: "Optional public URL supporting the website need or other qualification decision. Summarise the actual observation in Research findings and list any additional sources below."
+                    },
+                    {
                         key: "source",
-                        label: "Source",
+                        label: "Lead source / channel",
                         type: "select",
                         options:
                             [
@@ -21063,7 +21773,8 @@ function simpleBars(items, color) {
                                     value +
                                     "</option>"
                                 );
-                            }).join("")
+                            }).join(""),
+                        help: "Record where the lead originally came from. This is not a campaign name or a contact attempt; campaign membership and spend will be tracked separately."
                     },
                     {
                         key: "status",
@@ -22423,6 +23134,41 @@ function simpleBars(items, color) {
                             }).join("")
                     },
                     {
+                        key: "outcome",
+                        label: "Recorded outcome",
+                        type: "select",
+                        options:
+                            [
+                                { value: "not_recorded", label: "Not recorded" },
+                                { value: "no_reply_yet", label: "No reply yet" },
+                                { value: "positive_reply", label: "Positive reply" },
+                                { value: "neutral_reply", label: "Neutral reply" },
+                                { value: "negative_reply", label: "Negative reply" },
+                                { value: "meeting_agreed", label: "Meeting agreed" },
+                                { value: "proposal_requested", label: "Proposal requested" },
+                                { value: "follow_up_requested", label: "Follow-up requested" },
+                                { value: "opt_out", label: "Opt-out — do not contact" },
+                                { value: "opt_in_confirmed", label: "Explicit opt-in confirmed" },
+                                { value: "invalid_contact", label: "Invalid contact route" },
+                                { value: "other", label: "Other recorded outcome" }
+                            ].map(function (option) {
+                                return (
+                                    '<option value="' +
+                                    esc(option.value) +
+                                    '"' +
+                                    (
+                                        option.value === (item.outcome || "not_recorded")
+                                            ? " selected"
+                                            : ""
+                                    ) +
+                                    ">" +
+                                    esc(option.label) +
+                                    "</option>"
+                                );
+                            }).join(""),
+                        help: "Record only what was actually observed. Use No reply yet only after a reasonable response window; silence is not rejection. Opt-out suppresses further sales outreach unless a later explicit opt-in is logged."
+                    },
+                    {
                         key: "subject",
                         label: "Subject / topic",
                         type: "text",
@@ -22447,8 +23193,111 @@ function simpleBars(items, color) {
                     }
                 ];
             }
-        }
+        },
 
+        salesCampaigns: {
+            table: "sales_campaigns",
+            title: "Sales campaign",
+            fields: function (item) {
+                return [
+                    { key: "name", label: "Campaign name", type: "text", required: true, full: true, value: item.name },
+                    { key: "channel", label: "Primary channel", type: "select", required: true, value: item.channel || "email",
+                        options: salesCampaignSelectOptions([
+                            { value: "email", label: "Email" }, { value: "whatsapp", label: "WhatsApp" },
+                            { value: "facebook", label: "Facebook" }, { value: "instagram", label: "Instagram" },
+                            { value: "tiktok", label: "TikTok" }, { value: "website", label: "Website" },
+                            { value: "referral", label: "Referral" }, { value: "networking", label: "Networking" },
+                            { value: "other", label: "Other" }
+                        ], item.channel || "email", "Select channel")
+                    },
+                    { key: "target_segment", label: "Target segment", type: "select", required: true, value: item.target_segment || "unknown",
+                        options: salesCampaignSelectOptions([
+                            { value: "unknown", label: "Unknown / mixed" }, { value: "professional_services", label: "Professional services" },
+                            { value: "creative", label: "Creative" }, { value: "beauty_wellness", label: "Beauty and wellness" },
+                            { value: "food_hospitality", label: "Food and hospitality" }, { value: "retail_ecommerce", label: "Retail and e-commerce" },
+                            { value: "events_entertainment", label: "Events and entertainment" }, { value: "education", label: "Education" },
+                            { value: "other", label: "Other" }
+                        ], item.target_segment || "unknown", "Select segment")
+                    },
+                    { key: "status", label: "Campaign status", type: "select", required: true, value: item.status || "draft",
+                        options: salesCampaignSelectOptions([
+                            { value: "draft", label: "Draft" }, { value: "active", label: "Active" },
+                            { value: "paused", label: "Paused" }, { value: "completed", label: "Completed" },
+                            { value: "archived", label: "Archived" }
+                        ], item.status || "draft", "Select status")
+                    },
+                    { key: "start_date", label: "Start date", type: "date", required: true, value: item.start_date || dashboardTodayISO() },
+                    { key: "end_date", label: "End date (optional)", type: "date", value: item.end_date || "" },
+                    { key: "currency", label: "Budget currency", type: "select", required: true, value: item.currency || "ZAR",
+                        options: salesCampaignSelectOptions([
+                            { value: "ZAR", label: "ZAR · South African rand" }, { value: "USD", label: "USD · US dollar" },
+                            { value: "EUR", label: "EUR · euro" }, { value: "GBP", label: "GBP · pound sterling" }
+                        ], item.currency || "ZAR", "Select currency")
+                    },
+                    { key: "budget_amount", label: "Budget (optional)", type: "number", min: "0", step: "0.01", value: item.budget_amount },
+                    { key: "objective", label: "Campaign objective", type: "text", full: true, value: item.objective },
+                    { key: "notes", label: "Notes", type: "textarea", full: true, value: item.notes }
+                ];
+            }
+        },
+
+        salesCampaignLeads: {
+            table: "sales_campaign_leads",
+            title: "Campaign lead attribution",
+            fields: function (item) {
+                const campaignOptions = state.salesCampaigns.map(function (campaign) {
+                    return { value: campaign.id, label: campaign.name + " · " + formatDisplayText(campaign.status || "draft") };
+                });
+                const leadOptions = state.leads.map(function (lead) {
+                    return { value: lead.id, label: (lead.business_name || lead.contact_name || "Unnamed lead") + " · " + formatDisplayText(lead.status || "new") };
+                });
+                return [
+                    { key: "campaign_id", label: "Campaign", type: "select", required: true, value: item.campaign_id || "",
+                        options: salesCampaignSelectOptions(campaignOptions, item.campaign_id, "Select campaign") },
+                    { key: "lead_id", label: "Lead", type: "select", required: true, value: item.lead_id || "",
+                        options: salesCampaignSelectOptions(leadOptions, item.lead_id, "Select lead") },
+                    { key: "attribution_type", label: "Attribution type", type: "select", required: true, value: item.attribution_type || "assisted",
+                        options: salesCampaignSelectOptions([
+                            { value: "assisted", label: "Assisted · campaign supported existing demand" },
+                            { value: "primary", label: "Primary acquisition · campaign originated lead" }
+                        ], item.attribution_type || "assisted", "Select attribution") },
+                    { key: "linked_at", label: "Attribution recorded at", type: "datetime-local", required: true,
+                        value: dateTimeInput(item.linked_at) || dateTimeInput(new Date()) },
+                    { key: "notes", label: "Evidence / rationale", type: "textarea", full: true, value: item.notes,
+                        help: "Record why this campaign is primary or assisted. Primary is a human attribution claim and should have supporting evidence." }
+                ];
+            }
+        },
+
+        salesCampaignSpend: {
+            table: "sales_campaign_spend",
+            title: "Campaign spend",
+            fields: function (item) {
+                const campaignOptions = state.salesCampaigns.map(function (campaign) {
+                    return { value: campaign.id, label: campaign.name + " · " + (campaign.currency || "ZAR") };
+                });
+                return [
+                    { key: "campaign_id", label: "Campaign", type: "select", required: true, value: item.campaign_id || "",
+                        options: salesCampaignSelectOptions(campaignOptions, item.campaign_id, "Select campaign") },
+                    { key: "spent_on", label: "Spend date", type: "date", required: true, value: item.spent_on || dashboardTodayISO() },
+                    { key: "category", label: "Spend category", type: "select", required: true, value: item.category || "paid_ads",
+                        options: salesCampaignSelectOptions([
+                            { value: "paid_ads", label: "Paid advertising" }, { value: "creative_production", label: "Creative production" },
+                            { value: "printing", label: "Printing" }, { value: "event_or_networking", label: "Event / networking" },
+                            { value: "software", label: "Software" }, { value: "transport", label: "Transport" },
+                            { value: "other", label: "Other" }
+                        ], item.category || "paid_ads", "Select category") },
+                    { key: "amount", label: "Actual amount spent", type: "number", min: "0.01", step: "0.01", required: true, value: item.amount },
+                    { key: "currency", label: "Spend currency", type: "select", required: true, value: item.currency || "ZAR",
+                        options: salesCampaignSelectOptions([
+                            { value: "ZAR", label: "ZAR · South African rand" }, { value: "USD", label: "USD · US dollar" },
+                            { value: "EUR", label: "EUR · euro" }, { value: "GBP", label: "GBP · pound sterling" }
+                        ], item.currency || "ZAR", "Select currency") },
+                    { key: "description", label: "Description / supplier", type: "text", full: true, value: item.description },
+                    { key: "evidence_url", label: "Evidence URL (optional)", type: "url", full: true, value: item.evidence_url }
+                ];
+            }
+        }
     };
 
     function showModal(title, fields, onSubmit) {
@@ -22497,6 +23346,18 @@ function simpleBars(items, color) {
                     field.required && !field.disabled
                         ? " required"
                         : "";
+                const minAttribute =
+                    field.min != null
+                        ? ' min="' + esc(field.min) + '"'
+                        : "";
+                const maxAttribute =
+                    field.max != null
+                        ? ' max="' + esc(field.max) + '"'
+                        : "";
+                const stepAttribute =
+                    field.step != null
+                        ? ' step="' + esc(field.step) + '"'
+                        : "";
 
                 if (field.type === "section") {
                     return (
@@ -22527,6 +23388,7 @@ function simpleBars(items, color) {
                         '<select id="sway-field-' +
                         esc(field.key) +
                         '"' +
+                        requiredAttribute +
                         disabledAttribute +
                         ">" +
                         field.options +
@@ -22543,6 +23405,9 @@ function simpleBars(items, color) {
                         '" value="' +
                         esc(value) +
                         '"' +
+                        minAttribute +
+                        maxAttribute +
+                        stepAttribute +
                         requiredAttribute +
                         disabledAttribute +
                         ">";
@@ -22797,12 +23662,133 @@ function simpleBars(items, color) {
                         new Date().toISOString();
                 }
 
-                if (type === "leads") {
-                    payload.assessment_updated_at =
-                        new Date().toISOString();
+                if (type === "salesCampaigns") {
+                    const now = new Date().toISOString();
+                    payload.name = String(payload.name || "").trim();
+                    payload.channel = String(payload.channel || "").trim().toLowerCase();
+                    payload.target_segment = String(payload.target_segment || "unknown");
+                    payload.status = String(payload.status || "draft");
+                    payload.start_date = String(payload.start_date || dashboardTodayISO());
+                    payload.end_date = String(payload.end_date || "").trim() || null;
+                    payload.currency = String(payload.currency || "ZAR").toUpperCase();
+                    payload.budget_amount =
+                        payload.budget_amount == null || payload.budget_amount === ""
+                            ? null
+                            : Number(payload.budget_amount);
 
-                    payload.assessment_updated_by =
-                        state.currentUser.id;
+                    if (!payload.name) throw new Error("Enter a campaign name.");
+                    if (!["email", "whatsapp", "facebook", "instagram", "tiktok", "website", "referral", "networking", "other"].includes(payload.channel)) {
+                        throw new Error("Select a supported campaign channel.");
+                    }
+                    if (!["unknown", "professional_services", "creative", "beauty_wellness", "food_hospitality", "retail_ecommerce", "events_entertainment", "education", "other"].includes(payload.target_segment)) {
+                        throw new Error("Select a supported target segment.");
+                    }
+                    if (!["draft", "active", "paused", "completed", "archived"].includes(payload.status)) {
+                        throw new Error("Select a supported campaign status.");
+                    }
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.start_date) ||
+                        (payload.end_date && !/^\d{4}-\d{2}-\d{2}$/.test(payload.end_date))) {
+                        throw new Error("Enter valid campaign dates.");
+                    }
+                    if (payload.end_date && payload.end_date < payload.start_date) {
+                        throw new Error("The campaign end date cannot be before its start date.");
+                    }
+                    if (!["ZAR", "USD", "EUR", "GBP"].includes(payload.currency)) {
+                        throw new Error("Select a supported budget currency.");
+                    }
+                    if (payload.budget_amount != null &&
+                        (!Number.isFinite(payload.budget_amount) || payload.budget_amount < 0)) {
+                        throw new Error("Budget must be blank or a non-negative amount.");
+                    }
+                    payload.created_by = item.created_by || state.currentUser.id;
+                    payload.updated_at = now;
+                }
+
+                if (type === "salesCampaignLeads") {
+                    const campaign = state.salesCampaigns.find(function (entry) {
+                        return String(entry.id) === String(payload.campaign_id || "");
+                    });
+                    const lead = state.leads.find(function (entry) {
+                        return String(entry.id) === String(payload.lead_id || "");
+                    });
+                    if (!campaign) throw new Error("Select an existing campaign.");
+                    if (!lead) throw new Error("Select an existing lead.");
+                    payload.attribution_type = String(payload.attribution_type || "assisted");
+                    if (!["primary", "assisted"].includes(payload.attribution_type)) {
+                        throw new Error("Choose Primary acquisition or Assisted attribution.");
+                    }
+                    const linkedDate = payload.linked_at ? new Date(payload.linked_at) : new Date();
+                    if (!Number.isFinite(linkedDate.getTime())) throw new Error("Enter a valid attribution date.");
+                    payload.linked_at = linkedDate.toISOString();
+                    payload.linked_by = item.linked_by || state.currentUser.id;
+                    payload.notes = String(payload.notes || "").trim() || null;
+                }
+
+                if (type === "salesCampaignSpend") {
+                    const campaign = state.salesCampaigns.find(function (entry) {
+                        return String(entry.id) === String(payload.campaign_id || "");
+                    });
+                    if (!campaign) throw new Error("Select an existing campaign before logging spend.");
+                    payload.amount = Number(payload.amount);
+                    payload.currency = String(payload.currency || "ZAR").toUpperCase();
+                    payload.spent_on = String(payload.spent_on || "");
+                    if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+                        throw new Error("Actual campaign spend must be greater than zero.");
+                    }
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.spent_on)) {
+                        throw new Error("Enter a valid spend date.");
+                    }
+                    if (!["paid_ads", "creative_production", "printing", "event_or_networking", "software", "transport", "other"].includes(String(payload.category || ""))) {
+                        throw new Error("Select a supported spend category.");
+                    }
+                    if (!["ZAR", "USD", "EUR", "GBP"].includes(payload.currency)) {
+                        throw new Error("Select a supported spend currency.");
+                    }
+                    payload.description = String(payload.description || "").trim() || null;
+                    payload.evidence_url = String(payload.evidence_url || "").trim() || null;
+                    if (payload.evidence_url) {
+                        try {
+                            const evidence = new URL(payload.evidence_url);
+                            if (!["http:", "https:"].includes(evidence.protocol)) throw new Error("Invalid URL scheme.");
+                        } catch (error) {
+                            throw new Error("Evidence URL must be a valid HTTP or HTTPS URL.");
+                        }
+                    }
+                    payload.created_by = item.created_by || state.currentUser.id;
+                    payload.updated_at = new Date().toISOString();
+                }
+
+                if (type === "leads") {
+                    const now = new Date().toISOString();
+                    payload.assessment_updated_at = now;
+                    payload.assessment_updated_by = state.currentUser.id;
+
+                    const qualificationDefaults = {
+                        business_segment: "unknown",
+                        service_fit: "unknown",
+                        website_need: "unknown",
+                        contactability: "unknown",
+                        buying_signal: "unknown",
+                        qualification_priority: "unassessed",
+                        qualification_evidence_url: ""
+                    };
+                    const qualificationKeys = Object.keys(qualificationDefaults);
+                    const qualificationChanged = qualificationKeys.some(function (key) {
+                        const nextValue =
+                            payload[key] == null
+                                ? qualificationDefaults[key]
+                                : String(payload[key]);
+                        const previousValue =
+                            item[key] == null
+                                ? qualificationDefaults[key]
+                                : String(item[key]);
+                        return nextValue !== previousValue;
+                    });
+
+                    if (qualificationChanged) {
+                        payload.qualification_reviewed_at = now;
+                        payload.qualification_reviewed_by = state.currentUser.id;
+                    }
                 }
 
                 if (
@@ -26024,6 +27010,16 @@ function simpleBars(items, color) {
                     renderLeads();
             }
 
+            if (state.currentView === "sales-work-queue") {
+                main.innerHTML =
+                    renderSalesWorkQueue();
+            }
+
+            if (state.currentView === "sales-campaigns") {
+                main.innerHTML =
+                    renderSalesCampaigns();
+            }
+
             if (state.currentView === "followups") {
                 main.innerHTML =
                     renderFollowups();
@@ -27298,6 +28294,31 @@ function simpleBars(items, color) {
                         );
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-campaign-link-lead]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    createOrEdit("salesCampaignLeads", null, {
+                        campaign_id: button.dataset.campaignLinkLead || "",
+                        attribution_type: "assisted"
+                    });
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-campaign-log-spend]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    const campaign = state.salesCampaigns.find(function (entry) {
+                        return String(entry.id) === String(button.dataset.campaignLogSpend || "");
+                    });
+                    createOrEdit("salesCampaignSpend", null, {
+                        campaign_id: button.dataset.campaignLogSpend || "",
+                        currency: campaign ? campaign.currency : "ZAR"
+                    });
+                });
             });
 
         workspace

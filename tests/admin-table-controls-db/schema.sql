@@ -52,6 +52,21 @@ create table public.leads (
   swayphics_solution text,
   recommended_services text,
   research_sources text,
+    business_segment text not null default 'unknown'
+        check (business_segment in ('unknown','professional_services','creative','beauty_wellness','food_hospitality','retail_ecommerce','events_entertainment','education','other')),
+    service_fit text not null default 'unknown'
+        check (service_fit in ('unknown','fits_current_capacity','capacity_limited','outside_scope')),
+    website_need text not null default 'unknown'
+        check (website_need in ('unknown','no_website','verified_improvement','no_clear_need')),
+    contactability text not null default 'unknown'
+        check (contactability in ('unknown','verified','invalid')),
+    buying_signal text not null default 'unknown'
+        check (buying_signal in ('unknown','present','absent')),
+    qualification_priority text not null default 'unassessed'
+        check (qualification_priority in ('unassessed','A','B','C')),
+    qualification_evidence_url text,
+    qualification_reviewed_at timestamptz,
+    qualification_reviewed_by uuid references public.admin_users(user_id) on delete set null,
   assessment_updated_at timestamptz,
   assessment_updated_by uuid references public.admin_users(user_id) on delete set null,
   converted_client_id uuid references public.clients(id) on delete set null,
@@ -95,6 +110,76 @@ create table public.follow_ups (
   completed_at timestamptz,
   created_at timestamptz not null default now(),
   constraint follow_up_contact_check check (lead_id is not null or client_id is not null)
+);
+
+create table public.communication_logs (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid references public.clients(id) on delete cascade,
+  lead_id uuid references public.leads(id) on delete cascade,
+  channel text not null default 'WhatsApp'
+    check (channel in ('Email', 'WhatsApp', 'Phone', 'Meeting', 'SMS', 'Other')),
+  direction text not null default 'outbound'
+    check (direction in ('inbound', 'outbound')),
+  outcome text not null default 'not_recorded'
+    check (outcome in ('not_recorded','no_reply_yet','positive_reply','neutral_reply','negative_reply','meeting_agreed','proposal_requested','follow_up_requested','opt_out','opt_in_confirmed','invalid_contact','other')),
+  subject text,
+  message text not null,
+  contacted_at timestamptz not null default now(),
+  created_by uuid references public.admin_users(user_id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint communication_logs_contact_check
+    check (client_id is not null or lead_id is not null)
+);
+
+create table if not exists public.sales_campaigns (
+    id uuid primary key default gen_random_uuid(),
+    name text not null check (length(trim(name)) > 0),
+    channel text not null check (channel in ('email','whatsapp','facebook','instagram','tiktok','website','referral','networking','other')),
+    target_segment text not null default 'unknown'
+        check (target_segment in ('unknown','professional_services','creative','beauty_wellness','food_hospitality','retail_ecommerce','events_entertainment','education','other')),
+    status text not null default 'draft'
+        check (status in ('draft','active','paused','completed','archived')),
+    start_date date not null default current_date,
+    end_date date,
+    currency text not null default 'ZAR' check (currency in ('ZAR','USD','EUR','GBP')),
+    budget_amount numeric(12,2) check (budget_amount is null or budget_amount >= 0),
+    objective text,
+    notes text,
+    created_by uuid references public.admin_users(user_id) on delete set null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    constraint sales_campaigns_date_check check (end_date is null or end_date >= start_date)
+);
+
+create table if not exists public.sales_campaign_leads (
+    id uuid primary key default gen_random_uuid(),
+    campaign_id uuid not null references public.sales_campaigns(id) on delete cascade,
+    lead_id uuid not null references public.leads(id) on delete cascade,
+    attribution_type text not null default 'assisted' check (attribution_type in ('primary','assisted')),
+    linked_at timestamptz not null default now(),
+    linked_by uuid references public.admin_users(user_id) on delete set null,
+    notes text,
+    created_at timestamptz not null default now(),
+    constraint sales_campaign_leads_pair_unique unique (campaign_id, lead_id)
+);
+
+create unique index if not exists sales_campaign_leads_primary_unique_idx
+    on public.sales_campaign_leads(lead_id)
+    where attribution_type = 'primary';
+
+create table if not exists public.sales_campaign_spend (
+    id uuid primary key default gen_random_uuid(),
+    campaign_id uuid not null references public.sales_campaigns(id) on delete cascade,
+    spent_on date not null default current_date,
+    category text not null check (category in ('paid_ads','creative_production','printing','event_or_networking','software','transport','other')),
+    amount numeric(12,2) not null check (amount > 0),
+    currency text not null default 'ZAR' check (currency in ('ZAR','USD','EUR','GBP')),
+    description text,
+    evidence_url text,
+    created_by uuid references public.admin_users(user_id) on delete set null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
 );
 
 create table public.activity_log (
@@ -143,6 +228,10 @@ alter table public.admin_users enable row level security;
 alter table public.leads enable row level security;
 alter table public.tasks enable row level security;
 alter table public.follow_ups enable row level security;
+alter table public.communication_logs enable row level security;
+alter table public.sales_campaigns enable row level security;
+alter table public.sales_campaign_leads enable row level security;
+alter table public.sales_campaign_spend enable row level security;
 alter table public.activity_log enable row level security;
 
 create policy "Local test admins can view admin users"
@@ -177,6 +266,26 @@ on public.follow_ups for all to authenticated
 using (public.is_swayphics_admin())
 with check (public.is_swayphics_admin());
 
+create policy "Local test admins can manage communication logs"
+on public.communication_logs for all to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
+create policy "Local test admins can manage sales campaigns"
+on public.sales_campaigns for all to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
+create policy "Local test admins can manage sales campaign lead links"
+on public.sales_campaign_leads for all to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
+create policy "Local test admins can manage sales campaign spend"
+on public.sales_campaign_spend for all to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
 create policy "Local test admins can manage activity"
 on public.activity_log for all to authenticated
 using (public.is_swayphics_admin())
@@ -184,6 +293,6 @@ with check (public.is_swayphics_admin());
 
 grant usage on schema public to anon, authenticated, service_role;
 grant select, insert, update, delete
-on public.admin_users, public.leads, public.tasks, public.follow_ups, public.activity_log
+on public.admin_users, public.leads, public.tasks, public.follow_ups, public.communication_logs, public.sales_campaigns, public.sales_campaign_leads, public.sales_campaign_spend, public.activity_log
 to authenticated;
 grant all privileges on all tables in schema public to service_role;

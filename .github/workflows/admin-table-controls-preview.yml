@@ -12,6 +12,10 @@ on:
       - "scripts/admin-table-controls-db-smoke.cjs"
       - "tests/admin-table-controls-preview/**"
       - "tests/admin-table-controls-db/**"
+      - "supabase/swayphics-sales-qualification.sql"
+      - "supabase/swayphics-sales-communication-outcomes.sql"
+      - "supabase/swayphics-sales-campaign-attribution.sql"
+      - "supabase/swayphics-admin-workspace-realtime.sql"
       - "scripts/admin-table-controls-browser.test.cjs"
       - ".github/workflows/admin-table-controls-preview.yml"
   workflow_dispatch:
@@ -94,7 +98,19 @@ jobs:
           mkdir -p supabase/migrations
           cp "$GITHUB_WORKSPACE/tests/admin-table-controls-db/schema.sql" \
             "supabase/migrations/20261023000000_admin_table_controls_test_schema.sql"
+          # Execute the real forward-only sales migrations against this disposable
+          # local schema. Existing columns/tables are deliberately already present,
+          # so IF NOT EXISTS and policy replacement behaviour are exercised too.
+          cp "$GITHUB_WORKSPACE/supabase/swayphics-sales-qualification.sql" \
+            "supabase/migrations/20261024010000_sales_qualification.sql"
+          cp "$GITHUB_WORKSPACE/supabase/swayphics-sales-communication-outcomes.sql" \
+            "supabase/migrations/20261024020000_sales_communication_outcomes.sql"
+          cp "$GITHUB_WORKSPACE/supabase/swayphics-sales-campaign-attribution.sql" \
+            "supabase/migrations/20261024030000_sales_campaign_attribution.sql"
           "$CLI" start
+          # Explicitly reset the throwaway local database so the migration files
+          # above are actually applied before authenticated persistence/RLS tests.
+          "$CLI" db reset --local --yes
           "$CLI" status --output env > "$RUNNER_TEMP/local-supabase.env"
 
           set -a
