@@ -12,6 +12,7 @@ const localSchema = fs.readFileSync(path.join(root, "tests", "admin-table-contro
 
 const qualificationFields = [
   "business_segment",
+  "service_fit",
   "website_need",
   "contactability",
   "buying_signal",
@@ -28,6 +29,7 @@ for (const field of qualificationFields) {
 }
 
 assert.match(workspace, /key: "business_segment"/, "Lead editor must capture business segment.");
+assert.match(workspace, /key: "service_fit"/, "Lead editor must capture scope and capacity fit explicitly.");
 assert.match(workspace, /key: "website_need"/, "Lead editor must capture website need.");
 assert.match(workspace, /key: "contactability"/, "Lead editor must capture contactability.");
 assert.match(workspace, /key: "buying_signal"/, "Lead editor must capture buying signals.");
