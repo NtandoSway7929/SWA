@@ -50,7 +50,7 @@ assert.match(workspace, /not proof that a campaign caused a sale/i,
   "UI must not misrepresent current status as causal campaign conversion.");
 assert.match(workspace, /actual amount spent/i,
   "Spend UI must separate actual spend from planned budget.");
-assert.match(workspace, //^\\d\{4\}-\\d\{2\}-\\d\{2\}\$\//,
+assert.ok(workspace.includes("/^\\d{4}-\\d{2}-\\d{2}$/"),
   "Form validation must validate dates before submission.");
 assert.match(workspace, /payload\.amount <= 0/,
   "Form validation must reject zero or negative spend.");
