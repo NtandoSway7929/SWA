@@ -18,6 +18,7 @@ jobs:
         run: |
           set -e
           node --check admin-dashboard/admin-workspace.js
+          node --check admin-dashboard/admin-settings-expanded.js
           node --check admin-dashboard/lead-whatsapp.js
           node --check admin-dashboard/innerme-workspace-health.js
           node --check admin-dashboard/admin-table-controls.js
@@ -25,6 +26,9 @@ jobs:
 
       - name: Test admin welcome authentication handshake
         run: node scripts/admin-welcome-auth.test.cjs
+
+      - name: Test expanded admin settings
+        run: node scripts/admin-settings-expanded.test.cjs
 
       - name: Test admin table controls
         run: node scripts/admin-table-controls.test.cjs
