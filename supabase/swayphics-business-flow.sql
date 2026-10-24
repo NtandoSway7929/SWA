@@ -1295,3 +1295,120 @@ end;
 $$;
 
 notify pgrst, 'reload schema';
+
+-- Notify administrators when sent quotes reach their validity date.
+create or replace function innerme_private.generate_swayphics_quote_expiry_notifications_internal()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+    v_today date := (now() at time zone 'Africa/Johannesburg')::date;
+    v_count integer := 0;
+    r record;
+    v_title text;
+    v_message text;
+    v_severity text;
+    v_event_type text;
+    v_dedupe_key text;
+begin
+    for r in
+        select
+            q.id,
+            q.quote_number,
+            q.title,
+            q.valid_until,
+            coalesce(l.assigned_to, c.assigned_to) as assigned_to
+        from public.quotes q
+        left join public.leads l on l.id = q.lead_id
+        left join public.clients c on c.id = q.client_id
+        where q.status = 'sent'
+          and q.valid_until is not null
+          and q.valid_until <= v_today
+        order by q.valid_until asc, q.id
+    loop
+        if r.valid_until = v_today then
+            v_title := 'Quote expires today';
+            v_severity := 'warning';
+            v_event_type := 'quote.expiry_due';
+            v_message := coalesce(
+                nullif(trim(r.quote_number), ''),
+                nullif(trim(r.title), ''),
+                'Quote'
+            ) || ' is due to expire today. Review the prospect and decide whether to follow up.';
+        else
+            v_title := 'Quote has expired';
+            v_severity := 'danger';
+            v_event_type := 'quote.expired';
+            v_message := coalesce(
+                nullif(trim(r.quote_number), ''),
+                nullif(trim(r.title), ''),
+                'Quote'
+            ) || ' expired on ' || to_char(r.valid_until, 'DD Mon YYYY') ||
+            '. Verify its current status before re-engaging the prospect.';
+        end if;
+
+        v_dedupe_key := 'swayphics-quote-validity:' ||
+            r.id::text || ':' || r.valid_until::text || ':' ||
+            case when r.valid_until = v_today then 'due' else 'expired' end;
+
+        if r.assigned_to is not null then
+            perform public.create_admin_notification(
+                r.assigned_to, null,
+                v_severity,
+                v_event_type,
+                v_title,
+                v_message,
+                'quote',
+                r.id,
+                'quotes',
+                v_dedupe_key
+            );
+        else
+            perform public.notify_admins(
+                null,
+                v_severity,
+                v_event_type,
+                v_title,
+                v_message,
+                'quote',
+                r.id,
+                'quotes',
+                v_dedupe_key,
+                true
+            );
+        end if;
+
+        v_count := v_count + 1;
+    end loop;
+
+    return v_count;
+end;
+$$;
+
+revoke all privileges
+    on function innerme_private.generate_swayphics_quote_expiry_notifications_internal()
+    from public, anon, authenticated, service_role;
+
+do $$
+declare
+    v_job_id bigint;
+begin
+    for v_job_id in
+        select jobid
+        from cron.job
+        where jobname = 'swayphics-quote-expiry-reminders'
+    loop
+        perform cron.unschedule(v_job_id);
+    end loop;
+
+    perform cron.schedule(
+        'swayphics-quote-expiry-reminders',
+        '*/15 * * * *',
+        'select innerme_private.generate_swayphics_quote_expiry_notifications_internal();'
+    );
+end;
+$$;
+
+notify pgrst, 'reload schema';
