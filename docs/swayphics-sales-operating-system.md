@@ -98,6 +98,14 @@ All rates must show numerator, denominator, time window, and cohort. Do not mix 
 
 Do not calculate source/industry conversion rates until reliable source and segment values are captured consistently. Show small sample sizes and avoid presenting early results as statistically conclusive.
 
+## 7A. Communication outcomes and opt-out controls
+
+Every communication log has an explicit result field. Existing records default to `not_recorded`; missing outcomes must not be retrospectively guessed. Supported outcomes include no reply yet, positive/neutral/negative reply, meeting agreed, proposal requested, follow-up requested, opt-out, explicit opt-in, invalid contact route and other. “No reply yet” is only appropriate after a reasonable response window, and is not a rejection.
+
+An explicit opt-out suppresses routine lead follow-up suggestions and email composition. A later, separately logged explicit opt-in can restore eligibility. An invalid lead contactability assessment or the latest unresolved invalid-email outcome also blocks email composition until the contact route is verified. Billing/invoice work remains separate from sales outreach suppression.
+
+The rolling 30-day outreach report uses distinct leads with a manually logged outbound communication during the window. Each lead enters the denominator once; a reply counts only when there is a manually logged inbound communication at or after the cohort's first outbound event. Positive replies, meetings, proposals requested, follow-up requests and opt-outs require explicit inbound outcomes. These are not email delivery/read receipts, and the report must disclose incomplete or missing communication history.
+
 ## 8. Campaign tracking
 
 Campaign-level tracking should capture campaign name, channel, industry/segment, start/end dates, spend amount and currency, and the set of leads included. Reuse existing `leads.source` for source attribution, but do not overload it with multiple meanings. If campaign membership cannot be represented safely with current fields, propose a normalized campaign table in a later implementation step instead of storing structured data in free text.
