@@ -58,6 +58,15 @@ const structuredEnvelope = JSON.stringify({
 assert.equal(isInnerMeIntelligentUiEnvelope(structuredEnvelope), true);
 assert.equal(normalizeInnerMeAnswer(structuredEnvelope), structuredEnvelope,
   "Normalization must not insert newlines into JSON strings or otherwise mutate a valid UI envelope");
+const markdownSplitEnvelope = structuredEnvelope.replace(
+  "Illustrative only. Next Steps:",
+  "Illustrative only.\\nNext Steps:"
+);
+const repairedStructuredPayload = ui.parseOptInPayload(markdownSplitEnvelope);
+assert.equal(repairedStructuredPayload?.summary,
+  "Illustrative only. Next Steps: verify units before use.",
+  "Structured response parser must repair a renderer-inserted line break inside a JSON string");
+
 const fence = String.fromCharCode(96).repeat(3);
 const fencedStructuredEnvelope = fence + "json\n" + structuredEnvelope + "\n" + fence;
 assert.equal(isInnerMeIntelligentUiEnvelope(fencedStructuredEnvelope), true,
