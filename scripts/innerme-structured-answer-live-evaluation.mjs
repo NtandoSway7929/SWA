@@ -155,8 +155,7 @@ async function main() {
     const failedQuery = new URL(SUPABASE_URL + "/rest/v1/innerme_provider_usage");
     failedQuery.searchParams.set("select", "request_id,attempt_number,task_category,provider,model,outcome,http_status,latency_ms,error_code,fallback_reason,created_at");
     failedQuery.searchParams.set("task_category", "eq.assistant_chat");
-    failedQuery.searchParams.set("created_at", "gte." + startedAtWallClock);
-    failedQuery.searchParams.append("created_at", "lte." + endedAtWallClock);
+    failedQuery.searchParams.set("and", "(created_at.gte." + startedAtWallClock + ",created_at.lte." + endedAtWallClock + ")");
     failedQuery.searchParams.set("order", "created_at.asc,attempt_number.asc");
     let failedAttempts = null;
     let failedTelemetryError = null;
