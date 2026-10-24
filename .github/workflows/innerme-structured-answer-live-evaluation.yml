@@ -1,10 +1,6 @@
 name: InnerMe Structured Answer Live Evaluation (isolated test only)
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "scripts/innerme-structured-answer-live-evaluation.trigger"
   workflow_dispatch:
     inputs:
       confirm_no_billing:
@@ -41,7 +37,7 @@ jobs:
         run: node --check scripts/innerme-structured-answer-live-evaluation.mjs
 
   evaluate:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[AUTHORIZED-INNERME-LIVE-EVAL-ONCE]'))
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -50,7 +46,7 @@ jobs:
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
-          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing || (github.event_name == 'push' && contains(github.event.head_commit.message, '[AUTHORIZED-INNERME-LIVE-EVAL-ONCE]')) }}
+          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
         run: |
           set -euo pipefail
           if [[ "${CONFIRM_NO_BILLING}" != "true" ]]; then
@@ -79,5 +75,5 @@ jobs:
         env:
           INNERME_TEST_ADMIN_EMAIL: ${{ secrets.INNERME_TEST_ADMIN_EMAIL }}
           INNERME_TEST_ADMIN_PASSWORD: ${{ secrets.INNERME_TEST_ADMIN_PASSWORD }}
-          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing || (github.event_name == 'push' && contains(github.event.head_commit.message, '[AUTHORIZED-INNERME-LIVE-EVAL-ONCE]')) }}
+          CONFIRM_NO_BILLING: ${{ inputs.confirm_no_billing }}
         run: node scripts/innerme-structured-answer-live-evaluation.mjs
