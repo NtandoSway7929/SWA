@@ -26,6 +26,11 @@ const workspaceSchema = fs.readFileSync(
   "utf8"
 );
 
+const dueTodayMigration = fs.readFileSync(
+  path.join(root, "supabase/migrations/20261024214500_swayphics_due_today_lead_notifications.sql"),
+  "utf8"
+);
+
 
 function mustMatch(source, pattern, message) {
   assert.match(source, pattern, message);
@@ -140,6 +145,31 @@ mustMatch(
   "the baseline flow SQL must include the overdue status scheduler"
 );
 mustMatch(
+  dueTodayMigration,
+  /l\.next_follow_up = v_today/i,
+  "scheduled first-contact and follow-up reminders must include items due today"
+);
+mustMatch(
+  dueTodayMigration,
+  /r\.status = 'new'[\s\S]*?First contact due today/i,
+  "new leads due today must be labeled as first-contact reminders"
+);
+mustMatch(
+  dueTodayMigration,
+  /swayphics-leads-due-today[\s\S]*?'\*\/15 \* \* \* \*'/i,
+  "due-today lead notifications must run on a recurring schedule"
+);
+mustMatch(
+  dueTodayMigration,
+  /swayphics-lead-due-today:/i,
+  "due-today notifications must have a stable per-lead daily deduplication key"
+);
+mustMatch(
+  baseline,
+  /generate_swayphics_due_lead_notifications_internal/i,
+  "the baseline flow SQL must include the due-today notification routine"
+);
+mustMatch(
   workspaceSchema,
   /'invoice drafted'/i,
   "the base admin schema must accept the invoice drafted state"
@@ -147,7 +177,7 @@ mustMatch(
 
 console.log(JSON.stringify({
   result: "PASS",
-  checks: 23,
+  checks: 28,
   verified: [
     "cron uses a private, no-user-auth worker",
     "dashboard RPC remains admin-authenticated",
@@ -161,6 +191,7 @@ console.log(JSON.stringify({
     "draft invoices are not mislabeled as sent",
     "daily local-date overdue sweep is defined in migration and baseline SQL",
     "base and follow-on schemas accept invoice drafted status",
+    "due-today first-contact reminders are scheduled and deduplicated",
     "dashboard smoke test models scalar RPC results and asserts startup invocation"
   ]
 }, null, 2));
