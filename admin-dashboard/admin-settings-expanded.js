@@ -903,16 +903,57 @@
         });
     }
 
+    function normalizeSettingsSidebar() {
+        var workspace = document.getElementById("sway-admin-workspace");
+        if (!workspace) return;
+
+        var group = workspace.querySelector('[data-nav-group="settings"]');
+        if (!group) return;
+
+        var button = group.querySelector('[data-view="settings"]');
+        if (!button) return;
+
+        var label = button.querySelector("span");
+        if (label) label.textContent = "Settings";
+        else button.textContent = "Settings";
+
+        button.classList.add("sway-settings-direct-nav");
+        button.setAttribute("aria-label", "Settings");
+        group.parentNode.insertBefore(button, group);
+        group.remove();
+    }
+
     function mount() {
+        normalizeSettingsSidebar();
+
         var greetingForm = document.getElementById("sway-admin-greeting-form");
         if (!greetingForm || document.getElementById(ROOT_ID)) return;
 
-        var anchor = greetingForm;
+        var greetingPanel = greetingForm.closest(".sway-panel");
         var root = document.createElement("div");
         root.innerHTML = buildMarkup();
         root = root.firstElementChild;
         if (!root) return;
-        anchor.insertAdjacentElement("afterend", root);
+
+        if (greetingPanel && greetingPanel.parentElement) {
+            greetingPanel.insertAdjacentElement("afterend", root);
+            greetingPanel.classList.add("swe-greeting-settings-panel");
+            var preferencesPanel = root.querySelector('[data-settings-panel="preferences"]');
+            if (preferencesPanel) {
+                preferencesPanel.insertBefore(greetingPanel, preferencesPanel.firstElementChild);
+            }
+        } else {
+            greetingForm.insertAdjacentElement("afterend", root);
+        }
+
+        var headingDescription = document.querySelector(
+            "#sway-admin-workspace .sway-workspace-heading-copy p"
+        );
+        if (headingDescription) {
+            headingDescription.textContent =
+                "Manage sales workflows, notifications, shared templates and your dashboard preferences.";
+        }
+
         root.querySelectorAll("button[type='submit']").forEach(function (button) { button.disabled = true; });
 
         selectTab(root, "sales");
