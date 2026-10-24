@@ -283,6 +283,9 @@ begin
         v_event like 'email.%'
         or v_event like 'review.%'
         or v_event like 'delivery.%'
+        or v_event like 'project.%'
+        or v_event like 'document.%'
+        or v_event like 'portal.%'
     ) and coalesce(v_delivery_enabled, true) is false then
         return;
     end if;
