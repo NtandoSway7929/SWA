@@ -290,9 +290,20 @@ async function main() {
         const id = filter.startsWith("eq.") ? filter.slice(3) : "";
         const body = JSON.parse(request.postData() || "{}");
         const record = leads.find(item => String(item.id) === id);
-        if (record && body.status === "contacted") {
+        const qualificationKeys = [
+          "business_segment", "website_need", "contactability", "buying_signal",
+          "qualification_priority", "qualification_evidence_url",
+          "qualification_reviewed_at", "qualification_reviewed_by"
+        ];
+        const isQualificationUpdate = qualificationKeys.some(key =>
+          Object.prototype.hasOwnProperty.call(body, key)
+        );
+        if (record && (body.status === "contacted" || isQualificationUpdate)) {
           Object.assign(record, body);
-          metrics.mockedTableActionWrites.push({ method, path: url.pathname, id, status: body.status });
+          metrics.mockedTableActionWrites.push({
+            method, path: url.pathname, id, status: body.status || null,
+            qualificationUpdate: isQualificationUpdate
+          });
           return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
         }
       }
@@ -380,6 +391,52 @@ async function main() {
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
+
+    // Exercise structured qualification through the real editor, but persist only
+    // to the in-memory lead fixture intercepted by this test browser.
+    const qualificationLeadRow = leadRows.filter({ hasText: "Alpha Studio" });
+    await qualificationLeadRow.locator(".sway-lead-actions-menu > summary").click();
+    const qualificationEdit = page.locator('[data-edit="leads"][data-id="lead-alpha"]');
+    await qualificationEdit.waitFor({ state: "visible", timeout: 5000 });
+    await qualificationEdit.click();
+    const qualificationModal = page.locator(".sway-modal");
+    await qualificationModal.locator("#sway-field-website_need").waitFor({ state: "visible" });
+    assert.equal(await qualificationModal.locator("#sway-field-business_segment").inputValue(), "unknown",
+      "newly added qualification controls should preserve an explicit Unknown default");
+    assert.equal(await qualificationModal.locator("#sway-field-website_need").inputValue(), "unknown",
+      "website need must not assume a gap when it has not been researched");
+    assert.equal(await qualificationModal.locator("#sway-field-contactability").inputValue(), "unknown",
+      "contactability must not assume a verified route");
+    assert.equal(await qualificationModal.locator("#sway-field-buying_signal").inputValue(), "unknown",
+      "buying intent must not be inferred from a weak website");
+    assert.equal(await qualificationModal.locator("#sway-field-qualification_priority").inputValue(), "unassessed",
+      "qualification must remain unassessed until a human reviews it");
+    assert.equal(await qualificationModal.locator("#sway-field-qualification_evidence_url").getAttribute("type"), "url",
+      "evidence URL must use browser URL validation");
+
+    await qualificationModal.locator("#sway-field-business_segment").selectOption("creative");
+    await qualificationModal.locator("#sway-field-website_need").selectOption("verified_improvement");
+    await qualificationModal.locator("#sway-field-contactability").selectOption("verified");
+    await qualificationModal.locator("#sway-field-buying_signal").selectOption("present");
+    await qualificationModal.locator("#sway-field-qualification_priority").selectOption("A");
+    await qualificationModal.locator("#sway-field-qualification_evidence_url").fill("https://example.invalid/qualification-test");
+    await qualificationModal.locator('button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector("#sway-field-qualification_priority"), { timeout: 15000 });
+
+    const qualifiedFixture = leads.find(item => item.id === "lead-alpha");
+    assert.equal(qualifiedFixture.business_segment, "creative", "business segment should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.website_need, "verified_improvement", "website need should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.contactability, "verified", "contactability should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.buying_signal, "present", "buying signal should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.qualification_priority, "A", "the human-set priority should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.qualification_evidence_url, "https://example.invalid/qualification-test",
+      "the evidence URL should persist to the synthetic fixture");
+    assert.ok(qualifiedFixture.qualification_reviewed_at, "qualification edits must record a review timestamp");
+    assert.equal(qualifiedFixture.qualification_reviewed_by, TEST_USER_ID,
+      "qualification edits must record the authenticated synthetic reviewer");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.id === "lead-alpha" && item.qualificationUpdate === true
+    ), "the qualification save must be intercepted and stored only in the in-memory mock");
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
@@ -572,7 +629,7 @@ async function main() {
     ), "the linked-lead patch should be intercepted by the mock");
     assert.equal(metrics.mockedTableActionWrites.filter(item =>
       item.method === "POST" && item.path === "/rest/v1/activity_log"
-    ).length, 3, "the manual contacted mark and both confirmed bulk actions should log activity to the in-memory mock");
+    ).length, 4, "the qualification edit, manual contacted mark and confirmed bulk actions should log activity to the in-memory mock");
     assert.ok(mockActivityLog.some(item =>
       item.entity_type === "leads" && item.entity_id === "lead-contact-toggle" &&
       String(item.action || item.description || "").toLowerCase().includes("contacted")
@@ -638,8 +695,8 @@ async function main() {
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
-    assert.equal(metrics.mockedTableActionWrites.length, 7,
-      "only the expected lead-contact, task and follow-up action writes should be captured by the in-memory mock");
+    assert.equal(metrics.mockedTableActionWrites.length, 9,
+      "only the expected qualification, lead-contact, task, follow-up and activity-log writes should be captured by the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
       item.id === "lead-contact-toggle" && item.contacted_manually === true),
@@ -666,6 +723,7 @@ async function main() {
       checks: [
         "admin session accepted by mocked auth endpoint",
         "actual Leads, Follow-ups and Tasks views render synthetic records",
+        "qualification editor shows Unknown/Unassessed defaults and stores human-reviewed fields only in the in-memory mock",
         "lead email search, status filter and business-name sort",
         "visible-row selection, clear selection and formula-safe CSV download",
         "follow-up status filter and task priority sort/status filter",
