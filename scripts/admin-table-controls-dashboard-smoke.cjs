@@ -291,7 +291,7 @@ async function main() {
         const body = JSON.parse(request.postData() || "{}");
         const record = leads.find(item => String(item.id) === id);
         const qualificationKeys = [
-          "business_segment", "website_need", "contactability", "buying_signal",
+          "business_segment", "service_fit", "website_need", "contactability", "buying_signal",
           "qualification_priority", "qualification_evidence_url",
           "qualification_reviewed_at", "qualification_reviewed_by"
         ];
@@ -403,6 +403,8 @@ async function main() {
     await qualificationModal.locator("#sway-field-website_need").waitFor({ state: "visible" });
     assert.equal(await qualificationModal.locator("#sway-field-business_segment").inputValue(), "unknown",
       "newly added qualification controls should preserve an explicit Unknown default");
+    assert.equal(await qualificationModal.locator("#sway-field-service_fit").inputValue(), "unknown",
+      "service fit and capacity must remain unknown until assessed");
     assert.equal(await qualificationModal.locator("#sway-field-website_need").inputValue(), "unknown",
       "website need must not assume a gap when it has not been researched");
     assert.equal(await qualificationModal.locator("#sway-field-contactability").inputValue(), "unknown",
@@ -415,6 +417,7 @@ async function main() {
       "evidence URL must use browser URL validation");
 
     await qualificationModal.locator("#sway-field-business_segment").selectOption("creative");
+    await qualificationModal.locator("#sway-field-service_fit").selectOption("fits_current_capacity");
     await qualificationModal.locator("#sway-field-website_need").selectOption("verified_improvement");
     await qualificationModal.locator("#sway-field-contactability").selectOption("verified");
     await qualificationModal.locator("#sway-field-buying_signal").selectOption("present");
@@ -425,6 +428,7 @@ async function main() {
 
     const qualifiedFixture = leads.find(item => item.id === "lead-alpha");
     assert.equal(qualifiedFixture.business_segment, "creative", "business segment should persist to the synthetic fixture");
+    assert.equal(qualifiedFixture.service_fit, "fits_current_capacity", "service fit should persist to the synthetic fixture");
     assert.equal(qualifiedFixture.website_need, "verified_improvement", "website need should persist to the synthetic fixture");
     assert.equal(qualifiedFixture.contactability, "verified", "contactability should persist to the synthetic fixture");
     assert.equal(qualifiedFixture.buying_signal, "present", "buying signal should persist to the synthetic fixture");
