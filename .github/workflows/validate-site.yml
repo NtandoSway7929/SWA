@@ -30,6 +30,9 @@ jobs:
       - name: Test expanded admin settings
         run: node scripts/admin-settings-expanded.test.cjs
 
+      - name: Test dashboard automation integrity
+        run: node scripts/admin-automation-integrity.test.cjs
+
       - name: Test admin table controls
         run: node scripts/admin-table-controls.test.cjs
 
