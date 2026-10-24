@@ -71,27 +71,41 @@
     const fenced = raw.match(new RegExp("^\\x60\\x60\\x60(?:json|innerme-ui)\\s*([\\s\\S]*?)\\s*\\x60\\x60\\x60$", "i"));
     const candidate = fenced ? fenced[1] : raw;
     if (candidate.length > 20000 || candidate[0] !== "{") return null;
-    try {
-      const value = JSON.parse(candidate);
-      const payload = value && value.innerme_ui;
-      if (!payload || payload.version !== VERSION ||
-          !["summary", "metrics", "checklist", "chart", "sections"].includes(payload.kind)) return null;
-      if (payload.title !== undefined && typeof payload.title !== "string") return null;
-      if (payload.summary !== undefined && typeof payload.summary !== "string") return null;
-      if (payload.metrics !== undefined && (!Array.isArray(payload.metrics) || payload.metrics.length > 8 ||
-          payload.metrics.some(item => !item || typeof item.label !== "string" || typeof item.value !== "string"))) return null;
-      if (payload.items !== undefined && (!Array.isArray(payload.items) || payload.items.length > 12 ||
-          payload.items.some(item => typeof item !== "string" && (!item || typeof item.label !== "string")))) return null;
-      if (payload.sections !== undefined && (!Array.isArray(payload.sections) || payload.sections.length > 8 ||
-          payload.sections.some(item => !item || typeof item.title !== "string" || typeof item.body !== "string"))) return null;
-      if (payload.kind === "chart" &&
-          (!payload.chart || !Array.isArray(payload.chart.points) || payload.chart.points.length > 12 ||
-          payload.chart.points.some(point => !point || typeof point.label !== "string" ||
-            typeof point.value !== "number" || !Number.isFinite(point.value)))) return null;
-      return payload;
-    } catch (_) { return null; }
-  }
 
+    // The legacy Markdown renderer can turn a valid JSON string value into
+    // separate block nodes (for example, before "Next Steps"). innerText then
+    // inserts literal line breaks into the JSON. Try the original first, then
+    // repair only renderer-added physical line breaks as spaces. Strict shape
+    // validation still applies, and JSON-escaped \n sequences are untouched.
+    function parseCandidate(source) {
+      try {
+        const value = JSON.parse(source);
+        const payload = value && value.innerme_ui;
+        if (!payload || payload.version !== VERSION ||
+            !["summary", "metrics", "checklist", "chart", "sections"].includes(payload.kind)) return null;
+        if (payload.title !== undefined && typeof payload.title !== "string") return null;
+        if (payload.summary !== undefined && typeof payload.summary !== "string") return null;
+        if (payload.metrics !== undefined && (!Array.isArray(payload.metrics) || payload.metrics.length > 8 ||
+            payload.metrics.some(item => !item || typeof item.label !== "string" || typeof item.value !== "string"))) return null;
+        if (payload.items !== undefined && (!Array.isArray(payload.items) || payload.items.length > 12 ||
+            payload.items.some(item => typeof item !== "string" && (!item || typeof item.label !== "string")))) return null;
+        if (payload.sections !== undefined && (!Array.isArray(payload.sections) || payload.sections.length > 8 ||
+            payload.sections.some(item => !item || typeof item.title !== "string" || typeof item.body !== "string"))) return null;
+        if (payload.kind === "chart" &&
+            (!payload.chart || !Array.isArray(payload.chart.points) || payload.chart.points.length > 12 ||
+            payload.chart.points.some(point => !point || typeof point.label !== "string" ||
+              typeof point.value !== "number" || !Number.isFinite(point.value)))) return null;
+        return payload;
+      } catch (_) { return null; }
+    }
+
+    const parsed = parseCandidate(candidate);
+    if (parsed) return parsed;
+    if (/\r|\n/.test(candidate)) {
+      return parseCandidate(candidate.replace(/\r\n?/g, "\n").replace(/\n/g, " "));
+    }
+    return null;
+  }
   function classifyMessage(text, content) {
     const table = content && content.querySelector ? content.querySelector("table") : null;
     const hasList = !!(content && content.querySelector && content.querySelectorAll("li").length >= 3);
@@ -241,7 +255,7 @@
   }
 
   function enhanceMessage(doc, message) {
-    if (!message || message.dataset.innermeUiStructured === "1") return;
+    if (!message || (message.dataset.innermeUiStructured === "1" && message.querySelector(".innerme-iu-card"))) return;
     const content = message.querySelector(".sway-ai-message-content");
     if (!content) return;
     const rawText = String(content.innerText || content.textContent || "").trim();
