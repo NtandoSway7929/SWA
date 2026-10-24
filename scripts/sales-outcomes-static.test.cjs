@@ -49,7 +49,7 @@ for (const outcome of outcomes) {
 assert.match(workspace, /key: "outcome"/, "Communication editor must capture recorded outcome.");
 assert.match(workspace, /function renderSalesOutcomeAnalytics\(/, "Insights must provide sales outreach outcome metrics.");
 assert.match(workspace, /30 \* 24 \* 60 \* 60 \* 1000/, "Outreach metrics must use a defined rolling 30-day window.");
-assert.match(workspace, /No reply is not treated as rejection/, "Metrics must not infer rejection from silence.");
+assert.match(workspace, /no reply is not treated as rejection/i, "Metrics must not infer rejection from silence.");
 assert.match(workspace, /function isContactOptedOut\(/, "Opt-out state must be calculated from recorded consent events.");
 assert.match(workspace, /isContactOptedOut\("lead", lead\.id\)/, "Opted-out leads must be excluded from the sales work queue.");
 assert.match(workspace, /contactOutreachSuppressionReason\(/, "Email composer must check recorded suppression state.");
