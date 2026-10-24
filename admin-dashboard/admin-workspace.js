@@ -57,6 +57,9 @@
         initialDataLoading: false,
         initialDataError: null,
         communications: [],
+        salesCampaigns: [],
+        salesCampaignLeads: [],
+        salesCampaignSpend: [],
         emailMessages: [],
         emailSyncing: false,
         emailSyncError: "",
@@ -135,6 +138,7 @@
                 ["enquiries", "Enquiries"],
                 ["leads", "Leads"],
                 ["sales-work-queue", "Sales Work Queue"],
+                ["sales-campaigns", "Campaign Tracking"],
                 ["clients", "Clients"],
                 ["communications", "Communication log"],
                 ["email", "Inbox"],
@@ -4435,7 +4439,10 @@
             api("/rest/v1/client_portal_requests?select=*&order=created_at.desc"),
             optionalApi("/rest/v1/lead_proposals?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", [])
+            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
+            optionalApi("/rest/v1/sales_campaigns?select=*&order=start_date.desc", []),
+            optionalApi("/rest/v1/sales_campaign_leads?select=*&order=linked_at.desc", []),
+            optionalApi("/rest/v1/sales_campaign_spend?select=*&order=spent_on.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -4455,6 +4462,9 @@
         state.leadProposals = results[14] || [];
         state.documents = results[15] || [];
         state.communications = results[16] || [];
+        state.salesCampaigns = results[17] || [];
+        state.salesCampaignLeads = results[18] || [];
+        state.salesCampaignSpend = results[19] || [];
 
         await loadAdminNotifications();
 
@@ -12645,6 +12655,173 @@ function simpleBars(items, color) {
                 ? '<div class="sway-sales-queue" style="display:grid;gap:10px;">' + queue + '</div>'
                 : empty("No sales actions are due based on the records currently loaded. Check Leads and Follow-ups if you expected an item here.")
         ) + '<div class="sway-inline-note">Priority is based on recorded status and dates, not an AI prediction of who will buy. Keep each lead\'s next action and follow-up date current.</div>';
+    }
+
+    function salesCampaignSelectOptions(options, selectedValue, placeholder) {
+        return '<option value="">' + esc(placeholder || "Select...") + "</option>" +
+            options.map(function (option) {
+                const value = String(option.value);
+                return '<option value="' + esc(value) + '"' +
+                    (value === String(selectedValue == null ? "" : selectedValue) ? " selected" : "") +
+                    ">" + esc(option.label) + "</option>";
+            }).join("");
+    }
+
+    function salesCampaignMoney(amount, currency) {
+        if (amount == null || amount === "") return "Not recorded";
+        const code = ["ZAR", "USD", "EUR", "GBP"].includes(String(currency || "").toUpperCase())
+            ? String(currency).toUpperCase()
+            : "ZAR";
+        try {
+            return new Intl.NumberFormat("en-ZA", {
+                style: "currency",
+                currency: code,
+                maximumFractionDigits: 2
+            }).format(Number(amount));
+        } catch (error) {
+            return code + " " + Number(amount || 0).toFixed(2);
+        }
+    }
+
+    function salesCampaignSpendBreakdown(campaignId) {
+        const totals = {};
+        state.salesCampaignSpend.forEach(function (entry) {
+            if (String(entry.campaign_id) !== String(campaignId)) return;
+            const currency = String(entry.currency || "ZAR").toUpperCase();
+            totals[currency] = (totals[currency] || 0) + Number(entry.amount || 0);
+        });
+        const summary = Object.keys(totals).sort().map(function (currency) {
+            return salesCampaignMoney(totals[currency], currency);
+        });
+        return summary.length ? summary.join(" · ") : "No spend recorded";
+    }
+
+    function renderSalesCampaigns() {
+        const campaigns = state.salesCampaigns.slice().sort(function (a, b) {
+            const dateOrder = String(b.start_date || "").localeCompare(String(a.start_date || ""));
+            return dateOrder || String(a.name || "").localeCompare(String(b.name || ""));
+        });
+        const distinctLeadCount = new Set(state.salesCampaignLeads.map(function (link) {
+            return String(link.lead_id || "");
+        }).filter(Boolean)).size;
+        const primaryLinks = state.salesCampaignLeads.filter(function (link) {
+            return link.attribution_type === "primary";
+        });
+        const currencies = {};
+        state.salesCampaignSpend.forEach(function (entry) {
+            const currency = String(entry.currency || "ZAR").toUpperCase();
+            currencies[currency] = (currencies[currency] || 0) + Number(entry.amount || 0);
+        });
+        const spendTotals = Object.keys(currencies).sort().map(function (currency) {
+            return salesCampaignMoney(currencies[currency], currency);
+        }).join(" · ") || "No spend recorded";
+
+        const campaignRows = campaigns.map(function (campaign) {
+            const links = state.salesCampaignLeads.filter(function (link) {
+                return String(link.campaign_id) === String(campaign.id);
+            });
+            const primary = links.filter(function (link) {
+                return link.attribution_type === "primary";
+            });
+            const primaryCurrentlyWon = primary.filter(function (link) {
+                const lead = state.leads.find(function (entry) {
+                    return String(entry.id) === String(link.lead_id);
+                });
+                return lead && String(lead.status || "").toLowerCase() === "won";
+            }).length;
+            return "<tr>" +
+                "<td><strong>" + esc(campaign.name) + "</strong>" +
+                    (campaign.objective ? '<br><span style="color:var(--text-muted);font-size:.72rem;">' + esc(campaign.objective) + "</span>" : "") +
+                "</td>" +
+                "<td>" + esc(formatDisplayText(campaign.channel || "other")) +
+                    '<br><span style="color:var(--text-muted);font-size:.72rem;">' + esc(formatDisplayText(campaign.target_segment || "unknown")) + "</span></td>" +
+                "<td>" + chip(campaign.status || "draft") + "</td>" +
+                "<td>" + esc(date(campaign.start_date)) +
+                    (campaign.end_date ? '<br><span style="color:var(--text-muted);font-size:.72rem;">to ' + esc(date(campaign.end_date)) + "</span>" : "") + "</td>" +
+                "<td>" + esc(salesCampaignMoney(campaign.budget_amount, campaign.currency || "ZAR")) + "</td>" +
+                "<td>" + esc(salesCampaignSpendBreakdown(campaign.id)) + "</td>" +
+                "<td>" + links.length + " linked" +
+                    '<br><span style="color:var(--text-muted);font-size:.72rem;">' + primary.length + " primary</span></td>" +
+                "<td>" + primaryCurrentlyWon + " currently won</td>" +
+                '<td><div class="sway-row-actions"><button type="button" class="sway-row-action" data-edit="salesCampaigns" data-id="' + esc(campaign.id) + '">Edit</button>' +
+                    '<button type="button" class="sway-row-action" data-campaign-link-lead="' + esc(campaign.id) + '">Link lead</button>' +
+                    '<button type="button" class="sway-row-action" data-campaign-log-spend="' + esc(campaign.id) + '">Log spend</button></div></td>' +
+            "</tr>";
+        }).join("");
+
+        const linkRows = state.salesCampaignLeads.slice().sort(function (a, b) {
+            return String(b.linked_at || "").localeCompare(String(a.linked_at || ""));
+        }).map(function (link) {
+            const campaign = state.salesCampaigns.find(function (item) {
+                return String(item.id) === String(link.campaign_id);
+            });
+            const lead = state.leads.find(function (item) {
+                return String(item.id) === String(link.lead_id);
+            });
+            return "<tr><td>" + esc(campaign ? campaign.name : "Campaign unavailable") + "</td>" +
+                "<td><strong>" + esc(lead ? (lead.business_name || lead.contact_name || "Unnamed lead") : "Lead unavailable") + "</strong>" +
+                    (lead && lead.email ? '<br><span style="color:var(--text-muted);font-size:.72rem;">' + esc(lead.email) + "</span>" : "") + "</td>" +
+                "<td>" + chip(link.attribution_type || "assisted") + "</td>" +
+                "<td>" + esc(dateTime(link.linked_at)) + "</td>" +
+                "<td>" + esc(link.notes || "—") + "</td>" +
+                '<td><div class="sway-row-actions"><button type="button" class="sway-row-action" data-edit="salesCampaignLeads" data-id="' + esc(link.id) + '">Edit</button>' +
+                    '<button type="button" class="sway-row-action danger" data-delete="salesCampaignLeads" data-id="' + esc(link.id) + '">Remove link</button></div></td></tr>';
+        }).join("");
+
+        const spendRows = state.salesCampaignSpend.slice().sort(function (a, b) {
+            return String(b.spent_on || "").localeCompare(String(a.spent_on || ""));
+        }).map(function (entry) {
+            const campaign = state.salesCampaigns.find(function (item) {
+                return String(item.id) === String(entry.campaign_id);
+            });
+            return "<tr><td>" + esc(date(entry.spent_on)) + "</td>" +
+                "<td>" + esc(campaign ? campaign.name : "Campaign unavailable") + "</td>" +
+                "<td>" + esc(formatDisplayText(entry.category || "other")) + "</td>" +
+                "<td><strong>" + esc(salesCampaignMoney(entry.amount, entry.currency || "ZAR")) + "</strong></td>" +
+                "<td>" + esc(entry.description || "—") +
+                    (entry.evidence_url ? '<br><span style="color:var(--text-muted);font-size:.72rem;">Evidence recorded</span>' : "") + "</td>" +
+                '<td><div class="sway-row-actions"><button type="button" class="sway-row-action" data-edit="salesCampaignSpend" data-id="' + esc(entry.id) + '">Edit</button>' +
+                    '<button type="button" class="sway-row-action danger" data-delete="salesCampaignSpend" data-id="' + esc(entry.id) + '">Delete</button></div></td></tr>';
+        }).join("");
+
+        const statCard = function (label, value, hint) {
+            return '<div class="sway-stat-card"><span class="label">' + esc(label) + '</span><div class="value">' +
+                esc(String(value)) + '</div><div class="hint">' + esc(hint) + "</div></div>";
+        };
+
+        return heading(
+            '<button type="button" class="sway-workspace-button primary" data-add="salesCampaigns">+ New campaign</button>' +
+            '<button type="button" class="sway-workspace-button" data-add="salesCampaignLeads">+ Link lead</button>' +
+            '<button type="button" class="sway-workspace-button" data-add="salesCampaignSpend">+ Log spend</button>'
+        ) +
+        '<div class="sway-workspace-grid">' +
+            statCard("Campaigns", campaigns.length, campaigns.filter(function (item) { return item.status === "active"; }).length + " active") +
+            statCard("Distinct leads linked", distinctLeadCount, "Counted once across all campaign links") +
+            statCard("Primary acquisition links", primaryLinks.length, "Manual attribution; one primary campaign per lead") +
+            statCard("Recorded spend", spendTotals, state.salesCampaignSpend.length + " spend entries, grouped by currency") +
+        "</div>" +
+        panel(
+            "Campaigns",
+            "Record campaign purpose, channel, dates, optional budget, linked leads and actual spend. Campaign records are manually maintained.",
+            campaigns.length
+                ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Campaign</th><th>Channel / segment</th><th>Status</th><th>Dates</th><th>Budget</th><th>Actual spend by currency</th><th>Lead links</th><th>Current won status</th><th>Actions</th></tr></thead><tbody>' + campaignRows + "</tbody></table></div>"
+                : empty("No campaigns recorded. Create a campaign before adding spend or attribution links.")
+        ) +
+        panel(
+            "Lead attribution",
+            "Use Primary acquisition only when the campaign originated the lead; use Assisted when it supported existing demand. One lead can have only one primary campaign.",
+            linkRows
+                ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Campaign</th><th>Lead</th><th>Attribution</th><th>Linked at</th><th>Notes</th><th>Actions</th></tr></thead><tbody>' + linkRows + "</tbody></table></div>"
+                : empty("No campaign-to-lead links recorded.")
+        ) +
+        panel(
+            "Campaign spend ledger",
+            "Record actual spend as evidenced entries. Budgets and spending are kept separate; amounts in different currencies are never added together.",
+            spendRows
+                ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Date</th><th>Campaign</th><th>Category</th><th>Amount</th><th>Description / evidence</th><th>Actions</th></tr></thead><tbody>' + spendRows + "</tbody></table></div>"
+                : empty("No spend recorded yet. A budget is not treated as money spent.")
+        ) +
+        '<div class="sway-inline-note"><strong>Attribution and metric limits:</strong> Primary/assisted attribution is entered by a human. “Currently won” is only the lead’s present CRM status, not proof that a campaign caused a sale or a verified conversion cohort. No conversion-rate or revenue-ROI claim is made until reliable stage timestamps and attribution are confirmed.</div>';
     }
 
     function renderLeads() {
@@ -23013,8 +23190,111 @@ function simpleBars(items, color) {
                     }
                 ];
             }
-        }
+        },
 
+        salesCampaigns: {
+            table: "sales_campaigns",
+            title: "Sales campaign",
+            fields: function (item) {
+                return [
+                    { key: "name", label: "Campaign name", type: "text", required: true, full: true, value: item.name },
+                    { key: "channel", label: "Primary channel", type: "select", required: true, value: item.channel || "email",
+                        options: salesCampaignSelectOptions([
+                            { value: "email", label: "Email" }, { value: "whatsapp", label: "WhatsApp" },
+                            { value: "facebook", label: "Facebook" }, { value: "instagram", label: "Instagram" },
+                            { value: "tiktok", label: "TikTok" }, { value: "website", label: "Website" },
+                            { value: "referral", label: "Referral" }, { value: "networking", label: "Networking" },
+                            { value: "other", label: "Other" }
+                        ], item.channel || "email", "Select channel")
+                    },
+                    { key: "target_segment", label: "Target segment", type: "select", required: true, value: item.target_segment || "unknown",
+                        options: salesCampaignSelectOptions([
+                            { value: "unknown", label: "Unknown / mixed" }, { value: "professional_services", label: "Professional services" },
+                            { value: "creative", label: "Creative" }, { value: "beauty_wellness", label: "Beauty and wellness" },
+                            { value: "food_hospitality", label: "Food and hospitality" }, { value: "retail_ecommerce", label: "Retail and e-commerce" },
+                            { value: "events_entertainment", label: "Events and entertainment" }, { value: "education", label: "Education" },
+                            { value: "other", label: "Other" }
+                        ], item.target_segment || "unknown", "Select segment")
+                    },
+                    { key: "status", label: "Campaign status", type: "select", required: true, value: item.status || "draft",
+                        options: salesCampaignSelectOptions([
+                            { value: "draft", label: "Draft" }, { value: "active", label: "Active" },
+                            { value: "paused", label: "Paused" }, { value: "completed", label: "Completed" },
+                            { value: "archived", label: "Archived" }
+                        ], item.status || "draft", "Select status")
+                    },
+                    { key: "start_date", label: "Start date", type: "date", required: true, value: item.start_date || dashboardTodayISO() },
+                    { key: "end_date", label: "End date (optional)", type: "date", value: item.end_date || "" },
+                    { key: "currency", label: "Budget currency", type: "select", required: true, value: item.currency || "ZAR",
+                        options: salesCampaignSelectOptions([
+                            { value: "ZAR", label: "ZAR · South African rand" }, { value: "USD", label: "USD · US dollar" },
+                            { value: "EUR", label: "EUR · euro" }, { value: "GBP", label: "GBP · pound sterling" }
+                        ], item.currency || "ZAR", "Select currency")
+                    },
+                    { key: "budget_amount", label: "Budget (optional)", type: "number", min: "0", step: "0.01", value: item.budget_amount },
+                    { key: "objective", label: "Campaign objective", type: "text", full: true, value: item.objective },
+                    { key: "notes", label: "Notes", type: "textarea", full: true, value: item.notes }
+                ];
+            }
+        },
+
+        salesCampaignLeads: {
+            table: "sales_campaign_leads",
+            title: "Campaign lead attribution",
+            fields: function (item) {
+                const campaignOptions = state.salesCampaigns.map(function (campaign) {
+                    return { value: campaign.id, label: campaign.name + " · " + formatDisplayText(campaign.status || "draft") };
+                });
+                const leadOptions = state.leads.map(function (lead) {
+                    return { value: lead.id, label: (lead.business_name || lead.contact_name || "Unnamed lead") + " · " + formatDisplayText(lead.status || "new") };
+                });
+                return [
+                    { key: "campaign_id", label: "Campaign", type: "select", required: true, value: item.campaign_id || "",
+                        options: salesCampaignSelectOptions(campaignOptions, item.campaign_id, "Select campaign") },
+                    { key: "lead_id", label: "Lead", type: "select", required: true, value: item.lead_id || "",
+                        options: salesCampaignSelectOptions(leadOptions, item.lead_id, "Select lead") },
+                    { key: "attribution_type", label: "Attribution type", type: "select", required: true, value: item.attribution_type || "assisted",
+                        options: salesCampaignSelectOptions([
+                            { value: "assisted", label: "Assisted · campaign supported existing demand" },
+                            { value: "primary", label: "Primary acquisition · campaign originated lead" }
+                        ], item.attribution_type || "assisted", "Select attribution") },
+                    { key: "linked_at", label: "Attribution recorded at", type: "datetime-local", required: true,
+                        value: dateTimeInput(item.linked_at) || dateTimeInput(new Date()) },
+                    { key: "notes", label: "Evidence / rationale", type: "textarea", full: true, value: item.notes,
+                        help: "Record why this campaign is primary or assisted. Primary is a human attribution claim and should have supporting evidence." }
+                ];
+            }
+        },
+
+        salesCampaignSpend: {
+            table: "sales_campaign_spend",
+            title: "Campaign spend",
+            fields: function (item) {
+                const campaignOptions = state.salesCampaigns.map(function (campaign) {
+                    return { value: campaign.id, label: campaign.name + " · " + (campaign.currency || "ZAR") };
+                });
+                return [
+                    { key: "campaign_id", label: "Campaign", type: "select", required: true, value: item.campaign_id || "",
+                        options: salesCampaignSelectOptions(campaignOptions, item.campaign_id, "Select campaign") },
+                    { key: "spent_on", label: "Spend date", type: "date", required: true, value: item.spent_on || dashboardTodayISO() },
+                    { key: "category", label: "Spend category", type: "select", required: true, value: item.category || "paid_ads",
+                        options: salesCampaignSelectOptions([
+                            { value: "paid_ads", label: "Paid advertising" }, { value: "creative_production", label: "Creative production" },
+                            { value: "printing", label: "Printing" }, { value: "event_or_networking", label: "Event / networking" },
+                            { value: "software", label: "Software" }, { value: "transport", label: "Transport" },
+                            { value: "other", label: "Other" }
+                        ], item.category || "paid_ads", "Select category") },
+                    { key: "amount", label: "Actual amount spent", type: "number", min: "0.01", step: "0.01", required: true, value: item.amount },
+                    { key: "currency", label: "Spend currency", type: "select", required: true, value: item.currency || "ZAR",
+                        options: salesCampaignSelectOptions([
+                            { value: "ZAR", label: "ZAR · South African rand" }, { value: "USD", label: "USD · US dollar" },
+                            { value: "EUR", label: "EUR · euro" }, { value: "GBP", label: "GBP · pound sterling" }
+                        ], item.currency || "ZAR", "Select currency") },
+                    { key: "description", label: "Description / supplier", type: "text", full: true, value: item.description },
+                    { key: "evidence_url", label: "Evidence URL (optional)", type: "url", full: true, value: item.evidence_url }
+                ];
+            }
+        }
     };
 
     function showModal(title, fields, onSubmit) {
@@ -26618,6 +26898,11 @@ function simpleBars(items, color) {
             if (state.currentView === "sales-work-queue") {
                 main.innerHTML =
                     renderSalesWorkQueue();
+            }
+
+            if (state.currentView === "sales-campaigns") {
+                main.innerHTML =
+                    renderSalesCampaigns();
             }
 
             if (state.currentView === "followups") {
