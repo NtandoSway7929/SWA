@@ -7,6 +7,8 @@
 alter table public.leads
     add column if not exists business_segment text not null default 'unknown'
         check (business_segment in ('unknown','professional_services','creative','beauty_wellness','food_hospitality','retail_ecommerce','events_entertainment','education','other')),
+    add column if not exists service_fit text not null default 'unknown'
+        check (service_fit in ('unknown','fits_current_capacity','capacity_limited','outside_scope')),
     add column if not exists website_need text not null default 'unknown'
         check (website_need in ('unknown','no_website','verified_improvement','no_clear_need')),
     add column if not exists contactability text not null default 'unknown'
