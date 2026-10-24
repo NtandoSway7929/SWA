@@ -36,6 +36,8 @@ test("sales controls expose response SLA, stage intervals and an attempt cap", (
   assert.ok(migration.includes("l.created_at <= now() - make_interval(hours => v_response_hours)"));
   assert.ok(migration.includes("l.last_contacted_at <= now() - make_interval("), "stage-specific scheduling must preserve the full elapsed no-response interval");
   assert.ok(baseline.includes("l.last_contacted_at <= now() - make_interval("), "baseline worker must preserve the full elapsed no-response interval");
+  assert.ok(migration.includes("new.status is distinct from old.status"), "changing a lead stage must recalculate its configured next follow-up date");
+  assert.ok(migration.includes("new.next_follow_up is not distinct from old.next_follow_up"), "an explicitly changed due date must not be overwritten by the stage trigger");
 });
 
 test("monthly targets are saved and current-month actuals use live leads, quotes and invoices", () => {
