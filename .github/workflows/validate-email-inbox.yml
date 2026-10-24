@@ -1,0 +1,46 @@
+name: Validate email inbox sync
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "supabase/functions/sync-email-inbox/**"
+      - "scripts/email-inbox-sync.test.mjs"
+      - ".github/workflows/validate-email-inbox.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "supabase/functions/sync-email-inbox/**"
+      - "scripts/email-inbox-sync.test.mjs"
+      - ".github/workflows/validate-email-inbox.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Test inbox sync batching and reply linking
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run pure inbox helper tests
+        run: |
+          node --check supabase/functions/sync-email-inbox/inbox-helpers.mjs
+          node --check scripts/email-inbox-sync.test.mjs
+          node --test scripts/email-inbox-sync.test.mjs
+
+      - name: Type-check the deployed Edge Function source
+        run: deno check --no-lock supabase/functions/sync-email-inbox/index.ts
