@@ -21,6 +21,9 @@ begin
         'site_announcements',
         'activity_log',
         'communication_logs',
+        'sales_campaigns',
+        'sales_campaign_leads',
+        'sales_campaign_spend',
         'email_messages'
     ]
     loop
@@ -60,6 +63,9 @@ where pubname = 'supabase_realtime'
       'site_announcements',
       'activity_log',
       'communication_logs',
+      'sales_campaigns',
+      'sales_campaign_leads',
+      'sales_campaign_spend',
       'email_messages'
   )
 order by tablename;
