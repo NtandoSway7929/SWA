@@ -8075,6 +8075,9 @@ Deno.serve(async (req) => {
       summary.summary_source === "database_aggregate" &&
       !workspaceSummary?.error &&
       metricGroups.length > 0;
+    // A healthy aggregate alone is insufficient: the workspace diagnostic
+    // must fail when any bounded collection query failed.
+    const healthReady = aggregateReady && queryFailures.length === 0;
     const progressiveContextAssemblyStartedAt = performance.now();
     const probeContext: any = buildInnerMeProgressiveContext(safeContext, message);
     const progressiveContextAssemblyLatencyMs = Math.max(
@@ -8099,7 +8102,8 @@ Deno.serve(async (req) => {
     );
 
     return json({
-      ok: aggregateReady,
+      ok: healthReady,
+      aggregate_ready: aggregateReady,
       read_only: true,
       service: "swayphics-ai",
       check: "workspace_retrieval_and_aggregate",
@@ -8124,7 +8128,8 @@ Deno.serve(async (req) => {
       summary_metric_groups: metricGroups,
       summary_query_failed: Boolean(workspaceSummary?.error),
       workspace_query_failure_count: queryFailures.length,
-    }, aggregateReady ? 200 : 503, origin);
+      workspace_query_failures: queryFailures,
+    }, healthReady ? 200 : 503, origin);
   }
 
   /*
