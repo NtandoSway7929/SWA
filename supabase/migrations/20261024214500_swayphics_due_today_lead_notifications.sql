@@ -50,7 +50,7 @@ begin
             perform public.create_admin_notification(
                 r.assigned_to, null,
                 'warning',
-                'swayphics.lead.due_today',
+                'lead.due_today',
                 v_title,
                 v_message,
                 'lead',
@@ -62,7 +62,7 @@ begin
             perform public.notify_admins(
                 null,
                 'warning',
-                'swayphics.lead.due_today',
+                'lead.due_today',
                 v_title,
                 v_message,
                 'lead',
