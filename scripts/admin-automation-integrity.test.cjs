@@ -58,6 +58,11 @@ mustMatch(
 );
 mustMatch(
   migration,
+  /coalesce\(\s*v_lead\.assigned_to,\s*\(\s*select au\.user_id[\s\S]*?au\.active = true[\s\S]*?au\.role = 'owner'/i,
+  "unassigned lead follow-ups must be assigned to an active owner/admin so notifications have a recipient"
+);
+mustMatch(
+  migration,
   /when nullif\(trim\(v_lead\.email\), ''\) is not null then 'Email'\s+when nullif\(trim\(v_lead\.phone\), ''\) is not null then 'Phone'\s+else 'Other'/i,
   "the channel selection must use stored contact details rather than assuming WhatsApp"
 );
@@ -142,13 +147,14 @@ mustMatch(
 
 console.log(JSON.stringify({
   result: "PASS",
-  checks: 22,
+  checks: 23,
   verified: [
     "cron uses a private, no-user-auth worker",
     "dashboard RPC remains admin-authenticated",
     "follow-up leads remain in the repeat cycle",
     "pending follow-ups are deduplicated",
     "automatic channels do not assume WhatsApp",
+    "unassigned follow-ups receive an active admin owner",
     "completed follow-ups receive a next due date",
     "scheduler is defined in migration and baseline SQL",
     "project status tracks invoice creation, edits, re-association and deletion",
