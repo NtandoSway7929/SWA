@@ -107,7 +107,7 @@ comment on table public.sales_campaign_spend is
 
 -- Add campaign tables to Supabase Realtime where the standard publication exists.
 -- The application also subscribes to these tables for cross-session refreshes.
-do $
+do $campaign_realtime$
 declare
     table_name text;
 begin
@@ -133,6 +133,6 @@ begin
         end loop;
     end if;
 end
-$;
+$campaign_realtime$;
 
 notify pgrst, 'reload schema';
