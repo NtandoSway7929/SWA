@@ -381,6 +381,14 @@ async function main() {
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
 
+    const alphaValueCell = leadRows.filter({ hasText: "Alpha Studio" }).locator(".sway-lead-value-cell");
+    assert.equal(await alphaValueCell.count(), 1,
+      "each lead should render its estimated value in a dedicated amount cell");
+    assert.equal(await alphaValueCell.evaluate(el => getComputedStyle(el).whiteSpace), "nowrap",
+      "grouped ZAR lead values must stay on one line instead of splitting the final zero onto another line");
+    assert.ok(parseFloat(await alphaValueCell.evaluate(el => getComputedStyle(el).minWidth)) >= 100,
+      "the lead amount cell must reserve enough width for a grouped currency value");
+
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
     // Lead action menus are portalled to document.body to escape table clipping,
