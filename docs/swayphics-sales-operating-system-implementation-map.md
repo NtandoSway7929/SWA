@@ -68,7 +68,7 @@ The initial sales system should keep descriptive current-pipeline counts and int
 
 ### Batch B — qualification fields implemented, awaiting CI review
 
-- Added structured business segment, website need, contactability, buying signal, qualification priority and primary evidence URL fields to the lead editor.
+- Added structured business segment, explicit service fit/capacity, website need, contactability, buying signal, qualification priority and primary evidence URL fields to the lead editor.
 - Added reviewer timestamp and reviewer identity fields. They are updated only when a qualification field actually changes.
 - Defaults are explicitly Unknown/Unassessed. Priority is human-set and its definitions are displayed in the form; no opaque AI score is introduced.
 - Clarified that `leads.source` means original acquisition source/channel, not campaign membership, campaign spend or contact attempts.
