@@ -254,6 +254,18 @@ test("welcome event requires the matching server-verified active admin identity"
     assert.deepEqual(JSON.parse(JSON.stringify(events[0].detail)), { fullName: "Alex Admin", animate: true });
   });
 
+  await t.test("saved greeting name takes precedence over the account full name", () => {
+    const events = runPublisher({ state: { greetingName: "Sway" } });
+    assert.equal(events.length, 1);
+    assert.equal(events[0].detail.fullName, "Sway");
+  });
+
+  await t.test("blank greeting name falls back to the account full name", () => {
+    const events = runPublisher({ state: { greetingName: "  " } });
+    assert.equal(events.length, 1);
+    assert.equal(events[0].detail.fullName, "Alex Admin");
+  });
+
   await t.test("verified identity without a marker animates once on the first dashboard view", () => {
     const seenStorage = makeStorage();
     const events = runPublisher({
@@ -599,3 +611,79 @@ test("startup failure helper renders a visible error without leaking internals",
 });
 
 console.log("Admin welcome authentication tests registered.");
+
+
+test("saving a greeting name upserts a trimmed preference for the authenticated admin", async () => {
+  const requests = [];
+  const state = {
+    currentUser: { id: "admin-123" },
+    currentAdmin: { user_id: "admin-123", active: true, full_name: "Alex Admin" },
+    greetingName: ""
+  };
+  const api = async (url, options) => {
+    requests.push({ url, options });
+    return [{ user_id: "admin-123", greeting_name: "Sway" }];
+  };
+  const save = compileFunction(workspaceSource, "saveGreetingName", {
+    state,
+    api,
+    encodeURIComponent,
+    updateWelcomeNameDisplay() {},
+    Date
+  });
+
+  assert.equal(await save("  Sway  "), "Sway");
+  assert.equal(state.greetingName, "Sway");
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, "/rest/v1/admin_user_preferences?on_conflict=user_id");
+  assert.equal(requests[0].options.method, "POST");
+  const payload = JSON.parse(requests[0].options.body);
+  assert.equal(payload.user_id, "admin-123");
+  assert.equal(payload.greeting_name, "Sway");
+  assert.ok(Number.isFinite(Date.parse(payload.updated_at)));
+  assert.equal(requests[0].options.headers.Prefer, "resolution=merge-duplicates,return=representation");
+});
+
+test("clearing a greeting name deletes only the authenticated admin preference", async () => {
+  const requests = [];
+  const state = {
+    currentUser: { id: "admin-123" },
+    currentAdmin: { user_id: "admin-123", active: true, full_name: "Alex Admin" },
+    greetingName: "Sway"
+  };
+  const api = async (url, options) => {
+    requests.push({ url, options });
+    return null;
+  };
+  const save = compileFunction(workspaceSource, "saveGreetingName", {
+    state,
+    api,
+    encodeURIComponent,
+    updateWelcomeNameDisplay() {},
+    Date
+  });
+
+  assert.equal(await save("   "), "");
+  assert.equal(state.greetingName, "");
+  assert.equal(requests.length, 1);
+  assert.equal(
+    requests[0].url,
+    "/rest/v1/admin_user_preferences?user_id=eq.admin-123"
+  );
+  assert.equal(requests[0].options.method, "DELETE");
+});
+
+test("greeting settings include an ownership-protected preferences table", () => {
+  const migrationPath = path.join(
+    root,
+    "supabase/migrations/20261024194000_admin_greeting_preferences.sql"
+  );
+  const migration = fs.readFileSync(migrationPath, "utf8");
+
+  assert.match(workspaceSource, /id: "settings",\s*label: "Settings"/);
+  assert.match(workspaceSource, /id="sway-admin-greeting-form"/);
+  assert.match(workspaceSource, /admin_user_preferences\?select=user_id,greeting_name/);
+  assert.match(migration, /enable row level security/i);
+  assert.match(migration, /using\s*\(\s*user_id\s*=\s*\(select auth\.uid\(\)\)\s*\)/i);
+  assert.match(migration, /with check\s*\(\s*user_id\s*=\s*\(select auth\.uid\(\)\)\s*\)/i);
+});
