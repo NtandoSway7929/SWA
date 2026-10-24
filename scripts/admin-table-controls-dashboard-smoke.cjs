@@ -642,7 +642,7 @@ async function main() {
       "only the expected lead-contact, task and follow-up action writes should be captured by the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
-      item.id === "lead-alpha" && item.contacted_manually === true),
+      item.id === "lead-contact-toggle" && item.contacted_manually === true),
       "the contacted toggle should call the existing manual-contact RPC against synthetic lead data");
     assert.equal(tasks.find(item => item.id === "task-urgent").status, "completed");
     assert.equal(followups.find(item => item.id === "follow-sooner").status, "completed");
