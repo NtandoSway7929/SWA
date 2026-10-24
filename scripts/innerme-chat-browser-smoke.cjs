@@ -523,9 +523,22 @@ async function askMockedQuestion(page) {
 
   const chartToggle = assistantMessage.locator("button.innerme-iu-chart-toggle");
   await chartToggle.waitFor({ state: "visible", timeout: 5000 });
-  await chartToggle.click();
   const chart = assistantMessage.locator(".innerme-iu-chart");
+
+  // Verify the interactive chart with keyboard controls, not only a pointer click.
+  await chartToggle.focus();
+  await page.keyboard.press("Space");
   await chart.waitFor({ state: "visible" });
+  assert.equal(await chartToggle.getAttribute("aria-expanded"), "true", "Keyboard activation must expand the chart");
+  const focusState = await chartToggle.evaluate(node => ({
+    matches: node.matches(":focus-visible"),
+    outlineStyle: getComputedStyle(node).outlineStyle,
+    outlineWidth: getComputedStyle(node).outlineWidth
+  }));
+  assert.equal(focusState.matches, true, "Keyboard-focused chart toggle must use :focus-visible");
+  assert.equal(focusState.outlineStyle, "solid", "Chart toggle must expose a visible keyboard focus outline");
+  assert.equal(focusState.outlineWidth, "2px", "Chart toggle focus outline must be at least two CSS pixels");
+
   const barRows = chart.locator(".innerme-iu-bar-row");
   assert.equal(await barRows.count(), 2, "Numeric markdown tables should have a chart view");
   assert.deepEqual(
@@ -533,8 +546,74 @@ async function askMockedQuestion(page) {
     ["SSE", "Markdown"],
     "Chart bars must preserve the metric labels from the first table column"
   );
-  await chartToggle.click();
+
+  // Check layout at common mobile widths even when the base scenario is desktop.
+  const originalViewport = page.viewportSize();
+  const chartLayouts = [];
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: originalViewport.height });
+    const overflow = await assertNoHorizontalOverflow(page, "InnerMe chart at " + width + "px");
+    const geometry = await chart.evaluate(section => {
+      const chartRect = section.getBoundingClientRect();
+      const rows = Array.from(section.querySelectorAll(".innerme-iu-bar-row")).map(row => {
+        const rect = row.getBoundingClientRect();
+        const label = row.querySelector(".innerme-iu-bar-label").getBoundingClientRect();
+        const track = row.querySelector(".innerme-iu-bar-track").getBoundingClientRect();
+        const value = row.querySelector(".innerme-iu-bar-value").getBoundingClientRect();
+        return {
+          left: rect.left, right: rect.right,
+          labelLeft: label.left, labelRight: label.right,
+          trackWidth: track.width, valueLeft: value.left, valueRight: value.right
+        };
+      });
+      return {
+        chartLeft: chartRect.left, chartRight: chartRect.right, chartWidth: chartRect.width,
+        viewportWidth: document.documentElement.clientWidth, rows
+      };
+    });
+    assert.ok(geometry.chartLeft >= -1, "Chart should not extend left of the " + width + "px viewport");
+    assert.ok(geometry.chartRight <= width + 1, "Chart should fit inside the " + width + "px viewport");
+    for (const row of geometry.rows) {
+      assert.ok(row.left >= geometry.chartLeft - 1 && row.right <= geometry.chartRight + 1,
+        "Chart row must stay inside its card at " + width + "px: " + JSON.stringify(row));
+      assert.ok(row.trackWidth > 0, "Chart bar track must remain visible at " + width + "px");
+      assert.ok(row.labelLeft >= -1 && row.valueRight <= width + 1,
+        "Chart labels and values must remain inside the viewport at " + width + "px: " + JSON.stringify(row));
+    }
+    chartLayouts.push({ width, overflow, geometry });
+  }
+  await page.setViewportSize(originalViewport);
+
+  // Confirm chart text remains readable against the actual dark-mode chart surface.
+  await page.locator("#admin-theme-toggle").click();
+  await page.waitForFunction(() => document.body.classList.contains("sway-dark-mode"), undefined, { timeout: 5000 });
+  const darkChartColors = await chart.evaluate(section => ({
+    background: getComputedStyle(section).backgroundColor,
+    text: getComputedStyle(section).color,
+    label: getComputedStyle(section.querySelector(".innerme-iu-bar-label")).color,
+    value: getComputedStyle(section.querySelector(".innerme-iu-bar-value")).color
+  }));
+  assert.equal(darkChartColors.background, "rgb(16, 26, 44)", "Dark mode should use the dedicated chart surface");
+  assert.equal(darkChartColors.text, "rgb(248, 251, 255)", "Dark-mode chart text should remain light and readable");
+  assert.equal(darkChartColors.label, darkChartColors.text, "Dark-mode chart labels should inherit readable text color");
+  assert.equal(darkChartColors.value, darkChartColors.text, "Dark-mode chart values should inherit readable text color");
+  await page.locator("#admin-theme-toggle").click();
+  await page.waitForFunction(() => !document.body.classList.contains("sway-dark-mode"), undefined, { timeout: 5000 });
+
+  // The reduced-motion preference must remove chart and control transitions.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const motionStyles = await page.evaluate(() => ({
+    buttonDuration: getComputedStyle(document.querySelector(".innerme-iu-chart-toggle")).transitionDuration,
+    barDuration: getComputedStyle(document.querySelector(".innerme-iu-bar")).transitionDuration
+  }));
+  assert.equal(motionStyles.buttonDuration, "0s", "Reduced motion should remove chart-toggle transitions");
+  assert.equal(motionStyles.barDuration, "0s", "Reduced motion should remove bar-width transitions");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+
+  await chartToggle.focus();
+  await page.keyboard.press("Space");
   await chart.waitFor({ state: "hidden" });
+  assert.equal(await chartToggle.getAttribute("aria-expanded"), "false", "Keyboard activation must collapse the chart");
 
   const copyResponse = assistantMessage.locator("button.sway-ai-copy:not(.sway-ai-code-copy)");
   await copyResponse.click();
