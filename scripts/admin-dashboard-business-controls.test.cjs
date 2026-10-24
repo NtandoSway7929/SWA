@@ -101,6 +101,24 @@ test("automation-health RPC requires an active admin and limits exposed jobs", (
   assert.ok(settings.includes("Backup retention and restore-test status are not exposed"));
 });
 
+test("the migration and baseline use balanced PL/pgSQL dollar delimiters", () => {
+  function delimiterStats(source) {
+    const lines = source.split(/\\r?\\n/);
+    return {
+      malformedOpen: lines.filter(line => line === "as $" || line === "do $").length,
+      malformedClose: lines.filter(line => line === "$;").length,
+      opens: lines.filter(line => line === "as $" || line === "do $").length,
+      closes: lines.filter(line => line === "$;").length
+    };
+  }
+  for (const [name, source] of [["migration", migration], ["baseline", baseline]]) {
+    const stats = delimiterStats(source);
+    assert.equal(stats.malformedOpen, 0, name + " contains a malformed opening delimiter");
+    assert.equal(stats.malformedClose, 0, name + " contains a malformed closing delimiter");
+    assert.equal(stats.opens, stats.closes, name + " must balance its dollar delimiters");
+  }
+});
+
 test("business-flow baseline includes the new columns and governance controls", () => {
   for (const term of [
     "new_lead_response_hours", "followup_stage_days", "max_followup_attempts",
