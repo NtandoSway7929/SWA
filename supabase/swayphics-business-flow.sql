@@ -461,6 +461,7 @@ declare
     v_days integer;
     v_created integer := 0;
     v_inserted integer := 0;
+    v_assigned_to uuid;
     v_lead public.leads%rowtype;
 begin
     select coalesce(
@@ -492,6 +493,19 @@ begin
         order by l.last_contacted_at asc
         for update of l skip locked
     loop
+        select coalesce(
+            v_lead.assigned_to,
+            (
+                select au.user_id
+                from public.admin_users au
+                where au.active = true
+                order by case when au.role = 'owner' then 0 else 1 end,
+                         au.user_id
+                limit 1
+            )
+        )
+        into v_assigned_to;
+
         -- Never assume a stored phone number is registered on WhatsApp.
         -- Prefer a usable email address; otherwise create a phone task or an
         -- unassigned "Other" task so an administrator can verify contact details.
@@ -505,7 +519,7 @@ begin
         )
         values (
             v_lead.id,
-            v_lead.assigned_to,
+            v_assigned_to,
             current_date,
             case
                 when nullif(trim(v_lead.email), '') is not null then 'Email'
