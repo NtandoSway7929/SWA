@@ -39,6 +39,18 @@ assert.match(migration, /must not be summed across currencies/,
 assert.ok(migration.includes("'alter publication supabase_realtime add table public.%I'"),
   "Campaign migration must enable Realtime publication for new campaign tables when available.");
 
+const realtimeTablesStart = workspace.indexOf("const tables = [");
+const realtimeTablesEnd = workspace.indexOf("];", realtimeTablesStart);
+assert.ok(realtimeTablesStart >= 0 && realtimeTablesEnd > realtimeTablesStart,
+  "The workspace must retain an explicit Realtime subscription table list.");
+const realtimeTableBlock = workspace.slice(realtimeTablesStart, realtimeTablesEnd + 2);
+for (const table of ["sales_campaigns", "sales_campaign_leads", "sales_campaign_spend"]) {
+  assert.ok(realtimeTableBlock.includes('"' + table + '"'),
+    "Workspace Realtime subscription must include " + table + ".");
+  assert.ok(realtimeSetup.split("'" + table + "'").length >= 3,
+    "Realtime setup SQL must add and verify " + table + ".");
+}
+
 assert.match(workspace, /\["sales-campaigns", "Campaign Tracking"\]/,
   "The dashboard navigation must expose Campaign Tracking.");
 assert.match(workspace, /function renderSalesCampaigns\(/,
