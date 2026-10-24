@@ -20,7 +20,7 @@ for (const table of ["sales_campaigns", "sales_campaign_leads", "sales_campaign_
   assert.match(localSchema, new RegExp("alter table public\\." + table + " enable row level security"), table + " must enable RLS in disposable schema.");
 }
 
-assert.match(migration, /sales_campaign_leads_primary_unique_idx[\\s\\S]{0,220}where attribution_type = 'primary'/,
+assert.match(migration, /sales_campaign_leads_primary_unique_idx[\s\S]{0,220}where attribution_type = 'primary'/,
   "A lead must have at most one primary acquisition campaign.");
 assert.match(migration, /unique \(campaign_id, lead_id\)/,
   "Duplicate links from the same campaign to the same lead must be rejected.");
