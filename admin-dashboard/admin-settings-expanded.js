@@ -696,14 +696,25 @@
     }
 
     function monthWindow() {
-        var now = new Date();
-        var start = new Date(now.getFullYear(), now.getMonth(), 1);
-        var end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        var parts = new Intl.DateTimeFormat("en-ZA", {
+            timeZone: "Africa/Johannesburg",
+            year: "numeric",
+            month: "2-digit"
+        }).formatToParts(new Date());
+        var year = Number(parts.find(function (part) { return part.type === "year"; }).value);
+        var month = Number(parts.find(function (part) { return part.type === "month"; }).value);
+        var nextYear = month === 12 ? year + 1 : year;
+        var nextMonth = month === 12 ? 1 : month + 1;
+        function pad(value) { return String(value).padStart(2, "0"); }
+        var startDate = year + "-" + pad(month) + "-01";
+        var endDate = nextYear + "-" + pad(nextMonth) + "-01";
+        // South Africa observes UTC+02:00 year-round. Keep calendar boundaries
+        // in SAST, then convert them to UTC timestamps for timestamptz queries.
         return {
-            startDate: start.toISOString().slice(0, 10),
-            endDate: end.toISOString().slice(0, 10),
-            startIso: start.toISOString(),
-            endIso: end.toISOString()
+            startDate: startDate,
+            endDate: endDate,
+            startIso: new Date(startDate + "T00:00:00+02:00").toISOString(),
+            endIso: new Date(endDate + "T00:00:00+02:00").toISOString()
         };
     }
 
