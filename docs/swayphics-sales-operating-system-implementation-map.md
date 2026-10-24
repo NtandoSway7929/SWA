@@ -66,7 +66,7 @@ The initial sales system should keep descriptive current-pipeline counts and int
 - Added a static regression test; site validation and isolated desktop/mobile admin tests with disposable Supabase persistence/access-control checks passed for the batch-A commit.
 - No merge, deployment, production database write or external message was performed.
 
-### Batch B — qualification fields implemented, awaiting CI review
+### Batch B — qualification fields implemented and validated (2026-10-24)
 
 - Added structured business segment, explicit service fit/capacity, website need, contactability, buying signal, qualification priority and primary evidence URL fields to the lead editor.
 - Added reviewer timestamp and reviewer identity fields. They are updated only when a qualification field actually changes.
@@ -74,6 +74,15 @@ The initial sales system should keep descriptive current-pipeline counts and int
 - Clarified that `leads.source` means original acquisition source/channel, not campaign membership, campaign spend or contact attempts.
 - Added forward-only SQL and aligned the bootstrap and disposable local test schemas. The migration is not applied to production by this PR.
 - Added static tests for form fields, migration, bootstrap schema, and disposable test schema. Full CI and browser validation must pass before considering this batch ready for review.
+
+### Batch C — communication outcomes implemented, awaiting full CI review
+
+- Added explicit communication outcomes with a `not_recorded` default; the data model does not infer results from missing fields.
+- Added a rolling 30-day prospect-contact cohort in Insights. The denominator is distinct leads with a manually logged outbound communication in that window; each lead is counted once, and only inbound records on/after the first in-window outbound attempt count as replies.
+- Metrics show attempts, unique prospects contacted, recorded replies, explicit positive replies, meetings agreed, proposals requested, follow-ups requested and opt-outs. They are labelled as manual logs, not provider delivery/read receipts.
+- Added opt-out safeguards to the Sales Work Queue, automated quote-follow-up suggestions and the email composer. A later explicit opt-in record can restore eligibility; invalid lead contactability and the latest invalid email-route outcome also block email composition.
+- Added a forward-only migration, bootstrap/disposable schema changes, RLS rules and tests for persistence, invalid values, synthetic browser save and email suppression.
+- The migration has not been applied to production. Full static, browser, local Supabase and regression CI must pass before the batch is ready for review.
 
 ## 4. Batch A acceptance criteria
 
@@ -86,7 +95,7 @@ The initial sales system should keep descriptive current-pipeline counts and int
 7. Mobile layout remains usable and labels have accessible names.
 8. The feature can be disabled/reverted without changing database schema.
 
-## 5. Remaining unresolved items before outcome logging
+## 5. Remaining unresolved items before campaign attribution
 
 - Whether inbound email replies can be reliably joined to a lead without false matching.
 - Whether the current follow-up editor can represent all needed outreach outcomes.
