@@ -1,5 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ImapFlow } from "npm:imapflow@2.0.5";
+import {
+  resolveMatchingThreadMessage,
+  selectUidBatch,
+} from "./inbox-helpers.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://swayphics.co.za",
@@ -12,7 +16,7 @@ const corsHeaders = {
 const MAILBOX = "info@swayphics.co.za";
 
 const INITIAL_SYNC_LIMIT = 10;
-const MAX_MESSAGES_PER_SYNC = 1;
+const MAX_MESSAGES_PER_SYNC = 10;
 const MAX_SOURCE_LENGTH = 32768;
 
 function firstAddress(value: any) {
@@ -104,7 +108,7 @@ function stripHtml(value: string) {
     .trim();
 }
 
-function findMimePart(node: any, types: string[]) {
+function findMimePart(node: any, types: string[]): any | null {
   if (!node) return null;
 
   const nodeType =
@@ -288,15 +292,18 @@ async function findExistingThread(
 
   const result = await supabase
     .from("email_messages")
-    .select("thread_id")
+    .select("message_id,thread_id,client_id,lead_id")
     .in("message_id", candidates)
-    .limit(1);
+    .limit(candidates.length);
 
   if (result.error) {
     throw result.error;
   }
 
-  return result.data?.[0]?.thread_id || null;
+  return resolveMatchingThreadMessage(
+    candidates,
+    result.data || [],
+  );
 }
 
 async function findContact(
@@ -568,7 +575,7 @@ Deno.serve(async (req) => {
             newestUid - INITIAL_SYNC_LIMIT + 1
           );
 
-    let candidateUids =
+    let searchedUids =
       await client.search(
         {
           uid:
@@ -581,21 +588,21 @@ Deno.serve(async (req) => {
         }
       );
 
-    if (!Array.isArray(candidateUids)) {
-      candidateUids = [];
+    if (!Array.isArray(searchedUids)) {
+      searchedUids = [];
     }
 
-    candidateUids = candidateUids
-      .map((uid) => Number(uid))
-      .filter(
-        (uid) =>
-          Number.isFinite(uid) &&
-          uid > 0
-      )
-      .sort((a, b) => a - b)
-      .slice(0, MAX_MESSAGES_PER_SYNC);
+    const allCandidateUids = selectUidBatch(
+      searchedUids,
+      Number.MAX_SAFE_INTEGER,
+    );
+    const candidateUids = selectUidBatch(
+      allCandidateUids,
+      MAX_MESSAGES_PER_SYNC,
+    );
 
     let synced = 0;
+    let failedUid: number | null = null;
 
     for (const targetUid of candidateUids) {
       try {
@@ -614,7 +621,8 @@ Deno.serve(async (req) => {
           );
 
         if (!message) {
-          continue;
+          failedUid = targetUid;
+          break;
         }
 
         const body =
@@ -673,11 +681,14 @@ Deno.serve(async (req) => {
             ])
           );
 
-        let threadId =
+        const existingThread =
           await findExistingThread(
             supabase,
             candidates
           );
+
+        let threadId =
+          existingThread?.thread_id || null;
 
         if (!threadId) {
           threadId =
@@ -720,11 +731,25 @@ Deno.serve(async (req) => {
               "\\seen"
           );
 
-        const contact =
+        const emailContact =
           await findContact(
             supabase,
             fromEmail
           );
+
+        // Replies inherit the known CRM contact from the referenced outbound
+        // message when sender-address matching alone cannot identify it.
+        const threadContact =
+          existingThread?.client_id ||
+          existingThread?.lead_id
+            ? {
+                clientId: existingThread.client_id || null,
+                leadId: existingThread.lead_id || null,
+              }
+            : null;
+
+        const contact =
+          threadContact || emailContact;
 
         const sourceKey =
           "imap:" +
@@ -827,6 +852,12 @@ Deno.serve(async (req) => {
             ":",
           messageError
         );
+
+        // Do not store any later UID after a failure. The next sync starts
+        // from the latest stored UID, so continuing here could skip this
+        // failed message permanently.
+        failedUid = targetUid;
+        break;
       }
     }
 
@@ -838,7 +869,11 @@ Deno.serve(async (req) => {
         checked: candidateUids.length,
         newest_uid: newestUid,
         latest_stored_uid: latestStoredUid,
-        synced
+        synced,
+        failed_uid: failedUid,
+        backlog_remaining:
+          failedUid !== null ||
+          allCandidateUids.length > candidateUids.length,
       },
       {
         status: 200,
