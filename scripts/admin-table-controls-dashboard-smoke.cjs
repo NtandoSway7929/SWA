@@ -500,6 +500,16 @@ async function main() {
     assert.equal(await page.locator("#sway-email-composer").count(), 0,
       "a recorded opt-out must prevent opening a new email composer for that lead");
 
+    // swayAlert is a branded in-page dialog, not a native browser alert.
+    // Dismiss its acknowledgement before continuing the unrelated lead tests.
+    const suppressionNotice = page.locator(".sway-dialog");
+    if (await suppressionNotice.count()) {
+      assert.match(await suppressionNotice.locator(".sway-dialog-message").innerText(), /opted out/i,
+        "the blocked email action should explain the recorded opt-out");
+      await suppressionNotice.locator("[data-dialog-confirm]").click();
+      await suppressionNotice.waitFor({ state: "detached", timeout: 5000 });
+    }
+
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
     // Lead action menus are portalled to document.body to escape table clipping,
