@@ -121,7 +121,7 @@ mustMatch(
 );
 mustMatch(
   baseline,
-  /alter table public\\.client_projects[\s\S]*?add constraint client_projects_payment_status_check[\s\S]*?'invoice drafted'/i,
+  /alter table public\.client_projects[\s\S]*?add constraint client_projects_payment_status_check[\s\S]*?'invoice drafted'/i,
   "the baseline flow SQL must support the draft invoice project status"
 );
 mustMatch(
@@ -130,7 +130,7 @@ mustMatch(
   "the baseline flow SQL must include invoice-to-project synchronization"
 );
 mustMatch(
-  flow,
+  baseline,
   /swayphics-invoice-status-refresh/i,
   "the baseline flow SQL must include the overdue status scheduler"
 );
