@@ -409,50 +409,6 @@ jobs:
           print("PASS: no controller event was written by the non-mutating authenticated RPC test.")
           PY
 
-          # Temporary one-shot E2E on the feature branch only.
-          if [[ "${GITHUB_HEAD_REF:-}" == "agent/innerme-cloudflare-quota-fallback" ]]; then
-            printf '%s' '{"message":"Explain conversion rate in one short, general sentence without referencing workspace records.","history":[]}' > /tmp/innerme-fallback-request.json
-            fallback_status="$(curl --silent --show-error --max-time 35 -o /tmp/innerme-fallback-response.json -w '%{http_code}' -X POST "${SUPABASE_URL}/functions/v1/swayphics-ai" -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" -H "Authorization: Bearer ${ACCESS_TOKEN}" -H 'Content-Type: application/json' --data-binary @/tmp/innerme-fallback-request.json)"
-            if [[ "${fallback_status}" != "200" ]]; then
-              echo "::error::Cloudflare quota-fallback E2E returned HTTP ${fallback_status}."
-              python3 - <<'PY'
-          import json
-          from pathlib import Path
-          try:
-              body=json.loads(Path("/tmp/innerme-fallback-response.json").read_text(encoding="utf-8"))
-              print("Provider response error:", body.get("error", "No error field"))
-              print("Guard reason:", body.get("guard_reason", "not supplied"))
-          except Exception:
-              print("Provider response was not valid JSON.")
-          PY
-              exit 1
-            fi
-            python3 - <<'PY'
-          import json
-          from pathlib import Path
-          raw=Path("/tmp/innerme-fallback-response.json").read_text(encoding="utf-8")
-          try: body=json.loads(raw)
-          except Exception: body=None
-          if not isinstance(body,dict):
-              events=[]
-              for block in raw.split("\n\n"):
-                  data="\n".join(line[5:].strip() for line in block.splitlines() if line.startswith("data:"))
-                  if data:
-                      try: events.append(json.loads(data))
-                      except Exception: pass
-              body=next((item for item in reversed(events) if isinstance(item,dict) and item.get("answer")),None)
-          if not isinstance(body,dict): raise SystemExit("HTTP 200 returned no parseable answer payload.")
-          answer=body.get("answer")
-          model=str(body.get("model",""))
-          if not isinstance(answer,str) or len(answer.strip())<5: raise SystemExit("Provider fallback returned no usable answer.")
-          if "llama-3.1-8b-instruct-fp8" not in model.lower(): raise SystemExit("Expected Cloudflare Workers AI model, received: "+model)
-          if body.get("read_only") is not True: raise SystemExit("Expected read_only=true.")
-          print("PASS: Gemini quota was exhausted and Cloudflare Workers AI returned the answer.")
-          print("METRIC: model="+model+"; answer_characters="+str(len(answer.strip())))
-          PY
-            rm -f /tmp/innerme-fallback-request.json /tmp/innerme-fallback-response.json
-          fi
-
       - name: Verify published InnerMe dashboard assets on swayphics.co.za
         shell: bash
         run: |
