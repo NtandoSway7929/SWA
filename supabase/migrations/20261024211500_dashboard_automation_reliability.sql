@@ -186,7 +186,7 @@ create trigger trg_z_ensure_swayphics_next_followup_date
     for each row
     execute function public.ensure_swayphics_next_followup_date();
 
--- Once per day at 06:20 UTC (08:20 SAST). The routine is idempotent and has no
+-- Every 15 minutes, even when the dashboard is closed. The routine is idempotent and has no
 -- dependence on auth.uid(), unlike the dashboard-facing wrapper.
 do $$
 declare
@@ -202,7 +202,7 @@ begin
 
     perform cron.schedule(
         'swayphics-stale-lead-followups',
-        '20 6 * * *',
+        '*/15 * * * *',
         'select innerme_private.process_swayphics_stale_leads_internal();'
     );
 end;
