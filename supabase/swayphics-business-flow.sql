@@ -1584,14 +1584,130 @@ begin
             'follow-up'
         )
           and l.last_contacted_at is not null
-          and (
-              (l.last_contacted_at at time zone 'Africa/Johannesburg')::date
-              + case
-                  when coalesce(settings.stage_days, '') ~ '^[0-9]{1,3}$'
+          and l.last_contacted_at <= now() - make_interval(
+              days => case
+                  when coalesce(settings.stage_days, '') ~ '^[0-9]{1,3}
+          and not exists (
+              select 1
+              from public.follow_ups f
+              where f.lead_id = l.id
+                and f.status = 'pending'
+          )
+        order by l.last_contacted_at asc
+        for update of l skip locked
+    loop
+        select
+            case
+                when coalesce(ws.followup_stage_days ->> v_lead.status, '') ~ '^[0-9]{1,3}$'
+                    then greatest(1, least(365, (ws.followup_stage_days ->> v_lead.status)::integer))
+                else coalesce(ws.lead_no_response_days, 7)
+            end
+        into v_days
+        from public.workflow_settings ws
+        where ws.id = 1;
+        v_days := coalesce(v_days, 7);
+
+        select count(*)
+        into v_attempt_count
+        from public.follow_ups f
+        where f.lead_id = v_lead.id
+          and f.status in ('pending', 'completed');
+
+        select coalesce(
+            v_lead.assigned_to,
+            (
+                select au.user_id
+                from public.admin_users au
+                where au.active = true
+                order by case when au.role = 'owner' then 0 else 1 end,
+                         au.user_id
+                limit 1
+            )
+        )
+        into v_assigned_to;
+
+        if v_attempt_count >= v_max_attempts then
+            v_dedupe_key := 'swayphics-followup-limit:' ||
+                v_lead.id::text || ':' || v_today::text;
+
+            if v_assigned_to is not null then
+                perform public.create_admin_notification(
+                    v_assigned_to, null, 'warning', 'lead.followup_limit',
+                    'Follow-up limit reached',
+                    coalesce(nullif(trim(v_lead.business_name), ''), 'This lead') ||
+                        ' has reached the configured limit of ' || v_max_attempts ||
+                        ' follow-up attempts. Review the opportunity before further outreach.',
+                    'lead', v_lead.id, 'leads', v_dedupe_key
+                );
+            else
+                perform public.notify_admins(
+                    null, 'warning', 'lead.followup_limit',
+                    'Follow-up limit reached',
+                    coalesce(nullif(trim(v_lead.business_name), ''), 'This lead') ||
+                        ' has reached the configured limit of ' || v_max_attempts ||
+                        ' follow-up attempts. Review the opportunity before further outreach.',
+                    'lead', v_lead.id, 'leads', v_dedupe_key, true
+                );
+            end if;
+
+            update public.leads
+            set status = 'follow-up',
+                next_follow_up = v_today,
+                updated_at = now()
+            where id = v_lead.id
+              and status in ('contacted', 'interested', 'proposal sent', 'negotiating', 'follow-up');
+
+            continue;
+        end if;
+
+        insert into public.follow_ups (
+            lead_id, assigned_to, scheduled_for, channel, status, note
+        )
+        values (
+            v_lead.id,
+            v_assigned_to,
+            v_today,
+            case
+                when nullif(trim(v_lead.email), '') is not null then 'Email'
+                when nullif(trim(v_lead.phone), '') is not null then 'Phone'
+                else 'Other'
+            end,
+            'pending',
+            'Automatic follow-up: no response within ' ||
+                v_days ||
+                ' days for the current lead stage. Verify the contact channel before outreach.'
+        )
+        on conflict (lead_id)
+        where lead_id is not null and status = 'pending'
+        do nothing;
+
+        get diagnostics v_inserted = row_count;
+
+        if v_inserted > 0 then
+            update public.leads
+            set status = 'follow-up',
+                next_follow_up = v_today,
+                updated_at = now()
+            where id = v_lead.id
+              and status in (
+                  'contacted',
+                  'interested',
+                  'proposal sent',
+                  'negotiating',
+                  'follow-up'
+              );
+
+            v_created := v_created + 1;
+        end if;
+    end loop;
+
+    return v_created;
+end;
+$$;
                     then greatest(1, least(365, settings.stage_days::integer))
                   else coalesce(settings.lead_no_response_days, 7)
-                end
-          ) <= v_today
+              end
+          )
           and not exists (
               select 1
               from public.follow_ups f
