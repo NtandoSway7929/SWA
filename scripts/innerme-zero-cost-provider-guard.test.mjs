@@ -154,7 +154,7 @@ test("the quota fallback still honours Cloudflare credentials, quota reservation
   assert.ok(quotaRouteStart > fallbackStart, "the Cloudflare fallback function must have a bounded end");
   const fallbackSource = innermeFunctionSource.slice(fallbackStart, quotaRouteStart);
 
-  assert.match(fallbackSource, /if \(!cloudflareCredentialsConfigured\) return null/);
+  assert.match(fallbackSource, /if \(!cloudflareCredentialsConfigured\) \{[\s\S]*?return null;\s*\}/);
   assert.match(
     fallbackSource,
     /reserveInnerMeProviderQuota\("cloudflare", CLOUDFLARE_MODEL, new TextEncoder\(\)\.encode\(body\)\.byteLength\)/,
