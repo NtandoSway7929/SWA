@@ -12338,6 +12338,10 @@ function simpleBars(items, color) {
         const rows =
             visibleLeads.map(function (item) {
                 const contactStatus = leadContactStatus(item);
+                const whatsappUrl = window.swayphicsLeadWhatsApp &&
+                    typeof window.swayphicsLeadWhatsApp.buildUrl === "function"
+                        ? window.swayphicsLeadWhatsApp.buildUrl(item.phone)
+                        : "";
                 return (
                     '<tr data-admin-table-row="leads" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableControls.searchText("leads", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="leads:' + esc(item.id) + '">' +
                         adminTableControls.selectionCell("leads", item, item.business_name || item.contact_name || "lead") +
@@ -12405,6 +12409,11 @@ function simpleBars(items, color) {
                                         '<button type="button" class="sway-row-action" data-export-lead-assessment="' +
                                             esc(item.id) +
                                         '">Assessment report</button>' +
+                                        (
+                                            whatsappUrl
+                                                ? '<a class="sway-row-action sway-lead-whatsapp-link" href="' + esc(whatsappUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Contact ' + esc(item.business_name || item.contact_name || "lead") + ' on WhatsApp">Contact on WhatsApp</a>'
+                                                : '<button type="button" class="sway-row-action" disabled title="Add a valid phone number to this lead record to enable WhatsApp contact.">WhatsApp unavailable · check number</button>'
+                                        ) +
                                         '<button type="button" class="sway-row-action" data-draft-lead-proposal="' +
                                             esc(item.id) +
                                         '">Draft proposal</button>' +
