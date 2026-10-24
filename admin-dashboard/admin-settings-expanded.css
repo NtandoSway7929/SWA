@@ -178,3 +178,28 @@ body.sway-dark-mode #sway-settings-expanded input:not([type="checkbox"]),
 body.sway-dark-mode #sway-settings-expanded select,
 body.sway-dark-mode #sway-settings-expanded textarea { background: #0B1525; color: #E7EDF7; border-color: rgba(151,176,214,.22); }
 body.sway-dark-mode #sway-settings-expanded .swe-template-preview { background: #0B1525; color: #E7EDF7; }
+
+
+/* The Settings destination is a direct sidebar item, not a one-item accordion. */
+#sway-admin-workspace .sway-workspace-nav-scroll > .sway-settings-direct-nav {
+    width: calc(100% - 8px);
+    margin: 0 4px 7px;
+}
+
+/* Keep the existing greeting-name control as a native Settings subpanel. */
+#sway-settings-expanded .swe-panel > .swe-greeting-settings-panel {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+}
+#sway-settings-expanded .swe-greeting-settings-panel .sway-greeting-settings-form {
+    width: 100%;
+    max-width: none;
+}
+body.sway-dark-mode #sway-settings-expanded .swe-greeting-settings-panel {
+    color: #E7EDF7;
+}
+body.sway-dark-mode #sway-settings-expanded .swe-greeting-settings-panel .sway-greeting-settings-form {
+    border-color: rgba(151,176,214,.18);
+    background: linear-gradient(145deg, rgba(11,21,37,.98), rgba(15,29,49,.92));
+}
