@@ -60,7 +60,7 @@ assert.equal(normalizeInnerMeAnswer(structuredEnvelope), structuredEnvelope,
   "Normalization must not insert newlines into JSON strings or otherwise mutate a valid UI envelope");
 const markdownSplitEnvelope = structuredEnvelope.replace(
   "Illustrative only. Next Steps:",
-  "Illustrative only.\\nNext Steps:"
+  "Illustrative only.\nNext Steps:"
 );
 const repairedStructuredPayload = ui.parseOptInPayload(markdownSplitEnvelope);
 assert.equal(repairedStructuredPayload?.summary,
