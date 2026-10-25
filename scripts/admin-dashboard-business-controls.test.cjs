@@ -16,8 +16,19 @@ const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "valida
 
 test("new Settings assets are cache-busted and loaded in the dashboard", () => {
   assert.ok(html.includes("admin-settings-expanded.css?v=20261025-business-invoices-3"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261025-business-invoices-3"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261025-business-invoices-4"));
   assert.ok(html.indexOf("admin-workspace.js") < html.indexOf("admin-settings-expanded.js"));
+});
+
+test("project checklist textarea attributes are closed so later settings panels remain parseable", () => {
+  assert.ok(
+    settings.includes('maxlength="4000"'),
+    "the Project Delivery checklist textarea must close maxlength before Business & invoices markup"
+  );
+  assert.ok(
+    settings.includes('data-wide rows="8" maxlength="4000"'),
+    "the complete textarea attribute string must have balanced quotes"
+  );
 });
 
 test("selected settings panel is explicitly made visible", () => {
