@@ -1087,6 +1087,40 @@
             });
         });
 
+        bindForm(root, "delivery", async function (form) {
+            if (!isOwner) throw new Error("Only the Swayphics owner can change project delivery rules.");
+            var duration = Number(form.querySelector('[name="default_project_duration_days"]').value);
+            if (!Number.isInteger(duration) || duration < 1 || duration > 365) {
+                throw new Error("Default project duration must be a whole number from 1 to 365 days.");
+            }
+            var rawTemplate = String(form.querySelector('[name="default_project_task_template"]').value || "").trim();
+            var lines = rawTemplate ? rawTemplate.split(/\r?\n/).map(function (line) { return line.trim(); }).filter(Boolean) : [];
+            if (lines.length > 25) throw new Error("The default checklist can contain at most 25 tasks.");
+            var template = lines.map(function (line, index) {
+                var parts = line.split("|").map(function (part) { return part.trim(); });
+                if (parts.length > 3) throw new Error("Task " + (index + 1) + " has too many separators. Use Task title | days after creation | priority.");
+                var title = parts[0] || "";
+                if (title.length < 1 || title.length > 120 || title.indexOf("|") >= 0) {
+                    throw new Error("Task " + (index + 1) + " must have a title of 1 to 120 characters without a pipe character.");
+                }
+                var offset = parts.length > 1 && parts[1] !== "" ? Number(parts[1]) : 0;
+                if (!Number.isInteger(offset) || offset < 0 || offset > 365) {
+                    throw new Error("Task " + (index + 1) + " due offset must be a whole number from 0 to 365.");
+                }
+                var priority = (parts.length > 2 && parts[2] ? parts[2] : "medium").toLowerCase();
+                if (["low", "medium", "high", "urgent"].indexOf(priority) < 0) {
+                    throw new Error("Task " + (index + 1) + " priority must be low, medium, high, or urgent.");
+                }
+                return { title: title, due_offset_days: offset, priority: priority };
+            });
+            await updateRow("workflow_settings", "id=eq.1", {
+                default_project_duration_days: duration,
+                default_project_task_template: template,
+                updated_at: new Date().toISOString()
+            });
+            await loadWorkflow(root);
+        });
+
         bindForm(root, "business", async function (form) {
             if (!isOwner) throw new Error("Only the Swayphics owner can change invoice identity.");
             var values = formValues(form, [
