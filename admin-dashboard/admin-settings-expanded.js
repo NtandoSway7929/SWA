@@ -503,14 +503,41 @@
     }
 
     function selectTab(root, tabId) {
+        var targetId = "swe-panel-" + String(tabId || "");
+        var targetPanel = root.querySelector('[data-settings-panel="' + String(tabId || "") + '"]') ||
+            document.getElementById(targetId);
+
         root.querySelectorAll("[data-settings-tab]").forEach(function (tab) {
             var active = tab.getAttribute("data-settings-tab") === tabId;
             tab.setAttribute("aria-selected", active ? "true" : "false");
+            tab.setAttribute("aria-pressed", active ? "true" : "false");
             tab.tabIndex = active ? 0 : -1;
         });
+
         root.querySelectorAll("[data-settings-panel]").forEach(function (panel) {
-            panel.hidden = panel.getAttribute("data-settings-panel") !== tabId;
+            var active = panel === targetPanel ||
+                panel.getAttribute("data-settings-panel") === tabId;
+            if (active) {
+                panel.hidden = false;
+                panel.removeAttribute("hidden");
+                panel.setAttribute("aria-hidden", "false");
+                panel.style.removeProperty("display");
+            } else {
+                panel.hidden = true;
+                panel.setAttribute("hidden", "");
+                panel.setAttribute("aria-hidden", "true");
+                panel.style.removeProperty("display");
+            }
         });
+
+        // HTML parsing can relocate malformed descendants outside the settings root.
+        // Resolve the selected panel by its stable ID as a final visibility guarantee.
+        if (targetPanel) {
+            targetPanel.hidden = false;
+            targetPanel.removeAttribute("hidden");
+            targetPanel.setAttribute("aria-hidden", "false");
+            targetPanel.style.setProperty("display", "grid", "important");
+        }
     }
 
     function applyDashboardPreferences(prefs) {
