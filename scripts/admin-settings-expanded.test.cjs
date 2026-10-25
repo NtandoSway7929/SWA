@@ -48,6 +48,21 @@ test("greeting name is a Settings subpanel and Settings is a direct sidebar dest
   assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-controls-1/);
 });
 
+
+test("Business & invoices contains invoice identity, payment and VAT controls", () => {
+  assert.match(settingsScript, /data-settings-panel="business"/);
+  for (const field of [
+    "business_name", "email", "phone", "website", "address",
+    "bank_name", "account_name", "account_number", "account_type",
+    "branch_code", "swift_bic", "payment_instructions",
+    "vat_registered", "vat_number"
+  ]) {
+    assert.ok(settingsScript.includes('field("' + field + '"'), "missing Business & invoices field: " + field);
+  }
+  assert.match(settingsScript, /function loadBusiness\(root\)/);
+  assert.match(settingsScript, /setFormValues\(root\.querySelector\('\[data-settings-form="business"\]'\), rows\[0\]\)/);
+});
+
 test("business-wide edits are owner-gated and use existing workflow and invoice records", () => {
   assert.match(settingsScript, /workflow_settings/);
   assert.match(settingsScript, /invoice_settings/);
