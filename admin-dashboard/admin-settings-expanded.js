@@ -16,6 +16,7 @@
         ["sales", "Sales workflow"],
         ["performance", "Performance targets"],
         ["commercial", "Commercial rules"],
+        ["delivery", "Project delivery"],
         ["business", "Business & invoices"],
         ["notifications", "Notifications"],
         ["templates", "Communication templates"],
@@ -323,6 +324,12 @@
                 "Applied to new quotes only when an expiry date is not explicitly supplied.", 'min="1" max="365" step="1" required') +
             field("invoice_payment_terms_days", "Default invoice payment terms (days)", "number",
                 "Applied to new invoices only when a due date is not explicitly supplied. Zero means due on issue date.", 'min="0" max="365" step="1" required');
+
+        var deliveryFields =
+            field("default_project_duration_days", "Default project duration (days)", "number",
+                "Applied to new projects with no due date. Existing projects are unchanged.", 'min="1" max="365" step="1" required') +
+            field("default_project_task_template", "Default project checklist", "textarea",
+                "One task per line. Optional format: Task title | days after creation | priority (low, medium, high, urgent).", 'data-wide rows="8" maxlength="4000');
 
         var preferencesFields =
             selectField("default_landing_view", "Default landing page", [
