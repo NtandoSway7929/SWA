@@ -648,7 +648,7 @@
 
     async function loadWorkflow(root) {
         var rows = await getRows("workflow_settings", {
-            select: "id,lead_no_response_days,new_lead_response_hours,followup_stage_days,max_followup_attempts,monthly_revenue_target,monthly_new_leads_target,monthly_proposals_target,monthly_wins_target,target_conversion_rate,quote_validity_days,invoice_payment_terms_days,review_link,updated_at",
+            select: "id,lead_no_response_days,new_lead_response_hours,followup_stage_days,max_followup_attempts,monthly_revenue_target,monthly_new_leads_target,monthly_proposals_target,monthly_wins_target,target_conversion_rate,quote_validity_days,invoice_payment_terms_days,default_project_duration_days,default_project_task_template,review_link,updated_at",
             id: "eq.1",
             limit: "1"
         });
@@ -665,6 +665,16 @@
         setFormValues(root.querySelector('[data-settings-form="sales"]'), salesValues);
         setFormValues(root.querySelector('[data-settings-form="performance"]'), row);
         setFormValues(root.querySelector('[data-settings-form="commercial"]'), row);
+        var taskTemplate = Array.isArray(row.default_project_task_template) ? row.default_project_task_template : [];
+        var deliveryValues = Object.assign({}, row, {
+            default_project_task_template: taskTemplate.map(function (task) {
+                var title = String(task.title || "");
+                var offset = Number.isInteger(task.due_offset_days) ? task.due_offset_days : 0;
+                var priority = ["low", "medium", "high", "urgent"].indexOf(task.priority) >= 0 ? task.priority : "medium";
+                return title + " | " + offset + " | " + priority;
+            }).join("\n")
+        });
+        setFormValues(root.querySelector('[data-settings-form="delivery"]'), deliveryValues);
         setFormValues(root.querySelector('[data-settings-form="website"]'), row);
     }
 
