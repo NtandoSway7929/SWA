@@ -406,6 +406,11 @@
             formCard("commercial", "Default commercial terms", "These defaults affect newly created documents only. Existing quotes, invoice due dates and issued documents are not rewritten.", commercialFields, "Save commercial rules", true) +
             '<div class="swe-card"><h3>Document safety</h3><p>Existing explicit expiry and due dates are preserved. The defaults apply only when a new quote or invoice is saved without a date.</p></div></section>';
 
+        var deliveryPanel =
+            '<section class="swe-panel" role="tabpanel" id="swe-panel-delivery" aria-labelledby="swe-tab-delivery" data-settings-panel="delivery" hidden>' +
+            formCard("delivery", "Project delivery defaults", "Set a standard delivery window and an optional checklist for newly created client projects.", deliveryFields, "Save delivery rules", true) +
+            '<div class="swe-card"><h3>Checklist format</h3><p>Use one task per line. Example: Confirm project scope | 0 | high. Offsets are calendar days from project creation. No client messages are sent by these rules.</p></div></section>';
+
         var governancePanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-governance" aria-labelledby="swe-tab-governance" data-settings-panel="governance" hidden>' +
             '<div class="swe-card"><div class="swe-card-heading"><div><h3>Scheduled automation health</h3><p>Latest recorded run for each Swayphics background job. No run history is reported as “Not run yet”, not as a success.</p></div><button type="button" class="swe-button" data-action="refresh-governance">Refresh status</button></div>' +
@@ -452,7 +457,7 @@
             '<header class="swe-header"><div><span class="swe-eyebrow">Swayphics workspace</span>' +
             '<h2>Settings</h2><p class="swe-description">Control the business workflow, invoice identity, alerts, reusable communication and your administrator experience from one place.</p></div></header>' +
             '<div class="swe-tabs" role="tablist" aria-label="Settings sections">' + nav + '</div>' +
-            '<div class="swe-panels">' + salesPanel + performancePanel + commercialPanel + businessPanel + notificationsPanel +
+            '<div class="swe-panels">' + salesPanel + performancePanel + commercialPanel + deliveryPanel + businessPanel + notificationsPanel +
             templatesPanel + securityPanel + preferencesPanel + websitePanel + innermePanel + governancePanel + '</div>' +
             '<p class="swe-status" data-settings-global-status role="status" aria-live="polite"></p></div>';
     }
