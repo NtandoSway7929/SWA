@@ -10,12 +10,13 @@ const settings = fs.readFileSync(path.join(root, "admin-dashboard", "admin-setti
 const css = fs.readFileSync(path.join(root, "admin-dashboard", "admin-settings-expanded.css"), "utf8");
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
 const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261025020000_admin_dashboard_business_controls.sql"), "utf8");
+const deliveryMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261025031000_swayphics_project_delivery_settings.sql"), "utf8");
 const baseline = fs.readFileSync(path.join(root, "supabase", "swayphics-business-flow.sql"), "utf8");
 const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "validate-site.yml"), "utf8");
 
 test("new Settings assets are cache-busted and loaded in the dashboard", () => {
   assert.ok(html.includes("admin-settings-expanded.css?v=20261025-business-controls-1"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261025-business-controls-1"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261025-delivery-controls-1"));
   assert.ok(html.indexOf("admin-workspace.js") < html.indexOf("admin-settings-expanded.js"));
 });
 
@@ -78,6 +79,30 @@ test("commercial defaults apply only to new documents without explicit dates", (
   assert.ok(migration.includes("Separate functions keep record"));
 });
 
+test("project delivery rules apply only to new projects and create configured task checklists", () => {
+  assert.ok(settings.includes('["delivery", "Project delivery"]'));
+  assert.ok(settings.includes('field("default_project_duration_days"'));
+  assert.ok(settings.includes('field("default_project_task_template"'));
+  assert.ok(settings.includes('formCard("delivery"'));
+  assert.ok(settings.includes('bindForm(root, "delivery"'));
+  assert.ok(settings.includes("default_project_task_template: template"));
+  assert.ok(settings.includes("lines.length > 25"));
+  assert.ok(settings.includes("due_offset_days: offset"));
+  assert.ok(settings.includes("priority: priority"));
+  assert.ok(settings.includes("default_project_duration_days,default_project_task_template"));
+  assert.ok(deliveryMigration.includes("default_project_duration_days integer not null default 14"));
+  assert.ok(deliveryMigration.includes("default_project_task_template jsonb not null default '[]'::jsonb"));
+  assert.ok(deliveryMigration.includes("create trigger trg_swayphics_project_due_date_default"));
+  assert.ok(deliveryMigration.includes("before insert on public.client_projects"));
+  assert.ok(deliveryMigration.includes("create trigger trg_swayphics_project_default_tasks"));
+  assert.ok(deliveryMigration.includes("after insert on public.client_projects"));
+  assert.ok(deliveryMigration.includes("insert into public.tasks"));
+  assert.ok(deliveryMigration.includes("new.due_date is null"));
+  assert.ok(deliveryMigration.includes("at time zone 'Africa/Johannesburg'"));
+  assert.ok(baseline.includes("trg_swayphics_project_default_tasks"));
+  assert.ok(baseline.includes("default_project_task_template"));
+});
+
 test("settings audit records changed field names only and is protected by row-level security", () => {
   assert.ok(migration.includes("create table if not exists public.admin_settings_audit_log"));
   assert.ok(migration.includes("alter table public.admin_settings_audit_log enable row level security"));
@@ -127,7 +152,7 @@ test("business-flow baseline includes the new columns and governance controls", 
   for (const term of [
     "new_lead_response_hours", "followup_stage_days", "max_followup_attempts",
     "monthly_revenue_target", "quote_validity_days", "invoice_payment_terms_days",
-    "admin_settings_audit_log", "get_swayphics_automation_status"
+    "admin_settings_audit_log", "get_swayphics_automation_status", "default_project_duration_days", "default_project_task_template"
   ]) assert.ok(baseline.includes(term), "Baseline SQL missing " + term);
   assert.ok(baseline.includes("if to_regclass('public.admin_dashboard_preferences') is not null"));
 });
