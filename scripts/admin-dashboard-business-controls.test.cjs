@@ -15,9 +15,15 @@ const baseline = fs.readFileSync(path.join(root, "supabase", "swayphics-business
 const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "validate-site.yml"), "utf8");
 
 test("new Settings assets are cache-busted and loaded in the dashboard", () => {
-  assert.ok(html.includes("admin-settings-expanded.css?v=20261025-business-controls-1"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261025-delivery-controls-1"));
+  assert.ok(html.includes("admin-settings-expanded.css?v=20261025-business-invoices-3"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261025-business-invoices-3"));
   assert.ok(html.indexOf("admin-workspace.js") < html.indexOf("admin-settings-expanded.js"));
+});
+
+test("selected settings panel is explicitly made visible", () => {
+  assert.ok(settings.includes('targetPanel.removeAttribute("hidden")'));
+  assert.ok(settings.includes('targetPanel.style.setProperty("display", "grid", "important")'));
+  assert.ok(settings.includes("document.getElementById(targetId)"));
 });
 
 test("sales controls expose response SLA, stage intervals and an attempt cap", () => {
