@@ -13,8 +13,8 @@ const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "202
 const pushFunction = fs.readFileSync(path.join(root, "supabase", "functions", "send-admin-push", "index.ts"), "utf8");
 
 test("dashboard loads the expanded settings stylesheet and module after workspace initialization", () => {
-  assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-2/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261025-business-invoices-2/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-3/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261025-business-invoices-3/);
   assert.ok(
     dashboardHtml.indexOf("admin-workspace.js") < dashboardHtml.indexOf("admin-settings-expanded.js"),
     "settings integration must load after the core workspace"
@@ -44,8 +44,8 @@ test("greeting name is a Settings subpanel and Settings is a direct sidebar dest
   assert.match(settingsScript, /preferencesPanel\.insertBefore\(greetingPanel, preferencesPanel\.firstElementChild\)/);
   assert.match(settingsCss, /sway-settings-direct-nav/);
   assert.match(settingsCss, /swe-greeting-settings-panel/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261025-business-invoices-2/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-2/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261025-business-invoices-3/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-3/);
 });
 
 
