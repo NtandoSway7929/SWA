@@ -49,7 +49,11 @@ test("greeting name is a Settings subpanel and Settings is a direct sidebar dest
 });
 
 
-test("Business & invoices contains invoice identity, payment and VAT controls", () => {
+test("Business & invoices contains invoice identity, payment and VAT controls", () => {  assert.ok(
+    settingsScript.includes('data-wide rows="8" maxlength="4000"'),
+    "Project Delivery textarea attributes must be correctly quoted so Business & invoices markup can render"
+  );
+
   assert.match(settingsScript, /targetPanel\.removeAttribute\("hidden"\)/);
   assert.match(settingsScript, /targetPanel\.style\.setProperty\("display", "grid", "important"\)/);
   assert.match(settingsScript, /document\.getElementById\(targetId\)/);
