@@ -329,7 +329,7 @@
             field("default_project_duration_days", "Default project duration (days)", "number",
                 "Applied to new projects with no due date. Existing projects are unchanged.", 'min="1" max="365" step="1" required') +
             field("default_project_task_template", "Default project checklist", "textarea",
-                "One task per line. Optional format: Task title | days after creation | priority (low, medium, high, urgent).", 'data-wide rows="8" maxlength="4000');
+                "One task per line. Optional format: Task title | days after creation | priority (low, medium, high, urgent).", 'data-wide rows="8" maxlength="4000"');
 
         var preferencesFields =
             selectField("default_landing_view", "Default landing page", [
