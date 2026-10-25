@@ -50,6 +50,9 @@ test("greeting name is a Settings subpanel and Settings is a direct sidebar dest
 
 
 test("Business & invoices contains invoice identity, payment and VAT controls", () => {
+  assert.match(settingsScript, /targetPanel\.removeAttribute\("hidden"\)/);
+  assert.match(settingsScript, /targetPanel\.style\.setProperty\("display", "grid", "important"\)/);
+  assert.match(settingsScript, /document\.getElementById\(targetId\)/);
   assert.match(settingsScript, /data-settings-panel="business"/);
   for (const field of [
     "business_name", "email", "phone", "website", "address",
