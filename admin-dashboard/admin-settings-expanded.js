@@ -16,6 +16,7 @@
         ["sales", "Sales workflow"],
         ["performance", "Performance targets"],
         ["commercial", "Commercial rules"],
+        ["delivery", "Project delivery"],
         ["business", "Business & invoices"],
         ["notifications", "Notifications"],
         ["templates", "Communication templates"],
@@ -324,6 +325,12 @@
             field("invoice_payment_terms_days", "Default invoice payment terms (days)", "number",
                 "Applied to new invoices only when a due date is not explicitly supplied. Zero means due on issue date.", 'min="0" max="365" step="1" required');
 
+        var deliveryFields =
+            field("default_project_duration_days", "Default project duration (days)", "number",
+                "Applied to new projects with no due date. Existing projects are unchanged.", 'min="1" max="365" step="1" required') +
+            field("default_project_task_template", "Default project checklist", "textarea",
+                "One task per line. Optional format: Task title | days after creation | priority (low, medium, high, urgent).", 'data-wide rows="8" maxlength="4000');
+
         var preferencesFields =
             selectField("default_landing_view", "Default landing page", [
                 ["current", "Keep the dashboard's default"],
@@ -399,6 +406,11 @@
             formCard("commercial", "Default commercial terms", "These defaults affect newly created documents only. Existing quotes, invoice due dates and issued documents are not rewritten.", commercialFields, "Save commercial rules", true) +
             '<div class="swe-card"><h3>Document safety</h3><p>Existing explicit expiry and due dates are preserved. The defaults apply only when a new quote or invoice is saved without a date.</p></div></section>';
 
+        var deliveryPanel =
+            '<section class="swe-panel" role="tabpanel" id="swe-panel-delivery" aria-labelledby="swe-tab-delivery" data-settings-panel="delivery" hidden>' +
+            formCard("delivery", "Project delivery defaults", "Set a standard delivery window and an optional checklist for newly created client projects.", deliveryFields, "Save delivery rules", true) +
+            '<div class="swe-card"><h3>Checklist format</h3><p>Use one task per line. Example: Confirm project scope | 0 | high. Offsets are calendar days from project creation. No client messages are sent by these rules.</p></div></section>';
+
         var governancePanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-governance" aria-labelledby="swe-tab-governance" data-settings-panel="governance" hidden>' +
             '<div class="swe-card"><div class="swe-card-heading"><div><h3>Scheduled automation health</h3><p>Latest recorded run for each Swayphics background job. No run history is reported as “Not run yet”, not as a success.</p></div><button type="button" class="swe-button" data-action="refresh-governance">Refresh status</button></div>' +
@@ -445,7 +457,7 @@
             '<header class="swe-header"><div><span class="swe-eyebrow">Swayphics workspace</span>' +
             '<h2>Settings</h2><p class="swe-description">Control the business workflow, invoice identity, alerts, reusable communication and your administrator experience from one place.</p></div></header>' +
             '<div class="swe-tabs" role="tablist" aria-label="Settings sections">' + nav + '</div>' +
-            '<div class="swe-panels">' + salesPanel + performancePanel + commercialPanel + businessPanel + notificationsPanel +
+            '<div class="swe-panels">' + salesPanel + performancePanel + commercialPanel + deliveryPanel + businessPanel + notificationsPanel +
             templatesPanel + securityPanel + preferencesPanel + websitePanel + innermePanel + governancePanel + '</div>' +
             '<p class="swe-status" data-settings-global-status role="status" aria-live="polite"></p></div>';
     }
@@ -636,7 +648,7 @@
 
     async function loadWorkflow(root) {
         var rows = await getRows("workflow_settings", {
-            select: "id,lead_no_response_days,new_lead_response_hours,followup_stage_days,max_followup_attempts,monthly_revenue_target,monthly_new_leads_target,monthly_proposals_target,monthly_wins_target,target_conversion_rate,quote_validity_days,invoice_payment_terms_days,review_link,updated_at",
+            select: "id,lead_no_response_days,new_lead_response_hours,followup_stage_days,max_followup_attempts,monthly_revenue_target,monthly_new_leads_target,monthly_proposals_target,monthly_wins_target,target_conversion_rate,quote_validity_days,invoice_payment_terms_days,default_project_duration_days,default_project_task_template,review_link,updated_at",
             id: "eq.1",
             limit: "1"
         });
@@ -653,6 +665,16 @@
         setFormValues(root.querySelector('[data-settings-form="sales"]'), salesValues);
         setFormValues(root.querySelector('[data-settings-form="performance"]'), row);
         setFormValues(root.querySelector('[data-settings-form="commercial"]'), row);
+        var taskTemplate = Array.isArray(row.default_project_task_template) ? row.default_project_task_template : [];
+        var deliveryValues = Object.assign({}, row, {
+            default_project_task_template: taskTemplate.map(function (task) {
+                var title = String(task.title || "");
+                var offset = Number.isInteger(task.due_offset_days) ? task.due_offset_days : 0;
+                var priority = ["low", "medium", "high", "urgent"].indexOf(task.priority) >= 0 ? task.priority : "medium";
+                return title + " | " + offset + " | " + priority;
+            }).join("\n")
+        });
+        setFormValues(root.querySelector('[data-settings-form="delivery"]'), deliveryValues);
         setFormValues(root.querySelector('[data-settings-form="website"]'), row);
     }
 
@@ -1063,6 +1085,40 @@
                 invoice_payment_terms_days: paymentDays,
                 updated_at: new Date().toISOString()
             });
+        });
+
+        bindForm(root, "delivery", async function (form) {
+            if (!isOwner) throw new Error("Only the Swayphics owner can change project delivery rules.");
+            var duration = Number(form.querySelector('[name="default_project_duration_days"]').value);
+            if (!Number.isInteger(duration) || duration < 1 || duration > 365) {
+                throw new Error("Default project duration must be a whole number from 1 to 365 days.");
+            }
+            var rawTemplate = String(form.querySelector('[name="default_project_task_template"]').value || "").trim();
+            var lines = rawTemplate ? rawTemplate.split(/\r?\n/).map(function (line) { return line.trim(); }).filter(Boolean) : [];
+            if (lines.length > 25) throw new Error("The default checklist can contain at most 25 tasks.");
+            var template = lines.map(function (line, index) {
+                var parts = line.split("|").map(function (part) { return part.trim(); });
+                if (parts.length > 3) throw new Error("Task " + (index + 1) + " has too many separators. Use Task title | days after creation | priority.");
+                var title = parts[0] || "";
+                if (title.length < 1 || title.length > 120 || title.indexOf("|") >= 0) {
+                    throw new Error("Task " + (index + 1) + " must have a title of 1 to 120 characters without a pipe character.");
+                }
+                var offset = parts.length > 1 && parts[1] !== "" ? Number(parts[1]) : 0;
+                if (!Number.isInteger(offset) || offset < 0 || offset > 365) {
+                    throw new Error("Task " + (index + 1) + " due offset must be a whole number from 0 to 365.");
+                }
+                var priority = (parts.length > 2 && parts[2] ? parts[2] : "medium").toLowerCase();
+                if (["low", "medium", "high", "urgent"].indexOf(priority) < 0) {
+                    throw new Error("Task " + (index + 1) + " priority must be low, medium, high, or urgent.");
+                }
+                return { title: title, due_offset_days: offset, priority: priority };
+            });
+            await updateRow("workflow_settings", "id=eq.1", {
+                default_project_duration_days: duration,
+                default_project_task_template: template,
+                updated_at: new Date().toISOString()
+            });
+            await loadWorkflow(root);
         });
 
         bindForm(root, "business", async function (form) {
