@@ -23,7 +23,7 @@ test("campaign defaults preserve the approved seven-day, three-concept offer", (
 
 test("campaign is browser-local and clearly separated from live lead records", () => {
   assert.match(script, /swayphics_free_homepage_preview_campaign_v1/);
-  assert.match(script, /does not publish posts or change lead records/);
+  assert.match(script, /does not publish posts or alter lead records/);
   assert.match(script, /do not modify the main lead pipeline/);
   assert.match(css, /#sway-campaign-settings/);
 });
