@@ -27,3 +27,10 @@ test("campaign is browser-local and clearly separated from live lead records", (
   assert.match(script, /do not modify the main lead pipeline/);
   assert.match(css, /#sway-campaign-settings/);
 });
+
+
+test("dashboard markup contains real line breaks and campaign waits for dynamic Settings mount", () => {
+  assert.doesNotMatch(html, /\\\\n\\s*<link rel="stylesheet" href="free-homepage-preview-campaign/);
+  assert.doesNotMatch(html, /\\\\n\\s*<script src="free-homepage-preview-campaign/);
+  assert.match(script, /new MutationObserver/);
+});
