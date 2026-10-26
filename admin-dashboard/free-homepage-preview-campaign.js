@@ -70,6 +70,14 @@
     if(summary)summary.innerHTML='<div><span>Campaign window</span><strong>'+esc(config.startDate||"Not scheduled")+'</strong><small>Ends '+esc(end||"not calculated")+'</small></div><div><span>Funnel progress</span><strong>'+esc(config.leads)+' leads → '+esc(config.qualifiedLeads)+' qualified</strong><small>'+esc(config.quotesSent)+' quotes · '+esc(config.depositsReceived)+' deposits</small></div><div><span>Offer capacity</span><strong>'+esc(config.conceptSlots)+' concepts</strong><small>Max '+esc(config.conceptMinutesLimit)+' minutes per concept</small></div>';
   }
   function feedback(message,error){var node=document.querySelector("#swe-panel-campaign [data-campaign-feedback]");if(node){node.textContent=message;node.setAttribute("data-error",error?"true":"false");}}
-  function start(){var attempts=0,timer=window.setInterval(function(){attempts++;if(render()||attempts>=60)window.clearInterval(timer);},250);}
+  function start(){
+    if(render())return;
+    if(!document.documentElement||typeof MutationObserver==="undefined")return;
+    var observer=new MutationObserver(function(){
+      if(render())observer.disconnect();
+    });
+    observer.observe(document.documentElement,{childList:true,subtree:true});
+    window.setTimeout(function(){observer.disconnect();},30000);
+  }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
