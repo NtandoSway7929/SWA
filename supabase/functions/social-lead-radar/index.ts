@@ -319,8 +319,10 @@ Deno.serve(async (request: Request) => {
 
     const result = await searchX(xBearerToken, sinceId, now);
     const discoveredAt = new Date().toISOString();
-    const expiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString();
+    const receivedAt = new Date(discoveredAt);
+    const expiry = new Date(
+      receivedAt.getTime() + 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     const signals: Array<Record<string, unknown>> = [];
     let staleDiscarded = 0;
@@ -333,11 +335,12 @@ Deno.serve(async (request: Request) => {
       }
 
       const postTime = new Date(post.created_at).getTime();
-      const ageSeconds = Math.floor((now.getTime() - postTime) / 1000);
+      const ageMilliseconds = receivedAt.getTime() - postTime;
+      const ageSeconds = Math.ceil(ageMilliseconds / 1000);
 
       if (
-        !Number.isFinite(postTime) || ageSeconds < 0 ||
-        ageSeconds > MAX_AGE_SECONDS
+        !Number.isFinite(postTime) || ageMilliseconds < 0 ||
+        ageMilliseconds > MAX_AGE_SECONDS * 1000
       ) {
         staleDiscarded += 1;
         continue;
