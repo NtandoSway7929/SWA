@@ -21,6 +21,10 @@ It does not change the existing leads table, create CRM leads, send messages, re
 
 The five-minute cutoff is enforced locally. It does not guarantee that X indexes every post immediately; indexing delays and API outages can still cause missed opportunities. A one-minute schedule means the intended polling interval is one minute, not a guarantee of delivery within one minute.
 
+X's current Developer Guidelines prohibit scraping and browser automation, automated unsolicited replies or DMs, surveillance, sensitive-data derivation and unauthorized AI/ML training on X data. They also restrict matching X data with non-public off-platform identifiers. The radar therefore uses only the official API, does not interact with users, and keeps discovered signals separate from the CRM. Any later human conversion must rely on the public post/profile or public business contact information, not private customer lists or non-public identifiers without express opt-in consent.
+
+**Compliance launch gate:** X requires removal of X Content when it is deleted, suspended or removed, or when a deletion request is made. The current pilot stores only post IDs/URLs and derived labels, but it does not yet consume the X Compliance Firehose or revalidate stored IDs for removals. Do not treat the pilot as production-launch ready until a deletion-monitoring process that meets X's requirements is implemented. The 30-day expiry cleanup is a retention limit, not a substitute for deletion handling.
+
 ## Search terms
 
 The initial query targets phrases including:
@@ -65,7 +69,7 @@ Actual consumption depends on matching post volume, pagination, retries and the 
 ## Prerequisites before deployment
 
 1. Create an X developer project/app in the official Developer Console and obtain an app Bearer Token.
-2. Confirm that the app has access to the Recent Search endpoint and has sufficient API credits.
+2. Confirm that the app has access to the Recent Search endpoint, that its access level permits commercial use, and that it has sufficient API credits. X's current Developer Guidelines state that commercial use requires the appropriate paid access; do not rely on a non-commercial/free entitlement for this agency workflow.
 3. Give X an accurate use-case description: internal monitoring of public posts and replies for people expressly seeking website design/development, e-commerce or online-booking help; deterministic intent classification; human-reviewed source links for Swayphics sales staff; no automated replies, DMs, follows, likes, scraping or model training.
 4. In the Swayphics Supabase project's Edge Function Secrets, set:
    - X_API_BEARER_TOKEN — the X app Bearer Token.
