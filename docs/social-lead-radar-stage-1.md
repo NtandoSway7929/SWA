@@ -72,7 +72,7 @@ Actual consumption depends on matching post volume, pagination, retries and the 
    - SOCIAL_RADAR_CRON_SECRET — a long, random secret used only by the scheduled invocation.
 5. Do not paste either secret into GitHub, this chat, browser JavaScript or the function source.
 
-Supabase supplies SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to hosted Edge Functions. The service-role key is used server-side only.
+Supabase supplies SUPABASE_URL and the named SUPABASE_SECRET_KEYS dictionary to hosted Edge Functions. The function reads the default secret key from that dictionary for server-side database writes, with a fallback for the legacy SUPABASE_SERVICE_ROLE_KEY environment variable. These privileged keys are never sent to the browser.
 
 ## Database migration
 
@@ -111,30 +111,41 @@ Confirm that every returned candidate has age_seconds between 0 and 300. Inspect
 
 ## Schedule every minute
 
-Enable the pg_cron and pg_net extensions in Supabase if they are not already enabled. Store the same SOCIAL_RADAR_CRON_SECRET in Supabase Vault once, using the SQL Editor:
+Enable the pg_cron and pg_net extensions in Supabase if they are not already enabled. Store the project URL, publishable API key and the dedicated radar secret in Supabase Vault. Run these statements once in the SQL Editor, replacing the placeholders:
 
-    select vault.create_secret('REPLACE_WITH_SOCIAL_RADAR_CRON_SECRET', 'social_radar_cron_secret');
+    select vault.create_secret('https://PROJECT_REF.supabase.co', 'social_radar_project_url');
+    select vault.create_secret('SUPABASE_PUBLISHABLE_KEY', 'social_radar_publishable_key');
+    select vault.create_secret('SOCIAL_RADAR_CRON_SECRET', 'social_radar_cron_secret');
 
-Then schedule the function every minute. Replace the project reference and publishable key placeholders:
+Then schedule the function every minute:
 
     select cron.schedule(
       'swayphics-social-lead-radar-every-minute',
       '* * * * *',
-      $$
+      $
       select net.http_post(
-        url := 'https://PROJECT_REF.supabase.co/functions/v1/social-lead-radar',
+        url := (
+          select decrypted_secret
+          from vault.decrypted_secrets
+          where name = 'social_radar_project_url'
+        ) || '/functions/v1/social-lead-radar',
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
-          'apikey', 'SUPABASE_PUBLISHABLE_KEY',
-          'x-radar-cron-secret',
-            (select decrypted_secret
-             from vault.decrypted_secrets
-             where name = 'social_radar_cron_secret')
+          'apikey', (
+            select decrypted_secret
+            from vault.decrypted_secrets
+            where name = 'social_radar_publishable_key'
+          ),
+          'x-radar-cron-secret', (
+            select decrypted_secret
+            from vault.decrypted_secrets
+            where name = 'social_radar_cron_secret'
+          )
         ),
         body := '{"dry_run":false}'::jsonb,
         timeout_milliseconds := 10000
       );
-      $$
+      $
     );
 
 Also schedule daily expiry cleanup:
