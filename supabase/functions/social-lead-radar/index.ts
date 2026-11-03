@@ -5,7 +5,8 @@
 // Edge Function secrets required:
 //   X_API_BEARER_TOKEN
 //   SOCIAL_RADAR_CRON_SECRET
-// Supabase supplies SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
+// Supabase supplies SUPABASE_URL and SUPABASE_SECRET_KEYS.
+// Older projects may also expose SUPABASE_SERVICE_ROLE_KEY.
 
 const X_SEARCH_URL = "https://api.x.com/2/tweets/search/recent";
 const MONITOR_KEY = "x_website_intent";
@@ -59,6 +60,23 @@ function requiredEnv(name: string): string {
   const value = Deno.env.get(name);
   if (!value) throw new Error("Missing required secret: " + name);
   return value;
+}
+
+function supabaseServiceKey(): string {
+  const namedSecretKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (namedSecretKeys) {
+    try {
+      const parsed = JSON.parse(namedSecretKeys) as Record<string, string>;
+      const defaultKey = parsed["default"];
+      if (typeof defaultKey === "string" && defaultKey.length > 0) {
+        return defaultKey;
+      }
+    } catch {
+      throw new Error("Could not parse Supabase-injected SUPABASE_SECRET_KEYS");
+    }
+  }
+
+  return requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
 }
 
 function supabaseHeaders(serviceKey: string): HeadersInit {
@@ -300,7 +318,7 @@ Deno.serve(async (request: Request) => {
 
   try {
     const supabaseUrl = requiredEnv("SUPABASE_URL");
-    const serviceKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+    const serviceKey = supabaseServiceKey();
     const xBearerToken = requiredEnv("X_API_BEARER_TOKEN");
     const now = new Date();
 
