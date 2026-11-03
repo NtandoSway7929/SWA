@@ -113,7 +113,7 @@ function classifyIntent(text: string, location: string): ClassifiedSignal | null
   let intentType: ClassifiedSignal["intent_type"] = "direct_need";
 
   const directNeed =
-    /\b(need|looking for|seeking|want|want to hire|trying to find|searching for|in search of)\b[\s\S]{0,90}\b(website|web site|web designer|web developer|web development|web design|online store|e-?commerce|online booking|booking (site|website|system))\b/i;
+    /\b(need|looking for|seeking|want|want to hire|trying to find|searching for|in search of|recommend|recommendation for)\b[\s\S]{0,90}\b(website|web site|web designer|web developer|web development|web design|online store|e-?commerce|online booking|booking (site|website|system))\b/i;
   const reversedNeed =
     /\b(website|web site|web designer|web developer|web development|web design|online store|e-?commerce|online booking|booking (site|website|system))\b[\s\S]{0,70}\b(needed|wanted|looking for|recommend|quote|quotation|price|cost|hire|build|create|design|develop)\b/i;
   const recommendation =
