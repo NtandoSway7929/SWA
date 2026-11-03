@@ -20,3 +20,7 @@ verify_jwt = false
 # All private workspace actions enforce user JWT and Swayphics-admin checks in the function.
 [functions.swayphics-ai]
 verify_jwt = false
+
+# Social Lead Radar validates its dedicated scheduler secret in the function.
+[functions.social-lead-radar]
+verify_jwt = false
