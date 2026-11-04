@@ -47,6 +47,51 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null;
 }
 
+
+async function readBoundedRequestText(req: Request, maxBytes: number): Promise<string> {
+  if (!req.body) return "";
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new MunicipalMoneyError(
+          "request_body_too_large",
+          "Request body is too large.",
+          413,
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const joined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(joined);
+  } catch {
+    throw new MunicipalMoneyError(
+      "request_body_invalid_encoding",
+      "Request body must be valid UTF-8.",
+      400,
+    );
+  }
+}
+
 async function authenticateAdmin(req: Request) {
   const authorization = req.headers.get("authorization") || "";
   const accessToken = authorization.startsWith("Bearer ")
@@ -125,11 +170,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     await authenticateAdmin(req);
-    const rawBody = await req.text();
-
-    if (new TextEncoder().encode(rawBody).byteLength > 4096) {
-      return json({ error: "Request body is too large." }, 413, origin);
-    }
+    const rawBody = await readBoundedRequestText(req, 4096);
 
     let body: unknown;
     try {
