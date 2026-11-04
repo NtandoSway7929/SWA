@@ -9,7 +9,7 @@
 
 Do not add a new paid proxy service yet. First prototype the native Supabase Edge Runtime TCP/TLS route in an isolated CI environment. This is the only route identified so far that could provide connection-time destination pinning without introducing another continuously running service.
 
-This is a feasibility candidate, not an approved production control. The exact managed Supabase runtime behavior has not been proven.
+The native route has now passed a CI proof-of-concept against the pinned `supabase/edge-runtime:v1.77.9` image. This validates the local container's raw TCP/TLS behavior, not a managed Supabase production runtime or the production gateway. See [Stage 9 runtime probe](innerme-integration-stage-9-egress-runtime-probe.md).
 
 ## 2. Candidate A — native Supabase Edge Runtime socket
 
@@ -17,7 +17,7 @@ Deno documents the following primitives:
 
 - `Deno.resolveDns(host, "A")` and `Deno.resolveDns(host, "AAAA")` resolve both address families and require network permission.
 - `Deno.connect({ hostname: "<literal-IP>", port: 443 })` opens a raw TCP connection to the specified IP. The API is currently marked **unstable** in Deno's API reference.
-- `Deno.startTls(tcpConnection, { hostname: "municipaldata.treasury.gov.za" })` upgrades that already-open connection to TLS and accepts the original provider hostname for certificate hostname verification. Deno documents the hostname verification behavior; the exact SNI behavior must still be proven by an integration test.
+- `Deno.startTls(tcpConnection, { hostname: "municipaldata.treasury.gov.za" })` upgrades that already-open connection to TLS and uses the supplied hostname for certificate hostname verification. The Stage 9 mock-server test observed the expected SNI and confirmed that a trusted certificate for a different hostname is rejected after explicitly awaiting `TlsConn.handshake()`.
 
 References:
 - [Deno Network API — connect, resolveDns and startTls](https://docs.deno.com/api/deno/network/)
@@ -40,9 +40,9 @@ If any required DNS, socket, TLS, peer-address, or permission control is unavail
 
 ### Known blockers
 
-- Deno marks `Deno.connect` unstable. This must be checked against the exact Supabase Edge Runtime build and startup configuration used by Supabase.
-- Supabase documents a Deno-compatible Edge Runtime and local runtime testing, but the public documentation does not guarantee raw TCP permission or this unstable API in the hosted runtime.
-- The `Deno.startTls` hostname argument documents certificate hostname verification. A test must independently verify the emitted TLS SNI and the peer certificate hostname; do not infer this from the parameter name.
+- Deno's API reference marks `Deno.connect` unstable. It worked in the tested local Supabase Edge Runtime image, but the API stability and hosted managed-runtime permission behavior remain production compatibility risks.
+- Supabase's public documentation does not guarantee raw TCP permission or the unstable API in the hosted runtime.
+- Stage 9 confirmed TLS SNI and wrong-hostname certificate rejection in the local container; the same behavior still needs confirmation in an explicitly approved managed Supabase test environment.
 - The current gateway uses `fetch()`. A raw socket cannot be swapped into that call without an HTTP client/transport that supports a caller-supplied connected socket. Avoid implementing an ad hoc HTTP parser for production. Evaluate a maintained HTTP client/connector that preserves the pinned socket and TLS hostname semantics, or use a small, independently reviewed transport module.
 - The Edge Runtime self-hosting project labels itself beta. A local/CI pass would establish only that the tested Edge Runtime version behaves as expected, not that every hosted Supabase deployment has identical flags and network policy.
 
@@ -71,9 +71,9 @@ Reference:
 
 ## 5. Required proof-of-concept tests
 
-Create a CI-only test against a pinned Supabase Edge Runtime container version and a local mock HTTPS server. Do not call National Treasury, production Supabase, or the inactive test project.
+The CI-only proof-of-concept against a pinned Supabase Edge Runtime container and local mock TLS server has passed. Its exact scope and limitations are recorded in [Stage 9](innerme-integration-stage-9-egress-runtime-probe.md). Do not call National Treasury, production Supabase, or the inactive test project from CI.
 
-The test must demonstrate:
+The next test stage must demonstrate:
 
 - The exact runtime supports DNS resolution and raw TCP connect with the permissions available to a user function.
 - Mixed public/private A/AAAA answers are rejected before a socket is opened.
@@ -91,7 +91,7 @@ A passing local Edge Runtime container test is a necessary proof, not a sufficie
 
 | Route | Additional recurring infrastructure | Current decision |
 |---|---:|---|
-| Supabase Edge Runtime native pinned socket | None identified beyond the existing Supabase plan; usage still subject to current plan limits | Prototype first; not yet verified |
+| Supabase Edge Runtime native pinned socket | None identified beyond the existing Supabase plan; usage still subject to current plan limits | CI prototype passed; hosted compatibility and production transport outstanding |
 | Cloudflare Worker with ordinary `fetch()` | Potentially zero within the current free tier | Does not by itself prove destination pinning |
 | Dedicated outbound proxy | Yes; VM/service, static IP and operations | Fallback after cost review |
 
@@ -99,8 +99,8 @@ The GitHub Actions prototype should use an ephemeral mock service and must not r
 
 ## 7. Current release blockers
 
-- No proven connection-time DNS/IP pinning implementation exists in the gateway.
-- No runtime evidence yet confirms that managed Supabase Edge Functions allow the raw socket/TLS sequence described above.
+- The current gateway still does not implement connection-time DNS/IP pinning.
+- The raw socket/TLS sequence passed in the pinned local Edge Runtime container, but managed Supabase hosted compatibility is still unverified.
 - The exact HTTP transport over a caller-supplied pinned socket has not been selected or reviewed.
 - Treasury's authoritative publication date remains unavailable in the response; `retrieved_at` must not be substituted.
 - Treasury catalogue contract/counts and financial-year bounds still need live verification.
@@ -109,4 +109,4 @@ The GitHub Actions prototype should use an ephemeral mock service and must not r
 
 ## 8. Next implementation gate
 
-Build only the CI proof-of-concept described in Section 5. If it passes, review the connector and runtime compatibility before any hosted-environment test. If it fails or requires unsupported unstable APIs, stop and present the dedicated proxy's measured cost before choosing that route.
+Build the dependency-reviewed IP validation and pinned-socket HTTP transport on the feature branch, retaining the existing gateway unchanged until the new transport has a complete test suite. Before any hosted-environment test, review the exact Supabase runtime/API compatibility. If it cannot provide the required guarantees, stop and present the dedicated proxy's measured cost before choosing that route.
