@@ -61,9 +61,9 @@ The gateway workflow runs:
 node --test supabase/functions/innerme-integration-gateway/*.test.mjs
 ```
 
-[Latest successful gateway validation — run #41817411747](https://github.com/NtandoSway7929/SWA/actions/runs/41817411747)
+[Latest successful gateway validation — run #41819309060](https://github.com/NtandoSway7929/SWA/actions/runs/41819309060)
 
-- **54 tests passed, 0 failed**
+- **59 tests passed, 0 failed**
 - Deno Edge Function type-check passed
 - `git diff --check` passed
 
