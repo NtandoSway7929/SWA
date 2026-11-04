@@ -21,10 +21,7 @@ const ALLOWED_PARAMETERS = new Set([
 ]);
 
 export class MunicipalMoneyError extends Error {
-  code: string;
-  status: number;
-
-  constructor(code: string, message: string, status = 400) {
+  constructor(code, message, status = 400) {
     super(message);
     this.name = "MunicipalMoneyError";
     this.code = code;
@@ -32,18 +29,18 @@ export class MunicipalMoneyError extends Error {
   }
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+function isPlainObject(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
 }
 
 function requiredString(
-  value: unknown,
-  field: string,
-  pattern: RegExp,
-  description: string,
-): string {
+  value,
+  field,
+  pattern,
+  description,
+) {
   if (typeof value !== "string") {
     throw new MunicipalMoneyError("invalid_parameter", `${field} must be a string.`);
   }
@@ -55,12 +52,12 @@ function requiredString(
 }
 
 function boundedInteger(
-  value: unknown,
-  field: string,
-  min: number,
-  max: number,
-  fallback?: number,
-): number {
+  value,
+  field,
+  min,
+  max,
+  fallback,
+) {
   const candidate = value === undefined ? fallback : value;
   if (!Number.isInteger(candidate) || Number(candidate) < min || Number(candidate) > max) {
     throw new MunicipalMoneyError(
@@ -71,7 +68,7 @@ function boundedInteger(
   return Number(candidate);
 }
 
-export function validateMunicipalMoneyParameters(input: unknown) {
+export function validateMunicipalMoneyParameters(input) {
   if (!isPlainObject(input)) {
     throw new MunicipalMoneyError("invalid_parameters", "parameters must be a JSON object.");
   }
@@ -100,7 +97,7 @@ export function validateMunicipalMoneyParameters(input: unknown) {
   const page = boundedInteger(input.page, "page", 1, MAX_PAGE, 1);
   const pageSize = boundedInteger(input.page_size, "page_size", 1, MAX_PAGE_SIZE, 50);
 
-  let itemCode: string | undefined;
+  let itemCode;
   if (input.item_code !== undefined) {
     itemCode = requiredString(
       input.item_code,
@@ -121,7 +118,7 @@ export function validateMunicipalMoneyParameters(input: unknown) {
   };
 }
 
-export function buildMunicipalMoneyFactsUrl(input: unknown): URL {
+export function buildMunicipalMoneyFactsUrl(input) {
   const parameters = validateMunicipalMoneyParameters(input);
   const url = new URL(MUNICIPAL_MONEY_API_PATH, MUNICIPAL_MONEY_API_ORIGIN);
   const cuts = [
@@ -150,9 +147,9 @@ export function buildMunicipalMoneyFactsUrl(input: unknown): URL {
 }
 
 export function normalizeMunicipalMoneyResponse(
-  payload: unknown,
-  parameters: ReturnType<typeof validateMunicipalMoneyParameters>,
-  sourceUrl: string,
+  payload,
+  parameters,
+  sourceUrl,
   retrievedAt = new Date().toISOString(),
 ) {
   if (!isPlainObject(payload) || payload.status !== "ok" || !Array.isArray(payload.data)) {
@@ -234,7 +231,7 @@ export function normalizeMunicipalMoneyResponse(
   };
 }
 
-async function readBoundedBody(response: Response, maxBytes: number): Promise<string> {
+async function readBoundedBody(response, maxBytes) {
   const declaredLength = Number(response.headers.get("content-length") || 0);
   if (declaredLength > maxBytes) {
     throw new MunicipalMoneyError("provider_response_too_large", "Provider response exceeded the size limit.", 502);
@@ -243,7 +240,7 @@ async function readBoundedBody(response: Response, maxBytes: number): Promise<st
   if (!response.body) return "";
 
   const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
+  const chunks = [];
   let total = 0;
 
   try {
@@ -274,15 +271,7 @@ async function readBoundedBody(response: Response, maxBytes: number): Promise<st
   return new TextDecoder("utf-8", { fatal: true }).decode(joined);
 }
 
-export async function fetchMunicipalMoneyFacts(
-  input: unknown,
-  options: {
-    fetchImpl?: typeof fetch;
-    now?: () => Date;
-    timeoutMs?: number;
-    maxResponseBytes?: number;
-  } = {},
-) {
+export async function fetchMunicipalMoneyFacts(input, options = {}) {
   const parameters = validateMunicipalMoneyParameters(input);
   const url = buildMunicipalMoneyFactsUrl(parameters);
   const fetchImpl = options.fetchImpl || fetch;
@@ -290,7 +279,7 @@ export async function fetchMunicipalMoneyFacts(
   const maxResponseBytes = options.maxResponseBytes ?? MAX_RESPONSE_BYTES;
 
   const signal = AbortSignal.timeout(timeoutMs);
-  let response: Response;
+  let response;
 
   try {
     response = await fetchImpl(url, {
@@ -336,7 +325,7 @@ export async function fetchMunicipalMoneyFacts(
     );
   }
 
-  let payload: unknown;
+  let payload;
   try {
     payload = JSON.parse(await readBoundedBody(response, maxResponseBytes));
   } catch (error) {
