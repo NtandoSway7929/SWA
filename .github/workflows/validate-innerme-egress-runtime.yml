@@ -82,14 +82,15 @@ jobs:
         run: |
           ca_cert="$(cat "$RUNNER_TEMP/egress-certs/ca.crt")"
           payload="$(jq -n --arg ca "$ca_cert" '{caCert: $ca}')"
-          response="$(curl --silent --show-error --max-time 30 \
-            --write-out '\nHTTP_STATUS:%{http_code}' \
+          http_status="$(curl --silent --show-error --max-time 30 \
+            --output "$RUNNER_TEMP/egress-response.json" \
+            --write-out '%{http_code}' \
             -H "Content-Type: application/json" \
             --data "$payload" \
             http://127.0.0.1:9000/egress-probe)"
-          body="$(printf '%s\n' "$response" | sed '$d')"
-          http_status="$(printf '%s\n' "$response" | tail -n 1 | cut -d: -f2)"
+          body="$(cat "$RUNNER_TEMP/egress-response.json")"
           printf 'HTTP status: %s\n' "$http_status"
+          printf 'Response body: %s\n' "$body"
           printf '%s\n' "$body" | jq .
           test "$http_status" = "200"
           printf '%s\n' "$body" | jq -e '
@@ -101,7 +102,6 @@ jobs:
             .wrongHostnameRejected == true and
             .testOnlyPrivateDestination == true
           '
-
       - name: Print runtime logs on failure
         if: failure()
         run: |
