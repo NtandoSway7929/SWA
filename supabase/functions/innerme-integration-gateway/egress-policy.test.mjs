@@ -66,6 +66,9 @@ test("rejects non-global and special-purpose IPv6 literals", () => {
     ["100::1", "not_ipv6_global_unicast"],
     ["100:0:0:1::1", "not_ipv6_global_unicast"],
     ["2001:1::1", "ietf_protocol_assignments"],
+    ["2001:10::1", "deprecated_orchid"],
+    ["2001:20::1", "orchid_v2"],
+    ["2001:30::1", "drone_remote_id_special_purpose"],
     ["2001:2::1", "ietf_protocol_assignments"],
     ["2001:db8::1", "documentation"],
     ["2002::1", "deprecated_6to4"],
@@ -148,4 +151,13 @@ test("compares IPv4 and IPv6 literals by address value, not string spelling", ()
   assert.equal(sameOutboundAddress("2001:4860:4860::8888", "2001:4860:4860::8844"), false);
   assert.equal(sameOutboundAddress("2001:4860:4860::8888", "8.8.8.8"), false);
   assert.equal(sameOutboundAddress("not-an-ip", "not-an-ip"), false);
+});
+
+
+test("rejects DNS answer sets above the fixed safety bound", () => {
+  const tooMany = Array.from({ length: 65 }, () => "8.8.8.8");
+  const result = validateOutboundAddressSet(tooMany);
+  assert.equal(result.allowed, false);
+  assert.equal(result.reason, "dns_answer_limit_exceeded");
+  assert.equal(result.results.length, 0);
 });
