@@ -1,0 +1,30 @@
+name: Temporary repository ZIP export
+
+on:
+  push:
+    branches:
+      - agent/swayphics-repo-export-20261104
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository snapshot
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Create repository ZIP
+        shell: bash
+        run: |
+          git archive --format=zip --prefix=SWA-main/ HEAD -o "$RUNNER_TEMP/SWA-main.zip"
+          unzip -t "$RUNNER_TEMP/SWA-main.zip"
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SWA-main
+          path: ${{ runner.temp }}/SWA-main.zip
+          if-no-files-found: error
+          retention-days: 1
