@@ -243,7 +243,7 @@ test("rejects redirect responses without following the Location header", async (
 test("rejects non-200 provider status responses", async () => {
   for (const status of [204, 206, 304, 400, 429, 500, 503]) {
     const raw = status === 204 || status === 304
-      ? "HTTP/1.1 " + status + " Test\\r\\nContent-Length: 0\\r\\n\\r\\n"
+      ? "HTTP/1.1 " + status + " Test\r\nContent-Length: 0\r\n\r\n"
       : response(status, {}, "{}");
     const { runtime } = makeRuntime(raw);
     await assert.rejects(
