@@ -1,7 +1,5 @@
-import {
-  MUNICIPAL_MONEY_HOST,
-  fetchMunicipalMoneyFacts,
-} from "./lib/municipal-money.mjs";
+import { fetchMunicipalMoneyFacts } from "./lib/municipal-money.mjs";
+import { MUNICIPAL_MONEY_HOST } from "./lib/pinned-http.mjs";
 
 const PARAMETERS = {
   municipality_code: "JHB",
