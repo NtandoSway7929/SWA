@@ -44,7 +44,13 @@ Deno.serve(async (request: Request) => {
       else throw new Error("unexpected DNS record type");
 
       // Resolve the local mock alias rather than contacting Treasury.
-      const addresses = await Deno.resolveDns("mock-pinned-http", recordType, { signal });
+      let addresses: string[];
+      try {
+        addresses = await Deno.resolveDns("mock-pinned-http", recordType as "A" | "AAAA", { signal });
+      } catch (error) {
+        if (error instanceof Deno.errors.NotFound) return [];
+        throw error;
+      }
       if (recordType === "A") {
         assert(addresses.length === 1, "local mock DNS alias must resolve to exactly one A record");
         localMockIp = addresses[0];
