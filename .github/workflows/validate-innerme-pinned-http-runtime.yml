@@ -53,6 +53,16 @@ jobs:
             -CA ca.crt -CAkey ca.key -CAcreateserial \
             -out server.crt -days 2 -extfile server.ext
 
+      - name: Prepare read-only runtime bundle
+        run: |
+          mkdir -p "$RUNNER_TEMP/pinned-http-user/lib"
+          cp "$GITHUB_WORKSPACE/supabase/tests/pinned-http-runtime/user/index.ts" \
+            "$RUNNER_TEMP/pinned-http-user/index.ts"
+          cp "$GITHUB_WORKSPACE/supabase/functions/innerme-integration-gateway/pinned-http.mjs" \
+            "$RUNNER_TEMP/pinned-http-user/lib/pinned-http.mjs"
+          cp "$GITHUB_WORKSPACE/supabase/functions/innerme-integration-gateway/egress-policy.mjs" \
+            "$RUNNER_TEMP/pinned-http-user/lib/egress-policy.mjs"
+
       - name: Create isolated mock network
         run: docker network create innerme-pinned-http-ci
 
@@ -69,8 +79,7 @@ jobs:
           docker run -d --name innerme-pinned-http-runtime \
             --network innerme-pinned-http-ci -p 9000:9000 \
             -v "$GITHUB_WORKSPACE/supabase/tests/pinned-http-runtime/main:/services/main:ro" \
-            -v "$GITHUB_WORKSPACE/supabase/tests/pinned-http-runtime/user:/services/pinned-http-probe:ro" \
-            -v "$GITHUB_WORKSPACE/supabase/functions/innerme-integration-gateway:/services/pinned-http-probe/lib:ro" \
+            -v "$RUNNER_TEMP/pinned-http-user:/services/pinned-http-probe:ro" \
             supabase/edge-runtime:v1.77.9 \
             start --main-service /services/main -p 9000
 
