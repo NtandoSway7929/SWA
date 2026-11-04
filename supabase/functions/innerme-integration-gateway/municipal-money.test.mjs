@@ -364,3 +364,139 @@ test("provider errors are returned as sanitized integration errors", async () =>
       !error.message.includes("secret"),
   );
 });
+
+
+test("uses the pinned transport by default for member catalogues and facts", async () => {
+  clearMunicipalMoneyMemberCacheForTests();
+  const requests = [];
+  const requestPinnedImpl = async (url, options) => {
+    const parsed = new URL(url);
+    requests.push({ url: parsed, options });
+
+    let payload;
+    if (parsed.pathname.endsWith("/members/demarcation")) {
+      payload = {
+        status: "ok",
+        total_member_count: 1,
+        data: [{ "demarcation.code": "JHB" }],
+      };
+    } else if (parsed.pathname.endsWith("/members/amount_type")) {
+      payload = {
+        status: "ok",
+        total_member_count: 1,
+        data: [{ "amount_type.code": "ACT" }],
+      };
+    } else if (parsed.pathname.endsWith("/members/item")) {
+      payload = {
+        status: "ok",
+        total_member_count: 1,
+        data: [{ "item.code": "0200" }],
+      };
+    } else if (parsed.pathname === MUNICIPAL_MONEY_API_PATH) {
+      payload = {
+        status: "ok",
+        page: 1,
+        page_size: 25,
+        total_fact_count: 1,
+        fields: ["amount"],
+        data: [{ amount: 1250 }],
+      };
+    } else {
+      throw new Error("Unexpected pinned provider route");
+    }
+
+    return {
+      status: 200,
+      headers: { "content-type": "application/json" },
+      body: new TextEncoder().encode(JSON.stringify(payload)),
+    };
+  };
+
+  const result = await fetchMunicipalMoneyFacts(validParameters, {
+    requestPinnedImpl,
+    now: () => new Date("2026-11-04T12:00:00.000Z"),
+  });
+
+  assert.deepEqual(
+    requests.map(({ url }) => url.pathname),
+    [
+      "/api/cubes/incexp_v2/members/demarcation",
+      "/api/cubes/incexp_v2/members/amount_type",
+      "/api/cubes/incexp_v2/members/item",
+      MUNICIPAL_MONEY_API_PATH,
+    ],
+  );
+  assert.equal(requests.every(({ url }) => url.origin === MUNICIPAL_MONEY_API_ORIGIN), true);
+  assert.equal(requests.every(({ options }) => options.timeoutMs === 8_000), true);
+  assert.equal(requests.every(({ options }) => options.maxResponseBytes === 512 * 1024), true);
+  assert.equal(result.records[0].amount, 1250);
+});
+
+test("maps pinned transport timeouts to sanitized metadata and provider errors", async () => {
+  clearMunicipalMoneyMemberCacheForTests();
+  const metadataTimeout = async () => {
+    const error = new Error("sensitive socket details");
+    error.code = "provider_timeout";
+    throw error;
+  };
+
+  await assert.rejects(
+    validateMunicipalMoneyMembership(validParameters, {
+      requestPinnedImpl: metadataTimeout,
+    }),
+    (error) => error instanceof MunicipalMoneyError &&
+      error.code === "provider_metadata_timeout" &&
+      !error.message.includes("sensitive"),
+  );
+
+  clearMunicipalMoneyMemberCacheForTests();
+  let calls = 0;
+  const requestPinnedImpl = async (url) => {
+    const parsed = new URL(url);
+    calls += 1;
+    if (parsed.pathname.endsWith("/members/demarcation")) {
+      return {
+        status: 200,
+        headers: { "content-type": "application/json" },
+        body: new TextEncoder().encode(JSON.stringify({
+          status: "ok",
+          total_member_count: 1,
+          data: [{ "demarcation.code": "JHB" }],
+        })),
+      };
+    }
+    if (parsed.pathname.endsWith("/members/amount_type")) {
+      return {
+        status: 200,
+        headers: { "content-type": "application/json" },
+        body: new TextEncoder().encode(JSON.stringify({
+          status: "ok",
+          total_member_count: 1,
+          data: [{ "amount_type.code": "ACT" }],
+        })),
+      };
+    }
+    if (parsed.pathname.endsWith("/members/item")) {
+      return {
+        status: 200,
+        headers: { "content-type": "application/json" },
+        body: new TextEncoder().encode(JSON.stringify({
+          status: "ok",
+          total_member_count: 1,
+          data: [{ "item.code": "0200" }],
+        })),
+      };
+    }
+    const error = new Error("sensitive socket details");
+    error.code = "provider_timeout";
+    throw error;
+  };
+
+  await assert.rejects(
+    fetchMunicipalMoneyFacts(validParameters, { requestPinnedImpl }),
+    (error) => error instanceof MunicipalMoneyError &&
+      error.code === "provider_timeout" &&
+      !error.message.includes("sensitive"),
+  );
+  assert.equal(calls, 4);
+});
