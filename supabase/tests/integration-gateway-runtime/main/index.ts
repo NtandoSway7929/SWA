@@ -2,7 +2,7 @@ Deno.serve(async (request: Request) => {
   const url = new URL(request.url);
   if (url.pathname === "/health") return new Response("ok");
 
-  if (url.pathname !== "/integration-gateway" || request.method !== "POST") {
+  if (url.pathname !== "/integration-gateway") {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
 
