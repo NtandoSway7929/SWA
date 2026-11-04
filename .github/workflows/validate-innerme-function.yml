@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
+      - "supabase/functions/innerme-integration-gateway/**"
       - "supabase/functions/tests/innerme-evidence-traceability.test.mjs"
       - "supabase/functions/innerme-retrieval-smoke-test/**"
       - ".github/workflows/innerme-semantic-retrieval-smoke.yml"
@@ -78,6 +79,12 @@ jobs:
 
       - name: Type-check checked-in Edge Function source
         run: deno check --no-lock supabase/functions/swayphics-ai/index.ts
+
+      - name: Type-check InnerMe integration gateway
+        run: deno check --no-lock supabase/functions/innerme-integration-gateway/index.ts
+
+      - name: Test Municipal Money adapter without provider calls
+        run: node --test supabase/functions/innerme-integration-gateway/municipal-money.test.mjs
 
       - name: Type-check isolated semantic retrieval smoke endpoint
         run: deno check --no-lock supabase/functions/innerme-retrieval-smoke-test/index.ts
