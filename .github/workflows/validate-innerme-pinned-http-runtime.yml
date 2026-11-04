@@ -1,4 +1,4 @@
-name: Test InnerMe Pinned HTTP Transport in Edge Runtime
+name: Test Municipal Money Adapter over Pinned HTTP
 
 on:
   pull_request:
@@ -17,6 +17,7 @@ on:
     paths:
       - "supabase/functions/innerme-integration-gateway/pinned-http.mjs"
       - "supabase/functions/innerme-integration-gateway/egress-policy.mjs"
+      - "supabase/functions/innerme-integration-gateway/municipal-money.mjs"
       - "supabase/tests/pinned-http-runtime/**"
       - ".github/workflows/validate-innerme-pinned-http-runtime.yml"
 
@@ -24,7 +25,7 @@ permissions:
   contents: read
 
 jobs:
-  pinned-http:
+  municipal-money-pinned-http:
     name: Exercise Municipal Money adapter in Supabase Edge Runtime
     runs-on: ubuntu-latest
     timeout-minutes: 12
