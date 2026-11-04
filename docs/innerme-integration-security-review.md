@@ -118,3 +118,50 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 - Supabase: [Nested function rate limits](https://supabase.com/docs/guides/functions/recursive-functions)
 - National Treasury: [Municipal Money API documentation](https://municipaldata.treasury.gov.za/docs)
 - National Treasury: [Municipal Money terms](https://municipalmoney.gov.za/terms)
+
+
+---
+
+## Stage 14 update — adapter integration and focused security reassessment
+
+**Review date:** 4 November 2026  
+**Branch:** `feature/innerme-municipal-money-gateway`  
+**PR:** #147  
+**Nature of review:** Focused static reassessment of the current branch and CI evidence. This is not an independent third-party penetration test and is not a hosted Supabase runtime approval.
+
+### Updated implementation assessment
+
+The Municipal Money adapter now uses the pinned HTTP transport by default for both member-catalogue preflights and facts retrieval. The old Fetch implementation is available only when explicitly injected as a provider-free test seam.
+
+The production-default request path now:
+- resolves both A and AAAA for the fixed Treasury hostname;
+- treats Deno NotFound for a single address family as an empty result for that family, while propagating other resolver failures;
+- rejects empty, mixed safe/unsafe, malformed, or over-64 combined answer sets;
+- connects to a literal validated address and compares the socket peer numerically;
+- upgrades the same connection to TLS with the fixed Treasury hostname, default certificate verification, and HTTP/1.1 ALPN;
+- emits a fixed GET to the approved facts/member route and never follows redirects;
+- bounds HTTP headers/body/framing and rejects non-200 responses, invalid framing and compressed content;
+- passes caller cancellation and per-request timeout through to DNS/TCP and closes an active TCP/TLS connection on cancellation; and
+- keeps provider output marked as untrusted external data and outside the knowledge/action write path.
+
+### Current CI evidence
+
+- Gateway provider-free and contract validation [run #41819309060](https://github.com/NtandoSway7929/SWA/actions/runs/41819309060): **59/59 tests passed**, Deno type-check and `git diff --check` passed.
+- Full Municipal Money adapter runtime test [run #41818534857](https://github.com/NtandoSway7929/SWA/actions/runs/41818534857): **success** in `supabase/edge-runtime:v1.77.9` against a local mock. Three catalogues and one facts request all used the pinned transport, for four A/AAAA lookups, four literal-IP connections, and four TLS connections.
+- Quota migration test [run #41812361593](https://github.com/NtandoSway7929/SWA/actions/runs/41812361593): **success** in an ephemeral PostgreSQL 17 service with minimal Supabase auth/admin stubs.
+
+### Residual production blockers
+
+1. **No managed Supabase validation.** Local Edge Runtime CI does not prove the deployed project's Deno permission flags, runtime build, Auth/JWT claims, PostgREST RPC exposure, or actual Edge Function environment. The isolated Supabase test project remains inactive.
+2. **No live Treasury verification.** The API routes, member catalogue counts, current response contract, financial-year bounds, provider request allowance, and actual certificate chain have not been verified against the live provider.
+3. **Terms compliance remains blocked.** The response still has `attribution.publication_date: null`. A retrieval timestamp must not be substituted. Until a defensible publication date is sourced and attached, do not use the data for onward display, publication or distribution.
+4. **Quota limits are provisional.** The SQL migration has executed in ephemeral PostgreSQL CI, but it has not been applied to any Supabase project. The ceilings require owner confirmation; simultaneous multi-session last-slot race and hosted JWT/RPC behavior remain to be tested.
+5. **Deployment config is not prepared.** Add explicit `verify_jwt = true` only in an approved deployment change. No shared Supabase config or secrets were changed in this PR.
+6. **Address policy is manually maintained.** It is a conservative implementation snapshot of IANA special-purpose ranges, not an automatically updated registry feed. Review it before release and on a defined cadence.
+7. **IPv6 socket route remains unproven end-to-end.** IPv6 parsing/peer comparison is unit-tested; the full Edge Runtime mock exercises IPv4 only.
+8. **No chat/action integration.** The gateway is not called from `swayphics-ai`, InnerMe chat, or an Action Centre workflow. Keep provider content as untrusted evidence if and when the governance path is added.
+9. **Deno API stability.** `Deno.connect` is marked unstable. The tested local Edge Runtime image supports the needed calls; hosted managed-runtime availability and long-term compatibility are not guaranteed by this CI evidence.
+
+### Release decision
+
+**Keep PR #147 open as a draft. Do not merge, apply its migration, deploy its function, activate the inactive Supabase test project, or wire the capability into InnerMe chat yet.** The feature-branch implementation and local CI evidence are materially stronger, but the live provider terms, managed Supabase runtime and independent security gates remain open.
