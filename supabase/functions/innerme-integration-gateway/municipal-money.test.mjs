@@ -162,7 +162,7 @@ test("rejects malformed provider payloads and excessive provider rows", () => {
   );
   assert.throws(
     () => normalizeMunicipalMoneyResponse(
-      { status: "ok", data: Array.from({ length: 26 }, () => ({ amount: 1 })) },
+      { status: "ok", fields: ["amount"], data: Array.from({ length: 26 }, () => ({ amount: 1 })) },
       validParameters,
       "https://source.test",
     ),
