@@ -82,6 +82,13 @@ The provider's documentation describes quarterly snapshots and advises that data
 
 The GitHub Actions validation workflow type-checks the Edge Function and runs the adapter's provider-free tests.
 
+## Security review
+
+See [`docs/innerme-integration-security-review.md`](../../../docs/innerme-integration-security-review.md) for the static security review, residual risks, release blockers, and production acceptance checklist.
+
+
+**Terms-compliance blocker:** National Treasury's terms require attribution to the source and the date of publication. This facts endpoint response currently sets `attribution.publication_date` to `null`. `retrieved_at` is not the publication date. Until an authoritative publication date is obtained from provider metadata or an official notice and attached to the response, keep the pilot internal and do not use it for onward display, publication, or distribution.
+
 ## Deployment boundary
 
 Do not deploy this function, change production secrets, create a production registry table, or wire the capability into chat without explicit owner approval after the isolated test environment is available and the security review is complete.
