@@ -109,4 +109,4 @@ The GitHub Actions prototype should use an ephemeral mock service and must not r
 
 ## 8. Next implementation gate
 
-Build the dependency-reviewed IP validation and pinned-socket HTTP transport on the feature branch, retaining the existing gateway unchanged until the new transport has a complete test suite. Before any hosted-environment test, review the exact Supabase runtime/API compatibility. If it cannot provide the required guarantees, stop and present the dedicated proxy's measured cost before choosing that route.
+The standalone IPv4/IPv6 destination classifier and its unit tests now exist in [Stage 10](innerme-integration-stage-10-ip-policy.md), and the gateway CI run passed. Next, integrate it into a dependency-reviewed DNS resolver and pinned-socket HTTP transport on the feature branch, retaining the existing gateway unchanged until the transport has a complete test suite. Before any hosted-environment test, review the exact Supabase runtime/API compatibility. If it cannot provide the required guarantees, stop and present the dedicated proxy's measured cost before choosing that route.
