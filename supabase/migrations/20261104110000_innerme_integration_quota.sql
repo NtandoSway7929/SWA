@@ -113,7 +113,7 @@ begin
     v_retry_after := greatest(
       1,
       pg_catalog.ceil(
-        pg_catalog.extract(epoch from (v_next_lease_expiry - v_now))
+        pg_catalog.date_part('epoch', v_next_lease_expiry - v_now)
       )::integer
     );
   end if;
@@ -163,7 +163,7 @@ begin
     v_retry_after := greatest(
       v_retry_after,
       greatest(1, pg_catalog.ceil(
-        pg_catalog.extract(epoch from (v_minute_start + interval '1 minute' - v_now))
+        pg_catalog.date_part('epoch', v_minute_start + interval '1 minute' - v_now)
       )::integer)
     );
   end if;
@@ -173,7 +173,7 @@ begin
     v_retry_after := greatest(
       v_retry_after,
       greatest(1, pg_catalog.ceil(
-        pg_catalog.extract(epoch from (v_minute_start + interval '1 minute' - v_now))
+        pg_catalog.date_part('epoch', v_minute_start + interval '1 minute' - v_now)
       )::integer)
     );
   end if;
@@ -183,7 +183,7 @@ begin
     v_retry_after := greatest(
       v_retry_after,
       greatest(1, pg_catalog.ceil(
-        pg_catalog.extract(epoch from (v_day_start + interval '1 day' - v_now))
+        pg_catalog.date_part('epoch', v_day_start + interval '1 day' - v_now)
       )::integer)
     );
   end if;
@@ -193,7 +193,7 @@ begin
     v_retry_after := greatest(
       v_retry_after,
       greatest(1, pg_catalog.ceil(
-        pg_catalog.extract(epoch from (v_day_start + interval '1 day' - v_now))
+        pg_catalog.date_part('epoch', v_day_start + interval '1 day' - v_now)
       )::integer)
     );
   end if;
@@ -253,6 +253,7 @@ as $function$
 declare
   v_admin_user_id uuid := auth.uid();
   v_released boolean := false;
+  v_rows integer := 0;
 begin
   if v_admin_user_id is null or not public.is_swayphics_admin() then
     raise insufficient_privilege using message = 'Active Swayphics admin access is required.';
@@ -269,7 +270,8 @@ begin
     and capability = p_capability
     and released_at is null;
 
-  get diagnostics v_released = row_count;
+  get diagnostics v_rows = row_count;
+  v_released := v_rows > 0;
 
   return pg_catalog.jsonb_build_object(
     'released', v_released,
