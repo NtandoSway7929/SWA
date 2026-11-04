@@ -10,6 +10,8 @@ export const MAX_PAGE = 1000;
 export const MAX_RESPONSE_BYTES = 512 * 1024;
 export const REQUEST_TIMEOUT_MS = 8_000;
 
+import { requestPinnedMunicipalMoney } from "./pinned-http.mjs";
+
 const ALLOWED_PARAMETERS = new Set([
   "municipality_code",
   "financial_year",
@@ -27,6 +29,37 @@ export class MunicipalMoneyError extends Error {
     this.code = code;
     this.status = status;
   }
+}
+
+function getProviderFetch(options = {}) {
+  if (typeof options.fetchImpl === "function") return options.fetchImpl;
+
+  // The pinned transport is the production default. Fetch remains injectable
+  // solely as a provider-free test seam.
+  const requestPinned = options.requestPinnedImpl || requestPinnedMunicipalMoney;
+  return async (url, init = {}) => {
+    if (init.method !== "GET" || init.redirect !== "manual") {
+      throw new MunicipalMoneyError(
+        "provider_request_rejected",
+        "Only the approved manual-redirect GET request is supported.",
+        500,
+      );
+    }
+
+    const result = await requestPinned(url, {
+      timeoutMs: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
+      maxResponseBytes: options.maxResponseBytes ?? MAX_RESPONSE_BYTES,
+      ...(options.transportRuntime ? { runtime: options.transportRuntime } : {}),
+      ...(options.transportAddressPolicy
+        ? { addressPolicy: options.transportAddressPolicy }
+        : {}),
+    });
+
+    return new Response(result.body, {
+      status: result.status,
+      headers: result.headers,
+    });
+  };
 }
 
 function isPlainObject(value) {
@@ -169,7 +202,7 @@ async function fetchMunicipalMoneyMemberCodes(parameterName, options = {}) {
   const cached = memberCatalogueCache.get(definition.member);
   if (cached && cached.expiresAt > nowMs()) return cached.codes;
 
-  const fetchImpl = options.fetchImpl || fetch;
+  const fetchImpl = getProviderFetch(options);
   const url = new URL(
     `/api/cubes/incexp_v2/members/${definition.member}`,
     MUNICIPAL_MONEY_API_ORIGIN,
@@ -190,10 +223,20 @@ async function fetchMunicipalMoneyMemberCodes(parameterName, options = {}) {
       signal: AbortSignal.timeout(options.timeoutMs ?? REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    const isTimeout = error instanceof DOMException && error.name === "TimeoutError";
+    const isTimeout = (error instanceof DOMException && error.name === "TimeoutError") ||
+      error?.code === "provider_timeout";
+    const isRedirect = error?.code === "provider_redirect_rejected";
     throw new MunicipalMoneyError(
-      isTimeout ? "provider_metadata_timeout" : "provider_metadata_unavailable",
-      isTimeout ? "Provider metadata lookup timed out." : "Provider metadata is temporarily unavailable.",
+      isTimeout
+        ? "provider_metadata_timeout"
+        : isRedirect
+        ? "provider_metadata_redirect_rejected"
+        : "provider_metadata_unavailable",
+      isTimeout
+        ? "Provider metadata lookup timed out."
+        : isRedirect
+        ? "Provider metadata redirects are not accepted."
+        : "Provider metadata is temporarily unavailable.",
       502,
     );
   }
@@ -456,10 +499,20 @@ export async function fetchMunicipalMoneyFacts(input, options = {}) {
       signal,
     });
   } catch (error) {
-    const isTimeout = error instanceof DOMException && error.name === "TimeoutError";
+    const isTimeout = (error instanceof DOMException && error.name === "TimeoutError") ||
+      error?.code === "provider_timeout";
+    const isRedirect = error?.code === "provider_redirect_rejected";
     throw new MunicipalMoneyError(
-      isTimeout ? "provider_timeout" : "provider_unavailable",
-      isTimeout ? "The provider request timed out." : "The provider could not be reached.",
+      isTimeout
+        ? "provider_timeout"
+        : isRedirect
+        ? "provider_redirect_rejected"
+        : "provider_unavailable",
+      isTimeout
+        ? "The provider request timed out."
+        : isRedirect
+        ? "Provider redirects are not accepted."
+        : "The provider could not be reached.",
       502,
     );
   }
