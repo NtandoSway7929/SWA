@@ -133,6 +133,9 @@ Deno.serve(async (request: Request) => {
       hostname: "wrong-host.invalid",
       caCerts: [caCert],
     });
+    // Constructing TlsConn may precede the handshake. Force it so hostname
+    // verification is actually exercised before deciding the test passed.
+    await wrongTls.handshake();
     safeClose(wrongTls);
   } catch {
     wrongHostnameRejected = true;
