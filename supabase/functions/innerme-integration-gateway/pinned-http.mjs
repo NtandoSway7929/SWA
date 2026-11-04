@@ -448,10 +448,43 @@ export async function requestPinnedMunicipalMoney(target, options = {}) {
     }
   }
 
+  const externalSignal = options.signal;
+  if (
+    externalSignal !== undefined &&
+    (!externalSignal || typeof externalSignal.addEventListener !== "function")
+  ) {
+    throw new PinnedHttpError("invalid_transport_signal", "Provider cancellation signal is invalid.", 500);
+  }
+  if (externalSignal?.aborted) {
+    const wasTimeout = externalSignal.reason?.name === "TimeoutError";
+    throw new PinnedHttpError(
+      wasTimeout ? "provider_timeout" : "provider_aborted",
+      wasTimeout ? "Provider request timed out." : "Provider request was cancelled.",
+    );
+  }
+
   const controller = new AbortController();
   let activeConnection = null;
   let timedOut = false;
   let timer;
+  let externalAbortHandler;
+  let rejectExternalAbort;
+  const externalAbort = new Promise((_, reject) => {
+    rejectExternalAbort = reject;
+  });
+
+  if (externalSignal) {
+    externalAbortHandler = () => {
+      controller.abort(externalSignal.reason);
+      safeClose(activeConnection);
+      const wasTimeout = externalSignal.reason?.name === "TimeoutError";
+      rejectExternalAbort(new PinnedHttpError(
+        wasTimeout ? "provider_timeout" : "provider_aborted",
+        wasTimeout ? "Provider request timed out." : "Provider request was cancelled.",
+      ));
+    };
+    externalSignal.addEventListener("abort", externalAbortHandler, { once: true });
+  }
 
   const operation = async () => {
     const [ipv4, ipv6] = await Promise.all([
@@ -547,11 +580,16 @@ export async function requestPinnedMunicipalMoney(target, options = {}) {
   });
 
   try {
-    const result = await Promise.race([operation(), timeout]);
+    const race = [operation(), timeout];
+    if (externalSignal) race.push(externalAbort);
+    const result = await Promise.race(race);
     if (timedOut) throw new PinnedHttpError("provider_timeout", "Provider request timed out.");
     return result;
   } finally {
     clearTimeout(timer);
+    if (externalSignal && externalAbortHandler) {
+      externalSignal.removeEventListener("abort", externalAbortHandler);
+    }
     safeClose(activeConnection);
   }
 }
