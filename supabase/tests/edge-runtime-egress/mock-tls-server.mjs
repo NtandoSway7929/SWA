@@ -23,7 +23,7 @@ const server = tls.createServer(
       socket.end(
         "HTTP/1.1 200 OK\r\n" +
         "Content-Type: application/json\r\n" +
-        \`Content-Length: \${Buffer.byteLength(body)}\r\n\` +
+        "Content-Length: " + Buffer.byteLength(body) + "\r\n" +
         "Connection: close\r\n\r\n" +
         body,
       );
