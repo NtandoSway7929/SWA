@@ -12,6 +12,11 @@ export const MAX_PAGE = 1000;
 export const MAX_RESPONSE_BYTES = 512 * 1024;
 export const REQUEST_TIMEOUT_MS = 8_000;
 
+// incexp_v2 starts at the financial year ending in 2020. Prevent future-year
+// requests; published data may still lag behind the current calendar year.
+const MIN_FINANCIAL_YEAR_END = 2020;
+const MAX_FINANCIAL_YEAR_END = new Date().getUTCFullYear();
+
 const ALLOWED_PARAMETERS = new Set([
   "municipality_code",
   "financial_year",
@@ -128,7 +133,12 @@ export function validateMunicipalMoneyParameters(input) {
     "must use 1-16 uppercase letters, digits, underscores or hyphens.",
   );
 
-  const financialYear = boundedInteger(input.financial_year, "financial_year", 2020, 2035);
+  const financialYear = boundedInteger(
+    input.financial_year,
+    "financial_year",
+    MIN_FINANCIAL_YEAR_END,
+    MAX_FINANCIAL_YEAR_END,
+  );
   const financialPeriod = boundedInteger(input.financial_period, "financial_period", 1, 12);
   const page = boundedInteger(input.page, "page", 1, MAX_PAGE, 1);
   const pageSize = boundedInteger(input.page_size, "page_size", 1, MAX_PAGE_SIZE, 50);
