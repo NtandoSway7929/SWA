@@ -17,16 +17,25 @@ const validRequest = {
   },
 };
 
-async function invoke({ token, origin, body = validRequest } = {}) {
-  const headers = { "content-type": "application/json" };
+async function invoke({
+  token,
+  origin,
+  body = validRequest,
+  method = "POST",
+  rawBody,
+} = {}) {
+  const headers = {};
+  if (method === "POST") headers["content-type"] = "application/json";
   if (token) headers.authorization = `Bearer ${token}`;
   if (origin) headers.origin = origin;
 
-  const response = await fetch(gatewayUrl, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
+  const init = { method, headers };
+  if (method !== "GET" && method !== "OPTIONS") {
+    init.body = rawBody ?? JSON.stringify(body);
+  }
+
+  const response = await fetch(gatewayUrl, init);
+  if (response.status === 204) return { response, payload: null };
   let payload;
   try {
     payload = await response.json();
@@ -35,6 +44,9 @@ async function invoke({ token, origin, body = validRequest } = {}) {
   }
   return { response, payload };
 }
+
+const allowedOrigin = "https://swayphics.co.za";
+const disallowedOrigin = "https://attacker.example";
 
 const missingToken = await invoke({ token: "" });
 assert.equal(missingToken.response.status, 401);
@@ -58,6 +70,44 @@ const invalidParameters = await invoke({
 assert.equal(invalidParameters.response.status, 400);
 assert.equal(invalidParameters.payload.error.code, "invalid_parameter");
 
+const unsupportedBodyField = await invoke({
+  token: "unsupported-body-token",
+  body: { ...validRequest, url: "https://attacker.example" },
+});
+assert.equal(unsupportedBodyField.response.status, 400);
+assert.equal(unsupportedBodyField.payload.error, "Request contains unsupported fields.");
+
+const unknownCapability = await invoke({
+  token: "unknown-capability-token",
+  body: { ...validRequest, capability: "za.unknown.capability" },
+});
+assert.equal(unknownCapability.response.status, 404);
+assert.equal(unknownCapability.payload.error, "Unknown integration capability.");
+
+const invalidJson = await invoke({
+  token: "invalid-json-token",
+  rawBody: "{",
+});
+assert.equal(invalidJson.response.status, 400);
+assert.equal(invalidJson.payload.error, "Invalid JSON body.");
+
+const methodRejected = await invoke({ method: "GET" });
+assert.equal(methodRejected.response.status, 405);
+assert.equal(methodRejected.payload.error, "Method not allowed.");
+
+const oversizedBody = await invoke({
+  rawBody: "x".repeat(5000),
+});
+assert.equal(oversizedBody.response.status, 413);
+assert.equal(oversizedBody.payload.error, "Request body is too large.");
+
+const allowedPreflight = await invoke({
+  method: "OPTIONS",
+  origin: allowedOrigin,
+});
+assert.equal(allowedPreflight.response.status, 204);
+assert.equal(allowedPreflight.response.headers.get("access-control-allow-origin"), allowedOrigin);
+
 const quotaDenied = await invoke({ token: "quota-denied-token" });
 assert.equal(quotaDenied.response.status, 429);
 assert.equal(quotaDenied.response.headers.get("retry-after"), "17");
@@ -68,9 +118,21 @@ const quotaUnavailable = await invoke({ token: "quota-error-token" });
 assert.equal(quotaUnavailable.response.status, 503);
 assert.equal(quotaUnavailable.payload.error.code, "integration_quota_unavailable");
 
+const malformedQuotaDecision = await invoke({ token: "quota-malformed-token" });
+assert.equal(malformedQuotaDecision.response.status, 503);
+assert.equal(malformedQuotaDecision.payload.error.code, "integration_quota_unavailable");
+
+const invalidRetryAfter = await invoke({ token: "quota-retry-invalid-token" });
+assert.equal(invalidRetryAfter.response.status, 503);
+assert.equal(invalidRetryAfter.payload.error.code, "integration_quota_unavailable");
+
+const invalidReservationId = await invoke({ token: "quota-reservation-invalid-token" });
+assert.equal(invalidReservationId.response.status, 503);
+assert.equal(invalidReservationId.payload.error.code, "integration_quota_unavailable");
+
 const forbiddenOrigin = await invoke({
   token: "admin-invalid-token",
-  origin: "https://attacker.example",
+  origin: disallowedOrigin,
 });
 assert.equal(forbiddenOrigin.response.status, 403);
 assert.equal(forbiddenOrigin.payload.error, "Origin is not allowed.");
@@ -87,34 +149,66 @@ assert.ok(
   "all Supabase Auth/PostgREST calls must use the configured public API key",
 );
 
+const expectedAuthTokens = [
+  "invalid-session-token",
+  "non-admin-token",
+  "admin-invalid-token",
+  "unsupported-body-token",
+  "unknown-capability-token",
+  "invalid-json-token",
+  "quota-denied-token",
+  "quota-error-token",
+  "quota-malformed-token",
+  "quota-retry-invalid-token",
+  "quota-reservation-invalid-token",
+].sort();
 const authTokens = requests
   .filter((item) => item.path === "/auth/v1/user")
   .map((item) => item.token)
   .sort();
-assert.deepEqual(authTokens, [
-  "admin-invalid-token",
-  "invalid-session-token",
+assert.deepEqual(authTokens, expectedAuthTokens);
+
+const expectedAdminTokens = [
   "non-admin-token",
+  "admin-invalid-token",
+  "unsupported-body-token",
+  "unknown-capability-token",
+  "invalid-json-token",
   "quota-denied-token",
   "quota-error-token",
-].sort());
-
+  "quota-malformed-token",
+  "quota-retry-invalid-token",
+  "quota-reservation-invalid-token",
+].sort();
 const adminTokens = requests
   .filter((item) => item.path === "/rest/v1/rpc/is_swayphics_admin")
   .map((item) => item.token)
   .sort();
-assert.deepEqual(adminTokens, [
-  "admin-invalid-token",
-  "non-admin-token",
+assert.deepEqual(adminTokens, expectedAdminTokens);
+
+const expectedQuotaTokens = [
   "quota-denied-token",
   "quota-error-token",
-].sort());
-
+  "quota-malformed-token",
+  "quota-retry-invalid-token",
+  "quota-reservation-invalid-token",
+].sort();
 const quotaTokens = requests
   .filter((item) => item.path === "/rest/v1/rpc/innerme_reserve_integration_quota")
   .map((item) => item.token)
   .sort();
-assert.deepEqual(quotaTokens, ["quota-denied-token", "quota-error-token"].sort());
+assert.deepEqual(quotaTokens, expectedQuotaTokens);
+
+for (const token of expectedAdminTokens) {
+  const authIndex = requests.findIndex((item) => item.path === "/auth/v1/user" && item.token === token);
+  const adminIndex = requests.findIndex((item) => item.path === "/rest/v1/rpc/is_swayphics_admin" && item.token === token);
+  assert.ok(authIndex >= 0 && adminIndex > authIndex, `Auth must precede admin RPC for ${token}`);
+}
+for (const token of expectedQuotaTokens) {
+  const adminIndex = requests.findIndex((item) => item.path === "/rest/v1/rpc/is_swayphics_admin" && item.token === token);
+  const quotaIndex = requests.findIndex((item) => item.path === "/rest/v1/rpc/innerme_reserve_integration_quota" && item.token === token);
+  assert.ok(quotaIndex > adminIndex, `Admin check must precede quota reservation for ${token}`);
+}
 
 assert.ok(
   requests.every((item) =>
@@ -132,9 +226,19 @@ console.log(JSON.stringify({
     invalidSessionRejected: true,
     nonAdminRejected: true,
     invalidParametersRejectedBeforeQuota: true,
+    unsupportedBodyFieldRejectedBeforeQuota: true,
+    unknownCapabilityRejectedBeforeQuota: true,
+    invalidJsonRejected: true,
+    nonPostMethodRejected: true,
+    oversizedRequestRejected: true,
+    allowedPreflightAnsweredWithoutAuth: true,
     quotaDenialReturns429AndRetryAfter: true,
     quotaBackendFailureReturns503: true,
+    malformedQuotaDecisionReturns503: true,
+    invalidRetryAfterReturns503: true,
+    invalidReservationIdReturns503: true,
     disallowedOriginRejectedBeforeAuthentication: true,
+    authAdminAndQuotaOrderingVerified: true,
   },
   authUserCalls: authTokens.length,
   adminRpcCalls: adminTokens.length,
