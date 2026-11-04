@@ -50,7 +50,7 @@ The 2000::/3 test is a broad candidate-range check, not a proof that an address 
 
 ## 3. CI regression result
 
-[PASS] [GitHub Actions run #41821649273](https://github.com/NtandoSway7929/SWA/actions/runs/41821649273).
+[PASS] Latest PR-head validation [run #41822104085](https://github.com/NtandoSway7929/SWA/actions/runs/41822104085).
 
 - 60/60 provider-free tests passed.
 - Deno Edge Function type-check passed.
