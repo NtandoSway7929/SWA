@@ -8,6 +8,7 @@ on:
     paths:
       - "supabase/functions/innerme-integration-gateway/pinned-http.mjs"
       - "supabase/functions/innerme-integration-gateway/egress-policy.mjs"
+      - "supabase/functions/innerme-integration-gateway/municipal-money.mjs"
       - "supabase/tests/pinned-http-runtime/**"
       - ".github/workflows/validate-innerme-pinned-http-runtime.yml"
   push:
@@ -24,7 +25,7 @@ permissions:
 
 jobs:
   pinned-http:
-    name: Exercise pinned HTTP module in Supabase Edge Runtime
+    name: Exercise Municipal Money adapter in Supabase Edge Runtime
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -62,6 +63,8 @@ jobs:
             "$RUNNER_TEMP/pinned-http-user/lib/pinned-http.mjs"
           cp "$GITHUB_WORKSPACE/supabase/functions/innerme-integration-gateway/egress-policy.mjs" \
             "$RUNNER_TEMP/pinned-http-user/lib/egress-policy.mjs"
+          cp "$GITHUB_WORKSPACE/supabase/functions/innerme-integration-gateway/municipal-money.mjs" \
+            "$RUNNER_TEMP/pinned-http-user/lib/municipal-money.mjs"
 
       - name: Create isolated mock network
         run: docker network create innerme-pinned-http-ci
@@ -94,7 +97,7 @@ jobs:
           docker logs innerme-pinned-http-runtime
           exit 1
 
-      - name: Exercise the actual pinned HTTP transport module
+      - name: Exercise the full Municipal Money adapter over pinned HTTP
         run: |
           ca_cert="$(cat "$RUNNER_TEMP/pinned-http-certs/ca.crt")"
           payload="$(jq -n --arg ca "$ca_cert" '{caCert: $ca}')"
@@ -109,17 +112,19 @@ jobs:
           printf '%s\n' "$body" | jq .
           test "$status" = "200"
           printf '%s\n' "$body" | jq -e '
-            .status == 200 and
-            .dnsAAndAAAAQueried == true and
-            .connectedToLiteralIp == true and
-            .peerAddressMatched == true and
+            .status == "ok" and
+            .memberCataloguesValidated == 3 and
+            .factsRequests == 1 and
+            .dnsAQueries == 4 and
+            .dnsAAAAQueries == 4 and
+            .literalIpConnections == 4 and
+            .tlsConnections == 4 and
             .tlsSniObservedByServer == "municipaldata.treasury.gov.za" and
             .httpHostObservedByServer == "municipaldata.treasury.gov.za" and
-            .method == "GET" and
-            .pathRestrictedToFactsEndpoint == true and
+            .factsPathRestricted == true and
             .identityEncodingRequested == true and
-            .boundedHttpResponseParsed == true and
-            .redirectFollowed == false and
+            .normalizedAmount == 1250 and
+            .providerSourceAmountPreserved == true and
             .testOnlyPrivateDestination == true
           '
 
