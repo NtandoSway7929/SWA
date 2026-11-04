@@ -74,4 +74,4 @@ const server = tls.createServer({
     );
   });
 });
-server.listen(443, "0.0.0.0", () => console.log("pinned HTTP adapter mock TLS server listening on 443"));
+server.listen(443, "::", () => console.log("dual-stack pinned HTTP adapter mock TLS server listening on 443"));
