@@ -432,6 +432,34 @@ test("uses the pinned transport by default for member catalogues and facts", asy
   assert.equal(result.records[0].amount, 1250);
 });
 
+test("combines caller cancellation with the adapter's request timeout signal", async () => {
+  clearMunicipalMoneyMemberCacheForTests();
+  const caller = new AbortController();
+  let observedSignal;
+
+  const requestPinnedImpl = async (_url, options) => {
+    observedSignal = options.signal;
+    assert.ok(observedSignal, "pinned transport must receive an abort signal");
+    assert.equal(observedSignal.aborted, false);
+    caller.abort(new DOMException("Client disconnected", "AbortError"));
+    assert.equal(observedSignal.aborted, true, "caller abort must reach the transport signal");
+
+    const error = new Error("cancelled");
+    error.code = "provider_aborted";
+    throw error;
+  };
+
+  await assert.rejects(
+    validateMunicipalMoneyMembership(validParameters, {
+      signal: caller.signal,
+      requestPinnedImpl,
+    }),
+    (error) => error instanceof MunicipalMoneyError &&
+      error.code === "provider_metadata_unavailable",
+  );
+  assert.equal(observedSignal.aborted, true);
+});
+
 test("maps pinned transport timeouts to sanitized metadata and provider errors", async () => {
   clearMunicipalMoneyMemberCacheForTests();
   const metadataTimeout = async () => {
