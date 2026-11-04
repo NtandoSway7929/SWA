@@ -6,9 +6,11 @@ import {
   MUNICIPAL_MONEY_API_PATH,
   MunicipalMoneyError,
   buildMunicipalMoneyFactsUrl,
+  clearMunicipalMoneyMemberCacheForTests,
   fetchMunicipalMoneyFacts,
   normalizeMunicipalMoneyResponse,
   validateMunicipalMoneyParameters,
+  validateMunicipalMoneyMembership,
 } from "./municipal-money.mjs";
 
 const validParameters = {
@@ -207,6 +209,104 @@ test("rejects oversized provider bodies", async () => {
     }),
     (error) => error instanceof MunicipalMoneyError && error.code === "provider_response_too_large",
   );
+});
+
+
+function memberResponse(field, code) {
+  return new Response(JSON.stringify({
+    status: "ok",
+    page: 1,
+    page_size: 1000,
+    total_member_count: 1,
+    fields: [field],
+    data: [{ [field]: code }],
+  }), { status: 200, headers: { "content-type": "application/json" } });
+}
+
+test("preflights municipality, amount type and item codes against fixed provider catalogues", async () => {
+  clearMunicipalMoneyMemberCacheForTests();
+  const requested = [];
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    requested.push(parsed);
+    if (parsed.pathname.endsWith("/members/demarcation")) return memberResponse("demarcation.code", "JHB");
+    if (parsed.pathname.endsWith("/members/amount_type")) return memberResponse("amount_type.code", "ACT");
+    if (parsed.pathname.endsWith("/members/item")) return memberResponse("item.code", "0200");
+    throw new Error("Unexpected provider path");
+  };
+
+  await validateMunicipalMoneyMembership(validParameters, { fetchImpl });
+  assert.deepEqual(requested.map((url) => url.pathname), [
+    "/api/cubes/incexp_v2/members/demarcation",
+    "/api/cubes/incexp_v2/members/amount_type",
+    "/api/cubes/incexp_v2/members/item",
+  ]);
+  for (const url of requested) {
+    assert.equal(url.origin, MUNICIPAL_MONEY_API_ORIGIN);
+    assert.equal(url.searchParams.get("pagesize"), "1000");
+  }
+});
+
+test("rejects unknown municipality codes before requesting facts", async () => {
+  clearMunicipalMoneyMemberCacheForTests();
+  let factsRequested = false;
+  await assert.rejects(
+    fetchMunicipalMoneyFacts(validParameters, {
+      fetchImpl: async (url) => {
+        const parsed = new URL(url);
+        if (parsed.pathname.endsWith("/members/demarcation")) {
+          return memberResponse("demarcation.code", "CPT");
+        }
+        if (parsed.pathname.endsWith("/members/amount_type")) {
+          return memberResponse("amount_type.code", "ACT");
+        }
+        if (parsed.pathname.endsWith("/members/item")) {
+          return memberResponse("item.code", "0200");
+        }
+        factsRequested = true;
+        return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+      },
+    }),
+    (error) => error instanceof MunicipalMoneyError &&
+      error.code === "unknown_provider_member" &&
+      error.message.includes("municipality_code"),
+  );
+  assert.equal(factsRequested, false);
+});
+
+test("fails closed when provider member metadata is incomplete or malformed", async () => {
+  clearMunicipalMoneyMemberCacheForTests();
+  await assert.rejects(
+    validateMunicipalMoneyMembership(validParameters, {
+      fetchImpl: async () => new Response(JSON.stringify({
+        status: "ok",
+        page: 1,
+        page_size: 1,
+        total_member_count: 2,
+        fields: ["demarcation.code"],
+        data: [{ "demarcation.code": "JHB" }],
+      }), { status: 200, headers: { "content-type": "application/json" } }),
+    }),
+    (error) => error instanceof MunicipalMoneyError &&
+      error.code === "provider_metadata_invalid_response",
+  );
+});
+
+test("caches validated provider catalogues for ten minutes", async () => {
+  clearMunicipalMoneyMemberCacheForTests();
+  let calls = 0;
+  const fetchImpl = async (url) => {
+    calls += 1;
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith("/members/demarcation")) return memberResponse("demarcation.code", "JHB");
+    if (parsed.pathname.endsWith("/members/amount_type")) return memberResponse("amount_type.code", "ACT");
+    if (parsed.pathname.endsWith("/members/item")) return memberResponse("item.code", "0200");
+    throw new Error("Unexpected provider path");
+  };
+
+  await validateMunicipalMoneyMembership(validParameters, { fetchImpl });
+  await validateMunicipalMoneyMembership(validParameters, { fetchImpl });
+  assert.equal(calls, 3);
 });
 
 test("provider errors are returned as sanitized integration errors", async () => {
