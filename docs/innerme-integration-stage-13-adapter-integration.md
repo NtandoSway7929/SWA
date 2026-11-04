@@ -94,7 +94,11 @@ This does not prove the API contains data for every year in that range. Current 
 
 The current tests passed [run #41820778732](https://github.com/NtandoSway7929/SWA/actions/runs/41820778732): 60/60 provider-free tests, Edge Function type-check and diff check. The full adapter mock passed [run #41820772769](https://github.com/NtandoSway7929/SWA/actions/runs/41820772769). No live API request was made.
 
-## 8. Next gates
+## 8. Dual-stack runtime proof
+
+Stage 19 adds a second complete adapter pass on a dual-stack Docker network with the A response deliberately empty, forcing four literal IPv6 TCP connections and TLS sessions across three catalogue preflights plus facts retrieval. The mock observed the fixed Treasury SNI/Host and the adapter normalized/preserved the facts amount. See [Stage 19 dual-stack runtime verification](innerme-integration-stage-19-dual-stack-runtime.md) and [CI run #41822450213](https://github.com/NtandoSway7929/SWA/actions/runs/41822450213). This is local CI with a ULA test IP and a test-only allow policy, not live public IPv6 or managed Supabase.
+
+## 9. Next gates
 
 1. Independent security review of the adapter, transport, resolver normalization, quota reservation/release ordering, and all error paths.
 2. Runtime tests for empty combined DNS answers, mixed public/private and over-64 answers, invalid peer address, redirect, non-200, malformed/oversized response, and timeout/cancellation.
