@@ -75,15 +75,15 @@ Added `quota-contract.test.mjs`, a static contract test covering:
 - private helper security posture;
 - idempotent lease release and non-decrementing request counts.
 
-The CI workflow now runs the adapter tests and quota contract tests, alongside the Edge Function Deno type-check and whitespace check.
+The CI workflows run the adapter tests and quota contract tests, alongside the Edge Function Deno type-check and whitespace check. A separate PostgreSQL 17 service job executes the exact migration and an SQL integration test in an ephemeral GitHub Actions database. The SQL test creates minimal `auth.uid()` and `public.is_swayphics_admin()` stubs, then exercises the real migration's schema/grant boundaries, non-admin rejection, three-request admin ceiling, project concurrency ceiling, owner-scoped lease release, idempotent release, and non-refunded request counters.
 
-**Important verification limit:** these tests inspect the migration contract; they do not execute PostgreSQL. No database migration has been applied, no SQL compile/run test has been performed, and concurrency has not yet been demonstrated against a live Postgres instance. Those checks require an approved active test database.
+**Verification boundary:** the PostgreSQL job proves that the migration compiles and its RPC behavior works on PostgreSQL 17 under the stated auth stubs. It is not a managed Supabase project test: it does not validate Supabase's actual Auth JWT claim plumbing, `is_swayphics_admin()` implementation, PostgREST exposure settings, or hosted Edge Function runtime. No migration has been applied to any Supabase project.
 
 ## 6. Remaining release blockers
 
 - Confirm the five provisional quota ceilings before any database application.
 - Apply and test the migration only in an explicitly approved isolated Supabase environment; the existing test project is inactive and has not been restored.
-- Run SQL compilation, authorization, row-permission, UTC-boundary, concurrent last-slot, lease-expiry and idempotent-release tests on PostgreSQL.
+- Use PostgreSQL 17 CI execution as a first runtime gate; managed Supabase JWT/RPC behavior, UTC-boundary behavior under controlled clock conditions, advisory-lock last-slot races, and lease-expiry recovery still need dedicated verification.
 - Implement and independently verify connection-time DNS/IP enforcement through a controlled egress gateway. The current fixed-host `fetch()` adapter is not a complete DNS-rebinding control.
 - Obtain the authoritative National Treasury publication date; `retrieved_at` is not a substitute.
 - Verify live provider catalogue contracts/counts and financial-year bounds.
