@@ -3,6 +3,7 @@ import {
   MUNICIPAL_MONEY_CAPABILITY,
   MunicipalMoneyError,
   fetchMunicipalMoneyFacts,
+  validateMunicipalMoneyParameters,
 } from "./municipal-money.mjs";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -30,13 +31,19 @@ function corsHeaders(origin = "") {
   return headers;
 }
 
-function json(data: unknown, status = 200, origin = "") {
+function json(
+  data: unknown,
+  status = 200,
+  origin = "",
+  extraHeaders: Record<string, string> = {},
+) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       ...corsHeaders(origin),
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
+      ...extraHeaders,
     },
   });
 }
@@ -137,7 +144,7 @@ async function authenticateAdmin(req: Request) {
     throw new MunicipalMoneyError("admin_required", "Active Swayphics admin access is required.", 403);
   }
 
-  return userData.user.id;
+  return { userId: userData.user.id, supabase };
 }
 
 Deno.serve(async (req: Request) => {
@@ -169,7 +176,7 @@ Deno.serve(async (req: Request) => {
   const startedAt = Date.now();
 
   try {
-    await authenticateAdmin(req);
+    const { supabase } = await authenticateAdmin(req);
     const rawBody = await readBoundedRequestText(req, 4096);
 
     let body: unknown;
@@ -192,7 +199,93 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Unknown integration capability." }, 404, origin);
     }
 
-    const result = await fetchMunicipalMoneyFacts(body.parameters);
+    // Validate all model-supplied fields before consuming a shared quota slot.
+    validateMunicipalMoneyParameters(body.parameters);
+
+    let quotaDecision: unknown;
+    try {
+      const { data, error } = await supabase.rpc(
+        "innerme_reserve_integration_quota",
+        { p_capability: MUNICIPAL_MONEY_CAPABILITY },
+      );
+      if (error) throw error;
+      quotaDecision = data;
+    } catch {
+      throw new MunicipalMoneyError(
+        "integration_quota_unavailable",
+        "Integration request controls are temporarily unavailable.",
+        503,
+      );
+    }
+
+    if (!isPlainObject(quotaDecision)) {
+      throw new MunicipalMoneyError(
+        "integration_quota_unavailable",
+        "Integration request controls returned an invalid response.",
+        503,
+      );
+    }
+
+    if (quotaDecision.allowed !== true) {
+      const retryAfter = quotaDecision.retry_after_seconds;
+      if (
+        !Number.isInteger(retryAfter) ||
+        Number(retryAfter) < 1 ||
+        Number(retryAfter) > 86400
+      ) {
+        throw new MunicipalMoneyError(
+          "integration_quota_unavailable",
+          "Integration request controls returned an invalid response.",
+          503,
+        );
+      }
+
+      return json({
+        ok: false,
+        error: {
+          code: "integration_quota_exceeded",
+          message: "The integration request limit has been reached. Try again later.",
+        },
+        retry_after_seconds: retryAfter,
+      }, 429, origin, { "Retry-After": String(retryAfter) });
+    }
+
+    const reservationId = quotaDecision.reservation_id;
+    if (typeof reservationId !== "string" || !/^[0-9a-f-]{36}$/i.test(reservationId)) {
+      throw new MunicipalMoneyError(
+        "integration_quota_unavailable",
+        "Integration request controls returned an invalid reservation.",
+        503,
+      );
+    }
+
+    let result;
+    try {
+      result = await fetchMunicipalMoneyFacts(body.parameters);
+    } finally {
+      // The request counters stay consumed; this only frees the in-flight lease.
+      try {
+        const { error: releaseError } = await supabase.rpc(
+          "innerme_release_integration_quota",
+          {
+            p_reservation_id: reservationId,
+            p_capability: MUNICIPAL_MONEY_CAPABILITY,
+          },
+        );
+        if (releaseError) {
+          console.warn("InnerMe integration quota lease release failed.", {
+            capability: MUNICIPAL_MONEY_CAPABILITY,
+            error_code: "quota_lease_release_failed",
+          });
+        }
+      } catch {
+        // The database lease expires automatically if the release RPC is unavailable.
+        console.warn("InnerMe integration quota lease release failed.", {
+          capability: MUNICIPAL_MONEY_CAPABILITY,
+          error_code: "quota_lease_release_failed",
+        });
+      }
+    }
 
     console.info("InnerMe integration invocation completed.", {
       capability: MUNICIPAL_MONEY_CAPABILITY,
