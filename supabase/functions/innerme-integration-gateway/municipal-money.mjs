@@ -1,3 +1,5 @@
+import { requestPinnedMunicipalMoney } from "./pinned-http.mjs";
+
 export const MUNICIPAL_MONEY_PROVIDER = "national_treasury_municipal_money";
 export const MUNICIPAL_MONEY_CAPABILITY = "za.municipal_money.income_expenditure.read";
 export const MUNICIPAL_MONEY_API_ORIGIN = "https://municipaldata.treasury.gov.za";
@@ -9,8 +11,6 @@ export const MAX_PAGE_SIZE = 100;
 export const MAX_PAGE = 1000;
 export const MAX_RESPONSE_BYTES = 512 * 1024;
 export const REQUEST_TIMEOUT_MS = 8_000;
-
-import { requestPinnedMunicipalMoney } from "./pinned-http.mjs";
 
 const ALLOWED_PARAMETERS = new Set([
   "municipality_code",
@@ -481,7 +481,7 @@ export async function fetchMunicipalMoneyFacts(input, options = {}) {
   const parameters = validateMunicipalMoneyParameters(input);
   await validateMunicipalMoneyMembership(parameters, options);
   const url = buildMunicipalMoneyFactsUrl(parameters);
-  const fetchImpl = options.fetchImpl || fetch;
+  const fetchImpl = getProviderFetch(options);
   const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
   const maxResponseBytes = options.maxResponseBytes ?? MAX_RESPONSE_BYTES;
 
