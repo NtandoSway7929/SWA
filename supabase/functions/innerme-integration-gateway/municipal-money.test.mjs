@@ -137,6 +137,16 @@ test("rejects malformed provider payloads and excessive provider rows", () => {
   );
 });
 
+function withValidMemberCatalogues(factsFetch) {
+  return async (url, options) => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith("/members/demarcation")) return memberResponse("demarcation.code", "JHB");
+    if (parsed.pathname.endsWith("/members/amount_type")) return memberResponse("amount_type.code", "ACT");
+    if (parsed.pathname.endsWith("/members/item")) return memberResponse("item.code", "0200");
+    return factsFetch(url, options);
+  };
+}
+
 test("fetch uses GET, the fixed URL, manual redirects and JSON accept header", async () => {
   let captured;
   const fetchImpl = async (url, options) => {
@@ -156,7 +166,7 @@ test("fetch uses GET, the fixed URL, manual redirects and JSON accept header", a
 
   const result = await fetchMunicipalMoneyFacts(
     { ...validParameters, page_size: 1 },
-    { fetchImpl, now: () => new Date("2026-11-04T12:00:00.000Z") },
+    { fetchImpl: withValidMemberCatalogues(fetchImpl), now: () => new Date("2026-11-04T12:00:00.000Z") },
   );
 
   assert.equal(captured.options.method, "GET");
@@ -169,10 +179,10 @@ test("fetch uses GET, the fixed URL, manual redirects and JSON accept header", a
 test("does not follow provider redirects", async () => {
   await assert.rejects(
     fetchMunicipalMoneyFacts(validParameters, {
-      fetchImpl: async () => new Response(null, {
+      fetchImpl: withValidMemberCatalogues(async () => new Response(null, {
         status: 302,
         headers: { location: "https://attacker.example/" },
-      }),
+      })),
     }),
     (error) => error instanceof MunicipalMoneyError && error.code === "provider_redirect_rejected",
   );
@@ -181,17 +191,17 @@ test("does not follow provider redirects", async () => {
 test("rejects non-JSON provider responses and non-success HTTP statuses", async () => {
   await assert.rejects(
     fetchMunicipalMoneyFacts(validParameters, {
-      fetchImpl: async () => new Response("upstream error", {
+      fetchImpl: withValidMemberCatalogues(async () => new Response("upstream error", {
         status: 200,
         headers: { "content-type": "text/html" },
-      }),
+      })),
     }),
     (error) => error instanceof MunicipalMoneyError && error.code === "provider_content_type_rejected",
   );
 
   await assert.rejects(
     fetchMunicipalMoneyFacts(validParameters, {
-      fetchImpl: async () => new Response("unavailable", { status: 503 }),
+      fetchImpl: withValidMemberCatalogues(async () => new Response("unavailable", { status: 503 })),
     }),
     (error) => error instanceof MunicipalMoneyError && error.code === "provider_http_error",
   );
@@ -202,10 +212,10 @@ test("rejects oversized provider bodies", async () => {
   await assert.rejects(
     fetchMunicipalMoneyFacts(validParameters, {
       maxResponseBytes: 128,
-      fetchImpl: async () => new Response(largeBody, {
+      fetchImpl: withValidMemberCatalogues(async () => new Response(largeBody, {
         status: 200,
         headers: { "content-type": "application/json" },
-      }),
+      })),
     }),
     (error) => error instanceof MunicipalMoneyError && error.code === "provider_response_too_large",
   );
@@ -312,9 +322,9 @@ test("caches validated provider catalogues for ten minutes", async () => {
 test("provider errors are returned as sanitized integration errors", async () => {
   await assert.rejects(
     fetchMunicipalMoneyFacts(validParameters, {
-      fetchImpl: async () => {
-        throw new Error("secret upstream hostname and token");
-      },
+      fetchImpl: withValidMemberCatalogues(async () => {
+        throw new Error("upstream request details");
+      }),
     }),
     (error) => error instanceof MunicipalMoneyError &&
       error.code === "provider_unavailable" &&
