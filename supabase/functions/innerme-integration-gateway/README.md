@@ -88,7 +88,7 @@ The gateway now calls `innerme_reserve_integration_quota` using the caller JWT b
 
 The migration `supabase/migrations/20261104110000_innerme_integration_quota.sql` creates isolated tables and RPC helpers under the non-exposed `innerme_private` schema. It is committed to this feature branch only and has **not** been applied to any Supabase project. The staged ceilings (3/admin/minute, 15/project/minute, 30/admin/day, 100/project/day, 3 concurrent/project) count inbound gateway invocations, not individual Treasury HTTP requests. A cold invocation may make up to four provider GETs. These provisional internal safety defaults are not provider limits, require owner confirmation before database application, and do not replace checking Treasury's request allowance.
 
-See [`docs/innerme-integration-stage-7-quota-implementation.md`](../../../docs/innerme-integration-stage-7-quota-implementation.md) for the implementation and verification boundaries.
+See [`docs/innerme-integration-stage-7-quota-implementation.md`](../../../docs/innerme-integration-stage-7-quota-implementation.md) for the quota implementation and [`docs/innerme-integration-stage-15-quota-concurrency.md`](../../../docs/innerme-integration-stage-15-quota-concurrency.md) for the simultaneous reservation, UTC window and lease-recovery proof.
 
 ## Stage 6 infrastructure design
 
