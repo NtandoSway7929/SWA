@@ -77,7 +77,7 @@ node --test supabase/functions/innerme-integration-gateway/*.test.mjs
 
 The suite covers representative IPv4/IPv6 candidates, private/reserved/special-use blocks, malformed literals, IPv4-mapped IPv6, transition/translation ranges, and rejection of a mixed public/private answer set. The gateway Edge Function type-check is also part of the same workflow.
 
-[Gateway CI run](https://github.com/NtandoSway7929/SWA/actions/runs/41814639526)
+[Gateway CI run #41814644624](https://github.com/NtandoSway7929/SWA/actions/runs/41814644624) — success, 33/33 tests passed (8 IP-policy tests plus 25 existing adapter/quota tests), Deno type-check passed, and `git diff --check` passed.
 
 ## 5. Important limitations
 
