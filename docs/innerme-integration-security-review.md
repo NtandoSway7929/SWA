@@ -159,7 +159,7 @@ The production-default request path now:
 4. **Quota limits are provisional.** The SQL migration, simultaneous six-session reservation race, UTC window alignment under a non-UTC session timezone, expired-lease recovery and non-refunded request counters passed in ephemeral PostgreSQL CI [run #41820154737](https://github.com/NtandoSway7929/SWA/actions/runs/41820154737). The tests use auth/admin stubs. Hosted JWT/RPC behavior remains unverified, and the migration has not been applied to any Supabase project. The ceilings still require owner confirmation.
 5. **Deployment config is not prepared.** Add explicit `verify_jwt = true` only in an approved deployment change. No shared Supabase config or secrets were changed in this PR.
 6. **Address policy is manually maintained.** It is a conservative implementation snapshot of IANA special-purpose ranges, not an automatically updated registry feed. Review it before release and on a defined cadence.
-7. **IPv6 socket route remains unproven end-to-end.** IPv6 parsing/peer comparison is unit-tested; the full Edge Runtime mock exercises IPv4 only.
+7. **Managed IPv6 deployment remains unverified.** Stage 19 proves the full adapter's IPv6-only pinned TCP/TLS path in the local Edge Runtime using a ULA test address and test-only policy. A managed Supabase project and public IPv6 Treasury route are not yet tested.
 8. **No chat/action integration.** The gateway is not called from `swayphics-ai`, InnerMe chat, or an Action Centre workflow. Keep provider content as untrusted evidence if and when the governance path is added.
 9. **Deno API stability.** `Deno.connect` is marked unstable. The tested local Edge Runtime image supports the needed calls; hosted managed-runtime availability and long-term compatibility are not guaranteed by this CI evidence.
 
@@ -223,3 +223,14 @@ The policy blocks all registered special-purpose prefixes reviewed, either direc
 Final PR-head regression CI [run #41822104085](https://github.com/NtandoSway7929/SWA/actions/runs/41822104085) passed 60/60 tests, Deno type-check and diff check. The full adapter mock also passed [run #41822064879](https://github.com/NtandoSway7929/SWA/actions/runs/41822064879). See [Stage 18 IANA address-policy audit](innerme-integration-stage-18-iana-address-policy-audit.md).
 
 The lists are manually maintained and need a defined review cadence. The complete local Edge Runtime mock exercises IPv4 sockets; IPv6 parsing/policy/peer comparison are unit-tested, but an end-to-end IPv6 socket route has not been proven.
+
+
+---
+
+## Stage 19 update — full adapter over IPv6
+
+The previous residual concern that the local Edge Runtime had only exercised IPv4 sockets is closed. The dual-stack mock now runs the full Municipal Money adapter once using IPv4 and again with A deliberately empty so the same pinned transport must use IPv6.
+
+[GitHub Actions run #41822450213](https://github.com/NtandoSway7929/SWA/actions/runs/41822450213) passed. In the IPv6-only pass, three member catalogue lookups and one facts request used four A queries (empty), four AAAA queries, four literal-IP connections to `fd00:dead:beef::2`, and four TLS sessions. Peer matching succeeded, and the mock observed the expected Treasury SNI and Host header. The adapter normalized the mock amount and preserved its source value.
+
+This used a Docker ULA and a test-only address-policy override. It proves the local pinned Edge Runtime IPv6 socket path, not a publicly routed IPv6 destination or a managed Supabase deployment. The managed platform permission/runtime gate remains open.
