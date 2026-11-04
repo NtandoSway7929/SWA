@@ -3,13 +3,13 @@
 **Review date:** 4 November 2026  
 **Branch:** `feature/innerme-municipal-money-gateway`  
 **PR:** #147  
-**Status:** Static review only. Not deployed. No production schema, secrets, or function configuration changed.
+**Status:** Feature-branch implementation with static review and local CI verification only. Not deployed. No production schema, secrets, shared Supabase configuration, or function deployment changed.
 
 ## Decision
 
 **Keep this as an isolated draft. Do not deploy or connect it to InnerMe chat yet.**
 
-The handler has a meaningful authentication and destination boundary, but several important release requirements remain open: shared rate limits, connection-time DNS/IP enforcement, live provider verification, publication-date attribution, and isolated runtime testing.
+The implementation now has a fixed provider capability, caller-JWT/admin checks, shared quota reservation, and a pinned DNS/TCP/TLS transport that validates the literal socket peer. The quota migration and concurrency behavior passed in ephemeral PostgreSQL; the complete adapter passed in a pinned local Edge Runtime against IPv4 and IPv6 mocks. These are feature-branch and local-CI results, not managed Supabase or live Treasury validation. Remaining release gates are managed Supabase verification, provider contract/live-data confirmation (including the exact publication date), owner approval of provisional quota ceilings, explicit deployment configuration, and independent security review.
 
 ## 1. Authentication
 
@@ -29,15 +29,14 @@ The shared `supabase/config.toml` was intentionally not changed in this PR. Supa
 ## 2. Network / SSRF
 
 Implemented controls:
-- Compile-time HTTPS origin: `municipaldata.treasury.gov.za`.
-- Fixed `incexp_v2` facts and member paths.
-- Model inputs cannot supply URL, hostname, port, path, method, dataset, redirect target, or raw filter expression.
-- GET only; manual redirects; 3xx rejected.
-- JSON-only provider responses with timeout and byte limits.
+- Compile-time HTTPS origin: `municipaldata.treasury.gov.za`; fixed `incexp_v2` facts and member paths.
+- Model inputs cannot supply a URL, host, port, path, method, dataset, redirect target, or raw filter expression.
+- The production-default transport resolves both A and AAAA records, validates the complete combined answer set against the maintained address policy, and fails closed on empty, malformed, mixed-safe/unsafe, or over-cap answers.
+- It connects to a validated literal IP and compares the actual socket peer to that IP, avoiding the DNS lookup / ordinary-Fetch time-of-check-to-time-of-use gap.
+- TLS uses the fixed Treasury hostname with certificate hostname verification and the expected SNI/Host identity; redirects are not followed.
+- The bounded HTTP parser accepts only the fixed GET routes and rejects invalid framing, compressed bodies, non-200 responses, and oversized responses.
 
-**Residual blocker:** DNS rebinding / connection-time IP validation is not implemented. A fixed host and redirect rejection reduce model-controlled SSRF but do not prove the hostname resolves to public IPs at the moment the connection is made. A DNS lookup followed by ordinary `fetch()` would still have a time-of-check/time-of-use gap.
-
-Before production, use a controlled outbound proxy/gateway or a documented platform network control that validates the resolved destination at connection time. Do not claim the current function is fully SSRF-proof.
+**Verification boundary:** The complete adapter and pinned transport passed in the pinned local Supabase Edge Runtime against IPv4 and IPv6 test mocks (Stages 12, 13 and 19). The IPv6 test used a Docker ULA and a test-only address-policy override. This is local runtime evidence, not proof of public-route reachability, managed Supabase permission policy, or a third-party penetration test. The IANA deny lists are manually maintained and need a review cadence.
 
 ## 3. Rate limiting and abuse controls
 
@@ -49,7 +48,7 @@ The gateway now integrates a shared quota reservation/release mechanism in the f
 - HTTP 429 with `Retry-After` on denial; HTTP 503 and no provider call if the quota RPC is unavailable or malformed.
 - A 60-second lease is released in `finally`; the request count remains consumed after upstream failure.
 
-The migration is not applied to either Supabase project. Its numeric ceilings are provisional internal defaults and must be confirmed by the owner before database application. The added quota contract test is static; PostgreSQL behavior, grants, RLS, concurrency and runtime failure paths remain unverified.
+The migration is not applied to either Supabase project. Its numeric ceilings are provisional internal defaults and must be confirmed by the owner before database application. The exact migration, authorization/grant assertions, simultaneous six-session quota race, UTC-window alignment, lease expiry/recovery, and non-refunded request counters passed in ephemeral PostgreSQL 17 CI [run #41820154737](https://github.com/NtandoSway7929/SWA/actions/runs/41820154737). Those tests use minimal `auth.uid()` and admin-function stubs; actual managed Supabase JWT, PostgREST grants, and Edge Function interaction remain unverified.
 
 Supabase's nested Edge Function call budget does not govern inbound calls to this endpoint or outbound calls to third-party APIs.
 
@@ -90,10 +89,11 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 
 ## 8. Verification status
 
-- Earlier CI run [41787886223](https://github.com/NtandoSway7929/SWA/actions/runs/41787886223) passed before the latest strict monetary-record validation change.
-- The branch CI workflow now includes a static quota migration contract test as well as the provider adapter tests; a fresh run is required for the latest branch state.
-- Provider-free tests use injected responses; they do not call National Treasury.
-- No live provider API call, deployed Edge Function test, Supabase JWT round-trip, admin-RPC runtime test, PostgreSQL migration execution, concurrency test, quota runtime/failure-path test, or DNS/egress security test has been performed.
+- Provider-free gateway validation [run #41822104085](https://github.com/NtandoSway7929/SWA/actions/runs/41822104085): **60/60 tests passed**, Deno Edge Function type-check passed, and `git diff --check` passed.
+- Full adapter dual-stack runtime proof [run #41822450213](https://github.com/NtandoSway7929/SWA/actions/runs/41822450213): success in pinned `supabase/edge-runtime:v1.77.9`; three catalogue preflights plus one facts request passed over IPv4 and IPv6-only paths, with literal-IP peer matching and four TLS sessions per path.
+- Quota migration/concurrency proof [run #41820154737](https://github.com/NtandoSway7929/SWA/actions/runs/41820154737): success in ephemeral PostgreSQL 17 using minimal Supabase auth/admin stubs.
+- Provider-free tests use injected responses and do not call National Treasury. The local Edge Runtime proof uses a private mock, not Treasury.
+- No live provider API request, managed Supabase deployment, actual Supabase JWT/admin-RPC round-trip, hosted TCP permission test, or independent penetration test has been performed.
 
 ## 9. Release checklist
 
@@ -102,12 +102,15 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 - [ ] Confirm financial-year and period bounds from current metadata.
 - [ ] Obtain and attach the authoritative publication date.
 - [ ] Confirm the provisional quota ceilings and apply the migration only to an explicitly approved isolated Supabase environment.
-- [x] Run ephemeral PostgreSQL 17 authorization, RLS, concurrent last-slot, UTC window, lease expiry and idempotent-release tests. [Run #41820154737](https://github.com/NtandoSway7929/SWA/actions/runs/41820154737)
-- [ ] Verify the same authorization/RPC behavior in a managed Supabase test environment using the actual Auth JWT and admin function.
-- [ ] Implement connection-time DNS/IP destination enforcement.
-- [ ] Add explicit `verify_jwt = true` in deployment configuration.
-- [ ] Deploy only to an approved isolated Supabase environment.
-- [ ] Test valid admin, non-admin, expired/missing token, origin, upstream failure, body/response bounds, and quota paths.
+- [x] Implement pinned connection-time DNS/IP validation, literal-IP TCP connection, socket-peer matching, fixed-host TLS identity, and redirect rejection. See Stages 11–13.
+- [x] Exercise the full adapter and pinned transport in the pinned local Edge Runtime over IPv4 and IPv6-only mock paths. [Run #41822450213](https://github.com/NtandoSway7929/SWA/actions/runs/41822450213). This does not establish managed Supabase or public IPv6 routing.
+- [x] Run ephemeral PostgreSQL 17 migration, authorization/grant, RLS, concurrent last-slot, UTC window, lease expiry/recovery and idempotent-release tests. [Run #41820154737](https://github.com/NtandoSway7929/SWA/actions/runs/41820154737)
+- [ ] Live-check `incexp_v2` catalogue paths, exact response shape, current catalogue counts, available financial years/periods, and provider request allowance through an approved process.
+- [ ] Obtain an authoritative publication date applicable to the queried data and attach it to the response before any onward use.
+- [ ] Confirm the provisional quota ceilings before applying the migration.
+- [ ] Verify authorization/RPC behavior in an approved managed Supabase test environment using the actual Auth JWT and admin function.
+- [ ] Add explicit `verify_jwt = true` in an approved deployment change; shared `supabase/config.toml` remains untouched.
+- [ ] After separate approval and cost review, validate the deployed function, hosted TCP permissions, origin/JWT/admin paths, upstream failures, body/response limits, cancellation and quota paths in the isolated environment.
 - [ ] Review logs for tokens, prompts, user IDs, customer data, and raw provider payloads.
 - [ ] Complete independent security review and obtain explicit owner approval before production deployment or chat integration.
 
@@ -122,6 +125,8 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 
 
 ---
+
+> **Chronology note:** Sections 1–9 above are the current consolidated review after Stage 19. The numbered Stage 14–19 entries below are chronological evidence snapshots; later stages supersede earlier status statements where they differ.
 
 ## Stage 14 update — adapter integration and focused security reassessment
 
