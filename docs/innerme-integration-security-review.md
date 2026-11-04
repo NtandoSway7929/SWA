@@ -41,11 +41,17 @@ Before production, use a controlled outbound proxy/gateway or a documented platf
 
 ## 3. Rate limiting and abuse controls
 
-The function authenticates active admins and uses an in-memory ten-minute member-catalogue cache. That cache is a performance optimisation, not a quota.
+The gateway now integrates a shared quota reservation/release mechanism in the feature branch:
+- Separate counters and in-flight leases in a non-exposed `innerme_private` schema.
+- One fixed capability; active-admin checks are repeated in the private helpers.
+- Transaction-scoped advisory locking serializes quota checks and counter updates.
+- Per-admin and project-wide minute/day ceilings plus a project-wide concurrency cap.
+- HTTP 429 with `Retry-After` on denial; HTTP 503 and no provider call if the quota RPC is unavailable or malformed.
+- A 60-second lease is released in `finally`; the request count remains consumed after upstream failure.
 
-**Blocker:** There is no shared, persistent per-admin or project-wide rate limit, nor a shared concurrent-request ceiling. Supabase's nested Edge Function call budget does not govern inbound calls to this endpoint or outbound calls to third-party APIs.
+The migration is not applied to either Supabase project. Its numeric ceilings are provisional internal defaults and must be confirmed by the owner before database application. The added quota contract test is static; PostgreSQL behavior, grants, RLS, concurrency and runtime failure paths remain unverified.
 
-Before production, add a shared atomic quota mechanism for per-admin, per-capability and project-wide invocation limits, concurrency limits, metadata refresh budgets, explicit 429 handling, and fail-closed behaviour if the quota service is unavailable. This requires a separately reviewed shared-store / database design; no such production change is included here.
+Supabase's nested Edge Function call budget does not govern inbound calls to this endpoint or outbound calls to third-party APIs.
 
 ## 4. Request and response validation
 
@@ -85,9 +91,9 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 ## 8. Verification status
 
 - Earlier CI run [41787886223](https://github.com/NtandoSway7929/SWA/actions/runs/41787886223) passed before the latest strict monetary-record validation change.
-- A fresh CI run is required for the latest source state.
+- The branch CI workflow now includes a static quota migration contract test as well as the provider adapter tests; a fresh run is required for the latest branch state.
 - Provider-free tests use injected responses; they do not call National Treasury.
-- No live provider API call, deployed Edge Function test, Supabase JWT round-trip, admin-RPC runtime test, load test, rate-limit test, or DNS/egress security test has been performed.
+- No live provider API call, deployed Edge Function test, Supabase JWT round-trip, admin-RPC runtime test, PostgreSQL migration execution, concurrency test, quota runtime/failure-path test, or DNS/egress security test has been performed.
 
 ## 9. Release checklist
 
@@ -95,7 +101,8 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 - [ ] Confirm municipality, amount-type and item catalogue counts fit the 1,000-member cap.
 - [ ] Confirm financial-year and period bounds from current metadata.
 - [ ] Obtain and attach the authoritative publication date.
-- [ ] Implement shared atomic rate limits and concurrency ceilings.
+- [ ] Confirm the provisional quota ceilings and apply the migration only to an explicitly approved isolated Supabase environment.
+- [ ] Run PostgreSQL authorization, RLS, concurrent last-slot, UTC boundary, lease expiry and idempotent-release tests.
 - [ ] Implement connection-time DNS/IP destination enforcement.
 - [ ] Add explicit `verify_jwt = true` in deployment configuration.
 - [ ] Deploy only to an approved isolated Supabase environment.
