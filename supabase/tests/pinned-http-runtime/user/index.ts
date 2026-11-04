@@ -1,4 +1,7 @@
-import { fetchMunicipalMoneyFacts } from "./lib/municipal-money.mjs";
+import {
+  clearMunicipalMoneyMemberCacheForTests,
+  fetchMunicipalMoneyFacts,
+} from "./lib/municipal-money.mjs";
 import {
   MUNICIPAL_MONEY_HOST,
   requestPinnedMunicipalMoney,
@@ -31,6 +34,7 @@ Deno.serve(async (request: Request) => {
   }
 
   let localMockIp = "";
+  let localMockIpv6 = "";
   let aLookups = 0;
   let aaaaLookups = 0;
   let tcpConnections = 0;
@@ -54,6 +58,9 @@ Deno.serve(async (request: Request) => {
       if (recordType === "A") {
         assert(addresses.length === 1, "local mock DNS alias must resolve to exactly one A record");
         localMockIp = addresses[0];
+      } else {
+        assert(addresses.length === 1, "local mock DNS alias must resolve to exactly one AAAA record");
+        localMockIpv6 = addresses[0];
       }
       return addresses;
     },
@@ -70,9 +77,11 @@ Deno.serve(async (request: Request) => {
   // The only exception is this local CI fixture's private Docker IP. It is
   // derived from the mock DNS alias and cannot be changed by request data.
   const testOnlyAddressPolicy = (addresses: string[]) => ({
-    allowed: addresses.length === 1 &&
-      addresses[0] === localMockIp &&
-      localMockIp.length > 0,
+    allowed: addresses.length === 2 &&
+      addresses.includes(localMockIp) &&
+      addresses.includes(localMockIpv6) &&
+      localMockIp.length > 0 &&
+      localMockIpv6.length > 0,
   });
 
   let lastTransportErrorCode: string | null = null;
@@ -132,6 +141,63 @@ Deno.serve(async (request: Request) => {
   assert(tcpConnections === 4, "expected four literal-IP TCP connections");
   assert(tlsConnections === 4, "expected four pinned TLS connections");
 
+  // Run the complete adapter a second time with A deliberately empty so
+  // the real transport must connect over the mock's IPv6 literal address.
+  clearMunicipalMoneyMemberCacheForTests();
+  let ipv6AQueries = 0;
+  let ipv6AAAAQueries = 0;
+  let ipv6TcpConnections = 0;
+  let ipv6TlsConnections = 0;
+  let ipv6MockAddress = "";
+
+  const ipv6Runtime = {
+    async resolveDns(hostname: string, recordType: string, signal?: AbortSignal) {
+      assert(hostname === MUNICIPAL_MONEY_HOST, "IPv6 test queried an unexpected hostname");
+      if (recordType === "A") {
+        ipv6AQueries += 1;
+        return [];
+      }
+      if (recordType !== "AAAA") throw new Error("unexpected IPv6 test DNS record type");
+      ipv6AAAAQueries += 1;
+      const addresses = await Deno.resolveDns("mock-pinned-http", "AAAA", { signal });
+      assert(addresses.length === 1, "IPv6 mock alias must resolve to exactly one AAAA record");
+      ipv6MockAddress = addresses[0];
+      return addresses;
+    },
+    connect(args: { hostname: string; port: number; signal?: AbortSignal }) {
+      ipv6TcpConnections += 1;
+      return Deno.connect(args);
+    },
+    startTls(connection: Deno.Conn, options: Deno.StartTlsOptions) {
+      ipv6TlsConnections += 1;
+      return Deno.startTls(connection, { ...options, caCerts: [caCert] });
+    },
+  };
+  const ipv6OnlyTestPolicy = (addresses: string[]) => ({
+    allowed: addresses.length === 1 &&
+      addresses[0] === ipv6MockAddress &&
+      ipv6MockAddress.includes(":"),
+  });
+
+  const ipv6Result = await fetchMunicipalMoneyFacts(PARAMETERS, {
+    transportRuntime: ipv6Runtime,
+    transportAddressPolicy: ipv6OnlyTestPolicy,
+    timeoutMs: 5_000,
+    maxResponseBytes: 8 * 1024,
+    now: () => new Date("2026-11-04T12:00:00.000Z"),
+  });
+  assert(ipv6Result.status === "ok", "IPv6-only adapter request should succeed");
+  assert(ipv6Result.records.length === 1, "IPv6-only adapter should return one facts record");
+  assert(ipv6Result.records[0].amount === 1250, "IPv6-only adapter returned unexpected amount");
+  const ipv6Probe = ipv6Result.records[0].transport_probe;
+  assert(ipv6Probe?.servername === MUNICIPAL_MONEY_HOST, "IPv6 TLS SNI mismatch");
+  assert(ipv6Probe?.hostHeader === MUNICIPAL_MONEY_HOST, "IPv6 HTTP Host mismatch");
+  assert(ipv6Probe?.method === "GET", "IPv6 adapter sent a non-GET request");
+  assert(ipv6AQueries === 4, "IPv6 run should query A once per request");
+  assert(ipv6AAAAQueries === 4, "IPv6 run should query AAAA once per request");
+  assert(ipv6TcpConnections === 4, "IPv6 run should open four pinned TCP connections");
+  assert(ipv6TlsConnections === 4, "IPv6 run should complete four TLS sessions");
+
   return Response.json({
     status: result.status,
     memberCataloguesValidated: 3,
@@ -148,5 +214,14 @@ Deno.serve(async (request: Request) => {
     normalizedAmount: result.records[0].amount,
     providerSourceAmountPreserved: true,
     testOnlyPrivateDestination: true,
+    ipv6MemberCataloguesValidated: 3,
+    ipv6FactsRequests: 1,
+    ipv6DnsAQueries: ipv6AQueries,
+    ipv6DnsAAAAQueries: ipv6AAAAQueries,
+    ipv6LiteralIpConnections: ipv6TcpConnections,
+    ipv6TlsConnections: ipv6TlsConnections,
+    ipv6ConnectedToMock: ipv6MockAddress,
+    ipv6TlsSniObservedByServer: ipv6Probe.servername,
+    ipv6HttpHostObservedByServer: ipv6Probe.hostHeader,
   });
 });
