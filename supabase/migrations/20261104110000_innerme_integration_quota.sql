@@ -56,7 +56,7 @@ set search_path = ''
 as $function$
 declare
   v_admin_user_id uuid := auth.uid();
-  v_now timestamptz := pg_catalog.clock_timestamp();
+  v_now timestamptz;
   v_minute_start timestamptz;
   v_day_start timestamptz;
   v_project_scope_id text := pg_catalog.current_database();
@@ -78,16 +78,19 @@ begin
     raise invalid_parameter_value using message = 'Integration capability is not approved.';
   end if;
 
-  v_minute_start :=
-    (pg_catalog.date_trunc('minute', v_now at time zone 'UTC') at time zone 'UTC');
-  v_day_start :=
-    (pg_catalog.date_trunc('day', v_now at time zone 'UTC') at time zone 'UTC');
-
   -- One transaction lock per capability keeps the four counters and concurrency
   -- check serialised, so concurrent callers cannot reserve the same remaining slot.
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended('innerme.integration.quota:' || p_capability, 0)
   );
+
+  -- Capture time after acquiring the lock so a wait across a minute/day boundary
+  -- cannot place the reservation into a stale quota window.
+  v_now := pg_catalog.clock_timestamp();
+  v_minute_start :=
+    (pg_catalog.date_trunc('minute', v_now at time zone 'UTC') at time zone 'UTC');
+  v_day_start :=
+    (pg_catalog.date_trunc('day', v_now at time zone 'UTC') at time zone 'UTC');
 
   -- Remove expired leases and old released leases. An abandoned request therefore
   -- cannot permanently occupy a concurrency slot.
