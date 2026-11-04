@@ -82,6 +82,21 @@ const server = createServer(async (request, response) => {
         retry_after_seconds: 17,
       });
     }
+    if (token === "quota-malformed-token") {
+      return sendJson(response, 200, "not-an-object");
+    }
+    if (token === "quota-retry-invalid-token") {
+      return sendJson(response, 200, {
+        allowed: false,
+        retry_after_seconds: 0,
+      });
+    }
+    if (token === "quota-reservation-invalid-token") {
+      return sendJson(response, 200, {
+        allowed: true,
+        reservation_id: "not-a-valid-reservation-id",
+      });
+    }
     return sendJson(response, 500, {
       code: "unexpected_test_request",
       message: "The runtime test must not reach an allowed provider request",
