@@ -401,8 +401,17 @@ function getDefaultRuntime() {
   if (!deno) throw new PinnedHttpError("runtime_unavailable", "Pinned transport requires the Deno network runtime.", 500);
 
   return {
-    resolveDns: (hostname, recordType, signal) =>
-      deno.resolveDns(hostname, recordType, { signal }),
+    resolveDns: async (hostname, recordType, signal) => {
+      try {
+        return await deno.resolveDns(hostname, recordType, { signal });
+      } catch (error) {
+        // DNS NODATA/NXDOMAIN for one address family is an empty answer for
+        // that family, not a resolver outage. The combined A+AAAA set is
+        // still validated and an empty combined set is rejected.
+        if (error instanceof deno.errors.NotFound) return [];
+        throw error;
+      }
+    },
     connect: ({ hostname, port, signal }) =>
       deno.connect({ hostname, port, transport: "tcp", signal }),
     startTls: (connection, options) =>
