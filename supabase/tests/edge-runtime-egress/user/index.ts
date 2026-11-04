@@ -7,6 +7,14 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+function safeClose(resource: { close(): void }) {
+  try {
+    resource.close();
+  } catch {
+    // The Edge Runtime may already close the resource when the peer sends EOF.
+  }
+}
+
 async function openPinnedTlsConnection(ip: string, tlsHost: string, caCert: string) {
   const tcp = await Deno.connect({ hostname: ip, port: MOCK_TLS_PORT });
   const peer = tcp.remoteAddr;
@@ -24,7 +32,7 @@ async function openPinnedTlsConnection(ip: string, tlsHost: string, caCert: stri
     });
     return { tls, peerIp: peer.hostname };
   } catch (error) {
-    tcp.close();
+    safeClose(tcp);
     throw error;
   }
 }
@@ -94,12 +102,12 @@ Deno.serve(async (request: Request) => {
     await writer.write(requestBytes);
     writer.releaseLock();
   } catch (error) {
-    tls.close();
+    safeClose(tls);
     throw error;
   }
 
   const rawResponse = await readBoundedResponse(tls);
-  tls.close();
+  safeClose(tls);
 
   const separator = rawResponse.indexOf("\r\n\r\n");
   assert(separator >= 0, "mock server returned malformed HTTP");
@@ -125,10 +133,10 @@ Deno.serve(async (request: Request) => {
       hostname: "wrong-host.invalid",
       caCerts: [caCert],
     });
-    wrongTls.close();
+    safeClose(wrongTls);
   } catch {
     wrongHostnameRejected = true;
-    wrongHostTcp.close();
+    safeClose(wrongHostTcp);
   }
   assert(wrongHostnameRejected, "TLS accepted a certificate for the wrong hostname");
 
