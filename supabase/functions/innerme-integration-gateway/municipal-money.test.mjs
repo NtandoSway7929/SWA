@@ -41,6 +41,25 @@ test("accepts the narrow documented capability parameters and applies safe defau
   });
 });
 
+test("caps financial year end at the current UTC calendar year", () => {
+  const currentYear = new Date().getUTCFullYear();
+  assert.equal(
+    validateMunicipalMoneyParameters({
+      ...validParameters,
+      financial_year: currentYear,
+    }).financial_year,
+    currentYear,
+  );
+  assert.throws(
+    () => validateMunicipalMoneyParameters({
+      ...validParameters,
+      financial_year: currentYear + 1,
+    }),
+    (error) => error instanceof MunicipalMoneyError &&
+      error.code === "invalid_parameter",
+  );
+});
+
 test("rejects arbitrary parameters and model-supplied URL controls", () => {
   assert.throws(
     () => validateMunicipalMoneyParameters({ ...validParameters, url: "https://attacker.test" }),
