@@ -83,7 +83,18 @@ The provider-free gateway suite passed [run #41818526598](https://github.com/Nta
 - No Supabase function was deployed, no config/secret/network restriction changed, and the inactive test project was not restored.
 - The capability is not yet connected to swayphics-ai or the InnerMe UI/action system.
 
-## 6. Next gates
+
+## 7. Provider-documented contract and year bounds
+
+A subsequent public-documentation review is recorded in [Stage 16](innerme-integration-stage-16-provider-contract-review.md).
+
+The official API docs describe incexp_v2 as Section 71-level mSCOA income-and-expenditure data from FY 2019–20 onwards and define financial_year_end.year as the calendar year at the end of the financial year. The adapter's lower bound remains 2020; its earlier arbitrary upper bound of 2035 has been removed. The upper bound now follows the current UTC calendar year to reject obvious future-year requests.
+
+This does not prove the API contains data for every year in that range. Current v2 year availability and the public site's year selector need query-level verification. Latest official page banner describes 2026 Q2 data still undergoing completeness/integrity verification; it is not the publication date required by the terms.
+
+The current tests passed [run #41820778732](https://github.com/NtandoSway7929/SWA/actions/runs/41820778732): 60/60 provider-free tests, Edge Function type-check and diff check. The full adapter mock passed [run #41820772769](https://github.com/NtandoSway7929/SWA/actions/runs/41820772769). No live API request was made.
+
+## 8. Next gates
 
 1. Independent security review of the adapter, transport, resolver normalization, quota reservation/release ordering, and all error paths.
 2. Runtime tests for empty combined DNS answers, mixed public/private and over-64 answers, invalid peer address, redirect, non-200, malformed/oversized response, and timeout/cancellation.
