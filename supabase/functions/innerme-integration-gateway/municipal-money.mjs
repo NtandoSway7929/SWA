@@ -206,6 +206,7 @@ export function normalizeMunicipalMoneyResponse(
     dataset: "incexp_v2",
     query: parameters,
     status: "ok",
+    trust_boundary: "untrusted_external_data",
     fields,
     records,
     pagination: {
