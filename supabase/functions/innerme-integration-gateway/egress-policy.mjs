@@ -117,9 +117,12 @@ const IPV4_DENY = Object.freeze([
   // Conservative: block the whole IETF protocol-assignment /24, including
   // narrower globally-reachable exceptions, to avoid special-case routing.
   ["192.0.0.0/24", "ietf_protocol_assignments"],
+  ["192.31.196.0/24", "special_purpose_anycast"],
+  ["192.52.193.0/24", "special_purpose_amt"],
   ["192.0.2.0/24", "documentation"],
   ["192.88.99.0/24", "deprecated_6to4_relay"],
   ["192.168.0.0/16", "private_use"],
+  ["192.175.48.0/24", "special_purpose_anycast"],
   ["198.18.0.0/15", "benchmarking"],
   ["198.51.100.0/24", "documentation"],
   ["203.0.113.0/24", "documentation"],
@@ -140,6 +143,7 @@ const IPV6_DENY = Object.freeze([
   ["2001:2::/48", "benchmarking"],
   ["2001:db8::/32", "documentation"],
   ["2002::/16", "deprecated_6to4"],
+  ["2620:4f:8000::/48", "special_purpose_anycast"],
   ["3fff::/20", "documentation"],
   ["5f00::/16", "segment_routing_special_purpose"],
 ].map(([cidr, reason]) => Object.freeze({ ...parseCidr(cidr), reason })));
@@ -168,7 +172,7 @@ export function validateOutboundAddress(address) {
     return Object.freeze({
       allowed: true,
       family: 4,
-      reason: "non_special_ipv4_candidate",
+      reason: "not_blocked_ipv4_candidate",
     });
   }
 
