@@ -220,6 +220,6 @@ The policy blocks all registered special-purpose prefixes reviewed, either direc
 
 **Important qualification:** IANA states that special-purpose prefixes are not guaranteed routability in any local/global context. Its IPv6 GUA registry also says unlisted space inside `2000::/3` is reserved for future allocation. Consequently, the current policy's “allowed” result means “inside a broad GUA candidate range and not in the maintained deny list”; it does not prove current allocation or BGP routability. A registry-driven positive allowlist would be a separate future design.
 
-Regression CI [run #41821649273](https://github.com/NtandoSway7929/SWA/actions/runs/41821649273) passed 60/60 tests, Deno type-check and diff check. See [Stage 18 IANA address-policy audit](innerme-integration-stage-18-iana-address-policy-audit.md).
+Final PR-head regression CI [run #41822104085](https://github.com/NtandoSway7929/SWA/actions/runs/41822104085) passed 60/60 tests, Deno type-check and diff check. The full adapter mock also passed [run #41822064879](https://github.com/NtandoSway7929/SWA/actions/runs/41822064879). See [Stage 18 IANA address-policy audit](innerme-integration-stage-18-iana-address-policy-audit.md).
 
 The lists are manually maintained and need a defined review cadence. The complete local Edge Runtime mock exercises IPv4 sockets; IPv6 parsing/policy/peer comparison are unit-tested, but an end-to-end IPv6 socket route has not been proven.
