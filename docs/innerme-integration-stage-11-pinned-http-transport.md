@@ -71,15 +71,14 @@ Coverage includes IPv4/IPv6 classification, answer-set bounds, mixed public/priv
 
 ## Integration boundary
 
-This is a standalone, tested module. The existing `municipal-money.mjs` adapter still uses its original Fetch request path. The pinned transport has not yet called National Treasury or run in a managed Supabase project.
+The Municipal Money adapter now uses this transport by default for both member-catalogue and facts requests. The adapter retains an explicitly injected Fetch implementation as a provider-free test seam; it is not the production default. See [Stage 13 adapter integration](innerme-integration-stage-13-adapter-integration.md) for the wiring and full-flow test.
 
-See [Stage 12 runtime proof](innerme-integration-stage-12-pinned-http-runtime.md).
+No live Treasury request or managed Supabase project test has been performed.
 
 ## Remaining release review
 
-Before switching the adapter to this transport:
+Before release:
 - complete the independent security review;
-- integrate it for both member catalogue and facts requests;
 - verify provider response/catalogue compatibility;
 - test IPv4 and IPv6 socket paths;
 - verify resolver no-answer and error behavior for both A and AAAA;
