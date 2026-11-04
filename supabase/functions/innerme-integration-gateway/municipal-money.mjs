@@ -146,6 +146,133 @@ export function buildMunicipalMoneyFactsUrl(input) {
   return url;
 }
 
+const MEMBER_CATALOGUES = Object.freeze({
+  municipality_code: { member: "demarcation", field: "demarcation.code" },
+  amount_type_code: { member: "amount_type", field: "amount_type.code" },
+  item_code: { member: "item", field: "item.code" },
+});
+const MEMBER_CATALOGUE_PAGE_SIZE = 1000;
+const MEMBER_CATALOGUE_CACHE_TTL_MS = 10 * 60 * 1000;
+const memberCatalogueCache = new Map();
+
+export function clearMunicipalMoneyMemberCacheForTests() {
+  memberCatalogueCache.clear();
+}
+
+async function fetchMunicipalMoneyMemberCodes(parameterName, options = {}) {
+  const definition = MEMBER_CATALOGUES[parameterName];
+  if (!definition) {
+    throw new MunicipalMoneyError("unsupported_member_catalogue", "The requested provider catalogue is not approved.", 500);
+  }
+
+  const nowMs = options.nowMs || Date.now;
+  const cached = memberCatalogueCache.get(definition.member);
+  if (cached && cached.expiresAt > nowMs()) return cached.codes;
+
+  const fetchImpl = options.fetchImpl || fetch;
+  const url = new URL(
+    `/api/cubes/incexp_v2/members/${definition.member}`,
+    MUNICIPAL_MONEY_API_ORIGIN,
+  );
+  url.searchParams.set("page", "1");
+  url.searchParams.set("pagesize", String(MEMBER_CATALOGUE_PAGE_SIZE));
+  url.searchParams.set("format", "json");
+
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "InnerMe-ReadOnly-Integration/1.0",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(options.timeoutMs ?? REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const isTimeout = error instanceof DOMException && error.name === "TimeoutError";
+    throw new MunicipalMoneyError(
+      isTimeout ? "provider_metadata_timeout" : "provider_metadata_unavailable",
+      isTimeout ? "Provider metadata lookup timed out." : "Provider metadata is temporarily unavailable.",
+      502,
+    );
+  }
+
+  if (response.status >= 300 && response.status < 400) {
+    throw new MunicipalMoneyError("provider_metadata_redirect_rejected", "Provider metadata redirects are not accepted.", 502);
+  }
+  if (!response.ok) {
+    throw new MunicipalMoneyError("provider_metadata_http_error", "Provider metadata lookup failed.", 502);
+  }
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new MunicipalMoneyError("provider_metadata_content_type_rejected", "Provider metadata was not JSON.", 502);
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(await readBoundedBody(response, options.maxResponseBytes ?? MAX_RESPONSE_BYTES));
+  } catch (error) {
+    if (error instanceof MunicipalMoneyError) throw error;
+    throw new MunicipalMoneyError("provider_metadata_invalid_json", "Provider metadata was invalid.", 502);
+  }
+
+  if (
+    !isPlainObject(payload) ||
+    payload.status !== "ok" ||
+    !Array.isArray(payload.data) ||
+    !Number.isInteger(payload.total_member_count) ||
+    payload.total_member_count < 0 ||
+    payload.total_member_count > MEMBER_CATALOGUE_PAGE_SIZE ||
+    payload.data.length !== payload.total_member_count ||
+    payload.data.length > MEMBER_CATALOGUE_PAGE_SIZE
+  ) {
+    throw new MunicipalMoneyError(
+      "provider_metadata_invalid_response",
+      "Provider metadata could not be validated completely.",
+      502,
+    );
+  }
+
+  const codes = new Set();
+  for (const row of payload.data) {
+    if (!isPlainObject(row) || typeof row[definition.field] !== "string") {
+      throw new MunicipalMoneyError(
+        "provider_metadata_invalid_response",
+        "Provider metadata contained an invalid member.",
+        502,
+      );
+    }
+    codes.add(row[definition.field]);
+  }
+
+  memberCatalogueCache.set(definition.member, {
+    codes,
+    expiresAt: nowMs() + MEMBER_CATALOGUE_CACHE_TTL_MS,
+  });
+  return codes;
+}
+
+export async function validateMunicipalMoneyMembership(input, options = {}) {
+  const parameters = validateMunicipalMoneyParameters(input);
+  const membersToCheck = [
+    ["municipality_code", parameters.municipality_code],
+    ["amount_type_code", parameters.amount_type_code],
+    ...(parameters.item_code ? [["item_code", parameters.item_code]] : []),
+  ];
+
+  for (const [parameterName, value] of membersToCheck) {
+    const codes = await fetchMunicipalMoneyMemberCodes(parameterName, options);
+    if (!codes.has(value)) {
+      throw new MunicipalMoneyError(
+        "unknown_provider_member",
+        `The supplied ${parameterName} is not present in the current provider catalogue.`,
+        400,
+      );
+    }
+  }
+}
+
 export function normalizeMunicipalMoneyResponse(
   payload,
   parameters,
@@ -273,6 +400,7 @@ async function readBoundedBody(response, maxBytes) {
 
 export async function fetchMunicipalMoneyFacts(input, options = {}) {
   const parameters = validateMunicipalMoneyParameters(input);
+  await validateMunicipalMoneyMembership(parameters, options);
   const url = buildMunicipalMoneyFactsUrl(parameters);
   const fetchImpl = options.fetchImpl || fetch;
   const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
