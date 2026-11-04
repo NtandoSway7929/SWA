@@ -85,10 +85,10 @@ The CI workflows run the adapter tests and quota contract tests, alongside the E
 
 - Confirm the five provisional quota ceilings before any database application.
 - Apply and test the migration only in an explicitly approved isolated Supabase environment; the existing test project is inactive and has not been restored.
-- Use PostgreSQL 17 CI execution as a first runtime gate; managed Supabase JWT/RPC behavior, UTC-boundary behavior under controlled clock conditions, advisory-lock last-slot races, and lease-expiry recovery still need dedicated verification.
-- Implement and independently verify connection-time DNS/IP enforcement through a controlled egress gateway. The current fixed-host `fetch()` adapter is not a complete DNS-rebinding control.
+- PostgreSQL 17 CI has now passed the exact migration, six-session concurrency race, non-UTC session timezone checks and expired-lease recovery; see Stage 15. Managed Supabase JWT/RPC behavior and hosted Edge Function integration remain outstanding.
+- Connection-time DNS/IP enforcement is now implemented in the pinned transport and wired into the adapter on this feature branch. The full adapter passed in the pinned local Edge Runtime image against a mock. Managed Supabase runtime permissions and IPv6 socket routing remain unverified; see Stages 12–14.
 - Obtain the authoritative National Treasury publication date; `retrieved_at` is not a substitute.
-- Verify live provider catalogue contracts/counts and financial-year bounds.
+- Verify live provider catalogue contracts/counts and exact available financial years. Public documentation now confirms the v2 dataset scope and field semantics; live catalogue cardinalities remain unverified.
 - Add explicit `verify_jwt = true` in the deployment configuration when deployment is separately approved.
 - Complete a runtime test with valid admin, non-admin, expired token, quota denial, provider failure and quota-service failure.
 
