@@ -130,6 +130,9 @@ const IPV4_DENY = Object.freeze([
   ["240.0.0.0/4", "reserved"],
 ].map(([cidr, reason]) => Object.freeze({ ...parseCidr(cidr), reason })));
 
+// IANA defines 2000::/3 as the IPv6 GUA block, but unlisted subranges
+// can still be reserved for future allocation. This is only a broad
+// candidate-range filter, not affirmative proof of allocation or routability.
 const IPV6_GLOBAL_UNICAST = parseCidr("2000::/3");
 
 const IPV6_DENY = Object.freeze([
