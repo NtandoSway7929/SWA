@@ -279,10 +279,29 @@ export function normalizeMunicipalMoneyResponse(
   sourceUrl,
   retrievedAt = new Date().toISOString(),
 ) {
-  if (!isPlainObject(payload) || payload.status !== "ok" || !Array.isArray(payload.data)) {
+  if (
+    !isPlainObject(payload) ||
+    payload.status !== "ok" ||
+    !Array.isArray(payload.data) ||
+    !Array.isArray(payload.fields) ||
+    !payload.fields.every((field) => typeof field === "string") ||
+    !payload.fields.includes("amount")
+  ) {
     throw new MunicipalMoneyError(
       "invalid_provider_response",
       "The provider returned an unexpected response.",
+      502,
+    );
+  }
+
+  if (
+    (payload.page !== undefined && (!Number.isInteger(payload.page) || payload.page < 1)) ||
+    (payload.page_size !== undefined && (!Number.isInteger(payload.page_size) || payload.page_size < 1 || payload.page_size > 10_000)) ||
+    (payload.total_fact_count !== undefined && (!Number.isInteger(payload.total_fact_count) || payload.total_fact_count < 0))
+  ) {
+    throw new MunicipalMoneyError(
+      "invalid_provider_pagination",
+      "The provider returned invalid pagination metadata.",
       502,
     );
   }
@@ -309,6 +328,23 @@ export function normalizeMunicipalMoneyResponse(
     }
 
     const sourceAmount = record.amount;
+    if (
+      sourceAmount !== null &&
+      (!Number.isSafeInteger(sourceAmount) || typeof sourceAmount !== "number")
+    ) {
+      throw new MunicipalMoneyError(
+        "invalid_provider_amount",
+        "The provider returned an invalid monetary amount.",
+        502,
+      );
+    }
+    if (!Object.prototype.hasOwnProperty.call(record, "amount")) {
+      throw new MunicipalMoneyError(
+        "invalid_provider_amount",
+        "The provider record did not include a monetary amount.",
+        502,
+      );
+    }
     const normalizedAmount = sourceAmount === null ? 0 : sourceAmount;
 
     return {
