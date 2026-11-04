@@ -222,7 +222,7 @@ The policy blocks all registered special-purpose prefixes reviewed, either direc
 
 Final PR-head regression CI [run #41822104085](https://github.com/NtandoSway7929/SWA/actions/runs/41822104085) passed 60/60 tests, Deno type-check and diff check. The full adapter mock also passed [run #41822064879](https://github.com/NtandoSway7929/SWA/actions/runs/41822064879). See [Stage 18 IANA address-policy audit](innerme-integration-stage-18-iana-address-policy-audit.md).
 
-The lists are manually maintained and need a defined review cadence. The complete local Edge Runtime mock exercises IPv4 sockets; IPv6 parsing/policy/peer comparison are unit-tested, but an end-to-end IPv6 socket route has not been proven.
+The lists are manually maintained and need a defined review cadence. Stage 19 subsequently proved the full adapter's IPv6-only socket path in the pinned local Edge Runtime using a ULA and test-only address-policy override. A public IPv6 destination and managed Supabase route remain unverified.
 
 
 ---
