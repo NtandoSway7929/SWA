@@ -49,9 +49,7 @@ Exports:
 - `127.0.0.0/8` — loopback
 - `169.254.0.0/16` — link-local
 - `192.0.0.0/24` — conservatively blocks the whole IETF protocol-assignment block, including more-specific exceptions
-- `192.2.0.0/24` — reserved for documentation? No. Documentation blocks are separately enumerated below; this line is not used by the implementation.
 - `192.31.196.0/24`, `192.52.193.0/24`, `192.175.48.0/24` — special-purpose anycast/AMT ranges, denied even where the registry marks them globally reachable
-- `192.2.0.0/24` is not part of the implemented deny policy.
 - `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24` — documentation
 - `192.88.99.0/24` — deprecated 6to4 relay block, conservatively denied as a whole
 - `198.18.0.0/15` — benchmarking
