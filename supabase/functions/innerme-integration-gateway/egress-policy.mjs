@@ -133,6 +133,9 @@ const IPV4_DENY = Object.freeze([
 const IPV6_GLOBAL_UNICAST = parseCidr("2000::/3");
 
 const IPV6_DENY = Object.freeze([
+  ["2001:10::/28", "deprecated_orchid"],
+  ["2001:20::/28", "orchid_v2"],
+  ["2001:30::/28", "drone_remote_id_special_purpose"],
   ["::/128", "unspecified"],
   ["::1/128", "loopback"],
   ["::ffff:0:0/96", "ipv4_mapped"],
@@ -205,11 +208,21 @@ export function validateOutboundAddress(address) {
  * Reject the entire DNS answer set if it is empty or any answer is unsafe.
  * The caller must combine all A and AAAA results before calling this helper.
  */
+export const MAX_OUTBOUND_DNS_ANSWERS = 64;
+
 export function validateOutboundAddressSet(addresses) {
   if (!Array.isArray(addresses) || addresses.length === 0) {
     return Object.freeze({
       allowed: false,
       reason: "empty_dns_answer_set",
+      results: Object.freeze([]),
+    });
+  }
+
+  if (addresses.length > MAX_OUTBOUND_DNS_ANSWERS) {
+    return Object.freeze({
+      allowed: false,
+      reason: "dns_answer_limit_exceeded",
       results: Object.freeze([]),
     });
   }
