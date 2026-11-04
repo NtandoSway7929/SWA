@@ -168,7 +168,7 @@ export function validateOutboundAddress(address) {
     return Object.freeze({
       allowed: true,
       family: 4,
-      reason: "public_ipv4_candidate",
+      reason: "non_special_ipv4_candidate",
     });
   }
 
@@ -193,7 +193,7 @@ export function validateOutboundAddress(address) {
   return Object.freeze({
     allowed: true,
     family: 6,
-    reason: "public_ipv6_candidate",
+    reason: "global_unicast_ipv6_candidate",
   });
 }
 
