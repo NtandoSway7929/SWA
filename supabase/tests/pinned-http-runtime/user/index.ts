@@ -1,5 +1,8 @@
 import { fetchMunicipalMoneyFacts } from "./lib/municipal-money.mjs";
-import { MUNICIPAL_MONEY_HOST } from "./lib/pinned-http.mjs";
+import {
+  MUNICIPAL_MONEY_HOST,
+  requestPinnedMunicipalMoney,
+} from "./lib/pinned-http.mjs";
 
 const PARAMETERS = {
   municipality_code: "JHB",
@@ -66,13 +69,45 @@ Deno.serve(async (request: Request) => {
       localMockIp.length > 0,
   });
 
-  const result = await fetchMunicipalMoneyFacts(PARAMETERS, {
-    transportRuntime: runtime,
-    transportAddressPolicy: testOnlyAddressPolicy,
-    timeoutMs: 5_000,
-    maxResponseBytes: 8 * 1024,
-    now: () => new Date("2026-11-04T12:00:00.000Z"),
-  });
+  let lastTransportErrorCode: string | null = null;
+  let lastTransportTarget = "";
+
+  const requestPinnedImpl = async (target: string | URL, options: Record<string, unknown>) => {
+    lastTransportTarget = new URL(target.toString()).pathname;
+    try {
+      return await requestPinnedMunicipalMoney(target, options);
+    } catch (error) {
+      lastTransportErrorCode = typeof error?.code === "string"
+        ? error.code
+        : error instanceof Error
+        ? error.name
+        : "unknown_transport_error";
+      throw error;
+    }
+  };
+
+  let result;
+  try {
+    result = await fetchMunicipalMoneyFacts(PARAMETERS, {
+      requestPinnedImpl,
+      transportRuntime: runtime,
+      transportAddressPolicy: testOnlyAddressPolicy,
+      timeoutMs: 5_000,
+      maxResponseBytes: 8 * 1024,
+      now: () => new Date("2026-11-04T12:00:00.000Z"),
+    });
+  } catch (error) {
+    return Response.json({
+      errorCode: typeof error?.code === "string" ? error.code : "unknown_adapter_error",
+      lastTransportErrorCode,
+      lastTransportTarget,
+      aLookups,
+      aaaaLookups,
+      tcpConnections,
+      tlsConnections,
+      localMockIpResolved: localMockIp.length > 0,
+    }, { status: 500 });
+  }
 
   assert(result.status === "ok", "adapter should return normalized provider data");
   assert(result.records.length === 1, "expected one normalized facts record");
