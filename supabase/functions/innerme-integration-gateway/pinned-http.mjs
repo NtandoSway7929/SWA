@@ -507,6 +507,19 @@ export async function requestPinnedMunicipalMoney(target, options = {}) {
       maxBodyBytes: maxResponseBytes,
     });
 
+    if (response.status >= 300 && response.status < 400) {
+      throw new PinnedHttpError(
+        "provider_redirect_rejected",
+        "Provider redirects are not accepted.",
+      );
+    }
+    if (response.status !== 200) {
+      throw new PinnedHttpError(
+        "provider_http_status_rejected",
+        "Provider returned an unexpected HTTP status.",
+      );
+    }
+
     return Object.freeze({
       ...response,
       connectedAddress: selectedAddress,
