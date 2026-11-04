@@ -8,6 +8,8 @@ on:
     paths:
       - "supabase/migrations/20261104110000_innerme_integration_quota.sql"
       - "supabase/tests/integration_quota_migration_test.sql"
+      - "supabase/tests/integration_quota_concurrency_setup.sql"
+      - "supabase/tests/integration_quota_concurrency_test.sh"
       - ".github/workflows/validate-innerme-integration-quota-db.yml"
   push:
     branches:
@@ -57,3 +59,13 @@ jobs:
           PGDATABASE: postgres
         run: |
           psql --set ON_ERROR_STOP=1 --file supabase/tests/integration_quota_migration_test.sql
+
+      - name: Verify simultaneous last-slot reservations across six sessions
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: |
+          bash supabase/tests/integration_quota_concurrency_test.sh
