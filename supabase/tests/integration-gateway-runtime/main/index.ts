@@ -11,7 +11,10 @@ Deno.serve(async (request: Request) => {
     memoryLimitMb: 128,
     workerTimeoutMs: 20_000,
     noModuleCache: false,
-    envVars: ["SUPABASE_URL", "SUPABASE_ANON_KEY"],
+    envVars: [
+      ["SUPABASE_URL", "http://mock-supabase:54321"],
+      ["SUPABASE_ANON_KEY", "innerme-runtime-test-public-key"],
+    ],
     forceCreate: true,
     cpuTimeSoftLimitMs: 5_000,
     cpuTimeHardLimitMs: 10_000,
