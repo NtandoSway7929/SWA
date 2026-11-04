@@ -82,6 +82,10 @@ The provider's documentation describes quarterly snapshots and advises that data
 
 The GitHub Actions validation workflow type-checks the Edge Function and runs the adapter's provider-free tests.
 
+## Stage 6 infrastructure design
+
+See [`docs/innerme-integration-stage-6-infrastructure-design.md`](../../../docs/innerme-integration-stage-6-infrastructure-design.md) for the proposed shared quota and connection-time egress architecture. This is a design only; it does not create a schema migration, deploy a proxy, or change any project settings.
+
 ## Security review
 
 See [`docs/innerme-integration-security-review.md`](../../../docs/innerme-integration-security-review.md) for the static security review, residual risks, release blockers, and production acceptance checklist.
