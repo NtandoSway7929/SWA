@@ -1,0 +1,47 @@
+name: Validate InnerMe External Integration Gateway
+
+on:
+  pull_request:
+    branches:
+      - main
+      - agent/innerme-integration-registry-spec
+    paths:
+      - "supabase/functions/innerme-integration-gateway/**"
+      - ".github/workflows/validate-innerme-integration-gateway.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "supabase/functions/innerme-integration-gateway/**"
+      - ".github/workflows/validate-innerme-integration-gateway.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Type-check gateway and test provider adapter
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Type-check Edge Function
+        run: deno check --no-lock supabase/functions/innerme-integration-gateway/index.ts
+
+      - name: Run provider-free adapter tests
+        run: node --test supabase/functions/innerme-integration-gateway/municipal-money.test.mjs
+
+      - name: Check whitespace errors
+        run: git diff --check
