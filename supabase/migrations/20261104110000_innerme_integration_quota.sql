@@ -118,7 +118,7 @@ begin
     );
   end if;
 
-  select pg_catalog.coalesce((
+  select coalesce((
     select reserved_count
     from innerme_private.innerme_integration_quota_windows
     where scope_type = 'admin'
@@ -128,7 +128,7 @@ begin
       and window_start = v_minute_start
   ), 0) into v_admin_minute_used;
 
-  select pg_catalog.coalesce((
+  select coalesce((
     select reserved_count
     from innerme_private.innerme_integration_quota_windows
     where scope_type = 'project'
@@ -138,7 +138,7 @@ begin
       and window_start = v_minute_start
   ), 0) into v_project_minute_used;
 
-  select pg_catalog.coalesce((
+  select coalesce((
     select reserved_count
     from innerme_private.innerme_integration_quota_windows
     where scope_type = 'admin'
@@ -148,7 +148,7 @@ begin
       and window_start = v_day_start
   ), 0) into v_admin_day_used;
 
-  select pg_catalog.coalesce((
+  select coalesce((
     select reserved_count
     from innerme_private.innerme_integration_quota_windows
     where scope_type = 'project'
@@ -159,7 +159,7 @@ begin
   ), 0) into v_project_day_used;
 
   if v_admin_minute_used >= 3 then
-    v_reason := pg_catalog.coalesce(v_reason, 'admin_minute_limit');
+    v_reason := coalesce(v_reason, 'admin_minute_limit');
     v_retry_after := greatest(
       v_retry_after,
       greatest(1, pg_catalog.ceil(
@@ -169,7 +169,7 @@ begin
   end if;
 
   if v_project_minute_used >= 15 then
-    v_reason := pg_catalog.coalesce(v_reason, 'project_minute_limit');
+    v_reason := coalesce(v_reason, 'project_minute_limit');
     v_retry_after := greatest(
       v_retry_after,
       greatest(1, pg_catalog.ceil(
@@ -179,7 +179,7 @@ begin
   end if;
 
   if v_admin_day_used >= 30 then
-    v_reason := pg_catalog.coalesce(v_reason, 'admin_daily_limit');
+    v_reason := coalesce(v_reason, 'admin_daily_limit');
     v_retry_after := greatest(
       v_retry_after,
       greatest(1, pg_catalog.ceil(
@@ -189,7 +189,7 @@ begin
   end if;
 
   if v_project_day_used >= 100 then
-    v_reason := pg_catalog.coalesce(v_reason, 'project_daily_limit');
+    v_reason := coalesce(v_reason, 'project_daily_limit');
     v_retry_after := greatest(
       v_retry_after,
       greatest(1, pg_catalog.ceil(
