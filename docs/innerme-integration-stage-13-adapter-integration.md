@@ -62,7 +62,9 @@ That is four requests through the same pinned transport: three member catalogue 
 
 The transport runtime also passed the expected Deno NotFound handling for a missing mock AAAA record. It converts only that specific no-record error to an empty family result. Other resolver errors still propagate and fail closed.
 
-The provider-free gateway suite also passed [run #41818526598](https://github.com/NtandoSway7929/SWA/actions/runs/41818526598): **56/56 tests passed**, Deno Edge Function type-check passed, and git diff --check passed.
+The Edge Function now forwards its request-abort signal to the adapter. The adapter combines that with each provider request's timeout, and the transport aborts DNS/TCP work and closes an active socket when either signal fires.
+
+The provider-free gateway suite passed [run #41818526598](https://github.com/NtandoSway7929/SWA/actions/runs/41818526598): **56/56 tests passed**, Deno Edge Function type-check passed, and git diff --check passed. Subsequent cancellation hardening passed [run #41819309060](https://github.com/NtandoSway7929/SWA/actions/runs/41819309060): **59/59 tests passed**, type-check and git diff checks passed. The added tests cover an already-aborted caller signal and closing an active pinned socket during cancellation.
 
 ## 4. What this does not establish
 
