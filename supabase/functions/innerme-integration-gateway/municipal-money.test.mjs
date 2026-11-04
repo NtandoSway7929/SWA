@@ -122,6 +122,39 @@ test("normalizes records while preserving the provider's original amount value",
   assert.equal(result.attribution.source, "National Treasury, Municipal Money");
 });
 
+
+test("rejects missing, fractional and unsafe provider monetary values", () => {
+  for (const record of [
+    { "demarcation.code": "JHB" },
+    { amount: 1.25 },
+    { amount: Number.MAX_SAFE_INTEGER + 1 },
+    { amount: "123" },
+    { amount: { value: 123 } },
+  ]) {
+    assert.throws(
+      () => normalizeMunicipalMoneyResponse(
+        { status: "ok", fields: ["amount"], data: [record] },
+        validParameters,
+        "https://municipaldata.treasury.gov.za/api/cubes/incexp_v2/facts",
+      ),
+      (error) => error instanceof MunicipalMoneyError &&
+        error.code === "invalid_provider_amount",
+    );
+  }
+});
+
+test("rejects invalid provider pagination metadata", () => {
+  assert.throws(
+    () => normalizeMunicipalMoneyResponse(
+      { status: "ok", fields: ["amount"], page: 0, data: [] },
+      validParameters,
+      "https://municipaldata.treasury.gov.za/api/cubes/incexp_v2/facts",
+    ),
+    (error) => error instanceof MunicipalMoneyError &&
+      error.code === "invalid_provider_pagination",
+  );
+});
+
 test("rejects malformed provider payloads and excessive provider rows", () => {
   assert.throws(
     () => normalizeMunicipalMoneyResponse({ status: "error", data: [] }, validParameters, "https://source.test"),
