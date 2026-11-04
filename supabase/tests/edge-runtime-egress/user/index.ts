@@ -92,7 +92,7 @@ Deno.serve(async (request: Request) => {
       "GET / HTTP/1.1\r\nHost: " + TEST_TLS_HOST + "\r\nConnection: close\r\n\r\n",
     );
     await writer.write(requestBytes);
-    await writer.close();
+    writer.releaseLock();
   } catch (error) {
     tls.close();
     throw error;
