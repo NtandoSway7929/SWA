@@ -77,7 +77,9 @@ Added `quota-contract.test.mjs`, a static contract test covering:
 
 The CI workflows run the adapter tests and quota contract tests, alongside the Edge Function Deno type-check and whitespace check. A separate PostgreSQL 17 service job executes the exact migration and an SQL integration test in an ephemeral GitHub Actions database. The SQL test creates minimal `auth.uid()` and `public.is_swayphics_admin()` stubs, then exercises the real migration's schema/grant boundaries, non-admin rejection, three-request admin ceiling, project concurrency ceiling, owner-scoped lease release, idempotent release, and non-refunded request counters.
 
-**Verification boundary:** the PostgreSQL job proves that the migration compiles and its RPC behavior works on PostgreSQL 17 under the stated auth stubs. It is not a managed Supabase project test: it does not validate Supabase's actual Auth JWT claim plumbing, `is_swayphics_admin()` implementation, PostgREST exposure settings, or hosted Edge Function runtime. No migration has been applied to any Supabase project.
+**PostgreSQL execution result (4 November 2026):** [GitHub Actions run #41812361593](https://github.com/NtandoSway7929/SWA/actions/runs/41812361593) completed successfully. The exact migration executed on PostgreSQL 17, and all SQL integration assertions passed for schema/grant boundaries, non-admin rejection, the admin minute ceiling, project in-flight ceiling, owner-scoped lease release, idempotent release, and non-refunded request counters.
+
+**Verification boundary:** the job uses minimal auth stubs. It does not validate managed Supabase Auth JWT claim plumbing, the hosted `is_swayphics_admin()` implementation, PostgREST exposure settings, or hosted Edge Function runtime. The concurrency cap was checked using multiple outstanding leases in one SQL session, not a simultaneous multi-session race. No migration has been applied to any Supabase project.
 
 ## 6. Remaining release blockers
 
