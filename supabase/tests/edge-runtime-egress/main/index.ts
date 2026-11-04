@@ -1,4 +1,13 @@
 Deno.serve(async (request: Request) => {
+  const url = new URL(request.url);
+  if (url.pathname === "/health") {
+    return new Response("ok", { status: 200 });
+  }
+
+  if (url.pathname !== "/egress-probe") {
+    return Response.json({ error: "not_found" }, { status: 404 });
+  }
+
   const worker = await EdgeRuntime.userWorkers.create({
     servicePath: "/services/egress-probe",
     memoryLimitMb: 64,
