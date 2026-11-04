@@ -357,6 +357,48 @@ test("aborts and closes the active TLS socket when the whole request times out",
   assert.equal(tls.closed, true);
 });
 
+test("rejects an already-aborted caller signal before DNS or socket access", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const { runtime, calls } = makeRuntime(response());
+
+  await assert.rejects(
+    requestPinnedMunicipalMoney(FACTS_URL, {
+      runtime,
+      signal: controller.signal,
+    }),
+    (error) => error.code === "provider_aborted",
+  );
+
+  assert.equal(calls.dns.length, 0);
+  assert.equal(calls.connect.length, 0);
+});
+
+test("closes an active pinned connection when the caller aborts", async () => {
+  const controller = new AbortController();
+  const { runtime, tls, calls } = makeRuntime(null, { hangOnRead: true });
+
+  const pending = requestPinnedMunicipalMoney(FACTS_URL, {
+    runtime,
+    signal: controller.signal,
+    timeoutMs: 1_000,
+  });
+
+  for (let attempt = 0; attempt < 50 && tls.handshakeCalls === 0; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 2));
+  }
+  assert.equal(tls.handshakeCalls, 1, "test transport did not reach TLS/read phase");
+
+  controller.abort();
+  await assert.rejects(
+    pending,
+    (error) => error.code === "provider_aborted",
+  );
+
+  assert.equal(tls.closed, true);
+  assert.equal(calls.connect.length, 1);
+});
+
 test("readBoundedHttp1Response rejects an oversized header block", async () => {
   const header = "HTTP/1.1 200 OK\r\nX-Large: " + "a".repeat(100) + "\r\n\r\n";
   const conn = new FakeConnection(header, { readChunkSize: 10 });
