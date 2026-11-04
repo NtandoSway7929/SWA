@@ -15,7 +15,7 @@ The implementation now has a fixed provider capability, caller-JWT/admin checks,
 
 The handler validates a Bearer token with Supabase Auth `getUser(accessToken)`. It then calls `is_swayphics_admin()` using a Supabase client whose global Authorization header is the same caller token. The existing SQL definition of this RPC is `SECURITY DEFINER`, checks `admin_users.user_id = auth.uid()` and `active = true`, revokes execution from `PUBLIC`, and grants it to `authenticated`.
 
-**Assessment:** Static design is consistent with the existing Swayphics admin gate. Runtime verification remains outstanding. Do not replace the caller-context client with a service-role client.
+**Assessment:** Static design is consistent with the existing Swayphics admin gate. Stage 20 passed a local Edge Runtime handler-level contract test using the actual Supabase JS client and a controlled Auth/PostgREST mock. The mock verifies caller-token/API-key forwarding and handler outcomes, but it does not cryptographically validate JWTs or exercise the real project's admin RPC, JWT claims, grants, or RLS. Managed Supabase verification remains outstanding. Do not replace the caller-context client with a service-role client.
 
 Before deployment, explicitly add:
 
@@ -93,7 +93,8 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 - Full adapter dual-stack runtime proof [run #41822450213](https://github.com/NtandoSway7929/SWA/actions/runs/41822450213): success in pinned `supabase/edge-runtime:v1.77.9`; three catalogue preflights plus one facts request passed over IPv4 and IPv6-only paths, with literal-IP peer matching and four TLS sessions per path.
 - Quota migration/concurrency proof [run #41820154737](https://github.com/NtandoSway7929/SWA/actions/runs/41820154737): success in ephemeral PostgreSQL 17 using minimal Supabase auth/admin stubs.
 - Provider-free tests use injected responses and do not call National Treasury. The local Edge Runtime proof uses a private mock, not Treasury.
-- No live provider API request, managed Supabase deployment, actual Supabase JWT/admin-RPC round-trip, hosted TCP permission test, or independent penetration test has been performed.
+- Local handler/Auth-client contract proof [run #41825641021](https://github.com/NtandoSway7929/SWA/actions/runs/41825641021): **passed** in the pinned Edge Runtime with a local Auth/PostgREST mock. Seven assertions passed, including bearer-token and public API-key forwarding; zero provider calls occurred. This is not cryptographic JWT verification or a managed Supabase test.
+- No live provider API request, managed Supabase deployment, real Supabase Auth JWT/admin-RPC round-trip, hosted TCP permission test, or independent penetration test has been performed.
 
 ## 9. Release checklist
 
@@ -108,6 +109,7 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 - [ ] Live-check `incexp_v2` catalogue paths, exact response shape, current catalogue counts, available financial years/periods, and provider request allowance through an approved process.
 - [ ] Obtain an authoritative publication date applicable to the queried data and attach it to the response before any onward use.
 - [ ] Confirm the provisional quota ceilings before applying the migration.
+- [x] Exercise the actual gateway handler and Supabase JS Auth/RPC call path in the pinned local Edge Runtime with a controlled mock. [Run #41825641021](https://github.com/NtandoSway7929/SWA/actions/runs/41825641021). This is not real JWT signature or managed-project validation.
 - [ ] Verify authorization/RPC behavior in an approved managed Supabase test environment using the actual Auth JWT and admin function.
 - [ ] Add explicit `verify_jwt = true` in an approved deployment change; shared `supabase/config.toml` remains untouched.
 - [ ] After separate approval and cost review, validate the deployed function, hosted TCP permissions, origin/JWT/admin paths, upstream failures, body/response limits, cancellation and quota paths in the isolated environment.
@@ -239,3 +241,14 @@ The previous residual concern that the local Edge Runtime had only exercised IPv
 [GitHub Actions run #41822450213](https://github.com/NtandoSway7929/SWA/actions/runs/41822450213) passed. In the IPv6-only pass, three member catalogue lookups and one facts request used four A queries (empty), four AAAA queries, four literal-IP connections to `fd00:dead:beef::2`, and four TLS sessions. Peer matching succeeded, and the mock observed the expected Treasury SNI and Host header. The adapter normalized the mock amount and preserved its source value.
 
 This used a Docker ULA and a test-only address-policy override. It proves the local pinned Edge Runtime IPv6 socket path, not a publicly routed IPv6 destination or a managed Supabase deployment. The managed platform permission/runtime gate remains open.
+
+
+---
+
+## Stage 20 update — handler-level Auth and quota RPC runtime contract
+
+[Stage 20 test report](innerme-integration-stage-20-auth-runtime.md)
+
+The actual Edge Function handler now passes a pinned local Edge Runtime test using the real Supabase JavaScript client against a controlled local Auth/PostgREST mock. [Run #41825641021](https://github.com/NtandoSway7929/SWA/actions/runs/41825641021) passed all seven cases: missing bearer, invalid session, non-admin, invalid parameters before quota reservation, quota denial (429/`Retry-After`), quota-service failure (503), and disallowed Origin (403). The test also verified caller bearer-token and public API-key propagation and recorded zero provider calls.
+
+This closes the local handler-level Auth-client/RPC contract test gap. It does not cryptographically verify JWTs or test the actual managed Supabase Auth/JWT/admin function/PostgREST grants/RLS. Managed-project verification remains a release gate.
