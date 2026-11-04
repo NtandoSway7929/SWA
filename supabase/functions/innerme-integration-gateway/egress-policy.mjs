@@ -226,3 +226,17 @@ export function validateOutboundAddressSet(addresses) {
     results: Object.freeze(results.map((result) => Object.freeze(result))),
   });
 }
+
+
+/**
+ * Compare two strict literal IPs by numeric value, so alternate IPv6
+ * compression/case representations cannot cause a false peer-address match.
+ */
+export function sameOutboundAddress(left, right) {
+  const parsedLeft = parseAddress(left);
+  const parsedRight = parseAddress(right);
+  return parsedLeft !== null &&
+    parsedRight !== null &&
+    parsedLeft.family === parsedRight.family &&
+    parsedLeft.value === parsedRight.value;
+}
