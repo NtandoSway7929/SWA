@@ -23,6 +23,7 @@ async function invoke({
   body = validRequest,
   method = "POST",
   rawBody,
+  streamedBodyBytes,
 } = {}) {
   const headers = {};
   if (method === "POST") headers["content-type"] = "application/json";
@@ -31,7 +32,17 @@ async function invoke({
 
   const init = { method, headers };
   if (method !== "GET" && method !== "OPTIONS") {
-    init.body = rawBody ?? JSON.stringify(body);
+    if (Number.isInteger(streamedBodyBytes) && streamedBodyBytes > 0) {
+      init.body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("x".repeat(streamedBodyBytes)));
+          controller.close();
+        },
+      });
+      init.duplex = "half";
+    } else {
+      init.body = rawBody ?? JSON.stringify(body);
+    }
   }
 
   const response = await fetch(gatewayUrl, init);
@@ -100,6 +111,12 @@ const oversizedBody = await invoke({
 });
 assert.equal(oversizedBody.response.status, 413);
 assert.equal(oversizedBody.payload.error, "Request body is too large.");
+
+const streamedOversizedBody = await invoke({
+  streamedBodyBytes: 5000,
+});
+assert.equal(streamedOversizedBody.response.status, 413);
+assert.equal(streamedOversizedBody.payload.error.code, "request_body_too_large");
 
 const allowedPreflight = await invoke({
   method: "OPTIONS",
@@ -230,7 +247,8 @@ console.log(JSON.stringify({
     unknownCapabilityRejectedBeforeQuota: true,
     invalidJsonRejected: true,
     nonPostMethodRejected: true,
-    oversizedRequestRejected: true,
+    oversizedRequestRejectedBeforeAuth: true,
+    streamedBodyLimitEnforcedWithoutContentLength: true,
     allowedPreflightAnsweredWithoutAuth: true,
     quotaDenialReturns429AndRetryAfter: true,
     quotaBackendFailureReturns503: true,
