@@ -105,7 +105,7 @@ export function validateMunicipalMoneyParameters(input: unknown) {
     itemCode = requiredString(
       input.item_code,
       "item_code",
-      /^\\d{4}$/,
+      /^\d{4}$/,
       "must be a four-digit item code.",
     );
   }
