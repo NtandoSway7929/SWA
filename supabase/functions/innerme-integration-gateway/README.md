@@ -68,11 +68,11 @@ The provider's documentation describes quarterly snapshots and advises that data
 
 ## Known limitations before production
 
-1. Member validation is implemented against fixed provider catalogue endpoints and covered by injected-response tests, but a live provider metadata call and runtime test remain outstanding.
-2. The provider adapter has a fixed 2020-2035 financial-year range. Revisit this bound against current provider metadata before release.
-3. The fixed host/path and redirect rejection prevent model-controlled destination changes, but do not establish DNS rebinding protection.
-4. Shared per-admin and project-wide quota reservation is implemented on the feature branch. Its migration passed an ephemeral PostgreSQL 17 CI test, but hosted Supabase JWT/RPC behavior and multi-session concurrency remain outstanding; the migration is not applied.
-5. No live Treasury call or hosted Supabase project/runtime test has been run from this branch. The pinned Edge Runtime container probe is local CI only.
+1. Member validation is implemented against fixed provider catalogue endpoints and passed a full adapter test in the local Edge Runtime mock, but current live catalogue contents/counts and real provider responses remain unverified.
+2. The adapter accepts financial-year-end values from 2020 through the current UTC calendar year. The 2020 floor follows the published incexp_v2 FY 2019-20 start; the current-year ceiling prevents future-year queries. Exact available v2 years still require query-level confirmation because the public table selector and documentation are not fully aligned.
+3. The adapter uses a pinned transport that resolves A+AAAA, applies the IPv4/IPv6 address policy, connects to a literal IP, checks the peer and verifies TLS for the fixed Treasury hostname. This passed in the local Edge Runtime mock. Managed Supabase permissions/runtime and IPv6 socket routing remain unverified.
+4. Shared per-admin and project-wide quota reservation is implemented on the feature branch. The migration, six-session concurrency, UTC-window and expired-lease recovery tests passed in ephemeral PostgreSQL 17 CI. Hosted Supabase JWT/RPC behavior remains outstanding; the migration is not applied.
+5. No live Treasury call or hosted Supabase project/runtime test has been run from this branch. Local Edge Runtime tests use a private mock and test-only address-policy override.
 6. The existing isolated Supabase project `ofqofhnlzbouclvvrmzd` is currently inactive. Do not deploy until its state and cost implications are reviewed.
 7. The capability is not yet wired into `swayphics-ai` or the InnerMe UI. The gateway remains an isolated endpoint proposal only.
 
@@ -80,7 +80,7 @@ The provider's documentation describes quarterly snapshots and advises that data
 
 `municipal-money.test.mjs` uses injected fetch implementations and does not call the provider. It covers parameter validation, fixed catalogue membership preflight, unknown-code rejection before facts retrieval, incomplete metadata fail-closed behavior, in-isolate metadata caching, URL construction, redirect rejection, content-type and HTTP failures, payload validation, response-size limits, normalized amount semantics, provenance and sanitized errors.
 
-The GitHub Actions validation workflow type-checks the Edge Function and runs the adapter's provider-free tests. The latest gateway validation passed 59/59 tests, including cancellation and socket-cleanup cases.
+The GitHub Actions validation workflow type-checks the Edge Function and runs the adapter's provider-free tests. Latest gateway validation [run #41820778732](https://github.com/NtandoSway7929/SWA/actions/runs/41820778732) passed 60/60 tests, including current-year bounds and cancellation/socket-cleanup cases. Full adapter local Edge Runtime proof [run #41820772769](https://github.com/NtandoSway7929/SWA/actions/runs/41820772769) also passed.
 
 ## Shared integration quota
 
@@ -92,14 +92,14 @@ See [`docs/innerme-integration-stage-7-quota-implementation.md`](../../../docs/i
 
 ## Stage 6 infrastructure design
 
-See [`docs/innerme-integration-stage-6-infrastructure-design.md`](../../../docs/innerme-integration-stage-6-infrastructure-design.md) for the original shared-quota and controlled-egress design. See [`docs/innerme-integration-stage-9-egress-runtime-probe.md`](../../../docs/innerme-integration-stage-9-egress-runtime-probe.md) for the low-level TCP/TLS proof, [`docs/innerme-integration-stage-10-ip-policy.md`](../../../docs/innerme-integration-stage-10-ip-policy.md) for the address policy, [`docs/innerme-integration-stage-11-pinned-http-transport.md`](../../../docs/innerme-integration-stage-11-pinned-http-transport.md) for the HTTP client, [`docs/innerme-integration-stage-12-pinned-http-runtime.md`](../../../docs/innerme-integration-stage-12-pinned-http-runtime.md) for the transport runtime proof, and [`docs/innerme-integration-stage-13-adapter-integration.md`](../../../docs/innerme-integration-stage-13-adapter-integration.md) for the full adapter integration. The adapter and transport are now connected on this branch; managed Supabase testing and production release gates remain outstanding.
+See [`docs/innerme-integration-stage-6-infrastructure-design.md`](../../../docs/innerme-integration-stage-6-infrastructure-design.md) for the original shared-quota and controlled-egress design. Stages 9–13 document the pinned transport and adapter integration. See [`docs/innerme-integration-stage-15-quota-concurrency.md`](../../../docs/innerme-integration-stage-15-quota-concurrency.md) for the PostgreSQL concurrency/UTC/lease-recovery proof and [`docs/innerme-integration-stage-16-provider-contract-review.md`](../../../docs/innerme-integration-stage-16-provider-contract-review.md) for the public National Treasury API/terms review. The adapter and transport are connected on this branch; managed Supabase validation, live provider verification and publication-date compliance remain outstanding.
 
 ## Security review
 
 See [`docs/innerme-integration-security-review.md`](../../../docs/innerme-integration-security-review.md) for the static security review, residual risks, release blockers, and production acceptance checklist.
 
 
-**Terms-compliance blocker:** National Treasury's terms require attribution to the source and the date of publication. This facts endpoint response currently sets `attribution.publication_date` to `null`. `retrieved_at` is not the publication date. Until an authoritative publication date is obtained from provider metadata or an official notice and attached to the response, keep the pilot internal and do not use it for onward display, publication, or distribution.
+**Terms-compliance blocker:** National Treasury's terms require attribution to the source and the date of publication. This facts endpoint response currently sets `attribution.publication_date` to `null`. The current page banner says figures are updated with 2026 Q2 data and remain under verification; the API model's `last_updated` is described as a partial update date. Neither is established as the exact publication date for a given facts result. `retrieved_at` is not the publication date. Until an authoritative publication date is obtained from Treasury metadata or an official notice and attached to the response, keep the pilot internal and do not use it for onward display, publication, or distribution.
 
 ## Deployment boundary
 
