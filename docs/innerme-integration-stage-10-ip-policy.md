@@ -9,7 +9,7 @@
 
 Define a conservative, deterministic policy for classifying literal IPv4 and IPv6 DNS answers before a future pinned TCP connection. The policy is a local helper: it performs no DNS lookup, opens no sockets, and does not claim that an accepted IP is actually routed or reachable.
 
-The caller must combine all A and AAAA records for the provider lookup and validate the complete set. If the set is empty, malformed, or contains even one rejected address, the complete set is rejected. The caller must not select only the public-looking member of a mixed public/private answer set.
+The caller must combine all A and AAAA records for the provider lookup and validate the complete set. If the set is empty, malformed, contains more than 64 answers, or contains even one rejected address, the complete set is rejected. The caller must not select only the public-looking member of a mixed public/private answer set.
 
 ## 2. IANA reference basis
 
@@ -61,6 +61,7 @@ Exports:
 - Only `2000::/3` is considered for an IPv6 global-unicast candidate.
 - IPv4-mapped, unspecified, loopback, discard-only and dummy prefixes are denied.
 - The whole `2001::/23` IETF protocol-assignment range is denied, including narrower exceptions that IANA separately marks globally reachable. This avoids a complex special-case allowlist.
+- `2001:10::/28` (deprecated ORCHID), `2001:20::/28` (ORCHIDv2), and `2001:30::/28` (Drone Remote ID entity-tag prefix) are explicitly denied even though the latter two are marked globally reachable by IANA.
 - Documentation, benchmarking, 6to4 and SRv6 special-purpose ranges are denied.
 - IPv4-IPv6 translation prefixes, unique-local, link-local, multicast and other addresses outside `2000::/3` are rejected by the global-unicast gate.
 - The globally reachable AS112 special-purpose prefix `2620:4f:8000::/48` is explicitly denied.
@@ -77,15 +78,15 @@ node --test supabase/functions/innerme-integration-gateway/*.test.mjs
 
 The suite covers representative IPv4/IPv6 candidates, private/reserved/special-use blocks, malformed literals, IPv4-mapped IPv6, transition/translation ranges, and rejection of a mixed public/private answer set. The gateway Edge Function type-check is also part of the same workflow.
 
-[Gateway CI run #41814644624](https://github.com/NtandoSway7929/SWA/actions/runs/41814644624) — success, 33/33 tests passed (8 IP-policy tests plus 25 existing adapter/quota tests), Deno type-check passed, and `git diff --check` passed.
+[Gateway CI run #41817411747](https://github.com/NtandoSway7929/SWA/actions/runs/41817411747) — success, 54/54 tests passed, Deno type-check passed, and `git diff --check` passed.
 
 ## 5. Important limitations
 
 - Passing this module means only that the literal address is not in the current code's deny policy. It does not prove global routing, ownership, or reachability.
 - This list is a manually maintained snapshot, not generated from IANA registry data. Add a scheduled registry review before production and review changed/new special-purpose allocations.
-- The helper is not yet called by the gateway.
-- The gateway's DNS lookup, complete A+AAAA collection, literal-IP connect, peer-address check and pinned HTTP transport are not yet implemented.
-- It does not protect the production gateway until integrated into the transport path and tested end-to-end.
+- The classifier is called by the standalone pinned transport prototype. The current Municipal Money adapter has not yet been switched to that transport.
+- The standalone transport now performs DNS lookup, complete A+AAAA collection, literal-IP connect, peer-address check and pinned HTTP exchange; see Stages 11 and 12.
+- It does not protect the current gateway until the adapter is switched from Fetch to the pinned transport.
 - A simultaneous DNS rebinding test, IP parser differential testing against another implementation, and full IPv4/IPv6 socket integration test remain outstanding.
 
 ## 6. Release status
