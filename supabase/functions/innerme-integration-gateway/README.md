@@ -78,6 +78,9 @@ The provider's documentation describes quarterly snapshots and advises that data
 
 ## Tests
 
+The handler-level Auth/quota runtime contract test runs the actual Edge Function in the pinned local Edge Runtime with the real Supabase JS client and a local Auth/PostgREST mock. It covers 401/403 authentication gates, parameter rejection before quota reservation, quota 429/503 behavior, Origin rejection, caller-token/API-key forwarding, and zero provider calls. [Stage 20 report](../../../docs/innerme-integration-stage-20-auth-runtime.md); [CI run #41825641021](https://github.com/NtandoSway7929/SWA/actions/runs/41825641021). The mock is not cryptographic JWT or managed Supabase validation.
+
+
 `municipal-money.test.mjs` uses injected fetch implementations and does not call the provider. It covers parameter validation, fixed catalogue membership preflight, unknown-code rejection before facts retrieval, incomplete metadata fail-closed behavior, in-isolate metadata caching, URL construction, redirect rejection, content-type and HTTP failures, payload validation, response-size limits, normalized amount semantics, provenance and sanitized errors.
 
 The GitHub Actions validation workflow type-checks the Edge Function and runs the adapter's provider-free tests. Latest gateway validation [run #41820778732](https://github.com/NtandoSway7929/SWA/actions/runs/41820778732) passed 60/60 tests, including current-year bounds and cancellation/socket-cleanup cases. Full adapter local Edge Runtime proof [run #41820772769](https://github.com/NtandoSway7929/SWA/actions/runs/41820772769) also passed.
@@ -104,3 +107,6 @@ See [`docs/innerme-integration-security-review.md`](../../../docs/innerme-integr
 ## Deployment boundary
 
 Do not deploy this function, change production secrets, create a production registry table, or wire the capability into chat without explicit owner approval after the isolated test environment is available and the security review is complete.
+
+
+Stage 20 local handler/Auth-client runtime proof: [report](../../../docs/innerme-integration-stage-20-auth-runtime.md), [CI run #41825641021](https://github.com/NtandoSway7929/SWA/actions/runs/41825641021).
