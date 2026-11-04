@@ -11,11 +11,11 @@ The workflow exercises the actual `pinned-http.mjs` module in `supabase/edge-run
 
 A read-only runtime bundle contains the actual `pinned-http.mjs` and `egress-policy.mjs`. A user worker imports and calls `requestPinnedMunicipalMoney()`.
 
-The test DNS wrapper confirms that the transport asks for the fixed Treasury hostname and requests both A and AAAA. It maps the fixture lookup to the local mock server. A test-only address-policy override permits exactly the private Docker IP resolved for that mock; it is hard-coded to the local fixture and cannot be supplied through the request body. Production retains the actual deny policy and rejects private destinations.
+The test executes the full fetchMunicipalMoneyFacts() adapter. Its injected runtime confirms the transport asks for the fixed Treasury hostname and requests both A and AAAA on each of the three catalogue requests and the final facts request. It maps the fixture lookup to the local mock server. A test-only address-policy override permits exactly the private Docker IP resolved for that mock; it is hard-coded to the local fixture and cannot be supplied through the request body. Production retains the actual deny policy and rejects private destinations.
 
 ## Result
 
-[PASS] [GitHub Actions run #41817303856](https://github.com/NtandoSway7929/SWA/actions/runs/41817303856).
+[PASS] The initial transport-only proof passed in [run #41817303856](https://github.com/NtandoSway7929/SWA/actions/runs/41817303856). The subsequent full-adapter proof passed in [run #41818534857](https://github.com/NtandoSway7929/SWA/actions/runs/41818534857).
 
 Observed response:
 
@@ -41,7 +41,7 @@ All workflow assertions passed and the temporary Docker resources were removed.
 
 ## What this proves
 
-1. The actual transport module loads and runs in the selected Supabase Edge Runtime image.
+1. The actual Municipal Money adapter and imported transport module load and run in the selected Supabase Edge Runtime image.
 2. It asks for both A and AAAA records for the fixed provider hostname.
 3. It connects to a literal IP rather than passing the provider hostname to the TCP connector.
 4. The socket peer matches the selected address.
@@ -51,15 +51,17 @@ All workflow assertions passed and the temporary Docker resources were removed.
 8. Identity encoding is requested.
 9. The bounded HTTP response parser reads the mock JSON response.
 10. The transport does not follow redirects.
+11. All three catalogue responses are validated before the facts request.
+12. The adapter normalizes the returned source amount and preserves the original source value.
 
 ## What this does not prove
 
 - The private Docker IP was permitted only by the CI test override; production policy rejects private addresses.
 - No Treasury DNS, network route, live certificate chain, API response, catalogue metadata or provider rate allowance was tested.
 - This is not a managed Supabase project test; it does not verify hosted project permissions, runtime build, Auth/JWT, PostgREST or deployment settings.
-- The test sends the facts route only. Member routes are allowlisted but were not separately sent through the mock in this workflow.
+- This full-adapter test sends all three member routes and the facts route through the mock. It does not test the real provider's catalogue contents or completeness.
 - It does not exercise IPv6 socket connectivity, live DNS rebinding, TLS timeout against a stalled peer or every HTTP/1.1 edge case.
-- The existing Municipal Money adapter has not yet switched from Fetch to the pinned transport.
+- The adapter now defaults to the pinned transport on the feature branch. The explicitly injected Fetch path remains available to provider-free unit tests only.
 
 ## Runtime compatibility
 
@@ -73,6 +75,6 @@ References:
 
 The feasibility of a pinned HTTP/1.1 request in the tested local Edge Runtime is demonstrated. No paid proxy is needed for the next development step.
 
-Next: integrate this transport into the isolated Municipal Money adapter for both member-catalogue and facts requests. Keep Fetch as an explicit provider-free test seam only; it must not remain the production default. Test both route types with the Edge Runtime mock and keep all live projects unchanged.
+Next: independently review the complete adapter/transport chain, extend runtime failure-path tests, and verify the same required permissions/API behavior in an explicitly approved managed Supabase test environment. Keep all live projects unchanged.
 
 The integration remains not production-ready pending adapter wiring, complete security review, managed Supabase validation, Treasury publication-date compliance and approval for any hosted migration or deployment.
