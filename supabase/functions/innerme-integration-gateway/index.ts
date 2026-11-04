@@ -259,7 +259,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    let result;
+    let result: Awaited<ReturnType<typeof fetchMunicipalMoneyFacts>>;
     try {
       result = await fetchMunicipalMoneyFacts(body.parameters);
     } finally {
