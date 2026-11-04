@@ -79,7 +79,7 @@ The CI workflows run the adapter tests and quota contract tests, alongside the E
 
 **PostgreSQL execution result (4 November 2026):** [GitHub Actions run #41812361593](https://github.com/NtandoSway7929/SWA/actions/runs/41812361593) completed successfully. The exact migration executed on PostgreSQL 17, and all SQL integration assertions passed for schema/grant boundaries, non-admin rejection, the admin minute ceiling, project in-flight ceiling, owner-scoped lease release, idempotent release, and non-refunded request counters.
 
-**Verification boundary:** the job uses minimal auth stubs. It does not validate managed Supabase Auth JWT claim plumbing, the hosted `is_swayphics_admin()` implementation, PostgREST exposure settings, or hosted Edge Function runtime. The concurrency cap was checked using multiple outstanding leases in one SQL session, not a simultaneous multi-session race. No migration has been applied to any Supabase project.
+**Verification boundary:** PostgreSQL CI jobs use minimal auth stubs. They do not validate managed Supabase Auth JWT claim plumbing, the hosted `is_swayphics_admin()` implementation, PostgREST exposure settings, or hosted Edge Function runtime. A simultaneous six-session race, UTC-window verification under a non-UTC session timezone, and lease-expiry recovery have since passed in [Stage 15](innerme-integration-stage-15-quota-concurrency.md). No migration has been applied to any Supabase project.
 
 ## 6. Remaining release blockers
 
