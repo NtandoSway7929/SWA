@@ -208,3 +208,18 @@ References:
 - Supabase Edge Functions overview: https://supabase.com/docs/guides/functions
 - Supabase serverless-driver guidance: https://supabase.com/docs/guides/database/connecting-to-postgres/serverless-drivers
 - Deno Network API: https://docs.deno.com/api/deno/network/
+
+
+---
+
+## Stage 18 update — IANA address-policy audit
+
+The current IPv4 and IPv6 deny lists were compared against the IANA IPv4/IPv6 Special-Purpose Address Registries and IPv6 Global Unicast Address Assignments. The source registry pages report updates on 2025-10-09 (special-purpose registries) and 2025-10-10 (IPv6 GUA assignments).
+
+The policy blocks all registered special-purpose prefixes reviewed, either directly, through a containing denied prefix, or because they fall outside the IPv6 `2000::/3` candidate range. It intentionally denies the whole IPv4 `192.0.0.0/24` and IPv6 `2001::/23` parents, including more-specific globally reachable anycast exceptions. The tests explicitly assert those exceptions remain blocked.
+
+**Important qualification:** IANA states that special-purpose prefixes are not guaranteed routability in any local/global context. Its IPv6 GUA registry also says unlisted space inside `2000::/3` is reserved for future allocation. Consequently, the current policy's “allowed” result means “inside a broad GUA candidate range and not in the maintained deny list”; it does not prove current allocation or BGP routability. A registry-driven positive allowlist would be a separate future design.
+
+Regression CI [run #41821649273](https://github.com/NtandoSway7929/SWA/actions/runs/41821649273) passed 60/60 tests, Deno type-check and diff check. See [Stage 18 IANA address-policy audit](innerme-integration-stage-18-iana-address-policy-audit.md).
+
+The lists are manually maintained and need a defined review cadence. The complete local Edge Runtime mock exercises IPv4 sockets; IPv6 parsing/policy/peer comparison are unit-tested, but an end-to-end IPv6 socket route has not been proven.
