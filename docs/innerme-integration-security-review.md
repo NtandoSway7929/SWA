@@ -178,3 +178,21 @@ The production-default request path now:
 The ephemeral PostgreSQL 17 job passed the exact quota migration and an extended test using six independent psql sessions. Exactly three concurrent reservations were admitted and three denied. The test also verified all admin/project minute/day window starts against UTC while the session timezone was Pacific/Auckland; forced all three leases to expire; confirmed a subsequent reservation succeeded; released that reservation; and verified the project request counter still contained four consumed reservations.
 
 This materially closes the prior PostgreSQL-only concurrency, UTC-window, and expiry-recovery test gaps. It does not validate the real Supabase Auth JWT/admin function, managed PostgREST exposure, or hosted Edge Function runtime because the CI database uses minimal auth/admin stubs. No Supabase project was accessed or changed.
+
+
+---
+
+## Stage 16 update — official provider contract and financial-year validation
+
+**Review date:** 4 November 2026  
+**Sources:** National Treasury API documentation, Income and Expenditure (v2) page, and Municipal Money terms of use. See [Stage 16 provider contract review](innerme-integration-stage-16-provider-contract-review.md).
+
+The public API documentation describes `incexp_v2` as Section 71-level mSCOA income-and-expenditure data from FY 2019–20 onwards. It defines `financial_year_end.year` as the calendar year at the end of the financial year and documents amount type, period, item and municipality dimensions. The API documentation describes GET requests, HTTP 200/JSON success, pagination, integer ZAR values and null/zero semantics.
+
+The adapter previously allowed years up to 2035. It now caps the upper bound at the current UTC calendar year, retaining 2020 as the lower year-end boundary based on the documented v2 start. This prevents obvious future-year requests but does not prove data exists for every year in the range. The public v2 table page shows earlier year choices in its selector; the exact available years must be checked against the live v2 API before release.
+
+The current official page reports 2026 Q2 data and says it is still undergoing completeness/integrity verification. The API docs explain a model `last_updated` field as a partial date for the latest update. Neither the site banner nor `last_updated` has been established as the exact publication date required by the terms. `attribution.publication_date` remains null; this is still a release blocker.
+
+The public documentation reviewed does not identify a numeric provider request limit or current live catalogue cardinalities. Those require provider confirmation or approved live metadata checks.
+
+Latest gateway validation [run #41820778732](https://github.com/NtandoSway7929/SWA/actions/runs/41820778732) passed **60/60 tests**, type-check and `git diff --check`. The full adapter mock in the pinned local Edge Runtime also passed [run #41820772769](https://github.com/NtandoSway7929/SWA/actions/runs/41820772769). No live provider request or managed Supabase project test was performed.
