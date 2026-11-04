@@ -67,7 +67,7 @@ test("rejects non-global and special-purpose IPv6 literals", () => {
     ["2001:db8::1", "documentation"],
     ["2002::1", "deprecated_6to4"],
     ["3fff::1", "documentation"],
-    ["5f00::1", "segment_routing_special_purpose"],
+    ["5f00::1", "not_ipv6_global_unicast"],
     ["fc00::1", "not_ipv6_global_unicast"],
     ["fe80::1", "not_ipv6_global_unicast"],
     ["ff02::1", "not_ipv6_global_unicast"],
