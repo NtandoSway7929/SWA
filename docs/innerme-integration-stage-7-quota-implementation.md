@@ -35,7 +35,7 @@ Both require `auth.uid()` and an active `public.is_swayphics_admin()` result. Pr
 
 A transaction-scoped advisory lock serializes reservation decisions for the fixed capability. Under that lock, the function checks concurrency and all four counters, then increments the counters and creates the lease in the same transaction. This avoids concurrent callers passing the same last available slot.
 
-The migration currently stages these **provisional internal safety ceilings**:
+The migration currently stages these **provisional internal safety ceilings**. One quota unit currently represents one inbound Gateway invocation, not each outbound HTTP request. A cold invocation can make up to four Treasury GETs (catalogue lookups plus the facts request). These ceilings therefore do not establish compliance with any provider request allowance; verify Treasury's current limits and add outbound-call budgeting before release:
 
 | Scope | Window | Ceiling |
 |---|---:|---:|
