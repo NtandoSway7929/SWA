@@ -40,8 +40,8 @@ jobs:
       - name: Type-check Edge Function
         run: deno check --no-lock supabase/functions/innerme-integration-gateway/index.ts
 
-      - name: Run provider-free adapter tests
-        run: node --test supabase/functions/innerme-integration-gateway/municipal-money.test.mjs
+      - name: Run provider-free adapter and quota contract tests
+        run: node --test supabase/functions/innerme-integration-gateway/*.test.mjs
 
       - name: Check whitespace errors
         run: git diff --check
