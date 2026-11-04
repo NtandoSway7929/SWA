@@ -12,7 +12,10 @@ async function openPinnedTlsConnection(ip: string, tlsHost: string, caCert: stri
   const peer = tcp.remoteAddr;
 
   assert(peer.transport === "tcp", "connected peer is not TCP");
-  assert(peer.hostname === ip, \`peer IP mismatch: expected \${ip}, received \${peer.hostname}\`);
+  assert(
+    peer.hostname === ip,
+    "peer IP mismatch: expected " + ip + ", received " + peer.hostname,
+  );
 
   try {
     const tls = await Deno.startTls(tcp, {
@@ -86,7 +89,7 @@ Deno.serve(async (request: Request) => {
   const writer = tls.writable.getWriter();
   try {
     const requestBytes = new TextEncoder().encode(
-      \`GET / HTTP/1.1\r\nHost: \${TEST_TLS_HOST}\r\nConnection: close\r\n\r\n\`,
+      "GET / HTTP/1.1\r\nHost: " + TEST_TLS_HOST + "\r\nConnection: close\r\n\r\n",
     );
     await writer.write(requestBytes);
     await writer.close();
@@ -102,10 +105,14 @@ Deno.serve(async (request: Request) => {
   assert(separator >= 0, "mock server returned malformed HTTP");
   const responseBody = rawResponse.slice(separator + 4);
   const mockResponse = JSON.parse(responseBody);
-  assert(mockResponse.servername === TEST_TLS_HOST,
-    \`TLS SNI mismatch: expected \${TEST_TLS_HOST}, received \${mockResponse.servername}\`);
-  assert(mockResponse.hostHeader === TEST_TLS_HOST,
-    \`HTTP Host header mismatch: received \${mockResponse.hostHeader}\`);
+  assert(
+    mockResponse.servername === TEST_TLS_HOST,
+    "TLS SNI mismatch: expected " + TEST_TLS_HOST + ", received " + mockResponse.servername,
+  );
+  assert(
+    mockResponse.hostHeader === TEST_TLS_HOST,
+    "HTTP Host header mismatch: received " + mockResponse.hostHeader,
+  );
 
   // A trusted test CA must not make a certificate for another hostname valid.
   const wrongHostTcp = await Deno.connect({
