@@ -113,6 +113,7 @@ assert.equal(oversizedBody.response.status, 413);
 assert.equal(oversizedBody.payload.error, "Request body is too large.");
 
 const streamedOversizedBody = await invoke({
+  token: "admin-streamed-body-token",
   streamedBodyBytes: 5000,
 });
 assert.equal(streamedOversizedBody.response.status, 413);
@@ -173,6 +174,7 @@ const expectedAuthTokens = [
   "unsupported-body-token",
   "unknown-capability-token",
   "invalid-json-token",
+  "admin-streamed-body-token",
   "quota-denied-token",
   "quota-error-token",
   "quota-malformed-token",
@@ -191,6 +193,7 @@ const expectedAdminTokens = [
   "unsupported-body-token",
   "unknown-capability-token",
   "invalid-json-token",
+  "admin-streamed-body-token",
   "quota-denied-token",
   "quota-error-token",
   "quota-malformed-token",
