@@ -11,7 +11,7 @@ test("accepts representative public IPv4 literals", () => {
     "1.1.1.1",
     "8.8.8.8",
     "41.0.0.1",
-    "192.31.196.25",
+    "9.9.9.9",
   ]) {
     assert.equal(validateOutboundAddress(address).allowed, true, address);
   }
@@ -27,9 +27,12 @@ test("rejects non-public and special-purpose IPv4 literals", () => {
     ["172.16.0.1", "private_use"],
     ["172.31.255.254", "private_use"],
     ["192.0.0.9", "ietf_protocol_assignments"],
+    ["192.31.196.25", "special_purpose_anycast"],
+    ["192.52.193.1", "special_purpose_amt"],
     ["192.0.2.10", "documentation"],
     ["192.88.99.2", "deprecated_6to4_relay"],
     ["192.168.1.1", "private_use"],
+    ["192.175.48.1", "special_purpose_anycast"],
     ["198.18.0.1", "benchmarking"],
     ["198.51.100.7", "documentation"],
     ["203.0.113.7", "documentation"],
@@ -66,6 +69,7 @@ test("rejects non-global and special-purpose IPv6 literals", () => {
     ["2001:2::1", "ietf_protocol_assignments"],
     ["2001:db8::1", "documentation"],
     ["2002::1", "deprecated_6to4"],
+    ["2620:4f:8000::1", "special_purpose_anycast"],
     ["3fff::1", "documentation"],
     ["5f00::1", "not_ipv6_global_unicast"],
     ["fc00::1", "not_ipv6_global_unicast"],
