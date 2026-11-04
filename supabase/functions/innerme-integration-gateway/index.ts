@@ -261,7 +261,9 @@ Deno.serve(async (req: Request) => {
 
     let result: Awaited<ReturnType<typeof fetchMunicipalMoneyFacts>>;
     try {
-      result = await fetchMunicipalMoneyFacts(body.parameters);
+      result = await fetchMunicipalMoneyFacts(body.parameters, {
+        signal: req.signal,
+      });
     } finally {
       // The request counters stay consumed; this only frees the in-flight lease.
       try {
