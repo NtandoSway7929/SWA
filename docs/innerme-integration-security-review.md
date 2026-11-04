@@ -55,6 +55,7 @@ Supabase's nested Edge Function call budget does not govern inbound calls to thi
 ## 4. Request and response validation
 
 Implemented:
+- Handler-level local Edge Runtime boundary proof: Stage 21 passed 18 cases covering method/CORS, request parsing and limits, capability/parameter rejection, quota denial and malformed quota responses, and call ordering. [Run #41826477663](https://github.com/NtandoSway7929/SWA/actions/runs/41826477663). See [Stage 21 report](innerme-integration-stage-21-handler-boundaries.md).
 - 4 KiB request body cap enforced during streaming, with cancellation on overflow.
 - 8-second timeout per provider request.
 - 512 KiB provider response cap.
@@ -110,6 +111,7 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 - [ ] Obtain an authoritative publication date applicable to the queried data and attach it to the response before any onward use.
 - [ ] Confirm the provisional quota ceilings before applying the migration.
 - [x] Exercise the actual gateway handler and Supabase JS Auth/RPC call path in the pinned local Edge Runtime with a controlled mock. [Run #41825641021](https://github.com/NtandoSway7929/SWA/actions/runs/41825641021). This is not real JWT signature or managed-project validation.
+- [x] Extend local handler coverage for unsupported requests, non-POST/OPTIONS behavior, streaming body cap, malformed quota decisions, invalid retry intervals/reservation IDs, and Auth/admin/quota ordering. [Run #41826477663](https://github.com/NtandoSway7929/SWA/actions/runs/41826477663). Managed Supabase verification remains open.
 - [ ] Verify authorization/RPC behavior in an approved managed Supabase test environment using the actual Auth JWT and admin function.
 - [ ] Add explicit `verify_jwt = true` in an approved deployment change; shared `supabase/config.toml` remains untouched.
 - [ ] After separate approval and cost review, validate the deployed function, hosted TCP permissions, origin/JWT/admin paths, upstream failures, body/response limits, cancellation and quota paths in the isolated environment.
@@ -252,3 +254,20 @@ This used a Docker ULA and a test-only address-policy override. It proves the lo
 The actual Edge Function handler now passes a pinned local Edge Runtime test using the real Supabase JavaScript client against a controlled local Auth/PostgREST mock. [Run #41825641021](https://github.com/NtandoSway7929/SWA/actions/runs/41825641021) passed all seven cases: missing bearer, invalid session, non-admin, invalid parameters before quota reservation, quota denial (429/`Retry-After`), quota-service failure (503), and disallowed Origin (403). The test also verified caller bearer-token and public API-key propagation and recorded zero provider calls.
 
 This closes the local handler-level Auth-client/RPC contract test gap. It does not cryptographically verify JWTs or test the actual managed Supabase Auth/JWT/admin function/PostgREST grants/RLS. Managed-project verification remains a release gate.
+
+
+---
+
+## Stage 21 update — expanded handler boundary and fail-closed tests
+
+[Stage 21 report](innerme-integration-stage-21-handler-boundaries.md)
+
+The local pinned Edge Runtime handler test passed [run #41826477663](https://github.com/NtandoSway7929/SWA/actions/runs/41826477663). It covers 18 request/auth/quota contract cases, including:
+- POST-only handling and allowed/disallowed CORS origins;
+- JSON/object/body-field/capability/parameter validation before quota reservation;
+- declared-length and streamed-body size enforcement;
+- quota denial and malformed quota response fail-closed behavior;
+- Auth → active-admin → quota ordering; and
+- caller bearer-token/public API-key forwarding.
+
+The test uses mock Auth/PostgREST responses and produced zero provider calls. It does not validate real JWT cryptography or managed Supabase. Stage 20's basic local Auth-client proof is retained as the earlier baseline.
