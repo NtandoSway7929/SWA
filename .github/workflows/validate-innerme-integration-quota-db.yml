@@ -17,6 +17,8 @@ on:
     paths:
       - "supabase/migrations/20261104110000_innerme_integration_quota.sql"
       - "supabase/tests/integration_quota_migration_test.sql"
+      - "supabase/tests/integration_quota_concurrency_setup.sql"
+      - "supabase/tests/integration_quota_concurrency_test.sh"
       - ".github/workflows/validate-innerme-integration-quota-db.yml"
 
 permissions:
