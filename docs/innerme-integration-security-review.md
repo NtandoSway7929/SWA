@@ -196,3 +196,15 @@ The current official page reports 2026 Q2 data and says it is still undergoing c
 The public documentation reviewed does not identify a numeric provider request limit or current live catalogue cardinalities. Those require provider confirmation or approved live metadata checks.
 
 Latest gateway validation [run #41820778732](https://github.com/NtandoSway7929/SWA/actions/runs/41820778732) passed **60/60 tests**, type-check and `git diff --check`. The full adapter mock in the pinned local Edge Runtime also passed [run #41820772769](https://github.com/NtandoSway7929/SWA/actions/runs/41820772769). No live provider request or managed Supabase project test was performed.
+
+
+## Stage 17 update — hosted TCP capability documentation
+
+Supabase's current documentation for Edge Functions states that Edge Functions use Deno and have native TCP connection support. Its serverless-driver guidance specifically states that Edge Functions use Deno's native TCP support. This reduces the platform-level concern that TCP sockets are categorically unavailable in Edge Functions.
+
+The Deno API reference still marks `Deno.connect` as unstable and states that it requires `allow-net`. The pinned local Edge Runtime v1.77.9 test proves the exact transport path works in that container, but does not prove the hosted project's permission policy, deployed runtime build, or specific `Deno.connect`/ `Deno.startTls` support. The hosted-runtime verification gate therefore remains open.
+
+References:
+- Supabase Edge Functions overview: https://supabase.com/docs/guides/functions
+- Supabase serverless-driver guidance: https://supabase.com/docs/guides/database/connecting-to-postgres/serverless-drivers
+- Deno Network API: https://docs.deno.com/api/deno/network/
