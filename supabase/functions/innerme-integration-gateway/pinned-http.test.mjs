@@ -230,14 +230,24 @@ test("rejects a TLS negotiation that selects HTTP/2", async () => {
   );
 });
 
-test("returns redirect status without following the Location header", async () => {
+test("rejects redirect responses without following the Location header", async () => {
   const redirect = response(302, { Location: "https://example.com/other" }, "moved");
   const { runtime, calls } = makeRuntime(redirect);
-  const result = await requestPinnedMunicipalMoney(FACTS_URL, { runtime });
-  assert.equal(result.status, 302);
-  assert.equal(result.headers.location, "https://example.com/other");
-  assert.equal(result.redirectFollowed, false);
+  await assert.rejects(
+    requestPinnedMunicipalMoney(FACTS_URL, { runtime }),
+    (error) => error.code === "provider_redirect_rejected",
+  );
   assert.equal(calls.connect.length, 1);
+});
+
+test("rejects non-200 provider status responses", async () => {
+  for (const status of [204, 206, 400, 429, 500, 503]) {
+    const { runtime } = makeRuntime(response(status, {}, "{}"));
+    await assert.rejects(
+      requestPinnedMunicipalMoney(FACTS_URL, { runtime }),
+      (error) => error.code === "provider_http_status_rejected",
+    );
+  }
 });
 
 test("accepts a valid bounded chunked response", async () => {
