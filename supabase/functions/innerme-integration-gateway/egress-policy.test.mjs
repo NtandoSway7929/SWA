@@ -137,3 +137,15 @@ test("rejects an empty or malformed DNS answer set", () => {
     false,
   );
 });
+
+
+import { sameOutboundAddress } from "./egress-policy.mjs";
+
+test("compares IPv4 and IPv6 literals by address value, not string spelling", () => {
+  assert.equal(sameOutboundAddress("8.8.8.8", "8.8.8.8"), true);
+  assert.equal(sameOutboundAddress("8.8.8.8", "8.8.4.4"), false);
+  assert.equal(sameOutboundAddress("2001:4860:4860::8888", "2001:4860:4860:0:0:0:0:8888"), true);
+  assert.equal(sameOutboundAddress("2001:4860:4860::8888", "2001:4860:4860::8844"), false);
+  assert.equal(sameOutboundAddress("2001:4860:4860::8888", "8.8.8.8"), false);
+  assert.equal(sameOutboundAddress("not-an-ip", "not-an-ip"), false);
+});
