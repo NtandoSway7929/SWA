@@ -102,7 +102,8 @@ The current gateway has no model dispatch or knowledge-promotion path. Any later
 - [ ] Confirm financial-year and period bounds from current metadata.
 - [ ] Obtain and attach the authoritative publication date.
 - [ ] Confirm the provisional quota ceilings and apply the migration only to an explicitly approved isolated Supabase environment.
-- [ ] Run PostgreSQL authorization, RLS, concurrent last-slot, UTC boundary, lease expiry and idempotent-release tests.
+- [x] Run ephemeral PostgreSQL 17 authorization, RLS, concurrent last-slot, UTC window, lease expiry and idempotent-release tests. [Run #41820154737](https://github.com/NtandoSway7929/SWA/actions/runs/41820154737)
+- [ ] Verify the same authorization/RPC behavior in a managed Supabase test environment using the actual Auth JWT and admin function.
 - [ ] Implement connection-time DNS/IP destination enforcement.
 - [ ] Add explicit `verify_jwt = true` in deployment configuration.
 - [ ] Deploy only to an approved isolated Supabase environment.
@@ -155,7 +156,7 @@ The production-default request path now:
 1. **No managed Supabase validation.** Local Edge Runtime CI does not prove the deployed project's Deno permission flags, runtime build, Auth/JWT claims, PostgREST RPC exposure, or actual Edge Function environment. The isolated Supabase test project remains inactive.
 2. **No live Treasury verification.** The API routes, member catalogue counts, current response contract, financial-year bounds, provider request allowance, and actual certificate chain have not been verified against the live provider.
 3. **Terms compliance remains blocked.** The response still has `attribution.publication_date: null`. A retrieval timestamp must not be substituted. Until a defensible publication date is sourced and attached, do not use the data for onward display, publication or distribution.
-4. **Quota limits are provisional.** The SQL migration has executed in ephemeral PostgreSQL CI, but it has not been applied to any Supabase project. The ceilings require owner confirmation; simultaneous multi-session last-slot race and hosted JWT/RPC behavior remain to be tested.
+4. **Quota limits are provisional.** The SQL migration, simultaneous six-session reservation race, UTC window alignment under a non-UTC session timezone, expired-lease recovery and non-refunded request counters passed in ephemeral PostgreSQL CI [run #41820154737](https://github.com/NtandoSway7929/SWA/actions/runs/41820154737). The tests use auth/admin stubs. Hosted JWT/RPC behavior remains unverified, and the migration has not been applied to any Supabase project. The ceilings still require owner confirmation.
 5. **Deployment config is not prepared.** Add explicit `verify_jwt = true` only in an approved deployment change. No shared Supabase config or secrets were changed in this PR.
 6. **Address policy is manually maintained.** It is a conservative implementation snapshot of IANA special-purpose ranges, not an automatically updated registry feed. Review it before release and on a defined cadence.
 7. **IPv6 socket route remains unproven end-to-end.** IPv6 parsing/peer comparison is unit-tested; the full Edge Runtime mock exercises IPv4 only.
@@ -165,3 +166,15 @@ The production-default request path now:
 ### Release decision
 
 **Keep PR #147 open as a draft. Do not merge, apply its migration, deploy its function, activate the inactive Supabase test project, or wire the capability into InnerMe chat yet.** The feature-branch implementation and local CI evidence are materially stronger, but the live provider terms, managed Supabase runtime and independent security gates remain open.
+
+
+---
+
+## Stage 15 update — quota concurrency and recovery
+
+**Date:** 4 November 2026  
+**Evidence:** [GitHub Actions run #41820154737](https://github.com/NtandoSway7929/SWA/actions/runs/41820154737)
+
+The ephemeral PostgreSQL 17 job passed the exact quota migration and an extended test using six independent psql sessions. Exactly three concurrent reservations were admitted and three denied. The test also verified all admin/project minute/day window starts against UTC while the session timezone was Pacific/Auckland; forced all three leases to expire; confirmed a subsequent reservation succeeded; released that reservation; and verified the project request counter still contained four consumed reservations.
+
+This materially closes the prior PostgreSQL-only concurrency, UTC-window, and expiry-recovery test gaps. It does not validate the real Supabase Auth JWT/admin function, managed PostgREST exposure, or hosted Edge Function runtime because the CI database uses minimal auth/admin stubs. No Supabase project was accessed or changed.
