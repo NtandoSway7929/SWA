@@ -124,7 +124,7 @@ Deno.serve(async (req: Request) => {
   const startedAt = Date.now();
 
   try {
-    const userId = await authenticateAdmin(req);
+    await authenticateAdmin(req);
     const rawBody = await req.text();
 
     if (new TextEncoder().encode(rawBody).byteLength > 4096) {
@@ -156,7 +156,6 @@ Deno.serve(async (req: Request) => {
     console.info("InnerMe integration invocation completed.", {
       capability: MUNICIPAL_MONEY_CAPABILITY,
       provider: result.provider,
-      user_id: userId,
       outcome: "success",
       latency_ms: Date.now() - startedAt,
       record_count: result.records.length,
