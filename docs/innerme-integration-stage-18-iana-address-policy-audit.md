@@ -59,10 +59,14 @@ The 2000::/3 test is a broad candidate-range check, not a proof that an address 
 
 The source lists and code are manually maintained snapshots. They are not automatically synchronized with IANA. Recheck the registries before release and on a defined maintenance cadence.
 
-## 4. Remaining limitations
+## 4. Dual-stack runtime proof
+
+The full adapter now passes over both IPv4 and IPv6 in the pinned local Edge Runtime; see [Stage 19](innerme-integration-stage-19-dual-stack-runtime.md) and [run #41822450213](https://github.com/NtandoSway7929/SWA/actions/runs/41822450213). The IPv6 pass deliberately returned no A record, used AAAA only, connected to the literal ULA address `fd00:dead:beef::2`, verified peer match, completed TLS and observed the Treasury SNI/Host. The ULA was accepted only by the test-only override; the production policy rejects it.
+
+## 5. Remaining limitations
 
 - Registry classification does not guarantee reachability, allocation status for every address, or route behavior in the deployed environment.
-- IPv6 literal parsing and policy are unit-tested, but the full local Edge Runtime adapter mock currently exercises IPv4 socket connectivity only.
+- IPv6 literal parsing, policy and numeric peer comparison are unit-tested. Stage 19 now also proves the full IPv6-only adapter socket path in the local Edge Runtime mock; this uses a ULA test address and test-only policy override, not a public IPv6 destination.
 - A locally allowed mock override exists only in CI; production does not use it and applies the normal address policy.
 - The address policy does not resolve the separate managed Supabase runtime/permission question.
 
