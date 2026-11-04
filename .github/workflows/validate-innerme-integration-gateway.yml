@@ -11,6 +11,7 @@ on:
   push:
     branches:
       - main
+      - feature/innerme-municipal-money-gateway
     paths:
       - "supabase/functions/innerme-integration-gateway/**"
       - ".github/workflows/validate-innerme-integration-gateway.yml"
