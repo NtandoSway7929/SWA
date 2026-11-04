@@ -195,17 +195,19 @@ The isolated Supabase project `ofqofhnlzbouclvvrmzd` is currently inactive. Do n
 - Quota service unavailable: fail closed and zero provider calls.
 - Provider failure: no knowledge write, action proposal, or execution side effect.
 
-## 7. Approval boundary and next actions
+## 7. Implementation status and remaining approvals
 
-This document is a design, not an implementation or approval to alter the database.
+The owner has approved implementation of the separate integration quota tables and authenticated reservation/release RPCs on the feature branch. Stage 7 is recorded in [`docs/innerme-integration-stage-7-quota-implementation.md`](innerme-integration-stage-7-quota-implementation.md).
 
-Before any implementation:
-1. Approve a dedicated integration quota table and authenticated RPC migration.
-2. Confirm the provisional pilot ceilings or replace them with approved values.
-3. Confirm whether an additional controlled egress service and its cost are acceptable.
-4. Approve restoration/activation of the isolated Supabase test project only after its cost is known.
+The migration is committed to `feature/innerme-municipal-money-gateway` only. It has not been applied to production or the inactive test project. Its provisional numeric ceilings still require explicit owner confirmation before database application.
 
-Until those approvals and tests exist, keep PR #147 in draft and do not deploy or connect the capability to InnerMe chat.
+Remaining actions:
+1. Confirm or replace the five provisional quota ceilings.
+2. Apply and runtime-test the migration only in an explicitly approved active isolated Supabase environment.
+3. Select and verify a controlled egress service that enforces connection-time DNS/IP validation, with cost reviewed first.
+4. Restore/activate the existing inactive Supabase test project only after cost and resource implications are reviewed.
+
+Keep PR #147 in draft. Do not deploy or connect the capability to InnerMe chat until the SQL/runtime tests, egress control, source publication-date attribution, and independent security review are complete.
 
 ## Official references
 
