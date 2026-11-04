@@ -1,0 +1,127 @@
+name: Test InnerMe Pinned HTTP Transport in Edge Runtime
+
+on:
+  pull_request:
+    branches:
+      - main
+      - agent/innerme-integration-registry-spec
+    paths:
+      - "supabase/functions/innerme-integration-gateway/pinned-http.mjs"
+      - "supabase/functions/innerme-integration-gateway/egress-policy.mjs"
+      - "supabase/tests/pinned-http-runtime/**"
+      - ".github/workflows/validate-innerme-pinned-http-runtime.yml"
+  push:
+    branches:
+      - feature/innerme-municipal-money-gateway
+    paths:
+      - "supabase/functions/innerme-integration-gateway/pinned-http.mjs"
+      - "supabase/functions/innerme-integration-gateway/egress-policy.mjs"
+      - "supabase/tests/pinned-http-runtime/**"
+      - ".github/workflows/validate-innerme-pinned-http-runtime.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-http:
+    name: Exercise pinned HTTP module in Supabase Edge Runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Create short-lived test CA and Treasury-host certificate
+        run: |
+          mkdir -p "$RUNNER_TEMP/pinned-http-certs"
+          cd "$RUNNER_TEMP/pinned-http-certs"
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout ca.key -out ca.crt -days 2 \
+            -subj "/CN=InnerMe Pinned HTTP CI Test CA" \
+            -addext "basicConstraints=critical,CA:TRUE" \
+            -addext "keyUsage=critical,keyCertSign,cRLSign"
+          openssl req -new -newkey rsa:2048 -nodes \
+            -keyout server.key -out server.csr \
+            -subj "/CN=municipaldata.treasury.gov.za"
+          printf '%s\n' \
+            "basicConstraints=critical,CA:FALSE" \
+            "keyUsage=critical,digitalSignature,keyEncipherment" \
+            "extendedKeyUsage=serverAuth" \
+            "subjectAltName=DNS:municipaldata.treasury.gov.za" \
+            > server.ext
+          openssl x509 -req -in server.csr \
+            -CA ca.crt -CAkey ca.key -CAcreateserial \
+            -out server.crt -days 2 -extfile server.ext
+
+      - name: Create isolated mock network
+        run: docker network create innerme-pinned-http-ci
+
+      - name: Start local mock Treasury TLS server
+        run: |
+          docker run -d --name innerme-pinned-http-mock \
+            --network innerme-pinned-http-ci --network-alias mock-pinned-http \
+            -v "$RUNNER_TEMP/pinned-http-certs:/certs:ro" \
+            -v "$GITHUB_WORKSPACE/supabase/tests/pinned-http-runtime/mock-server.mjs:/app/server.mjs:ro" \
+            node:22-alpine node /app/server.mjs
+
+      - name: Start pinned Supabase Edge Runtime
+        run: |
+          docker run -d --name innerme-pinned-http-runtime \
+            --network innerme-pinned-http-ci -p 9000:9000 \
+            -v "$GITHUB_WORKSPACE/supabase/tests/pinned-http-runtime/main:/services/main:ro" \
+            -v "$GITHUB_WORKSPACE/supabase/tests/pinned-http-runtime/user:/services/pinned-http-probe:ro" \
+            -v "$GITHUB_WORKSPACE/supabase/functions/innerme-integration-gateway:/services/pinned-http-probe/lib:ro" \
+            supabase/edge-runtime:v1.77.9 \
+            start --main-service /services/main -p 9000
+
+      - name: Wait for Edge Runtime health
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:9000/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs innerme-pinned-http-runtime
+          exit 1
+
+      - name: Exercise the actual pinned HTTP transport module
+        run: |
+          ca_cert="$(cat "$RUNNER_TEMP/pinned-http-certs/ca.crt")"
+          payload="$(jq -n --arg ca "$ca_cert" '{caCert: $ca}')"
+          status="$(curl --silent --show-error --max-time 20 \
+            --output "$RUNNER_TEMP/pinned-http-response.json" \
+            --write-out '%{http_code}' \
+            -H "Content-Type: application/json" \
+            --data "$payload" \
+            http://127.0.0.1:9000/pinned-http-probe)"
+          body="$(cat "$RUNNER_TEMP/pinned-http-response.json")"
+          printf 'HTTP status: %s\n' "$status"
+          printf '%s\n' "$body" | jq .
+          test "$status" = "200"
+          printf '%s\n' "$body" | jq -e '
+            .status == 200 and
+            .dnsAAndAAAAQueried == true and
+            .connectedToLiteralIp == true and
+            .peerAddressMatched == true and
+            .tlsSniObservedByServer == "municipaldata.treasury.gov.za" and
+            .httpHostObservedByServer == "municipaldata.treasury.gov.za" and
+            .method == "GET" and
+            .pathRestrictedToFactsEndpoint == true and
+            .identityEncodingRequested == true and
+            .boundedHttpResponseParsed == true and
+            .redirectFollowed == false and
+            .testOnlyPrivateDestination == true
+          '
+
+      - name: Print logs on failure
+        if: failure()
+        run: |
+          docker logs innerme-pinned-http-runtime || true
+          docker logs innerme-pinned-http-mock || true
+
+      - name: Clean up local CI resources
+        if: always()
+        run: |
+          docker rm -f innerme-pinned-http-runtime innerme-pinned-http-mock || true
+          docker network rm innerme-pinned-http-ci || true
