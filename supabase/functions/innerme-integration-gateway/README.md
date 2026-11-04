@@ -29,7 +29,7 @@ Only the documented request fields are accepted. The model cannot supply a URL, 
 
 ## Authentication
 
-- Supabase gateway JWT verification is enabled in `supabase/config.toml`.
+- Before deployment, add an explicit `[functions.innerme-integration-gateway]` block with `verify_jwt = true` to `supabase/config.toml`. The shared config is intentionally unchanged in this isolated implementation PR.
 - The function independently validates the Bearer token with Supabase Auth `getUser`.
 - The function calls `is_swayphics_admin()` using the caller's authenticated client context.
 - It uses the public/anon (or publishable) API key, not the service-role key.
