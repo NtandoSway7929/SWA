@@ -46,9 +46,12 @@ function getProviderFetch(options = {}) {
       );
     }
 
+    const signals = [init.signal, options.signal].filter(Boolean);
+    const signal = signals.length > 1 ? AbortSignal.any(signals) : signals[0];
     const result = await requestPinned(url, {
       timeoutMs: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
       maxResponseBytes: options.maxResponseBytes ?? MAX_RESPONSE_BYTES,
+      ...(signal ? { signal } : {}),
       ...(options.transportRuntime ? { runtime: options.transportRuntime } : {}),
       ...(options.transportAddressPolicy
         ? { addressPolicy: options.transportAddressPolicy }
