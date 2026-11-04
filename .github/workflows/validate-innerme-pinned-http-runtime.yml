@@ -67,8 +67,8 @@ jobs:
           cp "$GITHUB_WORKSPACE/supabase/functions/innerme-integration-gateway/municipal-money.mjs" \
             "$RUNNER_TEMP/pinned-http-user/lib/municipal-money.mjs"
 
-      - name: Create isolated mock network
-        run: docker network create innerme-pinned-http-ci
+      - name: Create isolated dual-stack mock network
+        run: docker network create --ipv6 --subnet fd00:dead:beef::/64 innerme-pinned-http-ci
 
       - name: Start local mock Treasury TLS server
         run: |
@@ -126,7 +126,16 @@ jobs:
             .identityEncodingRequested == true and
             .normalizedAmount == 1250 and
             .providerSourceAmountPreserved == true and
-            .testOnlyPrivateDestination == true
+            .testOnlyPrivateDestination == true and
+            .ipv6MemberCataloguesValidated == 3 and
+            .ipv6FactsRequests == 1 and
+            .ipv6DnsAQueries == 4 and
+            .ipv6DnsAAAAQueries == 4 and
+            .ipv6LiteralIpConnections == 4 and
+            .ipv6TlsConnections == 4 and
+            .ipv6TlsSniObservedByServer == "municipaldata.treasury.gov.za" and
+            .ipv6HttpHostObservedByServer == "municipaldata.treasury.gov.za" and
+            (.ipv6ConnectedToMock | contains(":"))
           '
 
       - name: Print logs on failure
