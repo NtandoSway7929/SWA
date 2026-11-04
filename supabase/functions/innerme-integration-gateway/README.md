@@ -71,7 +71,7 @@ The provider's documentation describes quarterly snapshots and advises that data
 1. Member validation is implemented against fixed provider catalogue endpoints and covered by injected-response tests, but a live provider metadata call and runtime test remain outstanding.
 2. The provider adapter has a fixed 2020-2035 financial-year range. Revisit this bound against current provider metadata before release.
 3. The fixed host/path and redirect rejection prevent model-controlled destination changes, but do not establish DNS rebinding protection.
-4. No rate-limit persistence or shared per-admin quota has been added yet.
+4. Shared per-admin and project-wide quota reservation is now implemented in the feature branch. The migration is not applied and PostgreSQL concurrency/runtime verification remains outstanding.
 5. No live provider call or Supabase runtime test has been run from this branch.
 6. The existing isolated Supabase project `ofqofhnlzbouclvvrmzd` is currently inactive. Do not deploy until its state and cost implications are reviewed.
 7. The capability is not wired into `swayphics-ai` or the InnerMe UI. It is an isolated endpoint proposal only.
@@ -82,9 +82,17 @@ The provider's documentation describes quarterly snapshots and advises that data
 
 The GitHub Actions validation workflow type-checks the Edge Function and runs the adapter's provider-free tests.
 
+## Shared integration quota
+
+The gateway now calls `innerme_reserve_integration_quota` using the caller JWT before any provider catalogue or facts request. A denied reservation returns HTTP 429 with `Retry-After`; quota-service failure returns HTTP 503 and prevents provider access. The in-flight lease is released in a `finally` path, while the request count remains consumed after upstream errors. An expired 60-second lease is the recovery mechanism if release fails.
+
+The migration `supabase/migrations/20261104110000_innerme_integration_quota.sql` creates isolated tables and RPC helpers under the non-exposed `innerme_private` schema. It is committed to this feature branch only and has **not** been applied to any Supabase project. The staged ceilings (3/admin/minute, 15/project/minute, 30/admin/day, 100/project/day, 3 concurrent/project) are provisional internal safety defaults, not provider limits, and require owner confirmation before database application.
+
+See [`docs/innerme-integration-stage-7-quota-implementation.md`](../../../docs/innerme-integration-stage-7-quota-implementation.md) for the implementation and verification boundaries.
+
 ## Stage 6 infrastructure design
 
-See [`docs/innerme-integration-stage-6-infrastructure-design.md`](../../../docs/innerme-integration-stage-6-infrastructure-design.md) for the proposed shared quota and connection-time egress architecture. This is a design only; it does not create a schema migration, deploy a proxy, or change any project settings.
+See [`docs/innerme-integration-stage-6-infrastructure-design.md`](../../../docs/innerme-integration-stage-6-infrastructure-design.md) for the original shared-quota and controlled-egress design. The quota mechanism is now staged in this branch; connection-time DNS/IP enforcement remains a separate blocker.
 
 ## Security review
 
