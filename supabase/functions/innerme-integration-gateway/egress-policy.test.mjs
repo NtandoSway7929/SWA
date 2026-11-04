@@ -64,7 +64,7 @@ test("rejects non-global and special-purpose IPv6 literals", () => {
     ["100:0:0:1::1", "not_ipv6_global_unicast"],
     ["2001:1::1", "ietf_protocol_assignments"],
     ["2001:2::1", "ietf_protocol_assignments"],
-    ["2001:db8::1", "ietf_protocol_assignments"],
+    ["2001:db8::1", "documentation"],
     ["2002::1", "deprecated_6to4"],
     ["3fff::1", "documentation"],
     ["5f00::1", "segment_routing_special_purpose"],
