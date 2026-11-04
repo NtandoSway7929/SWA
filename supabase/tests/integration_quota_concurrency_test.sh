@@ -96,21 +96,39 @@ utc_misaligned_windows="$(psql --no-psqlrc --quiet --tuples-only --no-align \
     FROM innerme_private.innerme_integration_quota_leases l
     WHERE l.capability = 'za.municipal_money.income_expenditure.read'
       AND l.released_at IS NULL
-      AND NOT EXISTS (
-        SELECT 1 FROM innerme_private.innerme_integration_quota_windows q
-        WHERE q.scope_type = 'admin'
-          AND q.scope_id = l.admin_user_id::text
-          AND q.capability = l.capability
-          AND q.window_type = 'minute'
-          AND q.window_start = date_trunc('minute', l.reserved_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
-      )
-      OR NOT EXISTS (
-        SELECT 1 FROM innerme_private.innerme_integration_quota_windows q
-        WHERE q.scope_type = 'project'
-          AND q.scope_id = current_database()
-          AND q.capability = l.capability
-          AND q.window_type = 'utc_day'
-          AND q.window_start = date_trunc('day', l.reserved_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+      AND (
+        NOT EXISTS (
+          SELECT 1 FROM innerme_private.innerme_integration_quota_windows q
+          WHERE q.scope_type = 'admin'
+            AND q.scope_id = l.admin_user_id::text
+            AND q.capability = l.capability
+            AND q.window_type = 'minute'
+            AND q.window_start = date_trunc('minute', l.reserved_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+        )
+        OR NOT EXISTS (
+          SELECT 1 FROM innerme_private.innerme_integration_quota_windows q
+          WHERE q.scope_type = 'admin'
+            AND q.scope_id = l.admin_user_id::text
+            AND q.capability = l.capability
+            AND q.window_type = 'utc_day'
+            AND q.window_start = date_trunc('day', l.reserved_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+        )
+        OR NOT EXISTS (
+          SELECT 1 FROM innerme_private.innerme_integration_quota_windows q
+          WHERE q.scope_type = 'project'
+            AND q.scope_id = current_database()
+            AND q.capability = l.capability
+            AND q.window_type = 'minute'
+            AND q.window_start = date_trunc('minute', l.reserved_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+        )
+        OR NOT EXISTS (
+          SELECT 1 FROM innerme_private.innerme_integration_quota_windows q
+          WHERE q.scope_type = 'project'
+            AND q.scope_id = current_database()
+            AND q.capability = l.capability
+            AND q.window_type = 'utc_day'
+            AND q.window_start = date_trunc('day', l.reserved_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+        )
       );")"
 test "$utc_misaligned_windows" -eq 0
 
