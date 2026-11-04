@@ -429,6 +429,10 @@ export async function requestPinnedMunicipalMoney(target, options = {}) {
   assertLimit(maxResponseBytes, "maxResponseBytes", MAX_HTTP_RESPONSE_BYTES);
 
   const runtime = options.runtime ?? getDefaultRuntime();
+  const addressPolicy = options.addressPolicy ?? validateOutboundAddressSet;
+  if (typeof addressPolicy !== "function") {
+    throw new PinnedHttpError("runtime_unavailable", "Pinned transport address policy is incomplete.", 500);
+  }
   for (const name of ["resolveDns", "connect", "startTls"]) {
     if (typeof runtime[name] !== "function") {
       throw new PinnedHttpError("runtime_unavailable", "Pinned transport runtime is incomplete.", 500);
@@ -451,7 +455,7 @@ export async function requestPinnedMunicipalMoney(target, options = {}) {
     }
 
     const addresses = [...ipv4, ...ipv6];
-    const decision = validateOutboundAddressSet(addresses);
+    const decision = addressPolicy(addresses);
     if (!decision.allowed) {
       throw new PinnedHttpError("provider_address_rejected", "Provider DNS returned a prohibited destination address.");
     }
