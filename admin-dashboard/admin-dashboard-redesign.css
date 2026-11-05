@@ -948,9 +948,10 @@
         padding-left: 0 !important;
     }
 
-    #sway-admin-workspace .admin-mobile-sidebar-toggle,
+    .admin-mobile-sidebar-toggle,
     #sway-admin-workspace .sway-workspace-mobile-toggle,
-    body > .admin-mobile-sidebar-toggle {
+    #sway-admin-workspace .sway-workspace-mobile-close,
+    body .admin-mobile-sidebar-toggle {
         display: none !important;
         visibility: hidden !important;
         width: 0 !important;
