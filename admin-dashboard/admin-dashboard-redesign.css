@@ -433,7 +433,7 @@ body.sway-dark-mode #sway-admin-workspace .sway-top-nav-menu-layer .sway-workspa
     position: absolute;
     z-index: -1;
     top: -95px;
-    right: -75px;
+    right: 0;
     width: 280px;
     height: 280px;
     border: 1px solid rgba(1, 82, 244, 0.075);
