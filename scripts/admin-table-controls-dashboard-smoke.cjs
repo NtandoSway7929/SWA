@@ -665,7 +665,7 @@ async function main() {
       mobileNavBounds.x >= 0 &&
       mobileNavBounds.width >= 340 &&
       mobileNavBounds.width <= 390 &&
-      mobileNavBounds.height <= 160,
+      mobileNavBounds.height <= 120,
       "mobile navigation should remain a full-width, compact top bar: " + JSON.stringify(mobileNavBounds)
     );
     const mobileNavScroll = page.locator("#sway-admin-workspace .sway-workspace-nav-scroll");
@@ -673,8 +673,8 @@ async function main() {
     const primaryMobileLinks = page.locator(
       "#sway-admin-workspace .sway-workspace-nav-primary .sway-workspace-nav-button"
     );
-    assert.equal(await primaryMobileLinks.count(), 6,
-      "all six primary destinations should remain available in the mobile top navigation");
+    assert.equal(await primaryMobileLinks.count(), 4,
+      "all four primary destinations should remain available in the mobile top navigation");
     const primaryLinkBounds = await primaryMobileLinks.evaluateAll(nodes =>
       nodes.map(node => {
         const rect = node.getBoundingClientRect();
