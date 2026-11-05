@@ -139,6 +139,14 @@ A focused contract test was added to `scripts/admin-dashboard-redesign.test.cjs`
 
 ### Stage 3 - Hybrid Overview hero
 
+**Implementation recorded on this branch:** the Overview now opens with a hybrid hero using the authenticated workspace greeting, two existing quick-create handlers and four existing operational calculations: assigned open tasks, follow-ups scheduled today, open pipeline value and outstanding invoice value. The prior inline greeting was consolidated into the hero. Existing insights, needs-attention, follow-up automation, My work, Recent activity and Quick actions sections remain in the Overview renderer.
+
+The isolated redesign stylesheet adds the hero's responsive two-column metric layout, compact mobile treatment, dark-theme presentation and reduced-motion-safe action transitions. No new backend data, estimates, revenue assumptions or metrics were introduced.
+
+A contract test now checks the hero's accessible heading, authenticated greeting source, data-backed metrics, existing quick-action hooks and preservation of the Overview panels.
+
+**Verification status:** the workspace JavaScript, contract-test script and existing dashboard smoke script parse successfully. The contract test passed against the fetched branch sources using the same local in-memory Node module shim described in the baseline record. Existing inline dashboard scripts parse and the redesign stylesheet has balanced braces. Real browser rendering and Playwright interaction remain unverified until CI/browser execution.
+
 1. Build the hero from existing authenticated workspace state.
 2. Reuse the verified greeting name and current quick-action handlers.
 3. Add only clearly labelled, data-backed operational figures.
