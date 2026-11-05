@@ -176,6 +176,54 @@ assert.ok(
     "the existing destination button component styles must remain in place"
 );
 
+const overviewSource = extractConstant(
+    workspace,
+    "function renderOverview() {",
+    "\\n    const adminTableControls",
+    "Overview renderer"
+);
+
+assert.ok(
+    overviewSource.includes('class="sway-overview-hero"') &&
+    overviewSource.includes('aria-labelledby="sway-overview-hero-title"'),
+    "Overview must render an accessible hybrid hero"
+);
+assert.ok(
+    overviewSource.includes("esc(currentUserName())"),
+    "hero greeting must use the authenticated workspace user's configured name"
+);
+assert.ok(
+    overviewSource.includes("myOpenTasks.length") &&
+    overviewSource.includes("followupsToday") &&
+    overviewSource.includes("money(pipeline)") &&
+    overviewSource.includes("money(outstanding)"),
+    "hero metrics must use existing live workspace calculations"
+);
+assert.ok(
+    overviewSource.includes('data-quick="task"') &&
+    overviewSource.includes('data-quick="lead"'),
+    "hero quick actions must reuse existing task and lead handlers"
+);
+assert.ok(
+    overviewSource.includes("renderInsightsOverview()") &&
+    overviewSource.includes("renderNeedsAttention()") &&
+    overviewSource.includes("renderFollowupAutomation()") &&
+    overviewSource.includes('"My work"') &&
+    overviewSource.includes('"Recent activity"'),
+    "existing Overview panels must remain below the hero"
+);
+assert.equal(
+    overviewSource.split("Good day, ").length - 1,
+    1,
+    "the previous inline greeting must be consolidated into one hero greeting"
+);
+assert.ok(
+    redesignCss.includes(".sway-overview-hero") &&
+    redesignCss.includes("@media (max-width: 760px)") &&
+    redesignCss.includes("body.sway-dark-mode #sway-admin-workspace .sway-overview-hero"),
+    "the hero must have responsive and dark-theme styles"
+);
+
 console.log(JSON.stringify({
     result: "PASS",
     checks: [
