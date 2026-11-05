@@ -806,3 +806,54 @@
 .sway-workspace-nav-more-innerme.collapsed .sway-workspace-nav-more-items {
     display: none;
 }
+
+
+/* Override the legacy desktop two-column geometry contract. The older
+   stylesheet uses #sway-admin-workspace selectors and !important, so this
+   explicit contract is required for the new top navigation to sit above
+   the main workspace rather than beside it. */
+@media (min-width: 981px) {
+    #sway-admin-workspace .sway-workspace-shell {
+        display: block !important;
+        flex: none !important;
+        flex-direction: initial !important;
+        align-items: initial !important;
+        gap: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-sidebar {
+        position: sticky !important;
+        inset: auto !important;
+        top: 12px !important;
+        z-index: 5005 !important;
+        display: flex !important;
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-main {
+        position: relative !important;
+        z-index: 1 !important;
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        margin: 20px 0 0 !important;
+        overflow: visible !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-scroll {
+        width: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+}
