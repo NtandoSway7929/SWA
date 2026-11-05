@@ -6492,9 +6492,9 @@ function renderShell() {
                 ".sway-workspace-nav-scroll"
             );
 
-        const preserveSidebarScrollTop =
+        const preserveNavScrollLeft =
             existingNavScroll
-                ? existingNavScroll.scrollTop
+                ? existingNavScroll.scrollLeft
                 : 0;
 
         let openGroups = {};
@@ -6510,6 +6510,43 @@ function renderShell() {
             openGroups = {};
         }
 
+        const primaryNavItems = [
+            ["overview", "Overview"],
+            ["leads", "Sales"],
+            ["projects", "Delivery"],
+            ["invoices", "Finance"],
+            ["insights", "Insights"],
+            ["swayphics-ai", "InnerMe"]
+        ];
+
+        const primaryNavViews =
+            primaryNavItems.map(function (item) {
+                return item[0];
+            });
+
+        const secondaryGroups =
+            navGroups.map(function (group) {
+                return {
+                    id: group.id,
+                    label: group.label,
+                    items: group.items.filter(function (item) {
+                        return !primaryNavViews.includes(item[0]);
+                    })
+                };
+            }).filter(function (group) {
+                return group.items.length > 0;
+            });
+
+        const hasCurrentInMore =
+            secondaryGroups.some(function (group) {
+                return group.items.some(function (item) {
+                    return item[0] === state.currentView;
+                });
+            });
+
+        const moreIsOpen =
+            openGroups.more === true;
+
         const sidebar =
             '<div class="sway-workspace-sidebar-head">' +
                 '<div class="sway-workspace-sidebar-brand">' +
@@ -6519,43 +6556,37 @@ function renderShell() {
                 '<button type="button" class="sway-workspace-mobile-close" aria-label="Close navigation">×</button>' +
             '</div>' +
             '<div class="sway-workspace-nav-scroll">' +
-                navGroups.map(function (group) {
-                    const containsCurrent =
-                        group.items.some(function (item) {
-                            return item[0] === state.currentView;
-                        });
-
-                    const isOpen =
-                        openGroups[group.id] === true;
-
-                    return (
-                        '<section class="sway-workspace-nav-group ' +
-                        (isOpen ? "open" : "collapsed") +
-                        (containsCurrent ? " current" : "") +
-                        '" data-nav-group="' +
-                        esc(group.id) +
-                        '">' +
-                            '<button type="button" class="sway-workspace-nav-group-toggle" aria-expanded="' +
-                                (isOpen ? "true" : "false") +
-                                '" data-nav-group-toggle="' +
-                                esc(group.id) +
-                            '">' +
-                                '<span class="sway-workspace-nav-group-label">' +
-                                    '<span class="sway-workspace-nav-group-icon">' +
-                                        navGroupIcon(group.icon) +
-                                    '</span>' +
-                                    '<span>' +
+                '<div class="sway-workspace-nav-primary">' +
+                    primaryNavItems.map(navButton).join("") +
+                '</div>' +
+                '<section class="sway-workspace-nav-group ' +
+                    (moreIsOpen ? "open" : "collapsed") +
+                    (hasCurrentInMore ? " current" : "") +
+                    '" data-nav-group="more">' +
+                    '<button type="button" class="sway-workspace-nav-group-toggle" aria-expanded="' +
+                        (moreIsOpen ? "true" : "false") +
+                        '" data-nav-group-toggle="more">' +
+                        '<span class="sway-workspace-nav-group-label">' +
+                            '<span class="sway-workspace-nav-group-icon">' +
+                                navGroupIcon("settings") +
+                            '</span>' +
+                            '<span>More</span>' +
+                        '</span>' +
+                        '<i aria-hidden="true">⌄</i>' +
+                    '</button>' +
+                    '<div class="sway-workspace-nav-items">' +
+                        secondaryGroups.map(function (group) {
+                            return (
+                                '<section class="sway-workspace-nav-more-section">' +
+                                    '<h4>' +
                                         esc(formatDisplayText(group.label)) +
-                                    '</span>' +
-                                '</span>' +
-                                '<i aria-hidden="true">⌄</i>' +
-                            '</button>' +
-                            '<div class="sway-workspace-nav-items">' +
-                                group.items.map(navButton).join("") +
-                            '</div>' +
-                        '</section>'
-                    );
-                }).join("") +
+                                    '</h4>' +
+                                    group.items.map(navButton).join("") +
+                                '</section>'
+                            );
+                        }).join("") +
+                    '</div>' +
+                '</section>' +
             '</div>';
 
         workspace.innerHTML =
@@ -6595,8 +6626,8 @@ function renderShell() {
             );
 
         if (newNavScroll) {
-            newNavScroll.scrollTop =
-                preserveSidebarScrollTop;
+            newNavScroll.scrollLeft =
+                preserveNavScrollLeft;
         }
 
         const mobileToggle =
