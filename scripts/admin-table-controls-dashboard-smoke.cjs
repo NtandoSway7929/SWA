@@ -628,7 +628,9 @@ async function main() {
       }
 
       const crmTrigger = page.locator('[data-nav-group-toggle="crm"]');
-      await crmTrigger.click();
+      if ((await crmTrigger.getAttribute("aria-expanded")) !== "true") {
+        await crmTrigger.click();
+      }
       assert.equal(await crmTrigger.getAttribute("aria-expanded"), "true",
         "the CRM top-level menu should open at " + width + "px");
       const crmMenu = page.locator('[data-nav-menu="crm"]');
