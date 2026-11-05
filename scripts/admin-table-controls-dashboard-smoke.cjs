@@ -696,9 +696,9 @@ async function main() {
     assert.ok(
       mobileMoreBounds &&
       mobileMoreBounds.x >= mobileNavBounds.x - 1 &&
-      mobileMoreBounds.right <= mobileNavBounds.x + mobileNavBounds.width + 1 &&
+      mobileMoreBounds.x + mobileMoreBounds.width <= mobileNavBounds.x + mobileNavBounds.width + 1 &&
       mobileMoreBounds.y >= mobileNavBounds.y - 1 &&
-      mobileMoreBounds.bottom <= mobileNavBounds.y + mobileNavBounds.height + 1,
+      mobileMoreBounds.y + mobileMoreBounds.height <= mobileNavBounds.y + mobileNavBounds.height + 1,
       "the More menu should remain visible within the full mobile top navigation: " +
         JSON.stringify({ navigation: mobileNavBounds, more: mobileMoreBounds })
     );
