@@ -468,12 +468,12 @@ body.sway-dark-mode #sway-admin-workspace .sway-top-nav-menu-layer .sway-workspa
     letter-spacing: 0.16em;
 }
 
-#sway-admin-workspace .sway-overview-live-dot {
+#sway-admin-workspace .sway-overview-accent-dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #1C9A70;
-    box-shadow: 0 0 0 4px rgba(28, 154, 112, 0.10);
+    background: #0152F4;
+    box-shadow: 0 0 0 4px rgba(1, 82, 244, 0.10);
 }
 
 #sway-admin-workspace .sway-overview-hero-copy h2 {
