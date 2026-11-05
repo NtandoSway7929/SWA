@@ -199,6 +199,12 @@ assert.ok(
     overviewSource.includes("money(outstanding)"),
     "hero metrics must use existing live workspace calculations"
 );
+
+assert.ok(
+    overviewSource.includes('return !["won", "lost", "follow-up"].includes(item.status);') &&
+    overviewSource.includes('return !["won", "lost"].includes(item.status);'),
+    "pipeline valuation and active-lead count must retain their distinct pre-redesign definitions"
+);
 assert.ok(
     overviewSource.includes('data-quick="task"') &&
     overviewSource.includes('data-quick="lead"'),
