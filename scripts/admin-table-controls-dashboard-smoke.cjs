@@ -694,10 +694,13 @@ async function main() {
     );
     const mobileMoreBounds = await mobileMoreToggle.boundingBox();
     assert.ok(
-      mobileMoreBounds && mobileNavScrollBounds &&
-      mobileMoreBounds.x >= mobileNavScrollBounds.x - 1 &&
-      mobileMoreBounds.right <= mobileNavScrollBounds.x + mobileNavScrollBounds.width + 1,
-      "the More menu should remain visible within the mobile top navigation"
+      mobileMoreBounds &&
+      mobileMoreBounds.x >= mobileNavBounds.x - 1 &&
+      mobileMoreBounds.right <= mobileNavBounds.x + mobileNavBounds.width + 1 &&
+      mobileMoreBounds.y >= mobileNavBounds.y - 1 &&
+      mobileMoreBounds.bottom <= mobileNavBounds.y + mobileNavBounds.height + 1,
+      "the More menu should remain visible within the full mobile top navigation: " +
+        JSON.stringify({ navigation: mobileNavBounds, more: mobileMoreBounds })
     );
 
     const mobileMainBounds = await page.locator("#sway-workspace-main").boundingBox();
