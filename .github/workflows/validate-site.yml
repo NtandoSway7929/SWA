@@ -2,7 +2,7 @@ name: Validate Swayphics site
 
 on:
   push:
-    branches: ["main", "feature/admin-table-controls-phase-2"]
+    branches: ["main", "feature/admin-table-controls-phase-2", "design/admin-dashboard-top-nav-hybrid-hero"]
   pull_request:
     branches: ["main"]
 
