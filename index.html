@@ -12136,7 +12136,7 @@ nav.scrolled {
             100% !important;
 
         font-size:
-            clamp(3rem, 13.5vw, 4.7rem) !important;
+            clamp(2.45rem, 10vw, 3.55rem) !important;
 
         line-height:
             0.90 !important;
@@ -15363,7 +15363,7 @@ html.reveal-ready .reveal-delay-4 {
 
         width: 100% !important;
 
-        height: 46svh !important;
+        height: 40svh !important;
 
         transform: none !important;
     }
@@ -15461,13 +15461,14 @@ html.reveal-ready .reveal-delay-4 {
     .hero-actions .btn-secondary {
         align-self: flex-start !important;
         width: auto !important;
-        min-height: 42px !important;
-        padding: 0 8px !important;
-        border-color: transparent !important;
-        background: transparent !important;
-        box-shadow: none !important;
+        min-height: 46px !important;
+        padding: 0 16px !important;
+        border: 1px solid rgba(52, 58, 64, 0.18) !important;
+        border-radius: 12px !important;
+        background: rgba(255, 255, 255, 0.82) !important;
+        box-shadow: 0 8px 22px rgba(8, 21, 51, 0.08) !important;
         color: var(--sway-charcoal) !important;
-        text-decoration: underline !important;
+        text-decoration: none !important;
         text-underline-offset: 4px;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
@@ -15489,7 +15490,7 @@ html.reveal-ready .reveal-delay-4 {
 
     .hero-showcase,
     .hero-showcase-image {
-        height: 42svh !important;
+        height: 36svh !important;
     }
 
     .hero-intro h1 {
@@ -17319,9 +17320,8 @@ section {
         </div>
 
         <h1>
-            Build a brand that<br>
-            <span>earns attention</span><br>
-            and trust.
+            Build a brand<br>
+            <span>worth remembering.</span>
         </h1>
 
         <p>
@@ -17395,7 +17395,7 @@ section {
             href="#contact"
             class="btn btn-primary"
         >
-            Start a Project →
+            Start a Project
         </a>
 
         <a
@@ -17992,7 +17992,7 @@ section {
         </div>
 
         <a href="#contact" class="btn btn-primary">
-            Let's Work Together →
+            Let's Work Together
         </a>
 
     </div>
@@ -21030,6 +21030,34 @@ if (formStatus) {
 .sway-loading-button::before{content:"";width:16px;height:16px;flex:0 0 16px;background:conic-gradient(from -40deg,transparent 0deg 38deg,#0152F4 54deg 122deg,rgba(119,193,252,.82) 138deg 158deg,transparent 176deg 360deg);-webkit-mask:url("FIST.webp") center/contain no-repeat;mask:url("FIST.webp") center/contain no-repeat;animation:sway-button-favicon-draw-public 1.05s linear infinite}
 @keyframes sway-button-favicon-draw-public{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.sway-loading-button::before{animation:none}}
+
+/* Refined section spacing and translucent project form */
+.section-title { margin-bottom: 42px; }
+.cta .section-label { margin-bottom: 12px; }
+.cta h2 { margin-bottom: 18px; }
+.cta > p { margin-bottom: 26px; }
+
+.cta .project-form {
+    color: var(--sway-charcoal) !important;
+    background: rgba(255, 255, 255, 0.80) !important;
+    border-color: rgba(255, 255, 255, 0.58) !important;
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+}
+.cta .project-form::before { background: rgba(255, 255, 255, 0.12); }
+.cta .project-form label,
+.cta .project-form .form-privacy-notice,
+.cta .project-form .form-consent-label { color: var(--sway-charcoal) !important; }
+.cta .project-form input,
+.cta .project-form select,
+.cta .project-form textarea {
+    color: var(--sway-charcoal) !important;
+    background: rgba(255, 255, 255, 0.72) !important;
+    border-color: rgba(52, 58, 64, 0.22) !important;
+}
+.cta .project-form input::placeholder,
+.cta .project-form textarea::placeholder { color: rgba(52, 58, 64, 0.58) !important; }
+
 </style>
 <script id="sway-public-loading-observer">
 (function () {
