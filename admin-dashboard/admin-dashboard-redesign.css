@@ -739,3 +739,25 @@
         max-width: calc(100vw - 20px);
     }
 }
+
+
+/* Desktop has room for the primary destinations; allow the More popover to
+   escape the navigation row instead of clipping it inside a scrollport. */
+@media (min-width: 981px) {
+    #sway-admin-workspace .sway-workspace-nav-scroll {
+        width: auto !important;
+        overflow: visible !important;
+    }
+}
+
+/* Tablet navigation remains horizontally scrollable while the More menu
+   uses a viewport layer so it cannot be clipped by the scroll container. */
+@media (min-width: 701px) and (max-width: 980px) {
+    #sway-admin-workspace .sway-workspace-nav-group[data-nav-group="more"] .sway-workspace-nav-items {
+        position: fixed;
+        top: 88px;
+        right: 12px;
+        left: auto;
+        z-index: 5002;
+    }
+}
