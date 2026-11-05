@@ -360,6 +360,13 @@ async function main() {
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.locator("#sway-admin-workspace .sway-workspace-shell").waitFor({ timeout: 30000 });
     await page.locator("#sway-workspace-main").waitFor({ timeout: 30000 });
+    await page.locator("#sway-workspace-main .sway-dashboard-hero").waitFor({
+      state: "visible", timeout: 30000
+    });
+    await page.screenshot({
+      path: path.join(ARTIFACT_DIR, "dashboard-overview-desktop.png"),
+      fullPage: true
+    });
 
     async function navigate(view, group) {
       const toggle = page.locator('[data-nav-group-toggle="' + group + '"]').first();
@@ -618,42 +625,38 @@ async function main() {
     assert.equal(await page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').count(), 3,
       "all task records should remain available after mock completion");
 
-    // Keep the real Tasks view open while shrinking the viewport. The dashboard
-    // sidebar intentionally becomes off-canvas on mobile, so this isolates the
-    // table-control layout without forcing navigation behind the mobile menu.
+    // Keep the real Tasks view open while shrinking the viewport. The
+    // approved redesign uses a visible top navigation at mobile widths,
+    // not the legacy off-canvas drawer.
     await page.setViewportSize({ width: 390, height: 844 });
-    const mobileWorkspace = page.locator("#sway-admin-workspace");
     const mobileSidebar = page.locator("#sway-admin-workspace .sway-workspace-sidebar");
-    const mobileToggle = page.locator(".admin-mobile-sidebar-toggle").first();
-    await mobileToggle.waitFor({ state: "visible" });
-    const mobileMenuIsOpen = await page.evaluate(() => {
-      const workspace = document.getElementById("sway-admin-workspace");
-      const sidebar = workspace && workspace.querySelector(".sway-workspace-sidebar");
-      const toggle = document.querySelector(".admin-mobile-sidebar-toggle");
-      return Boolean(
-        workspace && workspace.classList.contains("nav-open") ||
-        sidebar && sidebar.classList.contains("mobile-open") ||
-        document.body.classList.contains("sway-mobile-nav-open") ||
-        toggle && toggle.getAttribute("aria-expanded") === "true"
-      );
-    });
-    if (mobileMenuIsOpen) {
-      await mobileToggle.click();
-      await page.waitForFunction(() => {
-        const workspace = document.getElementById("sway-admin-workspace");
-        const sidebar = workspace && workspace.querySelector(".sway-workspace-sidebar");
-        const toggle = document.querySelector(".admin-mobile-sidebar-toggle");
-        return !(
-          workspace && workspace.classList.contains("nav-open") ||
-          sidebar && sidebar.classList.contains("mobile-open") ||
-          document.body.classList.contains("sway-mobile-nav-open") ||
-          toggle && toggle.getAttribute("aria-expanded") === "true"
-        );
-      });
+    await mobileSidebar.waitFor({ state: "visible" });
+    const mobileNavBounds = await mobileSidebar.boundingBox();
+    assert.ok(
+      mobileNavBounds &&
+      mobileNavBounds.x >= 0 &&
+      mobileNavBounds.width >= 340 &&
+      mobileNavBounds.width <= 390 &&
+      mobileNavBounds.height <= 150,
+      "mobile navigation should remain a full-width, compact top bar: " + JSON.stringify(mobileNavBounds)
+    );
+    const mobileMainBounds = await page.locator("#sway-workspace-main").boundingBox();
+    assert.ok(
+      mobileMainBounds && mobileMainBounds.y >= mobileNavBounds.y + mobileNavBounds.height - 2,
+      "the main workspace should sit below the mobile top navigation: " + JSON.stringify({
+        navigation: mobileNavBounds,
+        main: mobileMainBounds
+      })
+    );
+    assert.equal(
+      await page.locator(".admin-mobile-sidebar-toggle").first().isVisible().catch(() => false),
+      false,
+      "the legacy mobile drawer toggle should not appear with top navigation"
+    );
+    const moreToggle = page.locator('[data-nav-group-toggle="more"]').first();
+    if (await moreToggle.count() && (await moreToggle.getAttribute("aria-expanded")) === "true") {
+      await moreToggle.click();
     }
-    // Wait for the drawer's CSS translate transition to finish, not just for
-    // its open-state classes to clear.
-    await page.waitForTimeout(350);
     const controls = page.locator('#sway-workspace-main .sway-admin-table-control-grid');
     await controls.waitFor({ state: "visible" });
     const bounds = await controls.boundingBox();
@@ -703,6 +706,8 @@ async function main() {
         "confirmed task completion updates the synthetic task only",
         "confirmed follow-up completion records contact and preserves the linked synthetic lead's status",
         "activity log POSTs are intercepted by the in-memory mock",
+        "mobile top navigation stays full-width and compact above the workspace",
+        "legacy mobile drawer toggle is hidden when top navigation is active",
         "mobile controls use a single-column layout and fit in viewport",
         "invoice search by invoice number and client",
         "invoice status filtering and due-date/total sorting",
