@@ -9393,7 +9393,7 @@ function simpleBars(items, color) {
                 liveBadge() +
             "</div>" +
 
-            '<div class="sway-insight-grid sway-bi-grid">' +
+            '<div class="sway-insight-grid sway-bi-grid sway-bi-overview-grid">' +
                 insightPanel(
                     "Business momentum",
                     "Cash received, invoices issued and estimated pipeline created by month.",
@@ -9419,11 +9419,8 @@ function simpleBars(items, color) {
                         true,
                         "Monthly business momentum"
                     ),
-                    "sway-bi-panel--wide"
+                    "sway-bi-panel--wide sway-bi-overview-main"
                 ) +
-            "</div>" +
-
-            '<div class="sway-insight-grid sway-bi-grid">' +
                 insightPanel(
                     "Demand signals",
                     "Website enquiries and new leads recorded each month.",
@@ -9443,7 +9440,8 @@ function simpleBars(items, color) {
                         labels,
                         false,
                         "Monthly enquiry and lead counts"
-                    )
+                    ),
+                    "sway-bi-overview-secondary"
                 ) +
                 insightPanel(
                     "Delivery throughput",
@@ -9463,7 +9461,8 @@ function simpleBars(items, color) {
                         ],
                         labels,
                         "Monthly tasks created and completed"
-                    )
+                    ),
+                    "sway-bi-overview-secondary"
                 ) +
             "</div>"
         );
