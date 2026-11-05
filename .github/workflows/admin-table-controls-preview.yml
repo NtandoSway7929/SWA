@@ -1,6 +1,15 @@
 name: Admin Table Controls Isolated Browser Preview
 
 on:
+  push:
+    branches: ["design/admin-dashboard-top-nav-hybrid-hero"]
+    paths:
+      - "admin-dashboard/admin-dashboard-redesign.css"
+      - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/index.html"
+      - "scripts/admin-dashboard-redesign.test.cjs"
+      - "scripts/admin-table-controls-dashboard-smoke.cjs"
+      - ".github/workflows/admin-table-controls-preview.yml"
   pull_request:
     branches: ["main", "feature/admin-table-controls-phase-2"]
     paths:
@@ -21,7 +30,7 @@ permissions:
 
 # Avoid multiple PR commits consuming runners while each downloads Chromium.
 concurrency:
-  group: admin-table-controls-preview-${{ github.event.pull_request.number || github.ref }}
+  group: admin-table-controls-preview-v2-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -44,10 +53,11 @@ jobs:
           node-version: 20
 
       - name: Install isolated browser and local Supabase test dependencies
-        run: npm install --no-save --no-package-lock playwright supabase@2.121.0
+        run: npm install --no-save --no-package-lock playwright@1.64.1 supabase@2.121.0
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install headless Chromium
+        timeout-minutes: 8
+        run: npx playwright install --with-deps --only-shell chromium
 
       - name: Start local-only preview server
         shell: bash

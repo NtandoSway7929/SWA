@@ -360,6 +360,16 @@ async function main() {
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.locator("#sway-admin-workspace .sway-workspace-shell").waitFor({ timeout: 30000 });
     await page.locator("#sway-workspace-main").waitFor({ timeout: 30000 });
+    const initialHero = page.locator("#sway-workspace-main .sway-overview-hero");
+    await initialHero.waitFor({ state: "visible", timeout: 20000 });
+    assert.ok((await initialHero.locator("#sway-overview-hero-title").innerText()).includes("Isolated Dashboard Test"),
+      "the Overview hero should greet the authenticated synthetic test user");
+    assert.equal(await initialHero.locator(".sway-overview-hero-metric").count(), 4,
+      "the Overview hero should render all four existing operational metrics");
+    assert.equal(await initialHero.locator('[data-quick="task"]').count(), 1,
+      "the hero should expose the existing quick-create task action");
+    assert.equal(await initialHero.locator('[data-quick="lead"]').count(), 1,
+      "the hero should expose the existing quick-create lead action");
 
     async function navigate(view, group) {
       const toggle = page.locator('[data-nav-group-toggle="' + group + '"]').first();
@@ -370,6 +380,11 @@ async function main() {
       const button = page.locator('[data-view="' + view + '"]').first();
       await button.waitFor({ state: "visible", timeout: 15000 });
       await button.click();
+      assert.equal(
+        await page.locator(".sway-top-nav-menu-layer [data-nav-menu]:visible").count(),
+        0,
+        "selecting a destination must close the top-navigation dropdown so it cannot cover page controls"
+      );
       await page.locator('[data-admin-table-search-input="' + view + '"]').waitFor({
         state: "visible", timeout: 20000
       });
@@ -604,42 +619,100 @@ async function main() {
     assert.equal(await page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').count(), 3,
       "all task records should remain available after mock completion");
 
-    // Keep the real Tasks view open while shrinking the viewport. The dashboard
-    // sidebar intentionally becomes off-canvas on mobile, so this isolates the
-    // table-control layout without forcing navigation behind the mobile menu.
-    await page.setViewportSize({ width: 390, height: 844 });
-    const mobileWorkspace = page.locator("#sway-admin-workspace");
-    const mobileSidebar = page.locator("#sway-admin-workspace .sway-workspace-sidebar");
-    const mobileToggle = page.locator(".admin-mobile-sidebar-toggle").first();
-    await mobileToggle.waitFor({ state: "visible" });
-    const mobileMenuIsOpen = await page.evaluate(() => {
-      const workspace = document.getElementById("sway-admin-workspace");
-      const sidebar = workspace && workspace.querySelector(".sway-workspace-sidebar");
-      const toggle = document.querySelector(".admin-mobile-sidebar-toggle");
-      return Boolean(
-        workspace && workspace.classList.contains("nav-open") ||
-        sidebar && sidebar.classList.contains("mobile-open") ||
-        document.body.classList.contains("sway-mobile-nav-open") ||
-        toggle && toggle.getAttribute("aria-expanded") === "true"
+    // Verify the redesigned top navigation at desktop, tablet and mobile
+    // widths. Menus sit outside the horizontal trigger scroller so they remain
+    // visible instead of being clipped by overflow.
+    for (const width of [1440, 1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: 900 });
+      const topNav = page.locator("#sway-admin-workspace .sway-top-nav");
+      const triggerRow = page.locator("#sway-admin-workspace .sway-workspace-nav-scroll");
+      await topNav.waitFor({ state: "visible" });
+      const navBounds = await topNav.boundingBox();
+      assert.ok(navBounds && navBounds.x >= 0 && navBounds.x + navBounds.width <= width + 1,
+        "top navigation should remain within the viewport at " + width + "px: " + JSON.stringify(navBounds));
+
+      if (width <= 980) {
+        const triggerMetrics = await triggerRow.evaluate(el => ({
+          clientWidth: el.clientWidth,
+          scrollWidth: el.scrollWidth
+        }));
+        assert.ok(triggerMetrics.scrollWidth > triggerMetrics.clientWidth,
+          "mobile/tablet group triggers should scroll horizontally at " + width + "px");
+        assert.equal(await page.locator(".admin-mobile-sidebar-toggle").isVisible(), false,
+          "the retired sidebar toggle should be hidden at " + width + "px");
+      }
+
+      const crmTrigger = page.locator('[data-nav-group-toggle="crm"]');
+      if ((await crmTrigger.getAttribute("aria-expanded")) !== "true") {
+        await crmTrigger.click();
+      }
+      assert.equal(await crmTrigger.getAttribute("aria-expanded"), "true",
+        "the CRM top-level menu should open at " + width + "px");
+      const crmMenu = page.locator('[data-nav-menu="crm"]');
+      await crmMenu.waitFor({ state: "visible" });
+      const menuBounds = await crmMenu.boundingBox();
+      assert.ok(menuBounds && menuBounds.x >= 0 && menuBounds.x + menuBounds.width <= width + 1,
+        "the CRM dropdown should remain within the viewport at " + width + "px: " + JSON.stringify(menuBounds));
+
+      await page.locator('[data-view="leads"]').click();
+      await page.waitForFunction(() =>
+        document.querySelector("#sway-workspace-main .sway-workspace-heading-copy h2")?.textContent.trim() === "Leads"
       );
-    });
-    if (mobileMenuIsOpen) {
-      await mobileToggle.click();
-      await page.waitForFunction(() => {
-        const workspace = document.getElementById("sway-admin-workspace");
-        const sidebar = workspace && workspace.querySelector(".sway-workspace-sidebar");
-        const toggle = document.querySelector(".admin-mobile-sidebar-toggle");
-        return !(
-          workspace && workspace.classList.contains("nav-open") ||
-          sidebar && sidebar.classList.contains("mobile-open") ||
-          document.body.classList.contains("sway-mobile-nav-open") ||
-          toggle && toggle.getAttribute("aria-expanded") === "true"
-        );
+      assert.ok(await page.locator('[data-view="leads"]').count() === 1,
+        "the existing Leads destination should remain available after top-nav navigation");
+
+      // Return to Overview at every target width and measure the actual hero,
+      // metric grid and quick actions for clipping and horizontal overflow.
+      const overviewToggle = page.locator('[data-nav-group-toggle="overview"]');
+      await overviewToggle.waitFor({ state: "visible" });
+      if ((await overviewToggle.getAttribute("aria-expanded")) !== "true") {
+        await overviewToggle.click();
+      }
+      const overviewDestination = page.locator(
+        '.sway-top-nav-menu-layer [data-nav-menu="overview"] [data-view="overview"]'
+      );
+      await overviewDestination.waitFor({ state: "visible" });
+      await overviewDestination.click();
+      assert.equal(
+        await page.locator(".sway-top-nav-menu-layer [data-nav-menu]:visible").count(),
+        0,
+        "selecting Overview must close its dropdown before checking the hero"
+      );
+      const hero = page.locator("#sway-workspace-main .sway-overview-hero");
+      await hero.waitFor({ state: "visible" });
+      const heroMetrics = await hero.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        const grid = el.querySelector(".sway-overview-hero-metrics");
+        const gridStyle = getComputedStyle(grid);
+        const actionButtons = Array.from(el.querySelectorAll(".sway-overview-primary-action, .sway-overview-secondary-action"));
+        return {
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+          metricColumns: gridStyle.gridTemplateColumns.split(" ").length,
+          actionsVisible: actionButtons.length === 2 && actionButtons.every(button => {
+            const buttonRect = button.getBoundingClientRect();
+            return buttonRect.width > 0 && buttonRect.left >= 0 && buttonRect.right <= window.innerWidth + 1;
+          })
+        };
       });
+      assert.ok(heroMetrics.left >= 0 && heroMetrics.right <= width + 1,
+        "the Overview hero should remain within the viewport at " + width + "px: " + JSON.stringify(heroMetrics));
+      assert.ok(heroMetrics.scrollWidth <= heroMetrics.clientWidth + 1,
+        "the Overview hero should not introduce horizontal overflow at " + width + "px: " + JSON.stringify(heroMetrics));
+      assert.ok(heroMetrics.actionsVisible,
+        "both Overview hero actions should remain visible at " + width + "px");
+      if (width <= 760) {
+        assert.equal(heroMetrics.metricColumns, 2,
+          "hero metrics should form two columns on mobile at " + width + "px");
+      }
     }
-    // Wait for the drawer's CSS translate transition to finish, not just for
-    // its open-state classes to clear.
-    await page.waitForTimeout(350);
+
+    // Return to Tasks at the narrowest viewport, then verify that the existing
+    // table-control layout remains usable without the former drawer.
+    await navigate("tasks", "delivery");
     const controls = page.locator('#sway-workspace-main .sway-admin-table-control-grid');
     await controls.waitFor({ state: "visible" });
     const bounds = await controls.boundingBox();
