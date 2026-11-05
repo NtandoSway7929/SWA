@@ -6338,6 +6338,30 @@ textarea:focus-visible {
     .sway-intro__tiles span { width: 32px; height: 32px; border-radius: 8px; }
     .sway-intro__logo { width: min(210px, 68vw); }
 }
+/* Keep the welcome visible while the page is parsing; start the motion when it is ready. */
+.sway-intro:not(.sway-intro--active) {
+    animation: none;
+    opacity: 1;
+    visibility: visible;
+}
+.sway-intro:not(.sway-intro--active) .sway-intro__grid {
+    opacity: .48;
+    transform: none;
+    animation: none;
+}
+.sway-intro:not(.sway-intro--active) .sway-intro__tiles {
+    display: none;
+    animation: none;
+}
+.sway-intro:not(.sway-intro--active) .sway-intro__tiles span {
+    opacity: 1;
+    animation: none;
+}
+.sway-intro:not(.sway-intro--active) .sway-intro__lockup {
+    opacity: 1;
+    transform: none;
+    animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
     .sway-intro { display: grid !important; animation: none !important; opacity: 1; visibility: visible; }
     .sway-intro__grid { opacity: .48; transform: none; animation: none; }
@@ -17374,15 +17398,27 @@ section {
     (() => {
         const intro = document.getElementById("sway-intro");
         if (!intro) return;
-        const dismiss = () => intro.remove();
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            window.setTimeout(dismiss, 2000);
-            return;
+
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const startIntro = () => {
+            if (!intro.isConnected) return;
+            const dismiss = () => intro.remove();
+
+            if (!reducedMotion) {
+                intro.addEventListener("animationend", event => {
+                    if (event.target === intro && event.animationName === "sway-intro-exit") dismiss();
+                });
+                intro.classList.add("sway-intro--active");
+            }
+
+            window.setTimeout(dismiss, 6400);
+        };
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => window.requestAnimationFrame(startIntro), { once: true });
+        } else {
+            window.requestAnimationFrame(startIntro);
         }
-        intro.addEventListener("animationend", event => {
-            if (event.target === intro && event.animationName === "sway-intro-exit") dismiss();
-        });
-        window.setTimeout(dismiss, 6400);
     })();
     </script>
 
