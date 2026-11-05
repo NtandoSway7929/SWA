@@ -11906,6 +11906,19 @@ function simpleBars(items, color) {
         const activities =
             state.activities.slice(0, 8);
 
+        const totalLeads =
+            state.leads.length;
+
+        const activeClients =
+            state.clients.filter(function (client) {
+                return client.status !== "archived";
+            }).length;
+
+        const activeProjects =
+            state.projects.filter(function (project) {
+                return ["planning", "in progress", "review"].includes(project.status);
+            }).length;
+
         return (
             '<section class="sway-dashboard-hero">' +
                 '<div class="sway-dashboard-hero-intro">' +
@@ -11931,34 +11944,36 @@ function simpleBars(items, color) {
             '<div class="sway-workspace-grid">' +
 
                 '<div class="sway-stat-card">' +
-                    '<span class="label">My open tasks</span>' +
+                    '<span class="label">Total leads</span>' +
                     '<div class="value">' +
-                        myOpenTasks.length +
+                        totalLeads +
                     "</div>" +
                     '<div class="hint">' +
-                        tasksToday +
-                        " due today. Keep the queue honest." +
-                    "</div>" +
-                "</div>" +
-
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Follow-ups today</span>' +
-                    '<div class="value">' +
-                        followupsToday +
-                    "</div>" +
-                    '<div class="hint">Keep active opportunities moving. Future-you will appreciate it.</div>' +
-                "</div>" +
-
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Open pipeline</span>' +
-                    '<div class="value">' +
-                        esc(money(pipeline)) +
-                    "</div>" +
-                    '<div class="hint">' +
-                        state.leads.filter(function (item) {
-                            return !["won", "lost"].includes(item.status);
+                        state.leads.filter(function (lead) {
+                            return lead.status === "new";
                         }).length +
-                        " active leads. Plenty to work with." +
+                        " new leads awaiting qualification." +
+                    "</div>" +
+                "</div>" +
+
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Active clients</span>' +
+                    '<div class="value">' +
+                        activeClients +
+                    "</div>" +
+                    '<div class="hint">Current client relationships, excluding archived records.</div>' +
+                "</div>" +
+
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Active projects</span>' +
+                    '<div class="value">' +
+                        activeProjects +
+                    "</div>" +
+                    '<div class="hint">' +
+                        state.projects.filter(function (project) {
+                            return project.status === "completed";
+                        }).length +
+                        " completed projects." +
                     "</div>" +
                 "</div>" +
 
@@ -11968,14 +11983,13 @@ function simpleBars(items, color) {
                         esc(money(outstanding)) +
                     "</div>" +
                     '<div class="hint">' +
-                        state.payments.filter(function (item) {
-                            return item.status !== "paid";
-                        }).length +
-                        " payment items. Keep these on the radar." +
+                        "Across non-cancelled invoices." +
                     "</div>" +
                 "</div>" +
 
             "</div>" +
+
+            renderRevenuePipeline() +
 
             panel(
                 "My work",
