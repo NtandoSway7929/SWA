@@ -2,7 +2,7 @@
 
 ## Implementation plan
 
-**Status:** Plan recorded. Dashboard UI and application behaviour have not yet been changed.  
+**Status:** Stage 1 source audit completed. Executable regression baseline remains unconfirmed; see the baseline report.  
 **Branch:** `design/admin-dashboard-top-nav-hybrid-hero`  
 **Base:** Current `main` branch  
 **Approved direction:** Top navigation + hybrid overview hero
