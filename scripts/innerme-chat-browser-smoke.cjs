@@ -492,6 +492,13 @@ async function openChat(page, initialView) {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#sway-admin-workspace .sway-workspace-shell", { timeout: 30000 });
   if (initialView !== "swayphics-ai") {
+    const moreGroup = page.locator('[data-nav-group-toggle="more"]').first();
+    if (await moreGroup.count()) {
+      if ((await moreGroup.getAttribute("aria-expanded")) !== "true") {
+        await moreGroup.click();
+      }
+    }
+
     const innerMeGroup = page.locator('[data-nav-group-toggle="innerme"]');
     if ((await innerMeGroup.getAttribute("aria-expanded")) !== "true") {
       await innerMeGroup.click();
@@ -1333,6 +1340,10 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     assert.equal(afterTokenRefresh.animationCount, 1, "token refresh must not replay the animation");
 
     // Routine SPA navigation must preserve the greeting without replaying its effects.
+    const moreGroup = page.locator('[data-nav-group-toggle="more"]').first();
+    if (await moreGroup.count() && (await moreGroup.getAttribute("aria-expanded")) !== "true") {
+      await moreGroup.click();
+    }
     const innerMeGroup = page.locator('[data-nav-group-toggle="innerme"]');
     if ((await innerMeGroup.getAttribute("aria-expanded")) !== "true") {
       await innerMeGroup.click();

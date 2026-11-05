@@ -130,7 +130,7 @@
         },
         {
             id: "crm",
-            label: "Clients & Pipeline",
+            label: "Sales",
             icon: "users",
             items: [
                 ["enquiries", "Enquiries"],
@@ -144,7 +144,7 @@
         },
         {
             id: "delivery",
-            label: "Work & Portfolio",
+            label: "Delivery",
             icon: "briefcase",
             items: [
                 ["projects", "Projects"],
@@ -154,7 +154,7 @@
         },
         {
             id: "billing",
-            label: "Sales & Billing",
+            label: "Finance",
             icon: "receipt",
             items: [
                 ["quotes", "Quotes"],
@@ -6492,9 +6492,9 @@ function renderShell() {
                 ".sway-workspace-nav-scroll"
             );
 
-        const preserveSidebarScrollTop =
+        const preserveNavScrollLeft =
             existingNavScroll
-                ? existingNavScroll.scrollTop
+                ? existingNavScroll.scrollLeft
                 : 0;
 
         let openGroups = {};
@@ -6510,6 +6510,42 @@ function renderShell() {
             openGroups = {};
         }
 
+        const primaryNavItems = [
+            ["overview", "Overview"],
+            ["leads", "Sales"],
+            ["projects", "Delivery"],
+            ["invoices", "Finance"],
+
+        ];
+
+        const primaryNavViews =
+            primaryNavItems.map(function (item) {
+                return item[0];
+            });
+
+        const secondaryGroups =
+            navGroups.map(function (group) {
+                return {
+                    id: group.id,
+                    label: group.label,
+                    items: group.items.filter(function (item) {
+                        return !primaryNavViews.includes(item[0]);
+                    })
+                };
+            }).filter(function (group) {
+                return group.items.length > 0;
+            });
+
+        const hasCurrentInMore =
+            secondaryGroups.some(function (group) {
+                return group.items.some(function (item) {
+                    return item[0] === state.currentView;
+                });
+            });
+
+        /* The More popover is transient: close it after each view render. */
+        const moreIsOpen = false;
+
         const sidebar =
             '<div class="sway-workspace-sidebar-head">' +
                 '<div class="sway-workspace-sidebar-brand">' +
@@ -6519,43 +6555,57 @@ function renderShell() {
                 '<button type="button" class="sway-workspace-mobile-close" aria-label="Close navigation">×</button>' +
             '</div>' +
             '<div class="sway-workspace-nav-scroll">' +
-                navGroups.map(function (group) {
-                    const containsCurrent =
-                        group.items.some(function (item) {
-                            return item[0] === state.currentView;
-                        });
+                '<div class="sway-workspace-nav-primary">' +
+                    primaryNavItems.map(navButton).join("") +
+                '</div>' +
+                '<section class="sway-workspace-nav-group ' +
+                    (moreIsOpen ? "open" : "collapsed") +
+                    (hasCurrentInMore ? " current" : "") +
+                    '" data-nav-group="more">' +
+                    '<button type="button" class="sway-workspace-nav-group-toggle" aria-expanded="' +
+                        (moreIsOpen ? "true" : "false") +
+                        '" data-nav-group-toggle="more">' +
+                        '<span class="sway-workspace-nav-group-label">' +
+                            '<span class="sway-workspace-nav-group-icon">' +
+                                navGroupIcon("settings") +
+                            '</span>' +
+                            '<span>More</span>' +
+                        '</span>' +
+                        '<i aria-hidden="true">⌄</i>' +
+                    '</button>' +
+                    '<div class="sway-workspace-nav-items">' +
+                        secondaryGroups.map(function (group) {
+                            if (group.id === "innerme") {
+                                const innerMeToolsOpen =
+                                    openGroups.innerme !== false;
 
-                    const isOpen =
-                        containsCurrent ||
-                        openGroups[group.id] === true;
+                                return (
+                                    '<section class="sway-workspace-nav-more-section sway-workspace-nav-more-innerme ' +
+                                        (innerMeToolsOpen ? "open" : "collapsed") +
+                                        '" data-nav-group="innerme">' +
+                                        '<button type="button" class="sway-workspace-nav-more-toggle" aria-expanded="' +
+                                            (innerMeToolsOpen ? "true" : "false") +
+                                            '" data-nav-group-toggle="innerme">' +
+                                            '<span>InnerMe tools</span><i aria-hidden="true">⌄</i>' +
+                                        '</button>' +
+                                        '<div class="sway-workspace-nav-more-items">' +
+                                            group.items.map(navButton).join("") +
+                                        '</div>' +
+                                    '</section>'
+                                );
+                            }
 
-                    return (
-                        '<section class="sway-workspace-nav-group ' +
-                        (isOpen ? "open" : "collapsed") +
-                        '" data-nav-group="' +
-                        esc(group.id) +
-                        '">' +
-                            '<button type="button" class="sway-workspace-nav-group-toggle" aria-expanded="' +
-                                (isOpen ? "true" : "false") +
-                                '" data-nav-group-toggle="' +
-                                esc(group.id) +
-                            '">' +
-                                '<span class="sway-workspace-nav-group-label">' +
-                                    '<span class="sway-workspace-nav-group-icon">' +
-                                        navGroupIcon(group.icon) +
-                                    '</span>' +
-                                    '<span>' +
+                            return (
+                                '<section class="sway-workspace-nav-more-section">' +
+                                    '<h4>' +
                                         esc(formatDisplayText(group.label)) +
-                                    '</span>' +
-                                '</span>' +
-                                '<i aria-hidden="true">⌄</i>' +
-                            '</button>' +
-                            '<div class="sway-workspace-nav-items">' +
-                                group.items.map(navButton).join("") +
-                            '</div>' +
-                        '</section>'
-                    );
-                }).join("") +
+                                    '</h4>' +
+                                    group.items.map(navButton).join("") +
+                                '</section>'
+                            );
+                        }).join("") +
+                    '</div>' +
+                '</section>' +
             '</div>';
 
         workspace.innerHTML =
@@ -6595,8 +6645,8 @@ function renderShell() {
             );
 
         if (newNavScroll) {
-            newNavScroll.scrollTop =
-                preserveSidebarScrollTop;
+            newNavScroll.scrollLeft =
+                preserveNavScrollLeft;
         }
 
         const mobileToggle =
@@ -9342,7 +9392,7 @@ function simpleBars(items, color) {
                 liveBadge() +
             "</div>" +
 
-            '<div class="sway-insight-grid sway-bi-grid">' +
+            '<div class="sway-insight-grid sway-bi-grid sway-bi-overview-grid">' +
                 insightPanel(
                     "Business momentum",
                     "Cash received, invoices issued and estimated pipeline created by month.",
@@ -9368,11 +9418,8 @@ function simpleBars(items, color) {
                         true,
                         "Monthly business momentum"
                     ),
-                    "sway-bi-panel--wide"
+                    "sway-bi-panel--wide sway-bi-overview-main"
                 ) +
-            "</div>" +
-
-            '<div class="sway-insight-grid sway-bi-grid">' +
                 insightPanel(
                     "Demand signals",
                     "Website enquiries and new leads recorded each month.",
@@ -9392,7 +9439,8 @@ function simpleBars(items, color) {
                         labels,
                         false,
                         "Monthly enquiry and lead counts"
-                    )
+                    ),
+                    "sway-bi-overview-secondary"
                 ) +
                 insightPanel(
                     "Delivery throughput",
@@ -9412,7 +9460,8 @@ function simpleBars(items, color) {
                         ],
                         labels,
                         "Monthly tasks created and completed"
-                    )
+                    ),
+                    "sway-bi-overview-secondary"
                 ) +
             "</div>"
         );
@@ -11906,21 +11955,34 @@ function simpleBars(items, color) {
         const activities =
             state.activities.slice(0, 8);
 
+        const totalLeads =
+            state.leads.length;
+
+        const activeClients =
+            state.clients.filter(function (client) {
+                return client.status !== "archived";
+            }).length;
+
+        const activeProjects =
+            state.projects.filter(function (project) {
+                return ["planning", "in progress", "review"].includes(project.status);
+            }).length;
+
         return (
-            heading(
-                '<button type="button" class="sway-workspace-button sway-heading-action primary" data-quick="task">+ New task</button>' +
-                '<button type="button" class="sway-workspace-button sway-heading-action" data-quick="lead">+ New lead</button>'
-            ) +
-
-            renderInsightsOverview() +
-
-            '<div class="sway-inline-note" style="margin-bottom:2px;">' +
-                "Good day, " +
-                "<strong>" +
-                esc(currentUserName()) +
-                "</strong>" +
-                ". Here is the useful bit: what is worth your attention right now." +
-            "</div>" +
+            '<section class="sway-dashboard-hero">' +
+                '<div class="sway-dashboard-hero-intro">' +
+                    '<div class="sway-dashboard-hero-copy">' +
+                        '<span class="sway-dashboard-hero-eyebrow">Swayphics business overview</span>' +
+                        '<h2 class="sway-dashboard-hero-title">Your business, at a glance</h2>' +
+                        '<p class="sway-dashboard-hero-subtitle">Track sales opportunities, cash flow and the work that needs your attention.</p>' +
+                    '</div>' +
+                    '<div class="sway-dashboard-hero-actions">' +
+                        '<button type="button" class="sway-workspace-button primary" data-quick="task">+ New task</button>' +
+                        '<button type="button" class="sway-workspace-button" data-quick="lead">+ New lead</button>' +
+                    '</div>' +
+                '</div>' +
+                renderInsightsOverview() +
+            '</section>' +
 
             renderNeedsAttention() +
 
@@ -11929,34 +11991,36 @@ function simpleBars(items, color) {
             '<div class="sway-workspace-grid">' +
 
                 '<div class="sway-stat-card">' +
-                    '<span class="label">My open tasks</span>' +
+                    '<span class="label">Total leads</span>' +
                     '<div class="value">' +
-                        myOpenTasks.length +
+                        totalLeads +
                     "</div>" +
                     '<div class="hint">' +
-                        tasksToday +
-                        " due today. Keep the queue honest." +
-                    "</div>" +
-                "</div>" +
-
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Follow-ups today</span>' +
-                    '<div class="value">' +
-                        followupsToday +
-                    "</div>" +
-                    '<div class="hint">Keep active opportunities moving. Future-you will appreciate it.</div>' +
-                "</div>" +
-
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Open pipeline</span>' +
-                    '<div class="value">' +
-                        esc(money(pipeline)) +
-                    "</div>" +
-                    '<div class="hint">' +
-                        state.leads.filter(function (item) {
-                            return !["won", "lost"].includes(item.status);
+                        state.leads.filter(function (lead) {
+                            return lead.status === "new";
                         }).length +
-                        " active leads. Plenty to work with." +
+                        " new leads awaiting qualification." +
+                    "</div>" +
+                "</div>" +
+
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Active clients</span>' +
+                    '<div class="value">' +
+                        activeClients +
+                    "</div>" +
+                    '<div class="hint">Current client relationships, excluding archived records.</div>' +
+                "</div>" +
+
+                '<div class="sway-stat-card">' +
+                    '<span class="label">Active projects</span>' +
+                    '<div class="value">' +
+                        activeProjects +
+                    "</div>" +
+                    '<div class="hint">' +
+                        state.projects.filter(function (project) {
+                            return project.status === "completed";
+                        }).length +
+                        " completed projects." +
                     "</div>" +
                 "</div>" +
 
@@ -11966,14 +12030,13 @@ function simpleBars(items, color) {
                         esc(money(outstanding)) +
                     "</div>" +
                     '<div class="hint">' +
-                        state.payments.filter(function (item) {
-                            return item.status !== "paid";
-                        }).length +
-                        " payment items. Keep these on the radar." +
+                        "Across non-cancelled invoices." +
                     "</div>" +
                 "</div>" +
 
             "</div>" +
+
+            renderRevenuePipeline() +
 
             panel(
                 "My work",
