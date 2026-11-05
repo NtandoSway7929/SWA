@@ -217,6 +217,17 @@ assert.equal(
     1,
     "the previous inline greeting must be consolidated into one hero greeting"
 );
+
+assert.ok(
+    !overviewSource.includes("heading(") &&
+    !overviewSource.includes("sway-heading-action"),
+    "the Overview hero must replace the previous heading and avoid duplicate quick actions"
+);
+assert.ok(
+    overviewSource.includes("sway-overview-accent-dot") &&
+    !overviewSource.includes("sway-overview-live-dot"),
+    "the decorative hero accent must not imply a verified live connection"
+);
 assert.ok(
     redesignCss.includes(".sway-overview-hero") &&
     redesignCss.includes("@media (max-width: 760px)") &&
