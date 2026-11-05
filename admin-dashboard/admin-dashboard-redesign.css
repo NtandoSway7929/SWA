@@ -691,3 +691,39 @@ body.sway-dark-mode #sway-admin-workspace .sway-overview-secondary-action {
         transition: none !important;
     }
 }
+
+/* =========================================================
+   STAGE 6 — NARROW MOBILE QUICK-CREATE
+   Keep the persistent create shortcut compact on small screens
+   while preserving its menu and existing action handlers.
+   ========================================================= */
+@media (max-width: 520px) {
+    #sway-admin-workspace .sway-quick-create {
+        right: max(12px, env(safe-area-inset-right)) !important;
+        bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    }
+
+    #sway-admin-workspace .sway-quick-create-toggle {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 48px !important;
+        min-width: 48px !important;
+        height: 48px !important;
+        padding: 0 !important;
+        border-radius: 999px !important;
+        gap: 0 !important;
+        font-size: 0 !important;
+    }
+
+    #sway-admin-workspace .sway-quick-create-plus {
+        display: inline-block !important;
+        font-size: 1.3rem !important;
+        line-height: 1 !important;
+    }
+
+    #sway-admin-workspace .sway-quick-create-menu {
+        right: 0 !important;
+        width: min(290px, calc(100vw - 24px)) !important;
+    }
+}
