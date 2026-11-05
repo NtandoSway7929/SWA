@@ -1,0 +1,567 @@
+/* =========================================================
+   SWAYPHICS ADMIN DASHBOARD REDESIGN
+   Top navigation + hybrid business-intelligence hero
+   Additive presentation layer; existing workspace logic retained.
+   ========================================================= */
+
+:root {
+    --sway-redesign-ink: #20242C;
+    --sway-redesign-muted: #687386;
+    --sway-redesign-blue: #0152F4;
+    --sway-redesign-line: rgba(24, 43, 83, 0.09);
+    --sway-redesign-surface: rgba(255, 255, 255, 0.88);
+    --sway-redesign-shadow: 0 18px 48px rgba(20, 35, 72, 0.075);
+}
+
+#sway-admin-workspace {
+    margin-bottom: 42px;
+    color: var(--sway-redesign-ink);
+    font-family: "Montserrat", sans-serif;
+}
+
+#sway-admin-workspace,
+#sway-admin-workspace * {
+    box-sizing: border-box;
+}
+
+.sway-workspace-shell {
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Top navigation: the existing navigation groups and view buttons are
+   retained, but presented as a compact horizontal command bar. */
+.sway-workspace-sidebar {
+    position: sticky;
+    top: 12px;
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    gap: clamp(12px, 2vw, 28px);
+    width: 100%;
+    min-width: 0;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 12px 38px rgba(22, 35, 70, 0.075);
+    backdrop-filter: blur(22px) saturate(145%);
+    -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+.sway-workspace-sidebar-head {
+    flex: 0 0 auto;
+    min-width: 132px;
+    padding: 2px 12px 2px 4px;
+    border: 0;
+}
+
+.sway-workspace-sidebar-brand {
+    gap: 1px;
+}
+
+.sway-workspace-sidebar-kicker {
+    color: #0152F4;
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+}
+
+.sway-workspace-sidebar-brand strong {
+    color: #20242C;
+    font-family: "Raleway", sans-serif;
+    font-size: 0.98rem;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+}
+
+.sway-workspace-mobile-close {
+    display: none !important;
+}
+
+.sway-workspace-nav-scroll {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    gap: 5px;
+    width: 100%;
+    height: auto;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 0 2px;
+    scrollbar-width: none;
+}
+
+.sway-workspace-nav-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.sway-workspace-nav-group {
+    position: relative;
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.sway-workspace-nav-group-toggle {
+    width: auto;
+    min-height: 40px;
+    justify-content: center;
+    gap: 9px;
+    padding: 9px 12px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: #657084;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.sway-workspace-nav-group-toggle:hover,
+.sway-workspace-nav-group.open > .sway-workspace-nav-group-toggle {
+    border-color: rgba(1, 82, 244, 0.09);
+    background: rgba(1, 82, 244, 0.055);
+    color: #0031C5;
+}
+
+.sway-workspace-nav-group-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.sway-workspace-nav-group-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 19px;
+    height: 19px;
+    color: #31517F;
+}
+
+.sway-workspace-nav-group-toggle > i {
+    font-size: 0.7rem;
+}
+
+.sway-workspace-nav-group.collapsed > .sway-workspace-nav-group-toggle i {
+    transform: rotate(-90deg);
+}
+
+.sway-workspace-nav-items,
+.sway-workspace-nav-group.collapsed .sway-workspace-nav-items,
+.sway-workspace-nav-group.open .sway-workspace-nav-items {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 160;
+    display: grid;
+    gap: 4px;
+    width: max-content;
+    min-width: 220px;
+    max-width: min(300px, calc(100vw - 28px));
+    max-height: min(72vh, 520px);
+    margin: 0;
+    padding: 8px;
+    overflow: auto;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 20px 48px rgba(17, 31, 66, 0.16);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-5px);
+    transition: opacity 150ms ease, transform 150ms ease, visibility 150ms ease;
+}
+
+.sway-workspace-nav-group.open .sway-workspace-nav-items {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.sway-workspace-nav-button {
+    min-height: 38px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    color: #526078;
+    font-size: 0.68rem;
+    font-weight: 650;
+}
+
+.sway-workspace-nav-button:hover {
+    background: rgba(1, 82, 244, 0.055);
+    color: #0031C5;
+}
+
+.sway-workspace-nav-button.active {
+    background: linear-gradient(110deg, #0031C5, #2C91FC);
+    box-shadow: 0 7px 18px rgba(1, 82, 244, 0.17);
+    color: #FFFFFF;
+}
+
+.sway-workspace-main {
+    min-width: 0;
+    margin-top: 20px;
+}
+
+.sway-workspace-view {
+    gap: 18px;
+}
+
+.sway-workspace-heading h2,
+.sway-dashboard-hero-title {
+    color: #20242C;
+    font-family: "Raleway", sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.045em;
+}
+
+/* Hybrid hero: brand-led greeting with the existing live BI components. */
+.sway-dashboard-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: clamp(18px, 2.2vw, 30px);
+    border: 1px solid rgba(255, 255, 255, 0.88);
+    border-radius: 25px;
+    background:
+        radial-gradient(ellipse at 78% 8%, rgba(119, 193, 252, 0.24), transparent 34%),
+        radial-gradient(ellipse at 12% 100%, rgba(1, 82, 244, 0.07), transparent 38%),
+        linear-gradient(132deg, rgba(255,255,255,0.97), rgba(244,247,252,0.92));
+    box-shadow: var(--sway-redesign-shadow), inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+.sway-dashboard-hero::after {
+    position: absolute;
+    top: -115px;
+    right: -90px;
+    z-index: -1;
+    width: 360px;
+    height: 360px;
+    border: 1px solid rgba(1, 82, 244, 0.08);
+    border-radius: 50%;
+    box-shadow: 0 0 0 28px rgba(1,82,244,0.018), 0 0 0 58px rgba(1,82,244,0.014);
+    content: "";
+    pointer-events: none;
+}
+
+.sway-dashboard-hero-intro {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 16px;
+}
+
+.sway-dashboard-hero-copy {
+    min-width: 0;
+}
+
+.sway-dashboard-hero-eyebrow {
+    display: block;
+    margin-bottom: 8px;
+    color: #0152F4;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.sway-dashboard-hero-title {
+    margin: 0;
+    font-size: clamp(1.65rem, 3vw, 2.55rem);
+    line-height: 1.08;
+}
+
+.sway-dashboard-hero-subtitle {
+    max-width: 580px;
+    margin: 9px 0 0;
+    color: #687386;
+    font-size: 0.76rem;
+    line-height: 1.65;
+}
+
+.sway-dashboard-hero-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.sway-dashboard-hero .sway-live-toolbar {
+    margin-top: 0;
+    border-color: rgba(1, 32, 110, 0.07);
+    background: rgba(255,255,255,0.62);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.sway-dashboard-hero .sway-insight-grid {
+    position: relative;
+    z-index: 1;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.sway-dashboard-hero .sway-insight-panel {
+    min-width: 0;
+    padding: 15px;
+    border: 1px solid rgba(255,255,255,0.9);
+    border-radius: 17px;
+    background: rgba(255,255,255,0.73);
+    box-shadow: 0 9px 26px rgba(24,43,83,0.045);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.sway-dashboard-hero .sway-bi-panel--wide {
+    grid-column: 1 / -1;
+}
+
+.sway-dashboard-hero .sway-chart-stage,
+.sway-dashboard-hero .sway-chart {
+    min-height: 205px;
+}
+
+/* Compact floating KPI cards, with the existing figures and calculations. */
+.sway-workspace-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.sway-stat-card {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    padding: 17px;
+    border: 1px solid rgba(255,255,255,0.95);
+    border-radius: 17px;
+    background: rgba(255,255,255,0.88);
+    box-shadow: 0 10px 30px rgba(20,35,72,0.055);
+}
+
+.sway-stat-card::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 58px;
+    height: 58px;
+    border-radius: 0 0 0 100%;
+    background: linear-gradient(135deg, rgba(119,193,252,0.12), rgba(1,82,244,0.025));
+    content: "";
+    pointer-events: none;
+}
+
+.sway-stat-card .label {
+    position: relative;
+    z-index: 1;
+    color: #687386;
+    font-size: 0.59rem;
+    letter-spacing: 0.055em;
+}
+
+.sway-stat-card .value {
+    position: relative;
+    z-index: 1;
+    margin-top: 9px;
+    color: #20242C;
+    font-family: "Raleway", sans-serif;
+    font-size: clamp(1.25rem, 2vw, 1.75rem);
+    font-weight: 800;
+}
+
+.sway-stat-card .hint {
+    position: relative;
+    z-index: 1;
+    color: #778195;
+    font-size: 0.61rem;
+    line-height: 1.5;
+}
+
+.sway-attention-panel,
+.sway-followup-automation,
+.sway-panel {
+    border-color: var(--sway-redesign-line);
+    border-radius: 19px;
+    box-shadow: 0 11px 32px rgba(20,35,72,0.045);
+}
+
+.sway-table th {
+    color: #7A8494;
+    font-size: 0.59rem;
+}
+
+.sway-table td {
+    font-size: 0.68rem;
+}
+
+/* Tablet */
+@media (max-width: 980px) {
+    .sway-workspace-shell {
+        display: block;
+    }
+
+    .sway-workspace-sidebar {
+        top: 8px;
+        gap: 10px;
+        padding: 9px 11px;
+        border-radius: 16px;
+    }
+
+    .sway-workspace-sidebar-head {
+        min-width: 112px;
+        padding-right: 8px;
+    }
+
+    .sway-workspace-nav-group-toggle {
+        min-height: 38px;
+        padding: 8px 10px;
+    }
+
+    .sway-workspace-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Mobile: keep navigation at the top and scroll it horizontally.
+   Do not turn it back into a drawer or hide navigation destinations. */
+@media (max-width: 700px) {
+    .sway-workspace-sidebar {
+        position: sticky;
+        top: 5px;
+        display: block;
+        padding: 8px;
+        border-radius: 15px;
+    }
+
+    .sway-workspace-sidebar-head {
+        min-width: 0;
+        padding: 1px 4px 7px;
+    }
+
+    .sway-workspace-sidebar-brand {
+        display: flex;
+        align-items: baseline;
+        gap: 7px;
+    }
+
+    .sway-workspace-sidebar-kicker {
+        font-size: 0.48rem;
+    }
+
+    .sway-workspace-sidebar-brand strong {
+        font-size: 0.84rem;
+    }
+
+    .sway-workspace-nav-scroll {
+        gap: 3px;
+        padding: 0;
+    }
+
+    .sway-workspace-nav-group-toggle {
+        min-height: 35px;
+        gap: 6px;
+        padding: 7px 9px;
+        font-size: 0.59rem;
+    }
+
+    .sway-workspace-nav-group-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .sway-workspace-nav-items,
+    .sway-workspace-nav-group.collapsed .sway-workspace-nav-items,
+    .sway-workspace-nav-group.open .sway-workspace-nav-items {
+        position: fixed;
+        top: 94px;
+        left: 10px;
+        width: min(280px, calc(100vw - 20px));
+        max-width: calc(100vw - 20px);
+        max-height: min(68vh, 480px);
+    }
+
+    .sway-workspace-main {
+        margin-top: 13px;
+    }
+
+    .sway-workspace-view {
+        gap: 13px;
+    }
+
+    .sway-dashboard-hero {
+        padding: 17px;
+        border-radius: 19px;
+    }
+
+    .sway-dashboard-hero-intro {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 13px;
+        margin-bottom: 12px;
+    }
+
+    .sway-dashboard-hero-title {
+        font-size: clamp(1.55rem, 7vw, 2rem);
+    }
+
+    .sway-dashboard-hero-subtitle {
+        font-size: 0.69rem;
+    }
+
+    .sway-dashboard-hero-actions {
+        justify-content: flex-start;
+    }
+
+    .sway-dashboard-hero-actions .sway-workspace-button {
+        padding: 9px 11px;
+        font-size: 0.62rem;
+    }
+
+    .sway-dashboard-hero .sway-insight-grid {
+        grid-template-columns: 1fr;
+        gap: 9px;
+    }
+
+    .sway-dashboard-hero .sway-insight-panel {
+        padding: 12px;
+    }
+
+    .sway-dashboard-hero .sway-chart-stage,
+    .sway-dashboard-hero .sway-chart {
+        min-height: 175px;
+    }
+
+    .sway-workspace-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+
+    .sway-stat-card {
+        padding: 13px;
+        border-radius: 14px;
+    }
+
+    .sway-stat-card .value {
+        font-size: 1.35rem;
+    }
+
+    .sway-stat-card .hint {
+        font-size: 0.57rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sway-workspace-nav-group-toggle,
+    .sway-workspace-nav-items,
+    .sway-workspace-nav-button {
+        scroll-behavior: auto;
+        transition: none !important;
+    }
+}
