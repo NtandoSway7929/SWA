@@ -11983,7 +11983,7 @@ function simpleBars(items, color) {
 
         const activeLeads =
             state.leads.filter(function (item) {
-                return !["won", "lost", "follow-up"].includes(item.status);
+                return !["won", "lost"].includes(item.status);
             }).length;
 
         const unpaidItems =
