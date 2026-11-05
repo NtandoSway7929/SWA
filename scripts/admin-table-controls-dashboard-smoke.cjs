@@ -380,6 +380,11 @@ async function main() {
       const button = page.locator('[data-view="' + view + '"]').first();
       await button.waitFor({ state: "visible", timeout: 15000 });
       await button.click();
+      assert.equal(
+        await page.locator(".sway-top-nav-menu-layer [data-nav-menu]:visible").count(),
+        0,
+        "selecting a destination must close the top-navigation dropdown so it cannot cover page controls"
+      );
       await page.locator('[data-admin-table-search-input="' + view + '"]').waitFor({
         state: "visible", timeout: 20000
       });
