@@ -1340,6 +1340,10 @@ async function testWelcomeAuthBrowserFlow(browser, metrics) {
     assert.equal(afterTokenRefresh.animationCount, 1, "token refresh must not replay the animation");
 
     // Routine SPA navigation must preserve the greeting without replaying its effects.
+    const moreGroup = page.locator('[data-nav-group-toggle="more"]').first();
+    if (await moreGroup.count() && (await moreGroup.getAttribute("aria-expanded")) !== "true") {
+      await moreGroup.click();
+    }
     const innerMeGroup = page.locator('[data-nav-group-toggle="innerme"]');
     if ((await innerMeGroup.getAttribute("aria-expanded")) !== "true") {
       await innerMeGroup.click();
