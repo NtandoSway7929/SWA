@@ -235,6 +235,25 @@
     box-shadow: inset 3px 0 0 var(--sway-blue, #0152F4);
 }
 
+#sway-admin-workspace .sway-settings-direct-nav.active {
+    border-color: rgba(1, 82, 244, 0.13) !important;
+    background: rgba(1, 82, 244, 0.085) !important;
+    color: var(--sway-blue, #0152F4) !important;
+}
+
+#sway-admin-workspace .sway-workspace-nav-group-toggle:focus-visible,
+#sway-admin-workspace .sway-settings-direct-nav:focus-visible,
+#sway-admin-workspace .sway-top-nav-menu-layer .sway-workspace-nav-button:focus-visible {
+    outline: 3px solid rgba(1, 82, 244, 0.28);
+    outline-offset: 2px;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-settings-direct-nav.active {
+    border-color: rgba(119, 193, 252, 0.16) !important;
+    background: rgba(1, 82, 244, 0.20) !important;
+    color: #A9CCFF !important;
+}
+
 #sway-admin-workspace .sway-top-nav-menu-layer .sway-workspace-count {
     flex: 0 0 auto;
     margin-left: 8px;
