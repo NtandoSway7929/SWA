@@ -6484,17 +6484,14 @@
     }
 
 function renderShell() {
-        const preserveMobileNavOpen =
-            workspace.classList.contains("nav-open");
-
         const existingNavScroll =
             workspace.querySelector(
                 ".sway-workspace-nav-scroll"
             );
 
-        const preserveSidebarScrollTop =
+        const preserveNavScrollLeft =
             existingNavScroll
-                ? existingNavScroll.scrollTop
+                ? existingNavScroll.scrollLeft
                 : 0;
 
         let openGroups = {};
@@ -6511,14 +6508,11 @@ function renderShell() {
         }
 
         const sidebar =
-            '<div class="sway-workspace-sidebar-head">' +
-                '<div class="sway-workspace-sidebar-brand">' +
-                    '<span class="sway-workspace-sidebar-kicker">SWAYPHICS</span>' +
-                    '<strong>Workspace</strong>' +
-                '</div>' +
-                '<button type="button" class="sway-workspace-mobile-close" aria-label="Close navigation">×</button>' +
+            '<div class="sway-top-nav-heading">' +
+                '<span class="sway-workspace-sidebar-kicker">SWAYPHICS</span>' +
+                '<strong>Workspace</strong>' +
             '</div>' +
-            '<div class="sway-workspace-nav-scroll">' +
+            '<div class="sway-workspace-nav-scroll" role="group" aria-label="Workspace sections">' +
                 navGroups.map(function (group) {
                     const containsCurrent =
                         group.items.some(function (item) {
@@ -6526,17 +6520,26 @@ function renderShell() {
                         });
 
                     const isOpen =
-                        containsCurrent ||
                         openGroups[group.id] === true;
+
+                    const settingsMenu =
+                        group.id === "settings"
+                            ? '<div class="sway-workspace-nav-items sway-settings-nav-source" data-nav-menu="settings" hidden>' +
+                                group.items.map(navButton).join("") +
+                              '</div>'
+                            : "";
 
                     return (
                         '<section class="sway-workspace-nav-group ' +
                         (isOpen ? "open" : "collapsed") +
+                        (containsCurrent ? " has-active" : "") +
                         '" data-nav-group="' +
                         esc(group.id) +
                         '">' +
                             '<button type="button" class="sway-workspace-nav-group-toggle" aria-expanded="' +
                                 (isOpen ? "true" : "false") +
+                                '" aria-controls="sway-nav-menu-' +
+                                esc(group.id) +
                                 '" data-nav-group-toggle="' +
                                 esc(group.id) +
                             '">' +
@@ -6550,19 +6553,36 @@ function renderShell() {
                                 '</span>' +
                                 '<i aria-hidden="true">⌄</i>' +
                             '</button>' +
-                            '<div class="sway-workspace-nav-items">' +
-                                group.items.map(navButton).join("") +
-                            '</div>' +
+                            settingsMenu +
                         '</section>'
+                    );
+                }).join("") +
+            '</div>' +
+            '<div class="sway-top-nav-menu-layer">' +
+                navGroups.filter(function (group) {
+                    return group.id !== "settings";
+                }).map(function (group) {
+                    return (
+                        '<div class="sway-workspace-nav-items" id="sway-nav-menu-' +
+                            esc(group.id) +
+                            '" data-nav-menu="' +
+                            esc(group.id) +
+                            '" role="group" aria-label="' +
+                            esc(formatDisplayText(group.label)) +
+                            '"' +
+                            (openGroups[group.id] === true ? "" : " hidden") +
+                        '>' +
+                            group.items.map(navButton).join("") +
+                        '</div>'
                     );
                 }).join("") +
             '</div>';
 
         workspace.innerHTML =
-            '<div class="sway-workspace-shell">' +
-                '<aside class="sway-workspace-sidebar" id="sway-workspace-sidebar" aria-label="Admin workspace navigation">' +
+            '<div class="sway-workspace-shell sway-top-nav-shell">' +
+                '<nav class="sway-workspace-sidebar sway-top-nav" id="sway-workspace-sidebar" aria-label="Admin workspace navigation">' +
                     sidebar +
-                "</aside>" +
+                "</nav>" +
                 '<div class="sway-workspace-main" id="sway-workspace-main"></div>' +
                 '<div class="sway-quick-create">' +
                     '<button type="button" class="sway-quick-create-toggle" aria-expanded="false" aria-controls="sway-quick-create-menu">' +
@@ -6595,47 +6615,14 @@ function renderShell() {
             );
 
         if (newNavScroll) {
-            newNavScroll.scrollTop =
-                preserveSidebarScrollTop;
+            newNavScroll.scrollLeft =
+                preserveNavScrollLeft;
         }
-
-        const mobileToggle =
-            document.querySelector(
-                ".admin-mobile-sidebar-toggle"
-            ) ||
-            workspace.querySelector(
-                ".sway-workspace-mobile-toggle"
-            );
-
-        const mobileClose =
-            workspace.querySelector(
-                ".sway-workspace-mobile-close"
-            );
 
         const sidebarElement =
             workspace.querySelector(
                 ".sway-workspace-sidebar"
             );
-
-        if (
-            preserveMobileNavOpen &&
-            sidebarElement &&
-            window.innerWidth <= MOBILE_SIDEBAR_BREAKPOINT
-        ) {
-            sidebarElement.classList.add(
-                "sway-sidebar-restoring"
-            );
-
-            setMobileSidebarOpen(true);
-
-            window.requestAnimationFrame(
-                function () {
-                    sidebarElement.classList.remove(
-                        "sway-sidebar-restoring"
-                    );
-                }
-            );
-        }
 
         const quickCreate =
             workspace.querySelector(
@@ -6777,12 +6764,6 @@ function renderShell() {
                 });
         }
 
-        setupMobileSidebarInteractions(
-            sidebarElement,
-            mobileToggle,
-            mobileClose
-        );
-
         workspace
             .querySelectorAll("[data-nav-group-toggle]")
             .forEach(function (button) {
@@ -6800,27 +6781,36 @@ function renderShell() {
                             button.dataset.navGroupToggle;
 
                         const isOpen =
-                            group.classList.contains(
-                                "open"
-                            );
+                            group.classList.contains("open");
+                        const shouldOpen = !isOpen;
 
-                        group.classList.toggle(
-                            "open",
-                            !isOpen
-                        );
+                        workspace
+                            .querySelectorAll("[data-nav-group]")
+                            .forEach(function (otherGroup) {
+                                const active =
+                                    otherGroup === group && shouldOpen;
+                                otherGroup.classList.toggle("open", active);
+                                otherGroup.classList.toggle("collapsed", !active);
 
-                        group.classList.toggle(
-                            "collapsed",
-                            isOpen
-                        );
+                                const otherToggle =
+                                    otherGroup.querySelector("[data-nav-group-toggle]");
+                                if (otherToggle) {
+                                    otherToggle.setAttribute(
+                                        "aria-expanded",
+                                        String(active)
+                                    );
+                                }
+                            });
 
-                        button.setAttribute(
-                            "aria-expanded",
-                            String(!isOpen)
-                        );
+                        workspace
+                            .querySelectorAll("[data-nav-menu]")
+                            .forEach(function (menu) {
+                                menu.hidden =
+                                    menu.dataset.navMenu !== groupId ||
+                                    !shouldOpen;
+                            });
 
                         let saved = {};
-
                         try {
                             saved =
                                 JSON.parse(
@@ -6832,7 +6822,10 @@ function renderShell() {
                             saved = {};
                         }
 
-                        saved[groupId] = !isOpen;
+                        Object.keys(saved).forEach(function (key) {
+                            saved[key] = false;
+                        });
+                        saved[groupId] = shouldOpen;
 
                         localStorage.setItem(
                             "swayphics_admin_nav_groups",
@@ -6841,6 +6834,79 @@ function renderShell() {
                     }
                 );
             });
+
+        if (!window.__swayphicsTopNavigationDismissBound) {
+            window.__swayphicsTopNavigationDismissBound = true;
+
+            document.addEventListener("pointerdown", function (event) {
+                const navigation =
+                    workspace.querySelector(".sway-top-nav");
+
+                if (!navigation || navigation.contains(event.target)) {
+                    return;
+                }
+
+                const openGroup =
+                    workspace.querySelector("[data-nav-group].open");
+                if (!openGroup) return;
+
+                const openButton =
+                    openGroup.querySelector("[data-nav-group-toggle]");
+                const openMenu =
+                    workspace.querySelector(
+                        '[data-nav-menu="' + openGroup.dataset.navGroup + '"]'
+                    );
+
+                openGroup.classList.remove("open");
+                openGroup.classList.add("collapsed");
+                if (openButton) {
+                    openButton.setAttribute("aria-expanded", "false");
+                }
+                if (openMenu) openMenu.hidden = true;
+
+                try {
+                    localStorage.setItem(
+                        "swayphics_admin_nav_groups",
+                        JSON.stringify({})
+                    );
+                } catch (error) {
+                    // Menu dismissal must not depend on local storage.
+                }
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key !== "Escape") return;
+
+                const openGroup =
+                    workspace.querySelector("[data-nav-group].open");
+                if (!openGroup) return;
+
+                event.preventDefault();
+                const openButton =
+                    openGroup.querySelector("[data-nav-group-toggle]");
+                const openMenu =
+                    workspace.querySelector(
+                        '[data-nav-menu="' + openGroup.dataset.navGroup + '"]'
+                    );
+
+                openGroup.classList.remove("open");
+                openGroup.classList.add("collapsed");
+                if (openButton) {
+                    openButton.setAttribute("aria-expanded", "false");
+                    openButton.focus();
+                }
+                if (openMenu) openMenu.hidden = true;
+
+                try {
+                    localStorage.setItem(
+                        "swayphics_admin_nav_groups",
+                        JSON.stringify({})
+                    );
+                } catch (error) {
+                    // Menu dismissal must not depend on local storage.
+                }
+            });
+        }
 
         workspace
             .querySelectorAll("[data-view]")
