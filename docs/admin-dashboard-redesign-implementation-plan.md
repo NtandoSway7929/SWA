@@ -2,7 +2,7 @@
 
 ## Implementation plan
 
-**Status:** Stage 1 source audit completed; Stage 2 top navigation implemented on this branch. Playwright/browser verification remains pending.  
+**Status:** Stages 1–5 implemented and source-regression verified. Stage 6 browser and dashboard smoke checks have passed on the current tested revision; disposable local-Supabase persistence verification is still in progress.  
 **Branch:** `design/admin-dashboard-top-nav-hybrid-hero`  
 **Base:** Current `main` branch  
 **Approved direction:** Top navigation + hybrid overview hero
@@ -159,7 +159,7 @@ A contract test now checks the hero's accessible heading, authenticated greeting
 
 The hero stylesheet includes a four-column desktop metric strip, a two-column mobile metric grid, stacked mobile actions at 380px and below, dark-theme styling and reduced-motion handling. Navigation retains the horizontally scrollable trigger row and separately positioned dropdown panels.
 
-**Verification status:** the updated Playwright smoke script passes JavaScript parsing, but the browser itself has not yet been run. Therefore the viewport checks are test coverage authored, not confirmed visual passes. Actual browser screenshots, interaction results and any layout defects remain pending a CI/browser execution.
+**Browser verification passed on the current implementation.** GitHub Actions run [42063383186](https://github.com/NtandoSway7929/SWA/actions/runs/42063383186), commit `1014be703c69b28bbea36657b3e5ec08196777cc`, completed the desktop/mobile browser preview and the actual dashboard smoke test successfully. The responsive assertions covered 1440px, 1024px, 768px, 390px and 360px. The hero remained within the viewport, the mobile metric grid used two columns, the retired drawer toggle stayed hidden, and the navigation dropdown stayed inside the viewport. The dashboard smoke run also passed its hero checks at all five widths.
 
 Test and refine at minimum these viewport widths: 1440px, 1024px, 768px, 390px and 360px.
 
@@ -180,9 +180,28 @@ Check menu placement, clipping, text wrapping, sticky positioning, touch-target 
 
 **Source-level verification:** the workspace script, contract-test script and responsive browser smoke script parse; the contract test passes against the fetched branch files using an in-memory Node module shim; all three inline scripts in the dashboard HTML parse; the redesign CSS has balanced braces.
 
-**Not yet verified:** a real Node/GitHub Actions run, Playwright browser execution, screenshots, live visual behaviour and cross-browser rendering. The GitHub status interface did not return completed workflow results for the branch commit at review time. These remain pending, not passed.
+**CI regression verification passed.** The full site-validation workflow [42063382283](https://github.com/NtandoSway7929/SWA/actions/runs/42063382283) completed successfully on commit `1014be703c69b28bbea36657b3e5ec08196777cc`. Its successful steps include the existing admin authentication, Settings, automation, business-control, table-control, dashboard redesign contract, lead WhatsApp and inline-JavaScript checks. The isolated browser workflow also passed its browser preview and actual-dashboard smoke steps on that same commit. Cross-browser testing in Safari and Firefox has not been performed.
 
 Do not merge, deploy or change production without explicit approval.
+
+
+## 6. Stage 6 — Browser verification and release preparation
+
+**Current evidence (commit `1014be703c69b28bbea36657b3e5ec08196777cc`):**
+
+- The full source regression workflow passed: [GitHub Actions 42063382283](https://github.com/NtandoSway7929/SWA/actions/runs/42063382283).
+- The isolated browser workflow successfully installed headless Chromium and started the local-only preview server.
+- The standalone desktop/mobile preview passed.
+- The actual dashboard smoke test passed. It used a mocked administrator identity and synthetic records, completed 135 mocked API reads, recorded zero unexpected external requests, blocked zero unexpected API writes, and reported zero uncaught page errors.
+- The dashboard test covered lead search/filter/sort, selected-row and formula-safe CSV export, task completion, follow-up completion, activity logging, invoice filtering/search/sorting/archive behaviour, and the five responsive viewport widths.
+- The Overview hero passed its authenticated greeting, four-metric, quick-action, viewport-boundary and mobile two-column checks.
+
+**Persistence check:** the same browser workflow is currently executing the authenticated read/write persistence test against an unlinked, disposable local Supabase stack. This test uses loopback-only endpoints, synthetic UUID records and local Auth credentials; it does not receive a hosted Supabase project reference or production credentials. Do not mark Stage 6 fully complete until this step and the overall workflow finish successfully.
+
+**Visual evidence:** the earlier completed browser-smoke artifact is available from [GitHub Actions run 42061237275](https://github.com/NtandoSway7929/SWA/actions/runs/42061237275). Its screenshots cover desktop Leads, Tasks and Invoices views and a narrow-mobile Tasks view. That run's browser and dashboard smoke steps passed, but its overall run was later cancelled before the disposable local-Supabase check completed.
+
+**Release decision:** no pull request, merge or deployment has been performed. Do not merge or deploy until the persistence check has passed and the final screenshot/review evidence has been inspected. Keep the branch isolated from `main`.
+
 
 ## 7. Acceptance criteria
 
