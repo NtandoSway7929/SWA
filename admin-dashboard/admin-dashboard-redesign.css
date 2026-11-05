@@ -1137,3 +1137,11 @@
         height: 165px !important;
     }
 }
+
+
+/* The global admin header already carries the official Swayphics logo.
+   Remove the repeated workspace brand block so the top navigation can start
+   with the primary destinations and stay compact on mobile. */
+#sway-admin-workspace .sway-workspace-sidebar-head {
+    display: none !important;
+}
