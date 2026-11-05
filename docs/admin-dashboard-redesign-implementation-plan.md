@@ -167,11 +167,22 @@ Check menu placement, clipping, text wrapping, sticky positioning, touch-target 
 
 ### Stage 5 - Regression and review
 
-1. Run JavaScript syntax checks and the new focused tests.
-2. Run the existing relevant admin tests and browser smoke checks.
-3. Confirm that no backend, authentication or production files were changed.
-4. Review the complete branch diff for accidental deletions, duplicated assets and unrelated changes.
-5. Report test results and any unverified browser/device conditions before requesting review.
+**Source-level regression review completed on the feature branch.**
+
+- Confirmed the branch changes are limited to the admin dashboard workspace, dashboard HTML/CSS, validation workflows, test scripts and redesign documentation. No public marketing page, admin login page, client portal, Supabase schema, functions, secrets or data files are in the diff.
+- Confirmed all eight navigation groups and 30 existing destination IDs remain present.
+- Confirmed the Settings direct-navigation normalizer remains compatible with the new navigation shell.
+- Removed the redundant Overview page heading and duplicate quick-action buttons now that the hero owns the primary heading and actions.
+- Replaced the misleading green "live" decoration with a neutral brand-blue accent; the hero does not claim real-time connectivity.
+- Preserved the existing definitions for pipeline valuation and active-lead count. Pipeline value excludes won, lost and follow-up statuses; active-lead count excludes only won and lost.
+- Added contract coverage for the no-duplicate-heading rule and the distinct pipeline/active-lead definitions.
+- Added push triggers for this feature branch to the validation and isolated browser-preview workflows, allowing automated checks without opening a pull request.
+
+**Source-level verification:** the workspace script, contract-test script and responsive browser smoke script parse; the contract test passes against the fetched branch files using an in-memory Node module shim; all three inline scripts in the dashboard HTML parse; the redesign CSS has balanced braces.
+
+**Not yet verified:** a real Node/GitHub Actions run, Playwright browser execution, screenshots, live visual behaviour and cross-browser rendering. The GitHub status interface did not return completed workflow results for the branch commit at review time. These remain pending, not passed.
+
+Do not merge, deploy or change production without explicit approval.
 
 ## 7. Acceptance criteria
 
