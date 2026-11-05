@@ -112,7 +112,7 @@
             icon: "grid",
             items: [
                 ["overview", "Overview"],
-                ["insights", "Insights"],
+    ,
                 ["reminders", "Automated reminders"]
             ]
         },
