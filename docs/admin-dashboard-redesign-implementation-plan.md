@@ -155,6 +155,12 @@ A contract test now checks the hero's accessible heading, authenticated greeting
 
 ### Stage 4 - Responsive and visual refinement
 
+**Implementation recorded on this branch:** the responsive browser smoke test now exercises the Overview hero at 1440px, 1024px, 768px, 390px and 360px. It checks the authenticated greeting, four metric tiles, both existing quick actions, hero bounds, horizontal overflow, action visibility and the two-column metric layout at mobile widths. The test continues to exercise top-navigation dropdown bounds and existing table controls at those same viewport sizes.
+
+The hero stylesheet includes a four-column desktop metric strip, a two-column mobile metric grid, stacked mobile actions at 380px and below, dark-theme styling and reduced-motion handling. Navigation retains the horizontally scrollable trigger row and separately positioned dropdown panels.
+
+**Verification status:** the updated Playwright smoke script passes JavaScript parsing, but the browser itself has not yet been run. Therefore the viewport checks are test coverage authored, not confirmed visual passes. Actual browser screenshots, interaction results and any layout defects remain pending a CI/browser execution.
+
 Test and refine at minimum these viewport widths: 1440px, 1024px, 768px, 390px and 360px.
 
 Check menu placement, clipping, text wrapping, sticky positioning, touch-target sizing, page overflow, chart/table scrolling, quick-create placement and the global search/header layout.
