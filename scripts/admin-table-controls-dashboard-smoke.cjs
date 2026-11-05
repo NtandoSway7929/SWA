@@ -360,6 +360,16 @@ async function main() {
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.locator("#sway-admin-workspace .sway-workspace-shell").waitFor({ timeout: 30000 });
     await page.locator("#sway-workspace-main").waitFor({ timeout: 30000 });
+    const initialHero = page.locator("#sway-workspace-main .sway-overview-hero");
+    await initialHero.waitFor({ state: "visible", timeout: 20000 });
+    assert.ok((await initialHero.locator("#sway-overview-hero-title").innerText()).includes("Isolated Dashboard Test"),
+      "the Overview hero should greet the authenticated synthetic test user");
+    assert.equal(await initialHero.locator(".sway-overview-hero-metric").count(), 4,
+      "the Overview hero should render all four existing operational metrics");
+    assert.equal(await initialHero.locator('[data-quick="task"]').count(), 1,
+      "the hero should expose the existing quick-create task action");
+    assert.equal(await initialHero.locator('[data-quick="lead"]').count(), 1,
+      "the hero should expose the existing quick-create lead action");
 
     async function navigate(view, group) {
       const toggle = page.locator('[data-nav-group-toggle="' + group + '"]').first();
@@ -645,6 +655,40 @@ async function main() {
       );
       assert.ok(await page.locator('[data-view="leads"]').count() === 1,
         "the existing Leads destination should remain available after top-nav navigation");
+
+      // Return to Overview at every target width and measure the actual hero,
+      // metric grid and quick actions for clipping and horizontal overflow.
+      await page.locator('[data-view="overview"]').first().click();
+      const hero = page.locator("#sway-workspace-main .sway-overview-hero");
+      await hero.waitFor({ state: "visible" });
+      const heroMetrics = await hero.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        const grid = el.querySelector(".sway-overview-hero-metrics");
+        const gridStyle = getComputedStyle(grid);
+        const actionButtons = Array.from(el.querySelectorAll(".sway-overview-primary-action, .sway-overview-secondary-action"));
+        return {
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+          metricColumns: gridStyle.gridTemplateColumns.split(" ").length,
+          actionsVisible: actionButtons.length === 2 && actionButtons.every(button => {
+            const buttonRect = button.getBoundingClientRect();
+            return buttonRect.width > 0 && buttonRect.left >= 0 && buttonRect.right <= window.innerWidth + 1;
+          })
+        };
+      });
+      assert.ok(heroMetrics.left >= 0 && heroMetrics.right <= width + 1,
+        "the Overview hero should remain within the viewport at " + width + "px: " + JSON.stringify(heroMetrics));
+      assert.ok(heroMetrics.scrollWidth <= heroMetrics.clientWidth + 1,
+        "the Overview hero should not introduce horizontal overflow at " + width + "px: " + JSON.stringify(heroMetrics));
+      assert.ok(heroMetrics.actionsVisible,
+        "both Overview hero actions should remain visible at " + width + "px");
+      if (width <= 760) {
+        assert.equal(heroMetrics.metricColumns, 2,
+          "hero metrics should form two columns on mobile at " + width + "px");
+      }
     }
 
     // Return to Tasks at the narrowest viewport, then verify that the existing
