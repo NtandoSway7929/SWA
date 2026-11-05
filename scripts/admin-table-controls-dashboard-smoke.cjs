@@ -663,7 +663,21 @@ async function main() {
 
       // Return to Overview at every target width and measure the actual hero,
       // metric grid and quick actions for clipping and horizontal overflow.
-      await page.locator('[data-view="overview"]').first().click();
+      const overviewToggle = page.locator('[data-nav-group-toggle="overview"]');
+      await overviewToggle.waitFor({ state: "visible" });
+      if ((await overviewToggle.getAttribute("aria-expanded")) !== "true") {
+        await overviewToggle.click();
+      }
+      const overviewDestination = page.locator(
+        '.sway-top-nav-menu-layer [data-nav-menu="overview"] [data-view="overview"]'
+      );
+      await overviewDestination.waitFor({ state: "visible" });
+      await overviewDestination.click();
+      assert.equal(
+        await page.locator(".sway-top-nav-menu-layer [data-nav-menu]:visible").count(),
+        0,
+        "selecting Overview must close its dropdown before checking the hero"
+      );
       const hero = page.locator("#sway-workspace-main .sway-overview-hero");
       await hero.waitFor({ state: "visible" });
       const heroMetrics = await hero.evaluate(el => {
