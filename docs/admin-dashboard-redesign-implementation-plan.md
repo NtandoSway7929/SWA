@@ -2,7 +2,7 @@
 
 ## Implementation plan
 
-**Status:** Stage 1 source audit completed. Executable regression baseline remains unconfirmed; see the baseline report.  
+**Status:** Stage 1 source audit completed; Stage 2 top navigation implemented on this branch. Playwright/browser verification remains pending.  
 **Branch:** `design/admin-dashboard-top-nav-hybrid-hero`  
 **Base:** Current `main` branch  
 **Approved direction:** Top navigation + hybrid overview hero
@@ -123,11 +123,19 @@ No production merge or deployment is included in this implementation phase.
 
 ### Stage 2 - Navigation conversion
 
+**Implementation recorded on this branch:** the workspace shell now renders a semantic top-navigation landmark with a horizontally scrollable group-trigger row and separate dropdown panels. Existing `data-view` destination identifiers and dynamic destination counters are retained. The trigger-to-panel relationship uses `aria-controls` and `aria-expanded`; menus support outside-click dismissal and Escape. The 980px drawer setup is no longer bound, and the old hamburger is hidden by the isolated redesign stylesheet.
+
+The current Settings module still promotes its Settings destination to a direct top-level item using its existing normalizer. The `swayphics_admin_nav_groups` preference key remains in use, but legacy multiple-open accordion preferences are normalized to one active dropdown because the new top navigation permits one dropdown at a time.
+
+A focused contract test was added to `scripts/admin-dashboard-redesign.test.cjs` and wired into `.github/workflows/validate-site.yml`. The existing mocked-dashboard smoke script was updated to cover 1440, 1024, 768, 390 and 360 pixel viewports.
+
 1. Keep the existing navigation data model and destination identifiers.
 2. Refactor the rendered shell so navigation occupies the top of the workspace.
 3. Implement anchored group menus with accessible expanded state, Escape handling, outside-click handling and reliable focus behaviour.
 4. Adapt the 980px mobile-drawer logic to the horizontally scrollable top-navigation model.
 5. Verify all destinations and dynamic badges still navigate correctly.
+
+**Verification status:** structural contract checks and JavaScript parsing have been performed through the available execution environment. The Playwright browser workflow has not yet run; visual clipping, focus behaviour and viewport interaction are not marked as passed until CI/browser execution.
 
 ### Stage 3 - Hybrid Overview hero
 
