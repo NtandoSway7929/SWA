@@ -128,7 +128,7 @@ assert.ok(
 const navClickHandler = extractConstant(
     workspace,
     '.querySelectorAll("[data-view]")',
-    "\\n    function heading(",
+    "\n    function heading(",
     "workspace navigation click handler"
 );
 assert.ok(
