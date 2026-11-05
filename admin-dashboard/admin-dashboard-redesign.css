@@ -1051,3 +1051,89 @@
         max-width: calc(100vw - 20px) !important;
     }
 }
+
+
+/* =========================================================
+   OVERVIEW HERO — compact reference-inspired BI composition
+   One principal momentum chart with two supporting signal cards.
+   The detailed charts remain available on the Insights destination.
+   ========================================================= */
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    align-items: stretch;
+    gap: 11px !important;
+    margin-top: 11px !important;
+}
+
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-main {
+    grid-column: span 2 !important;
+    min-width: 0;
+}
+
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-secondary {
+    grid-column: span 1 !important;
+    min-width: 0;
+}
+
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-insight-panel {
+    padding: 13px !important;
+    border-radius: 15px !important;
+}
+
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-panel-title {
+    margin-bottom: 8px !important;
+}
+
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-panel-title h3 {
+    font-size: 0.72rem !important;
+}
+
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-panel-title p {
+    font-size: 0.57rem !important;
+    line-height: 1.45;
+}
+
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-bi-svg {
+    height: clamp(150px, 13vw, 188px) !important;
+    min-height: 0 !important;
+}
+
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-bi-y-axis {
+    font-size: 0.55rem !important;
+}
+
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-bi-x-axis,
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-bi-legend-item,
+#sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-bi-legend-item strong {
+    font-size: 0.55rem !important;
+}
+
+@media (min-width: 701px) and (max-width: 980px) {
+    #sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    #sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-main {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+@media (max-width: 700px) {
+    #sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 9px !important;
+    }
+
+    #sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-main {
+        grid-column: 1 / -1 !important;
+    }
+
+    #sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-secondary {
+        display: none !important;
+    }
+
+    #sway-admin-workspace .sway-dashboard-hero .sway-bi-overview-grid .sway-bi-svg {
+        height: 165px !important;
+    }
+}
