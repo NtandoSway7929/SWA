@@ -6926,6 +6926,35 @@ function renderShell() {
                         const view =
                             button.dataset.view;
 
+                        const openNavigationGroup =
+                            workspace.querySelector("[data-nav-group].open");
+
+                        if (openNavigationGroup) {
+                            openNavigationGroup.classList.remove("open");
+                            openNavigationGroup.classList.add("collapsed");
+
+                            const openToggle =
+                                openNavigationGroup.querySelector("[data-nav-group-toggle]");
+                            const openMenu =
+                                workspace.querySelector(
+                                    '[data-nav-menu="' + openNavigationGroup.dataset.navGroup + '"]'
+                                );
+
+                            if (openToggle) {
+                                openToggle.setAttribute("aria-expanded", "false");
+                            }
+                            if (openMenu) openMenu.hidden = true;
+
+                            try {
+                                localStorage.setItem(
+                                    "swayphics_admin_nav_groups",
+                                    JSON.stringify({})
+                                );
+                            } catch (error) {
+                                // Navigation must remain usable without storage.
+                            }
+                        }
+
                         if (
                             isInnerMeView(view) &&
                             isInnerMeView(state.currentView) &&
