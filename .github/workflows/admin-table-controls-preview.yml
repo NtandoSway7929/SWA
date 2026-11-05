@@ -55,8 +55,8 @@ jobs:
       - name: Install isolated browser and local Supabase test dependencies
         run: npm install --no-save --no-package-lock playwright supabase@2.121.0
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install headless Chromium
+        run: npx playwright install --with-deps --only-shell chromium
 
       - name: Start local-only preview server
         shell: bash
