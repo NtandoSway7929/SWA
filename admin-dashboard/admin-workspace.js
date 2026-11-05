@@ -6545,7 +6545,7 @@ function renderShell() {
                         '" data-nav-group="' +
                         esc(group.id) +
                         '">' +
-                            '<button type="button" class="sway-workspace-nav-group-toggle" aria-expanded="' +
+                            '<button type="button" class="sway-workspace-nav-group-toggle" aria-haspopup="true" aria-expanded="' +
                                 (isOpen ? "true" : "false") +
                                 '" aria-controls="sway-nav-menu-' +
                                 esc(group.id) +
