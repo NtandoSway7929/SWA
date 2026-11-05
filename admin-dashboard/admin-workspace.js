@@ -6507,6 +6507,15 @@ function renderShell() {
             openGroups = {};
         }
 
+        const rememberedOpenGroup =
+            Object.keys(openGroups).filter(function (groupId) {
+                return openGroups[groupId] === true;
+            }).pop();
+
+        openGroups = rememberedOpenGroup
+            ? { [rememberedOpenGroup]: true }
+            : {};
+
         const sidebar =
             '<div class="sway-top-nav-heading">' +
                 '<span class="sway-workspace-sidebar-kicker">SWAYPHICS</span>' +
