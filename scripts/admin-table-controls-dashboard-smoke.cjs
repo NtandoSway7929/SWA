@@ -692,7 +692,6 @@ async function main() {
       "primary mobile destinations should wrap inside the top navigation instead of being clipped: " +
         JSON.stringify({ mobileNavScrollBounds, primaryLinkBounds })
     );
-    const mobileMoreToggle = page.locator('[data-nav-group-toggle="more"]').first();
     const mobileMoreBounds = await mobileMoreToggle.boundingBox();
     assert.ok(
       mobileMoreBounds && mobileNavScrollBounds &&
