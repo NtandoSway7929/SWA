@@ -367,7 +367,21 @@ async function main() {
         await toggle.waitFor({ state: "visible", timeout: 10000 });
         if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
       }
+
       const button = page.locator('[data-view="' + view + '"]').first();
+
+      if (!(await button.isVisible().catch(() => false))) {
+        const moreToggle = page.locator('[data-nav-group-toggle="more"]').first();
+
+        if (await moreToggle.count()) {
+          await moreToggle.waitFor({ state: "visible", timeout: 10000 });
+
+          if ((await moreToggle.getAttribute("aria-expanded")) !== "true") {
+            await moreToggle.click();
+          }
+        }
+      }
+
       await button.waitFor({ state: "visible", timeout: 15000 });
       await button.click();
       await page.locator('[data-admin-table-search-input="' + view + '"]').waitFor({
