@@ -6576,6 +6576,26 @@ function renderShell() {
                     '</button>' +
                     '<div class="sway-workspace-nav-items">' +
                         secondaryGroups.map(function (group) {
+                            if (group.id === "innerme") {
+                                const innerMeToolsOpen =
+                                    openGroups.innerme !== false;
+
+                                return (
+                                    '<section class="sway-workspace-nav-more-section sway-workspace-nav-more-innerme ' +
+                                        (innerMeToolsOpen ? "open" : "collapsed") +
+                                        '" data-nav-group="innerme">' +
+                                        '<button type="button" class="sway-workspace-nav-more-toggle" aria-expanded="' +
+                                            (innerMeToolsOpen ? "true" : "false") +
+                                            '" data-nav-group-toggle="innerme">' +
+                                            '<span>InnerMe tools</span><i aria-hidden="true">⌄</i>' +
+                                        '</button>' +
+                                        '<div class="sway-workspace-nav-more-items">' +
+                                            group.items.map(navButton).join("") +
+                                        '</div>' +
+                                    '</section>'
+                                );
+                            }
+
                             return (
                                 '<section class="sway-workspace-nav-more-section">' +
                                     '<h4>' +
