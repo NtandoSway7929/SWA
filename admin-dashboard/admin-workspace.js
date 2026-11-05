@@ -11907,20 +11907,22 @@ function simpleBars(items, color) {
             state.activities.slice(0, 8);
 
         return (
-            heading(
-                '<button type="button" class="sway-workspace-button sway-heading-action primary" data-quick="task">+ New task</button>' +
-                '<button type="button" class="sway-workspace-button sway-heading-action" data-quick="lead">+ New lead</button>'
-            ) +
-
-            renderInsightsOverview() +
-
-            '<div class="sway-inline-note" style="margin-bottom:2px;">' +
-                "Good day, " +
-                "<strong>" +
-                esc(currentUserName()) +
-                "</strong>" +
-                ". Here is the useful bit: what is worth your attention right now." +
-            "</div>" +
+            '<section class="sway-dashboard-hero">' +
+                '<div class="sway-dashboard-hero-intro">' +
+                    '<div class="sway-dashboard-hero-copy">' +
+                        '<span class="sway-dashboard-hero-eyebrow">Swayphics business overview</span>' +
+                        '<h2 class="sway-dashboard-hero-title">Good day, ' +
+                            esc(currentUserName()) +
+                        '.</h2>' +
+                        '<p class="sway-dashboard-hero-subtitle">A clear view of business movement, opportunities and the work that needs your attention.</p>' +
+                    '</div>' +
+                    '<div class="sway-dashboard-hero-actions">' +
+                        '<button type="button" class="sway-workspace-button primary" data-quick="task">+ New task</button>' +
+                        '<button type="button" class="sway-workspace-button" data-quick="lead">+ New lead</button>' +
+                    '</div>' +
+                '</div>' +
+                renderInsightsOverview() +
+            '</section>' +
 
             renderNeedsAttention() +
 
