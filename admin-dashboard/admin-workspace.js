@@ -11973,10 +11973,8 @@ function simpleBars(items, color) {
                 '<div class="sway-dashboard-hero-intro">' +
                     '<div class="sway-dashboard-hero-copy">' +
                         '<span class="sway-dashboard-hero-eyebrow">Swayphics business overview</span>' +
-                        '<h2 class="sway-dashboard-hero-title">Good day, ' +
-                            esc(currentUserName()) +
-                        '.</h2>' +
-                        '<p class="sway-dashboard-hero-subtitle">A clear view of business movement, opportunities and the work that needs your attention.</p>' +
+                        '<h2 class="sway-dashboard-hero-title">Your business, at a glance</h2>' +
+                        '<p class="sway-dashboard-hero-subtitle">Track sales opportunities, cash flow and the work that needs your attention.</p>' +
                     '</div>' +
                     '<div class="sway-dashboard-hero-actions">' +
                         '<button type="button" class="sway-workspace-button primary" data-quick="task">+ New task</button>' +
