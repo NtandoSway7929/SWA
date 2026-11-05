@@ -130,7 +130,7 @@
         },
         {
             id: "crm",
-            label: "Clients & Pipeline",
+            label: "Sales",
             icon: "users",
             items: [
                 ["enquiries", "Enquiries"],
@@ -144,7 +144,7 @@
         },
         {
             id: "delivery",
-            label: "Work & Portfolio",
+            label: "Delivery",
             icon: "briefcase",
             items: [
                 ["projects", "Projects"],
@@ -154,7 +154,7 @@
         },
         {
             id: "billing",
-            label: "Sales & Billing",
+            label: "Finance",
             icon: "receipt",
             items: [
                 ["quotes", "Quotes"],
@@ -6526,12 +6526,12 @@ function renderShell() {
                         });
 
                     const isOpen =
-                        containsCurrent ||
                         openGroups[group.id] === true;
 
                     return (
                         '<section class="sway-workspace-nav-group ' +
                         (isOpen ? "open" : "collapsed") +
+                        (containsCurrent ? " current" : "") +
                         '" data-nav-group="' +
                         esc(group.id) +
                         '">' +
