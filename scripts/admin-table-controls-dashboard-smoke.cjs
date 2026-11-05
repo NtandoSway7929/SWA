@@ -363,10 +363,33 @@ async function main() {
     await page.locator("#sway-workspace-main .sway-dashboard-hero").waitFor({
       state: "visible", timeout: 30000
     });
+
+    // The admin welcome flight intentionally blurs the page for about ten
+    // seconds. Capture visual QA only after that transient overlay has cleared.
+    const welcomeToast = page.locator("#swayphics-admin-welcome");
+    const welcomeAppeared = await welcomeToast
+      .waitFor({ state: "attached", timeout: 12000 })
+      .then(() => true)
+      .catch(() => false);
+    if (welcomeAppeared) {
+      await page.locator("#swayphics-admin-welcome-flight")
+        .waitFor({ state: "detached", timeout: 15000 })
+        .catch(() => {});
+      await page.locator("#swayphics-admin-welcome-backdrop")
+        .waitFor({ state: "detached", timeout: 2000 })
+        .catch(() => {});
+    }
+
     await page.screenshot({
       path: path.join(ARTIFACT_DIR, "dashboard-overview-desktop.png"),
       fullPage: true
     });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({
+      path: path.join(ARTIFACT_DIR, "dashboard-overview-mobile.png"),
+      fullPage: true
+    });
+    await page.setViewportSize({ width: 1365, height: 960 });
 
     async function navigate(view, group) {
       const toggle = page.locator('[data-nav-group-toggle="' + group + '"]').first();
