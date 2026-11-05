@@ -631,13 +631,18 @@ async function main() {
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileSidebar = page.locator("#sway-admin-workspace .sway-workspace-sidebar");
     await mobileSidebar.waitFor({ state: "visible" });
+    // Close any persisted More popover before measuring the compact nav bar.
+    const mobileMoreToggle = page.locator('[data-nav-group-toggle="more"]').first();
+    if (await mobileMoreToggle.count() && (await mobileMoreToggle.getAttribute("aria-expanded")) === "true") {
+      await mobileMoreToggle.click();
+    }
     const mobileNavBounds = await mobileSidebar.boundingBox();
     assert.ok(
       mobileNavBounds &&
       mobileNavBounds.x >= 0 &&
       mobileNavBounds.width >= 340 &&
       mobileNavBounds.width <= 390 &&
-      mobileNavBounds.height <= 180,
+      mobileNavBounds.height <= 160,
       "mobile navigation should remain a full-width, compact top bar: " + JSON.stringify(mobileNavBounds)
     );
     const mobileNavScroll = page.locator("#sway-admin-workspace .sway-workspace-nav-scroll");
@@ -686,10 +691,6 @@ async function main() {
       false,
       "the legacy mobile drawer toggle should not appear with top navigation"
     );
-    const moreToggle = page.locator('[data-nav-group-toggle="more"]').first();
-    if (await moreToggle.count() && (await moreToggle.getAttribute("aria-expanded")) === "true") {
-      await moreToggle.click();
-    }
     const controls = page.locator('#sway-workspace-main .sway-admin-table-control-grid');
     await controls.waitFor({ state: "visible" });
     const bounds = await controls.boundingBox();
