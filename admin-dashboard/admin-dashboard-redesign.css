@@ -653,3 +653,89 @@
     outline: 3px solid rgba(1, 82, 244, 0.38);
     outline-offset: 2px;
 }
+
+
+/* Primary destinations remain one click away; secondary destinations are
+   grouped under the More menu without removing any existing workspace view. */
+.sway-workspace-nav-primary {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 5px;
+}
+
+.sway-workspace-nav-primary .sway-workspace-nav-button {
+    width: auto;
+    min-height: 40px;
+    padding: 9px 12px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: #657084;
+    font-size: 0.65rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.sway-workspace-nav-primary .sway-workspace-nav-button:hover {
+    border-color: rgba(1, 82, 244, 0.09);
+    background: rgba(1, 82, 244, 0.055);
+    color: #0031C5;
+}
+
+.sway-workspace-nav-primary .sway-workspace-nav-button.active {
+    border-color: transparent;
+    background: linear-gradient(110deg, #0031C5, #2C91FC);
+    box-shadow: 0 7px 18px rgba(1, 82, 244, 0.16);
+    color: #FFFFFF;
+}
+
+.sway-workspace-nav-more-section {
+    display: grid;
+    gap: 4px;
+    padding: 5px 3px 9px;
+    border-bottom: 1px solid rgba(24, 43, 83, 0.07);
+}
+
+.sway-workspace-nav-more-section:last-child {
+    padding-bottom: 3px;
+    border-bottom: 0;
+}
+
+.sway-workspace-nav-more-section h4 {
+    margin: 2px 8px 4px;
+    color: #8791A2;
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.sway-workspace-nav-group[data-nav-group="more"] .sway-workspace-nav-items {
+    min-width: 255px;
+    max-width: min(340px, calc(100vw - 28px));
+}
+
+@media (max-width: 980px) {
+    .sway-workspace-nav-primary {
+        flex: 0 0 auto;
+    }
+}
+
+@media (max-width: 700px) {
+    .sway-workspace-nav-primary {
+        gap: 3px;
+    }
+
+    .sway-workspace-nav-primary .sway-workspace-nav-button {
+        min-height: 35px;
+        padding: 7px 9px;
+        font-size: 0.59rem;
+    }
+
+    .sway-workspace-nav-group[data-nav-group="more"] .sway-workspace-nav-items {
+        top: 94px;
+        left: 10px;
+        width: min(310px, calc(100vw - 20px));
+        max-width: calc(100vw - 20px);
+    }
+}
