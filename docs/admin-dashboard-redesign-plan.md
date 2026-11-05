@@ -19,7 +19,7 @@ All existing view IDs and view renderers remain authoritative. Top-level navigat
 
 ## Dashboard composition
 - Compact top bar with the Swayphics identity in the existing admin header, four direct workspace destinations and an accessible More menu.
-- Hybrid hero with personalized greeting, clear business context, existing live-update state and a compact business-momentum chart paired with demand and delivery signal cards on larger screens.
+- Hybrid hero with a business-focused overview heading (kept distinct from the time-based welcome in the admin header), clear business context, existing live-update state and a compact business-momentum chart paired with demand and delivery signal cards on larger screens.
 - Mobile overview keeps the main business-momentum chart prominent; supporting demand and delivery analysis remains accessible from Insights.
 - KPI cards based on existing records only: total leads, active clients, active projects and outstanding invoice balances.
 - A dedicated sales-pipeline panel uses the existing lead estimates and keeps estimated pipeline separate from booked revenue.
@@ -45,7 +45,7 @@ All existing view IDs and view renderers remain authoritative. Top-level navigat
 ## Responsive behaviour
 - Desktop: horizontal top navigation with floating More menu; four direct destinations; compact hybrid hero; multi-column metric and insight cards.
 - Tablet: wrapping/scrollable navigation and two-column dashboard cards.
-- Mobile: four direct destinations remain visible, with More on a compact second row; stacked hero content; a compact two-column KPI area where readable; single-column operational tables/cards with existing overflow handling.
+- Mobile: four direct destinations remain visible, with More on a compact second row in the navigation grid; stacked hero content; a compact two-column KPI area where readable; single-column operational tables/cards with existing overflow handling.
 - The legacy off-canvas workspace drawer is not used by the redesigned top-navigation shell.
 - Respect reduced-motion preferences and keyboard focus/aria state.
 
