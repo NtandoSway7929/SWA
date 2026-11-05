@@ -6229,7 +6229,7 @@ textarea:focus-visible {
     place-items: center;
     overflow: hidden;
     background: #F7F9FD;
-    animation: sway-intro-exit 700ms cubic-bezier(.76,0,.24,1) 2.75s forwards;
+    animation: sway-intro-exit 700ms cubic-bezier(.76,0,.24,1) 3.25s forwards;
 }
 .sway-intro__grid {
     position: absolute;
@@ -6251,6 +6251,7 @@ textarea:focus-visible {
     grid-template-columns: repeat(2, 40px);
     gap: 6px;
     transform: rotate(-12deg);
+    animation: sway-intro-tiles-exit 420ms ease-in 1.82s forwards;
 }
 .sway-intro__tiles span {
     width: 40px;
@@ -6281,7 +6282,7 @@ textarea:focus-visible {
     height: auto;
     opacity: 0;
     transform: translateY(12px) scale(.94);
-    animation: sway-intro-logo 850ms cubic-bezier(.2,.8,.2,1) 1650ms forwards;
+    animation: sway-intro-logo 850ms cubic-bezier(.2,.8,.2,1) 2.30s forwards;
 }
 @keyframes sway-intro-grid-in {
     to { opacity: 1; transform: scale(1) rotate(0); }
@@ -6296,6 +6297,9 @@ textarea:focus-visible {
 .sway-intro__tiles span:nth-child(4) { --from-x: 48px; --from-y: 34px; }
 @keyframes sway-intro-logo {
     to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sway-intro-tiles-exit {
+    to { opacity: 0; transform: rotate(-12deg) scale(1.18); }
 }
 @keyframes sway-intro-exit {
     to { opacity: 0; visibility: hidden; }
@@ -17341,7 +17345,7 @@ section {
         intro.addEventListener("animationend", event => {
             if (event.target === intro && event.animationName === "sway-intro-exit") dismiss();
         }, { once: true });
-        window.setTimeout(dismiss, 3900);
+        window.setTimeout(dismiss, 4300);
     })();
     </script>
 
