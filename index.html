@@ -15460,8 +15460,8 @@ html.reveal-ready .reveal-delay-4 {
 
     .hero-actions .btn-secondary {
         align-self: flex-start !important;
-        width: auto !important;
-        min-height: 46px !important;
+        width: 100% !important;
+        min-height: 50px !important;
         padding: 0 16px !important;
         border: 1px solid rgba(52, 58, 64, 0.18) !important;
         border-radius: 12px !important;
@@ -17472,7 +17472,7 @@ section {
             </div>
 
             <a href="#contact" class="package-button" data-package="Starter Package">
-                Choose Starter →
+                Choose Starter
             </a>
 
         </article>
@@ -17517,7 +17517,7 @@ section {
             </div>
 
             <a href="#contact" class="package-button" data-package="Launch Package">
-                Launch My Business →
+                Launch My Business
             </a>
 
         </article>
@@ -17560,7 +17560,7 @@ section {
             </div>
 
             <a href="#contact" class="package-button" data-package="Growth Package">
-                Choose Growth →
+                Choose Growth
             </a>
 
         </article>
@@ -21057,6 +21057,21 @@ if (formStatus) {
 }
 .cta .project-form input::placeholder,
 .cta .project-form textarea::placeholder { color: rgba(52, 58, 64, 0.58) !important; }
+
+
+@media (max-width: 700px) {
+    .hero-actions .btn-secondary {
+        align-self: stretch !important;
+        width: 100% !important;
+    }
+    .contact-social-links {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .contact-social-links .contact-social-link:nth-child(5) { order: 4; }
+    .contact-social-links .contact-social-link:nth-child(4) { order: 5; }
+}
+.package-button { margin-top: 24px; }
 
 </style>
 <script id="sway-public-loading-observer">
