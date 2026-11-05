@@ -584,3 +584,72 @@
 .sway-workspace-mobile-toggle {
     display: none !important;
 }
+
+
+/* Explicitly release the legacy desktop sidebar's fixed viewport height. */
+@media (min-width: 981px) {
+    #sway-admin-workspace .sway-workspace-sidebar {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-scroll {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+}
+
+/* The legacy mobile drawer contract uses high-specificity !important rules.
+   Override that contract explicitly so the new top navigation is actually
+   visible and remains in document flow at tablet/mobile widths. */
+@media (max-width: 980px) {
+    #sway-admin-workspace .sway-workspace-sidebar,
+    #sway-admin-workspace .sway-workspace-sidebar.mobile-open {
+        position: sticky !important;
+        top: max(5px, env(safe-area-inset-top)) !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        z-index: 120 !important;
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        padding: 8px !important;
+        overflow: visible !important;
+        transform: none !important;
+        transition: none !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-sidebar-head {
+        min-height: 0 !important;
+        padding: 1px 4px 7px !important;
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-scroll {
+        display: flex !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        padding: 0 !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-group {
+        margin: 0 !important;
+    }
+}
+
+#sway-admin-workspace button:focus-visible {
+    outline: 3px solid rgba(1, 82, 244, 0.38);
+    outline-offset: 2px;
+}
