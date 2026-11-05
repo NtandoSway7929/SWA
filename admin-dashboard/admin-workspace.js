@@ -6515,8 +6515,7 @@ function renderShell() {
             ["leads", "Sales"],
             ["projects", "Delivery"],
             ["invoices", "Finance"],
-            ["insights", "Insights"],
-            ["swayphics-ai", "InnerMe"]
+            ["insights", "Insights"]
         ];
 
         const primaryNavViews =
