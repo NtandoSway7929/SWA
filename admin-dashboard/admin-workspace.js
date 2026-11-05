@@ -11992,15 +11992,10 @@ function simpleBars(items, color) {
             }).length;
 
         return (
-            heading(
-                '<button type="button" class="sway-workspace-button sway-heading-action primary" data-quick="task">+ New task</button>' +
-                '<button type="button" class="sway-workspace-button sway-heading-action" data-quick="lead">+ New lead</button>'
-            ) +
-
             '<section class="sway-overview-hero" aria-labelledby="sway-overview-hero-title">' +
                 '<div class="sway-overview-hero-main">' +
                     '<div class="sway-overview-hero-copy">' +
-                        '<span class="sway-overview-eyebrow"><span class="sway-overview-live-dot"></span> SWAYPHICS WORKSPACE</span>' +
+                        '<span class="sway-overview-eyebrow"><span class="sway-overview-accent-dot"></span> SWAYPHICS WORKSPACE</span>' +
                         '<h2 id="sway-overview-hero-title">Good day, ' + esc(currentUserName()) + '.</h2>' +
                         '<p>Your business, projects and next moves. All in one place.</p>' +
                     '</div>' +
