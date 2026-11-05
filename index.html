@@ -3424,8 +3424,10 @@ footer {
     --white: #FFFFFF;
     --off-white: #F7FAFF;
     --soft-blue: #EEF6FF;
-    --text-dark: #081533;
-    --text-muted: #3F4B61;
+    --sway-charcoal: #343A40;
+    --sway-charcoal-soft: #59636E;
+    --text-dark: var(--sway-charcoal);
+    --text-muted: var(--sway-charcoal-soft);
 
     --gradient-main:
         linear-gradient(
@@ -4286,9 +4288,9 @@ nav {
     background:
         linear-gradient(
             180deg,
-            rgba(255,255,255,0.78) 0%,
-            rgba(248,251,255,0.66) 45%,
-            rgba(238,246,255,0.72) 100%
+            rgba(246,247,249,0.94) 0%,
+            rgba(243,245,247,0.92) 45%,
+            rgba(238,246,255,0.94) 100%
         ),
         url("background%20branded%20wallpaper.webp") center / cover no-repeat;
 
@@ -4556,18 +4558,24 @@ nav {
 
     .package-grid {
         gap:
-            14px;
+            12px;
 
         margin-bottom:
-            75px;
+            64px;
     }
 
     .package-card {
         padding:
-            28px 24px;
+            22px 20px;
 
         border-radius:
-            20px;
+            18px;
+    }
+
+    .package-features {
+        gap: 10px;
+        margin-top: 24px;
+        padding-top: 22px;
     }
 
     .package-featured {
@@ -4581,6 +4589,7 @@ nav {
     }
 
     .package-price {
+        margin-bottom: 18px;
         font-size:
             3.8rem;
     }
@@ -4592,10 +4601,10 @@ nav {
 
     .service-category {
         padding:
-            24px 20px;
+            20px 18px;
 
         border-radius:
-            19px;
+            18px;
     }
 
     .service-row {
@@ -4604,6 +4613,9 @@ nav {
 
         gap:
             8px;
+
+        padding:
+            18px 0;
     }
 
     .service-row strong {
@@ -6564,10 +6576,14 @@ textarea:focus-visible {
         min-height: auto !important;
 
         padding:
-            28px 24px !important;
+            22px 20px !important;
 
         border-radius:
-            20px !important;
+            18px !important;
+    }
+
+    .why-swayphics .why-number {
+        margin-bottom: 18px !important;
     }
 
     .why-swayphics .why-footer {
@@ -9707,8 +9723,8 @@ nav.scrolled {
     .testimonial-card:nth-child(3) {
         grid-column: 1;
         min-height: 0;
-        padding: 27px 24px 24px;
-        border-radius: 24px;
+        padding: 22px 20px 20px;
+        border-radius: 20px;
     }
 
     .testimonial-card blockquote,
@@ -9717,7 +9733,7 @@ nav.scrolled {
     }
 
     .testimonial-author {
-        margin-top: 30px;
+        margin-top: 24px;
     }
 
     .testimonials-cta {
@@ -11762,7 +11778,7 @@ nav.scrolled {
         0 !important;
 
     color:
-        #07142F !important;
+        var(--sway-charcoal) !important;
 
     font-family:
         'Raleway',
@@ -11818,7 +11834,7 @@ nav.scrolled {
         28px 0 0 !important;
 
     color:
-        #2B3B55 !important;
+        var(--sway-charcoal-soft) !important;
 
     font-size:
         0.97rem !important;
@@ -14360,7 +14376,7 @@ html.reveal-ready .reveal-delay-4 {
 @media (max-width: 700px) {
 
     .package-featured {
-        padding-top: 78px !important;
+        padding-top: 66px !important;
     }
 
 
@@ -15347,7 +15363,7 @@ html.reveal-ready .reveal-delay-4 {
 
         width: 100% !important;
 
-        height: 58svh !important;
+        height: 46svh !important;
 
         transform: none !important;
     }
@@ -15429,7 +15445,32 @@ html.reveal-ready .reveal-delay-4 {
         position: relative !important;
         z-index: 21 !important;
 
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+
         width: 100% !important;
+        margin-top: 18px !important;
+    }
+
+    .hero-actions .btn-primary {
+        width: 100% !important;
+    }
+
+    .hero-actions .btn-secondary {
+        align-self: flex-start !important;
+        width: auto !important;
+        min-height: 42px !important;
+        padding: 0 8px !important;
+        border-color: transparent !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: var(--sway-charcoal) !important;
+        text-decoration: underline !important;
+        text-underline-offset: 4px;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
     }
 
     /* Hide decorative hero typography on small screens */
@@ -15448,7 +15489,7 @@ html.reveal-ready .reveal-delay-4 {
 
     .hero-showcase,
     .hero-showcase-image {
-        height: 54svh !important;
+        height: 42svh !important;
     }
 
     .hero-intro h1 {
@@ -17037,18 +17078,18 @@ body {
 
     .selected-work .scene {
         height:
-            420px;
+            380px;
 
         perspective:
             60em;
 
         padding:
-            40px 0;
+            30px 0;
     }
 
     .selected-work .card {
         --w:
-            11.5em;
+            10.75em;
 
         border-radius:
             1.2em;
@@ -17078,7 +17119,7 @@ body {
         width:
             min(
                 100%,
-                11.5em
+                10.75em
             );
     }
 
@@ -17278,14 +17319,14 @@ section {
         </div>
 
         <h1>
-            Build a brand<br>
-            <span>worth remembering.</span>
+            Build a brand that<br>
+            <span>earns attention</span><br>
+            and trust.
         </h1>
 
         <p>
-            Swayphics helps businesses turn ideas into distinctive
-            brands, compelling content and visual experiences built
-            to stand out and move business forward.
+            Swayphics brings identity, content and web design together
+            so your business looks consistent, credible and ready to grow.
         </p>
 
         <div
@@ -17354,14 +17395,14 @@ section {
             href="#contact"
             class="btn btn-primary"
         >
-            Build My Brand →
+            Start a Project →
         </a>
 
         <a
-            href="#services"
+            href="#selected-work"
             class="btn btn-secondary"
         >
-            Explore Services
+            View Our Work
         </a>
 
     </div>
