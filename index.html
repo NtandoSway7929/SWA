@@ -6339,7 +6339,10 @@ textarea:focus-visible {
     .sway-intro__logo { width: min(210px, 68vw); }
 }
 @media (prefers-reduced-motion: reduce) {
-    .sway-intro { display: none !important; animation: none !important; }
+    .sway-intro { display: grid !important; animation: none !important; opacity: 1; visibility: visible; }
+    .sway-intro__grid { opacity: .48; transform: none; animation: none; }
+    .sway-intro__tiles { display: none !important; animation: none !important; }
+    .sway-intro__lockup { opacity: 1; transform: none; animation: none; }
 }
 
 </style>
@@ -17371,14 +17374,14 @@ section {
     (() => {
         const intro = document.getElementById("sway-intro");
         if (!intro) return;
+        const dismiss = () => intro.remove();
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            intro.remove();
+            window.setTimeout(dismiss, 2000);
             return;
         }
-        const dismiss = () => intro.remove();
         intro.addEventListener("animationend", event => {
             if (event.target === intro && event.animationName === "sway-intro-exit") dismiss();
-        }, { once: true });
+        });
         window.setTimeout(dismiss, 6400);
     })();
     </script>
