@@ -142,3 +142,32 @@ No pass/fail claim is made for tests that were not executed. These checks must r
 6. Keep the greeting sourced from the authenticated administrator identity and existing saved greeting preference.
 7. Do not modify public `index.html`, login `admin/index.html`, client portal, Supabase schema/functions/data or production deployment configuration.
 8. Do not merge or deploy as part of this branch implementation.
+
+
+## 9. Stage 2 implementation record — 5 November 2026
+
+The dedicated branch now contains the top-navigation implementation:
+
+- `admin-dashboard/admin-workspace.js` renders the workspace navigation as a semantic `nav` landmark. The existing eight group IDs, 30 destination IDs, `data-view` handlers and dynamic counts remain.
+- `admin-dashboard/admin-dashboard-redesign.css` is a separate presentation layer loaded after existing dashboard styles. It provides the scrollable top-level trigger row, separate dropdown panels, compact mobile layouts, keyboard focus indication and dark-theme styling.
+- `admin-dashboard/index.html` loads the new stylesheet and makes Montserrat and Raleway available alongside the current font.
+- `scripts/admin-dashboard-redesign.test.cjs` checks navigation contracts and Settings compatibility; it is included in `.github/workflows/validate-site.yml`.
+- `scripts/admin-table-controls-dashboard-smoke.cjs` has been updated to exercise the top navigation at 1440, 1024, 768, 390 and 360 pixel widths using its mocked backend.
+
+### Verification performed
+
+| Check | Result |
+|---|---|
+| Workspace JavaScript syntax compilation | PASS |
+| Updated dashboard smoke-script syntax compilation | PASS |
+| New contract-test syntax compilation | PASS |
+| New navigation contract test executed against fetched branch sources with a local file/require shim | PASS |
+| Existing inline dashboard scripts parse | PASS |
+| New CSS brace balance | PASS |
+| Settings direct-navigation source contract retained | PASS |
+| Actual Playwright browser execution | NOT RUN |
+| Screenshots and real rendered viewport review | NOT RUN |
+
+The contract-test execution used the fetched branch source and an in-memory shim for Node's `fs`, `path` and assertion modules. It verifies the test's source-level assertions but is not a substitute for running the repository test under Node.js in CI. The browser smoke script was syntax-checked, not executed. No visual pass is claimed.
+
+The branch diff is intended to contain only the implementation plan/baseline documents, the dashboard workspace controller and shell stylesheet/HTML, the new isolated redesign stylesheet, the targeted smoke/contract tests and the validation workflow. No public website, login page, client portal, Supabase schema/functions/data or production deployment configuration was changed.
