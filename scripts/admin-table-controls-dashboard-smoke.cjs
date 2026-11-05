@@ -673,8 +673,8 @@ async function main() {
     const primaryMobileLinks = page.locator(
       "#sway-admin-workspace .sway-workspace-nav-primary .sway-workspace-nav-button"
     );
-    assert.equal(await primaryMobileLinks.count(), 4,
-      "all four primary destinations should remain available in the mobile top navigation");
+    assert.equal(await primaryMobileLinks.count(), 6,
+      "all six primary destinations should remain available in the mobile top navigation");
     const primaryLinkBounds = await primaryMobileLinks.evaluateAll(nodes =>
       nodes.map(node => {
         const rect = node.getBoundingClientRect();
