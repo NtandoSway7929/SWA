@@ -565,3 +565,22 @@
         transition: none !important;
     }
 }
+
+
+/* The active destination is indicated on its group tab without opening
+   the dropdown on initial load. */
+.sway-workspace-nav-group.current > .sway-workspace-nav-group-toggle {
+    border-color: rgba(1, 82, 244, 0.10);
+    background: rgba(1, 82, 244, 0.065);
+    color: #0031C5;
+}
+
+.sway-workspace-nav-group.current > .sway-workspace-nav-group-toggle
+.sway-workspace-nav-group-icon {
+    color: #0152F4;
+}
+
+.admin-mobile-sidebar-toggle,
+.sway-workspace-mobile-toggle {
+    display: none !important;
+}
