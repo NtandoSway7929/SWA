@@ -6219,7 +6219,85 @@ textarea:focus-visible {
     box-shadow: 0 8px 24px rgba(1, 82, 244, 0.22) !important;
 }
     
- </style>
+ 
+/* Swayphics first-load logo reveal */
+.sway-intro {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #F7F9FD;
+    animation: sway-intro-exit 460ms cubic-bezier(.76,0,.24,1) 1.42s forwards;
+}
+.sway-intro__grid {
+    position: absolute;
+    inset: -18%;
+    background-image:
+        linear-gradient(rgba(52,58,64,.10) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(52,58,64,.10) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse at center, #000 8%, transparent 72%);
+    opacity: 0;
+    transform: scale(1.06) rotate(-2deg);
+    animation: sway-intro-grid-in 900ms ease-out 80ms forwards;
+}
+.sway-intro__tiles {
+    position: absolute;
+    display: grid;
+    grid-template-columns: repeat(2, 29px);
+    gap: 5px;
+    transform: rotate(-12deg);
+}
+.sway-intro__tiles span {
+    width: 29px;
+    height: 29px;
+    border-radius: 7px;
+    background: linear-gradient(145deg, #343A40, #7D858D);
+    opacity: 0;
+}
+.sway-intro__tiles span:nth-child(1) { animation: sway-intro-tile 560ms cubic-bezier(.2,.8,.2,1) 120ms forwards; }
+.sway-intro__tiles span:nth-child(2) { animation: sway-intro-tile 560ms cubic-bezier(.2,.8,.2,1) 200ms forwards; }
+.sway-intro__tiles span:nth-child(3) { animation: sway-intro-tile 560ms cubic-bezier(.2,.8,.2,1) 280ms forwards; }
+.sway-intro__tiles span:nth-child(4) { background: linear-gradient(145deg, #0152F4, #77C1FC); animation: sway-intro-tile 560ms cubic-bezier(.2,.8,.2,1) 360ms forwards; }
+.sway-intro__logo {
+    position: relative;
+    z-index: 1;
+    width: min(220px, 58vw);
+    height: auto;
+    opacity: 0;
+    transform: translateY(8px) scale(.96);
+    animation: sway-intro-logo 620ms cubic-bezier(.2,.8,.2,1) 620ms forwards;
+}
+@keyframes sway-intro-grid-in {
+    to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes sway-intro-tile {
+    from { opacity: 0; transform: translate(var(--from-x, 0), var(--from-y, 0)) rotate(-24deg) scale(.72); }
+    to { opacity: .88; transform: translate(0,0) rotate(0) scale(1); }
+}
+.sway-intro__tiles span:nth-child(1) { --from-x: -24px; --from-y: -18px; }
+.sway-intro__tiles span:nth-child(2) { --from-x: 24px; --from-y: -18px; }
+.sway-intro__tiles span:nth-child(3) { --from-x: -24px; --from-y: 18px; }
+.sway-intro__tiles span:nth-child(4) { --from-x: 24px; --from-y: 18px; }
+@keyframes sway-intro-logo {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sway-intro-exit {
+    to { opacity: 0; visibility: hidden; }
+}
+@media (max-width: 600px) {
+    .sway-intro__grid { background-size: 56px 56px; }
+    .sway-intro__tiles { grid-template-columns: repeat(2, 24px); gap: 4px; }
+    .sway-intro__tiles span { width: 24px; height: 24px; border-radius: 6px; }
+    .sway-intro__logo { width: min(190px, 62vw); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sway-intro { display: none !important; animation: none !important; }
+}
+
+</style>
 
 <style>
 
@@ -17230,6 +17308,29 @@ section {
 </head>
 
 <body>
+
+    <div class="sway-intro" id="sway-intro" aria-hidden="true">
+        <div class="sway-intro__grid"></div>
+        <div class="sway-intro__tiles">
+            <span></span><span></span><span></span><span></span>
+        </div>
+        <img class="sway-intro__logo" src="swayphics-logo.png" alt="" width="200" height="48" decoding="async">
+    </div>
+    <script>
+    (() => {
+        const intro = document.getElementById("sway-intro");
+        if (!intro) return;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            intro.remove();
+            return;
+        }
+        const dismiss = () => intro.remove();
+        intro.addEventListener("animationend", event => {
+            if (event.target === intro && event.animationName === "sway-intro-exit") dismiss();
+        }, { once: true });
+        window.setTimeout(dismiss, 2300);
+    })();
+    </script>
 
     <nav>
 
