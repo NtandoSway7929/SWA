@@ -11981,74 +11981,47 @@ function simpleBars(items, color) {
         const activities =
             state.activities.slice(0, 8);
 
+        const activeLeads =
+            state.leads.filter(function (item) {
+                return !["won", "lost", "follow-up"].includes(item.status);
+            }).length;
+
+        const unpaidItems =
+            state.payments.filter(function (item) {
+                return item.status !== "paid";
+            }).length;
+
         return (
             heading(
                 '<button type="button" class="sway-workspace-button sway-heading-action primary" data-quick="task">+ New task</button>' +
                 '<button type="button" class="sway-workspace-button sway-heading-action" data-quick="lead">+ New lead</button>'
             ) +
 
-            renderInsightsOverview() +
+            '<section class="sway-overview-hero" aria-labelledby="sway-overview-hero-title">' +
+                '<div class="sway-overview-hero-main">' +
+                    '<div class="sway-overview-hero-copy">' +
+                        '<span class="sway-overview-eyebrow"><span class="sway-overview-live-dot"></span> SWAYPHICS WORKSPACE</span>' +
+                        '<h2 id="sway-overview-hero-title">Good day, ' + esc(currentUserName()) + '.</h2>' +
+                        '<p>Your business, projects and next moves. All in one place.</p>' +
+                    '</div>' +
+                    '<div class="sway-overview-hero-actions">' +
+                        '<button type="button" class="sway-overview-primary-action" data-quick="task"><span aria-hidden="true">＋</span> Create a task</button>' +
+                        '<button type="button" class="sway-overview-secondary-action" data-quick="lead"><span aria-hidden="true">＋</span> Add a lead</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="sway-overview-hero-metrics">' +
+                    '<div class="sway-overview-hero-metric"><span>My open tasks</span><strong>' + myOpenTasks.length + '</strong><small>' + tasksToday + ' due today</small></div>' +
+                    '<div class="sway-overview-hero-metric"><span>Follow-ups today</span><strong>' + followupsToday + '</strong><small>Scheduled for today</small></div>' +
+                    '<div class="sway-overview-hero-metric"><span>Open pipeline</span><strong>' + esc(money(pipeline)) + '</strong><small>' + activeLeads + ' active leads</small></div>' +
+                    '<div class="sway-overview-hero-metric"><span>Outstanding</span><strong>' + esc(money(outstanding)) + '</strong><small>' + unpaidItems + ' unpaid payment items</small></div>' +
+                '</div>' +
+            '</section>' +
 
-            '<div class="sway-inline-note" style="margin-bottom:2px;">' +
-                "Good day, " +
-                "<strong>" +
-                esc(currentUserName()) +
-                "</strong>" +
-                ". Here is the useful bit: what is worth your attention right now." +
-            "</div>" +
+            renderInsightsOverview() +
 
             renderNeedsAttention() +
 
             renderFollowupAutomation() +
-
-            '<div class="sway-workspace-grid">' +
-
-                '<div class="sway-stat-card">' +
-                    '<span class="label">My open tasks</span>' +
-                    '<div class="value">' +
-                        myOpenTasks.length +
-                    "</div>" +
-                    '<div class="hint">' +
-                        tasksToday +
-                        " due today. Keep the queue honest." +
-                    "</div>" +
-                "</div>" +
-
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Follow-ups today</span>' +
-                    '<div class="value">' +
-                        followupsToday +
-                    "</div>" +
-                    '<div class="hint">Keep active opportunities moving. Future-you will appreciate it.</div>' +
-                "</div>" +
-
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Open pipeline</span>' +
-                    '<div class="value">' +
-                        esc(money(pipeline)) +
-                    "</div>" +
-                    '<div class="hint">' +
-                        state.leads.filter(function (item) {
-                            return !["won", "lost"].includes(item.status);
-                        }).length +
-                        " active leads. Plenty to work with." +
-                    "</div>" +
-                "</div>" +
-
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Outstanding</span>' +
-                    '<div class="value">' +
-                        esc(money(outstanding)) +
-                    "</div>" +
-                    '<div class="hint">' +
-                        state.payments.filter(function (item) {
-                            return item.status !== "paid";
-                        }).length +
-                        " payment items. Keep these on the radar." +
-                    "</div>" +
-                "</div>" +
-
-            "</div>" +
 
             panel(
                 "My work",
