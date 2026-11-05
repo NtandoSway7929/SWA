@@ -53,7 +53,7 @@ jobs:
           node-version: 20
 
       - name: Install isolated browser and local Supabase test dependencies
-        run: npm install --no-save --no-package-lock playwright supabase@2.121.0
+        run: npm install --no-save --no-package-lock playwright@1.64.1 supabase@2.121.0
 
       - name: Install headless Chromium
         timeout-minutes: 8
