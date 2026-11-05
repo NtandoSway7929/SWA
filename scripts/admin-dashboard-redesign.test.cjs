@@ -179,7 +179,7 @@ assert.ok(
 const overviewSource = extractConstant(
     workspace,
     "function renderOverview() {",
-    "\\n    const adminTableControls",
+    "\n    const adminTableControls",
     "Overview renderer"
 );
 
