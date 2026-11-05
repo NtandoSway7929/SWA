@@ -637,9 +637,42 @@ async function main() {
       mobileNavBounds.x >= 0 &&
       mobileNavBounds.width >= 340 &&
       mobileNavBounds.width <= 390 &&
-      mobileNavBounds.height <= 150,
+      mobileNavBounds.height <= 180,
       "mobile navigation should remain a full-width, compact top bar: " + JSON.stringify(mobileNavBounds)
     );
+    const mobileNavScroll = page.locator("#sway-admin-workspace .sway-workspace-nav-scroll");
+    const mobileNavScrollBounds = await mobileNavScroll.boundingBox();
+    const primaryMobileLinks = page.locator(
+      "#sway-admin-workspace .sway-workspace-nav-primary .sway-workspace-nav-button"
+    );
+    assert.equal(await primaryMobileLinks.count(), 6,
+      "all six primary destinations should remain available in the mobile top navigation");
+    const primaryLinkBounds = await primaryMobileLinks.evaluateAll(nodes =>
+      nodes.map(node => {
+        const rect = node.getBoundingClientRect();
+        return { x: rect.x, right: rect.right, y: rect.y, bottom: rect.bottom };
+      })
+    );
+    assert.ok(
+      mobileNavScrollBounds &&
+      primaryLinkBounds.every(rect =>
+        rect.x >= mobileNavScrollBounds.x - 1 &&
+        rect.right <= mobileNavScrollBounds.x + mobileNavScrollBounds.width + 1 &&
+        rect.y >= mobileNavScrollBounds.y - 1 &&
+        rect.bottom <= mobileNavScrollBounds.y + mobileNavScrollBounds.height + 1
+      ),
+      "primary mobile destinations should wrap inside the top navigation instead of being clipped: " +
+        JSON.stringify({ mobileNavScrollBounds, primaryLinkBounds })
+    );
+    const mobileMoreToggle = page.locator('[data-nav-group-toggle="more"]').first();
+    const mobileMoreBounds = await mobileMoreToggle.boundingBox();
+    assert.ok(
+      mobileMoreBounds && mobileNavScrollBounds &&
+      mobileMoreBounds.x >= mobileNavScrollBounds.x - 1 &&
+      mobileMoreBounds.right <= mobileNavScrollBounds.x + mobileNavScrollBounds.width + 1,
+      "the More menu should remain visible within the mobile top navigation"
+    );
+
     const mobileMainBounds = await page.locator("#sway-workspace-main").boundingBox();
     assert.ok(
       mobileMainBounds && mobileMainBounds.y >= mobileNavBounds.y + mobileNavBounds.height - 2,
@@ -707,6 +740,7 @@ async function main() {
         "confirmed follow-up completion records contact and preserves the linked synthetic lead's status",
         "activity log POSTs are intercepted by the in-memory mock",
         "mobile top navigation stays full-width and compact above the workspace",
+        "all primary mobile destinations wrap visibly without clipping",
         "legacy mobile drawer toggle is hidden when top navigation is active",
         "mobile controls use a single-column layout and fit in viewport",
         "invoice search by invoice number and client",
