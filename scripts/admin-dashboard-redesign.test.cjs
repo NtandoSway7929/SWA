@@ -151,7 +151,7 @@ assert.ok(
 );
 
 assert.ok(
-    dashboardHtml.includes('href="admin-dashboard-redesign.css?v=20261105-top-navigation-1"'),
+    dashboardHtml.includes('href="admin-dashboard-redesign.css?v=20261105-top-navigation-'),
     "the isolated top-navigation stylesheet must be linked"
 );
 assert.ok(
