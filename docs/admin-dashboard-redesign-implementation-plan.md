@@ -2,7 +2,7 @@
 
 ## Implementation plan
 
-**Status:** Stages 1–5 implemented and source-regression verified. Stage 6 browser and dashboard smoke checks have passed on the current tested revision; disposable local-Supabase persistence verification is still in progress.  
+**Status:** Stages 1–6 implemented and verified on the dedicated feature branch. Browser, dashboard interaction, responsive, source-regression and disposable local-Supabase persistence checks have passed. Ready for draft pull-request review; not merged or deployed.  
 **Branch:** `design/admin-dashboard-top-nav-hybrid-hero`  
 **Base:** Current `main` branch  
 **Approved direction:** Top navigation + hybrid overview hero
@@ -196,11 +196,18 @@ Do not merge, deploy or change production without explicit approval.
 - The dashboard test covered lead search/filter/sort, selected-row and formula-safe CSV export, task completion, follow-up completion, activity logging, invoice filtering/search/sorting/archive behaviour, and the five responsive viewport widths.
 - The Overview hero passed its authenticated greeting, four-metric, quick-action, viewport-boundary and mobile two-column checks.
 
-**Persistence check:** the same browser workflow is currently executing the authenticated read/write persistence test against an unlinked, disposable local Supabase stack. This test uses loopback-only endpoints, synthetic UUID records and local Auth credentials; it does not receive a hosted Supabase project reference or production credentials. Do not mark Stage 6 fully complete until this step and the overall workflow finish successfully.
+**Authenticated persistence passed.** The isolated browser workflow [42063383186](https://github.com/NtandoSway7929/SWA/actions/runs/42063383186) completed with an overall `success` conclusion on commit `1014be703c69b28bbea36657b3e5ec08196777cc`. The persistence summary reports:
+- Loopback-only API host: `127.0.0.1`; disposable local Supabase Auth JWT; synthetic UUID fixtures only.
+- Admin CRUD succeeded under RLS; a signed-in non-admin received zero CRM lead rows.
+- Task completion and timestamp persisted; follow-up completion and timestamp persisted; the linked lead moved to contacted and its next follow-up was cleared.
+- Two activity-log records persisted; unsupported lead status was rejected without mutating the existing row.
+- Remote requests: `0`; production/cloud writes: `0`. The temporary local stack and fixtures were cleaned up by the workflow.
 
-**Visual evidence:** the earlier completed browser-smoke artifact is available from [GitHub Actions run 42061237275](https://github.com/NtandoSway7929/SWA/actions/runs/42061237275). Its screenshots cover desktop Leads, Tasks and Invoices views and a narrow-mobile Tasks view. That run's browser and dashboard smoke steps passed, but its overall run was later cancelled before the disposable local-Supabase check completed.
+**Workflow artifact:** [Download the complete Stage 6 browser and persistence evidence](https://github.com/NtandoSway7929/SWA/actions/runs/42063383186/artifacts/13431569972). It includes desktop/mobile screenshots and both dashboard and local-database smoke summaries.
 
-**Release decision:** no pull request, merge or deployment has been performed. Do not merge or deploy until the persistence check has passed and the final screenshot/review evidence has been inspected. Keep the branch isolated from `main`.
+**Final visual review:** inspected desktop Leads and Invoices captures and the narrow-mobile Tasks capture. The redesigned top-navigation row is in place; the legacy hamburger is absent; the task filters and table fit the 360px viewport; no page-level horizontal overflow or browser page errors were reported. One pre-existing polish item remains visible in the mobile screenshot: the floating `+ New` quick-create control overlaps part of the Tasks table header at the initial scroll position. Its fixed positioning is in the unchanged `admin-workspace.css`, outside this redesign diff. It is recorded as a follow-up visual refinement, not a regression introduced by this branch.
+
+**Release decision:** Stage 6 is complete for draft review. Safari and Firefox have not been tested. No merge or deployment has been performed. Keep the branch isolated from `main`; resolve the noted mobile floating-action overlap before production release if the final review considers it unacceptable.
 
 
 ## 7. Acceptance criteria
