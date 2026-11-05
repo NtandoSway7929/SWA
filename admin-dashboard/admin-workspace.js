@@ -112,7 +112,7 @@
             icon: "grid",
             items: [
                 ["overview", "Overview"],
-    ,
+                ["insights", "Insights"],
                 ["reminders", "Automated reminders"]
             ]
         },
@@ -6515,7 +6515,7 @@ function renderShell() {
             ["leads", "Sales"],
             ["projects", "Delivery"],
             ["invoices", "Finance"],
-            ["insights", "Insights"]
+
         ];
 
         const primaryNavViews =
