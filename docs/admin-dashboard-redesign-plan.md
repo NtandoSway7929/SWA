@@ -20,7 +20,8 @@ All existing view IDs and view renderers remain authoritative. Top-level navigat
 ## Dashboard composition
 - Compact top bar with Swayphics identity, grouped horizontal navigation and accessible dropdown panels.
 - Hybrid hero with personalized greeting, clear business context, existing live-update state and the current monthly business-movement chart.
-- KPI cards based on existing records only: tasks, follow-ups, open pipeline and outstanding invoices.
+- KPI cards based on existing records only: total leads, new leads awaiting qualification, active clients, active projects, completed projects and outstanding invoice balances.
+- A dedicated sales-pipeline panel uses the existing lead estimates and keeps estimated pipeline separate from booked revenue.
 - Attention centre for due/overdue tasks, follow-ups, invoices, new enquiries, unread inbound email, portal requests and quotes.
 - Follow-up automation panel, assigned work, recent activity and quick actions.
 - Existing detailed Insights view remains available for demand and delivery analysis.
