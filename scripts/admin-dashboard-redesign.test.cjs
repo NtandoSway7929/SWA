@@ -125,6 +125,19 @@ assert.ok(
     "top navigation must support outside-click dismissal and Escape"
 );
 
+const navClickHandler = extractConstant(
+    workspace,
+    '.querySelectorAll("[data-view]")',
+    "\\n    function heading(",
+    "workspace navigation click handler"
+);
+assert.ok(
+    navClickHandler.includes("openNavigationGroup.classList.remove(\"open\")") &&
+    navClickHandler.includes("if (openMenu) openMenu.hidden = true") &&
+    navClickHandler.includes('localStorage.setItem(\n                                    "swayphics_admin_nav_groups",\n                                    JSON.stringify({})'),
+    "selecting a destination must dismiss its open dropdown before rendering the selected view"
+);
+
 assert.ok(
     settings.includes('var group = workspace.querySelector(\'[data-nav-group="settings"]\')') &&
     settings.includes('group.parentNode.insertBefore(button, group)') &&
