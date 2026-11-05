@@ -6544,8 +6544,8 @@ function renderShell() {
                 });
             });
 
-        const moreIsOpen =
-            openGroups.more === true;
+        /* The More popover is transient: close it after each view render. */
+        const moreIsOpen = false;
 
         const sidebar =
             '<div class="sway-workspace-sidebar-head">' +
