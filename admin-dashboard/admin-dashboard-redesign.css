@@ -1145,3 +1145,80 @@
 #sway-admin-workspace .sway-workspace-sidebar-head {
     display: none !important;
 }
+
+
+/* Two-row mobile navigation: six primary destinations plus More.
+   Display-contents lets the navigation buttons share one four-column grid,
+   instead of forcing More onto an additional row. */
+@media (max-width: 700px) {
+    #sway-admin-workspace .sway-workspace-nav-scroll {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        align-items: stretch !important;
+        gap: 4px !important;
+        width: 100% !important;
+        overflow: visible !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-primary {
+        display: contents !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-primary .sway-workspace-nav-button {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 0 !important;
+        min-height: 34px !important;
+        padding: 6px 4px !important;
+        border-radius: 9px !important;
+        font-size: 0.61rem !important;
+        line-height: 1.1 !important;
+        white-space: nowrap !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-group[data-nav-group="more"] {
+        position: relative !important;
+        display: flex !important;
+        align-items: stretch !important;
+        min-width: 0 !important;
+        width: auto !important;
+        margin: 0 !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-group[data-nav-group="more"] > .sway-workspace-nav-group-toggle {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        min-width: 0 !important;
+        min-height: 34px !important;
+        width: 100% !important;
+        padding: 6px 4px !important;
+        border-radius: 9px !important;
+        font-size: 0.61rem !important;
+        line-height: 1.1 !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-group[data-nav-group="more"] .sway-workspace-nav-items {
+        position: absolute !important;
+        top: calc(100% + 8px) !important;
+        right: 0 !important;
+        bottom: auto !important;
+        left: auto !important;
+        z-index: 5010 !important;
+        width: min(310px, calc(100vw - 20px)) !important;
+        max-width: calc(100vw - 20px) !important;
+    }
+}
+
+@media (max-width: 360px) {
+    #sway-admin-workspace .sway-workspace-nav-scroll {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-primary .sway-workspace-nav-button,
+    #sway-admin-workspace .sway-workspace-nav-group[data-nav-group="more"] > .sway-workspace-nav-group-toggle {
+        font-size: 0.59rem !important;
+    }
+}
