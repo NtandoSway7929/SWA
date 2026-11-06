@@ -261,6 +261,20 @@ async function main() {
     }
 
     if (method !== "GET" && method !== "HEAD") {
+      // Permanent lead deletions are applied to in-memory test records only.
+      // The browser cannot send these requests to a hosted Supabase project.
+      if (method === "DELETE" && url.pathname === "/rest/v1/leads") {
+        const filter = String(url.searchParams.get("id") || "");
+        const id = filter.startsWith("eq.") ? decodeURIComponent(filter.slice(3)) : "";
+        const index = leads.findIndex(item => String(item.id) === id);
+        if (index >= 0) {
+          const deleted = leads.splice(index, 1)[0];
+          metrics.mockedTableActionWrites.push({ method, path: url.pathname, id });
+          return route.fulfill(jsonResponse([deleted]));
+        }
+        return route.fulfill(jsonResponse([]));
+      }
+
       // Completion requests are applied to in-memory test arrays only.
       // Playwright intercepts them before a request can leave this browser.
       if (method === "PATCH" && url.pathname === "/rest/v1/tasks") {
@@ -619,6 +633,50 @@ async function main() {
     assert.equal(await page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').count(), 3,
       "all task records should remain available after mock completion");
 
+    // Bulk lead deletion must ask once, preserve selection on cancellation,
+    // and delete only the selected IDs after confirmation.
+    await navigate("leads", "crm");
+    await page.locator('[data-admin-table-filter="leads"]').selectOption("all");
+    const deleteLeadRows = page.locator('#sway-workspace-main [data-admin-table-row="leads"]');
+    const alphaDeleteRow = deleteLeadRows.filter({ hasText: "Alpha Studio" });
+    const zuluDeleteRow = deleteLeadRows.filter({ hasText: "Zulu Market" });
+    await alphaDeleteRow.locator('[data-admin-table-select="leads"]').check();
+    await zuluDeleteRow.locator('[data-admin-table-select="leads"]').check();
+    assert.equal((await page.locator('[data-admin-table-selected-count="leads"]').innerText()).trim(), "2 selected",
+      "the bulk delete action should reflect the number of selected leads");
+
+    const leadWritesBeforeDeleteCancel = metrics.mockedTableActionWrites.length;
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    assert.match(await page.locator(".sway-dialog").innerText(), /Permanently delete 2 selected leads\?/,
+      "bulk lead deletion should confirm the selected record count and permanent effect");
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, leadWritesBeforeDeleteCancel,
+      "cancelling bulk lead deletion must not send any delete requests");
+    assert.equal(leads.some(item => item.id === "lead-alpha"), true,
+      "cancelling bulk lead deletion must preserve the selected lead records");
+    assert.equal((await page.locator('[data-admin-table-selected-count="leads"]').innerText()).trim(), "2 selected",
+      "cancelling bulk deletion must keep the selected leads checked");
+
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() =>
+      document.querySelectorAll('#sway-workspace-main [data-admin-table-row="leads"]').length === 2
+    );
+    assert.equal(leads.some(item => item.id === "lead-alpha" || item.id === "lead-zulu"), false,
+      "confirmed bulk deletion should remove exactly the selected synthetic leads");
+    assert.equal(metrics.mockedTableActionWrites.filter(item =>
+      item.method === "DELETE" && item.path === "/rest/v1/leads" &&
+      ["lead-alpha", "lead-zulu"].includes(item.id)
+    ).length, 2, "the confirmed action should issue exactly one authenticated delete request per selected lead");
+    assert.equal(mockActivityLog.filter(item =>
+      item.entity_type === "leads" && ["lead-alpha", "lead-zulu"].includes(item.entity_id)
+    ).length, 2, "each deleted lead should receive its own activity-log entry");
+    assert.equal(await page.locator('[data-admin-table-bulk-toolbar="leads"]').isVisible(), false,
+      "successfully deleted leads should be removed from selection and hide the bulk toolbar");
+
     // Verify the redesigned top navigation at desktop, tablet and mobile
     // widths. Menus sit outside the horizontal trigger scroller so they remain
     // visible instead of being clipped by overflow.
@@ -724,8 +782,8 @@ async function main() {
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
-    assert.equal(metrics.mockedTableActionWrites.length, 7,
-      "only the expected lead-contact, task and follow-up action writes should be captured by the in-memory mock");
+    assert.equal(metrics.mockedTableActionWrites.length, 11,
+      "only the expected lead-contact, task, follow-up and selected-lead delete writes should be captured by the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
       item.id === "lead-contact-toggle" && item.contacted_manually === true),
@@ -757,6 +815,8 @@ async function main() {
         "actual Leads, Follow-ups and Tasks views render synthetic records",
         "lead email search, status filter and business-name sort",
         "visible-row selection, clear selection and formula-safe CSV download",
+        "cancelled bulk lead deletion makes no delete requests",
+        "confirmed bulk lead deletion removes only selected IDs and logs each deletion",
         "follow-up status filter and task priority sort/status filter",
         "cancelled task completion makes no in-memory updates",
         "confirmed task completion updates the synthetic task only",
