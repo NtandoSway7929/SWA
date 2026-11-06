@@ -13,7 +13,7 @@ export function resolveInboxDeleteTargets(
   records,
   currentMessages,
   folder = "INBOX",
-  currentUidValidity = null,
+  currentUidValidity = 0,
 ) {
   if (!Array.isArray(records) || !Array.isArray(currentMessages)) {
     throw new TypeError("Inbox message records and live IMAP messages must be arrays.");
