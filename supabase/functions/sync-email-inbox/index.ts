@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ImapFlow } from "npm:imapflow@2.0.5";
 import {
+  getSyncStartUid,
   resolveMatchingThreadMessage,
   selectUidBatch,
 } from "./inbox-helpers.mjs";
@@ -15,7 +16,7 @@ const corsHeaders = {
 
 const MAILBOX = "info@swayphics.co.za";
 
-const INITIAL_SYNC_LIMIT = 10;
+const INITIAL_SYNC_LIMIT = 25;
 const MAX_MESSAGES_PER_SYNC = 10;
 const MAX_SOURCE_LENGTH = 32768;
 
@@ -306,6 +307,29 @@ async function findExistingThread(
   );
 }
 
+async function findExistingInboundMessage(
+  supabase: any,
+  messageId: string | null
+) {
+  if (!messageId) {
+    return null;
+  }
+
+  const result = await supabase
+    .from("email_messages")
+    .select("id")
+    .eq("mailbox", MAILBOX)
+    .eq("direction", "inbound")
+    .eq("message_id", messageId)
+    .limit(1);
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  return result.data?.[0] || null;
+}
+
 async function findContact(
   supabase: any,
   email: string
@@ -447,31 +471,46 @@ Deno.serve(async (req) => {
       publicApiKey
     );
 
+    const supabase = createClient(
+      supabaseUrl,
+      serviceRoleKey
+    );
+
     const userResult =
       await authSupabase.auth.getUser(
         accessToken
       );
 
-    if (
-      userResult.error ||
-      !userResult.data?.user
-    ) {
-      return Response.json(
+    const isAuthenticatedUser =
+      !userResult.error &&
+      Boolean(userResult.data?.user);
+
+    if (!isAuthenticatedUser) {
+      // Scheduled ingestion uses a random token held only in Supabase Vault.
+      // The RPC is executable only by this function's service-role client.
+      const scheduledResult = await supabase.rpc(
+        "verify_swayphics_email_sync_cron_token",
         {
-          error:
-            "Your admin session is invalid or expired."
-        },
-        {
-          status: 401,
-          headers: corsHeaders
+          p_token: accessToken
         }
       );
-    }
 
-    const supabase = createClient(
-      supabaseUrl,
-      serviceRoleKey
-    );
+      if (
+        scheduledResult.error ||
+        scheduledResult.data !== true
+      ) {
+        return Response.json(
+          {
+            error:
+              "Your admin session is invalid or expired."
+          },
+          {
+            status: 401,
+            headers: corsHeaders
+          }
+        );
+      }
+    }
 
     const imapHost =
       Deno.env.get(
@@ -524,6 +563,20 @@ Deno.serve(async (req) => {
         }
       );
 
+    const uidValidity =
+      Number(
+        client.mailbox?.uidValidity || 0
+      );
+
+    if (
+      !Number.isSafeInteger(uidValidity) ||
+      uidValidity <= 0
+    ) {
+      throw new Error(
+        "IMAP did not return a valid UIDVALIDITY for the inbox. Sync stopped without advancing the cursor."
+      );
+    }
+
     const uidNext =
       Number(
         client.mailbox?.uidNext || 0
@@ -533,9 +586,19 @@ Deno.serve(async (req) => {
       Math.max(0, uidNext - 1);
 
     if (!newestUid) {
+      console.info(
+        "Swayphics email inbox sync completed:",
+        JSON.stringify({
+          uid_validity: uidValidity,
+          newest_uid: 0,
+          synced: 0
+        })
+      );
+
       return Response.json(
         {
           success: true,
+          uid_validity: uidValidity,
           synced: 0,
           unread: 0
         },
@@ -551,6 +614,7 @@ Deno.serve(async (req) => {
         .from("email_messages")
         .select("imap_uid")
         .eq("mailbox", MAILBOX)
+        .eq("imap_uid_validity", uidValidity)
         .not("imap_uid", "is", null)
         .order("imap_uid", {
           ascending: false
@@ -567,13 +631,11 @@ Deno.serve(async (req) => {
           ?.imap_uid || 0
       );
 
-    const startUid =
-      latestStoredUid > 0
-        ? latestStoredUid + 1
-        : Math.max(
-            1,
-            newestUid - INITIAL_SYNC_LIMIT + 1
-          );
+    const startUid = getSyncStartUid(
+      latestStoredUid,
+      newestUid,
+      INITIAL_SYNC_LIMIT
+    );
 
     let searchedUids =
       await client.search(
@@ -602,6 +664,7 @@ Deno.serve(async (req) => {
     );
 
     let synced = 0;
+    let alreadyStored = 0;
     let failedUid: number | null = null;
 
     for (const targetUid of candidateUids) {
@@ -660,6 +723,39 @@ Deno.serve(async (req) => {
           cleanHeaderValue(
             envelope.inReplyTo
           ) || null;
+
+        const existingInbound =
+          await findExistingInboundMessage(
+            supabase,
+            messageId
+          );
+
+        if (existingInbound) {
+          const existingSourceKey =
+            "imap:" +
+            String(uidValidity) +
+            ":" +
+            folder +
+            ":" +
+            String(targetUid);
+
+          const updatedExisting =
+            await supabase
+              .from("email_messages")
+              .update({
+                imap_uid: Number(targetUid),
+                imap_uid_validity: uidValidity,
+                source_key: existingSourceKey
+              })
+              .eq("id", existingInbound.id);
+
+          if (updatedExisting.error) {
+            throw updatedExisting.error;
+          }
+
+          alreadyStored += 1;
+          continue;
+        }
 
         const references =
           cleanHeaderValue(
@@ -753,6 +849,8 @@ Deno.serve(async (req) => {
 
         const sourceKey =
           "imap:" +
+          String(uidValidity) +
+          ":" +
           folder +
           ":" +
           String(targetUid);
@@ -766,6 +864,7 @@ Deno.serve(async (req) => {
               source_key: sourceKey,
               imap_uid:
                 Number(targetUid),
+              imap_uid_validity: uidValidity,
               external_id: null,
               message_id: messageId,
               in_reply_to:
@@ -861,19 +960,37 @@ Deno.serve(async (req) => {
       }
     }
 
+    const backlogRemaining =
+      failedUid !== null ||
+      allCandidateUids.length > candidateUids.length;
+
+    console.info(
+      "Swayphics email inbox sync completed:",
+      JSON.stringify({
+        uid_validity: uidValidity,
+        checked: candidateUids.length,
+        newest_uid: newestUid,
+        latest_stored_uid: latestStoredUid,
+        synced,
+        already_stored: alreadyStored,
+        failed_uid: failedUid,
+        backlog_remaining: backlogRemaining
+      })
+    );
+
     return Response.json(
       {
         success: true,
         provider: "HOSTAFRICA HMailPlus",
         mailbox: MAILBOX,
+        uid_validity: uidValidity,
         checked: candidateUids.length,
         newest_uid: newestUid,
         latest_stored_uid: latestStoredUid,
         synced,
+        already_stored: alreadyStored,
         failed_uid: failedUid,
-        backlog_remaining:
-          failedUid !== null ||
-          allCandidateUids.length > candidateUids.length,
+        backlog_remaining: backlogRemaining,
       },
       {
         status: 200,
