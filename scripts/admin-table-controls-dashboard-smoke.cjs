@@ -789,15 +789,14 @@ async function main() {
 
     await navigate("followups", "crm");
     await page.locator('[data-admin-table-filter="followups"]').selectOption("all");
-    const followupDeleteRow = page.locator('#sway-workspace-main [data-admin-table-row="followups"]').filter({ hasText: "Alpha Studio" });
+    const followupDeleteRow = page.locator('#sway-workspace-main [data-admin-table-row="followups"][data-admin-table-id="follow-later"]');
     await followupDeleteRow.locator('[data-admin-table-select="followups"]').check();
     await page.locator('[data-admin-table-bulk-action="delete"]').click();
     await page.locator(".sway-dialog").waitFor({ state: "visible" });
     assert.match(await page.locator(".sway-dialog").innerText(), /Permanently delete 1 selected follow-up\?/);
     await page.locator(".sway-dialog [data-dialog-confirm]").click();
     await page.waitForFunction(() =>
-      !Array.from(document.querySelectorAll('#sway-workspace-main [data-admin-table-row="followups"]'))
-        .some(row => row.innerText.includes("Alpha Studio"))
+      !document.querySelector('#sway-workspace-main [data-admin-table-row="followups"][data-admin-table-id="follow-later"]')
     );
     assert.equal(followups.some(item => item.id === "follow-later"), false,
       "confirmed bulk follow-up deletion should remove only the selected synthetic follow-up");
