@@ -32,3 +32,29 @@ export function resolveMatchingThreadMessage(candidates, rows) {
 
   return null;
 }
+
+/**
+ * Choose the next UID to search for. If a stored cursor is missing or lies
+ * beyond the current mailbox's UIDNEXT, restart with a bounded recent window.
+ * The caller scopes stored cursors to the current UIDVALIDITY.
+ */
+export function getSyncStartUid(latestStoredUid, newestUid, initialLimit = 10) {
+  const latest = Number(latestStoredUid);
+  const newest = Number(newestUid);
+  const parsedLimit = Number(initialLimit);
+  const limit = Number.isSafeInteger(parsedLimit) && parsedLimit > 0
+    ? parsedLimit
+    : 10;
+
+  if (!Number.isSafeInteger(newest) || newest <= 0) return 1;
+
+  if (
+    !Number.isSafeInteger(latest) ||
+    latest <= 0 ||
+    latest > newest
+  ) {
+    return Math.max(1, newest - limit + 1);
+  }
+
+  return latest + 1;
+}
