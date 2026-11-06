@@ -1,13 +1,13 @@
 /**
- * Resolve the live IMAP UIDs corresponding to selected inbox mirror rows.
+ * Resolve selected inbound rows to live mailbox UIDs without trusting a
+ * potentially stale UID on its own.
  *
- * A mailbox UID can only be trusted when its source key still matches the
- * configured folder and the live message's RFC Message-ID matches the stored
- * mirror. A missing UID is safe to clean up from the database because that
- * original mailbox message is already gone. A mismatched UID is rejected to
- * prevent deleting a different message if the mailbox has been reset.
+ * IMAP UIDs are only unique within a mailbox UIDVALIDITY generation. If a
+ * mailbox is rebuilt/reset, an old UID can be reused by a different message.
+ * The caller must then re-resolve the selected message by its exact
+ * Message-ID before deleting anything from the live mailbox.
  */
-export function resolveInboxDeleteUids(records, currentMessages, folder = "INBOX") {
+export function resolveInboxDeleteTargets(records, currentMessages, folder = "INBOX") {
   if (!Array.isArray(records) || !Array.isArray(currentMessages)) {
     throw new TypeError("Inbox message records and live IMAP messages must be arrays.");
   }
@@ -22,6 +22,7 @@ export function resolveInboxDeleteUids(records, currentMessages, folder = "INBOX
   }
 
   const uids = new Set();
+  const messageIdLookups = [];
   for (const record of records) {
     if (!record || record.direction === "outbound") continue;
     if (record.direction !== "inbound") {
@@ -44,18 +45,23 @@ export function resolveInboxDeleteUids(records, currentMessages, folder = "INBOX
     }
 
     const liveMessage = liveByUid.get(uid);
-    if (!liveMessage) {
-      // The source message is already absent; only its mirror needs cleanup.
+    const liveMessageId = String(liveMessage?.envelope?.messageId || "").trim();
+    if (!liveMessage || !liveMessageId || liveMessageId !== expectedMessageId) {
+      // Never delete a live message merely because it now occupies an old UID.
+      // The caller must search by Message-ID and verify the exact envelope ID.
+      messageIdLookups.push({
+        recordId: String(record.id || ""),
+        originalUid: uid,
+        messageId: expectedMessageId,
+      });
       continue;
-    }
-
-    const liveMessageId = String(liveMessage.envelope?.messageId || "").trim();
-    if (!liveMessageId || liveMessageId !== expectedMessageId) {
-      throw new Error("The mailbox identity for a selected message has changed. Refresh the inbox before deleting.");
     }
 
     uids.add(uid);
   }
 
-  return [...uids].sort((a, b) => a - b);
+  return {
+    uids: [...uids].sort((a, b) => a - b),
+    messageIdLookups,
+  };
 }
