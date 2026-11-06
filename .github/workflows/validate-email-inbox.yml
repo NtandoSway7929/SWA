@@ -19,9 +19,11 @@ on:
     paths:
       - "supabase/functions/sync-email-inbox/**"
       - "supabase/functions/delete-email-messages/**"
+      - "supabase/functions/send-admin-push/**"
       - "supabase/config.toml"
       - "scripts/email-inbox-sync.test.mjs"
       - "scripts/delete-email-messages.test.mjs"
+      - "scripts/admin-push-preferences-grant.test.mjs"
       - "admin-dashboard/admin-workspace.js"
       - "supabase/migrations/**"
       - ".github/workflows/validate-email-inbox.yml"
