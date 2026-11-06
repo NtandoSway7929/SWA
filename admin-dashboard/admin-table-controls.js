@@ -590,7 +590,7 @@
                         button.getAttribute("data-admin-table-bulk-action"));
                 });
             });
-            ["leads", "tasks", "followups", "invoices"].forEach(function (view) {
+            ["leads", "tasks", "followups", "communications", "invoices"].forEach(function (view) {
                 if (workspace.querySelector('[data-admin-table-tools="' + view + '"]')) applySearch(view);
             });
         }
