@@ -1,8 +1,9 @@
 [functions.send-email]
 verify_jwt = true
 
+# The function validates either a Supabase user JWT or a Vault-backed scheduler key.
 [functions.sync-email-inbox]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-email-messages]
 verify_jwt = true
