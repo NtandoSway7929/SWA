@@ -443,7 +443,7 @@
                         const feedbackParts = [
                             deletedCount === selectedIds.length
                                 ? "Deleted " + deletedCount + " selected " + deletedLabel + "."
-                                : "Deleted " + deletedCount + " of " + selectedIds.length + " selected records."
+                                : "Deleted " + deletedCount + " of " + selectedIds.length + " selected " + labels.plural + "."
                         ];
                         if (failedCount > 0) {
                             feedbackParts.push(failedCount +
