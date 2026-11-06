@@ -476,14 +476,19 @@ Deno.serve(async (req) => {
       serviceRoleKey
     );
 
-    const userResult =
-      await authSupabase.auth.getUser(
-        accessToken
-      );
+    const looksLikeJwt =
+      accessToken.split(".").length === 3;
+
+    const userResult = looksLikeJwt
+      ? await authSupabase.auth.getUser(accessToken)
+      : null;
 
     const isAuthenticatedUser =
-      !userResult.error &&
-      Boolean(userResult.data?.user);
+      Boolean(
+        userResult &&
+        !userResult.error &&
+        userResult.data?.user
+      );
 
     if (!isAuthenticatedUser) {
       // Scheduled ingestion uses a random token held only in Supabase Vault.
