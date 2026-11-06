@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ImapFlow } from "npm:imapflow@2.0.5";
-import { resolveInboxDeleteUids } from "./delete-helpers.mjs";
+import { resolveInboxDeleteTargets } from "./delete-helpers.mjs";
 
 const MAILBOX = "info@swayphics.co.za";
 const MAX_DELETE_MESSAGES = 150;
@@ -154,12 +154,68 @@ Deno.serve(async (req) => {
         { envelope: true },
         { uid: true },
       );
-      const uidsToDelete = resolveInboxDeleteUids(inboundRecords, currentMessages || [], folder);
+      if (!Array.isArray(currentMessages)) {
+        throw new Error("The connected mailbox could not verify selected message identities.");
+      }
 
-      // fetchAll omits UIDs already removed from the mailbox. Those mirrors can
-      // still be safely cleaned up; a different Message-ID at a reused UID is rejected.
-      if (uidsToDelete.length) {
-        const deleteResult = await mailboxClient.messageDelete(uidsToDelete, { uid: true });
+      const deleteTargets = resolveInboxDeleteTargets(inboundRecords, currentMessages, folder);
+      const uidsToDelete = new Set(deleteTargets.uids);
+      let mailboxMessagesNotFound = 0;
+      let mailboxUidsReconciled = 0;
+
+      // UIDs are unique only within an IMAP UIDVALIDITY generation. If a mailbox
+      // was rebuilt, an old UID may now point to a different message. Search by
+      // the stored RFC Message-ID, then verify the exact envelope ID before
+      // deleting the message at its current UID.
+      for (const lookup of deleteTargets.messageIdLookups) {
+        const searchResult = await mailboxClient.search(
+          { header: { "Message-ID": lookup.messageId } },
+          { uid: true },
+        );
+        if (!Array.isArray(searchResult)) {
+          throw new Error("The connected mailbox could not safely search for a selected message by Message-ID.");
+        }
+
+        if (!searchResult.length) {
+          // The original message is no longer in this mailbox folder. Its dashboard
+          // mirror can still be removed without touching another mailbox message.
+          mailboxMessagesNotFound += 1;
+          continue;
+        }
+
+        const matchedMessages = await mailboxClient.fetchAll(
+          searchResult,
+          { envelope: true },
+          { uid: true },
+        );
+        if (!Array.isArray(matchedMessages)) {
+          throw new Error("The connected mailbox could not verify a Message-ID search result.");
+        }
+
+        const exactMatches = [...new Set(
+          matchedMessages
+            .filter((message: any) =>
+              String(message?.envelope?.messageId || "").trim() === lookup.messageId
+            )
+            .map((message: any) => Number(message?.uid))
+            .filter((uid: number) => Number.isSafeInteger(uid) && uid > 0)
+        )].sort((a, b) => a - b);
+
+        if (exactMatches.length > 1) {
+          throw new Error("Multiple mailbox messages share a selected Message-ID. No ambiguous mailbox deletion was attempted.");
+        }
+        if (!exactMatches.length) {
+          mailboxMessagesNotFound += 1;
+          continue;
+        }
+
+        uidsToDelete.add(exactMatches[0]);
+        mailboxUidsReconciled += 1;
+      }
+
+      const verifiedUidsToDelete = [...uidsToDelete].sort((a, b) => a - b);
+      if (verifiedUidsToDelete.length) {
+        const deleteResult = await mailboxClient.messageDelete(verifiedUidsToDelete, { uid: true });
         if (deleteResult !== true) {
           throw new Error("The connected mailbox did not confirm the selected message deletion.");
         }
@@ -188,7 +244,9 @@ Deno.serve(async (req) => {
     return jsonResponse({
       success: true,
       deleted_ids: deletedIds,
-      mailbox_messages_removed: inboundRecords.length,
+      mailbox_messages_removed: inboundRecords.length - mailboxMessagesNotFound,
+      mailbox_messages_not_found: mailboxMessagesNotFound,
+      mailbox_uids_reconciled: mailboxUidsReconciled,
       dashboard_records_removed: deletedIds.length,
     });
   } catch (error) {
