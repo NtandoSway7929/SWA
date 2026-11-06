@@ -749,6 +749,7 @@ async function main() {
 
     // Follow-ups: one confirmation for the selected row, with the failed/cancel path preserved.
     await navigate("followups", "crm");
+    await page.locator('[data-admin-table-filter="followups"]').selectOption("all");
     const followupDeleteRow = page.locator('#sway-workspace-main [data-admin-table-row="followups"]').filter({ hasText: "Send follow-up" });
     await followupDeleteRow.locator('[data-admin-table-select="followups"]').check();
     const writesBeforeFollowupCancel = metrics.mockedTableActionWrites.length;
@@ -763,7 +764,7 @@ async function main() {
     await page.locator('[data-admin-table-bulk-action="delete"]').click();
     await page.locator(".sway-dialog").waitFor({ state: "visible" });
     await page.locator(".sway-dialog [data-dialog-confirm]").click();
-    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-admin-table-row="followups"]').length === 1);
+    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-admin-table-row="followups"]').length === 2);
     assert.equal(followups.some(item => item.id === "follow-later"), false);
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.method === "DELETE" && item.path === "/rest/v1/follow_ups" && item.id === "follow-later"),
