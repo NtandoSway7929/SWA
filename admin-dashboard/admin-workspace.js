@@ -25,10 +25,11 @@
             leads: { search: "", filter: "all", sort: "followup_asc" },
             tasks: { search: "", filter: "all", sort: "due_asc" },
             followups: { search: "", filter: "all", sort: "scheduled_asc" },
+            communications: { search: "", filter: "all", sort: "date_desc" },
             invoices: { search: "", filter: "all", sort: "invoice_due_asc" }
         },
-        tableSelection: { leads: [], tasks: [], followups: [], invoices: [] },
-        tableFeedback: { leads: "", tasks: "", followups: "", invoices: "" },
+        tableSelection: { leads: [], tasks: [], followups: [], communications: [], invoices: [] },
+        tableFeedback: { leads: "", tasks: "", followups: "", communications: "", invoices: "" },
         tableBulkActionRunning: false,
         currentUser: null,
         currentAdmin: null,
@@ -62,6 +63,9 @@
         emailSyncing: false,
         emailSyncError: "",
         emailSelectedThreadId: "",
+        emailThreadSelection: [],
+        emailInboxDeleteRunning: false,
+        emailInboxDeleteFeedback: "",
         emailViewInitialized: false,
         emailLastSync: null,
         documents: [],
@@ -12241,6 +12245,66 @@ function simpleBars(items, color) {
                 refreshFailed: refreshFailed
             };
         },
+        deleteRecords: async function (view, ids) {
+            const mapping = {
+                tasks: { table: "tasks", label: "task" },
+                followups: { table: "follow_ups", label: "follow-up" },
+                communications: { table: "communication_logs", label: "communication log entry" }
+            };
+            const config = mapping[view];
+            if (!config) throw new Error("Bulk deletion is not enabled for this workspace section.");
+
+            const requestedIds = Array.from(new Set((Array.isArray(ids) ? ids : [])
+                .map(function (id) { return String(id || "").trim(); })
+                .filter(Boolean)));
+            const deletedIds = [];
+            const failedIds = [];
+            const activityLogFailures = [];
+
+            for (const id of requestedIds) {
+                try {
+                    const deletedRecords = await api(
+                        "/rest/v1/" + config.table + "?id=eq." + encodeURIComponent(id),
+                        {
+                            method: "DELETE",
+                            headers: headers({ "Prefer": "return=representation" })
+                        }
+                    );
+                    if (!Array.isArray(deletedRecords) ||
+                        !deletedRecords.some(function (record) { return String(record.id) === id; })) {
+                        failedIds.push(id);
+                        continue;
+                    }
+                    deletedIds.push(id);
+                    try {
+                        await logActivity("Deleted " + config.label, config.table, id);
+                    } catch (error) {
+                        activityLogFailures.push(id);
+                        console.warn("A deleted workspace record could not be written to the activity log.", error);
+                    }
+                } catch (error) {
+                    failedIds.push(id);
+                    console.warn("Unable to delete selected workspace record.", error);
+                }
+            }
+
+            let refreshFailed = false;
+            if (deletedIds.length) {
+                try {
+                    await refreshData();
+                    renderShell();
+                } catch (error) {
+                    refreshFailed = true;
+                    console.warn("Selected workspace records were deleted, but the dashboard refresh failed.", error);
+                }
+            }
+            return {
+                deletedIds: deletedIds,
+                failedIds: failedIds,
+                activityLogFailures: activityLogFailures,
+                refreshFailed: refreshFailed
+            };
+        },
         renderView: renderView,
         swayAlert: swayAlert,
         swayConfirm: swayConfirm,
@@ -15920,6 +15984,114 @@ function simpleBars(items, color) {
         saveWorkspaceSnapshot();
     }
 
+    async function deleteSelectedEmailThreads() {
+        if (state.emailInboxDeleteRunning) return;
+        const selectedThreadIds = Array.from(new Set(
+            (state.emailThreadSelection || []).map(String).filter(Boolean)
+        ));
+        const threads = emailThreadGroups().filter(function (thread) {
+            return selectedThreadIds.includes(String(thread.threadId)) && emailThreadHasInbound(thread);
+        });
+        if (!threads.length) {
+            state.emailThreadSelection = [];
+            renderView();
+            return;
+        }
+
+        const messageCount = threads.reduce(function (total, thread) {
+            return total + thread.messages.length;
+        }, 0);
+        const confirmed = await swayConfirm(
+            "Delete " + threads.length + " selected email conversation" +
+            (threads.length === 1 ? "" : "s") + " (" + messageCount +
+            " stored messages) from the Swayphics dashboard inbox? This only removes the synced dashboard copies. " +
+            "The original HOSTAFRICA mailbox is unchanged, and a later sync may import messages again. This cannot be undone here."
+        );
+        if (!confirmed) return;
+
+        state.emailInboxDeleteRunning = true;
+        state.emailInboxDeleteFeedback = "Deleting selected email conversations…";
+        renderView();
+
+        const deletedMessageIds = [];
+        const failedThreadIds = [];
+        let activityLogFailures = 0;
+
+        for (const thread of threads) {
+            const ids = thread.messages.map(function (message) { return String(message.id || ""); })
+                .filter(Boolean);
+            if (!ids.length) {
+                failedThreadIds.push(String(thread.threadId));
+                continue;
+            }
+
+            try {
+                const deletedRecords = await api(
+                    "/rest/v1/email_messages?id=in.(" +
+                        ids.map(encodeURIComponent).join(",") + ")",
+                    {
+                        method: "DELETE",
+                        headers: headers({ "Prefer": "return=representation" })
+                    }
+                );
+                const returnedIds = new Set(
+                    (Array.isArray(deletedRecords) ? deletedRecords : []).map(function (record) {
+                        return String(record.id);
+                    })
+                );
+                ids.forEach(function (id) {
+                    if (returnedIds.has(id)) deletedMessageIds.push(id);
+                });
+
+                if (ids.some(function (id) { return !returnedIds.has(id); })) {
+                    failedThreadIds.push(String(thread.threadId));
+                }
+
+                for (const id of ids) {
+                    if (!returnedIds.has(id)) continue;
+                    try {
+                        await logActivity("Deleted inbox email message", "email_messages", id);
+                    } catch (error) {
+                        activityLogFailures += 1;
+                    }
+                }
+            } catch (error) {
+                failedThreadIds.push(String(thread.threadId));
+                console.warn("Unable to delete a selected inbox thread from the dashboard copy.", error);
+            }
+        }
+
+        if (deletedMessageIds.length) {
+            const deletedSet = new Set(deletedMessageIds);
+            state.emailMessages = state.emailMessages.filter(function (message) {
+                return !deletedSet.has(String(message.id));
+            });
+            state.emailThreadSelection = failedThreadIds;
+            state.emailSelectedThreadId = failedThreadIds.includes(String(state.emailSelectedThreadId))
+                ? state.emailSelectedThreadId
+                : "";
+            saveWorkspaceSnapshot();
+        } else {
+            state.emailThreadSelection = failedThreadIds;
+        }
+
+        const deletedThreads = threads.filter(function (thread) {
+            return thread.messages.every(function (message) {
+                return deletedMessageIds.includes(String(message.id));
+            });
+        }).length;
+        const failedCount = threads.length - deletedThreads;
+        state.emailInboxDeleteFeedback = deletedThreads
+            ? "Deleted " + deletedThreads + " of " + threads.length +
+              " selected conversations from the dashboard inbox." +
+              (failedCount ? " " + failedCount + " remain selected for review." : "") +
+              (activityLogFailures ? " Activity logging failed for " + activityLogFailures + " deleted message(s)." : "")
+            : "No selected conversations were deleted. They remain selected for review.";
+
+        state.emailInboxDeleteRunning = false;
+        renderView();
+    }
+
     async function syncEmailInbox(
         shouldRender
     ) {
@@ -16450,7 +16622,18 @@ function simpleBars(items, color) {
                                 thread
                             );
 
+                        const threadId = String(thread.threadId || "");
+                        const isSelected = state.emailThreadSelection.some(function (id) {
+                            return String(id) === threadId;
+                        });
+
                         return (
+                            '<div class="sway-email-inbox-item-row">' +
+                                '<label class="sway-email-inbox-select">' +
+                                    '<input type="checkbox" data-email-thread-select="' + esc(threadId) +
+                                    '" aria-label="Select conversation ' + esc(emailThreadSubject(thread)) + '"' +
+                                    (isSelected ? " checked" : "") + '>' +
+                                "</label>" +
                             '<button type="button" class="sway-email-inbox-item ' +
                             (
                                 unread
@@ -16491,11 +16674,46 @@ function simpleBars(items, color) {
                                         )
                                     ) +
                                 "</span>" +
-                            "</button>"
+                            "</button>" +
+                            "</div>"
                         );
                     }
                 )
                 .join("");
+
+        const selectedInboxThreadCount = inboundThreads.filter(function (thread) {
+            return state.emailThreadSelection.some(function (id) {
+                return String(id) === String(thread.threadId);
+            });
+        }).length;
+        const selectedInboxMessageCount = inboundThreads.reduce(function (total, thread) {
+            return state.emailThreadSelection.some(function (id) {
+                return String(id) === String(thread.threadId);
+            }) ? total + thread.messages.length : total;
+        }, 0);
+        const emailInboxSelectionToolbar = inboundThreads.length
+            ? '<div class="sway-email-inbox-bulk-toolbar">' +
+                '<label><input type="checkbox" data-email-thread-select-all aria-label="Select all visible email conversations"' +
+                    (selectedInboxThreadCount === inboundThreads.length ? " checked" : "") + '>' +
+                    "Select all</label>" +
+                '<div><span data-email-thread-selected-count>' +
+                    esc(selectedInboxThreadCount + " selected") +
+                    "</span>" +
+                    '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-email-delete-selected' +
+                        (selectedInboxThreadCount === 0 || state.emailInboxDeleteRunning ? " disabled" : "") +
+                    '>Delete selected threads</button></div>' +
+            "</div>" +
+            (state.emailInboxDeleteFeedback
+                ? '<p class="sway-admin-table-feedback" role="status" aria-live="polite">' +
+                    esc(state.emailInboxDeleteFeedback) + "</p>"
+                : "") +
+            (selectedInboxThreadCount
+                ? '<p class="sway-email-inbox-delete-note">Selected conversations contain ' +
+                    esc(selectedInboxMessageCount) + " stored message" +
+                    (selectedInboxMessageCount === 1 ? "" : "s") +
+                    ". Original messages remain in the HOSTAFRICA mailbox; a future sync may import them again.</p>"
+                : "")
+            : "";
 
         const sentEmails =
             state.communications
@@ -16609,7 +16827,8 @@ function simpleBars(items, color) {
                 "</div>" +
                 (
                     threadRows
-                        ? '<div class="sway-email-inbox-list">' +
+                        ? emailInboxSelectionToolbar +
+                          '<div class="sway-email-inbox-list">' +
                           threadRows +
                           "</div>"
                         : (
@@ -18419,13 +18638,17 @@ function simpleBars(items, color) {
     }
 
     function renderCommunications() {
+        const tableItems = adminTableControls.items("communications", state.communications);
         const rows =
-            state.communications.map(function (item) {
+            tableItems.map(function (item) {
                 const contactDetails =
                     communicationContactDetails(item);
 
                 return (
-                    "<tr>" +
+                    '<tr data-admin-table-row="communications" data-admin-table-id="' + esc(item.id) +
+                    '" data-admin-table-search="' + esc(adminTableControls.searchText("communications", item)) +
+                    '" data-admin-table-filter="' + esc(String(item.direction || "outbound").toLowerCase()) + '">' +
+                        adminTableControls.selectionCell("communications", item, contactDetails.primary || "communication") +
                         "<td>" +
                             "<strong>" +
                                 esc(contactDetails.primary) +
@@ -18489,11 +18712,13 @@ function simpleBars(items, color) {
             panel(
                 "Communication log",
                 "Keep a durable record of important client and lead conversations across every channel.",
-                state.communications.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Channel</th><th>Direction</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th></tr></thead><tbody>' +
+                adminTableControls.renderControls("communications") +
+                (state.communications.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="communications" aria-label="Select all visible communication log entries"></th><th>Contact</th><th>Channel</th><th>Direction</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th></tr></thead><tbody>' +
                       rows +
+                      '<tr data-admin-table-no-results="communications" hidden><td colspan="8">No communication log entries match these controls. Try another search or direction.</td></tr>' +
                       "</tbody></table></div>"
-                    : empty("No communications logged yet. Use “Log communication” to start the relationship history.")
+                    : empty("No communications logged yet. Use “Log communication” to start the relationship history."))
             )
         );
     }
@@ -27713,6 +27938,39 @@ function simpleBars(items, color) {
                         renderView();
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-email-thread-select]")
+            .forEach(function (checkbox) {
+                checkbox.addEventListener("change", function () {
+                    const threadId = String(checkbox.dataset.emailThreadSelect || "");
+                    const selected = new Set((state.emailThreadSelection || []).map(String));
+                    if (checkbox.checked) selected.add(threadId);
+                    else selected.delete(threadId);
+                    state.emailThreadSelection = Array.from(selected);
+                    renderView();
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-email-thread-select-all]")
+            .forEach(function (checkbox) {
+                checkbox.addEventListener("change", function () {
+                    const selectedThreads = emailThreadGroups().filter(emailThreadHasInbound);
+                    state.emailThreadSelection = checkbox.checked
+                        ? selectedThreads.map(function (thread) { return String(thread.threadId); })
+                        : [];
+                    renderView();
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-email-delete-selected]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    deleteSelectedEmailThreads();
+                });
             });
 
         workspace
