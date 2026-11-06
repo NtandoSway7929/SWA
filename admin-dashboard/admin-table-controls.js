@@ -34,6 +34,10 @@
                     ["contact_asc", "Contact (A–Z)"],
                     ["status_asc", "Status (A–Z)"]
                 ],
+                communications: [
+                    ["date_desc", "Newest first"],
+                    ["date_asc", "Oldest first"]
+                ],
                 invoices: [
                     ["invoice_due_asc", "Due date (soonest first)"],
                     ["invoice_total_desc", "Invoice total (high to low)"],
@@ -62,6 +66,7 @@
                 return String(context.invoiceStatus(item) || "").trim().toLowerCase();
             }
             if (view === "invoices" && item.archived === true) return "archived";
+            if (view === "communications") return String(item.direction || "outbound").trim().toLowerCase();
             return String(item.status || "").trim().toLowerCase();
         }
 
@@ -76,6 +81,12 @@
             } else if (view === "followups") {
                 fields = [item.lead_id ? leadName(item.lead_id) : clientName(item.client_id),
                     item.channel, item.status, adminName(item.assigned_to), item.scheduled_for, item.note];
+            } else if (view === "communications") {
+                fields = [
+                    item.client_id ? clientName(item.client_id) : leadName(item.lead_id),
+                    item.channel, item.direction, item.subject, item.message,
+                    item.contacted_at, adminName(item.created_by)
+                ];
             } else if (view === "invoices") {
                 fields = [item.invoice_number, clientName(item.client_id), item.email, item.status,
                     statusValue(view, item), item.email_status, item.issue_date, item.due_date,
@@ -142,6 +153,10 @@
                             b.lead_id ? leadName(b.lead_id) : clientName(b.client_id));
                     case "status_asc":
                         return textCompare(a.status, b.status) || dateCompare(a.scheduled_for, b.scheduled_for);
+                    case "date_desc":
+                        return reverseDateCompare(a.contacted_at || a.created_at, b.contacted_at || b.created_at);
+                    case "date_asc":
+                        return dateCompare(a.contacted_at || a.created_at, b.contacted_at || b.created_at);
                     case "invoice_due_asc":
                         return dateCompare(a.due_date, b.due_date) ||
                             textCompare(a.invoice_number, b.invoice_number);
@@ -203,14 +218,25 @@
                     (controls.sort === option[0] ? " selected" : "") + ">" +
                     esc(option[1]) + "</option>";
             }).join("");
+            const deleteLabels = {
+                leads: "leads",
+                tasks: "tasks",
+                followups: "follow-ups",
+                communications: "communication log entries"
+            };
+            const deleteButton = deleteLabels[view]
+                ? '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected ' +
+                    esc(deleteLabels[view]) + '">Delete selected ' + esc(deleteLabels[view]) + '</button>'
+                : "";
             const bulk = view === "leads"
-                ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>' +
-                  '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected leads">Delete selected leads</button>'
-                : view === "invoices" ? "" :
-                '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="complete">Complete selected</button>';
+                ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>' + deleteButton
+                : (view === "tasks" || view === "followups")
+                    ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="complete">Complete selected</button>' + deleteButton
+                    : deleteButton;
             const placeholder = view === "leads" ? "Business, contact, service or email" :
                 view === "tasks" ? "Task, client, assignee or description" :
                 view === "invoices" ? "Invoice number, client, status or date" :
+                view === "communications" ? "Contact, channel, subject or message" :
                 "Contact, channel or assignee";
             return '<div class="sway-admin-table-tools" data-admin-table-tools="' + esc(view) + '">' +
                 '<div class="sway-admin-table-control-grid">' +
@@ -345,30 +371,40 @@
                 return;
             }
             if (action === "delete") {
-                if (view !== "leads") return;
+                const labels = {
+                    leads: { singular: "lead", plural: "leads" },
+                    tasks: { singular: "task", plural: "tasks" },
+                    followups: { singular: "follow-up", plural: "follow-ups" },
+                    communications: { singular: "communication log entry", plural: "communication log entries" }
+                };
+                const label = labels[view];
+                if (!label) return;
+
                 const selected = selectedItems(view);
                 if (!selected.length) return;
 
                 const selectedIds = selected.map(function (item) {
                     return String(item.id);
                 });
+                const noun = selected.length === 1 ? label.singular : label.plural;
                 if (!(await swayConfirm(
-                    "Permanently delete " + selected.length + " selected lead" +
-                    (selected.length === 1 ? "" : "s") + "? This cannot be undone."
+                    "Permanently delete " + selected.length + " selected " + noun + "? This cannot be undone."
                 ))) return;
 
-                if (typeof context.deleteLeads !== "function") {
-                    swayAlert("Bulk lead deletion is unavailable. Refresh the dashboard and try again.");
+                const deleteHandler = view === "leads" ? context.deleteLeads : context.deleteRecords;
+                if (typeof deleteHandler !== "function") {
+                    swayAlert("Bulk deletion is unavailable for this section. Refresh the dashboard and try again.");
                     return;
                 }
 
                 state.tableBulkActionRunning = true;
                 syncSelection(view);
-                announceFeedback(view, "Deleting " + selected.length + " selected lead" +
-                    (selected.length === 1 ? "" : "s") + "…");
+                announceFeedback(view, "Deleting " + selected.length + " selected " + noun + "…");
 
                 try {
-                    const result = await context.deleteLeads(selectedIds);
+                    const result = view === "leads"
+                        ? await context.deleteLeads(selectedIds)
+                        : await context.deleteRecords(view, selectedIds);
                     const requestedIds = new Set(selectedIds);
                     const deletedIds = new Set(
                         (result && Array.isArray(result.deletedIds) ? result.deletedIds : [])
@@ -384,7 +420,7 @@
                         return !deletedIds.has(id);
                     });
 
-                    state.tableSelection.leads = (state.tableSelection.leads || [])
+                    state.tableSelection[view] = (state.tableSelection[view] || [])
                         .filter(function (id) { return !deletedIds.has(String(id)); });
 
                     const deletedCount = deletedIds.size;
@@ -398,12 +434,12 @@
                     if (deletedCount === selectedIds.length && failedCount === 0 &&
                         activityLogFailures === 0 && !(result && result.refreshFailed)) {
                         announceFeedback(view, "Permanently deleted " + deletedCount +
-                            " selected lead" + (deletedCount === 1 ? "" : "s") + ".");
+                            " selected " + (deletedCount === 1 ? label.singular : label.plural) + ".");
                     } else if (deletedCount > 0) {
                         const feedbackParts = [
                             deletedCount === selectedIds.length
-                                ? "Deleted " + deletedCount + " selected lead" + (deletedCount === 1 ? "" : "s") + "."
-                                : "Deleted " + deletedCount + " of " + selectedIds.length + " selected leads."
+                                ? "Deleted " + deletedCount + " selected " + (deletedCount === 1 ? label.singular : label.plural) + "."
+                                : "Deleted " + deletedCount + " of " + selectedIds.length + " selected " + label.plural + "."
                         ];
                         if (failedCount > 0) {
                             feedbackParts.push(failedCount +
@@ -411,7 +447,7 @@
                         }
                         if (activityLogFailures > 0) {
                             feedbackParts.push("Activity logging failed for " +
-                                activityLogFailures + " deleted lead" +
+                                activityLogFailures + " deleted record" +
                                 (activityLogFailures === 1 ? "" : "s") + ".");
                         }
                         if (result && result.refreshFailed) {
@@ -419,16 +455,16 @@
                         }
                         announceFeedback(view, feedbackParts.join(" "));
                     } else {
-                        announceFeedback(view, "No selected leads were deleted. All " +
+                        announceFeedback(view, "No selected records were deleted. All " +
                             remainingIds.length + " remain selected. Check your permissions and try again.");
                     }
 
                     if (result && result.refreshFailed && deletedCount === selectedIds.length) {
-                        announceFeedback(view, "The selected leads were deleted, but the list could not refresh. Refresh the dashboard to verify the latest records.");
+                        announceFeedback(view, "The selected records were deleted, but the list could not refresh. Refresh the dashboard to verify the latest records.");
                     }
                 } catch (error) {
-                    // Do not surface raw provider/database errors in the dashboard UI.
-                    announceFeedback(view, "Unable to complete the bulk deletion. The selected leads remain selected for review; refresh the dashboard before retrying.");
+                    // Keep raw database/provider details out of the dashboard UI.
+                    announceFeedback(view, "Unable to complete the bulk deletion. The selected records remain selected for review; refresh the dashboard before retrying.");
                 } finally {
                     state.tableBulkActionRunning = false;
                     renderView();
