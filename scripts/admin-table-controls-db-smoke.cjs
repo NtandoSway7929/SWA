@@ -87,7 +87,7 @@ async function bestEffortCleanup(userIds, recordIds) {
     try { await rest("DELETE", table, query, serviceOptions); } catch { /* local stack is disposable */ }
   };
 
-  for (const id of [recordIds.taskId, recordIds.followupId]) {
+  for (const id of [recordIds.taskId, recordIds.followupId, recordIds.leadDeleteId]) {
     if (id) await clean("activity_log", "entity_id=eq." + id);
   }
   if (recordIds.followupId) await clean("follow_ups", "id=eq." + recordIds.followupId);
