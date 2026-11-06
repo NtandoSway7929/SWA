@@ -260,9 +260,13 @@ Deno.serve(async request => {
 
                 sent += 1;
             } catch (error) {
+                const pushError = error as {
+                    statusCode?: number;
+                    status?: number;
+                } | null;
                 const statusCode =
-                    error?.statusCode ||
-                    error?.status ||
+                    pushError?.statusCode ||
+                    pushError?.status ||
                     null;
 
                 if (statusCode === 404 || statusCode === 410) {
@@ -299,11 +303,12 @@ Deno.serve(async request => {
             { status: 200, headers: jsonHeaders }
         );
     } catch (error) {
+        const dispatcherError = error as { message?: string } | null;
         console.error("Admin push dispatcher failed:", error);
 
         return new Response(
             JSON.stringify({
-                error: error?.message || "Push delivery failed."
+                error: dispatcherError?.message || "Push delivery failed."
             }),
             { status: 500, headers: jsonHeaders }
         );

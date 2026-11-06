@@ -1,4 +1,4 @@
-name: Validate email inbox sync
+name: Validate email inbox and push notifications
 
 on:
   push:
@@ -6,9 +6,11 @@ on:
     paths:
       - "supabase/functions/sync-email-inbox/**"
       - "supabase/functions/delete-email-messages/**"
+      - "supabase/functions/send-admin-push/**"
       - "supabase/config.toml"
       - "scripts/email-inbox-sync.test.mjs"
       - "scripts/delete-email-messages.test.mjs"
+      - "scripts/admin-push-preferences-grant.test.mjs"
       - "admin-dashboard/admin-workspace.js"
       - "supabase/migrations/**"
       - ".github/workflows/validate-email-inbox.yml"
@@ -17,9 +19,11 @@ on:
     paths:
       - "supabase/functions/sync-email-inbox/**"
       - "supabase/functions/delete-email-messages/**"
+      - "supabase/functions/send-admin-push/**"
       - "supabase/config.toml"
       - "scripts/email-inbox-sync.test.mjs"
       - "scripts/delete-email-messages.test.mjs"
+      - "scripts/admin-push-preferences-grant.test.mjs"
       - "admin-dashboard/admin-workspace.js"
       - "supabase/migrations/**"
       - ".github/workflows/validate-email-inbox.yml"
@@ -29,7 +33,7 @@ permissions:
 
 jobs:
   validate:
-    name: Test inbox sync batching and reply linking
+    name: Validate inbox sync, deletion, and push permissions
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -57,8 +61,11 @@ jobs:
           node --check supabase/functions/delete-email-messages/delete-helpers.mjs
           node --check scripts/delete-email-messages.test.mjs
           node --test scripts/delete-email-messages.test.mjs
+          node --check scripts/admin-push-preferences-grant.test.mjs
+          node --test scripts/admin-push-preferences-grant.test.mjs
 
       - name: Type-check the deployed Edge Function sources
         run: |
           deno check --no-lock supabase/functions/sync-email-inbox/index.ts
           deno check --no-lock supabase/functions/delete-email-messages/index.ts
+          deno check --no-lock supabase/functions/send-admin-push/index.ts
