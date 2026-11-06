@@ -18,6 +18,9 @@ create table if not exists innerme_private.email_sync_cron_token_hashes (
     created_at timestamptz not null default now()
 );
 
+alter table innerme_private.email_sync_cron_token_hashes
+    enable row level security;
+
 revoke all on table innerme_private.email_sync_cron_token_hashes
     from public, anon, authenticated;
 
