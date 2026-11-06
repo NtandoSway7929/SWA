@@ -86,6 +86,69 @@ const path = require("node:path");
     await tasks.locator('[data-admin-table-filter="tasks"]').selectOption("todo");
     if (await tasks.locator('[data-admin-table-row="tasks"]:visible').count() !== 2) throw new Error("Task todo filter failed.");
 
+    // Tasks: cancellation must be non-mutating; confirmed deletion removes only the selected task.
+    const taskToDelete = tasks.locator('[data-admin-table-row="tasks"]:visible').filter({ hasText: "Prepare proposal" });
+    await taskToDelete.locator('[data-admin-table-select="tasks"]').check();
+    await tasks.locator('[data-admin-table-bulk-action="delete"]').click();
+    if (!(await page.locator("#preview-root").getAttribute("data-confirmation-message")).includes("Permanently delete 1 selected task")) {
+      throw new Error("Task bulk deletion did not display a count-specific confirmation.");
+    }
+    if ((await tasks.locator('[data-admin-table-selected-count="tasks"]').innerText()).trim() !== "1 selected") {
+      throw new Error("Cancelling task deletion must preserve the selection.");
+    }
+    await page.evaluate(() => window.setPreviewBulkDeleteConfirmation(true));
+    await tasks.locator('[data-admin-table-bulk-action="delete"]').click();
+    if (await page.locator("#preview-root").getAttribute("data-deleted-records-view") !== "tasks" ||
+        await page.locator("#preview-root").getAttribute("data-deleted-record-ids") !== "task-a") {
+      throw new Error("Confirmed task deletion did not remove only the selected synthetic task.");
+    }
+    await tasks.locator('[data-admin-table-filter="tasks"]').selectOption("all");
+    if (await tasks.locator('[data-admin-table-row="tasks"]').count() !== 2) {
+      throw new Error("Confirmed task deletion should remove exactly one task.");
+    }
+
+    // Follow-ups use the same confirm/retain-selection workflow.
+    const followupToDelete = followups.locator('[data-admin-table-row="followups"]').filter({ hasText: "Check interest" });
+    await followupToDelete.locator('[data-admin-table-select="followups"]').check();
+    await page.evaluate(() => window.setPreviewBulkDeleteConfirmation(false));
+    await followups.locator('[data-admin-table-bulk-action="delete"]').click();
+    if (!(await page.locator("#preview-root").getAttribute("data-confirmation-message")).includes("Permanently delete 1 selected follow-up")) {
+      throw new Error("Follow-up bulk deletion did not display a singular confirmation.");
+    }
+    if ((await followups.locator('[data-admin-table-selected-count="followups"]').innerText()).trim() !== "1 selected") {
+      throw new Error("Cancelling follow-up deletion must preserve the selection.");
+    }
+    await page.evaluate(() => window.setPreviewBulkDeleteConfirmation(true));
+    await followups.locator('[data-admin-table-bulk-action="delete"]').click();
+    if (await page.locator("#preview-root").getAttribute("data-deleted-records-view") !== "followups" ||
+        await page.locator("#preview-root").getAttribute("data-deleted-record-ids") !== "follow-b") {
+      throw new Error("Confirmed follow-up deletion did not remove only the selected synthetic follow-up.");
+    }
+
+    const communications = page.locator('[data-preview-view="communications"]');
+    await communications.locator('[data-admin-table-search-input="communications"]').fill("Earlier introduction");
+    if (await communications.locator('[data-admin-table-row="communications"]:visible').count() !== 1) {
+      throw new Error("Communication Log message search failed.");
+    }
+    await communications.locator('[data-admin-table-search-input="communications"]').fill("");
+    await communications.locator('[data-admin-table-sort="communications"]').selectOption("date_desc");
+    if (!(await communications.locator('[data-admin-table-row="communications"]:visible').first().innerText()).includes("Follow-up")) {
+      throw new Error("Communication Log should sort newest first.");
+    }
+    const communicationToDelete = communications.locator('[data-admin-table-row="communications"]').filter({ hasText: "Earlier introduction" });
+    await communicationToDelete.locator('[data-admin-table-select="communications"]').check();
+    await page.evaluate(() => window.setPreviewBulkDeleteConfirmation(false));
+    await communications.locator('[data-admin-table-bulk-action="delete"]').click();
+    if (!(await page.locator("#preview-root").getAttribute("data-confirmation-message")).includes("Permanently delete 1 selected communication log entry")) {
+      throw new Error("Communication Log bulk deletion did not display a count-specific confirmation.");
+    }
+    await page.evaluate(() => window.setPreviewBulkDeleteConfirmation(true));
+    await communications.locator('[data-admin-table-bulk-action="delete"]').click();
+    if (await page.locator("#preview-root").getAttribute("data-deleted-records-view") !== "communications" ||
+        await page.locator("#preview-root").getAttribute("data-deleted-record-ids") !== "comm-a") {
+      throw new Error("Confirmed Communication Log deletion did not remove only the selected synthetic entry.");
+    }
+
     await page.screenshot({ path: "artifacts/admin-table-controls-desktop.png", fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: "artifacts/admin-table-controls-mobile.png", fullPage: true });
