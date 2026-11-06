@@ -113,6 +113,8 @@ Deno.serve(async (req) => {
     }
 
     const inboundRecords = records.filter((record: any) => record.direction === "inbound");
+    let mailboxMessagesNotFound = 0;
+    let mailboxUidsReconciled = 0;
     if (inboundRecords.length) {
       const imapPassword = Deno.env.get("EMAIL_IMAP_PASSWORD");
       if (!imapPassword) {
@@ -160,9 +162,6 @@ Deno.serve(async (req) => {
 
       const deleteTargets = resolveInboxDeleteTargets(inboundRecords, currentMessages, folder);
       const uidsToDelete = new Set(deleteTargets.uids);
-      let mailboxMessagesNotFound = 0;
-      let mailboxUidsReconciled = 0;
-
       // UIDs are unique only within an IMAP UIDVALIDITY generation. If a mailbox
       // was rebuilt, an old UID may now point to a different message. Search by
       // the stored RFC Message-ID, then verify the exact envelope ID before
