@@ -77,6 +77,31 @@ const followups = [
   }
 ];
 
+const communications = [
+  {
+    id: "comm-old", lead_id: "lead-alpha", client_id: null, channel: "Email",
+    direction: "outbound", subject: "Older introduction", message: "Older communication fixture",
+    contacted_at: "2026-10-20T10:00:00Z", created_by: TEST_USER_ID
+  },
+  {
+    id: "comm-new", lead_id: "lead-bravo", client_id: null, channel: "WhatsApp",
+    direction: "outbound", subject: "Latest follow-up", message: "Newer communication fixture",
+    contacted_at: "2026-11-01T10:00:00Z", created_by: TEST_USER_ID
+  }
+];
+
+const emailMessages = [
+  {
+    id: "email-msg-inbound-1", direction: "inbound", mailbox: "info@swayphics.co.za",
+    source_key: "test:inbox:1", thread_id: "email-thread-fixture",
+    from_name: "Synthetic Sender", from_email: "sender@example.invalid",
+    to_email: "info@swayphics.co.za", subject: "Synthetic inbox fixture",
+    text_body: "A synthetic email used only for the isolated admin dashboard browser test.",
+    received_at: "2026-11-05T10:00:00Z", is_read: false,
+    message_id: "<synthetic-inbox-1@example.invalid>"
+  }
+];
+
 function dateOffset(days) {
   const value = new Date();
   value.setDate(value.getDate() + days);
@@ -143,7 +168,7 @@ function jsonResponse(body, status = 200, extraHeaders = {}) {
     contentType: "application/json; charset=utf-8",
     headers: {
       "Access-Control-Allow-Origin": "http://127.0.0.1:4173",
-      "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "apikey,authorization,content-type,prefer,x-client-info",
       "Access-Control-Max-Age": "600",
       ...extraHeaders
@@ -197,7 +222,8 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/client_portal_requests") return [];
   if (url.pathname === "/rest/v1/lead_proposals") return [];
   if (url.pathname === "/rest/v1/client_documents") return [];
-  if (url.pathname === "/rest/v1/communication_logs") return [];
+  if (url.pathname === "/rest/v1/communication_logs") return communications;
+  if (url.pathname === "/rest/v1/email_messages") return emailMessages;
   if (url.pathname === "/rest/v1/lead_stage_history") return [];
   if (url.pathname === "/rest/v1/client_portal_tokens") return [];
   if (url.pathname === "/rest/v1/admin_notifications") return [];
@@ -252,7 +278,7 @@ async function main() {
         status: 204,
         headers: {
           "Access-Control-Allow-Origin": "http://127.0.0.1:4173",
-          "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, DELETE, OPTIONS",
           "Access-Control-Allow-Headers": "apikey,authorization,content-type,prefer,x-client-info",
           "Access-Control-Max-Age": "600"
         },
@@ -263,16 +289,37 @@ async function main() {
     if (method !== "GET" && method !== "HEAD") {
       // Permanent lead deletions are applied to in-memory test records only.
       // The browser cannot send these requests to a hosted Supabase project.
-      if (method === "DELETE" && url.pathname === "/rest/v1/leads") {
+      if (method === "DELETE" && ["/rest/v1/leads", "/rest/v1/tasks", "/rest/v1/follow_ups", "/rest/v1/communication_logs"].includes(url.pathname)) {
+        const table = {
+          "/rest/v1/leads": leads,
+          "/rest/v1/tasks": tasks,
+          "/rest/v1/follow_ups": followups,
+          "/rest/v1/communication_logs": communications
+        }[url.pathname];
         const filter = String(url.searchParams.get("id") || "");
         const id = filter.startsWith("eq.") ? decodeURIComponent(filter.slice(3)) : "";
-        const index = leads.findIndex(item => String(item.id) === id);
+        const index = table.findIndex(item => String(item.id) === id);
         if (index >= 0) {
-          const deleted = leads.splice(index, 1)[0];
+          const deleted = table.splice(index, 1)[0];
           metrics.mockedTableActionWrites.push({ method, path: url.pathname, id });
           return route.fulfill(jsonResponse([deleted]));
         }
         return route.fulfill(jsonResponse([]));
+      }
+      if (method === "DELETE" && url.pathname === "/rest/v1/email_messages") {
+        const filter = String(url.searchParams.get("id") || "");
+        const match = filter.match(/^in\.\((.*)\)$/);
+        const requestedIds = new Set(match ? match[1].split(",").map(value => decodeURIComponent(value.trim())) : []);
+        const deleted = [];
+        for (let index = emailMessages.length - 1; index >= 0; index -= 1) {
+          if (requestedIds.has(String(emailMessages[index].id))) {
+            deleted.unshift(emailMessages.splice(index, 1)[0]);
+          }
+        }
+        deleted.forEach(record => metrics.mockedTableActionWrites.push({
+          method, path: url.pathname, id: record.id
+        }));
+        return route.fulfill(jsonResponse(deleted));
       }
 
       // Completion requests are applied to in-memory test arrays only.
