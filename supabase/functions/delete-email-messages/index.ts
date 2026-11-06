@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
     const storedResult = await serviceClient
       .from("email_messages")
-      .select("id,direction,mailbox,imap_uid,message_id,source_key")
+      .select("id,direction,mailbox,imap_uid,imap_uid_validity,message_id,source_key")
       .eq("mailbox", MAILBOX)
       .in("id", messageIds);
 
@@ -160,7 +160,17 @@ Deno.serve(async (req) => {
         throw new Error("The connected mailbox could not verify selected message identities.");
       }
 
-      const deleteTargets = resolveInboxDeleteTargets(inboundRecords, currentMessages, folder);
+      const currentUidValidity = Number(mailboxClient.mailbox?.uidValidity || 0);
+      if (!Number.isSafeInteger(currentUidValidity) || currentUidValidity <= 0) {
+        throw new Error("The connected mailbox did not provide a valid UIDVALIDITY value.");
+      }
+
+      const deleteTargets = resolveInboxDeleteTargets(
+        inboundRecords,
+        currentMessages,
+        folder,
+        currentUidValidity,
+      );
       const uidsToDelete = new Set(deleteTargets.uids);
       // UIDs are unique only within an IMAP UIDVALIDITY generation. If a mailbox
       // was rebuilt, an old UID may now point to a different message. Search by
