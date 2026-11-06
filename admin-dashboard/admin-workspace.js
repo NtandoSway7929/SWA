@@ -27,9 +27,12 @@
             followups: { search: "", filter: "all", sort: "scheduled_asc" },
             invoices: { search: "", filter: "all", sort: "invoice_due_asc" }
         },
-        tableSelection: { leads: [], tasks: [], followups: [], invoices: [] },
-        tableFeedback: { leads: "", tasks: "", followups: "", invoices: "" },
+        tableSelection: { leads: [], tasks: [], followups: [], communications: [], invoices: [] },
+        tableFeedback: { leads: "", tasks: "", followups: "", communications: "", invoices: "" },
         tableBulkActionRunning: false,
+        emailThreadSelection: [],
+        emailBulkDeleteRunning: false,
+        emailBulkDeleteFeedback: "",
         currentUser: null,
         currentAdmin: null,
         greetingName: "",
@@ -12172,6 +12175,71 @@ function simpleBars(items, color) {
         );
     }
 
+    async function deleteSelectedTableRecords(view, ids) {
+        const targets = {
+            leads: { table: "leads", label: "lead" },
+            tasks: { table: "tasks", label: "task" },
+            followups: { table: "follow_ups", label: "follow-up" },
+            communications: { table: "communication_logs", label: "communication log entry" }
+        };
+        const target = targets[String(view || "")];
+        if (!target) throw new Error("Bulk deletion is not available for this record type.");
+
+        const requestedIds = Array.from(new Set((Array.isArray(ids) ? ids : [])
+            .map(function (id) { return String(id || "").trim(); })
+            .filter(Boolean)));
+        const deletedIds = [];
+        const failedIds = [];
+        const activityLogFailures = [];
+
+        for (const id of requestedIds) {
+            try {
+                const deletedRecords = await api(
+                    "/rest/v1/" + target.table + "?id=eq." + encodeURIComponent(id),
+                    {
+                        method: "DELETE",
+                        headers: headers({ "Prefer": "return=representation" })
+                    }
+                );
+
+                if (!Array.isArray(deletedRecords) ||
+                    !deletedRecords.some(function (record) { return String(record.id) === id; })) {
+                    failedIds.push(id);
+                    continue;
+                }
+
+                deletedIds.push(id);
+                try {
+                    await logActivity("Deleted " + target.label, target.table, id);
+                } catch (error) {
+                    activityLogFailures.push(id);
+                    console.warn("A deleted " + target.label + " could not be written to the activity log.", error);
+                }
+            } catch (error) {
+                failedIds.push(id);
+                console.warn("Unable to delete selected " + target.label + ".", error);
+            }
+        }
+
+        let refreshFailed = false;
+        if (deletedIds.length) {
+            try {
+                await refreshData();
+                renderShell();
+            } catch (error) {
+                refreshFailed = true;
+                console.warn("Selected " + target.label + " records were deleted, but the dashboard refresh failed.", error);
+            }
+        }
+
+        return {
+            deletedIds: deletedIds,
+            failedIds: failedIds,
+            activityLogFailures: activityLogFailures,
+            refreshFailed: refreshFailed
+        };
+    }
+
     const adminTableControls = window.createSwayphicsAdminTableControls({
         state: state,
         workspace: workspace,
@@ -12182,65 +12250,10 @@ function simpleBars(items, color) {
         formatDisplayText: formatDisplayText,
         completeTask: completeTask,
         completeFollowup: completeFollowup,
-        deleteLeads: async function (ids) {
-            const requestedIds = Array.from(new Set((Array.isArray(ids) ? ids : [])
-                .map(function (id) { return String(id || "").trim(); })
-                .filter(Boolean)));
-            const deletedIds = [];
-            const failedIds = [];
-            const activityLogFailures = [];
-
-            for (const id of requestedIds) {
-                try {
-                    const deletedRecords = await api(
-                        "/rest/v1/leads?id=eq." + encodeURIComponent(id),
-                        {
-                            method: "DELETE",
-                            headers: headers({
-                                "Prefer": "return=representation"
-                            })
-                        }
-                    );
-
-                    if (!Array.isArray(deletedRecords) ||
-                        !deletedRecords.some(function (record) {
-                            return String(record.id) === id;
-                        })) {
-                        failedIds.push(id);
-                        continue;
-                    }
-
-                    deletedIds.push(id);
-                    try {
-                        await logActivity("Deleted lead", "leads", id);
-                    } catch (error) {
-                        activityLogFailures.push(id);
-                        console.warn("A deleted lead could not be written to the activity log.", error);
-                    }
-                } catch (error) {
-                    failedIds.push(id);
-                    console.warn("Unable to delete selected lead.", error);
-                }
-            }
-
-            let refreshFailed = false;
-            if (deletedIds.length) {
-                try {
-                    await refreshData();
-                    renderShell();
-                } catch (error) {
-                    refreshFailed = true;
-                    console.warn("Selected leads were deleted, but the dashboard refresh failed.", error);
-                }
-            }
-
-            return {
-                deletedIds: deletedIds,
-                failedIds: failedIds,
-                activityLogFailures: activityLogFailures,
-                refreshFailed: refreshFailed
-            };
+        deleteLeads: function (ids) {
+            return deleteSelectedTableRecords("leads", ids);
         },
+        deleteRecords: deleteSelectedTableRecords,
         renderView: renderView,
         swayAlert: swayAlert,
         swayConfirm: swayConfirm,
@@ -12248,8 +12261,7 @@ function simpleBars(items, color) {
             if (item.archived !== true &&
                 item.status !== "paid" &&
                 item.status !== "cancelled" &&
-                item.due_date &&
-                isOverdue(item.due_date)
+                item.due_date && isOverdue(item.due_date)
             ) return "overdue";
             return String(item.status || "").toLowerCase();
         }
@@ -16194,6 +16206,89 @@ function simpleBars(items, color) {
         }
     }
 
+    async function deleteSelectedEmailThreads() {
+        if (state.emailBulkDeleteRunning || state.emailSyncing) return;
+        const selectedThreads = new Set((state.emailThreadSelection || []).map(String));
+        if (!selectedThreads.size) return;
+
+        const messageIds = Array.from(new Set(
+            (state.emailMessages || [])
+                .filter(function (message) { return selectedThreads.has(String(message.thread_id)); })
+                .map(function (message) { return String(message.id || "").trim(); })
+                .filter(Boolean)
+        ));
+        if (!messageIds.length) {
+            state.emailThreadSelection = [];
+            state.emailBulkDeleteFeedback = "The selected conversations are no longer in the inbox. Refresh the list and try again.";
+            renderView();
+            return;
+        }
+
+        const selectedConversationCount = selectedThreads.size;
+        const confirmed = await swayConfirm(
+            "Permanently delete " + selectedConversationCount + " selected email conversation" +
+            (selectedConversationCount === 1 ? "" : "s") + " containing " + messageIds.length +
+            " message" + (messageIds.length === 1 ? "" : "s") +
+            "? Incoming messages will also be removed from the connected HOSTAFRICA mailbox. " +
+            "Outbound message copies will be removed from this dashboard only; sent emails cannot be recalled. This cannot be undone."
+        );
+        if (!confirmed) return;
+
+        state.emailBulkDeleteRunning = true;
+        state.emailBulkDeleteFeedback = "Deleting " + selectedConversationCount + " conversations…";
+        renderView();
+
+        try {
+            const result = await api("/functions/v1/delete-email-messages", {
+                method: "POST",
+                headers: headers({ "Content-Type": "application/json" }),
+                body: JSON.stringify({ message_ids: messageIds })
+            });
+            const deletedIds = new Set(
+                result && Array.isArray(result.deleted_ids)
+                    ? result.deleted_ids.map(String)
+                    : []
+            );
+            if (deletedIds.size !== messageIds.length ||
+                messageIds.some(function (id) { return !deletedIds.has(id); })) {
+                throw new Error("The inbox deletion response did not confirm every selected message.");
+            }
+
+            for (const threadId of selectedThreads) {
+                try {
+                    await logActivity("Deleted email conversation", "email_messages", threadId);
+                } catch (error) {
+                    console.warn("A deleted email conversation could not be added to the activity log.", error);
+                }
+            }
+
+            await loadEmailMessages();
+            state.emailThreadSelection = [];
+            state.emailBulkDeleteFeedback = "Permanently deleted " + selectedConversationCount +
+                " email conversation" + (selectedConversationCount === 1 ? "" : "s") + ".";
+        } catch (error) {
+            // A response can be lost after the Edge Function has committed the delete. Reload to distinguish that case.
+            try {
+                await loadEmailMessages();
+            } catch (reloadError) {
+                // Retain the original error and current selection.
+            }
+            const stillPresent = (state.emailMessages || []).some(function (message) {
+                return messageIds.includes(String(message.id));
+            });
+            if (!stillPresent) {
+                state.emailThreadSelection = [];
+                state.emailBulkDeleteFeedback = "The selected email conversations were deleted. The confirmation response was interrupted, but the inbox now reflects the deletion.";
+            } else {
+                state.emailBulkDeleteFeedback = "Unable to complete the email deletion. The selected conversations remain selected; check the inbox connection and try again.";
+            }
+        } finally {
+            state.emailBulkDeleteRunning = false;
+            if (state.currentView === "email") renderView();
+        }
+    }
+
+
     function renderEmailWorkspace() {
         const threads =
             emailThreadGroups();
@@ -16418,141 +16513,63 @@ function simpleBars(items, color) {
             );
         }
 
-        const inboundThreads =
-            threads.filter(
-                emailThreadHasInbound
+        const inboundThreads = threads.filter(emailThreadHasInbound);
+        const visibleThreadIds = new Set(inboundThreads.map(function (thread) { return String(thread.threadId); }));
+        state.emailThreadSelection = (Array.isArray(state.emailThreadSelection) ? state.emailThreadSelection : [])
+            .map(String).filter(function (threadId) { return visibleThreadIds.has(threadId); });
+        const selectedThreadIds = new Set(state.emailThreadSelection);
+        const selectedEmailMessageCount = inboundThreads.reduce(function (count, thread) {
+            return selectedThreadIds.has(String(thread.threadId)) ? count + thread.messages.length : count;
+        }, 0);
+        const allInboxThreadsSelected = inboundThreads.length > 0 &&
+            inboundThreads.every(function (thread) { return selectedThreadIds.has(String(thread.threadId)); });
+
+        const threadRows = inboundThreads.map(function (thread) {
+            const latest = thread.messages[thread.messages.length - 1];
+            const unread = emailThreadUnread(thread);
+            const sender = emailThreadSender(thread);
+            const preview = emailMessageText(latest) || emailThreadSubject(thread);
+            const threadId = String(thread.threadId);
+            return (
+                '<div class="sway-email-inbox-row">' +
+                    '<label class="sway-email-inbox-select">' +
+                        '<input type="checkbox" data-email-thread-select="' + esc(threadId) + '"' +
+                            (selectedThreadIds.has(threadId) ? " checked" : "") +
+                            (state.emailBulkDeleteRunning ? " disabled" : "") +
+                            ' aria-label="Select conversation: ' + esc(emailThreadSubject(thread)) + '">' +
+                        '<span aria-hidden="true"></span>' +
+                    "</label>" +
+                    '<button type="button" class="sway-email-inbox-item ' + (unread ? "unread" : "") +
+                        '" data-email-thread="' + esc(threadId) + '"' +
+                        (state.emailBulkDeleteRunning ? " disabled" : "") + '>' +
+                        '<span class="sway-email-inbox-unread" aria-hidden="true"></span>' +
+                        '<span class="sway-email-inbox-copy">' +
+                            "<strong>" + esc(sender) + "</strong>" +
+                            '<span class="sway-email-inbox-subject">' + esc(emailThreadSubject(thread)) + "</span>" +
+                            '<span class="sway-email-inbox-preview">' + esc(preview.slice(0, 150)) + "</span>" +
+                        "</span>" +
+                        '<span class="sway-email-inbox-date">' + esc(dateTime(latest.received_at || latest.created_at)) + "</span>" +
+                    "</button>" +
+                "</div>"
             );
+        }).join("");
 
-        const threadRows =
-            inboundThreads
-                .map(
-                    function (thread) {
-                        const latest =
-                            thread.messages[
-                                thread.messages.length - 1
-                            ];
+        const sentEmails = state.communications
+            .filter(function (item) { return item.channel === "Email" && item.direction === "outbound"; })
+            .slice(0, 6);
 
-                        const unread =
-                            emailThreadUnread(
-                                thread
-                            );
-
-                        const sender =
-                            emailThreadSender(
-                                thread
-                            );
-
-                        const preview =
-                            emailMessageText(
-                                latest
-                            ) ||
-                            emailThreadSubject(
-                                thread
-                            );
-
-                        return (
-                            '<button type="button" class="sway-email-inbox-item ' +
-                            (
-                                unread
-                                    ? "unread"
-                                    : ""
-                            ) +
-                            '" data-email-thread="' +
-                            esc(
-                                thread.threadId
-                            ) +
-                            '">' +
-                                '<span class="sway-email-inbox-unread" aria-hidden="true"></span>' +
-                                '<span class="sway-email-inbox-copy">' +
-                                    '<strong>' +
-                                        esc(sender) +
-                                    "</strong>" +
-                                    '<span class="sway-email-inbox-subject">' +
-                                        esc(
-                                            emailThreadSubject(
-                                                thread
-                                            )
-                                        ) +
-                                    "</span>" +
-                                    '<span class="sway-email-inbox-preview">' +
-                                        esc(
-                                            preview.slice(
-                                                0,
-                                                150
-                                            )
-                                        ) +
-                                    "</span>" +
-                                "</span>" +
-                                '<span class="sway-email-inbox-date">' +
-                                    esc(
-                                        dateTime(
-                                            latest.received_at ||
-                                            latest.created_at
-                                        )
-                                    ) +
-                                "</span>" +
-                            "</button>"
-                        );
-                    }
-                )
-                .join("");
-
-        const sentEmails =
-            state.communications
-                .filter(function (item) {
-                    return (
-                        item.channel === "Email" &&
-                        item.direction === "outbound"
-                    );
-                })
-                .slice(0, 6);
-
-        const recentRows =
-            sentEmails
-                .map(
-                    function (item) {
-                        const contactDetails =
-                            communicationContactDetails(
-                                item
-                            );
-
-                        return (
-                            "<tr>" +
-                                "<td><strong>" +
-                                    esc(
-                                        contactDetails.primary
-                                    ) +
-                                "</strong>" +
-                                (
-                                    item.subject
-                                        ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                          esc(
-                                              item.subject
-                                          ) +
-                                          "</span>"
-                                        : ""
-                                ) +
-                                "</td>" +
-                                "<td>" +
-                                    '<div class="sway-communication-message">' +
-                                        esc(
-                                            item.message ||
-                                            "—"
-                                        ) +
-                                    "</div>" +
-                                "</td>" +
-                                "<td>" +
-                                    esc(
-                                        dateTime(
-                                            item.contacted_at
-                                        )
-                                    ) +
-                                "</td>" +
-                            "</tr>"
-                        );
-                    }
-                )
-                .join("");
+        const recentRows = sentEmails.map(function (item) {
+            const contactDetails = communicationContactDetails(item);
+            return (
+                "<tr>" +
+                    "<td><strong>" + esc(contactDetails.primary) + "</strong>" +
+                        (item.subject ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' + esc(item.subject) + "</span>" : "") +
+                    "</td>" +
+                    "<td>" + '<div class="sway-communication-message">' + esc(item.message || "—") + "</div>" + "</td>" +
+                    "<td>" + esc(dateTime(item.contacted_at)) + "</td>" +
+                "</tr>"
+            );
+        }).join("");
 
         return (
             heading(
@@ -16597,6 +16614,12 @@ function simpleBars(items, color) {
                             ) +
                         "</h3>" +
                     "</div>" +
+                    (inboundThreads.length
+                        ? '<label class="sway-email-select-all"><input type="checkbox" data-email-select-all' +
+                          (allInboxThreadsSelected ? " checked" : "") +
+                          (state.emailBulkDeleteRunning ? " disabled" : "") +
+                          ' aria-label="Select all inbox conversations"> Select all</label>'
+                        : "") +
                     '<button type="button" class="sway-workspace-button" data-email-sync ' +
                         (
                             state.emailSyncing
@@ -16607,6 +16630,22 @@ function simpleBars(items, color) {
                         esc(syncLabel) +
                     "</button>" +
                 "</div>" +
+                '<div class="sway-email-selection-toolbar" data-email-selection-toolbar' +
+                    (state.emailThreadSelection.length ? "" : " hidden") + '>' +
+                    '<span class="sway-email-selection-count" data-email-selected-count>' +
+                        esc(state.emailThreadSelection.length + " conversations · " + selectedEmailMessageCount + " messages selected") +
+                    "</span>" +
+                    '<div class="sway-email-selection-actions">' +
+                        '<button type="button" class="sway-workspace-button danger" data-email-bulk-delete' +
+                            (state.emailBulkDeleteRunning || state.emailSyncing ? " disabled" : "") + '>Delete selected conversations</button>' +
+                        '<button type="button" class="sway-workspace-button" data-email-selection-clear' +
+                            (state.emailBulkDeleteRunning ? " disabled" : "") + '>Clear selection</button>' +
+                    "</div>" +
+                "</div>" +
+                '<p class="sway-email-bulk-feedback" data-email-bulk-feedback role="status" aria-live="polite"' +
+                    (state.emailBulkDeleteFeedback ? "" : " hidden") + ">" +
+                    esc(state.emailBulkDeleteFeedback) +
+                "</p>" +
                 (
                     threadRows
                         ? '<div class="sway-email-inbox-list">' +
@@ -18419,67 +18458,40 @@ function simpleBars(items, color) {
     }
 
     function renderCommunications() {
-        const rows =
-            state.communications.map(function (item) {
-                const contactDetails =
-                    communicationContactDetails(item);
-
-                return (
-                    "<tr>" +
-                        "<td>" +
-                            "<strong>" +
-                                esc(contactDetails.primary) +
-                            "</strong>" +
-                            (
-                                contactDetails.secondary
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(contactDetails.secondary) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                            (
-                                contactDetails.ambiguous
-                                    ? '<br><span style="color:#B42318;font-size:.54rem;font-weight:800;">Needs contact review</span>'
-                                    : ""
-                            ) +
-                            (
-                                item.subject
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.subject) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(item.channel || "—") +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.direction || "outbound") +
-                        "</td>" +
-                        "<td>" +
-                            esc(dateTime(item.contacted_at)) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-communication-message">' +
-                                esc(item.message || "—") +
-                            "</div>" +
-                        "</td>" +
-                        "<td>" +
-                            esc(adminName(item.created_by)) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                '<button class="sway-row-action" data-edit="communications" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
-                                '<button class="sway-row-action danger" data-delete="communications" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const tableItems = adminTableControls.items("communications", state.communications);
+        const rows = tableItems.map(function (item) {
+            const contactDetails = communicationContactDetails(item);
+            return (
+                '<tr data-admin-table-row="communications" data-admin-table-id="' + esc(item.id) +
+                    '" data-admin-table-search="' + esc(adminTableControls.searchText("communications", item)) +
+                    '" data-admin-table-filter="' + esc(String(item.direction || "unknown").toLowerCase()) + '">' +
+                    adminTableControls.selectionCell("communications", item, contactDetails.primary) +
+                    "<td>" +
+                        "<strong>" + esc(contactDetails.primary) + "</strong>" +
+                        (contactDetails.secondary
+                            ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' + esc(contactDetails.secondary) + "</span>"
+                            : "") +
+                        (contactDetails.ambiguous
+                            ? '<br><span style="color:#B42318;font-size:.54rem;font-weight:800;">Needs contact review</span>'
+                            : "") +
+                        (item.subject
+                            ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' + esc(item.subject) + "</span>"
+                            : "") +
+                    "</td>" +
+                    "<td>" + esc(item.channel || "—") + "</td>" +
+                    "<td>" + chip(item.direction || "outbound") + "</td>" +
+                    "<td>" + esc(dateTime(item.contacted_at)) + "</td>" +
+                    "<td>" + '<div class="sway-communication-message">' + esc(item.message || "—") + "</div>" + "</td>" +
+                    "<td>" + esc(adminName(item.created_by)) + "</td>" +
+                    "<td>" +
+                        '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
+                            '<button class="sway-row-action" data-edit="communications" data-id="' + esc(item.id) + '">Edit</button>' +
+                            '<button class="sway-row-action danger" data-delete="communications" data-id="' + esc(item.id) + '">Delete</button>' +
+                        "</div></details></div>" +
+                    "</td>" +
+                "</tr>"
+            );
+        }).join("");
 
         return (
             heading(
@@ -18489,11 +18501,16 @@ function simpleBars(items, color) {
             panel(
                 "Communication log",
                 "Keep a durable record of important client and lead conversations across every channel.",
-                state.communications.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Contact</th><th>Channel</th><th>Direction</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th></tr></thead><tbody>' +
-                      rows +
+                adminTableControls.renderControls("communications") +
+                (state.communications.length
+                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr>' +
+                        '<th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="communications" aria-label="Select all visible communication log entries"></th>' +
+                        '<th>Contact</th><th>Channel</th><th>Direction</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th>' +
+                      "</tr></thead><tbody>" + rows +
+                      '<tr data-admin-table-no-results="communications" hidden><td colspan="8">No communication entries match these controls. Try another search or direction.</td></tr>' +
                       "</tbody></table></div>"
                     : empty("No communications logged yet. Use “Log communication” to start the relationship history.")
+                )
             )
         );
     }
@@ -27713,6 +27730,52 @@ function simpleBars(items, color) {
                         renderView();
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-email-thread-select]")
+            .forEach(function (checkbox) {
+                checkbox.addEventListener("change", function () {
+                    const threadId = String(checkbox.dataset.emailThreadSelect || "");
+                    const selected = new Set((state.emailThreadSelection || []).map(String));
+                    if (checkbox.checked) selected.add(threadId);
+                    else selected.delete(threadId);
+                    state.emailThreadSelection = Array.from(selected);
+                    state.emailBulkDeleteFeedback = "";
+                    renderView();
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-email-select-all]")
+            .forEach(function (checkbox) {
+                checkbox.addEventListener("change", function () {
+                    state.emailThreadSelection = checkbox.checked
+                        ? emailThreadGroups().filter(emailThreadHasInbound).map(function (thread) {
+                            return String(thread.threadId);
+                        })
+                        : [];
+                    state.emailBulkDeleteFeedback = "";
+                    renderView();
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-email-selection-clear]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    state.emailThreadSelection = [];
+                    state.emailBulkDeleteFeedback = "";
+                    renderView();
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-email-bulk-delete]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    deleteSelectedEmailThreads();
+                });
             });
 
         workspace

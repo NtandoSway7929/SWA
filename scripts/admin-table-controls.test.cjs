@@ -16,7 +16,7 @@ const controlsScriptIndex = dashboardHtml.indexOf('src="admin-table-controls.js'
 const workspaceScriptIndex = dashboardHtml.indexOf('src="admin-workspace.js');
 assert.ok(controlsScriptIndex >= 0 && workspaceScriptIndex > controlsScriptIndex,
     "the table controls module must load before the dashboard workspace");
-for (const view of ["leads", "followups", "tasks"]) {
+for (const view of ["leads", "followups", "tasks", "communications"]) {
     assert.ok(workspaceSource.includes('adminTableControls.renderControls("' + view + '")'),
         view + " view must render the table controls");
     assert.ok(workspaceSource.includes('adminTableControls.items("' + view + '", state.' + view + ")"),
@@ -28,16 +28,26 @@ assert.ok(workspaceSource.includes("adminTableControls.bind();"),
     "dashboard view lifecycle must bind the table controls after rendering");
 assert.match(workspaceSource, /data-toggle-lead-contacted=/,
     "each eligible lead row should expose the contacted toggle in its Actions dropdown");
-const bulkDeleteHandlerIndex = workspaceSource.indexOf("deleteLeads: async function (ids)");
+const bulkDeleteHandlerIndex = workspaceSource.indexOf("async function deleteSelectedTableRecords(view, ids)");
 assert.ok(bulkDeleteHandlerIndex >= 0,
-    "the table-controls module should receive the authenticated selected-lead delete handler");
-const bulkDeleteHandlerSource = workspaceSource.slice(bulkDeleteHandlerIndex, bulkDeleteHandlerIndex + 2600);
+    "the dashboard must define the authenticated generic bulk-delete handler");
+const bulkDeleteHandlerSource = workspaceSource.slice(bulkDeleteHandlerIndex, bulkDeleteHandlerIndex + 3600);
 assert.match(bulkDeleteHandlerSource, /method: "DELETE"/,
-    "bulk lead deletion must use the existing authenticated Supabase API helper");
+    "bulk deletion must use the authenticated Supabase API helper");
 assert.match(bulkDeleteHandlerSource, /return=representation/,
-    "bulk lead deletion must verify that each requested lead was actually deleted");
-assert.match(bulkDeleteHandlerSource, /logActivity\("Deleted lead", "leads", id\)/,
-    "each permanently deleted lead should be added to the workspace activity log");
+    "bulk deletion must verify each requested row was actually deleted");
+assert.match(bulkDeleteHandlerSource, /logActivity\("Deleted " \+ target\.label, target\.table, id\)/,
+    "each successful deletion must be written to the activity log");
+assert.match(workspaceSource, /deleteLeads: function \(ids\)[\s\S]*?deleteRecords: deleteSelectedTableRecords/,
+    "leads and the other eligible lists must use the shared safe deletion helper");
+assert.match(workspaceSource, /communications: \{ table: "communication_logs"/,
+    "communication log bulk deletion must target communication_logs");
+assert.match(workspaceSource, /data-email-bulk-delete/,
+    "the Email inbox must expose a separate selected-conversation delete action");
+assert.match(workspaceSource, /functions\/v1\/delete-email-messages/,
+    "the Email inbox must use its identity-checked server-side deletion function");
+assert.match(workspaceSource, /Incoming messages will also be removed from the connected HOSTAFRICA mailbox/,
+    "the inbox confirmation must disclose deletion from the connected mailbox");
 assert.match(workspaceSource, /contactStatus\.source === "communication"[\s\S]*?data-toggle-lead-contacted=/,
     "leads with outbound communication records should be distinguished from manual contact marks");
 assert.match(workspaceSource, /contactStatus\.contacted \? "Undo contacted mark" : "Mark as contacted"/,
@@ -77,10 +87,11 @@ const state = {
         leads: { search: "", filter: "all", sort: "value_desc" },
         tasks: { search: "", filter: "all", sort: "priority_desc" },
         followups: { search: "", filter: "all", sort: "scheduled_asc" },
+        communications: { search: "", filter: "all", sort: "contacted_desc" },
         invoices: { search: "", filter: "all", sort: "invoice_due_asc" }
     },
-    tableSelection: { leads: ["lead-mid"], tasks: [], followups: [], invoices: [] },
-    tableFeedback: { leads: "", tasks: "", followups: "", invoices: "" },
+    tableSelection: { leads: ["lead-mid"], tasks: [], followups: [], communications: [], invoices: [] },
+    tableFeedback: { leads: "", tasks: "", followups: "", communications: "", invoices: "" },
     tableBulkActionRunning: false,
     leads: [
         { id: "lead-low", business_name: "Alpha", contact_name: "Sam", email: "sam@example.com", status: "new", estimated_value: 250, next_follow_up: "2026-11-03" },
@@ -96,6 +107,10 @@ const state = {
         { id: "followup-later", lead_id: "lead-low", channel: "Email", status: "pending", scheduled_for: "2026-11-02", note: "call later" },
         { id: "followup-sooner", lead_id: "lead-mid", channel: "WhatsApp", status: "pending", scheduled_for: "2026-10-24" },
         { id: "followup-done", lead_id: "lead-high", channel: "Email", status: "completed", scheduled_for: "2026-10-23" }
+    ],
+    communications: [
+        { id: "communication-latest", lead_id: "lead-low", channel: "WhatsApp", direction: "outbound", subject: "Re: website", message: "Follow-up message", contacted_at: "2026-11-05T09:00:00Z" },
+        { id: "communication-earlier", lead_id: "lead-mid", channel: "Email", direction: "inbound", subject: "Enquiry", message: "Interested", contacted_at: "2026-11-01T09:00:00Z" }
     ],
     invoices: [
         { id: "inv-sent", invoice_number: "INV-100", client_id: "client-zulu", status: "sent", display_status: "sent", total: 1500, amount_paid: 0, amount_outstanding: 1500, due_date: "2026-11-10", issue_date: "2026-10-10", created_at: "2026-10-10T12:00:00Z", archived: false, email: "finance@zulu.example", email_status: "sent" },
@@ -196,10 +211,16 @@ assert.match(controlsMarkup, /data-admin-table-bulk-action="delete"/,
     "the Leads bulk toolbar should expose a delete-selected action");
 assert.match(controlsMarkup, /Delete selected leads/,
     "the destructive action should clearly identify the selected lead records");
-assert.doesNotMatch(controls.renderControls("tasks"), /data-admin-table-bulk-action="delete"/,
-    "bulk lead deletion must not appear in the Tasks toolbar");
-assert.doesNotMatch(controls.renderControls("followups"), /data-admin-table-bulk-action="delete"/,
-    "bulk lead deletion must not appear in the Follow-ups toolbar");
+for (const view of ["tasks", "followups", "communications"]) {
+    assert.match(controls.renderControls(view), /data-admin-table-bulk-action="delete"/,
+        view + " bulk toolbar should expose a delete-selected action");
+}
+assert.match(controls.renderControls("tasks"), /Complete selected/,
+    "task bulk completion should remain available alongside bulk deletion");
+assert.match(controls.renderControls("followups"), /Complete selected/,
+    "follow-up bulk completion should remain available alongside bulk deletion");
+assert.doesNotMatch(controls.renderControls("invoices"), /data-admin-table-bulk-action="delete"/,
+    "financial invoice records should not inherit generic bulk deletion");
 
 state.tableControls.invoices.sort = "invoice_due_asc";
 assert.deepEqual(
@@ -232,6 +253,13 @@ assert.deepEqual(
 assert.match(controls.searchText("invoices", state.invoices[0]), /inv-100/i);
 assert.match(controls.searchText("invoices", state.invoices[0]), /client client-zulu/i);
 assert.match(controls.searchText("invoices", state.invoices[2]), /archived/);
+assert.match(controls.searchText("communications", state.communications[0]), /follow-up message/);
+state.tableControls.communications.sort = "contacted_desc";
+assert.deepEqual(controls.items("communications", state.communications).map(item => item.id),
+    ["communication-latest", "communication-earlier"]);
+state.tableControls.communications.filter = "inbound";
+assert.deepEqual(controls.items("communications", state.communications).map(item => item.id),
+    ["communication-earlier"], "communication direction should be filterable");
 
 state.tableControls.invoices.filter = "overdue";
 assert.deepEqual(
@@ -329,7 +357,7 @@ assert.ok(
 assert.match(invoiceSaveSource, /if \(!selectedClient \|\| !selectedClient\.email\)/,
     "the direct send path must still validate that the selected client has an email address");
 
-assert.ok(moduleSource.includes('["leads", "tasks", "followups", "invoices"].forEach(function (view)'),
+assert.ok(moduleSource.includes('["leads", "tasks", "followups", "communications", "invoices"].forEach(function (view)'),
     "invoice search should be reapplied after control-driven rerenders and archive-mode changes");
 
 
@@ -434,7 +462,74 @@ async function verifyBulkLeadDeletion() {
         "the Leads view should rerender once after the bulk delete attempt");
 }
 
-verifyBulkLeadDeletion().then(function () {
+
+async function verifyBulkDeletionForOtherViews() {
+    for (const view of ["tasks", "followups", "communications"]) {
+        const selectedIds = [view + "-one", view + "-two"];
+        const testState = {
+            tableControls: { [view]: { search: "", filter: "all", sort: "created_desc" } },
+            tableSelection: { [view]: selectedIds.slice() },
+            tableFeedback: { [view]: "" },
+            tableBulkActionRunning: false,
+            [view]: selectedIds.map(id => ({ id, status: "pending" }))
+        };
+        const handlers = {};
+        const calls = [];
+        const button = {
+            disabled: false,
+            addEventListener(name, callback) { handlers[name] = callback; },
+            getAttribute(name) { return name === "data-admin-table-bulk-action" ? "delete" : null; },
+            closest() { return { getAttribute: name => name === "data-admin-table-tools" ? view : null }; }
+        };
+        let confirmText = "";
+        let renders = 0;
+        const fakeWorkspace = {
+            querySelector() { return null; },
+            querySelectorAll(selector) {
+                return selector.includes("[data-admin-table-bulk-action]") ? [button] : [];
+            }
+        };
+        const instance = global.window.createSwayphicsAdminTableControls({
+            state: testState,
+            workspace: fakeWorkspace,
+            esc: value => String(value == null ? "" : value),
+            adminName: () => "Admin",
+            clientName: id => String(id),
+            leadName: id => String(id),
+            formatDisplayText: value => String(value),
+            completeTask: async () => {},
+            completeFollowup: async () => {},
+            deleteRecords: async (receivedView, ids) => {
+                calls.push({ view: receivedView, ids: ids.slice() });
+                return {
+                    deletedIds: [ids[0]],
+                    failedIds: [ids[1]],
+                    activityLogFailures: [],
+                    refreshFailed: false
+                };
+            },
+            renderView: () => { renders += 1; },
+            swayAlert: message => { throw new Error(message); },
+            swayConfirm: async message => { confirmText = message; return true; }
+        });
+        instance.bind();
+        await handlers.click();
+        await new Promise(resolve => setImmediate(resolve));
+
+        const plural = view === "tasks" ? "tasks" : view === "followups" ? "follow-ups" : "communication log entries";
+        assert.equal(confirmText, "Permanently delete 2 selected " + plural + "? This cannot be undone.");
+        assert.equal(calls.length, 1, view + " should call the authenticated generic delete handler once");
+        assert.equal(calls[0].view, view, "the exact list type must be passed to the delete handler");
+        assert.deepEqual(new Set(calls[0].ids), new Set(selectedIds));
+        assert.deepEqual(testState.tableSelection[view], [selectedIds[1]],
+            "a failed " + view + " row must remain selected for review");
+        assert.match(testState.tableFeedback[view], /remain selected for review/);
+        assert.equal(testState.tableBulkActionRunning, false);
+        assert.equal(renders, 1);
+    }
+}
+
+verifyBulkLeadDeletion().then(verifyBulkDeletionForOtherViews).then(function () {
     console.log("Admin table controls tests passed.");
 }).catch(function (error) {
     console.error(error);
