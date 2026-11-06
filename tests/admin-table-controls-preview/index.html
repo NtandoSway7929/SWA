@@ -23,8 +23,8 @@ main{max-width:1180px;margin:auto}.preview-note{padding:14px;background:#fff;bor
 <script>
 (function(){
   const state={
-    tableControls:{leads:{search:"",filter:"all",sort:"value_desc"},tasks:{search:"",filter:"all",sort:"priority_desc"},followups:{search:"",filter:"all",sort:"scheduled_asc"}},
-    tableSelection:{leads:[],tasks:[],followups:[]},tableFeedback:{leads:"",tasks:"",followups:""},tableBulkActionRunning:false,
+    tableControls:{leads:{search:"",filter:"all",sort:"value_desc"},tasks:{search:"",filter:"all",sort:"priority_desc"},followups:{search:"",filter:"all",sort:"scheduled_asc"},communications:{search:"",filter:"all",sort:"date_desc"}},
+    tableSelection:{leads:[],tasks:[],followups:[],communications:[]},tableFeedback:{leads:"",tasks:"",followups:"",communications:""},tableBulkActionRunning:false,
     leads:[
       {id:"lead-a",business_name:"Alpha Studio",contact_name:"Sam Dube",email:'=HYPERLINK("https://example.invalid","Open")',service_interest:"Website",status:"new",source:"Referral",estimated_value:1500,next_follow_up:"2026-11-03"},
       {id:"lead-b",business_name:"Zulu Market",contact_name:"Lee Mokoena",email:"lee@example.test",service_interest:"Branding",status:"interested",source:"Website",estimated_value:4500,next_follow_up:"2026-10-25"},
@@ -39,13 +39,19 @@ main{max-width:1180px;margin:auto}.preview-note{padding:14px;background:#fff;bor
       {id:"follow-a",lead_id:"lead-a",channel:"Email",status:"pending",scheduled_for:"2026-11-02",note:"Send follow-up"},
       {id:"follow-b",lead_id:"lead-c",channel:"WhatsApp",status:"pending",scheduled_for:"2026-10-24",note:"Check interest"},
       {id:"follow-c",lead_id:"lead-b",channel:"Email",status:"completed",scheduled_for:"2026-10-23",note:"Already contacted"}
-    ],clients:[],admins:[]
+    ],
+    communications:[
+      {id:"comm-a",lead_id:"lead-a",channel:"Email",direction:"outbound",subject:"Introduction",message:"Earlier introduction",contacted_at:"2026-10-20T10:00:00Z",created_by:"admin-1"},
+      {id:"comm-b",lead_id:"lead-c",channel:"WhatsApp",direction:"outbound",subject:"Follow-up",message:"Newer follow-up",contacted_at:"2026-11-01T10:00:00Z",created_by:"admin-1"}
+    ],
+    clients:[],admins:[]
   };
   const root=document.getElementById("preview-root");
   const esc=value=>String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   const leadName=id=>({ "lead-a":"Alpha Studio","lead-b":"Zulu Market","lead-c":"Bravo Cafe"}[id]||"Unknown lead");
-  let allowLeadDeletion = false;
-  window.setPreviewLeadDeleteConfirmation = value => { allowLeadDeletion = value === true; };
+  let allowBulkDeletion = false;
+  window.setPreviewBulkDeleteConfirmation = value => { allowBulkDeletion = value === true; };
+  window.setPreviewLeadDeleteConfirmation = window.setPreviewBulkDeleteConfirmation;
   const controls=window.createSwayphicsAdminTableControls({
     state,workspace:root,esc,adminName:()=> "Test Admin",clientName:id=>"Test Client "+id,leadName,
     formatDisplayText:value=>String(value).replace(/_/g," "),
@@ -58,19 +64,27 @@ main{max-width:1180px;margin:auto}.preview-note{padding:14px;background:#fff;bor
       root.dataset.deletedLeadIds = deletedIds.join(",");
       return {deletedIds,failedIds:[],activityLogFailures:[],refreshFailed:false};
     },
+    deleteRecords:async (view,ids)=>{
+      const requested = new Set(ids.map(String));
+      const deletedIds = state[view].filter(item=>requested.has(String(item.id))).map(item=>String(item.id));
+      state[view] = state[view].filter(item=>!requested.has(String(item.id)));
+      root.dataset.deletedRecordsView = view;
+      root.dataset.deletedRecordIds = deletedIds.join(",");
+      return {deletedIds,failedIds:[],activityLogFailures:[],refreshFailed:false};
+    },
     renderView:render,swayAlert:message=>{root.dataset.alert=message},
-    swayConfirm:async message=>{root.dataset.confirmationMessage=message;return allowLeadDeletion;}
+    swayConfirm:async message=>{root.dataset.confirmationMessage=message;return allowBulkDeletion;}
   });
   function render(){
-    root.innerHTML=["leads","followups","tasks"].map(view=>{
-      const title={leads:"Leads",followups:"Follow-ups",tasks:"Tasks"}[view];
+    root.innerHTML=["leads","followups","tasks","communications"].map(view=>{
+      const title={leads:"Leads",followups:"Follow-ups",tasks:"Tasks",communications:"Communication Log"}[view];
       const rows=controls.items(view,state[view]).map(item=>{
-        const label=view==="leads"?item.business_name:view==="tasks"?item.title:leadName(item.lead_id);
+        const label=view==="leads"?item.business_name:view==="tasks"?item.title:view==="communications"?(item.subject||leadName(item.lead_id)):leadName(item.lead_id);
         const search=controls.searchText(view,item);
-        const date=view==="leads"?item.next_follow_up:view==="tasks"?item.due_date:item.scheduled_for;
+        const date=view==="leads"?item.next_follow_up:view==="tasks"?item.due_date:view==="communications"?item.contacted_at:item.scheduled_for;
         return '<tr data-admin-table-row="'+view+'" data-admin-table-search="'+esc(search)+'">'+
           controls.selectionCell(view,item,label)+
-          '<td>'+esc(label)+'</td><td>'+esc(item.status)+'</td><td>'+esc(date||"")+'</td></tr>';
+          '<td>'+esc(label)+'</td><td>'+esc(view==="communications"?item.direction:item.status)+'</td><td>'+esc(date||"")+'</td></tr>';
       }).join("");
       return '<section class="preview-view" data-preview-view="'+view+'"><h2>'+title+'</h2>'+
         controls.renderControls(view)+'<div class="table-wrap"><table><thead><tr>'+
