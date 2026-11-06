@@ -724,6 +724,100 @@ async function main() {
     assert.equal(await page.locator('[data-admin-table-bulk-toolbar="leads"]').isVisible(), false,
       "successfully deleted leads should be removed from selection and hide the bulk toolbar");
 
+    // Tasks: cancel first, then delete only the explicitly selected synthetic task.
+    await navigate("tasks", "delivery");
+    const taskDeleteRow = page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').filter({ hasText: "Prepare proposal" });
+    await taskDeleteRow.locator('[data-admin-table-select="tasks"]').check();
+    const writesBeforeTaskCancel = metrics.mockedTableActionWrites.length;
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    assert.match(await page.locator(".sway-dialog").innerText(), /Permanently delete 1 selected task\?/);
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, writesBeforeTaskCancel,
+      "cancelling task deletion must not issue a Supabase DELETE");
+    assert.ok(tasks.some(item => item.id === "task-low"), "cancelling task deletion must preserve the selected task");
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-admin-table-row="tasks"]').length === 2);
+    assert.equal(tasks.some(item => item.id === "task-low"), false,
+      "confirmed task deletion should remove only the selected synthetic task");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "DELETE" && item.path === "/rest/v1/tasks" && item.id === "task-low"),
+      "task deletion must be intercepted by the in-memory mock");
+
+    // Follow-ups: one confirmation for the selected row, with the failed/cancel path preserved.
+    await navigate("followups", "crm");
+    const followupDeleteRow = page.locator('#sway-workspace-main [data-admin-table-row="followups"]').filter({ hasText: "Send follow-up" });
+    await followupDeleteRow.locator('[data-admin-table-select="followups"]').check();
+    const writesBeforeFollowupCancel = metrics.mockedTableActionWrites.length;
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    assert.match(await page.locator(".sway-dialog").innerText(), /Permanently delete 1 selected follow-up\?/);
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, writesBeforeFollowupCancel,
+      "cancelling follow-up deletion must not mutate the mock database");
+    assert.ok(followups.some(item => item.id === "follow-later"));
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-admin-table-row="followups"]').length === 1);
+    assert.equal(followups.some(item => item.id === "follow-later"), false);
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "DELETE" && item.path === "/rest/v1/follow_ups" && item.id === "follow-later"),
+      "follow-up deletion must be intercepted by the in-memory mock");
+
+    // Communication Log: retain its search/sort controls and delete only the selected history row.
+    await navigate("communications", "crm");
+    const communicationDeleteRow = page.locator('#sway-workspace-main [data-admin-table-row="communications"]').filter({ hasText: "Older introduction" });
+    await communicationDeleteRow.locator('[data-admin-table-select="communications"]').check();
+    const writesBeforeCommunicationCancel = metrics.mockedTableActionWrites.length;
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    assert.match(await page.locator(".sway-dialog").innerText(), /Permanently delete 1 selected communication log entry\?/);
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, writesBeforeCommunicationCancel,
+      "cancelling Communication Log deletion must not mutate the mock database");
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-admin-table-row="communications"]').length === 1);
+    assert.equal(communications.some(item => item.id === "comm-old"), false);
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "DELETE" && item.path === "/rest/v1/communication_logs" && item.id === "comm-old"),
+      "communication-log deletion must be intercepted by the in-memory mock");
+
+    // Inbox threads remove only the dashboard's synchronized email_messages copies.
+    const crmNavToggle = page.locator('[data-nav-group-toggle="crm"]');
+    if ((await crmNavToggle.getAttribute("aria-expanded")) !== "true") await crmNavToggle.click();
+    await page.locator('[data-view="email"]').click();
+    await page.locator('[data-email-thread]').waitFor({ state: "visible", timeout: 15000 });
+    const inboxSelection = page.locator('[data-email-thread-select]');
+    await inboxSelection.check();
+    const writesBeforeInboxCancel = metrics.mockedTableActionWrites.length;
+    await page.locator('[data-email-delete-selected]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    const inboxConfirmation = await page.locator(".sway-dialog").innerText();
+    assert.match(inboxConfirmation, /Delete 1 selected email conversation/);
+    assert.match(inboxConfirmation, /original HOSTAFRICA mailbox is unchanged/i);
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, writesBeforeInboxCancel,
+      "cancelling inbox deletion must leave the stored dashboard email messages untouched");
+    assert.ok(emailMessages.some(item => item.id === "email-msg-inbound-1"));
+    await page.locator('[data-email-delete-selected]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-email-thread]').length === 0);
+    assert.equal(emailMessages.some(item => item.id === "email-msg-inbound-1"), false,
+      "confirmed inbox deletion should remove only the stored dashboard copy");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "DELETE" && item.path === "/rest/v1/email_messages" && item.id === "email-msg-inbound-1"),
+      "email-message deletion must be intercepted by the in-memory mock");
+
     // Verify the redesigned top navigation at desktop, tablet and mobile
     // widths. Menus sit outside the horizontal trigger scroller so they remain
     // visible instead of being clipped by overflow.
