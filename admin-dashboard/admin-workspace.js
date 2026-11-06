@@ -16832,6 +16832,10 @@ function simpleBars(items, color) {
                           threadRows +
                           "</div>"
                         : (
+                            (state.emailInboxDeleteFeedback
+                                ? '<p class="sway-admin-table-feedback" role="status" aria-live="polite">' +
+                                    esc(state.emailInboxDeleteFeedback) + "</p>"
+                                : "") +
                             '<div class="sway-email-inbox-empty">' +
                                 '<div class="sway-email-inbox-empty-mark">@</div>' +
                                 "<strong>Your inbox is quiet.</strong>" +
