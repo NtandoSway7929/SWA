@@ -12182,6 +12182,65 @@ function simpleBars(items, color) {
         formatDisplayText: formatDisplayText,
         completeTask: completeTask,
         completeFollowup: completeFollowup,
+        deleteLeads: async function (ids) {
+            const requestedIds = Array.from(new Set((Array.isArray(ids) ? ids : [])
+                .map(function (id) { return String(id || "").trim(); })
+                .filter(Boolean)));
+            const deletedIds = [];
+            const failedIds = [];
+            const activityLogFailures = [];
+
+            for (const id of requestedIds) {
+                try {
+                    const deletedRecords = await api(
+                        "/rest/v1/leads?id=eq." + encodeURIComponent(id),
+                        {
+                            method: "DELETE",
+                            headers: headers({
+                                "Prefer": "return=representation"
+                            })
+                        }
+                    );
+
+                    if (!Array.isArray(deletedRecords) ||
+                        !deletedRecords.some(function (record) {
+                            return String(record.id) === id;
+                        })) {
+                        failedIds.push(id);
+                        continue;
+                    }
+
+                    deletedIds.push(id);
+                    try {
+                        await logActivity("Deleted lead", "leads", id);
+                    } catch (error) {
+                        activityLogFailures.push(id);
+                        console.warn("A deleted lead could not be written to the activity log.", error);
+                    }
+                } catch (error) {
+                    failedIds.push(id);
+                    console.warn("Unable to delete selected lead.", error);
+                }
+            }
+
+            let refreshFailed = false;
+            if (deletedIds.length) {
+                try {
+                    await refreshData();
+                    renderShell();
+                } catch (error) {
+                    refreshFailed = true;
+                    console.warn("Selected leads were deleted, but the dashboard refresh failed.", error);
+                }
+            }
+
+            return {
+                deletedIds: deletedIds,
+                failedIds: failedIds,
+                activityLogFailures: activityLogFailures,
+                refreshFailed: refreshFailed
+            };
+        },
         renderView: renderView,
         swayAlert: swayAlert,
         swayConfirm: swayConfirm,
