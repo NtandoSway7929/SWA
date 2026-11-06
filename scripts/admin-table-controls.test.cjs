@@ -392,7 +392,7 @@ async function verifyBulkLeadDeletion() {
                 refreshFailed: false
             };
         },
-        renderView: () => { renderCount += 1; },
+        renderView: () => { renderCount += 1; bulkButton.disabled = testState.tableBulkActionRunning; },
         swayAlert: message => { throw new Error(message); },
         swayConfirm: async message => {
             confirmationText = message;
