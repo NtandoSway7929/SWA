@@ -44,12 +44,22 @@ main{max-width:1180px;margin:auto}.preview-note{padding:14px;background:#fff;bor
   const root=document.getElementById("preview-root");
   const esc=value=>String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   const leadName=id=>({ "lead-a":"Alpha Studio","lead-b":"Zulu Market","lead-c":"Bravo Cafe"}[id]||"Unknown lead");
+  let allowLeadDeletion = false;
+  window.setPreviewLeadDeleteConfirmation = value => { allowLeadDeletion = value === true; };
   const controls=window.createSwayphicsAdminTableControls({
     state,workspace:root,esc,adminName:()=> "Test Admin",clientName:id=>"Test Client "+id,leadName,
     formatDisplayText:value=>String(value).replace(/_/g," "),
     completeTask:async()=>{throw new Error("Preview blocks business mutations")},
     completeFollowup:async()=>{throw new Error("Preview blocks business mutations")},
-    renderView:render,swayAlert:message=>{root.dataset.alert=message},swayConfirm:async()=>false
+    deleteLeads:async ids=>{
+      const requested = new Set(ids.map(String));
+      const deletedIds = state.leads.filter(item=>requested.has(String(item.id))).map(item=>String(item.id));
+      state.leads = state.leads.filter(item=>!requested.has(String(item.id)));
+      root.dataset.deletedLeadIds = deletedIds.join(",");
+      return {deletedIds,failedIds:[],activityLogFailures:[],refreshFailed:false};
+    },
+    renderView:render,swayAlert:message=>{root.dataset.alert=message},
+    swayConfirm:async message=>{root.dataset.confirmationMessage=message;return allowLeadDeletion;}
   });
   function render(){
     root.innerHTML=["leads","followups","tasks"].map(view=>{

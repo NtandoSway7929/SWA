@@ -28,6 +28,16 @@ assert.ok(workspaceSource.includes("adminTableControls.bind();"),
     "dashboard view lifecycle must bind the table controls after rendering");
 assert.match(workspaceSource, /data-toggle-lead-contacted=/,
     "each eligible lead row should expose the contacted toggle in its Actions dropdown");
+const bulkDeleteHandlerIndex = workspaceSource.indexOf("deleteLeads: async function (ids)");
+assert.ok(bulkDeleteHandlerIndex >= 0,
+    "the table-controls module should receive the authenticated selected-lead delete handler");
+const bulkDeleteHandlerSource = workspaceSource.slice(bulkDeleteHandlerIndex, bulkDeleteHandlerIndex + 2600);
+assert.match(bulkDeleteHandlerSource, /method: "DELETE"/,
+    "bulk lead deletion must use the existing authenticated Supabase API helper");
+assert.match(bulkDeleteHandlerSource, /return=representation/,
+    "bulk lead deletion must verify that each requested lead was actually deleted");
+assert.match(bulkDeleteHandlerSource, /logActivity\("Deleted lead", "leads", id\)/,
+    "each permanently deleted lead should be added to the workspace activity log");
 assert.match(workspaceSource, /contactStatus\.source === "communication"[\s\S]*?data-toggle-lead-contacted=/,
     "leads with outbound communication records should be distinguished from manual contact marks");
 assert.match(workspaceSource, /contactStatus\.contacted \? "Undo contacted mark" : "Mark as contacted"/,
@@ -182,6 +192,14 @@ assert.match(controlsMarkup, /data-admin-table-search-input="leads"/);
 assert.match(controlsMarkup, /data-admin-table-filter="leads"/);
 assert.match(controlsMarkup, /data-admin-table-sort="leads"/);
 assert.match(controlsMarkup, /Export selected CSV/);
+assert.match(controlsMarkup, /data-admin-table-bulk-action="delete"/,
+    "the Leads bulk toolbar should expose a delete-selected action");
+assert.match(controlsMarkup, /Delete selected leads/,
+    "the destructive action should clearly identify the selected lead records");
+assert.doesNotMatch(controls.renderControls("tasks"), /data-admin-table-bulk-action="delete"/,
+    "bulk lead deletion must not appear in the Tasks toolbar");
+assert.doesNotMatch(controls.renderControls("followups"), /data-admin-table-bulk-action="delete"/,
+    "bulk lead deletion must not appear in the Follow-ups toolbar");
 
 state.tableControls.invoices.sort = "invoice_due_asc";
 assert.deepEqual(
@@ -315,4 +333,110 @@ assert.ok(moduleSource.includes('["leads", "tasks", "followups", "invoices"].for
     "invoice search should be reapplied after control-driven rerenders and archive-mode changes");
 
 
-console.log("Admin table controls tests passed.");
+async function verifyBulkLeadDeletion() {
+    const testState = {
+        tableControls: { leads: { search: "", filter: "all", sort: "value_desc" } },
+        tableSelection: { leads: ["lead-mid", "lead-low"], tasks: [], followups: [], invoices: [] },
+        tableFeedback: { leads: "", tasks: [], followups: [], invoices: [] },
+        tableBulkActionRunning: false,
+        leads: state.leads.slice()
+    };
+    const toolbar = { hidden: false };
+    const selectedCount = { textContent: "" };
+    const feedback = { hidden: true, textContent: "" };
+    const handlers = {};
+    let confirmResult = false;
+    let confirmationText = "";
+    let deletionCalls = [];
+    let renderCount = 0;
+
+    const bulkButton = {
+        disabled: false,
+        addEventListener(name, callback) { handlers[name] = callback; },
+        getAttribute(name) {
+            return name === "data-admin-table-bulk-action" ? "delete" : null;
+        },
+        closest() {
+            return { getAttribute: name => name === "data-admin-table-tools" ? "leads" : null };
+        }
+    };
+    const testWorkspace = {
+        querySelector(selector) {
+            if (selector === '[data-admin-table-bulk-toolbar="leads"]') return toolbar;
+            if (selector === '[data-admin-table-selected-count="leads"]') return selectedCount;
+            if (selector === '[data-admin-table-feedback="leads"]') return feedback;
+            return null;
+        },
+        querySelectorAll(selector) {
+            if (selector.includes("[data-admin-table-bulk-action]")) return [bulkButton];
+            return [];
+        }
+    };
+
+    const deleteControls = global.window.createSwayphicsAdminTableControls({
+        state: testState,
+        workspace: testWorkspace,
+        esc: value => String(value == null ? "" : value),
+        adminName: () => "Admin",
+        clientName: id => "Client " + id,
+        leadName: id => "Lead " + id,
+        formatDisplayText: value => String(value),
+        completeTask: async () => {},
+        completeFollowup: async () => {},
+        deleteLeads: async ids => {
+            deletionCalls.push(ids.slice());
+            return {
+                deletedIds: ["lead-mid"],
+                failedIds: ["lead-low"],
+                activityLogFailures: [],
+                refreshFailed: false
+            };
+        },
+        renderView: () => { renderCount += 1; bulkButton.disabled = testState.tableBulkActionRunning; },
+        swayAlert: message => { throw new Error(message); },
+        swayConfirm: async message => {
+            confirmationText = message;
+            return confirmResult;
+        }
+    });
+
+    deleteControls.bind();
+    assert.match(deleteControls.renderControls("leads"), /Delete selected leads/,
+        "the Leads toolbar should keep the permanent-delete control available");
+
+    // Cancelling the confirmation must not call the delete callback or clear selection.
+    await handlers.click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(confirmationText, /Permanently delete 2 selected leads\? This cannot be undone\./);
+    assert.equal(deletionCalls.length, 0,
+        "cancelling bulk deletion must not send any delete requests");
+    assert.deepEqual(testState.tableSelection.leads, ["lead-mid", "lead-low"],
+        "cancelled bulk deletion must preserve the entire selection");
+    assert.equal(renderCount, 0,
+        "cancelled bulk deletion must not trigger an unnecessary rerender");
+
+    // Confirming deletes only the rows reported as deleted; failed rows remain selected.
+    confirmResult = true;
+    await handlers.click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(deletionCalls.length, 1,
+        "confirming bulk deletion should call the authenticated workspace delete callback once");
+    assert.deepEqual(new Set(deletionCalls[0]), new Set(["lead-mid", "lead-low"]));
+    assert.deepEqual(testState.tableSelection.leads, ["lead-low"],
+        "a partially failed deletion must retain only the failed lead in the selection");
+    assert.match(feedback.textContent, /Deleted 1 of 2 selected leads/);
+    assert.match(feedback.textContent, /remain selected for review/);
+    assert.equal(testState.tableBulkActionRunning, false,
+        "bulk-action state must be released after the delete callback settles");
+    assert.equal(bulkButton.disabled, false,
+        "bulk toolbar controls must be re-enabled after the delete callback settles");
+    assert.equal(renderCount, 1,
+        "the Leads view should rerender once after the bulk delete attempt");
+}
+
+verifyBulkLeadDeletion().then(function () {
+    console.log("Admin table controls tests passed.");
+}).catch(function (error) {
+    console.error(error);
+    process.exitCode = 1;
+});

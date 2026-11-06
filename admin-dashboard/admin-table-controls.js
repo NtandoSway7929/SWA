@@ -204,7 +204,8 @@
                     esc(option[1]) + "</option>";
             }).join("");
             const bulk = view === "leads"
-                ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>'
+                ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>' +
+                  '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected leads">Delete selected leads</button>'
                 : view === "invoices" ? "" :
                 '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="complete">Complete selected</button>';
             const placeholder = view === "leads" ? "Business, contact, service or email" :
@@ -343,6 +344,98 @@
                 exportSelection(view);
                 return;
             }
+            if (action === "delete") {
+                if (view !== "leads") return;
+                const selected = selectedItems(view);
+                if (!selected.length) return;
+
+                const selectedIds = selected.map(function (item) {
+                    return String(item.id);
+                });
+                if (!(await swayConfirm(
+                    "Permanently delete " + selected.length + " selected lead" +
+                    (selected.length === 1 ? "" : "s") + "? This cannot be undone."
+                ))) return;
+
+                if (typeof context.deleteLeads !== "function") {
+                    swayAlert("Bulk lead deletion is unavailable. Refresh the dashboard and try again.");
+                    return;
+                }
+
+                state.tableBulkActionRunning = true;
+                syncSelection(view);
+                announceFeedback(view, "Deleting " + selected.length + " selected lead" +
+                    (selected.length === 1 ? "" : "s") + "…");
+
+                try {
+                    const result = await context.deleteLeads(selectedIds);
+                    const requestedIds = new Set(selectedIds);
+                    const deletedIds = new Set(
+                        (result && Array.isArray(result.deletedIds) ? result.deletedIds : [])
+                            .map(String)
+                            .filter(function (id) { return requestedIds.has(id); })
+                    );
+                    const failedIds = new Set(
+                        (result && Array.isArray(result.failedIds) ? result.failedIds : [])
+                            .map(String)
+                            .filter(function (id) { return requestedIds.has(id); })
+                    );
+                    const remainingIds = selectedIds.filter(function (id) {
+                        return !deletedIds.has(id);
+                    });
+
+                    state.tableSelection.leads = (state.tableSelection.leads || [])
+                        .filter(function (id) { return !deletedIds.has(String(id)); });
+
+                    const deletedCount = deletedIds.size;
+                    const failedCount = Math.max(failedIds.size, selectedIds.length - deletedCount);
+                    const activityLogFailures = result && Array.isArray(result.activityLogFailures)
+                        ? result.activityLogFailures.filter(function (id) {
+                            return deletedIds.has(String(id));
+                        }).length
+                        : 0;
+
+                    if (deletedCount === selectedIds.length && failedCount === 0 &&
+                        activityLogFailures === 0 && !(result && result.refreshFailed)) {
+                        announceFeedback(view, "Permanently deleted " + deletedCount +
+                            " selected lead" + (deletedCount === 1 ? "" : "s") + ".");
+                    } else if (deletedCount > 0) {
+                        const feedbackParts = [
+                            deletedCount === selectedIds.length
+                                ? "Deleted " + deletedCount + " selected lead" + (deletedCount === 1 ? "" : "s") + "."
+                                : "Deleted " + deletedCount + " of " + selectedIds.length + " selected leads."
+                        ];
+                        if (failedCount > 0) {
+                            feedbackParts.push(failedCount +
+                                " could not be deleted and remain selected for review.");
+                        }
+                        if (activityLogFailures > 0) {
+                            feedbackParts.push("Activity logging failed for " +
+                                activityLogFailures + " deleted lead" +
+                                (activityLogFailures === 1 ? "" : "s") + ".");
+                        }
+                        if (result && result.refreshFailed) {
+                            feedbackParts.push("Refresh the dashboard to verify the latest list.");
+                        }
+                        announceFeedback(view, feedbackParts.join(" "));
+                    } else {
+                        announceFeedback(view, "No selected leads were deleted. All " +
+                            remainingIds.length + " remain selected. Check your permissions and try again.");
+                    }
+
+                    if (result && result.refreshFailed && deletedCount === selectedIds.length) {
+                        announceFeedback(view, "The selected leads were deleted, but the list could not refresh. Refresh the dashboard to verify the latest records.");
+                    }
+                } catch (error) {
+                    // Do not surface raw provider/database errors in the dashboard UI.
+                    announceFeedback(view, "Unable to complete the bulk deletion. The selected leads remain selected for review; refresh the dashboard before retrying.");
+                } finally {
+                    state.tableBulkActionRunning = false;
+                    renderView();
+                }
+                return;
+            }
+
             if (action !== "complete") return;
             const selected = selectedItems(view);
             const eligible = selected.filter(function (item) {
