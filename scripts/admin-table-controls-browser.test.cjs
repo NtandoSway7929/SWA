@@ -44,6 +44,35 @@ const path = require("node:path");
     if (await leads.locator('[data-admin-table-bulk-toolbar="leads"]').isVisible()) throw new Error("Clear selection did not hide the bulk toolbar.");
     await leads.locator('[data-admin-table-search-input="leads"]').fill("");
 
+    // Cancelled permanent deletion must keep the selected lead and make no mutation.
+    await leads.locator('[data-admin-table-search-input="leads"]').fill("Bravo Cafe");
+    const bravoRow = leads.locator('[data-admin-table-row="leads"]:visible').filter({ hasText: "Bravo Cafe" });
+    await bravoRow.locator('[data-admin-table-select="leads"]').check();
+    await leads.locator('[data-admin-table-bulk-action="delete"]').click();
+    if (!(await page.locator("#preview-root").getAttribute("data-confirmation-message")).includes("Permanently delete 1 selected lead")) {
+      throw new Error("Bulk lead deletion did not ask for a count-specific confirmation.");
+    }
+    if ((await leads.locator('[data-admin-table-selected-count="leads"]').innerText()).trim() !== "1 selected") {
+      throw new Error("Cancelling bulk deletion must retain the selected lead.");
+    }
+    if (await leads.locator('[data-admin-table-row="leads"]:visible').count() !== 1) {
+      throw new Error("Cancelling bulk deletion must leave the lead visible.");
+    }
+
+    // The confirmed path removes only the selected synthetic lead.
+    await page.evaluate(() => window.setPreviewLeadDeleteConfirmation(true));
+    await leads.locator('[data-admin-table-bulk-action="delete"]').click();
+    if (!(await page.locator("#preview-root").getAttribute("data-deleted-lead-ids")).includes("lead-c")) {
+      throw new Error("Confirmed bulk deletion did not call the isolated delete handler for the selected lead.");
+    }
+    await leads.locator('[data-admin-table-search-input="leads"]').fill("");
+    if (await leads.locator('[data-admin-table-row="leads"]').count() !== 2) {
+      throw new Error("Confirmed bulk deletion should remove exactly one selected lead from the synthetic list.");
+    }
+    if (await leads.locator('[data-admin-table-row="leads"]').filter({ hasText: "Bravo Cafe" }).count() !== 0) {
+      throw new Error("The selected lead should no longer appear after confirmed deletion.");
+    }
+
     const followups = page.locator('[data-preview-view="followups"]');
     await followups.locator('[data-admin-table-search-input="followups"]').fill("send follow-up");
     if (await followups.locator('[data-admin-table-row="followups"]:visible').count() !== 1) throw new Error("Follow-up note search failed against schema field `note`.");
