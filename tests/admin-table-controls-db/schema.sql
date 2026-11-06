@@ -97,6 +97,35 @@ create table public.follow_ups (
   constraint follow_up_contact_check check (lead_id is not null or client_id is not null)
 );
 
+create table public.communication_logs (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid references public.leads(id) on delete set null,
+  client_id uuid references public.clients(id) on delete set null,
+  channel text not null,
+  direction text not null default 'outbound',
+  subject text,
+  message text,
+  contacted_at timestamptz not null default now(),
+  created_by uuid references public.admin_users(user_id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table public.email_messages (
+  id uuid primary key default gen_random_uuid(),
+  mailbox text not null,
+  thread_id text not null,
+  direction text not null check (direction in ('inbound', 'outbound')),
+  source_key text,
+  message_id text,
+  from_email text,
+  to_email text,
+  subject text,
+  text_body text,
+  received_at timestamptz,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
 create table public.activity_log (
   id uuid primary key default gen_random_uuid(),
   actor_id uuid references public.admin_users(user_id) on delete set null,
@@ -143,6 +172,8 @@ alter table public.admin_users enable row level security;
 alter table public.leads enable row level security;
 alter table public.tasks enable row level security;
 alter table public.follow_ups enable row level security;
+alter table public.communication_logs enable row level security;
+alter table public.email_messages enable row level security;
 alter table public.activity_log enable row level security;
 
 create policy "Local test admins can view admin users"
@@ -177,6 +208,16 @@ on public.follow_ups for all to authenticated
 using (public.is_swayphics_admin())
 with check (public.is_swayphics_admin());
 
+create policy "Local test admins can manage communication logs"
+on public.communication_logs for all to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
+create policy "Local test admins can manage email messages"
+on public.email_messages for all to authenticated
+using (public.is_swayphics_admin())
+with check (public.is_swayphics_admin());
+
 create policy "Local test admins can manage activity"
 on public.activity_log for all to authenticated
 using (public.is_swayphics_admin())
@@ -184,6 +225,7 @@ with check (public.is_swayphics_admin());
 
 grant usage on schema public to anon, authenticated, service_role;
 grant select, insert, update, delete
-on public.admin_users, public.leads, public.tasks, public.follow_ups, public.activity_log
+on public.admin_users, public.leads, public.tasks, public.follow_ups,
+   public.communication_logs, public.email_messages, public.activity_log
 to authenticated;
 grant all privileges on all tables in schema public to service_role;
