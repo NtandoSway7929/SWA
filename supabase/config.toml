@@ -2,7 +2,9 @@
 verify_jwt = true
 
 [functions.sync-email-inbox]
-verify_jwt = true
+# The function validates admin JWTs itself and also validates a Vault-held token
+# for the scheduled server-side poll. Do not remove its application-level checks.
+verify_jwt = false
 
 [functions.delete-email-messages]
 verify_jwt = true

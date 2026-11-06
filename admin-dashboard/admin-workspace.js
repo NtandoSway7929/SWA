@@ -62,6 +62,7 @@
         initialDataError: null,
         communications: [],
         emailMessages: [],
+        emailMessagesRefreshing: false,
         emailSyncing: false,
         emailSyncError: "",
         emailSelectedThreadId: "",
@@ -10464,6 +10465,8 @@ function simpleBars(items, color) {
     }
 
     function setupRealtime() {
+        setupEmailInboxBackgroundRefresh();
+
         const beginBackgroundSync = function () {
             if (state.backgroundSyncTimer) {
                 window.clearInterval(state.backgroundSyncTimer);
@@ -15932,6 +15935,89 @@ function simpleBars(items, color) {
         saveWorkspaceSnapshot();
     }
 
+    /*
+     * Mailbox ingestion runs server-side on a schedule. Keep the open admin
+     * workspace's inbox view current independently of which navigation item
+     * is selected, and refresh immediately when the tab returns online.
+     */
+    async function refreshEmailMessagesInBackground() {
+        if (
+            state.emailMessagesRefreshing ||
+            state.emailSyncing ||
+            document.visibilityState !== "visible" ||
+            (typeof navigator !== "undefined" && navigator.onLine === false) ||
+            !token()
+        ) {
+            return;
+        }
+
+        state.emailMessagesRefreshing = true;
+
+        const signature = function () {
+            return state.emailMessages.map(function (message) {
+                return [
+                    message.id || "",
+                    message.updated_at || "",
+                    message.is_read === true ? "1" : "0"
+                ].join(":");
+            }).join("|");
+        };
+
+        const before = signature();
+
+        try {
+            await loadEmailMessages();
+
+            if (
+                before !== signature() &&
+                (
+                    state.currentView === "email" ||
+                    state.currentView === "overview"
+                )
+            ) {
+                renderView();
+            }
+        } catch (error) {
+            console.warn("Background email inbox refresh failed.", error);
+        } finally {
+            state.emailMessagesRefreshing = false;
+        }
+    }
+
+    function setupEmailInboxBackgroundRefresh() {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        if (!window.__swayphicsEmailInboxRefreshTimer) {
+            window.__swayphicsEmailInboxRefreshTimer =
+                window.setInterval(
+                    refreshEmailMessagesInBackground,
+                    20000
+                );
+        }
+
+        if (!window.__swayphicsEmailInboxRefreshListeners) {
+            document.addEventListener("visibilitychange", function () {
+                if (document.visibilityState === "visible") {
+                    refreshEmailMessagesInBackground();
+                }
+            });
+
+            window.addEventListener(
+                "online",
+                refreshEmailMessagesInBackground
+            );
+
+            window.__swayphicsEmailInboxRefreshListeners = true;
+        }
+
+        window.setTimeout(
+            refreshEmailMessagesInBackground,
+            1000
+        );
+    }
+
     async function syncEmailInbox(
         shouldRender
     ) {
@@ -15946,8 +16032,6 @@ function simpleBars(items, color) {
 
         state.emailSyncing = true;
         state.emailSyncError = "";
-
-        await ensureFreshAdminAccessToken();
 
         let response = null;
         let responseText = "";
@@ -15975,6 +16059,8 @@ function simpleBars(items, color) {
         }
 
         try {
+            await ensureFreshAdminAccessToken();
+
             response =
                 await performSyncRequest();
 
@@ -16103,28 +16189,6 @@ function simpleBars(items, color) {
             "email"
         ) {
             return;
-        }
-
-        if (
-            typeof window !==
-                "undefined" &&
-            !window.__swayphicsEmailInboxPoll
-        ) {
-            window.__swayphicsEmailInboxPoll =
-                window.setInterval(
-                    function () {
-                        if (
-                            state.currentView ===
-                                "email" &&
-                            !state.emailSyncing
-                        ) {
-                            syncEmailInbox(
-                                true
-                            );
-                        }
-                    },
-                    15000
-                );
         }
 
         await syncEmailInbox(
