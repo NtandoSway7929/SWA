@@ -638,17 +638,19 @@ Deno.serve(async (req) => {
     );
 
     let searchedUids =
-      await client.search(
-        {
-          uid:
-            String(startUid) +
-            ":" +
-            String(newestUid)
-        },
-        {
-          uid: true
-        }
-      );
+      startUid <= newestUid
+        ? await client.search(
+            {
+              uid:
+                String(startUid) +
+                ":" +
+                String(newestUid)
+            },
+            {
+              uid: true
+            }
+          )
+        : [];
 
     if (!Array.isArray(searchedUids)) {
       searchedUids = [];
