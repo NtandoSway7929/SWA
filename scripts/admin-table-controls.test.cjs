@@ -28,6 +28,16 @@ assert.ok(workspaceSource.includes("adminTableControls.bind();"),
     "dashboard view lifecycle must bind the table controls after rendering");
 assert.match(workspaceSource, /data-toggle-lead-contacted=/,
     "each eligible lead row should expose the contacted toggle in its Actions dropdown");
+const bulkDeleteHandlerIndex = workspaceSource.indexOf("deleteLeads: async function (ids)");
+assert.ok(bulkDeleteHandlerIndex >= 0,
+    "the table-controls module should receive the authenticated selected-lead delete handler");
+const bulkDeleteHandlerSource = workspaceSource.slice(bulkDeleteHandlerIndex, bulkDeleteHandlerIndex + 2600);
+assert.match(bulkDeleteHandlerSource, /method: "DELETE"/,
+    "bulk lead deletion must use the existing authenticated Supabase API helper");
+assert.match(bulkDeleteHandlerSource, /return=representation/,
+    "bulk lead deletion must verify that each requested lead was actually deleted");
+assert.match(bulkDeleteHandlerSource, /logActivity\("Deleted lead", "leads", id\)/,
+    "each permanently deleted lead should be added to the workspace activity log");
 assert.match(workspaceSource, /contactStatus\.source === "communication"[\s\S]*?data-toggle-lead-contacted=/,
     "leads with outbound communication records should be distinguished from manual contact marks");
 assert.match(workspaceSource, /contactStatus\.contacted \? "Undo contacted mark" : "Mark as contacted"/,
