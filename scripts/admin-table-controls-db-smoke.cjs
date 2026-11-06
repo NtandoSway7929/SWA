@@ -87,9 +87,20 @@ async function bestEffortCleanup(userIds, recordIds) {
     try { await rest("DELETE", table, query, serviceOptions); } catch { /* local stack is disposable */ }
   };
 
-  for (const id of [recordIds.taskId, recordIds.followupId, recordIds.leadDeleteId]) {
-    if (id) await clean("activity_log", "entity_id=eq." + id);
+  const activityEntityIds = [
+    recordIds.taskId,
+    recordIds.followupId,
+    recordIds.leadDeleteId,
+    recordIds.communicationId,
+    ...(recordIds.emailMessageIds || [])
+  ].filter(Boolean);
+  for (const id of activityEntityIds) {
+    await clean("activity_log", "entity_id=eq." + id);
   }
+  for (const id of recordIds.emailMessageIds || []) {
+    await clean("email_messages", "id=eq." + id);
+  }
+  if (recordIds.communicationId) await clean("communication_logs", "id=eq." + recordIds.communicationId);
   if (recordIds.followupId) await clean("follow_ups", "id=eq." + recordIds.followupId);
   if (recordIds.taskId) await clean("tasks", "id=eq." + recordIds.taskId);
   for (const id of [recordIds.leadAlphaId, recordIds.leadBravoId, recordIds.leadDeleteId]) {
@@ -116,7 +127,9 @@ async function main() {
     leadBravoId: randomUUID(),
     leadDeleteId: randomUUID(),
     taskId: randomUUID(),
-    followupId: randomUUID()
+    followupId: randomUUID(),
+    communicationId: randomUUID(),
+    emailMessageIds: [randomUUID(), randomUUID()]
   };
   const writes = [];
   let summary;
@@ -147,6 +160,26 @@ async function main() {
     await rest("POST", "follow_ups", "", {
       token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
       body: [{ id: ids.followupId, lead_id: ids.leadBravoId, assigned_to: admin.id, scheduled_for: "2026-10-27", channel: "WhatsApp", status: "pending", note: "CI-only follow-up" }]
+    });
+    await rest("POST", "communication_logs", "", {
+      token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
+      body: [{
+        id: ids.communicationId, lead_id: ids.leadBravoId, channel: "Email",
+        direction: "outbound", subject: "CI communication fixture",
+        message: "Disposable communication log row", contacted_at: new Date().toISOString(),
+        created_by: admin.id
+      }]
+    });
+    await rest("POST", "email_messages", "", {
+      token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
+      body: ids.emailMessageIds.map((id, index) => ({
+        id, mailbox: "info@swayphics.co.za", thread_id: "ci-email-thread",
+        direction: "inbound", source_key: "ci-source-" + index,
+        message_id: "<ci-message-" + index + "@example.invalid>",
+        from_email: "sender@example.invalid", to_email: "info@swayphics.co.za",
+        subject: "CI inbox fixture", text_body: "Disposable synced email message",
+        received_at: new Date(Date.now() + index).toISOString(), is_read: false
+      }))
     });
 
     const adminCheck = await rest("GET", "admin_users", "select=user_id,role,active&user_id=eq." + admin.id, { token: adminToken });
@@ -240,6 +273,30 @@ async function main() {
     assert.equal(protectedLead.data.length, 1,
       "a lead targeted by a non-admin delete attempt must remain present");
 
+    for (const [table, id] of [
+      ["tasks", ids.taskId],
+      ["follow_ups", ids.followupId],
+      ["communication_logs", ids.communicationId]
+    ]) {
+      const attempt = await rest("DELETE", table, "id=eq." + id, {
+        token: nonAdminToken,
+        allowError: true
+      });
+      assert.ok(!Array.isArray(attempt.data) || attempt.data.length === 0,
+        "a non-admin must not delete a row from " + table + " through RLS");
+    }
+    const nonAdminEmailDelete = await rest(
+      "DELETE", "email_messages",
+      "id=in.(" + ids.emailMessageIds.join(",") + ")",
+      { token: nonAdminToken, allowError: true }
+    );
+    assert.ok(!Array.isArray(nonAdminEmailDelete.data) || nonAdminEmailDelete.data.length === 0,
+      "a non-admin must not delete synced inbox messages through RLS");
+    assert.equal((await rest("GET", "tasks", "select=id&id=eq." + ids.taskId, { token: adminToken })).data.length, 1);
+    assert.equal((await rest("GET", "follow_ups", "select=id&id=eq." + ids.followupId, { token: adminToken })).data.length, 1);
+    assert.equal((await rest("GET", "communication_logs", "select=id&id=eq." + ids.communicationId, { token: adminToken })).data.length, 1);
+    assert.equal((await rest("GET", "email_messages", "select=id&id=in.(" + ids.emailMessageIds.join(",") + ")", { token: adminToken })).data.length, 2);
+
     const leadDelete = await rest("DELETE", "leads", "id=eq." + ids.leadDeleteId, { token: adminToken });
     assert.equal(leadDelete.data.length, 1, "an authenticated admin should permanently delete one selected lead");
     writes.push("DELETE leads (selected lead)");
@@ -257,6 +314,69 @@ async function main() {
     assert.equal(deletedLeadActivity.data.length, 1,
       "the permanent lead deletion should have an authenticated activity-log entry");
 
+    // Simulate the repeated, authenticated DELETE requests used by the
+    // workspace bulk handler. Every fixture is isolated to this local stack.
+    const taskDelete = await rest("DELETE", "tasks", "id=eq." + ids.taskId, { token: adminToken });
+    assert.equal(taskDelete.data.length, 1, "an authenticated admin should delete one selected task");
+    writes.push("DELETE tasks (selected task)");
+    await rest("POST", "activity_log", "", {
+      token: adminToken,
+      body: [{ actor_id: admin.id, action: "task_deleted", entity_type: "tasks", entity_id: ids.taskId }]
+    });
+    writes.push("POST activity_log (deleted task)");
+
+    const followupDelete = await rest("DELETE", "follow_ups", "id=eq." + ids.followupId, { token: adminToken });
+    assert.equal(followupDelete.data.length, 1, "an authenticated admin should delete one selected follow-up");
+    writes.push("DELETE follow_ups (selected follow-up)");
+    await rest("POST", "activity_log", "", {
+      token: adminToken,
+      body: [{ actor_id: admin.id, action: "follow_up_deleted", entity_type: "follow_ups", entity_id: ids.followupId }]
+    });
+    writes.push("POST activity_log (deleted follow-up)");
+
+    const communicationDelete = await rest(
+      "DELETE", "communication_logs", "id=eq." + ids.communicationId, { token: adminToken }
+    );
+    assert.equal(communicationDelete.data.length, 1, "an authenticated admin should delete one selected communication log entry");
+    writes.push("DELETE communication_logs (selected entry)");
+    await rest("POST", "activity_log", "", {
+      token: adminToken,
+      body: [{ actor_id: admin.id, action: "communication_log_deleted", entity_type: "communication_logs", entity_id: ids.communicationId }]
+    });
+    writes.push("POST activity_log (deleted communication entry)");
+
+    const emailDelete = await rest(
+      "DELETE", "email_messages", "id=in.(" + ids.emailMessageIds.join(",") + ")", { token: adminToken }
+    );
+    assert.equal(emailDelete.data.length, 2, "an authenticated admin should delete all messages in one selected inbox thread");
+    writes.push("DELETE email_messages (selected inbox thread)");
+    for (const id of ids.emailMessageIds) {
+      await rest("POST", "activity_log", "", {
+        token: adminToken,
+        body: [{ actor_id: admin.id, action: "inbox_email_deleted", entity_type: "email_messages", entity_id: id }]
+      });
+      writes.push("POST activity_log (deleted inbox email)");
+    }
+
+    for (const [table, id] of [
+      ["tasks", ids.taskId],
+      ["follow_ups", ids.followupId],
+      ["communication_logs", ids.communicationId]
+    ]) {
+      const after = await rest("GET", table, "select=id&id=eq." + id, { token: adminToken });
+      assert.equal(after.data.length, 0, "confirmed " + table + " deletion should persist");
+    }
+    const emailAfter = await rest("GET", "email_messages", "select=id&id=in.(" + ids.emailMessageIds.join(",") + ")", { token: adminToken });
+    assert.equal(emailAfter.data.length, 0, "confirmed inbox thread deletion should persist in the local mirror");
+    const deleteActivities = await rest(
+      "GET", "activity_log",
+      "select=id,entity_type,entity_id&entity_id=in.(" +
+        [ids.taskId, ids.followupId, ids.communicationId].concat(ids.emailMessageIds).join(",") + ")",
+      { token: adminToken }
+    );
+    assert.equal(deleteActivities.data.length, 5,
+      "task, follow-up, communication-log and both inbox-message deletions should each be audited");
+
     summary = {
       result: "PASS",
       environment: "disposable local Supabase only",
@@ -271,7 +391,9 @@ async function main() {
         "linked lead moved to contacted and next_follow_up was cleared",
         "two activity-log rows persisted",
         "selected lead deletion persisted and produced an activity-log row",
-        "non-admin could not delete a lead through RLS",
+        "selected task, follow-up, communication-log and Inbox message deletions persisted",
+        "each additional selected-record deletion produced an activity-log row",
+        "non-admin could not delete leads, tasks, follow-ups, communication-log rows or Inbox messages through RLS",
         "unsupported lead status rejected without changing the existing row"
       ],
       remoteRequests: 0,

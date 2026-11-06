@@ -77,6 +77,31 @@ const followups = [
   }
 ];
 
+const communications = [
+  {
+    id: "comm-old", lead_id: "lead-alpha", client_id: null, channel: "Email",
+    direction: "outbound", subject: "Older introduction", message: "Older communication fixture",
+    contacted_at: "2026-10-20T10:00:00Z", created_by: TEST_USER_ID
+  },
+  {
+    id: "comm-new", lead_id: "lead-bravo", client_id: null, channel: "WhatsApp",
+    direction: "outbound", subject: "Latest follow-up", message: "Newer communication fixture",
+    contacted_at: "2026-11-01T10:00:00Z", created_by: TEST_USER_ID
+  }
+];
+
+const emailMessages = [
+  {
+    id: "email-msg-inbound-1", direction: "inbound", mailbox: "info@swayphics.co.za",
+    source_key: "test:inbox:1", thread_id: "email-thread-fixture",
+    from_name: "Synthetic Sender", from_email: "sender@example.invalid",
+    to_email: "info@swayphics.co.za", subject: "Synthetic inbox fixture",
+    text_body: "A synthetic email used only for the isolated admin dashboard browser test.",
+    received_at: "2026-11-05T10:00:00Z", is_read: false,
+    message_id: "<synthetic-inbox-1@example.invalid>"
+  }
+];
+
 function dateOffset(days) {
   const value = new Date();
   value.setDate(value.getDate() + days);
@@ -143,7 +168,7 @@ function jsonResponse(body, status = 200, extraHeaders = {}) {
     contentType: "application/json; charset=utf-8",
     headers: {
       "Access-Control-Allow-Origin": "http://127.0.0.1:4173",
-      "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "apikey,authorization,content-type,prefer,x-client-info",
       "Access-Control-Max-Age": "600",
       ...extraHeaders
@@ -197,7 +222,8 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/client_portal_requests") return [];
   if (url.pathname === "/rest/v1/lead_proposals") return [];
   if (url.pathname === "/rest/v1/client_documents") return [];
-  if (url.pathname === "/rest/v1/communication_logs") return [];
+  if (url.pathname === "/rest/v1/communication_logs") return communications;
+  if (url.pathname === "/rest/v1/email_messages") return emailMessages;
   if (url.pathname === "/rest/v1/lead_stage_history") return [];
   if (url.pathname === "/rest/v1/client_portal_tokens") return [];
   if (url.pathname === "/rest/v1/admin_notifications") return [];
@@ -252,7 +278,7 @@ async function main() {
         status: 204,
         headers: {
           "Access-Control-Allow-Origin": "http://127.0.0.1:4173",
-          "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, HEAD, POST, PATCH, DELETE, OPTIONS",
           "Access-Control-Allow-Headers": "apikey,authorization,content-type,prefer,x-client-info",
           "Access-Control-Max-Age": "600"
         },
@@ -263,16 +289,37 @@ async function main() {
     if (method !== "GET" && method !== "HEAD") {
       // Permanent lead deletions are applied to in-memory test records only.
       // The browser cannot send these requests to a hosted Supabase project.
-      if (method === "DELETE" && url.pathname === "/rest/v1/leads") {
+      if (method === "DELETE" && ["/rest/v1/leads", "/rest/v1/tasks", "/rest/v1/follow_ups", "/rest/v1/communication_logs"].includes(url.pathname)) {
+        const table = {
+          "/rest/v1/leads": leads,
+          "/rest/v1/tasks": tasks,
+          "/rest/v1/follow_ups": followups,
+          "/rest/v1/communication_logs": communications
+        }[url.pathname];
         const filter = String(url.searchParams.get("id") || "");
         const id = filter.startsWith("eq.") ? decodeURIComponent(filter.slice(3)) : "";
-        const index = leads.findIndex(item => String(item.id) === id);
+        const index = table.findIndex(item => String(item.id) === id);
         if (index >= 0) {
-          const deleted = leads.splice(index, 1)[0];
+          const deleted = table.splice(index, 1)[0];
           metrics.mockedTableActionWrites.push({ method, path: url.pathname, id });
           return route.fulfill(jsonResponse([deleted]));
         }
         return route.fulfill(jsonResponse([]));
+      }
+      if (method === "DELETE" && url.pathname === "/rest/v1/email_messages") {
+        const filter = String(url.searchParams.get("id") || "");
+        const match = filter.match(/^in\.\((.*)\)$/);
+        const requestedIds = new Set(match ? match[1].split(",").map(value => decodeURIComponent(value.trim())) : []);
+        const deleted = [];
+        for (let index = emailMessages.length - 1; index >= 0; index -= 1) {
+          if (requestedIds.has(String(emailMessages[index].id))) {
+            deleted.unshift(emailMessages.splice(index, 1)[0]);
+          }
+        }
+        deleted.forEach(record => metrics.mockedTableActionWrites.push({
+          method, path: url.pathname, id: record.id
+        }));
+        return route.fulfill(jsonResponse(deleted));
       }
 
       // Completion requests are applied to in-memory test arrays only.
@@ -677,6 +724,104 @@ async function main() {
     assert.equal(await page.locator('[data-admin-table-bulk-toolbar="leads"]').isVisible(), false,
       "successfully deleted leads should be removed from selection and hide the bulk toolbar");
 
+    // Tasks: cancel first, then delete only the explicitly selected synthetic task.
+    await navigate("tasks", "delivery");
+    const taskDeleteRow = page.locator('#sway-workspace-main [data-admin-table-row="tasks"]').filter({ hasText: "Prepare proposal" });
+    await taskDeleteRow.locator('[data-admin-table-select="tasks"]').check();
+    const writesBeforeTaskCancel = metrics.mockedTableActionWrites.length;
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    assert.match(await page.locator(".sway-dialog").innerText(), /Permanently delete 1 selected task\?/);
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, writesBeforeTaskCancel,
+      "cancelling task deletion must not issue a Supabase DELETE");
+    assert.ok(tasks.some(item => item.id === "task-low"), "cancelling task deletion must preserve the selected task");
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-admin-table-row="tasks"]').length === 2);
+    assert.equal(tasks.some(item => item.id === "task-low"), false,
+      "confirmed task deletion should remove only the selected synthetic task");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "DELETE" && item.path === "/rest/v1/tasks" && item.id === "task-low"),
+      "task deletion must be intercepted by the in-memory mock");
+
+    // Follow-ups: one confirmation for the selected row, with the failed/cancel path preserved.
+    await navigate("followups", "crm");
+    await page.locator('[data-admin-table-filter="followups"]').selectOption("all");
+    const followupDeleteRow = page.locator('#sway-workspace-main [data-admin-table-row="followups"]').filter({ hasText: "Send follow-up" });
+    await followupDeleteRow.locator('[data-admin-table-select="followups"]').check();
+    const writesBeforeFollowupCancel = metrics.mockedTableActionWrites.length;
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    assert.match(await page.locator(".sway-dialog").innerText(), /Permanently delete 1 selected follow-up\?/);
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, writesBeforeFollowupCancel,
+      "cancelling follow-up deletion must not mutate the mock database");
+    assert.ok(followups.some(item => item.id === "follow-later"));
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-admin-table-row="followups"]').length === 2);
+    assert.equal(followups.some(item => item.id === "follow-later"), false);
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "DELETE" && item.path === "/rest/v1/follow_ups" && item.id === "follow-later"),
+      "follow-up deletion must be intercepted by the in-memory mock");
+
+    // Communication Log: retain its search/sort controls and delete only the selected history row.
+    await navigate("communications", "crm");
+    const communicationDeleteRow = page.locator('#sway-workspace-main [data-admin-table-row="communications"]').filter({ hasText: "Older introduction" });
+    await communicationDeleteRow.locator('[data-admin-table-select="communications"]').check();
+    const writesBeforeCommunicationCancel = metrics.mockedTableActionWrites.length;
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    assert.match(await page.locator(".sway-dialog").innerText(), /Permanently delete 1 selected communication log entry\?/);
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, writesBeforeCommunicationCancel,
+      "cancelling Communication Log deletion must not mutate the mock database");
+    await page.locator('[data-admin-table-bulk-action="delete"]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-admin-table-row="communications"]').length === 1);
+    assert.equal(communications.some(item => item.id === "comm-old"), false);
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "DELETE" && item.path === "/rest/v1/communication_logs" && item.id === "comm-old"),
+      "communication-log deletion must be intercepted by the in-memory mock");
+
+    // Inbox threads remove only the dashboard's synchronized email_messages copies.
+    const crmNavToggle = page.locator('[data-nav-group-toggle="crm"]');
+    if ((await crmNavToggle.getAttribute("aria-expanded")) !== "true") await crmNavToggle.click();
+    await page.locator('[data-view="email"]').click();
+    await page.locator('[data-email-thread]').waitFor({ state: "visible", timeout: 15000 });
+    const inboxSelection = page.locator('[data-email-thread-select]');
+    await inboxSelection.check();
+    const writesBeforeInboxCancel = metrics.mockedTableActionWrites.length;
+    await page.locator('[data-email-delete-selected]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    const inboxConfirmation = await page.locator(".sway-dialog").innerText();
+    assert.match(inboxConfirmation, /Delete 1 selected email conversation/);
+    assert.match(inboxConfirmation, /original HOSTAFRICA mailbox is unchanged/i);
+    await page.locator(".sway-dialog [data-dialog-cancel]").click();
+    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    assert.equal(metrics.mockedTableActionWrites.length, writesBeforeInboxCancel,
+      "cancelling inbox deletion must leave the stored dashboard email messages untouched");
+    assert.ok(emailMessages.some(item => item.id === "email-msg-inbound-1"));
+    await page.locator('[data-email-delete-selected]').click();
+    await page.locator(".sway-dialog").waitFor({ state: "visible" });
+    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await page.waitForFunction(() => document.querySelectorAll('#sway-workspace-main [data-email-thread]').length === 0);
+    assert.equal(emailMessages.some(item => item.id === "email-msg-inbound-1"), false,
+      "confirmed inbox deletion should remove only the stored dashboard copy");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "DELETE" && item.path === "/rest/v1/email_messages" && item.id === "email-msg-inbound-1"),
+      "email-message deletion must be intercepted by the in-memory mock");
+    assert.match(await page.locator('#sway-workspace-main [role="status"]').innerText(),
+      /Deleted 1 of 1 selected conversations from the dashboard inbox/,
+      "the Inbox must confirm a successful delete even after its final thread disappears");
+
     // Verify the redesigned top navigation at desktop, tablet and mobile
     // widths. Menus sit outside the horizontal trigger scroller so they remain
     // visible instead of being clipped by overflow.
@@ -782,7 +927,7 @@ async function main() {
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
-    assert.equal(metrics.mockedTableActionWrites.length, 11,
+    assert.equal(metrics.mockedTableActionWrites.length, 19,
       "only the expected lead-contact, task, follow-up and selected-lead delete writes should be captured by the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
@@ -817,6 +962,10 @@ async function main() {
         "visible-row selection, clear selection and formula-safe CSV download",
         "cancelled bulk lead deletion makes no delete requests",
         "confirmed bulk lead deletion removes only selected IDs and logs each deletion",
+        "cancelled task, follow-up and communication-log bulk deletions make no writes",
+        "confirmed task and follow-up deletion remove only selected records",
+        "confirmed communication-log deletion removes only the selected history row",
+        "Inbox bulk deletion removes synced dashboard copies, preserves source-mailbox messaging, and logs the deletion",
         "follow-up status filter and task priority sort/status filter",
         "cancelled task completion makes no in-memory updates",
         "confirmed task completion updates the synthetic task only",
