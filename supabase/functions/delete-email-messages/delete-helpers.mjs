@@ -2,17 +2,29 @@
  * Resolve selected inbound rows to live mailbox UIDs without trusting a
  * potentially stale UID on its own.
  *
- * IMAP UIDs are only unique within a mailbox UIDVALIDITY generation. If a
- * mailbox is rebuilt/reset, an old UID can be reused by a different message.
- * The caller must then re-resolve the selected message by its exact
- * Message-ID before deleting anything from the live mailbox.
+ * IMAP UIDs are unique only inside one mailbox UIDVALIDITY generation. A
+ * generation mismatch always requires an exact Message-ID search, even when
+ * the old UID currently appears to contain the same Message-ID.
+ *
+ * Rows created before UIDVALIDITY tracking are supported as legacy records,
+ * but are also reconciled by Message-ID instead of trusting their old UID.
  */
-export function resolveInboxDeleteTargets(records, currentMessages, folder = "INBOX") {
+export function resolveInboxDeleteTargets(
+  records,
+  currentMessages,
+  folder = "INBOX",
+  currentUidValidity = null,
+) {
   if (!Array.isArray(records) || !Array.isArray(currentMessages)) {
     throw new TypeError("Inbox message records and live IMAP messages must be arrays.");
   }
 
   const mailboxFolder = String(folder || "INBOX");
+  const liveUidValidity = Number(currentUidValidity);
+  if (!Number.isSafeInteger(liveUidValidity) || liveUidValidity <= 0) {
+    throw new Error("The connected mailbox did not provide a valid UIDVALIDITY value.");
+  }
+
   const liveByUid = new Map();
   for (const message of currentMessages) {
     const uid = Number(message?.uid);
@@ -34,7 +46,21 @@ export function resolveInboxDeleteTargets(records, currentMessages, folder = "IN
       throw new Error("An incoming message is missing its mailbox UID.");
     }
 
-    const expectedSourceKey = "imap:" + mailboxFolder + ":" + String(uid);
+    const rawUidValidity = record.imap_uid_validity;
+    const hasUidValidity = rawUidValidity !== null &&
+      rawUidValidity !== undefined &&
+      rawUidValidity !== "";
+    const storedUidValidity = hasUidValidity ? Number(rawUidValidity) : null;
+
+    if (hasUidValidity &&
+        (!Number.isSafeInteger(storedUidValidity) || storedUidValidity <= 0)) {
+      throw new Error("An incoming message has an invalid mailbox UIDVALIDITY value.");
+    }
+
+    const expectedSourceKey = hasUidValidity
+      ? "imap:" + String(storedUidValidity) + ":" + mailboxFolder + ":" + String(uid)
+      : "imap:" + mailboxFolder + ":" + String(uid);
+
     if (String(record.source_key || "") !== expectedSourceKey) {
       throw new Error("An incoming message does not belong to the selected IMAP folder.");
     }
@@ -46,9 +72,12 @@ export function resolveInboxDeleteTargets(records, currentMessages, folder = "IN
 
     const liveMessage = liveByUid.get(uid);
     const liveMessageId = String(liveMessage?.envelope?.messageId || "").trim();
-    if (!liveMessage || !liveMessageId || liveMessageId !== expectedMessageId) {
-      // Never delete a live message merely because it now occupies an old UID.
-      // The caller must search by Message-ID and verify the exact envelope ID.
+    const sameUidGeneration = storedUidValidity === liveUidValidity;
+
+    if (!sameUidGeneration || !liveMessage || !liveMessageId ||
+        liveMessageId !== expectedMessageId) {
+      // Never delete by UID across UIDVALIDITY generations or when the current
+      // envelope differs. The caller must search and verify the exact Message-ID.
       messageIdLookups.push({
         recordId: String(record.id || ""),
         originalUid: uid,
