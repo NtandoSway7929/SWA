@@ -16264,8 +16264,22 @@ function simpleBars(items, color) {
 
             await loadEmailMessages();
             state.emailThreadSelection = [];
-            state.emailBulkDeleteFeedback = "Permanently deleted " + selectedConversationCount +
-                " email conversation" + (selectedConversationCount === 1 ? "" : "s") + ".";
+            const mailboxMessagesNotFound = Math.max(
+                0,
+                Number(result && result.mailbox_messages_not_found || 0)
+            );
+            state.emailBulkDeleteFeedback = mailboxMessagesNotFound
+                ? (
+                    "Removed " + selectedConversationCount +
+                    " selected email conversation" + (selectedConversationCount === 1 ? "" : "s") +
+                    " from the dashboard. " + mailboxMessagesNotFound +
+                    " incoming message" + (mailboxMessagesNotFound === 1 ? " was" : "s were") +
+                    " not found in the connected mailbox folder, so no other mailbox message was deleted."
+                )
+                : (
+                    "Permanently deleted " + selectedConversationCount +
+                    " email conversation" + (selectedConversationCount === 1 ? "" : "s") + "."
+                );
         } catch (error) {
             // A response can be lost after the Edge Function has committed the delete. Reload to distinguish that case.
             try {
