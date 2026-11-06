@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  getSyncStartUid,
   resolveMatchingThreadMessage,
   selectUidBatch,
 } from "../supabase/functions/sync-email-inbox/inbox-helpers.mjs";
@@ -74,4 +75,21 @@ test("resolveMatchingThreadMessage can preserve an unlinked thread without inven
   assert.equal(match.thread_id, "thread-1");
   assert.equal(match.client_id, null);
   assert.equal(match.lead_id, null);
+});
+
+test("getSyncStartUid starts with a bounded recent window for an empty cursor", () => {
+  assert.equal(getSyncStartUid(0, 100, 25), 76);
+});
+
+test("getSyncStartUid resumes immediately after the cursor", () => {
+  assert.equal(getSyncStartUid(75, 100, 25), 76);
+});
+
+test("getSyncStartUid recovers when mailbox UIDs reset below the stored cursor", () => {
+  assert.equal(getSyncStartUid(900, 12, 10), 3);
+});
+
+test("getSyncStartUid handles an empty mailbox and invalid limits safely", () => {
+  assert.equal(getSyncStartUid(0, 0, 10), 1);
+  assert.equal(getSyncStartUid(0, 10, 0), 1);
 });
