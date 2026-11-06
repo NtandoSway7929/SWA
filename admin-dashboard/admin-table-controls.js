@@ -395,17 +395,29 @@
                         }).length
                         : 0;
 
-                    if (deletedCount === selectedIds.length && failedCount === 0) {
+                    if (deletedCount === selectedIds.length && failedCount === 0 &&
+                        activityLogFailures === 0 && !(result && result.refreshFailed)) {
                         announceFeedback(view, "Permanently deleted " + deletedCount +
                             " selected lead" + (deletedCount === 1 ? "" : "s") + ".");
                     } else if (deletedCount > 0) {
-                        announceFeedback(view, "Deleted " + deletedCount + " of " + selectedIds.length +
-                            " selected leads. " + failedCount +
-                            " could not be deleted and remain selected for review." +
-                            (activityLogFailures ? " Activity logging failed for " +
+                        const feedbackParts = [
+                            deletedCount === selectedIds.length
+                                ? "Deleted " + deletedCount + " selected lead" + (deletedCount === 1 ? "" : "s") + "."
+                                : "Deleted " + deletedCount + " of " + selectedIds.length + " selected leads."
+                        ];
+                        if (failedCount > 0) {
+                            feedbackParts.push(failedCount +
+                                " could not be deleted and remain selected for review.");
+                        }
+                        if (activityLogFailures > 0) {
+                            feedbackParts.push("Activity logging failed for " +
                                 activityLogFailures + " deleted lead" +
-                                (activityLogFailures === 1 ? "" : "s") + "." : "") +
-                            (result && result.refreshFailed ? " Refresh the dashboard to verify the latest list." : ""));
+                                (activityLogFailures === 1 ? "" : "s") + ".");
+                        }
+                        if (result && result.refreshFailed) {
+                            feedbackParts.push("Refresh the dashboard to verify the latest list.");
+                        }
+                        announceFeedback(view, feedbackParts.join(" "));
                     } else {
                         announceFeedback(view, "No selected leads were deleted. All " +
                             remainingIds.length + " remain selected. Check your permissions and try again.");
