@@ -817,6 +817,9 @@ async function main() {
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.method === "DELETE" && item.path === "/rest/v1/email_messages" && item.id === "email-msg-inbound-1"),
       "email-message deletion must be intercepted by the in-memory mock");
+    assert.match(await page.locator('#sway-workspace-main [role="status"]').innerText(),
+      /Deleted 1 of 1 selected conversations from the dashboard inbox/,
+      "the Inbox must confirm a successful delete even after its final thread disappears");
 
     // Verify the redesigned top navigation at desktop, tablet and mobile
     // widths. Menus sit outside the horizontal trigger scroller so they remain
