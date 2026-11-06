@@ -5,13 +5,19 @@ on:
     branches: ["main"]
     paths:
       - "supabase/functions/sync-email-inbox/**"
+      - "supabase/functions/delete-email-messages/**"
+      - "supabase/config.toml"
       - "scripts/email-inbox-sync.test.mjs"
+      - "scripts/delete-email-messages.test.mjs"
       - ".github/workflows/validate-email-inbox.yml"
   pull_request:
     branches: ["main"]
     paths:
       - "supabase/functions/sync-email-inbox/**"
+      - "supabase/functions/delete-email-messages/**"
+      - "supabase/config.toml"
       - "scripts/email-inbox-sync.test.mjs"
+      - "scripts/delete-email-messages.test.mjs"
       - ".github/workflows/validate-email-inbox.yml"
 
 permissions:
@@ -41,6 +47,11 @@ jobs:
           node --check supabase/functions/sync-email-inbox/inbox-helpers.mjs
           node --check scripts/email-inbox-sync.test.mjs
           node --test scripts/email-inbox-sync.test.mjs
+          node --check supabase/functions/delete-email-messages/delete-helpers.mjs
+          node --check scripts/delete-email-messages.test.mjs
+          node --test scripts/delete-email-messages.test.mjs
 
-      - name: Type-check the deployed Edge Function source
-        run: deno check --no-lock supabase/functions/sync-email-inbox/index.ts
+      - name: Type-check the deployed Edge Function sources
+        run: |
+          deno check --no-lock supabase/functions/sync-email-inbox/index.ts
+          deno check --no-lock supabase/functions/delete-email-messages/index.ts
