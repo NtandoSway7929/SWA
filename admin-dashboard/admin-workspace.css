@@ -9606,3 +9606,30 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
     min-width: 6.5rem;
     font-variant-numeric: tabular-nums;
 }
+
+/* =========================================================
+   STAGE 6 — SELECTED LEAD BULK DELETE BUTTON
+   Visually distinguish permanent deletion from export/completion.
+   ========================================================= */
+.sway-admin-table-tools .sway-admin-table-bulk-delete-button {
+    border-color: rgba(185, 28, 28, .28);
+    background: rgba(185, 28, 28, .075);
+    color: #991B1B;
+}
+.sway-admin-table-tools .sway-admin-table-bulk-delete-button:hover:not(:disabled) {
+    border-color: rgba(185, 28, 28, .45);
+    background: rgba(185, 28, 28, .13);
+}
+.sway-admin-table-tools .sway-admin-table-bulk-delete-button:focus-visible {
+    outline: 3px solid rgba(185, 28, 28, .25);
+    outline-offset: 2px;
+}
+body.sway-dark-mode .sway-admin-table-tools .sway-admin-table-bulk-delete-button {
+    border-color: rgba(248, 113, 113, .34);
+    background: rgba(248, 113, 113, .12);
+    color: #FECACA;
+}
+body.sway-dark-mode .sway-admin-table-tools .sway-admin-table-bulk-delete-button:hover:not(:disabled) {
+    border-color: rgba(248, 113, 113, .48);
+    background: rgba(248, 113, 113, .18);
+}
