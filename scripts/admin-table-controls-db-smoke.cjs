@@ -92,7 +92,7 @@ async function bestEffortCleanup(userIds, recordIds) {
   }
   if (recordIds.followupId) await clean("follow_ups", "id=eq." + recordIds.followupId);
   if (recordIds.taskId) await clean("tasks", "id=eq." + recordIds.taskId);
-  for (const id of [recordIds.leadAlphaId, recordIds.leadBravoId]) {
+  for (const id of [recordIds.leadAlphaId, recordIds.leadBravoId, recordIds.leadDeleteId]) {
     if (id) await clean("leads", "id=eq." + id);
   }
   for (const id of userIds.slice().reverse()) {
@@ -114,6 +114,7 @@ async function main() {
   const ids = {
     leadAlphaId: randomUUID(),
     leadBravoId: randomUUID(),
+    leadDeleteId: randomUUID(),
     taskId: randomUUID(),
     followupId: randomUUID()
   };
@@ -135,7 +136,8 @@ async function main() {
       token: SERVICE_ROLE_KEY, key: SERVICE_ROLE_KEY,
       body: [
         { id: ids.leadAlphaId, business_name: "CI Alpha Studio", contact_name: "Local Test", email: "alpha@example.invalid", service_interest: "Website", source: "CI Fixture", status: "new", estimated_value: 1500, assigned_to: admin.id, next_follow_up: "2026-11-03" },
-        { id: ids.leadBravoId, business_name: "CI Bravo Cafe", contact_name: "Local Test", email: "bravo@example.invalid", service_interest: "Branding", source: "CI Fixture", status: "new", estimated_value: 900, assigned_to: admin.id, next_follow_up: "2026-10-27" }
+        { id: ids.leadBravoId, business_name: "CI Bravo Cafe", contact_name: "Local Test", email: "bravo@example.invalid", service_interest: "Branding", source: "CI Fixture", status: "new", estimated_value: 900, assigned_to: admin.id, next_follow_up: "2026-10-27" },
+        { id: ids.leadDeleteId, business_name: "CI Delete Fixture", contact_name: "Local Test", email: "delete@example.invalid", service_interest: "Website", source: "CI Fixture", status: "new", estimated_value: 0, assigned_to: admin.id, next_follow_up: null }
       ]
     });
     await rest("POST", "tasks", "", {
@@ -228,12 +230,39 @@ async function main() {
     const hiddenLeads = await rest("GET", "leads", "select=id&id=eq." + ids.leadBravoId, { token: nonAdminToken });
     assert.equal(hiddenLeads.data.length, 0, "a signed-in user without an admin row must not read CRM leads through RLS");
 
+    const nonAdminDelete = await rest("DELETE", "leads", "id=eq." + ids.leadDeleteId, {
+      token: nonAdminToken,
+      allowError: true
+    });
+    assert.ok(!Array.isArray(nonAdminDelete.data) || nonAdminDelete.data.length === 0,
+      "a non-admin must not delete a lead through RLS");
+    const protectedLead = await rest("GET", "leads", "select=id&id=eq." + ids.leadDeleteId, { token: adminToken });
+    assert.equal(protectedLead.data.length, 1,
+      "a lead targeted by a non-admin delete attempt must remain present");
+
+    const leadDelete = await rest("DELETE", "leads", "id=eq." + ids.leadDeleteId, { token: adminToken });
+    assert.equal(leadDelete.data.length, 1, "an authenticated admin should permanently delete one selected lead");
+    writes.push("DELETE leads (selected lead)");
+    await rest("POST", "activity_log", "", {
+      token: adminToken,
+      body: [{ actor_id: admin.id, action: "lead_deleted", entity_type: "leads", entity_id: ids.leadDeleteId }]
+    });
+    writes.push("POST activity_log (deleted lead)");
+    const deletedLeadAfter = await rest("GET", "leads", "select=id&id=eq." + ids.leadDeleteId, { token: adminToken });
+    assert.equal(deletedLeadAfter.data.length, 0,
+      "a deleted lead should no longer be visible after the authenticated delete");
+
+    const deletedLeadActivity = await rest("GET", "activity_log",
+      "select=id,entity_type,entity_id&entity_id=eq." + ids.leadDeleteId, { token: adminToken });
+    assert.equal(deletedLeadActivity.data.length, 1,
+      "the permanent lead deletion should have an authenticated activity-log entry");
+
     summary = {
       result: "PASS",
       environment: "disposable local Supabase only",
       apiHost: parsedApiUrl.hostname,
       authentication: "local Supabase Auth password-grant JWT",
-      rls: "admin CRUD succeeded; non-admin lead read returned zero rows",
+      rls: "admin CRUD and selected-lead DELETE succeeded; non-admin lead read and DELETE returned no rows",
       seed: "synthetic UUID records only; created in local database and cleaned up",
       authenticatedActionWrites: writes,
       readAfterWrite: [
@@ -241,6 +270,8 @@ async function main() {
         "follow-up completion status and timestamp persisted",
         "linked lead moved to contacted and next_follow_up was cleared",
         "two activity-log rows persisted",
+        "selected lead deletion persisted and produced an activity-log row",
+        "non-admin could not delete a lead through RLS",
         "unsupported lead status rejected without changing the existing row"
       ],
       remoteRequests: 0,
