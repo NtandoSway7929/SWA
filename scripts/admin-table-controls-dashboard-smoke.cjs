@@ -923,7 +923,7 @@ async function main() {
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
-    assert.equal(metrics.mockedTableActionWrites.length, 11,
+    assert.equal(metrics.mockedTableActionWrites.length, 19,
       "only the expected lead-contact, task, follow-up and selected-lead delete writes should be captured by the in-memory mock");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.path === "/rest/v1/rpc/set_swayphics_lead_manual_contact" &&
@@ -958,6 +958,10 @@ async function main() {
         "visible-row selection, clear selection and formula-safe CSV download",
         "cancelled bulk lead deletion makes no delete requests",
         "confirmed bulk lead deletion removes only selected IDs and logs each deletion",
+        "cancelled task, follow-up and communication-log bulk deletions make no writes",
+        "confirmed task and follow-up deletion remove only selected records",
+        "confirmed communication-log deletion removes only the selected history row",
+        "Inbox bulk deletion removes synced dashboard copies, preserves source-mailbox messaging, and logs the deletion",
         "follow-up status filter and task priority sort/status filter",
         "cancelled task completion makes no in-memory updates",
         "confirmed task completion updates the synthetic task only",
