@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  normalizeUidSearchResult,
   resolveMatchingThreadMessage,
   selectUidBatch,
 } from "../supabase/functions/sync-email-inbox/inbox-helpers.mjs";
@@ -24,6 +25,30 @@ test("selectUidBatch safely handles missing or non-array search results", () => 
   assert.deepEqual(selectUidBatch(null, 10), []);
   assert.deepEqual(selectUidBatch("1:10", 10), []);
   assert.deepEqual(selectUidBatch([], 10), []);
+});
+
+
+test("normalizeUidSearchResult filters results to the requested UID cursor range", () => {
+  assert.deepEqual(
+    normalizeUidSearchResult([9, "2", 4, 1, 12, 4, "bad"], 2, 9),
+    [2, 4, 9],
+  );
+});
+
+test("normalizeUidSearchResult rejects failed or missing IMAP SEARCH results", () => {
+  assert.throws(
+    () => normalizeUidSearchResult(false, 1, 10),
+    /did not return a valid result/,
+  );
+  assert.throws(
+    () => normalizeUidSearchResult(undefined, 1, 10),
+    /did not return a valid result/,
+  );
+});
+
+test("normalizeUidSearchResult handles an empty mailbox range without coercing failures", () => {
+  assert.deepEqual(normalizeUidSearchResult([], 1, 10), []);
+  assert.deepEqual(normalizeUidSearchResult([1, 2, 3], 4, 3), []);
 });
 
 test("resolveMatchingThreadMessage respects In-Reply-To candidate priority", () => {
