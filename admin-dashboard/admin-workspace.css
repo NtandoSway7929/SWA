@@ -9633,3 +9633,94 @@ body.sway-dark-mode .sway-admin-table-tools .sway-admin-table-bulk-delete-button
     border-color: rgba(248, 113, 113, .48);
     background: rgba(248, 113, 113, .18);
 }
+
+
+/* =========================================================
+   BULK EMAIL INBOX SELECTION
+   ========================================================= */
+.sway-email-inbox-item-row {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+
+.sway-email-inbox-select {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    cursor: pointer;
+}
+
+.sway-email-inbox-select input,
+.sway-email-inbox-bulk-toolbar input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--sway-blue, #0152F4);
+    cursor: pointer;
+}
+
+.sway-email-inbox-item-row .sway-email-inbox-item {
+    width: 100%;
+    min-width: 0;
+}
+
+.sway-email-inbox-bulk-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 14px 0 8px;
+    padding: 11px 13px;
+    border: 1px solid var(--border, rgba(0,32,150,0.10));
+    border-radius: 14px;
+    background: var(--surface, rgba(255,255,255,0.9));
+}
+
+.sway-email-inbox-bulk-toolbar > label,
+.sway-email-inbox-bulk-toolbar > div {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--text-muted, #56627A);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.sway-email-inbox-bulk-toolbar button {
+    min-height: 34px;
+}
+
+.sway-email-inbox-delete-note {
+    margin: 5px 0 10px;
+    color: var(--text-muted, #56627A);
+    font-size: 0.64rem;
+    line-height: 1.55;
+}
+
+body.sway-dark-mode .sway-email-inbox-bulk-toolbar {
+    border-color: rgba(255,255,255,0.11);
+    background: rgba(15,23,42,0.74);
+}
+
+body.sway-dark-mode .sway-email-inbox-bulk-toolbar > label,
+body.sway-dark-mode .sway-email-inbox-bulk-toolbar > div,
+body.sway-dark-mode .sway-email-inbox-delete-note {
+    color: #A8B5CA;
+}
+
+@media (max-width: 520px) {
+    .sway-email-inbox-bulk-toolbar {
+        align-items: flex-start;
+    }
+
+    .sway-email-inbox-bulk-toolbar > div {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+}
