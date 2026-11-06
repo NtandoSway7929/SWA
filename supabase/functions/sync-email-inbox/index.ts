@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ImapFlow } from "npm:imapflow@2.0.5";
 import {
+  normalizeUidSearchResult,
   resolveMatchingThreadMessage,
   selectUidBatch,
 } from "./inbox-helpers.mjs";
@@ -8,7 +9,7 @@ import {
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://swayphics.co.za",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-swayphics-email-sync-key",
   "Access-Control-Allow-Methods":
     "POST, OPTIONS"
 };
@@ -386,18 +387,8 @@ Deno.serve(async (req) => {
         ""
       ).trim();
 
-    if (!accessToken) {
-      return Response.json(
-        {
-          error:
-            "Authentication required."
-        },
-        {
-          status: 401,
-          headers: corsHeaders
-        }
-      );
-    }
+    const cronSyncKey =
+      (req.headers.get("x-swayphics-email-sync-key") || "").trim();
 
     const supabaseUrl =
       Deno.env.get("SUPABASE_URL");
@@ -442,36 +433,69 @@ Deno.serve(async (req) => {
       );
     }
 
-    const authSupabase = createClient(
-      supabaseUrl,
-      publicApiKey
-    );
-
-    const userResult =
-      await authSupabase.auth.getUser(
-        accessToken
-      );
-
-    if (
-      userResult.error ||
-      !userResult.data?.user
-    ) {
-      return Response.json(
-        {
-          error:
-            "Your admin session is invalid or expired."
-        },
-        {
-          status: 401,
-          headers: corsHeaders
-        }
-      );
-    }
-
     const supabase = createClient(
       supabaseUrl,
       serviceRoleKey
     );
+
+    if (cronSyncKey) {
+      const cronAuthResult = await supabase.rpc(
+        "validate_swayphics_email_sync_cron_key",
+        { p_key: cronSyncKey }
+      );
+
+      if (cronAuthResult.error) {
+        throw new Error(
+          "Scheduled inbox authorization could not be verified."
+        );
+      }
+
+      if (cronAuthResult.data !== true) {
+        return Response.json(
+          { error: "Scheduled inbox authorization failed." },
+          {
+            status: 401,
+            headers: corsHeaders
+          }
+        );
+      }
+    } else {
+      if (!accessToken) {
+        return Response.json(
+          { error: "Authentication required." },
+          {
+            status: 401,
+            headers: corsHeaders
+          }
+        );
+      }
+
+      const authSupabase = createClient(
+        supabaseUrl,
+        publicApiKey
+      );
+
+      const userResult =
+        await authSupabase.auth.getUser(
+          accessToken
+        );
+
+      if (
+        userResult.error ||
+        !userResult.data?.user
+      ) {
+        return Response.json(
+          {
+            error:
+              "Your admin session is invalid or expired."
+          },
+          {
+            status: 401,
+            headers: corsHeaders
+          }
+        );
+      }
+    }
 
     const imapHost =
       Deno.env.get(
@@ -588,13 +612,32 @@ Deno.serve(async (req) => {
         }
       );
 
-    if (!Array.isArray(searchedUids)) {
-      searchedUids = [];
+    let searchMode = "uid-range";
+
+    /*
+     * ImapFlow resolves a rejected IMAP SEARCH as false rather than throwing.
+     * Treating that value as an empty array made failed searches look like
+     * successful zero-message syncs. Retry with UID SEARCH ALL, then filter
+     * locally to the requested cursor range. If that also fails, surface a
+     * real sync error instead of returning a false success.
+     */
+    if (searchedUids === false) {
+      console.warn(
+        "IMAP UID-range SEARCH was rejected; retrying with UID SEARCH ALL."
+      );
+
+      searchedUids = await client.search(
+        { all: true },
+        { uid: true }
+      );
+
+      searchMode = "uid-all-fallback";
     }
 
-    const allCandidateUids = selectUidBatch(
+    const allCandidateUids = normalizeUidSearchResult(
       searchedUids,
-      Number.MAX_SAFE_INTEGER,
+      startUid,
+      newestUid
     );
     const candidateUids = selectUidBatch(
       allCandidateUids,
@@ -866,7 +909,11 @@ Deno.serve(async (req) => {
         success: true,
         provider: "HOSTAFRICA HMailPlus",
         mailbox: MAILBOX,
+        trigger: cronSyncKey ? "scheduled" : "admin",
+        search_mode: searchMode,
+        searched_uid_count: allCandidateUids.length,
         checked: candidateUids.length,
+        uid_next: uidNext,
         newest_uid: newestUid,
         latest_stored_uid: latestStoredUid,
         synced,
