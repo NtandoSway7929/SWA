@@ -265,7 +265,7 @@ Deno.serve(async (req) => {
           attachmentCleanupWarning = true;
           console.error("Email rows were deleted, but private attachment cleanup failed:", attachmentRemoval.error);
         } else {
-          attachmentsRemoved = attachmentPaths.length;
+          attachmentsRemoved = Array.isArray(attachmentRemoval.data) ? attachmentRemoval.data.length : 0;
         }
       } catch (cleanupError) {
         attachmentCleanupWarning = true;
