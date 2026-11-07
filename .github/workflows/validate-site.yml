@@ -18,6 +18,7 @@ jobs:
         run: |
           set -e
           node --check admin-dashboard/admin-workspace.js
+          node --check admin-dashboard/admin-mobile-quick-create.js
           node --check admin-dashboard/admin-settings-expanded.js
           node --check admin-dashboard/lead-whatsapp.js
           node --check admin-dashboard/innerme-workspace-health.js
@@ -44,6 +45,9 @@ jobs:
 
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
+
+      - name: Test mobile quick-create placement
+        run: node scripts/admin-mobile-quick-create.test.cjs
 
       - name: Validate inline JavaScript
         shell: bash
