@@ -28,10 +28,14 @@ const MAX_EMAIL_BODY_BYTES = 1024 * 1024;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const MAX_STORED_ATTACHMENTS = 12;
-const EXISTING_MEDIA_BACKFILL_BATCH = 6;
+// Backfill one pending email per authenticated sync to keep each retry bounded.
+const EXISTING_MEDIA_BACKFILL_BATCH = 1;
 const IMAP_CONNECTION_TIMEOUT_MS = 8000;
 const IMAP_GREETING_TIMEOUT_MS = 8000;
-const IMAP_SOCKET_TIMEOUT_MS = 12000;
+// Scheduled header ingestion has a 30-second HTTP deadline; MIME hydration
+// runs only on authenticated dashboard requests and needs a longer idle window.
+const IMAP_SCHEDULED_SOCKET_TIMEOUT_MS = 12000;
+const IMAP_MEDIA_SOCKET_TIMEOUT_MS = 30000;
 
 function firstAddress(value: any) {
   let address = value;
@@ -669,11 +673,11 @@ Deno.serve(async (req) => {
       logger: false,
       disableCompression: true,
       disableAutoIdle: true,
-      // Keep network waits comfortably below the one-minute cron interval
-      // and its 30-second HTTP request deadline.
       connectionTimeout: IMAP_CONNECTION_TIMEOUT_MS,
       greetingTimeout: IMAP_GREETING_TIMEOUT_MS,
-      socketTimeout: IMAP_SOCKET_TIMEOUT_MS,
+      socketTimeout: isAuthenticatedUser
+        ? IMAP_MEDIA_SOCKET_TIMEOUT_MS
+        : IMAP_SCHEDULED_SOCKET_TIMEOUT_MS,
       auth: {
         user: imapUser,
         pass: imapPassword
@@ -1206,6 +1210,13 @@ Deno.serve(async (req) => {
             storedUid,
             storedMessage.bodyStructure
           );
+
+          if (!refreshedBody.bodyDownloadSucceeded) {
+            console.warn("Inbound email body hydration remains pending:", {
+              uid: storedUid
+            });
+            continue;
+          }
 
           const refreshedAttachments = await storeEmailAttachments(
             client,
