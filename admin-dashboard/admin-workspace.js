@@ -16091,10 +16091,10 @@ function simpleBars(items, color) {
         if (/^https?:\/\//i.test(downloadUrl)) {
             return downloadUrl;
         }
-        const storagePath = downloadUrl.charAt(0) === "/"
+        const storageApiPath = downloadUrl.charAt(0) === "/"
             ? downloadUrl
             : "/" + downloadUrl;
-        return SUPABASE_URL + "/storage/v1" + storagePath;
+        return SUPABASE_URL + "/storage/v1" + storageApiPath;
     }
 
     async function loadEmailThreadMedia(thread) {
