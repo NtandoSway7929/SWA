@@ -142,6 +142,10 @@ create table public.follow_ups (
   constraint follow_up_contact_check check (lead_id is not null or client_id is not null)
 );
 
+create unique index follow_ups_one_pending_per_lead_idx
+on public.follow_ups (lead_id)
+where lead_id is not null and status = 'pending';
+
 create table public.activity_log (
   id uuid primary key default gen_random_uuid(),
   actor_id uuid references public.admin_users(user_id) on delete set null,
