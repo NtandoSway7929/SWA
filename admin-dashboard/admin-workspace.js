@@ -4826,6 +4826,12 @@
             }).length;
         }
 
+        if (view === "email") {
+            count = emailThreadGroups().filter(function (thread) {
+                return emailThreadHasInbound(thread) && emailThreadUnread(thread);
+            }).length;
+        }
+
         return (
             '<button type="button" class="sway-workspace-nav-button ' +
             (state.currentView === view ? "active" : "") +
@@ -26770,7 +26776,35 @@ function simpleBars(items, color) {
         );
     }
 
+    function updateInboxNavigationCount() {
+        const unreadCount = emailThreadGroups().filter(function (thread) {
+            return emailThreadHasInbound(thread) && emailThreadUnread(thread);
+        }).length;
+
+        workspace.querySelectorAll('[data-view="email"]').forEach(function (button) {
+            let badge = button.querySelector(".sway-workspace-count");
+
+            if (unreadCount > 0) {
+                if (!badge) {
+                    badge = document.createElement("span");
+                    badge.className = "sway-workspace-count";
+                    button.appendChild(badge);
+                }
+
+                badge.textContent = String(unreadCount);
+                badge.setAttribute(
+                    "aria-label",
+                    unreadCount + (unreadCount === 1 ? " unread conversation" : " unread conversations")
+                );
+            } else if (badge) {
+                badge.remove();
+            }
+        });
+    }
+
     function renderView(forceInnerMeRender) {
+        updateInboxNavigationCount();
+
         const main =
             document.getElementById(
                 "sway-workspace-main"
