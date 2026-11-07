@@ -116,7 +116,9 @@ test("IMAP sync uses bounded role-specific socket timeouts", () => {
 
 test("authenticated inbox hydration parses bounded full RFC822 sources instead of fetching MIME parts individually", () => {
   assert.ok(syncFunctionSource.includes('import PostalMime from "npm:postal-mime@4.2.0";'));
-  assert.ok(syncFunctionSource.includes("source: isAuthenticatedUser"));
+  assert.ok(syncFunctionSource.includes("size: isAuthenticatedUser"));
+  assert.ok(syncFunctionSource.includes("source: { start: 0, maxLength: MAX_SOURCE_LENGTH }"));
+  assert.ok(syncFunctionSource.includes("async function fetchMessageBodyFromMailbox("));
   assert.ok(syncFunctionSource.includes("maxLength: MAX_SOURCE_LENGTH"));
   assert.ok(syncFunctionSource.includes("await PostalMime.parse(sourceBytes"));
   assert.ok(syncFunctionSource.includes('attachmentEncoding: "arraybuffer"'));
@@ -127,7 +129,7 @@ test("authenticated inbox hydration parses bounded full RFC822 sources instead o
 
 test("existing inbound media backfill parses full source before marking media processed", () => {
   const backfillStart = syncFunctionSource.indexOf("const storedMessage = await client.fetchOne(");
-  const sourceParse = syncFunctionSource.indexOf("const refreshedBody = await fetchMessageBody(", backfillStart);
+  const sourceParse = syncFunctionSource.indexOf("const refreshedBody = await fetchMessageBodyFromMailbox(", backfillStart);
   const attachmentStore = syncFunctionSource.indexOf("const refreshedAttachments = await storeEmailAttachments(", sourceParse);
   const completionUpdate = syncFunctionSource.indexOf("media_processed_at: new Date().toISOString()", sourceParse);
 
@@ -147,7 +149,7 @@ test("new inbound email is persisted before MIME body or attachment downloads", 
   );
   const insertIndex = newMessageFlow.indexOf('.from("email_messages")');
   const insertCallIndex = newMessageFlow.indexOf(".insert({", insertIndex);
-  const bodyDownloadIndex = newMessageFlow.indexOf("const body = await fetchMessageBody(");
+  const bodyDownloadIndex = newMessageFlow.indexOf("const body = await fetchMessageBodyFromMailbox(");
   const attachmentDownloadIndex = newMessageFlow.indexOf("const attachmentMetadata = await storeEmailAttachments(");
 
   assert.notEqual(insertIndex, -1);
