@@ -1,0 +1,21 @@
+/* Keyboard focus indicators for the persistent quick-create disclosure. */
+#sway-admin-workspace .sway-quick-create-toggle:focus-visible,
+#sway-admin-workspace .sway-quick-create-item:focus-visible {
+    outline: 3px solid #0152F4 !important;
+    outline-offset: 3px !important;
+    box-shadow: 0 0 0 2px rgba(1, 82, 244, 0.16) !important;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-quick-create-toggle:focus-visible,
+body.sway-dark-mode #sway-admin-workspace .sway-quick-create-item:focus-visible {
+    outline-color: #77C1FC !important;
+    box-shadow: 0 0 0 2px rgba(119, 193, 252, 0.18) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #sway-admin-workspace .sway-quick-create-toggle:focus-visible,
+    #sway-admin-workspace .sway-quick-create-item:focus-visible {
+        transform: none !important;
+        transition: none !important;
+    }
+}
