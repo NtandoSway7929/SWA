@@ -212,9 +212,18 @@ assert.match(controlsMarkup, /data-admin-table-bulk-action="delete"/,
 assert.match(controlsMarkup, /Delete selected leads/,
     "the destructive action should clearly identify the selected lead records");
 for (const view of ["tasks", "followups", "communications"]) {
-    assert.match(controls.renderControls(view), /data-admin-table-bulk-action="delete"/,
+    const viewControls = controls.renderControls(view);
+    assert.match(viewControls, /data-admin-table-bulk-action="delete"/,
         view + " bulk toolbar should expose a delete-selected action");
+    assert.match(viewControls, /data-admin-table-bulk-action="export"/,
+        view + " bulk toolbar should expose selected-record CSV export");
+    assert.match(viewControls, /Export selected CSV/,
+        view + " export action should be clearly labelled");
 }
+assert.match(moduleSource, /view === "communications"[\\s\\S]*?\["Contact", "Channel", "Direction", "Subject", "Message", "Communicated at", "Created by"\]/,
+    "Communication Log exports must use communication-specific columns rather than follow-up fields");
+assert.match(moduleSource, /item\.contacted_at \|\| item\.created_at/,
+    "Communication Log exports should include the best available communication timestamp");
 assert.match(controls.renderControls("tasks"), /Complete selected/,
     "task bulk completion should remain available alongside bulk deletion");
 assert.match(controls.renderControls("followups"), /Complete selected/,
