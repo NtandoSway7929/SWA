@@ -22,9 +22,9 @@ returns integer
 language sql
 security definer
 set search_path = ''
-as $
+as $due_work$
     select innerme_private.generate_admin_due_notifications_internal();
-$;
+$due_work$;
 
 revoke all privileges
     on function public.run_swayphics_due_work_notification_test()
