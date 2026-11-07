@@ -16007,8 +16007,9 @@ function simpleBars(items, color) {
         }
 
         const remoteImages = emailHtmlHasExternalImages(message.html_body);
+        const showRemoteImageNote = remoteImages && !emailRemoteImagesEnabled.has(messageId);
         return (
-            (remoteImages
+            (showRemoteImageNote
                 ? '<div class="sway-email-remote-image-note"><span>External images are hidden by default to protect your privacy.</span><button type="button" data-email-load-images="' + esc(messageId) + '">Load external images</button></div>'
                 : "") +
             '<div class="sway-email-html-shell">' +
@@ -28960,6 +28961,13 @@ function simpleBars(items, color) {
             if (message && message.thread_id) {
                 state.emailSelectedThreadId =
                     message.thread_id;
+
+                const selectedEmailThread = emailThreadGroups().find(function (thread) {
+                    return String(thread.threadId) === String(message.thread_id);
+                });
+                if (selectedEmailThread) {
+                    await loadEmailThreadMedia(selectedEmailThread);
+                }
 
                 renderView();
 
