@@ -499,6 +499,22 @@ async function main() {
       await page.locator('[data-admin-table-row="' + view + '"]').first().waitFor({ timeout: 10000 });
     }
 
+    async function downloadSelectedCsv(view) {
+      const button = page.locator(
+        '[data-admin-table-tools="' + view + '"] [data-admin-table-bulk-action="export"]'
+      );
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        button.click()
+      ]);
+      const downloadPath = await download.path();
+      assert.ok(downloadPath, view + " selected CSV export should create a file");
+      return {
+        filename: download.suggestedFilename(),
+        content: fs.readFileSync(downloadPath, "utf8")
+      };
+    }
+
     await navigate("leads", "crm");
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
@@ -575,6 +591,14 @@ async function main() {
     await page.locator('[data-admin-table-filter="followups"]').selectOption("pending");
     assert.equal(await followupRows.filter({ visible: true }).count(), 2,
       "the actual Follow-ups view should filter pending records");
+    await followupRows.filter({ hasText: "Bravo Cafe" })
+      .locator('[data-admin-table-select="followups"]').check();
+    const followupCsv = await downloadSelectedCsv("followups");
+    assert.equal(followupCsv.filename, "swayphics-selected-followups.csv");
+    assert.ok(followupCsv.content.includes('"Contact","Channel","Scheduled for","Assigned to","Status","Notes"'));
+    assert.ok(followupCsv.content.includes('"Check interest"'),
+      "follow-up CSV should contain the selected follow-up notes");
+    await page.locator('[data-admin-table-clear-selection="followups"]').click();
 
     await navigate("tasks", "delivery");
     const taskRows = page.locator('#sway-workspace-main [data-admin-table-row="tasks"]');
@@ -585,6 +609,14 @@ async function main() {
     await page.locator('[data-admin-table-filter="tasks"]').selectOption("todo");
     assert.equal(await taskRows.filter({ visible: true }).count(), 2,
       "the actual Tasks view should filter pending tasks");
+    await taskRows.filter({ hasText: "Confirm scope" })
+      .locator('[data-admin-table-select="tasks"]').check();
+    const taskCsv = await downloadSelectedCsv("tasks");
+    assert.equal(taskCsv.filename, "swayphics-selected-tasks.csv");
+    assert.ok(taskCsv.content.includes('"Task","Description","Assigned to","Client","Priority","Due date","Status"'));
+    assert.ok(taskCsv.content.includes('"Confirm project scope"'),
+      "task CSV should include the selected task description");
+    await page.locator('[data-admin-table-clear-selection="tasks"]').click();
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-desktop.png"), fullPage: true });
 
     // Phase 3: invoice table controls must affect rows only, not billing totals.
@@ -806,6 +838,12 @@ async function main() {
     const communicationRows = page.locator('#sway-workspace-main [data-admin-table-row="communications"]');
     assert.equal(await communicationRows.count(), 1, "the Communication Log should render synthetic entries");
     await communicationRows.first().locator('[data-admin-table-select="communications"]').check();
+    const communicationCsv = await downloadSelectedCsv("communications");
+    assert.equal(communicationCsv.filename, "swayphics-selected-communications.csv");
+    assert.ok(communicationCsv.content.includes('"Contact","Channel","Direction","Subject","Message","Communicated at","Created by"'));
+    assert.ok(communicationCsv.content.includes('"inbound"') &&
+      communicationCsv.content.includes('"Please send more information."'),
+      "Communication Log CSV must export direction and message fields rather than follow-up columns");
     await page.locator('[data-admin-table-bulk-action="delete"]').click();
     await page.locator(".sway-dialog").waitFor({ state: "visible" });
     assert.match(await page.locator(".sway-dialog").innerText(), /Permanently delete 1 selected communication log entry\?/);
@@ -997,7 +1035,7 @@ async function main() {
         "admin session accepted by mocked auth endpoint",
         "actual Leads, Follow-ups, Tasks, Communication Log and Inbox views render synthetic records",
         "lead email search, status filter and business-name sort",
-        "visible-row selection, clear selection and formula-safe CSV download",
+        "visible-row selection, clear selection and formula-safe CSV exports for Leads, Tasks, Follow-ups and Communication Log",
         "cancelled bulk lead deletion makes no delete requests",
         "confirmed bulk lead, task, follow-up and communication deletion removes only selected IDs",
         "confirmed Inbox conversation deletion calls the dedicated mailbox deletion endpoint",
