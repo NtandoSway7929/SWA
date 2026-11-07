@@ -44,17 +44,17 @@ const leads = [
 const tasks = [
   {
     id: "task-low", title: "Prepare proposal", description: "Draft a website proposal",
-    status: "todo", priority: "low", due_date: "2026-11-01",
+    status: "todo", priority: "low", due_date: dateOffset(2),
     assigned_to: TEST_USER_ID, client_id: null, created_at: "2026-10-01T12:00:00Z"
   },
   {
     id: "task-urgent", title: "Confirm scope", description: "Confirm project scope",
-    status: "todo", priority: "urgent", due_date: "2026-10-26",
+    status: "todo", priority: "urgent", due_date: dateOffset(-1),
     assigned_to: TEST_USER_ID, client_id: null, created_at: "2026-10-02T12:00:00Z"
   },
   {
     id: "task-done", title: "Send invoice", description: "Prepare invoice draft",
-    status: "completed", priority: "high", due_date: "2026-10-24",
+    status: "completed", priority: "high", due_date: dateOffset(0),
     assigned_to: TEST_USER_ID, client_id: null, created_at: "2026-10-03T12:00:00Z"
   }
 ];
@@ -62,17 +62,17 @@ const tasks = [
 const followups = [
   {
     id: "follow-later", lead_id: "lead-alpha", client_id: null, channel: "Email",
-    status: "pending", scheduled_for: "2026-11-02", assigned_to: TEST_USER_ID,
+    status: "pending", scheduled_for: dateOffset(2), assigned_to: TEST_USER_ID,
     note: "Send follow-up"
   },
   {
     id: "follow-sooner", lead_id: "lead-bravo", client_id: null, channel: "WhatsApp",
-    status: "pending", scheduled_for: "2026-10-24", assigned_to: TEST_USER_ID,
+    status: "pending", scheduled_for: dateOffset(-1), assigned_to: TEST_USER_ID,
     note: "Check interest"
   },
   {
     id: "follow-done", lead_id: "lead-zulu", client_id: null, channel: "Email",
-    status: "completed", scheduled_for: "2026-10-23", assigned_to: TEST_USER_ID,
+    status: "completed", scheduled_for: dateOffset(-2), assigned_to: TEST_USER_ID,
     note: "Already contacted"
   }
 ];
@@ -129,9 +129,23 @@ const emailMessages = [
 ];
 
 function dateOffset(days) {
-  const value = new Date();
-  value.setDate(value.getDate() + days);
-  return value.toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Johannesburg",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts
+    .filter(part => part.type !== "literal")
+    .map(part => [part.type, Number(part.value)]));
+  const value = new Date(Date.UTC(
+    values.year,
+    values.month - 1,
+    values.day + Number(days || 0)
+  ));
+  return value.getUTCFullYear() + "-" +
+    String(value.getUTCMonth() + 1).padStart(2, "0") + "-" +
+    String(value.getUTCDate()).padStart(2, "0");
 }
 
 const todayTimestamp = new Date().toISOString();
@@ -590,20 +604,66 @@ async function main() {
 
     await navigate("followups", "crm");
     const followupRows = page.locator('#sway-workspace-main [data-admin-table-row="followups"]');
+    const followupDateFilter = page.locator('[data-admin-table-date-filter="followups"]');
     assert.equal(await followupRows.count(), 3, "the actual Follow-ups view should render synthetic follow-ups");
+    await followupDateFilter.selectOption("overdue");
+    assert.equal(await followupRows.filter({ visible: true }).count(), 1,
+      "the Follow-ups date filter should isolate the overdue pending follow-up");
+    assert.ok((await followupRows.filter({ visible: true }).first().innerText()).includes("Bravo Cafe"),
+      "the overdue follow-up should retain its linked contact");
+    await followupDateFilter.selectOption("today");
+    assert.equal(await followupRows.filter({ visible: true }).count(), 0,
+      "the Follow-ups today filter should not show overdue or future records");
+    await followupDateFilter.selectOption("upcoming");
+    assert.equal(await followupRows.filter({ visible: true }).count(), 1,
+      "the Follow-ups upcoming filter should show the future pending follow-up");
+    assert.ok((await followupRows.filter({ visible: true }).first().innerText()).includes("Alpha Studio"),
+      "the upcoming follow-up should retain its linked contact");
+    await followupDateFilter.selectOption("all");
     await page.locator('[data-admin-table-filter="followups"]').selectOption("pending");
     assert.equal(await followupRows.filter({ visible: true }).count(), 2,
-      "the actual Follow-ups view should filter pending records");
+      "the actual Follow-ups view should combine date and status filtering");
 
     await navigate("tasks", "delivery");
     const taskRows = page.locator('#sway-workspace-main [data-admin-table-row="tasks"]');
+    const taskDateFilter = page.locator('[data-admin-table-date-filter="tasks"]');
     assert.equal(await taskRows.count(), 3, "the actual Tasks view should render synthetic tasks");
+    await taskDateFilter.selectOption("overdue");
+    assert.equal(await taskRows.filter({ visible: true }).count(), 1,
+      "the Tasks date filter should isolate the overdue active task");
+    assert.ok((await taskRows.filter({ visible: true }).first().innerText()).includes("Confirm scope"),
+      "the overdue task should retain its correct title");
+    await taskDateFilter.selectOption("today");
+    assert.equal(await taskRows.filter({ visible: true }).count(), 0,
+      "completed tasks should not appear in the active due-today bucket");
+    await taskDateFilter.selectOption("upcoming");
+    assert.equal(await taskRows.filter({ visible: true }).count(), 1,
+      "the Tasks upcoming filter should show the future active task");
+    assert.ok((await taskRows.filter({ visible: true }).first().innerText()).includes("Prepare proposal"),
+      "the upcoming task should retain its correct title");
+    await taskDateFilter.selectOption("all");
     await page.locator('[data-admin-table-sort="tasks"]').selectOption("priority_desc");
     assert.ok((await taskRows.first().innerText()).includes("Confirm scope"),
       "the actual Tasks view should sort urgent priority first");
     await page.locator('[data-admin-table-filter="tasks"]').selectOption("todo");
     assert.equal(await taskRows.filter({ visible: true }).count(), 2,
       "the actual Tasks view should filter pending tasks");
+    await taskDateFilter.selectOption("upcoming");
+    assert.equal(await taskRows.filter({ visible: true }).count(), 1,
+      "the date filter should combine with the task status filter");
+    const taskResetFilters = page.locator('[data-admin-table-reset-filters="tasks"]');
+    assert.equal(await taskResetFilters.isEnabled(), true,
+      "the date filter should enable the task filter-reset action");
+    await taskResetFilters.click();
+    assert.equal(await page.locator('[data-admin-table-filter="tasks"]').inputValue(), "all",
+      "clear filters should restore all task statuses");
+    assert.equal(await taskDateFilter.inputValue(), "all",
+      "clear filters should restore all task dates");
+    assert.equal(await taskRows.filter({ visible: true }).count(), 3,
+      "clear filters should restore all task records");
+    assert.equal(await page.locator('[data-admin-table-sort="tasks"]').inputValue(), "priority_desc",
+      "clear filters should preserve the task sort order");
+    await page.locator('[data-admin-table-filter="tasks"]').selectOption("todo");
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-desktop.png"), fullPage: true });
 
     // Phase 3: invoice table controls must affect rows only, not billing totals.
