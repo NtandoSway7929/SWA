@@ -81,6 +81,51 @@ create table public.tasks (
   updated_at timestamptz not null default now()
 );
 
+create table public.workflow_settings (
+  id smallint primary key default 1 check (id = 1),
+  new_lead_response_hours integer not null default 24,
+  lead_no_response_days integer not null default 3,
+  followup_stage_days jsonb not null default '{}'::jsonb,
+  max_followup_attempts integer not null default 1
+);
+
+insert into public.workflow_settings (id, new_lead_response_hours, lead_no_response_days, max_followup_attempts)
+values (1, 24, 3, 1);
+
+create schema if not exists innerme_private;
+
+create or replace function public.create_admin_notification(
+  p_user_id uuid,
+  p_actor_id uuid,
+  p_level text,
+  p_event_type text,
+  p_title text,
+  p_message text,
+  p_entity_type text,
+  p_entity_id uuid,
+  p_target_view text,
+  p_dedupe_key text
+)
+returns void
+language plpgsql
+as $notification$ begin return; end; $notification$;
+
+create or replace function public.notify_admins(
+  p_actor_id uuid,
+  p_level text,
+  p_event_type text,
+  p_title text,
+  p_message text,
+  p_entity_type text,
+  p_entity_id uuid,
+  p_target_view text,
+  p_dedupe_key text,
+  p_force boolean
+)
+returns void
+language plpgsql
+as $notification$ begin return; end; $notification$;
+
 create table public.follow_ups (
   id uuid primary key default gen_random_uuid(),
   lead_id uuid references public.leads(id) on delete cascade,
@@ -96,6 +141,10 @@ create table public.follow_ups (
   created_at timestamptz not null default now(),
   constraint follow_up_contact_check check (lead_id is not null or client_id is not null)
 );
+
+create unique index follow_ups_one_pending_per_lead_idx
+on public.follow_ups (lead_id)
+where lead_id is not null and status = 'pending';
 
 create table public.activity_log (
   id uuid primary key default gen_random_uuid(),

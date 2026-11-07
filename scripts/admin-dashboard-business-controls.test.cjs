@@ -10,13 +10,14 @@ const settings = fs.readFileSync(path.join(root, "admin-dashboard", "admin-setti
 const css = fs.readFileSync(path.join(root, "admin-dashboard", "admin-settings-expanded.css"), "utf8");
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
 const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261025020000_admin_dashboard_business_controls.sql"), "utf8");
+const firstContactMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261107190000_swayphics_first_contact_task_automation.sql"), "utf8");
 const deliveryMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261025031000_swayphics_project_delivery_settings.sql"), "utf8");
 const baseline = fs.readFileSync(path.join(root, "supabase", "swayphics-business-flow.sql"), "utf8");
 const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "validate-site.yml"), "utf8");
 
 test("new Settings assets are cache-busted and loaded in the dashboard", () => {
   assert.ok(html.includes("admin-settings-expanded.css?v=20261025-business-invoices-3"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261107-followup-automation-5"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261107-first-contact-automation-1"));
   assert.ok(html.indexOf("admin-workspace.js") < html.indexOf("admin-settings-expanded.js"));
 });
 
@@ -131,6 +132,55 @@ test("settings audit records changed field names only and is protected by row-le
   assert.ok(!/old_values|new_values|previous_value|new_value/i.test(migration));
   assert.ok(settings.includes("admin_settings_audit_log"));
   assert.ok(settings.includes("Fields changed"));
+});
+
+
+test("first-contact SLA creates one internal follow-up without changing a new lead's status", () => {
+  assert.ok(firstContactMigration.includes("coalesce(ws.new_lead_response_hours, 24)"));
+  assert.ok(firstContactMigration.includes("where l.status = 'new'"));
+  assert.ok(firstContactMigration.includes("l.created_at <= now() - make_interval(hours => v_response_hours)"));
+  assert.ok(firstContactMigration.includes("for update of l skip locked"));
+  assert.ok(firstContactMigration.includes("where f.lead_id = l.id"));
+  assert.ok(firstContactMigration.includes("Automatic first-contact task: response target missed after "));
+  assert.ok(firstContactMigration.includes("on conflict (lead_id)"));
+  assert.ok(firstContactMigration.includes("where lead_id is not null and status = 'pending'"));
+  assert.ok(firstContactMigration.includes("do nothing"));
+
+  const firstContactBlock = firstContactMigration
+    .split("-- New leads receive a pending first-contact task")[1]
+    ?.split("-- Existing stage-based follow-ups retain")[0] || "";
+  assert.ok(firstContactBlock, "the dedicated first-contact processing block should exist");
+  assert.doesNotMatch(firstContactBlock, /update public\.leads/i,
+    "creating the internal reminder must leave the lead's New status unchanged");
+  assert.doesNotMatch(firstContactBlock, /send_?email|send_?whatsapp|net\.http_|functions\/v1/i,
+    "the first-contact task must not send outbound communications");
+
+  assert.match(firstContactBlock,
+    /when nullif\(trim\(v_lead\.email\), ''\) is not null then 'Email'\s+when nullif\(trim\(v_lead\.phone\), ''\) is not null then 'Phone'\s+else 'Other'/i);
+  assert.match(firstContactBlock,
+    /where au\.user_id = v_lead\.assigned_to\s+and au\.active = true/i,
+    "the lead's assigned administrator should be reused only while active");
+  assert.match(firstContactBlock,
+    /select au\.user_id[\s\S]*?where au\.active = true[\s\S]*?au\.role = 'owner'/i,
+    "unassigned or inactive assignees should fall back to an active owner/admin");
+
+  assert.ok(firstContactMigration.includes("coalesce(f.note, '') not like 'Automatic first-contact task:%'"),
+    "first-contact reminders must not consume later-stage follow-up attempts");
+  assert.ok(firstContactMigration.includes("new.status in ('won', 'lost', 'not interested')"),
+    "terminal lead outcomes must skip pending first-contact tasks");
+  assert.ok(firstContactMigration.includes("set status = case"));
+  assert.ok(firstContactMigration.includes("completed_at = case"));
+  assert.ok(firstContactMigration.includes("old.status = 'new' and new.status <> 'new'"));
+  assert.ok(firstContactMigration.includes("trg_complete_swayphics_first_contact_followups"));
+  assert.ok(!firstContactMigration.includes("cron.schedule("),
+    "the enhancement must reuse the existing 15-minute scheduler instead of adding a second job");
+
+  assert.ok(settings.includes("Create an assigned first-contact task after a new lead exceeds this response target."));
+  assert.ok(settings.includes("one assigned first-contact task for a New lead"));
+  assert.ok(settings.includes("pending automatic first-contact task"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261107-first-contact-automation-1"));
+  assert.ok(baseline.includes("Automatic first-contact task: response target missed after "));
+  assert.ok(baseline.includes("trg_complete_swayphics_first_contact_followups"));
 });
 
 test("automation-health RPC requires an active admin and limits exposed jobs", () => {
