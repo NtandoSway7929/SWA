@@ -10090,3 +10090,122 @@ body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-pending > span 
         flex-direction: column;
     }
 }
+
+
+/* Inbox search and read-state filters */
+#sway-admin-workspace .sway-email-inbox-filters {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.6fr) minmax(170px, .8fr) auto;
+    align-items: end;
+    gap: 12px;
+    padding: 15px 21px;
+    border-bottom: 1px solid rgba(0,32,150,0.055);
+    background: rgba(248,251,255,0.48);
+}
+
+#sway-admin-workspace .sway-email-inbox-filter-field {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
+}
+
+#sway-admin-workspace .sway-email-inbox-filter-field > span {
+    color: var(--text-muted);
+    font-size: .54rem;
+    font-weight: 850;
+    letter-spacing: .04em;
+}
+
+#sway-admin-workspace .sway-email-inbox-filter-field input,
+#sway-admin-workspace .sway-email-inbox-filter-field select {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid rgba(0,32,150,.12);
+    border-radius: 11px;
+    background: rgba(255,255,255,.94);
+    color: var(--sway-dark);
+    font: 650 .62rem 'Plus Jakarta Sans', sans-serif;
+}
+
+#sway-admin-workspace .sway-email-inbox-filter-field input:focus-visible,
+#sway-admin-workspace .sway-email-inbox-filter-field select:focus-visible {
+    outline: 3px solid rgba(1,82,244,.24);
+    outline-offset: 2px;
+    border-color: var(--sway-blue);
+}
+
+#sway-admin-workspace .sway-email-inbox-result-count {
+    align-self: center;
+    padding-bottom: 2px;
+    color: var(--text-muted);
+    font-size: .55rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+#sway-admin-workspace .sway-email-inbox-filter-empty {
+    display: grid;
+    gap: 6px;
+    padding: 34px 22px;
+    text-align: center;
+}
+
+#sway-admin-workspace .sway-email-inbox-filter-empty strong {
+    color: var(--sway-dark);
+    font-size: .72rem;
+    font-weight: 850;
+}
+
+#sway-admin-workspace .sway-email-inbox-filter-empty span {
+    color: var(--text-muted);
+    font-size: .6rem;
+    line-height: 1.5;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-filters {
+    border-bottom-color: rgba(119,193,252,.12);
+    background: rgba(11,22,40,.5);
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-filter-field > span,
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-result-count {
+    color: #A8B4C7;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-filter-field input,
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-filter-field select {
+    border-color: rgba(119,193,252,.18);
+    background: #101A2C;
+    color: #EAF1FD;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-filter-empty strong {
+    color: #EAF1FD;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-filter-empty span {
+    color: #A8B4C7;
+}
+
+@media (max-width: 720px) {
+    #sway-admin-workspace .sway-email-inbox-filters {
+        grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr);
+        padding: 14px 16px;
+    }
+
+    #sway-admin-workspace .sway-email-inbox-result-count {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 440px) {
+    #sway-admin-workspace .sway-email-inbox-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #sway-admin-workspace .sway-email-inbox-result-count {
+        grid-column: auto;
+    }
+}
