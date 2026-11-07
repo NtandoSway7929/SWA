@@ -1071,7 +1071,10 @@ Deno.serve(async (req) => {
     }
 
     let existingMediaHydrated = 0;
-    if (isAuthenticatedUser && failedUid === null) {
+    // Both authenticated dashboard requests and the Vault-authenticated cron may
+    // hydrate one pending message after its metadata row has been persisted.
+    // The scheduled client retains its shorter 12-second socket timeout.
+    if (failedUid === null) {
       try {
         const pendingMedia = await supabase
           .from("email_messages")

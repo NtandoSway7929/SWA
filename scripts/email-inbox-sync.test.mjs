@@ -181,6 +181,18 @@ test("scheduled ingestion does not block inbox persistence on optional media dow
   assert.ok(attachmentDownloadIndex < communicationLogIndex);
 });
 
+
+test("scheduled inbox sync can hydrate one pending media record after metadata persistence", () => {
+  const backfillStart = syncFunctionSource.indexOf("let existingMediaHydrated = 0;");
+  const backfillBlock = syncFunctionSource.slice(backfillStart);
+  assert.notEqual(backfillStart, -1);
+  assert.ok(backfillBlock.includes("if (failedUid === null)"));
+  assert.ok(!backfillBlock.includes("if (isAuthenticatedUser && failedUid === null)"));
+  assert.ok(syncFunctionSource.includes("const EXISTING_MEDIA_BACKFILL_BATCH = 1;"));
+  assert.ok(syncFunctionSource.includes("const IMAP_SCHEDULED_SOCKET_TIMEOUT_MS = 12000;"));
+  assert.ok(syncFunctionSource.includes("const IMAP_MEDIA_SOCKET_TIMEOUT_MS = 30000;"));
+});
+
 test("failed full-source retrieval leaves inbound media pending for retry", () => {
   assert.ok(syncFunctionSource.includes('if (!source) throw new Error("The IMAP server did not return the full message source.")'));
   assert.ok(syncFunctionSource.includes("media_processed_at: null"));
