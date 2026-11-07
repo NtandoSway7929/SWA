@@ -197,7 +197,7 @@ test("Overview metric routing clears stale list state but preserves sorting", ()
         assert.equal(state.tableControls[view].filter, filter);
         assert.equal(state.tableControls[view].search, "");
         assert.equal(state.tableControls[view].sort, sort);
-        assert.deepEqual(state.tableSelection[view], []);
+        assert.deepEqual(Array.from(state.tableSelection[view]), []);
         assert.equal(state.tableFeedback[view], "");
     }
     assert.equal(state.showArchivedInvoices, false,
