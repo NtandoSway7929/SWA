@@ -727,3 +727,45 @@ body.sway-dark-mode #sway-admin-workspace .sway-overview-secondary-action {
         width: min(290px, calc(100vw - 24px)) !important;
     }
 }
+
+
+/* Overview KPI cards are navigational controls, not decorative figures. */
+#sway-admin-workspace .sway-overview-hero-metric-link {
+    appearance: none;
+    width: 100%;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 160ms ease, transform 160ms ease;
+}
+
+#sway-admin-workspace .sway-overview-hero-metric-link:hover {
+    background: rgba(1, 82, 244, 0.055);
+    transform: translateY(-1px);
+}
+
+#sway-admin-workspace .sway-overview-hero-metric-link:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 3px solid rgba(1, 82, 244, 0.34);
+    outline-offset: 3px;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-overview-hero-metric-link:hover {
+    background: rgba(119, 193, 252, 0.09);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #sway-admin-workspace .sway-overview-hero-metric-link {
+        transition: none;
+    }
+    #sway-admin-workspace .sway-overview-hero-metric-link:hover {
+        transform: none;
+    }
+}

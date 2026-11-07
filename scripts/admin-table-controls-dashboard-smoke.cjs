@@ -62,7 +62,7 @@ const tasks = [
 const followups = [
   {
     id: "follow-later", lead_id: "lead-alpha", client_id: null, channel: "Email",
-    status: "pending", scheduled_for: "2026-11-02", assigned_to: TEST_USER_ID,
+    status: "pending", scheduled_for: dateOffset(0), assigned_to: TEST_USER_ID,
     note: "Send follow-up"
   },
   {
@@ -129,8 +129,18 @@ const emailMessages = [
 ];
 
 function dateOffset(days) {
-  const value = new Date();
-  value.setDate(value.getDate() + days);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Johannesburg",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const value = new Date(Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day) + days
+  ));
   return value.toISOString().slice(0, 10);
 }
 
@@ -499,6 +509,90 @@ async function main() {
       await page.locator('[data-admin-table-row="' + view + '"]').first().waitFor({ timeout: 10000 });
     }
 
+    async function returnToOverview() {
+      const overviewToggle = page.locator('[data-nav-group-toggle="overview"]');
+      await overviewToggle.waitFor({ state: "visible" });
+      if ((await overviewToggle.getAttribute("aria-expanded")) !== "true") {
+        await overviewToggle.click();
+      }
+      const overviewDestination = page.locator(
+        '.sway-top-nav-menu-layer [data-nav-menu="overview"] [data-view="overview"]'
+      );
+      await overviewDestination.waitFor({ state: "visible" });
+      await overviewDestination.click();
+      await page.locator("#sway-workspace-main .sway-overview-hero").waitFor({ state: "visible" });
+    }
+
+    // Seed a non-default sort and stale search. The metric must clear the
+    // search but keep the operator's preferred sort order.
+    await navigate("tasks", "delivery");
+    await page.locator('[data-admin-table-sort="tasks"]').selectOption("priority_desc");
+    await page.locator('[data-admin-table-search-input="tasks"]').fill("Send invoice");
+    await returnToOverview();
+
+    const tasksMetric = page.locator(
+      '#sway-workspace-main [data-overview-filter="overview_my_open"]'
+    );
+    await tasksMetric.focus();
+    await page.keyboard.press("Enter");
+    const taskMetricRows = page.locator('#sway-workspace-main [data-admin-table-row="tasks"]');
+    await page.locator('[data-admin-table-search-input="tasks"]').waitFor({ state: "visible" });
+    assert.equal(await page.locator('[data-admin-table-filter="tasks"]').inputValue(), "overview_my_open",
+      "My open tasks should select its dedicated filter");
+    assert.equal(await page.locator('[data-admin-table-search-input="tasks"]').inputValue(), "",
+      "opening a metric should clear a stale table search");
+    assert.equal(await page.locator('[data-admin-table-sort="tasks"]').inputValue(), "priority_desc",
+      "opening a metric should preserve the user's sort preference");
+    assert.equal(await taskMetricRows.count(), 2,
+      "My open tasks should show incomplete tasks assigned to the signed-in admin");
+    assert.equal(await taskMetricRows.filter({ hasText: "Send invoice" }).count(), 0,
+      "My open tasks should exclude completed tasks");
+
+    await returnToOverview();
+    await page.locator('#sway-workspace-main [data-overview-filter="overview_due_today"]').click();
+    const todayFollowupRows = page.locator('#sway-workspace-main [data-admin-table-row="followups"]');
+    assert.equal(await page.locator('[data-admin-table-filter="followups"]').inputValue(), "overview_due_today",
+      "Follow-ups today should select its date-specific filter");
+    assert.equal(await todayFollowupRows.count(), 1,
+      "Follow-ups today should show only pending records scheduled for the Johannesburg dashboard date");
+    assert.ok((await todayFollowupRows.first().innerText()).includes("Alpha Studio"),
+      "the due-today filter should return the synthetic follow-up scheduled today");
+
+    await returnToOverview();
+    await page.locator('#sway-workspace-main [data-overview-filter="overview_open_pipeline"]').click();
+    const pipelineMetricRows = page.locator('#sway-workspace-main [data-admin-table-row="leads"]');
+    assert.equal(await page.locator('[data-admin-table-filter="leads"]').inputValue(), "overview_open_pipeline",
+      "Open pipeline should select its dedicated lead filter");
+    assert.equal(await pipelineMetricRows.count(), 3,
+      "Open pipeline should show active leads but exclude won, lost and follow-up statuses");
+    assert.equal(await pipelineMetricRows.filter({ hasText: "Bravo Cafe" }).count(), 0,
+      "Open pipeline should exclude a follow-up-only lead");
+
+    await returnToOverview();
+    await page.locator('#sway-workspace-main [data-overview-filter="overview_outstanding"]').click();
+    const outstandingMetricRows = page.locator('#sway-workspace-main [data-admin-table-row="invoices"]');
+    assert.equal(await page.locator('[data-admin-table-filter="invoices"]').inputValue(), "overview_outstanding",
+      "Outstanding should select its dedicated invoice filter");
+    assert.equal(await outstandingMetricRows.count(), 2,
+      "Outstanding should show only active invoices with positive balances");
+    assert.equal(await outstandingMetricRows.filter({ hasText: "INV-CI-300" }).count(), 0,
+      "Outstanding should exclude paid invoices");
+    assert.equal(await outstandingMetricRows.filter({ hasText: "INV-CI-ARCH" }).count(), 0,
+      "Outstanding should exclude archived invoices");
+
+    // Restore the standard list filters before running the older independent
+    // regression checks below. The dashboard intentionally remembers filters
+    // when moving between views; tests should reset their own shared state.
+    await navigate("tasks", "delivery");
+    await page.locator('[data-admin-table-filter="tasks"]').selectOption("all");
+    await navigate("followups", "crm");
+    await page.locator('[data-admin-table-filter="followups"]').selectOption("all");
+    await navigate("leads", "crm");
+    await page.locator('[data-admin-table-filter="leads"]').selectOption("all");
+    await navigate("invoices", "billing");
+    await page.locator('[data-admin-table-filter="invoices"]').selectOption("all");
+
+    await returnToOverview();
     await navigate("leads", "crm");
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
