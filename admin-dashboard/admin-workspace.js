@@ -5698,6 +5698,11 @@
                 "sway-notification-badge"
             );
 
+        const toggle =
+            document.getElementById(
+                "sway-notification-toggle"
+            );
+
         const empty =
             document.getElementById(
                 "sway-notification-empty"
@@ -5744,6 +5749,15 @@
 
         badge.hidden = unread === 0;
 
+        if (toggle) {
+            toggle.setAttribute(
+                "aria-label",
+                unread > 0
+                    ? "Open notifications, " + unread + " unread"
+                    : "Open notifications, no unread notifications"
+            );
+        }
+
         if (!notifications.length) {
             list.hidden = true;
             empty.hidden = false;
@@ -5768,37 +5782,50 @@
                         ? storedNotification.is_read === true
                         : readKeys.has(item.key);
 
+                const detailText =
+                    String(item.detail || "").trim().replace(/[.!?]+$/, "");
+                const accessibleLabel =
+                    "Open notification: " +
+                    String(item.title || "Notification") +
+                    (detailText ? ". " + detailText : "") +
+                    ". " +
+                    (isRead ? "Read" : "Unread");
+
                 return (
-                    '<div class="sway-notification-item ' +
-                        notificationIconClass(item.type) +
-                        (isRead ? " is-read" : "") +
-                        '" data-notification-key="' +
-                        esc(item.key) +
-                        '" data-notification-view="' +
-                        esc(item.view) +
-                        '">' +
-                        '<span class="sway-notification-icon" aria-hidden="true">' +
-                            esc(item.icon) +
-                        "</span>" +
-                        '<span class="sway-notification-copy">' +
-                            "<strong>" +
-                                esc(item.title) +
-                            "</strong>" +
-                            "<span>" +
-                                esc(item.detail) +
+                    '<div class="sway-notification-row" role="listitem">' +
+                        '<button type="button" class="sway-notification-item ' +
+                            notificationIconClass(item.type) +
+                            (isRead ? " is-read" : "") +
+                            '" data-notification-key="' +
+                            esc(item.key) +
+                            '" data-notification-view="' +
+                            esc(item.view) +
+                            '" aria-label="' +
+                            esc(accessibleLabel) +
+                            '">' +
+                            '<span class="sway-notification-icon" aria-hidden="true">' +
+                                esc(item.icon) +
                             "</span>" +
-                            (
-                                isRead
-                                    ? ""
-                                    : '<i aria-label="Unread"></i>'
-                            ) +
-                        "</span>" +
-                        '<span class="sway-notification-actions">' +
-                            '<button type="button" class="sway-notification-clear" data-notification-clear="' +
-                                esc(item.key) +
-                                '" aria-label="Clear notification" title="Clear notification">×</button>' +
+                            '<span class="sway-notification-copy">' +
+                                "<strong>" +
+                                    esc(item.title) +
+                                "</strong>" +
+                                "<span>" +
+                                    esc(item.detail) +
+                                "</span>" +
+                                (
+                                    isRead
+                                        ? ""
+                                        : '<i aria-hidden="true"></i>'
+                                ) +
+                            "</span>" +
                             '<span class="sway-notification-arrow" aria-hidden="true">›</span>' +
-                        "</span>" +
+                        "</button>" +
+                        '<button type="button" class="sway-notification-clear" data-notification-clear="' +
+                            esc(item.key) +
+                            '" aria-label="Clear notification: ' +
+                            esc(item.title || "Notification") +
+                            '" title="Clear notification">×</button>' +
                     "</div>"
                 );
             }).join("");
@@ -6112,7 +6139,53 @@
             if (clearButton) {
                 event.preventDefault();
                 event.stopPropagation();
+
+                const currentRow =
+                    clearButton.closest(".sway-notification-row");
+                const currentItem =
+                    currentRow
+                        ? currentRow.querySelector("[data-notification-key]")
+                        : null;
+                const notificationButtons =
+                    Array.from(
+                        list.querySelectorAll("[data-notification-key]")
+                    );
+                const currentIndex =
+                    notificationButtons.indexOf(currentItem);
+                const preferredItem =
+                    currentIndex >= 0
+                        ? (
+                            notificationButtons[currentIndex + 1] ||
+                            notificationButtons[currentIndex - 1] ||
+                            null
+                        )
+                        : null;
+                const preferredKey =
+                    preferredItem
+                        ? preferredItem.dataset.notificationKey
+                        : "";
+
                 clearNotification(clearButton.dataset.notificationClear);
+
+                const remainingItems =
+                    Array.from(
+                        list.querySelectorAll("[data-notification-key]")
+                    );
+                const nextFocus =
+                    preferredKey
+                        ? remainingItems.find(function (item) {
+                            return item.dataset.notificationKey === preferredKey;
+                        })
+                        : null;
+
+                if (nextFocus) {
+                    nextFocus.focus();
+                } else if (markAll) {
+                    markAll.focus();
+                } else {
+                    button.focus();
+                }
+
                 return;
             }
 
@@ -6188,9 +6261,28 @@
             document.addEventListener(
                 "keydown",
                 function (event) {
-                    if (event.key === "Escape") {
-                        closeNotificationCenter();
+                    if (event.key !== "Escape") return;
+
+                    const currentPanel =
+                        document.getElementById(
+                            "sway-notification-panel"
+                        );
+                    const currentButton =
+                        document.getElementById(
+                            "sway-notification-toggle"
+                        );
+
+                    if (
+                        !currentPanel ||
+                        currentPanel.hidden ||
+                        !currentButton
+                    ) {
+                        return;
                     }
+
+                    event.preventDefault();
+                    closeNotificationCenter();
+                    currentButton.focus();
                 }
             );
         }
