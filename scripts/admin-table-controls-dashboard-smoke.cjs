@@ -492,6 +492,10 @@ async function main() {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });
         return route.fulfill(jsonResponse(0));
       }
+      if (method === "POST" && url.pathname === "/rest/v1/rpc/get_swayphics_automation_status") {
+        metrics.mockedStartupCalls.push({ method, path: url.pathname });
+        return route.fulfill(jsonResponse([]));
+      }
       if (method === "POST" && url.pathname === "/rest/v1/services") {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });
         return route.fulfill({
