@@ -504,8 +504,17 @@ async function main() {
     await page.locator('[data-view="settings"]').first().click();
     const settingsTabs = page.locator('#sway-settings-expanded .swe-tabs [role="tab"]');
     await settingsTabs.first().waitFor({ state: "visible", timeout: 20000 });
-    assert.equal(await settingsTabs.count(), 12,
-      "all twelve Settings sections should be available in the actual dashboard");
+    const settingsTabDetails = await settingsTabs.evaluateAll(tabs => tabs.map(tab => ({
+      id: tab.id,
+      label: tab.innerText.trim(),
+      selected: tab.getAttribute("aria-selected")
+    })));
+    console.log("Actual Settings tablist entries:", JSON.stringify(settingsTabDetails));
+    for (const section of ["sales", "performance", "commercial", "delivery", "business", "notifications",
+      "templates", "security", "preferences", "website", "innerme", "governance"]) {
+      assert.ok(settingsTabDetails.some(tab => tab.id === "swe-tab-" + section),
+        "the actual Settings tablist should include the " + section + " section");
+    }
     const firstSettingsTab = settingsTabs.first();
     const lastSettingsTab = settingsTabs.last();
     await firstSettingsTab.focus();
