@@ -58,6 +58,10 @@
                     sort: (sortOptions(view)[0] || ["", ""])[0]
                 };
             }
+            if ((view === "tasks" || view === "followups") &&
+                typeof state.tableControls[view].dateFilter !== "string") {
+                state.tableControls[view].dateFilter = "all";
+            }
             if (!Array.isArray(state.tableSelection[view])) state.tableSelection[view] = [];
             if (typeof state.tableFeedback[view] !== "string") state.tableFeedback[view] = "";
             return state.tableControls[view];
@@ -70,6 +74,55 @@
             if (view === "invoices" && item.archived === true) return "archived";
             if (view === "communications") return String(item.direction || "unknown").trim().toLowerCase();
             return String(item.status || "").trim().toLowerCase();
+        }
+
+        function todayDateKey() {
+            if (typeof context.today === "function") {
+                const supplied = String(context.today() || "");
+                if (/^\d{4}-\d{2}-\d{2}$/.test(supplied)) {
+                    return supplied;
+                }
+            }
+
+            return new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Africa/Johannesburg",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+            }).format(new Date());
+        }
+
+        function recordDateKey(view, item) {
+            const raw = view === "tasks"
+                ? item.due_date
+                : item.scheduled_for;
+            const key = String(raw || "").trim().slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return "";
+            const parsed = new Date(key + "T00:00:00Z");
+            return Number.isNaN(parsed.getTime()) ||
+                parsed.toISOString().slice(0, 10) !== key
+                ? ""
+                : key;
+        }
+
+        function dateFilterMatches(view, item, filter) {
+            if ((view !== "tasks" && view !== "followups") ||
+                !filter || filter === "all") {
+                return true;
+            }
+
+            const dateKey = recordDateKey(view, item);
+            if (filter === "undated") return !dateKey;
+            if (!dateKey) return false;
+
+            const closedStatuses = ["completed", "cancelled", "canceled", "skipped"];
+            if (closedStatuses.includes(statusValue(view, item))) return false;
+
+            const today = todayDateKey();
+            if (filter === "overdue") return dateKey < today;
+            if (filter === "today") return dateKey === today;
+            if (filter === "upcoming") return dateKey > today;
+            return true;
         }
 
         function searchText(view, item) {
@@ -101,8 +154,11 @@
         function items(view, sourceItems) {
             const controls = settings(view);
             const filterValue = String(controls.filter || "all").toLowerCase();
+            const dateFilter = String(controls.dateFilter || "all").trim().toLowerCase();
             const result = (sourceItems || []).filter(function (item) {
-                return filterValue === "all" || statusValue(view, item) === filterValue;
+                const statusMatches = filterValue === "all" ||
+                    statusValue(view, item) === filterValue;
+                return statusMatches && dateFilterMatches(view, item, dateFilter);
             }).slice();
 
             function dateValue(value) {
@@ -220,6 +276,26 @@
                     (controls.sort === option[0] ? " selected" : "") + ">" +
                     esc(option[1]) + "</option>";
             }).join("");
+            const dateFilterValue = String(controls.dateFilter || "all").trim().toLowerCase();
+            const dateFilterOptions = [
+                ["all", "All dates"],
+                ["overdue", "Overdue"],
+                ["today", "Due today"],
+                ["upcoming", "Upcoming"],
+                ["undated", "No date"]
+            ];
+            const dateFilterHtml = view === "tasks" || view === "followups"
+                ? '<label class="sway-admin-table-field"><span>' +
+                    (view === "tasks" ? "Due date" : "Scheduled date") +
+                    '</span><select data-admin-table-date-filter="' + esc(view) +
+                    '" aria-label="Filter ' + esc(view) + ' by date">' +
+                    dateFilterOptions.map(function (option) {
+                        return '<option value="' + option[0] + '"' +
+                            (dateFilterValue === option[0] ? " selected" : "") + ">" +
+                            option[1] + "</option>";
+                    }).join("") +
+                    "</select></label>"
+                : "";
             const bulk = view === "leads"
                 ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>' +
                   '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected leads">Delete selected leads</button>'
@@ -248,13 +324,17 @@
                     '<label class="sway-admin-table-field"><span>Status</span>' +
                         '<select data-admin-table-filter="' + esc(view) + '" aria-label="Filter ' + esc(view) + ' by status">' +
                             filterOptions + '</select></label>' +
+                    dateFilterHtml +
                     '<label class="sway-admin-table-field"><span>Sort by</span>' +
                         '<select data-admin-table-sort="' + esc(view) + '" aria-label="Sort ' + esc(view) + '">' +
                             sortHtml + '</select></label>' +
                     '<div class="sway-admin-table-count" data-admin-table-count="' + esc(view) + '" aria-live="polite"></div>' +
                     '<button type="button" class="sway-admin-table-reset-button" data-admin-table-reset-filters="' + esc(view) +
-                    '" aria-label="Clear search and status filters for ' + esc(view) + '; keep sort order"' +
-                    (String(controls.search || "").trim() || currentFilter !== "all" ? "" : " disabled") +
+                    '" aria-label="Clear search, status and date filters for ' + esc(view) + '; keep sort order"' +
+                    (String(controls.search || "").trim() ||
+                        currentFilter !== "all" ||
+                        ((view === "tasks" || view === "followups") && dateFilterValue !== "all")
+                        ? "" : " disabled") +
                     '>Clear filters</button>' +
                 '</div>' +
                 (view === "invoices" ? "" :
@@ -282,7 +362,9 @@
         function syncFilterReset(view) {
             const controls = settings(view);
             const hasFilters = String(controls.search || "").trim() !== "" ||
-                String(controls.filter || "all").trim().toLowerCase() !== "all";
+                String(controls.filter || "all").trim().toLowerCase() !== "all" ||
+                ((view === "tasks" || view === "followups") &&
+                    String(controls.dateFilter || "all").trim().toLowerCase() !== "all");
             const button = workspace.querySelector('[data-admin-table-reset-filters="' + view + '"]');
             if (button) button.disabled = !hasFilters;
         }
@@ -555,6 +637,15 @@
                     if (replacement) replacement.focus();
                 });
             });
+            workspace.querySelectorAll("[data-admin-table-date-filter]").forEach(function (select) {
+                select.addEventListener("change", function () {
+                    const view = select.getAttribute("data-admin-table-date-filter");
+                    settings(view).dateFilter = select.value;
+                    renderView();
+                    const replacement = workspace.querySelector('[data-admin-table-date-filter="' + view + '"]');
+                    if (replacement) replacement.focus();
+                });
+            });
             workspace.querySelectorAll("[data-admin-table-sort]").forEach(function (select) {
                 select.addEventListener("change", function () {
                     const view = select.getAttribute("data-admin-table-sort");
@@ -570,6 +661,9 @@
                     const controls = settings(view);
                     controls.search = "";
                     controls.filter = "all";
+                    if (view === "tasks" || view === "followups") {
+                        controls.dateFilter = "all";
+                    }
                     renderView();
                     const replacement = workspace.querySelector('[data-admin-table-reset-filters="' + view + '"]');
                     if (replacement) replacement.focus();
