@@ -29,6 +29,9 @@ const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const MAX_STORED_ATTACHMENTS = 12;
 const EXISTING_MEDIA_BACKFILL_BATCH = 6;
+const IMAP_CONNECTION_TIMEOUT_MS = 8000;
+const IMAP_GREETING_TIMEOUT_MS = 8000;
+const IMAP_SOCKET_TIMEOUT_MS = 12000;
 
 function firstAddress(value: any) {
   let address = value;
@@ -196,6 +199,8 @@ async function fetchMessageBody(
   const parts = collectEmailMimeParts(bodyStructure);
   let plainText = "";
   let html: string | null = null;
+  let plainTextDownloaded = !parts.plain;
+  let htmlDownloaded = !parts.html;
 
   // One oversized or malformed MIME body part must not stop the mailbox
   // cursor. Try the alternate representation independently, then retain the
@@ -203,6 +208,7 @@ async function fetchMessageBody(
   if (parts.plain) {
     try {
       plainText = await decodeMimeTextPart(imapClient, uid, parts.plain);
+      plainTextDownloaded = true;
     } catch (error) {
       console.warn("Unable to download inbound text/plain body part:", {
         uid,
@@ -214,6 +220,7 @@ async function fetchMessageBody(
   if (parts.html) {
     try {
       html = await decodeMimeTextPart(imapClient, uid, parts.html);
+      htmlDownloaded = true;
     } catch (error) {
       console.warn("Unable to download inbound text/html body part:", {
         uid,
@@ -225,6 +232,7 @@ async function fetchMessageBody(
   return {
     text: plainText.trim() || (html ? stripHtml(html) : ""),
     html: html || null,
+    bodyDownloadSucceeded: plainTextDownloaded && htmlDownloaded,
     mimeParts: parts
   };
 }
@@ -661,10 +669,19 @@ Deno.serve(async (req) => {
       logger: false,
       disableCompression: true,
       disableAutoIdle: true,
+      // Keep network waits comfortably below the one-minute cron interval
+      // and its 30-second HTTP request deadline.
+      connectionTimeout: IMAP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: IMAP_GREETING_TIMEOUT_MS,
+      socketTimeout: IMAP_SOCKET_TIMEOUT_MS,
       auth: {
         user: imapUser,
         pass: imapPassword
       }
+    });
+
+    client.on("error", (error: unknown) => {
+      console.error("Swayphics IMAP connection error:", describeImapError(error));
     });
 
     await client.connect();
@@ -784,6 +801,7 @@ Deno.serve(async (req) => {
     let synced = 0;
     let alreadyStored = 0;
     let failedUid: number | null = null;
+    const mediaAttemptedMessageIds = new Set<string>();
 
     for (const targetUid of candidateUids) {
       try {
@@ -805,13 +823,6 @@ Deno.serve(async (req) => {
           failedUid = targetUid;
           break;
         }
-
-        const body =
-          await fetchMessageBody(
-            client,
-            targetUid,
-            message.bodyStructure
-          );
 
         const envelope =
           message.envelope || {};
@@ -857,19 +868,35 @@ Deno.serve(async (req) => {
             ":" +
             String(targetUid);
 
-          const existingAttachments = Array.isArray(existingInbound.attachments)
-            ? existingInbound.attachments
-            : [];
           const mediaAlreadyProcessed = Boolean(existingInbound.media_processed_at);
-          const hydratedAttachments = mediaAlreadyProcessed
-            ? existingAttachments
-            : await storeEmailAttachments(
-                client,
-                targetUid,
-                body.mimeParts.attachments,
-                supabase,
-                String(existingInbound.id)
-              );
+          let mediaUpdate: Record<string, unknown> = {};
+
+          // Scheduled ingestion must never block message visibility on media
+          // downloads. An authenticated inbox refresh can hydrate pending media
+          // after the message row already exists.
+          if (!mediaAlreadyProcessed && isAuthenticatedUser) {
+            mediaAttemptedMessageIds.add(String(existingInbound.id));
+            const existingBody = await fetchMessageBody(
+              client,
+              targetUid,
+              message.bodyStructure
+            );
+            const hydratedAttachments = await storeEmailAttachments(
+              client,
+              targetUid,
+              existingBody.mimeParts.attachments,
+              supabase,
+              String(existingInbound.id)
+            );
+            mediaUpdate = {
+              text_body: existingBody.text || existingInbound.text_body || subject || "(Email received)",
+              html_body: existingBody.html || existingInbound.html_body || null,
+              attachments: hydratedAttachments,
+              media_processed_at: existingBody.bodyDownloadSucceeded
+                ? new Date().toISOString()
+                : null
+            };
+          }
 
           const updatedExisting =
             await supabase
@@ -878,19 +905,11 @@ Deno.serve(async (req) => {
                 imap_uid: Number(targetUid),
                 imap_uid_validity: uidValidity,
                 source_key: existingSourceKey,
-                ...(mediaAlreadyProcessed ? {} : {
-                  text_body: body.text || existingInbound.text_body || subject || "(Email received)",
-                  html_body: body.html || existingInbound.html_body || null,
-                  attachments: hydratedAttachments,
-                  media_processed_at: new Date().toISOString()
-                })
+                ...mediaUpdate
               })
               .eq("id", existingInbound.id);
 
           if (updatedExisting.error) {
-            if (!mediaAlreadyProcessed) {
-              await cleanupStoredEmailAttachments(supabase, hydratedAttachments);
-            }
             throw updatedExisting.error;
           }
 
@@ -940,8 +959,7 @@ Deno.serve(async (req) => {
         const fromEmail =
           from.email || "";
 
-        const textBody =
-          body.text ||
+        let textBody =
           subject ||
           "(Email received)";
 
@@ -997,14 +1015,9 @@ Deno.serve(async (req) => {
           String(targetUid);
 
         const emailRecordId = crypto.randomUUID();
-        const attachmentMetadata = await storeEmailAttachments(
-          client,
-          targetUid,
-          body.mimeParts.attachments,
-          supabase,
-          emailRecordId
-        );
 
+        // Persist the email first. Media is optional enrichment and must not
+        // prevent the message from appearing in the inbox.
         const inserted =
           await supabase
             .from("email_messages")
@@ -1035,10 +1048,9 @@ Deno.serve(async (req) => {
                 textBody ||
                 subject ||
                 "(Email received)",
-              html_body:
-                body.html || null,
-              attachments: attachmentMetadata,
-              media_processed_at: new Date().toISOString(),
+              html_body: null,
+              attachments: [],
+              media_processed_at: null,
               received_at:
                 receivedAt,
               is_read: isRead,
@@ -1052,7 +1064,6 @@ Deno.serve(async (req) => {
             .single();
 
         if (inserted.error) {
-          await cleanupStoredEmailAttachments(supabase, attachmentMetadata);
           if (
             inserted.error.code !==
             "23505"
@@ -1061,6 +1072,49 @@ Deno.serve(async (req) => {
           }
         } else {
           synced += 1;
+          mediaAttemptedMessageIds.add(emailRecordId);
+
+          if (isAuthenticatedUser) {
+            try {
+              const body = await fetchMessageBody(
+                client,
+                targetUid,
+                message.bodyStructure
+              );
+              textBody = body.text || textBody;
+              const attachmentMetadata = await storeEmailAttachments(
+                client,
+                targetUid,
+                body.mimeParts.attachments,
+                supabase,
+                emailRecordId
+              );
+              const mediaUpdate = await supabase
+                .from("email_messages")
+                .update({
+                  text_body: textBody,
+                  html_body: body.html || null,
+                  attachments: attachmentMetadata,
+                  media_processed_at: body.bodyDownloadSucceeded
+                    ? new Date().toISOString()
+                    : null
+                })
+                .eq("id", emailRecordId)
+                .is("media_processed_at", null);
+
+              if (mediaUpdate.error) {
+                await cleanupStoredEmailAttachments(supabase, attachmentMetadata);
+                throw mediaUpdate.error;
+              }
+            } catch (mediaError) {
+              // Keep the already-inserted email visible. Pending media can be
+              // retried by the next authenticated inbox sync.
+              console.error("Inbound email media hydration deferred:", {
+                uid: targetUid,
+                error: String((mediaError as any)?.message || mediaError || "Unknown error")
+              });
+            }
+          }
 
           if (
             contact.clientId ||
@@ -1130,7 +1184,9 @@ Deno.serve(async (req) => {
 
         if (pendingMedia.error) throw pendingMedia.error;
 
-        for (const record of pendingMedia.data || []) {
+        for (const record of (pendingMedia.data || []).filter(
+          (item: any) => !mediaAttemptedMessageIds.has(String(item.id))
+        )) {
           const storedUid = Number(record.imap_uid);
           if (!Number.isSafeInteger(storedUid) || storedUid <= 0 || !record.message_id) continue;
 

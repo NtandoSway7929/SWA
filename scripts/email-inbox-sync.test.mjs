@@ -1,5 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const syncFunctionSource = readFileSync(
+  new URL("../supabase/functions/sync-email-inbox/index.ts", import.meta.url),
+  "utf8",
+);
 
 import {
   getSyncStartUid,
@@ -92,4 +98,62 @@ test("getSyncStartUid recovers when mailbox UIDs reset below the stored cursor",
 test("getSyncStartUid handles an empty mailbox and invalid limits safely", () => {
   assert.equal(getSyncStartUid(0, 0, 10), 1);
   assert.equal(getSyncStartUid(0, 10, 0), 1);
+});
+
+
+
+test("IMAP sync uses bounded connection and socket timeouts", () => {
+  assert.ok(syncFunctionSource.includes("connectionTimeout: IMAP_CONNECTION_TIMEOUT_MS"));
+  assert.ok(syncFunctionSource.includes("greetingTimeout: IMAP_GREETING_TIMEOUT_MS"));
+  assert.ok(syncFunctionSource.includes("socketTimeout: IMAP_SOCKET_TIMEOUT_MS"));
+  assert.ok(syncFunctionSource.includes("const IMAP_CONNECTION_TIMEOUT_MS = 8000;"));
+  assert.ok(syncFunctionSource.includes("const IMAP_GREETING_TIMEOUT_MS = 8000;"));
+  assert.ok(syncFunctionSource.includes("const IMAP_SOCKET_TIMEOUT_MS = 12000;"));
+  assert.ok(syncFunctionSource.includes('client.on("error"'));
+});
+
+test("new inbound email is persisted before MIME body or attachment downloads", () => {
+  const newMessageFlow = syncFunctionSource.slice(
+    syncFunctionSource.indexOf("const emailRecordId ="),
+  );
+  const insertIndex = newMessageFlow.indexOf('.from("email_messages")');
+  const insertCallIndex = newMessageFlow.indexOf(".insert({", insertIndex);
+  const bodyDownloadIndex = newMessageFlow.indexOf("const body = await fetchMessageBody(");
+  const attachmentDownloadIndex = newMessageFlow.indexOf("const attachmentMetadata = await storeEmailAttachments(");
+
+  assert.notEqual(insertIndex, -1);
+  assert.notEqual(insertCallIndex, -1);
+  assert.notEqual(bodyDownloadIndex, -1);
+  assert.notEqual(attachmentDownloadIndex, -1);
+  assert.ok(insertCallIndex < bodyDownloadIndex);
+  assert.ok(bodyDownloadIndex < attachmentDownloadIndex);
+
+  const insertPayload = newMessageFlow.slice(insertCallIndex, bodyDownloadIndex);
+  assert.ok(insertPayload.includes("text_body:"));
+  assert.ok(insertPayload.includes("html_body: null"));
+  assert.ok(insertPayload.includes("attachments: []"));
+  assert.ok(insertPayload.includes("media_processed_at: null"));
+});
+
+test("scheduled ingestion does not block inbox persistence on optional media downloads", () => {
+  const newMessageFlow = syncFunctionSource.slice(
+    syncFunctionSource.indexOf("const emailRecordId ="),
+  );
+  const mediaGateIndex = newMessageFlow.indexOf("if (isAuthenticatedUser)");
+  const attachmentDownloadIndex = newMessageFlow.indexOf("const attachmentMetadata = await storeEmailAttachments(");
+  const communicationLogIndex = newMessageFlow.indexOf("communication_logs");
+
+  assert.notEqual(mediaGateIndex, -1);
+  assert.notEqual(attachmentDownloadIndex, -1);
+  assert.notEqual(communicationLogIndex, -1);
+  assert.ok(mediaGateIndex < attachmentDownloadIndex);
+  assert.ok(attachmentDownloadIndex < communicationLogIndex);
+});
+
+test("failed MIME body downloads remain pending for a later retry", () => {
+  assert.ok(
+    syncFunctionSource.includes("bodyDownloadSucceeded: plainTextDownloaded && htmlDownloaded"),
+  );
+  assert.equal(syncFunctionSource.split(".bodyDownloadSucceeded").length - 1, 2);
+  assert.ok(syncFunctionSource.includes('.is("media_processed_at", null)'));
 });
