@@ -32,10 +32,8 @@ async function main() {
             "the compact toggle must have a useful accessible name");
         assert.equal(await menu.getAttribute("aria-labelledby"), "sway-quick-create-heading",
             "the action panel must be named by its visible heading");
-        assert.equal(await menu.locator(".sway-quick-create-grid").getAttribute("role"), "group",
-            "quick-create actions must be grouped semantically");
-        assert.equal(await menu.locator(".sway-quick-create-grid").getAttribute("aria-label"),
-            "Create a new workspace record");
+        assert.equal(await menu.getAttribute("role"), "group",
+            "the action panel must be exposed as a semantic group");
 
         await toggle.focus();
         await page.keyboard.press("Enter");
