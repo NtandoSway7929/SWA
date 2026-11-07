@@ -15,3 +15,5 @@ revoke all privileges
 grant execute
     on function public.run_swayphics_first_contact_automation_test()
     to service_role;
+
+notify pgrst, 'reload schema';
