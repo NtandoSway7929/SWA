@@ -574,9 +574,8 @@ async function main() {
     const acceptedScan = await acceptScanDialog;
     await acceptedScan.accept();
     await page.waitForFunction(() =>
-      /Scan complete\\. 0 pending follow-ups created\\./.test(
-        document.querySelector("[data-sales-automation-status]")?.textContent || ""
-      )
+      (document.querySelector("[data-sales-automation-status]")?.textContent || "")
+        .includes("Scan complete. 0 pending follow-ups created.")
     );
     assert.equal(metrics.mockedStartupCalls.filter(item =>
       item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
