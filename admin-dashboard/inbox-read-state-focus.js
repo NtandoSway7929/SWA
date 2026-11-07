@@ -56,5 +56,5 @@
         });
 
         timeoutId = window.setTimeout(stopObserving, 15000);
-    });
+    }, true);
 })();
