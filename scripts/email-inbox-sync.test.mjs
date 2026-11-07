@@ -179,10 +179,9 @@ test("scheduled ingestion does not block inbox persistence on optional media dow
   assert.ok(attachmentDownloadIndex < communicationLogIndex);
 });
 
-test("failed MIME body downloads remain pending for a later retry", () => {
-  assert.ok(
-    syncFunctionSource.includes("bodyDownloadSucceeded: plainTextDownloaded && htmlDownloaded"),
-  );
-  assert.equal(syncFunctionSource.split(".bodyDownloadSucceeded").length - 1, 3);
+test("failed full-source retrieval leaves inbound media pending for retry", () => {
+  assert.ok(syncFunctionSource.includes('if (!source) throw new Error("The IMAP server did not return the full message source.")'));
+  assert.ok(syncFunctionSource.includes("media_processed_at: null"));
   assert.ok(syncFunctionSource.includes('.is("media_processed_at", null)'));
+  assert.ok(syncFunctionSource.includes("Unable to backfill existing inbound email media:"));
 });
