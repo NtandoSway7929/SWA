@@ -48,6 +48,25 @@ test("background inbox polling does not reload an unchanged selected email", () 
 });
 
 test("the updated email viewer assets are cache-busted", () => {
-  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-viewer-refinements-1"));
-  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-email-viewer-refinements-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-inbox-search-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-email-inbox-search-1"));
+});
+
+
+test("Inbox search filters sender, subject, recipient and message content without changing email records", () => {
+  assert.ok(workspaceJs.includes("function emailInboxVisibleThreads(threads)"));
+  assert.ok(workspaceJs.includes("emailThreadSubject(thread)"));
+  assert.ok(workspaceJs.includes("emailThreadSender(thread)"));
+  assert.ok(workspaceJs.includes("emailMessageText(message)"));
+  assert.ok(workspaceJs.includes('data-email-inbox-search'));
+  assert.ok(workspaceJs.includes('data-email-inbox-filter'));
+  assert.ok(workspaceJs.includes('value="unread"'));
+  assert.ok(workspaceJs.includes('value="read"'));
+  assert.ok(workspaceJs.includes("state.emailInboxSearch = input.value"));
+  assert.ok(workspaceJs.includes("state.emailInboxFilter = select.value || \"all\""));
+  assert.ok(workspaceJs.includes("emailInboxVisibleThreads(emailThreadGroups())"));
+  assert.ok(workspaceCss.includes(".sway-email-inbox-filters"));
+  assert.ok(workspaceCss.includes(".sway-email-inbox-filter-empty"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-inbox-search-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-email-inbox-search-1"));
 });

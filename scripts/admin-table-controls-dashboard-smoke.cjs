@@ -125,6 +125,40 @@ const emailMessages = [
     is_read: true,
     received_at: "2026-11-05T10:01:00Z",
     created_at: "2026-11-05T10:01:00Z"
+  },
+  {
+    id: "email-read-ui-test",
+    direction: "inbound",
+    mailbox: "info@swayphics.co.za",
+    thread_id: "thread-read-ui-test",
+    message_id: "<read-ui-test@example.invalid>",
+    imap_uid: 43,
+    source_key: "imap:INBOX:43",
+    from_name: "Existing Client",
+    from_email: "client@example.invalid",
+    to_email: "info@swayphics.co.za",
+    subject: "Brand identity enquiry",
+    text_body: "Could you send the brand identity and packaging options?",
+    is_read: true,
+    received_at: "2026-11-04T10:00:00Z",
+    created_at: "2026-11-04T10:00:00Z"
+  },
+  {
+    id: "email-unread-ui-test",
+    direction: "inbound",
+    mailbox: "info@swayphics.co.za",
+    thread_id: "thread-unread-ui-test",
+    message_id: "<unread-ui-test@example.invalid>",
+    imap_uid: 44,
+    source_key: "imap:INBOX:44",
+    from_name: "Website Prospect",
+    from_email: "prospect@example.invalid",
+    to_email: "info@swayphics.co.za",
+    subject: "Website estimate request",
+    text_body: "Please share the website development estimate.",
+    is_read: false,
+    received_at: "2026-11-03T10:00:00Z",
+    created_at: "2026-11-03T10:00:00Z"
   }
 ];
 
@@ -822,6 +856,37 @@ async function main() {
     if ((await inboxNavToggle.getAttribute("aria-expanded")) !== "true") await inboxNavToggle.click();
     await page.locator('[data-view="email"]').click();
     await page.locator('[data-email-thread="thread-ui-test"]').waitFor({ state: "visible", timeout: 20000 });
+    assert.equal(await page.locator("[data-email-thread]").count(), 3,
+      "the Inbox should render each inbound conversation once");
+    const inboxSearch = page.locator("[data-email-inbox-search]");
+    const inboxFilter = page.locator("[data-email-inbox-filter]");
+    await inboxSearch.fill("brand identity");
+    assert.equal(await page.locator('[data-email-thread]').count(), 1,
+      "search should match a conversation by subject");
+    assert.equal(await page.locator('[data-email-thread="thread-read-ui-test"]').count(), 1,
+      "subject search should show the matching conversation");
+    assert.equal(await page.locator("[data-email-inbox-result-count]").innerText(), "Showing 1 of 3 conversations",
+      "the Inbox should show the filtered and total conversation counts");
+    await inboxSearch.fill("development estimate");
+    assert.equal(await page.locator('[data-email-thread="thread-unread-ui-test"]').count(), 1,
+      "search should match message-body content");
+    await inboxSearch.fill("SYNTHETIC");
+    assert.equal(await page.locator('[data-email-thread="thread-ui-test"]').count(), 1,
+      "search should be case-insensitive and match sender or message content");
+    await inboxSearch.fill("");
+    await inboxFilter.selectOption("unread");
+    assert.equal(await page.locator("[data-email-thread]").count(), 2,
+      "Unread only should hide read conversations");
+    await inboxFilter.selectOption("read");
+    assert.equal(await page.locator("[data-email-thread]").count(), 1,
+      "Read only should show read conversations");
+    await inboxFilter.selectOption("all");
+    await inboxSearch.fill("Brand identity");
+    await page.locator("[data-email-select-all]").check();
+    assert.equal(await page.locator("[data-email-selected-count]").innerText(), "1 conversations · 1 messages selected",
+      "Select all visible should select only the filtered conversation");
+    await page.locator("[data-email-selection-clear]").click();
+    await inboxSearch.fill("");
     await page.locator('[data-email-thread-select="thread-ui-test"]').check();
     assert.equal(await page.locator('[data-email-selection-toolbar]').isVisible(), true,
       "selecting an inbox conversation should reveal its separate bulk-delete toolbar");
@@ -852,8 +917,8 @@ async function main() {
     await page.waitForFunction(() =>
       document.querySelectorAll('#sway-workspace-main [data-email-thread="thread-ui-test"]').length === 0
     );
-    assert.equal(emailMessages.length, 0,
-      "confirmed inbox conversation deletion should remove all messages in the selected synthetic thread");
+    assert.equal(emailMessages.length, 2,
+      "confirmed inbox conversation deletion should remove only the selected synthetic thread and preserve other conversations");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.method === "POST" && item.path === "/functions/v1/delete-email-messages" &&
       item.ids.includes("email-inbound-ui-test") && item.ids.includes("email-outbound-ui-test")
