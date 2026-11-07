@@ -140,7 +140,7 @@ test("existing inbound media backfill parses full source before marking media pr
   assert.ok(backfillStart < sourceParse);
   assert.ok(sourceParse < attachmentStore);
   assert.ok(attachmentStore < completionUpdate);
-  assert.ok(syncFunctionSource.includes("storedMessage.source"));
+  assert.ok(syncFunctionSource.includes("await fetchMessageBodyFromMailbox(\n            client,\n            storedUid,"));
 });
 
 test("new inbound email is persisted before MIME body or attachment downloads", () => {
