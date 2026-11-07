@@ -953,7 +953,70 @@ async function main() {
 
     // Return to Tasks at the narrowest viewport, then verify that the existing
     // table-control layout remains usable without the former drawer.
+    // Overview has no page-level create button, so its global shortcut remains floating.
+    const overviewQuickCreate = page.locator("#sway-admin-workspace .sway-quick-create");
+    const overviewPlacement = await overviewQuickCreate.evaluate(el => ({
+      parentIsShell: el.parentElement.classList.contains("sway-workspace-shell"),
+      position: getComputedStyle(el).position
+    }));
+    assert.equal(overviewPlacement.parentIsShell, true,
+      "views without a page-level create action should retain the global quick-create in the workspace shell");
+    assert.equal(overviewPlacement.position, "fixed",
+      "the global quick-create should remain a floating shortcut when it is not docked");
+
     await navigate("tasks", "delivery");
+    const quickCreate = page.locator("#sway-admin-workspace .sway-quick-create");
+    const pageCreateAction = page.locator('#sway-workspace-main .sway-workspace-heading-actions [data-add="tasks"]');
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector("#sway-admin-workspace .sway-quick-create");
+      const slot = document.querySelector("#sway-workspace-main .sway-workspace-heading-actions");
+      return Boolean(wrapper && slot && wrapper.parentElement === slot);
+    });
+    const dockedLayout = await page.evaluate(() => {
+      const wrapper = document.querySelector("#sway-admin-workspace .sway-quick-create");
+      const slot = document.querySelector("#sway-workspace-main .sway-workspace-heading-actions");
+      const action = slot && slot.querySelector('[data-add="tasks"]');
+      if (!wrapper || !slot || !action) return null;
+      const a = action.getBoundingClientRect();
+      const q = wrapper.getBoundingClientRect();
+      const overlaps = !(q.right <= a.left || q.left >= a.right || q.bottom <= a.top || q.top >= a.bottom);
+      return {
+        parentIsActions: wrapper.parentElement === slot,
+        actionVisible: a.width > 0 && a.height > 0,
+        wrapperVisible: q.width > 0 && q.height > 0,
+        overlaps
+      };
+    });
+    assert.ok(dockedLayout && dockedLayout.parentIsActions && dockedLayout.actionVisible && dockedLayout.wrapperVisible,
+      "the global quick-create should dock beside the Tasks page action on narrow mobile: " + JSON.stringify(dockedLayout));
+    assert.equal(dockedLayout.overlaps, false,
+      "the docked quick-create must not overlap the page-level New task action");
+    await quickCreate.locator(".sway-quick-create-toggle").click();
+    const quickCreateMenu = quickCreate.locator(".sway-quick-create-menu");
+    await quickCreateMenu.waitFor({ state: "visible" });
+    assert.equal(await quickCreateMenu.locator("[data-global-quick]").count(), 9,
+      "docking must preserve all nine global quick-create actions");
+    await quickCreate.locator(".sway-quick-create-toggle").click();
+
+    // Resizing back to desktop restores the original fixed shortcut; resizing
+    // to mobile again re-docks it beside the active view's New action.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector("#sway-admin-workspace .sway-quick-create");
+      const shell = document.querySelector("#sway-admin-workspace .sway-workspace-shell");
+      const main = document.querySelector("#sway-workspace-main");
+      return Boolean(wrapper && shell && main &&
+        wrapper.parentElement === shell &&
+        wrapper.previousElementSibling === main &&
+        getComputedStyle(wrapper).position === "fixed");
+    });
+    await page.setViewportSize({ width: 360, height: 900 });
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector("#sway-admin-workspace .sway-quick-create");
+      const slot = document.querySelector("#sway-workspace-main .sway-workspace-heading-actions");
+      return Boolean(wrapper && slot && wrapper.parentElement === slot);
+    });
+
     const controls = page.locator('#sway-workspace-main .sway-admin-table-control-grid');
     await controls.waitFor({ state: "visible" });
     const bounds = await controls.boundingBox();
