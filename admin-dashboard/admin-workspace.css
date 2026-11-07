@@ -3849,7 +3849,18 @@
     display: none !important;
 }
 
+.sway-notification-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36px;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
 .sway-notification-item {
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
     width: 100%;
     min-width: 0;
     display: grid;
@@ -3870,12 +3881,17 @@
         transform 0.18s ease;
 }
 
-.sway-notification-item:hover,
-.sway-notification-item:focus-visible {
-    outline: none;
+.sway-notification-item:hover {
     background: rgba(1,82,244,0.05);
     border-color: rgba(1,82,244,0.075);
     transform: translateY(-1px);
+}
+
+.sway-notification-item:focus-visible {
+    outline: 2px solid #0152F4;
+    outline-offset: 2px;
+    background: rgba(1,82,244,0.05);
+    border-color: rgba(1,82,244,0.20);
 }
 
 .sway-notification-item.is-read {
@@ -3956,8 +3972,8 @@
 }
 
 .sway-notification-clear {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     display: inline-grid;
     place-items: center;
     padding: 0;
@@ -3976,14 +3992,19 @@
         background 0.18s ease;
 }
 
-.sway-notification-item:hover .sway-notification-clear,
-.sway-notification-item:focus-within .sway-notification-clear {
+.sway-notification-row:hover .sway-notification-clear,
+.sway-notification-row:focus-within .sway-notification-clear {
     opacity: 1;
 }
 
-.sway-notification-clear:hover,
+.sway-notification-clear:hover {
+    color: #B42318;
+    background: rgba(180,35,24,0.07);
+}
+
 .sway-notification-clear:focus-visible {
-    outline: none;
+    outline: 2px solid #0152F4;
+    outline-offset: 2px;
     color: #B42318;
     background: rgba(180,35,24,0.07);
 }
@@ -4002,7 +4023,8 @@
     transition: transform 0.18s ease, color 0.18s ease;
 }
 
-.sway-notification-item:hover .sway-notification-arrow {
+.sway-notification-item:hover .sway-notification-arrow,
+.sway-notification-item:focus-visible .sway-notification-arrow {
     color: #0152F4;
     transform: translateX(1px);
 }
