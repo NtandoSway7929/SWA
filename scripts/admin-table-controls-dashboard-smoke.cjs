@@ -499,6 +499,33 @@ async function main() {
       await page.locator('[data-admin-table-row="' + view + '"]').first().waitFor({ timeout: 10000 });
     }
 
+    // Settings uses a horizontal ARIA tablist: verify both sequential arrows
+    // and direct first/last jumps against the mounted production module.
+    await page.locator('[data-view="settings"]').first().click();
+    const settingsTabs = page.locator('#sway-settings-expanded [data-settings-tab]');
+    await settingsTabs.first().waitFor({ state: "visible", timeout: 20000 });
+    assert.equal(await settingsTabs.count(), 12,
+      "all twelve Settings sections should be available in the actual dashboard");
+    const firstSettingsTab = settingsTabs.first();
+    const lastSettingsTab = settingsTabs.last();
+    await firstSettingsTab.focus();
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await settingsTabs.nth(1).getAttribute("aria-selected"), "true",
+      "ArrowRight should move to the next Settings tab");
+    await page.keyboard.press("ArrowLeft");
+    assert.equal(await firstSettingsTab.getAttribute("aria-selected"), "true",
+      "ArrowLeft should return to the previous Settings tab");
+    await page.keyboard.press("End");
+    assert.equal(await lastSettingsTab.getAttribute("aria-selected"), "true",
+      "End should select the final Settings section");
+    assert.equal(await lastSettingsTab.evaluate(el => document.activeElement === el), true,
+      "End should move keyboard focus to the final Settings section");
+    await page.keyboard.press("Home");
+    assert.equal(await firstSettingsTab.getAttribute("aria-selected"), "true",
+      "Home should select the first Settings section");
+    assert.equal(await firstSettingsTab.evaluate(el => document.activeElement === el), true,
+      "Home should move keyboard focus to the first Settings section");
+
     await navigate("leads", "crm");
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
