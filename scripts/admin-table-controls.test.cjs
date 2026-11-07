@@ -498,13 +498,13 @@ function verifyFilterResetBehavior() {
         getAttribute: name => name === "data-admin-table-sort" ? "tasks" : null,
         addEventListener: (name, handler) => { listeners["sort:" + name] = handler; }
     };
+    let dateFocusCount = 0;
     const dateFilterSelect = {
         value: "overdue",
         getAttribute: name => name === "data-admin-table-date-filter" ? "tasks" : null,
         addEventListener: (name, handler) => { listeners["date:" + name] = handler; },
         focus: () => { dateFocusCount += 1; }
     };
-    let dateFocusCount = 0;
     const resetButton = {
         disabled: false,
         getAttribute: name => name === "data-admin-table-reset-filters" ? "tasks" : null,
