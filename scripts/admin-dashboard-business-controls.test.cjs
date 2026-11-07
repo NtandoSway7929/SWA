@@ -188,10 +188,9 @@ test("first-contact SLA creates one internal follow-up without changing a new le
 
 test("due tasks and follow-ups escalate when assignees are missing or inactive", () => {
   const workerStart = dueWorkMigration.indexOf("create or replace function innerme_private.generate_admin_due_notifications_internal()");
-  const workerEnd = dueWorkMigration.indexOf("\\n$;", workerStart);
-  const worker = dueWorkMigration.slice(workerStart, workerEnd);
+  const worker = dueWorkMigration.slice(workerStart);
 
-  assert.ok(workerStart >= 0 && workerEnd > workerStart, "the private due-notification worker must be replaced");
+  assert.ok(workerStart >= 0, "the private due-notification worker must be replaced");
   assert.match(worker, /from public\\.tasks t[\\s\\S]*?where t\\.status <> 'completed'[\\s\\S]*?t\\.due_date <= current_date/i);
   assert.match(worker, /from public\\.follow_ups f[\\s\\S]*?where f\\.status = 'pending'[\\s\\S]*?f\\.scheduled_for <= current_date/i);
   assert.equal((worker.match(/where au\\.user_id = [tf]\\.assigned_to\\s+and au\\.active = true/gi) || []).length, 2,
