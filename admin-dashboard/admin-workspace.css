@@ -9459,7 +9459,7 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
 }
 .sway-admin-table-control-grid {
     display: grid;
-    grid-template-columns: minmax(220px, 1.7fr) minmax(140px, .8fr) minmax(190px, 1fr) auto auto;
+    grid-template-columns: minmax(180px, 1.5fr) minmax(115px, .75fr) minmax(125px, .85fr) minmax(170px, 1fr) auto auto;
     align-items: end;
     gap: 12px;
 }
