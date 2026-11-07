@@ -933,6 +933,9 @@ async function main() {
     await page.waitForFunction(() =>
       document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark unread"
     );
+    await page.waitForFunction(() =>
+      document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
+    );
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute("data-email-thread-read-toggle") || ""),
       "thread-ui-test",
