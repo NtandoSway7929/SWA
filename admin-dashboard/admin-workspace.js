@@ -12252,6 +12252,12 @@ function simpleBars(items, color) {
         state: state,
         workspace: workspace,
         esc: esc,
+        admins: function () {
+            return state.admins;
+        },
+        currentUserId: function () {
+            return state.currentUser && state.currentUser.id;
+        },
         adminName: adminName,
         clientName: clientName,
         leadName: leadName,
