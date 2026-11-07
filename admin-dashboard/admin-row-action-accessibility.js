@@ -15,7 +15,10 @@
                 continue;
             }
 
-            const label = String(cell.textContent || "")
+            // Prefer the cell's bold primary value so secondary contact names
+            // or descriptions do not get folded into the record's accessible name.
+            const primary = cell.querySelector("strong");
+            const label = String(primary ? primary.textContent : cell.textContent || "")
                 .replace(/\s+/g, " ")
                 .trim();
 
