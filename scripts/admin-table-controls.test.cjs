@@ -6,6 +6,9 @@ const path = require("node:path");
 
 const modulePath = path.join(__dirname, "..", "admin-dashboard", "admin-table-controls.js");
 const moduleSource = fs.readFileSync(modulePath, "utf8");
+const workspaceCss = fs.readFileSync(
+    path.join(__dirname, "..", "admin-dashboard", "admin-workspace.css"), "utf8"
+);
 const workspaceSource = fs.readFileSync(
     path.join(__dirname, "..", "admin-dashboard", "admin-workspace.js"), "utf8"
 );
@@ -16,6 +19,10 @@ const controlsScriptIndex = dashboardHtml.indexOf('src="admin-table-controls.js'
 const workspaceScriptIndex = dashboardHtml.indexOf('src="admin-workspace.js');
 assert.ok(controlsScriptIndex >= 0 && workspaceScriptIndex > controlsScriptIndex,
     "the table controls module must load before the dashboard workspace");
+assert.match(dashboardHtml, /admin-workspace\.css\?v=20261107-admin-table-selection-status-1/,
+    "the selection live-region styling must use a refreshed workspace stylesheet cache key");
+assert.match(workspaceCss, /\.sway-admin-table-selection-status\s*\{[\\s\\S]*clip-path:\s*inset\(50%\)/,
+    "the selection live region must remain visually hidden without using display:none");
 for (const view of ["leads", "followups", "tasks", "communications"]) {
     assert.ok(workspaceSource.includes('adminTableControls.renderControls("' + view + '")'),
         view + " view must render the table controls");
@@ -203,6 +210,8 @@ assert.deepEqual(controls.items("tasks", state.tasks), [],
     "preserving a stale filter must not silently reset the actual record filter");
 
 const controlsMarkup = controls.renderControls("leads");
+assert.match(controlsMarkup, /data-admin-table-selection-status="leads" role="status" aria-live="polite" aria-atomic="true">0 records selected\.<\/span>/,
+    "the selected-record count should have a persistent atomic polite live region");
 assert.match(controlsMarkup, /data-admin-table-search-input="leads"/);
 assert.match(controlsMarkup, /data-admin-table-filter="leads"/);
 assert.match(controlsMarkup, /data-admin-table-sort="leads"/);
@@ -360,6 +369,103 @@ assert.match(invoiceSaveSource, /if \(!selectedClient \|\| !selectedClient\.emai
 assert.ok(moduleSource.includes('["leads", "tasks", "followups", "communications", "invoices"].forEach(function (view)'),
     "invoice search should be reapplied after control-driven rerenders and archive-mode changes");
 
+
+function verifySelectionAnnouncementBehavior() {
+    const testState = {
+        tableControls: {
+            leads: { search: "", filter: "all", sort: "value_desc" }
+        },
+        tableSelection: { leads: [] },
+        tableFeedback: { leads: "" },
+        tableBulkActionRunning: false,
+        leads: [{ id: "lead-announcement", business_name: "Announcement Fixture", status: "new" }]
+    };
+    const listeners = {};
+    const toolbar = { hidden: true };
+    const selectedCount = { textContent: "0 selected" };
+    const selectionStatus = { textContent: "0 records selected." };
+    const visibleCount = { textContent: "" };
+    const feedback = { hidden: true, textContent: "" };
+    const checkbox = {
+        checked: false,
+        getAttribute(name) {
+            if (name === "data-admin-table-select") return "leads";
+            if (name === "data-id") return "lead-announcement";
+            return null;
+        },
+        addEventListener(name, handler) { listeners["checkbox:" + name] = handler; }
+    };
+    const row = {
+        hidden: false,
+        getAttribute(name) {
+            return name === "data-admin-table-search" ? "announcement fixture" : null;
+        },
+        querySelector(selector) {
+            return selector === '[data-admin-table-select="leads"]' ? checkbox : null;
+        }
+    };
+    const clearButton = {
+        getAttribute(name) {
+            return name === "data-admin-table-clear-selection" ? "leads" : null;
+        },
+        addEventListener(name, handler) { listeners["clear:" + name] = handler; }
+    };
+    const testWorkspace = {
+        querySelector(selector) {
+            if (selector === '[data-admin-table-bulk-toolbar="leads"]') return toolbar;
+            if (selector === '[data-admin-table-selected-count="leads"]') return selectedCount;
+            if (selector === '[data-admin-table-selection-status="leads"]') return selectionStatus;
+            if (selector === '[data-admin-table-count="leads"]') return visibleCount;
+            if (selector === '[data-admin-table-feedback="leads"]') return feedback;
+            if (selector === '[data-admin-table-tools="leads"]') return {};
+            return null;
+        },
+        querySelectorAll(selector) {
+            if (selector === '[data-admin-table-row="leads"]') return [row];
+            if (selector === "[data-admin-table-select]") return [checkbox];
+            if (selector === "[data-admin-table-clear-selection]") return [clearButton];
+            return [];
+        }
+    };
+    const instance = global.window.createSwayphicsAdminTableControls({
+        state: testState,
+        workspace: testWorkspace,
+        esc: value => String(value == null ? "" : value),
+        adminName: () => "Admin",
+        clientName: id => String(id),
+        leadName: id => String(id),
+        formatDisplayText: value => String(value),
+        completeTask: async () => {},
+        completeFollowup: async () => {},
+        renderView: () => {},
+        swayAlert: message => { throw new Error(message); },
+        swayConfirm: async () => true
+    });
+
+    instance.bind();
+    assert.equal(selectionStatus.textContent, "0 records selected.",
+        "the live region should start with a stable zero-selection message");
+
+    checkbox.checked = true;
+    listeners["checkbox:change"]();
+    assert.deepEqual(testState.tableSelection.leads, ["lead-announcement"]);
+    assert.equal(selectedCount.textContent, "1 selected");
+    assert.equal(selectionStatus.textContent, "1 record selected.",
+        "selecting a row should announce the singular selected-record count");
+    assert.equal(toolbar.hidden, false,
+        "the bulk toolbar should appear when a record is selected");
+
+    clearButton && listeners["clear:click"]();
+    assert.deepEqual(testState.tableSelection.leads, [],
+        "Clear selection should remove the selected record");
+    assert.equal(checkbox.checked, false,
+        "Clear selection should update the visible row checkbox");
+    assert.equal(selectedCount.textContent, "0 selected");
+    assert.equal(selectionStatus.textContent, "0 records selected.",
+        "clearing selection should announce the zero-selection state");
+    assert.equal(toolbar.hidden, true,
+        "the bulk toolbar should hide when selection is cleared");
+}
 
 async function verifyBulkLeadDeletion() {
     const testState = {
@@ -529,7 +635,8 @@ async function verifyBulkDeletionForOtherViews() {
     }
 }
 
-verifyBulkLeadDeletion().then(verifyBulkDeletionForOtherViews).then(function () {
+Promise.resolve().then(verifySelectionAnnouncementBehavior).then(verifyBulkLeadDeletion)
+    .then(verifyBulkDeletionForOtherViews).then(function () {
     console.log("Admin table controls tests passed.");
 }).catch(function (error) {
     console.error(error);
