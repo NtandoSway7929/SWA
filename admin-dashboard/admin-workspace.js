@@ -9792,12 +9792,7 @@ function simpleBars(items, color) {
 
         const dueNext30 =
             dueNext30Invoices.reduce(function (sum, invoice) {
-                return sum +
-                    Number(
-                        invoice.amount_outstanding != null
-                            ? invoice.amount_outstanding
-                            : invoice.total || 0
-                    );
+                return sum + invoiceOutstandingBalance(invoice);
             }, 0);
 
         const months = cashFlowMonths();
