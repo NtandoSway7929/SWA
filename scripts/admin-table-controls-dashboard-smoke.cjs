@@ -383,6 +383,29 @@ async function main() {
         }));
       }
 
+      if (method === "PATCH" && url.pathname === "/rest/v1/email_messages") {
+        const threadFilter = String(url.searchParams.get("thread_id") || "");
+        const threadId = threadFilter.startsWith("eq.") ? decodeURIComponent(threadFilter.slice(3)) : "";
+        const directionFilter = String(url.searchParams.get("direction") || "");
+        const body = JSON.parse(request.postData() || "{}");
+        const changed = emailMessages.filter(item =>
+          String(item.thread_id) === threadId &&
+          (!directionFilter || item.direction === directionFilter.slice(3))
+        );
+        if (threadId && typeof body.is_read === "boolean" && changed.length) {
+          changed.forEach(item => Object.assign(item, body));
+          metrics.mockedTableActionWrites.push({
+            method, path: url.pathname, thread_id: threadId,
+            is_read: body.is_read, updated_ids: changed.map(item => String(item.id))
+          });
+          return route.fulfill({
+            status: 204,
+            headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" },
+            body: ""
+          });
+        }
+      }
+
       // Completion requests are applied to in-memory test arrays only.
       // Playwright intercepts them before a request can leave this browser.
       if (method === "PATCH" && url.pathname === "/rest/v1/tasks") {
@@ -895,12 +918,43 @@ async function main() {
     assert.equal(communications.length, 0,
       "confirmed communication bulk deletion should remove only the selected synthetic log entry");
 
+    // Verify the updated read action and focus restoration after the Inbox rerender.
     // The Inbox operates on whole conversations. Its separate endpoint is mocked
     // here so no real mailbox or production email message can be touched.
     const inboxNavToggle = page.locator('[data-nav-group-toggle="crm"]').first();
     if ((await inboxNavToggle.getAttribute("aria-expanded")) !== "true") await inboxNavToggle.click();
     await page.locator('[data-view="email"]').click();
     await page.locator('[data-email-thread="thread-ui-test"]').waitFor({ state: "visible", timeout: 20000 });
+    const readToggle = page.locator('[data-email-thread-read-toggle="thread-ui-test"]');
+    assert.equal(await readToggle.innerText(), "Mark read",
+      "an unread conversation should offer a Mark read action");
+    await readToggle.focus();
+    await readToggle.press("Enter");
+    await page.waitForFunction(() =>
+      document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark unread"
+    );
+    assert.equal(
+      await page.evaluate(() => document.activeElement?.getAttribute("data-email-thread-read-toggle") || ""),
+      "thread-ui-test",
+      "keyboard focus should return to the updated conversation read-state action"
+    );
+    assert.equal(emailMessages.find(item => item.id === "email-inbound-ui-test").is_read, true,
+      "Mark read should update every inbound message in the conversation in the mocked store");
+    const unreadToggle = page.locator('[data-email-thread-read-toggle="thread-ui-test"]');
+    assert.equal(await unreadToggle.innerText(), "Mark unread",
+      "a read conversation should offer a Mark unread action");
+    await unreadToggle.focus();
+    await unreadToggle.press("Enter");
+    await page.waitForFunction(() =>
+      document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark read" &&
+      document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
+    );
+    assert.equal(emailMessages.find(item => item.id === "email-inbound-ui-test").is_read, false,
+      "Mark unread should restore the unread state in the mocked store");
+    assert.equal(metrics.mockedTableActionWrites.filter(item =>
+      item.method === "PATCH" && item.path === "/rest/v1/email_messages" &&
+      item.thread_id === "thread-ui-test"
+    ).length, 2, "both explicit read-state changes should be persisted through the existing email_messages endpoint");
     await page.locator('[data-email-thread-select="thread-ui-test"]').check();
     assert.equal(await page.locator('[data-email-selection-toolbar]').isVisible(), true,
       "selecting an inbox conversation should reveal its separate bulk-delete toolbar");

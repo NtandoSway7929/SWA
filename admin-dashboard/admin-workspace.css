@@ -10108,3 +10108,66 @@ body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-pending > span 
         flex-direction: column;
     }
 }
+
+/* Inbox conversation read-state action */
+#sway-admin-workspace .sway-email-inbox-row {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+}
+
+#sway-admin-workspace .sway-email-inbox-read-toggle {
+    align-self: center;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid rgba(1,82,244,.14);
+    border-radius: 10px;
+    background: rgba(1,82,244,.045);
+    color: var(--sway-blue);
+    font: 800 .54rem 'Plus Jakarta Sans', sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .16s ease, border-color .16s ease;
+}
+
+#sway-admin-workspace .sway-email-inbox-read-toggle:hover:not(:disabled),
+#sway-admin-workspace .sway-email-inbox-read-toggle:focus-visible {
+    border-color: rgba(1,82,244,.36);
+    background: rgba(1,82,244,.09);
+}
+
+#sway-admin-workspace .sway-email-inbox-read-toggle:focus-visible {
+    outline: 3px solid rgba(1,82,244,.24);
+    outline-offset: 2px;
+}
+
+#sway-admin-workspace .sway-email-inbox-read-toggle:disabled {
+    opacity: .55;
+    cursor: wait;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-read-toggle {
+    border-color: rgba(119,193,252,.22);
+    background: rgba(119,193,252,.08);
+    color: #9EC9FF;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-read-toggle:hover:not(:disabled),
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-read-toggle:focus-visible {
+    border-color: rgba(119,193,252,.42);
+    background: rgba(119,193,252,.14);
+}
+
+@media (max-width: 640px) {
+    #sway-admin-workspace .sway-email-inbox-row {
+        grid-template-columns: 24px minmax(0, 1fr);
+        gap: 5px;
+        padding: 7px 8px;
+    }
+
+    #sway-admin-workspace .sway-email-inbox-row .sway-email-inbox-read-toggle {
+        grid-column: 2;
+        justify-self: end;
+        min-height: 30px;
+        margin: 0 8px 4px 0;
+        padding: 6px 9px;
+    }
+}
