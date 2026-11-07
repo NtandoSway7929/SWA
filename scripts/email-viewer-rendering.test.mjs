@@ -48,6 +48,21 @@ test("background inbox polling does not reload an unchanged selected email", () 
 });
 
 test("the updated email viewer assets are cache-busted", () => {
-  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-viewer-refinements-1"));
-  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-email-viewer-refinements-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-inbox-keyboard-nav-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-email-inbox-keyboard-nav-1"));
+});
+
+
+test("Inbox conversations support arrow, Home and End keyboard navigation", () => {
+  assert.ok(workspaceJs.includes('aria-keyshortcuts="ArrowDown ArrowUp Home End"'));
+  assert.ok(workspaceJs.includes('button.addEventListener("keydown", function (event)'));
+  assert.ok(workspaceJs.includes('["ArrowDown", "ArrowUp", "Home", "End"].includes(key)'));
+  assert.ok(workspaceJs.includes('(currentIndex + 1) % conversationButtons.length'));
+  assert.ok(workspaceJs.includes('(currentIndex - 1 + conversationButtons.length) % conversationButtons.length'));
+  assert.ok(workspaceJs.includes('key === "Home"'));
+  assert.ok(workspaceJs.includes('key === "End"'));
+  assert.ok(workspaceCss.includes(".sway-email-inbox-item:focus-visible"));
+  assert.ok(workspaceCss.includes("body.sway-dark-mode .sway-email-inbox-item:focus-visible"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-inbox-keyboard-nav-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-email-inbox-keyboard-nav-1"));
 });
