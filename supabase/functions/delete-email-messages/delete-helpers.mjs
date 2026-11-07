@@ -94,3 +94,41 @@ export function resolveInboxDeleteTargets(
     messageIdLookups,
   };
 }
+
+
+/**
+ * Return only attachment paths that belong to the email rows being deleted.
+ * A corrupted or tampered metadata path must never delete another message's
+ * private object.
+ */
+export function resolveEmailAttachmentStoragePaths(records) {
+  if (!Array.isArray(records)) {
+    throw new TypeError("Email records must be an array.");
+  }
+
+  const paths = new Set();
+  for (const record of records) {
+    const recordId = String(record?.id || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(recordId)) {
+      continue;
+    }
+
+    for (const attachment of (Array.isArray(record?.attachments) ? record.attachments : [])) {
+      const path = String(attachment?.storage_path || "");
+      const parts = path.split("/");
+      if (
+        parts.length === 2 &&
+        parts[0] === recordId &&
+        parts[1] &&
+        parts[1] !== "." &&
+        parts[1] !== ".." &&
+        !parts[1].includes("\\\\") &&
+        !parts[1].includes("\\u0000")
+      ) {
+        paths.add(path);
+      }
+    }
+  }
+
+  return [...paths];
+}
