@@ -191,17 +191,17 @@ test("due tasks and follow-ups escalate when assignees are missing or inactive",
   const worker = dueWorkMigration.slice(workerStart);
 
   assert.ok(workerStart >= 0, "the private due-notification worker must be replaced");
-  assert.match(worker, /from public\\.tasks t[\\s\\S]*?where t\\.status <> 'completed'[\\s\\S]*?t\\.due_date <= current_date/i);
-  assert.match(worker, /from public\\.follow_ups f[\\s\\S]*?where f\\.status = 'pending'[\\s\\S]*?f\\.scheduled_for <= current_date/i);
-  assert.equal((worker.match(/where au\\.user_id = [tf]\\.assigned_to\\s+and au\\.active = true/gi) || []).length, 2,
+  assert.match(worker, /from public\.tasks t[\s\S]*?where t\.status <> 'completed'[\s\S]*?t\.due_date <= current_date/i);
+  assert.match(worker, /from public\.follow_ups f[\s\S]*?where f\.status = 'pending'[\s\S]*?f\.scheduled_for <= current_date/i);
+  assert.equal((worker.match(/where au\.user_id = [tf]\.assigned_to\s+and au\.active = true/gi) || []).length, 2,
     "both task and follow-up assignees must be checked against active administrators");
-  assert.equal((worker.match(/if r\\.assignee_active then/gi) || []).length, 2);
-  assert.equal((worker.match(/perform public\\.notify_admins\\(/gi) || []).length, 3,
+  assert.equal((worker.match(/if r\.assignee_active then/gi) || []).length, 2);
+  assert.equal((worker.match(/perform public\.notify_admins\(/gi) || []).length, 3,
     "unassigned/inactive task and follow-up work should escalate to all active admins; invoice routing remains shared");
-  assert.match(worker, /No active assignee; administrator attention required\\./);
-  assert.match(worker, /task-due:' \\|\\| r\\.id::text \\|\\| ':' \\|\\| r\\.due_date::text/);
-  assert.match(worker, /followup-due:' \\|\\| r\\.id::text \\|\\| ':' \\|\\| r\\.scheduled_for::text/);
-  assert.match(worker, /where coalesce\\(i\\.status, ''\\) not in \\('paid', 'cancelled'\\)/,
+  assert.match(worker, /No active assignee; administrator attention required\./);
+  assert.match(worker, /task-due:' \|\| r\.id::text \|\| ':' \|\| r\.due_date::text/);
+  assert.match(worker, /followup-due:' \|\| r\.id::text \|\| ':' \|\| r\.scheduled_for::text/);
+  assert.match(worker, /where coalesce\(i\.status, ''\) not in \('paid', 'cancelled'\)/,
     "invoice due reminders must remain unchanged");
   assert.ok(dueWorkMigration.includes("revoke all privileges"));
   assert.ok(notificationBaseline.includes("No active assignee; administrator attention required."));
