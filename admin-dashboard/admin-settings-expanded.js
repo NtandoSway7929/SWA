@@ -290,7 +290,7 @@
 
         var salesFields =
             field("new_lead_response_hours", "New enquiry response target (hours)", "number",
-                "Flag new leads that have waited longer than this target.", 'min="1" max="720" step="1" required') +
+                "Create an assigned first-contact task after a new lead exceeds this response target.", 'min="1" max="720" step="1" required') +
             field("lead_no_response_days", "Fallback follow-up interval (days)", "number",
                 "Used only when a stage-specific interval has not been configured.", 'min="1" max="365" step="1" required') +
             field("stage_days_contacted", "Contacted stage interval (days)", "number",
@@ -387,10 +387,10 @@
         var salesPanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-sales" aria-labelledby="swe-tab-sales" data-settings-panel="sales">' +
             formCard("sales", "Lead follow-up rules", "Control the existing workflow clock without changing individual lead records.", salesFields, "Save workflow", true) +
-            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Run a follow-up scan</h3><p>The scheduled worker checks every 15 minutes. Run it now to process eligible leads immediately. Existing pending follow-ups and the configured attempt limit are respected; no email or WhatsApp messages are sent.</p></div></div>' +
+            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Run a follow-up scan</h3><p>The scheduled worker checks every 15 minutes. After the response target expires, it creates one assigned first-contact task for a New lead. Later-stage follow-ups keep their stage intervals and attempt limit. Existing follow-up records prevent duplicates. No email or WhatsApp messages are sent.</p></div></div>' +
             '<div class="swe-actions"><button type="button" class="swe-button swe-button-primary" data-action="run-stale-lead-automation">Run follow-up scan now</button></div>' +
             '<p class="swe-status" data-sales-automation-status role="status" aria-live="polite"></p></div>' +
-            '<div class="swe-card"><h3>Workflow boundary</h3><p>These settings change the follow-up interval used by the current database workflow. Email and WhatsApp outreach still require the existing manual or approved sending steps.</p></div></section>';
+            '<div class="swe-card"><h3>Workflow boundary</h3><p>The response target schedules an internal first-contact task; it does not change a lead from New or mark it contacted. When the lead is moved out of New, its pending automatic first-contact task is completed or skipped. Email and WhatsApp outreach still require the existing manual or approved sending steps.</p></div></section>';
 
         var performancePanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-performance" aria-labelledby="swe-tab-performance" data-settings-panel="performance" hidden>' +
