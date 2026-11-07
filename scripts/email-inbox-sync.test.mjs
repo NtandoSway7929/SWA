@@ -141,7 +141,7 @@ test("scheduled ingestion does not block inbox persistence on optional media dow
   );
   const mediaGateIndex = newMessageFlow.indexOf("if (isAuthenticatedUser)");
   const attachmentDownloadIndex = newMessageFlow.indexOf("const attachmentMetadata = await storeEmailAttachments(");
-  const communicationLogIndex = newMessageFlow.indexOf('.from("communication_logs")');
+  const communicationLogIndex = newMessageFlow.indexOf("communication_logs");
 
   assert.notEqual(mediaGateIndex, -1);
   assert.notEqual(attachmentDownloadIndex, -1);
@@ -154,6 +154,6 @@ test("failed MIME body downloads remain pending for a later retry", () => {
   assert.ok(
     syncFunctionSource.includes("bodyDownloadSucceeded: plainTextDownloaded && htmlDownloaded"),
   );
-  assert.equal(syncFunctionSource.split("bodyDownloadSucceeded ?").length - 1, 2);
+  assert.equal(syncFunctionSource.split(".bodyDownloadSucceeded").length - 1, 2);
   assert.ok(syncFunctionSource.includes('.is("media_processed_at", null)'));
 });
