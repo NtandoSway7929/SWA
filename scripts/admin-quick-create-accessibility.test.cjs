@@ -30,11 +30,9 @@ assert.ok(
 
 assert.ok(script.includes('toggle.setAttribute("aria-label", "Quick-create actions")'),
     "the compact New toggle must have a useful accessible name");
-assert.ok(script.includes('parts.menu.setAttribute("aria-labelledby", parts.heading.id)'),
-    "the action panel must be named by its visible heading");
-assert.ok(script.includes('parts.grid.setAttribute("role", "group")') &&
-    script.includes('parts.grid.setAttribute("aria-label", "Create a new workspace record")'),
-    "the action buttons must be exposed as one named group");
+assert.ok(script.includes('parts.menu.setAttribute("role", "group")') &&
+    script.includes('parts.menu.setAttribute("aria-labelledby", parts.heading.id)'),
+    "the action panel must be exposed as a named group using its visible heading");
 assert.ok(script.includes("event.detail !== 0") &&
     script.includes('firstAction.focus()'),
     "keyboard activation must move focus into the opened action list");
