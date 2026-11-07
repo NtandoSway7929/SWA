@@ -197,6 +197,7 @@ test("collects only storage paths owned by the email rows being deleted", () => 
           { storage_path: emailId + "/2-proposal.pdf" },
           { storage_path: otherId + "/1-other.png" },
           { storage_path: emailId + "/../other-message.png" },
+          { storage_path: emailId + "/unsafe\\\\name.png" },
           { filename: "not-stored.png" },
         ],
       },
