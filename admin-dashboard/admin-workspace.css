@@ -9756,3 +9756,321 @@ body.sway-dark-mode .sway-email-selection-actions .sway-workspace-button.danger:
         width: 100%;
     }
 }
+
+
+/* Rich inbound email rendering: branded message content, sender identity and private attachments. */
+#sway-admin-workspace .sway-email-thread-message-meta {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+#sway-admin-workspace .sway-email-message-identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+#sway-admin-workspace .sway-email-message-avatar {
+    display: inline-flex;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(1,82,244,.13);
+    border-radius: 11px;
+    background: linear-gradient(145deg,rgba(1,82,244,.12),rgba(119,193,252,.18));
+    color: #0031C5;
+    font-size: 13px;
+    font-weight: 850;
+}
+#sway-admin-workspace .sway-email-message-identity > div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+#sway-admin-workspace .sway-email-message-identity strong {
+    color: var(--text,#17233A);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+#sway-admin-workspace .sway-email-message-address,
+#sway-admin-workspace .sway-email-message-recipient {
+    color: var(--text-muted,#687385);
+    font-size: 10px;
+    font-weight: 550;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+#sway-admin-workspace .sway-email-thread-message-meta time {
+    flex: 0 0 auto;
+    color: var(--text-muted,#687385);
+    font-size: 9px;
+    font-weight: 650;
+    text-align: right;
+    white-space: nowrap;
+}
+#sway-admin-workspace .sway-email-thread-message-body {
+    min-width: 0;
+    margin-top: 13px;
+}
+#sway-admin-workspace .sway-email-plain-body {
+    color: var(--text,#283449);
+    font-size: 13px;
+    font-weight: 450;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+#sway-admin-workspace .sway-email-plain-body a,
+#sway-admin-workspace .sway-email-html-frame a {
+    color: #0152F4;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+#sway-admin-workspace .sway-email-plain-body a:hover {
+    color: #002096;
+}
+#sway-admin-workspace .sway-email-html-shell {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(8,21,51,.10);
+    border-radius: 12px;
+    background: #fff;
+}
+#sway-admin-workspace .sway-email-html-frame {
+    display: block;
+    width: 100%;
+    min-height: 340px;
+    height: min(68vh,640px);
+    border: 0;
+    background: #fff;
+    color-scheme: light;
+}
+#sway-admin-workspace .sway-email-remote-image-note {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 0 0 9px;
+    padding: 9px 11px;
+    border: 1px solid rgba(1,82,244,.13);
+    border-radius: 10px;
+    background: rgba(1,82,244,.045);
+    color: var(--text-muted,#687385);
+    font-size: 10px;
+    line-height: 1.45;
+}
+#sway-admin-workspace .sway-email-remote-image-note button {
+    min-height: 31px;
+    padding: 6px 10px;
+    border: 1px solid rgba(1,82,244,.22);
+    border-radius: 8px;
+    background: #fff;
+    color: #0031C5;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+}
+#sway-admin-workspace .sway-email-attachments {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 13px;
+    border-top: 1px solid rgba(8,21,51,.08);
+}
+#sway-admin-workspace .sway-email-attachments-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+#sway-admin-workspace .sway-email-attachments-head strong {
+    color: var(--text,#17233A);
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .015em;
+}
+#sway-admin-workspace .sway-email-attachments-head span {
+    color: var(--text-muted,#687385);
+    font-size: 9px;
+    font-weight: 700;
+}
+#sway-admin-workspace .sway-email-attachments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
+    gap: 10px;
+}
+#sway-admin-workspace .sway-email-attachment-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid rgba(8,21,51,.10);
+    border-radius: 11px;
+    background: rgba(120,145,180,.035);
+}
+#sway-admin-workspace .sway-email-attachment-preview {
+    display: flex;
+    width: 100%;
+    min-height: 100px;
+    max-height: 170px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: #fff;
+}
+#sway-admin-workspace .sway-email-attachment-preview img {
+    display: block;
+    max-width: 100%;
+    max-height: 150px;
+    object-fit: contain;
+    border-radius: 6px;
+}
+#sway-admin-workspace .sway-email-attachment-size {
+    display: block;
+    padding: 6px 9px 8px;
+    color: var(--text-muted,#687385);
+    font-size: 9px;
+}
+#sway-admin-workspace .sway-email-attachment-file,
+#sway-admin-workspace .sway-email-attachment-pending,
+#sway-admin-workspace .sway-email-attachment-unavailable {
+    display: flex;
+    min-height: 74px;
+    align-items: center;
+    gap: 9px;
+    padding: 10px;
+    color: var(--text,#17233A);
+    text-decoration: none;
+}
+#sway-admin-workspace .sway-email-attachment-file:hover {
+    background: rgba(1,82,244,.045);
+}
+#sway-admin-workspace .sway-email-attachment-file-icon,
+#sway-admin-workspace .sway-email-attachment-pending > span {
+    display: inline-flex;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: rgba(1,82,244,.09);
+    color: #0152F4;
+    font-size: 16px;
+    font-weight: 850;
+}
+#sway-admin-workspace .sway-email-attachment-file > span:last-child,
+#sway-admin-workspace .sway-email-attachment-pending,
+#sway-admin-workspace .sway-email-attachment-unavailable {
+    min-width: 0;
+}
+#sway-admin-workspace .sway-email-attachment-file strong,
+#sway-admin-workspace .sway-email-attachment-pending strong,
+#sway-admin-workspace .sway-email-attachment-unavailable strong {
+    display: block;
+    color: var(--text,#17233A);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+#sway-admin-workspace .sway-email-attachment-file small,
+#sway-admin-workspace .sway-email-attachment-pending small,
+#sway-admin-workspace .sway-email-attachment-unavailable small {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-muted,#687385);
+    font-size: 9px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+#sway-admin-workspace .sway-email-attachment-unavailable {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    min-height: 74px;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-message-avatar {
+    border-color: rgba(119,193,252,.20);
+    background: rgba(119,193,252,.12);
+    color: #9EC9FF;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-message-identity strong,
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachments-head strong,
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-file strong,
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-pending strong,
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-unavailable strong {
+    color: #EAF1FD;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-message-address,
+body.sway-dark-mode #sway-admin-workspace .sway-email-message-recipient,
+body.sway-dark-mode #sway-admin-workspace .sway-email-thread-message-meta time,
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachments-head span,
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-size {
+    color: #A8B4C7;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-plain-body {
+    color: #D7E1F1;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-plain-body a {
+    color: #9EC9FF;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-html-shell {
+    border-color: rgba(119,193,252,.16);
+    background: #fff;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-remote-image-note {
+    border-color: rgba(119,193,252,.18);
+    background: rgba(119,193,252,.07);
+    color: #A8B4C7;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-remote-image-note button {
+    border-color: rgba(119,193,252,.24);
+    background: #101A2C;
+    color: #9EC9FF;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachments {
+    border-top-color: rgba(119,193,252,.13);
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-card {
+    border-color: rgba(119,193,252,.15);
+    background: #101A2C;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-preview {
+    background: #fff;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-file:hover {
+    background: rgba(119,193,252,.08);
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-file-icon,
+body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-pending > span {
+    background: rgba(119,193,252,.13);
+    color: #9EC9FF;
+}
+@media(max-width:640px) {
+    #sway-admin-workspace .sway-email-thread-message-meta {
+        flex-direction: column;
+        gap: 8px;
+    }
+    #sway-admin-workspace .sway-email-thread-message-meta time {
+        padding-left: 44px;
+        text-align: left;
+    }
+    #sway-admin-workspace .sway-email-html-frame {
+        min-height: 300px;
+        height: 65vh;
+    }
+    #sway-admin-workspace .sway-email-attachments-grid {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+    #sway-admin-workspace .sway-email-remote-image-note {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

@@ -11,7 +11,10 @@ on:
       - "scripts/email-inbox-sync.test.mjs"
       - "scripts/delete-email-messages.test.mjs"
       - "scripts/admin-push-preferences-grant.test.mjs"
+      - "scripts/email-mime-helpers.test.mjs"
       - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/admin-workspace.css"
+      - "admin-dashboard/index.html"
       - "supabase/migrations/**"
       - ".github/workflows/validate-email-inbox.yml"
   pull_request:
@@ -24,7 +27,10 @@ on:
       - "scripts/email-inbox-sync.test.mjs"
       - "scripts/delete-email-messages.test.mjs"
       - "scripts/admin-push-preferences-grant.test.mjs"
+      - "scripts/email-mime-helpers.test.mjs"
       - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/admin-workspace.css"
+      - "admin-dashboard/index.html"
       - "supabase/migrations/**"
       - ".github/workflows/validate-email-inbox.yml"
 
@@ -56,8 +62,11 @@ jobs:
       - name: Run pure inbox helper tests
         run: |
           node --check supabase/functions/sync-email-inbox/inbox-helpers.mjs
+          node --check supabase/functions/sync-email-inbox/email-mime-helpers.mjs
           node --check scripts/email-inbox-sync.test.mjs
           node --test scripts/email-inbox-sync.test.mjs
+          node --check scripts/email-mime-helpers.test.mjs
+          node --test scripts/email-mime-helpers.test.mjs
           node --check supabase/functions/delete-email-messages/delete-helpers.mjs
           node --check scripts/delete-email-messages.test.mjs
           node --test scripts/delete-email-messages.test.mjs
