@@ -950,7 +950,8 @@ async function main() {
           })()
         })),
         workspaceView: document.querySelector("#sway-admin-workspace")?.getAttribute("data-current-view") || "",
-        bulkReadRunning: document.querySelector("[data-email-bulk-read]")?.disabled ?? null
+        bulkReadRunning: document.querySelector("[data-email-bulk-read]")?.disabled ?? null,
+        inboxFocus: window.__swayInboxReadFocus || null
       }));
       console.error("Inbox read action focus diagnostic:", JSON.stringify(focusDebug));
       throw error;
