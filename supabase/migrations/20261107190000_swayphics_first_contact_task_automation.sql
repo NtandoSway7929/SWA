@@ -48,7 +48,13 @@ begin
         for update of l skip locked
     loop
         select coalesce(
-            v_lead.assigned_to,
+            (
+                select au.user_id
+                from public.admin_users au
+                where au.user_id = v_lead.assigned_to
+                  and au.active = true
+                limit 1
+            ),
             (
                 select au.user_id
                 from public.admin_users au
