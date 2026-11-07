@@ -430,6 +430,12 @@ async function main() {
       // Intercept and stub them before the request can reach Supabase. They
       // are not part of table-control interactions and must never touch data
       // in this isolated browser run.
+      // This POST-style RPC only reads scheduled-job health for Settings.
+      // Stub its result locally instead of counting it as a data mutation.
+      if (method === "POST" && url.pathname === "/rest/v1/rpc/get_swayphics_automation_status") {
+        metrics.mockedStartupCalls.push({ method, path: url.pathname });
+        return route.fulfill(jsonResponse([]));
+      }
       if (method === "POST" && url.pathname === "/rest/v1/rpc/generate_admin_due_notifications") {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });
         return route.fulfill({
@@ -504,19 +510,22 @@ async function main() {
     await page.locator('[data-view="settings"]').first().click();
     const settingsTabs = page.locator('#sway-settings-expanded .swe-tabs [role="tab"]');
     await settingsTabs.first().waitFor({ state: "visible", timeout: 20000 });
+    await page.locator("#swe-tab-campaign").waitFor({ state: "visible", timeout: 15000 });
     const settingsTabDetails = await settingsTabs.evaluateAll(tabs => tabs.map(tab => ({
       id: tab.id,
-      label: tab.innerText.trim(),
-      selected: tab.getAttribute("aria-selected")
+      label: tab.innerText.trim()
     })));
-    console.log("Actual Settings tablist entries:", JSON.stringify(settingsTabDetails));
+    assert.equal(settingsTabDetails.length, 13,
+      "the actual Settings tablist should include twelve core sections plus the Campaign tab");
+    assert.ok(settingsTabDetails.some(tab => tab.id === "swe-tab-campaign" && tab.label === "Campaign"),
+      "the dynamically-added Campaign section should be present in the Settings tablist");
     for (const section of ["sales", "performance", "commercial", "delivery", "business", "notifications",
       "templates", "security", "preferences", "website", "innerme", "governance"]) {
       assert.ok(settingsTabDetails.some(tab => tab.id === "swe-tab-" + section),
         "the actual Settings tablist should include the " + section + " section");
     }
     const firstSettingsTab = settingsTabs.first();
-    const lastSettingsTab = settingsTabs.last();
+    const campaignSettingsTab = settingsTabs.last();
     await firstSettingsTab.focus();
     await page.keyboard.press("ArrowRight");
     assert.equal(await settingsTabs.nth(1).getAttribute("aria-selected"), "true",
@@ -525,15 +534,21 @@ async function main() {
     assert.equal(await firstSettingsTab.getAttribute("aria-selected"), "true",
       "ArrowLeft should return to the previous Settings tab");
     await page.keyboard.press("End");
-    assert.equal(await lastSettingsTab.getAttribute("aria-selected"), "true",
-      "End should select the final Settings section");
-    assert.equal(await lastSettingsTab.evaluate(el => document.activeElement === el), true,
-      "End should move keyboard focus to the final Settings section");
+    assert.equal(await campaignSettingsTab.getAttribute("aria-selected"), "true",
+      "End should select the dynamically-added Campaign tab");
+    assert.equal(await campaignSettingsTab.evaluate(el => document.activeElement === el), true,
+      "End should move keyboard focus to the dynamically-added Campaign tab");
     await page.keyboard.press("Home");
     assert.equal(await firstSettingsTab.getAttribute("aria-selected"), "true",
-      "Home should select the first Settings section");
+      "Home from the Campaign tab should select the first Settings section");
     assert.equal(await firstSettingsTab.evaluate(el => document.activeElement === el), true,
       "Home should move keyboard focus to the first Settings section");
+    await page.keyboard.press("ArrowLeft");
+    assert.equal(await campaignSettingsTab.getAttribute("aria-selected"), "true",
+      "ArrowLeft from the first tab should wrap to Campaign");
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await firstSettingsTab.getAttribute("aria-selected"), "true",
+      "ArrowRight from Campaign should wrap to the first Settings section");
 
     await navigate("leads", "crm");
     const leadView = page.locator("#sway-workspace-main");
