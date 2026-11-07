@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { resolveInboxDeleteTargets } from "../supabase/functions/delete-email-messages/delete-helpers.mjs";
+import {
+  resolveInboxDeleteTargets,
+  resolveEmailAttachmentStoragePaths,
+} from "../supabase/functions/delete-email-messages/delete-helpers.mjs";
 
 const UID_VALIDITY = 1790292229;
 const row = (overrides = {}) => ({
@@ -178,5 +181,34 @@ test("rejects malformed record and message input", () => {
   assert.throws(
     () => resolveInboxDeleteTargets(null, [], "INBOX", UID_VALIDITY),
     /must be arrays/i,
+  );
+});
+
+
+test("collects only storage paths owned by the email rows being deleted", () => {
+  const emailId = "9ac08ee2-2a4b-4c1a-8a43-13a7b7c08101";
+  const otherId = "ac5f5a54-28bf-4c44-94b2-39864b7ad6a1";
+  assert.deepEqual(
+    resolveEmailAttachmentStoragePaths([
+      {
+        id: emailId,
+        attachments: [
+          { storage_path: emailId + "/1-brand.png" },
+          { storage_path: emailId + "/2-proposal.pdf" },
+          { storage_path: otherId + "/1-other.png" },
+          { storage_path: emailId + "/../other-message.png" },
+          { filename: "not-stored.png" },
+        ],
+      },
+      {
+        id: otherId,
+        attachments: [{ storage_path: otherId + "/1-other.png" }],
+      },
+    ]),
+    [
+      emailId + "/1-brand.png",
+      emailId + "/2-proposal.pdf",
+      otherId + "/1-other.png",
+    ],
   );
 });
