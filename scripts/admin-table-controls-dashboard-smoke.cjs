@@ -559,7 +559,7 @@ async function main() {
     ).length;
 
     const cancelScanDialog = page.waitForEvent("dialog");
-    await runFollowupScan.click();
+    await runFollowupScan.click({ force: true });
     const cancelledScan = await cancelScanDialog;
     assert.match(cancelledScan.message(), /No email or WhatsApp messages will be sent/i,
       "the on-demand scan confirmation must disclose that it does not send messages");
@@ -570,7 +570,7 @@ async function main() {
       "cancelling the follow-up scan must not invoke the automation RPC");
 
     const acceptScanDialog = page.waitForEvent("dialog");
-    await runFollowupScan.click();
+    await runFollowupScan.click({ force: true });
     const acceptedScan = await acceptScanDialog;
     await acceptedScan.accept();
     await page.waitForFunction(() =>
