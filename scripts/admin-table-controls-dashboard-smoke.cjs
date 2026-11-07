@@ -991,28 +991,21 @@ async function main() {
       "the actual Inbox should render two synthetic conversations for keyboard navigation");
     const firstConversation = keyboardThreads.nth(0);
     const secondConversation = keyboardThreads.nth(1);
+    const firstThreadId = await firstConversation.getAttribute("data-email-thread");
+    const secondThreadId = await secondConversation.getAttribute("data-email-thread");
+    assert.notEqual(firstThreadId, secondThreadId, "the two synthetic threads must have distinct IDs");
     await firstConversation.focus();
     assert.equal(await firstConversation.getAttribute("aria-keyshortcuts"), "ArrowDown ArrowUp Home End");
     await firstConversation.press("ArrowDown");
-    await page.waitForFunction(() =>
-      document.activeElement?.getAttribute("data-email-thread") === "thread-keyboard-nav-ui-test"
-    );
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, secondThreadId);
     await secondConversation.press("ArrowDown");
-    await page.waitForFunction(() =>
-      document.activeElement?.getAttribute("data-email-thread") === "thread-ui-test"
-    );
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, firstThreadId);
     await firstConversation.press("ArrowUp");
-    await page.waitForFunction(() =>
-      document.activeElement?.getAttribute("data-email-thread") === "thread-keyboard-nav-ui-test"
-    );
-    await firstConversation.press("Home");
-    await page.waitForFunction(() =>
-      document.activeElement?.getAttribute("data-email-thread") === "thread-ui-test"
-    );
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, secondThreadId);
+    await secondConversation.press("Home");
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, firstThreadId);
     await firstConversation.press("End");
-    await page.waitForFunction(() =>
-      document.activeElement?.getAttribute("data-email-thread") === "thread-keyboard-nav-ui-test"
-    );
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, secondThreadId);
 
     const readToggle = page.locator('[data-email-thread-read-toggle="thread-ui-test"]');
     assert.equal(await readToggle.innerText(), "Mark read",
