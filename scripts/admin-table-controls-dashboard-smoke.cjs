@@ -935,7 +935,7 @@ async function main() {
     );
     await page.waitForFunction(() =>
       document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
-    , { timeout: 5000 });
+    , null, { timeout: 5000 });
     try {
       await page.waitForFunction(() =>
         document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
