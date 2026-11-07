@@ -549,6 +549,40 @@ async function main() {
       await page.locator('[data-admin-table-row="' + view + '"]').first().waitFor({ timeout: 10000 });
     }
 
+    const settingsNavigation = page.locator('[data-view="settings"]').first();
+    await settingsNavigation.waitFor({ state: "visible", timeout: 15000 });
+    await settingsNavigation.click();
+    const runFollowupScan = page.locator('#sway-settings-expanded [data-action="run-stale-lead-automation"]');
+    await runFollowupScan.waitFor({ state: "visible", timeout: 20000 });
+    const followupScanCallsBefore = metrics.mockedStartupCalls.filter(item =>
+      item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
+    ).length;
+
+    const cancelScanDialog = page.waitForEvent("dialog");
+    await runFollowupScan.click();
+    const cancelledScan = await cancelScanDialog;
+    assert.match(cancelledScan.message(), /No email or WhatsApp messages will be sent/i,
+      "the on-demand scan confirmation must disclose that it does not send messages");
+    await cancelledScan.dismiss();
+    assert.equal(metrics.mockedStartupCalls.filter(item =>
+      item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
+    ).length, followupScanCallsBefore,
+      "cancelling the follow-up scan must not invoke the automation RPC");
+
+    const acceptScanDialog = page.waitForEvent("dialog");
+    await runFollowupScan.click();
+    const acceptedScan = await acceptScanDialog;
+    await acceptedScan.accept();
+    await page.waitForFunction(() =>
+      /Scan complete\\. 0 pending follow-ups created\\./.test(
+        document.querySelector("[data-sales-automation-status]")?.textContent || ""
+      )
+    );
+    assert.equal(metrics.mockedStartupCalls.filter(item =>
+      item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
+    ).length, followupScanCallsBefore + 1,
+      "confirming the follow-up scan must invoke the existing authenticated RPC exactly once");
+
     await navigate("leads", "crm");
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
