@@ -194,12 +194,33 @@ async function fetchMessageBody(
   bodyStructure: any
 ) {
   const parts = collectEmailMimeParts(bodyStructure);
-  const plainText = parts.plain
-    ? await decodeMimeTextPart(imapClient, uid, parts.plain)
-    : "";
-  const html = parts.html
-    ? await decodeMimeTextPart(imapClient, uid, parts.html)
-    : null;
+  let plainText = "";
+  let html: string | null = null;
+
+  // One oversized or malformed MIME body part must not stop the mailbox
+  // cursor. Try the alternate representation independently, then retain the
+  // email headers and any downloadable attachments if both body parts fail.
+  if (parts.plain) {
+    try {
+      plainText = await decodeMimeTextPart(imapClient, uid, parts.plain);
+    } catch (error) {
+      console.warn("Unable to download inbound text/plain body part:", {
+        uid,
+        error: String((error as any)?.message || error || "Unknown error")
+      });
+    }
+  }
+
+  if (parts.html) {
+    try {
+      html = await decodeMimeTextPart(imapClient, uid, parts.html);
+    } catch (error) {
+      console.warn("Unable to download inbound text/html body part:", {
+        uid,
+        error: String((error as any)?.message || error || "Unknown error")
+      });
+    }
+  }
 
   return {
     text: plainText.trim() || (html ? stripHtml(html) : ""),
@@ -867,6 +888,9 @@ Deno.serve(async (req) => {
               .eq("id", existingInbound.id);
 
           if (updatedExisting.error) {
+            if (!mediaAlreadyProcessed) {
+              await cleanupStoredEmailAttachments(supabase, hydratedAttachments);
+            }
             throw updatedExisting.error;
           }
 
