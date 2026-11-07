@@ -7004,6 +7004,15 @@
     background: rgba(1,82,244,0.035);
 }
 
+/* Make the active conversation unmistakable during keyboard navigation. */
+.sway-email-inbox-item:focus-visible {
+    outline: 3px solid rgba(1,82,244,0.62);
+    outline-offset: -3px;
+}
+body.sway-dark-mode .sway-email-inbox-item:focus-visible {
+    outline-color: #77C1FC;
+}
+
 .sway-email-inbox-unread {
     width: 7px;
     height: 7px;
