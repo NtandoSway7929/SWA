@@ -31,6 +31,8 @@
         tableFeedback: { leads: "", tasks: "", followups: "", communications: "", invoices: "" },
         tableBulkActionRunning: false,
         emailThreadSelection: [],
+        emailInboxSearch: "",
+        emailInboxFilter: "all",
         emailBulkDeleteRunning: false,
         emailBulkDeleteFeedback: "",
         currentUser: null,
@@ -16808,6 +16810,38 @@ function simpleBars(items, color) {
     }
 
 
+    function emailInboxVisibleThreads(threads) {
+        const source = Array.isArray(threads) ? threads : [];
+        const query = String(state.emailInboxSearch || "").trim().toLowerCase();
+        const filter = state.emailInboxFilter || "all";
+
+        return source.filter(function (thread) {
+            if (!emailThreadHasInbound(thread)) return false;
+
+            const unread = emailThreadUnread(thread);
+            if (filter === "unread" && !unread) return false;
+            if (filter === "read" && unread) return false;
+            if (!query) return true;
+
+            const searchable = [
+                emailThreadSubject(thread),
+                emailThreadSender(thread)
+            ].concat(
+                thread.messages.map(function (message) {
+                    return [
+                        message.from_name,
+                        message.from_email,
+                        message.to_email,
+                        message.subject,
+                        emailMessageText(message)
+                    ].join(" ");
+                })
+            ).join(" ").toLowerCase();
+
+            return searchable.includes(query);
+        });
+    }
+
     function renderEmailWorkspace() {
         const threads =
             emailThreadGroups();
@@ -17022,6 +17056,7 @@ function simpleBars(items, color) {
         }
 
         const inboundThreads = threads.filter(emailThreadHasInbound);
+        const filteredThreads = emailInboxVisibleThreads(inboundThreads);
         const visibleThreadIds = new Set(inboundThreads.map(function (thread) { return String(thread.threadId); }));
         state.emailThreadSelection = (Array.isArray(state.emailThreadSelection) ? state.emailThreadSelection : [])
             .map(String).filter(function (threadId) { return visibleThreadIds.has(threadId); });
@@ -17029,10 +17064,13 @@ function simpleBars(items, color) {
         const selectedEmailMessageCount = inboundThreads.reduce(function (count, thread) {
             return selectedThreadIds.has(String(thread.threadId)) ? count + thread.messages.length : count;
         }, 0);
-        const allInboxThreadsSelected = inboundThreads.length > 0 &&
-            inboundThreads.every(function (thread) { return selectedThreadIds.has(String(thread.threadId)); });
+        const allInboxThreadsSelected = filteredThreads.length > 0 &&
+            filteredThreads.every(function (thread) { return selectedThreadIds.has(String(thread.threadId)); });
 
-        const threadRows = inboundThreads.map(function (thread) {
+        const inboxResultCount = "Showing " + filteredThreads.length + " of " + inboundThreads.length +
+            (inboundThreads.length === 1 ? " conversation" : " conversations");
+
+        const threadRows = filteredThreads.map(function (thread) {
             const latest = thread.messages[thread.messages.length - 1];
             const unread = emailThreadUnread(thread);
             const sender = emailThreadSender(thread);
@@ -17126,7 +17164,8 @@ function simpleBars(items, color) {
                         ? '<label class="sway-email-select-all"><input type="checkbox" data-email-select-all' +
                           (allInboxThreadsSelected ? " checked" : "") +
                           (state.emailBulkDeleteRunning ? " disabled" : "") +
-                          ' aria-label="Select all inbox conversations"> Select all</label>'
+                          (filteredThreads.length ? "" : " disabled") +
+                          ' aria-label="Select all visible inbox conversations"> Select all visible</label>'
                         : "") +
                     '<button type="button" class="sway-workspace-button" data-email-sync ' +
                         (
@@ -17137,6 +17176,25 @@ function simpleBars(items, color) {
                     ">" +
                         esc(syncLabel) +
                     "</button>" +
+                "</div>" +
+                '<div class="sway-email-inbox-filters" role="search">' +
+                    '<label class="sway-email-inbox-filter-field" for="sway-email-inbox-search">' +
+                        "<span>Search conversations</span>" +
+                        '<input id="sway-email-inbox-search" type="search" data-email-inbox-search aria-label="Search inbox conversations" placeholder="Sender, subject or message" value="' +
+                            esc(state.emailInboxSearch || "") +
+                        '">' +
+                    "</label>" +
+                    '<label class="sway-email-inbox-filter-field" for="sway-email-inbox-filter">' +
+                        "<span>Show</span>" +
+                        '<select id="sway-email-inbox-filter" data-email-inbox-filter aria-label="Filter inbox conversations">' +
+                            '<option value="all"' + ((state.emailInboxFilter || "all") === "all" ? " selected" : "") + '>All conversations</option>' +
+                            '<option value="unread"' + (state.emailInboxFilter === "unread" ? " selected" : "") + '>Unread only</option>' +
+                            '<option value="read"' + (state.emailInboxFilter === "read" ? " selected" : "") + '>Read only</option>' +
+                        "</select>" +
+                    "</label>" +
+                    '<span class="sway-email-inbox-result-count" data-email-inbox-result-count role="status" aria-live="polite">' +
+                        esc(inboxResultCount) +
+                    "</span>" +
                 "</div>" +
                 '<div class="sway-email-selection-toolbar" data-email-selection-toolbar' +
                     (state.emailThreadSelection.length ? "" : " hidden") + '>' +
@@ -17155,16 +17213,20 @@ function simpleBars(items, color) {
                     esc(state.emailBulkDeleteFeedback) +
                 "</p>" +
                 (
-                    threadRows
+                    filteredThreads.length
                         ? '<div class="sway-email-inbox-list">' +
                           threadRows +
                           "</div>"
                         : (
-                            '<div class="sway-email-inbox-empty">' +
-                                '<div class="sway-email-inbox-empty-mark">@</div>' +
-                                "<strong>Your inbox is quiet.</strong>" +
-                                "<span>Messages sent to info@swayphics.co.za will appear here after the next synchronization.</span>" +
-                            "</div>"
+                            inboundThreads.length
+                                ? '<div class="sway-email-inbox-filter-empty"><strong>No matching conversations.</strong><span>Try another sender, subject or message, or change the filter.</span></div>'
+                                : (
+                                    '<div class="sway-email-inbox-empty">' +
+                                        '<div class="sway-email-inbox-empty-mark">@</div>' +
+                                        "<strong>Your inbox is quiet.</strong>" +
+                                        "<span>Messages sent to info@swayphics.co.za will appear here after the next synchronization.</span>" +
+                                    "</div>"
+                                )
                         )
                 ) +
             "</section>" +
@@ -28284,6 +28346,38 @@ function simpleBars(items, color) {
             });
 
         workspace
+            .querySelectorAll("[data-email-inbox-search]")
+            .forEach(function (input) {
+                input.addEventListener("input", function () {
+                    state.emailInboxSearch = input.value;
+                    const cursor = typeof input.selectionStart === "number"
+                        ? input.selectionStart
+                        : input.value.length;
+                    renderView();
+                    const nextInput = workspace.querySelector("[data-email-inbox-search]");
+                    if (nextInput) {
+                        nextInput.focus();
+                        try {
+                            nextInput.setSelectionRange(cursor, cursor);
+                        } catch (error) {
+                            // Some browser input implementations do not expose text selection.
+                        }
+                    }
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-email-inbox-filter]")
+            .forEach(function (select) {
+                select.addEventListener("change", function () {
+                    state.emailInboxFilter = select.value || "all";
+                    renderView();
+                    const nextSelect = workspace.querySelector("[data-email-inbox-filter]");
+                    if (nextSelect) nextSelect.focus();
+                });
+            });
+
+        workspace
             .querySelectorAll("[data-email-thread]")
             .forEach(function (button) {
                 button.addEventListener(
@@ -28326,11 +28420,15 @@ function simpleBars(items, color) {
             .querySelectorAll("[data-email-select-all]")
             .forEach(function (checkbox) {
                 checkbox.addEventListener("change", function () {
-                    state.emailThreadSelection = checkbox.checked
-                        ? emailThreadGroups().filter(emailThreadHasInbound).map(function (thread) {
-                            return String(thread.threadId);
-                        })
-                        : [];
+                    const visibleIds = emailInboxVisibleThreads(emailThreadGroups()).map(function (thread) {
+                        return String(thread.threadId);
+                    });
+                    const selected = new Set((state.emailThreadSelection || []).map(String));
+                    visibleIds.forEach(function (threadId) {
+                        if (checkbox.checked) selected.add(threadId);
+                        else selected.delete(threadId);
+                    });
+                    state.emailThreadSelection = Array.from(selected);
                     state.emailBulkDeleteFeedback = "";
                     renderView();
                 });
