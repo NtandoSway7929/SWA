@@ -38,7 +38,7 @@ test("Settings tab keyboard navigation supports arrow keys and Home/End", () => 
     "keyboard navigation should select the destination and move focus to it");
 });
 
-test("all eleven settings sections are mounted and navigable", () => {
+test("all twelve settings sections are mounted and navigable", () => {
   for (const section of [
     "sales", "performance", "commercial", "business", "notifications", "templates",
     "security", "preferences", "website", "innerme", "governance"
