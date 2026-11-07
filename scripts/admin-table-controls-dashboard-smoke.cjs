@@ -849,12 +849,18 @@ async function main() {
     assert.equal(await readToggle.innerText(), "Mark read",
       "an unread conversation should offer a Mark read action");
     await readToggle.click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark unread"
+    );
     assert.equal(emailMessages.find(item => item.id === "email-inbound-ui-test").is_read, true,
       "Mark read should update every inbound message in the conversation in the mocked store");
     const unreadToggle = page.locator('[data-email-thread-read-toggle="thread-ui-test"]');
     assert.equal(await unreadToggle.innerText(), "Mark unread",
       "a read conversation should offer a Mark unread action");
     await unreadToggle.click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark read"
+    );
     assert.equal(emailMessages.find(item => item.id === "email-inbound-ui-test").is_read, false,
       "Mark unread should restore the unread state in the mocked store");
     assert.equal(metrics.mockedTableActionWrites.filter(item =>
