@@ -23280,6 +23280,8 @@ function simpleBars(items, color) {
             modal.querySelectorAll(selector)
         ).filter(function (element) {
             return (
+                !element.disabled &&
+                element.getAttribute("type") !== "hidden" &&
                 !element.hidden &&
                 element.getAttribute("aria-hidden") !== "true" &&
                 typeof element.getClientRects === "function" &&
@@ -23342,7 +23344,7 @@ function simpleBars(items, color) {
 
         modal.innerHTML =
             '<div class="sway-modal-backdrop"></div>' +
-            '<div class="sway-modal-card" role="dialog" aria-modal="true">' +
+            '<div class="sway-modal-card" role="dialog" aria-modal="true" aria-labelledby="sway-modal-title" tabindex="-1">' +
                 '<div class="sway-modal-header">' +
                     '<div>' +
                         '<span class="admin-label">Swayphics workspace</span>' +
