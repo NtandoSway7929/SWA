@@ -9459,7 +9459,7 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
 }
 .sway-admin-table-control-grid {
     display: grid;
-    grid-template-columns: minmax(220px, 1.7fr) minmax(140px, .8fr) minmax(190px, 1fr) auto;
+    grid-template-columns: minmax(220px, 1.7fr) minmax(140px, .8fr) minmax(190px, 1fr) auto auto;
     align-items: end;
     gap: 12px;
 }
@@ -9498,6 +9498,12 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
     padding: 0 0 11px;
     color: var(--text-muted, #687385);
     font-size: .77rem;
+    white-space: nowrap;
+}
+.sway-admin-table-reset-button {
+    align-self: end;
+    justify-self: start;
+    margin-bottom: 2px;
     white-space: nowrap;
 }
 .sway-admin-table-bulk-toolbar {

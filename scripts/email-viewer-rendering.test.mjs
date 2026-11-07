@@ -49,5 +49,5 @@ test("background inbox polling does not reload an unchanged selected email", () 
 
 test("the updated email viewer assets are cache-busted", () => {
   assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-viewer-refinements-1"));
-  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-email-viewer-refinements-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-admin-table-filter-reset-1"));
 });
