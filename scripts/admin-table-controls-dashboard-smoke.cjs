@@ -546,6 +546,25 @@ async function main() {
     assert.ok((await leadRows.first().innerText()).includes("Alpha Studio"),
       "the actual dashboard should sort lead rows by business name");
 
+    await leadView.locator('[data-admin-table-filter="leads"]').selectOption("new");
+    await leadView.locator('[data-admin-table-search-input="leads"]').fill("alpha");
+    assert.equal(await leadRows.filter({ visible: true }).count(), 1,
+      "combined search and status filters should narrow the list before reset");
+    const resetFilters = leadView.locator('[data-admin-table-reset-filters="leads"]');
+    assert.equal(await resetFilters.isEnabled(), true,
+      "the reset action should become enabled when a search or status filter is active");
+    await resetFilters.click();
+    assert.equal(await leadView.locator('[data-admin-table-search-input="leads"]').inputValue(), "",
+      "reset should clear the text search");
+    assert.equal(await leadView.locator('[data-admin-table-filter="leads"]').inputValue(), "all",
+      "reset should restore All statuses");
+    assert.equal(await leadRows.filter({ visible: true }).count(), 4,
+      "reset should restore all active leads");
+    assert.equal(await leadView.locator('[data-admin-table-sort="leads"]').inputValue(), "business_asc",
+      "reset should preserve the selected sort order");
+    assert.equal(await resetFilters.isEnabled(), false,
+      "reset should disable itself when no search or status filter remains");
+
     await leadView.locator('[data-admin-table-search-input="leads"]').fill("alpha");
     await leadView.locator('[data-admin-table-select-all="leads"]').check();
     assert.ok((await leadView.locator('[data-admin-table-selected-count="leads"]').innerText()).includes("1 selected"),
