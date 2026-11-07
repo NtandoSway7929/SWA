@@ -16078,17 +16078,23 @@ function simpleBars(items, color) {
             {
                 method: "POST",
                 body: JSON.stringify({
-                    expiresIn: 600,
-                    ...(asDownload ? { download: true } : {})
+                    expiresIn: 600
                 })
             }
         );
 
         const signedUrl = String(result && (result.signedURL || result.signedUrl) || "");
         if (!signedUrl) throw new Error("Supabase did not return a signed attachment URL.");
-        return /^https?:\/\//i.test(signedUrl)
-            ? signedUrl
-            : SUPABASE_URL + (signedUrl.charAt(0) === "/" ? signedUrl : "/" + signedUrl);
+        const downloadUrl = asDownload
+            ? signedUrl + (signedUrl.indexOf("?") >= 0 ? "&" : "?") + "download="
+            : signedUrl;
+        if (/^https?:\/\//i.test(downloadUrl)) {
+            return downloadUrl;
+        }
+        const storagePath = downloadUrl.charAt(0) === "/"
+            ? downloadUrl
+            : "/" + downloadUrl;
+        return SUPABASE_URL + "/storage/v1" + storagePath;
     }
 
     async function loadEmailThreadMedia(thread) {
