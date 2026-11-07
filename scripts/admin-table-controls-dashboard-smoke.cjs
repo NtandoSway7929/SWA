@@ -677,12 +677,12 @@ async function main() {
     await page.keyboard.press("Tab");
     assert.equal(await taskConfirmDialog.locator("[data-dialog-cancel]").evaluate(el => document.activeElement === el), true,
       "Tab from the last dialog control should wrap to Cancel");
-    await page.keyboard.press("Tab");
-    assert.equal(await taskConfirmDialog.locator("[data-dialog-confirm]").evaluate(el => document.activeElement === el), true,
-      "Tab from Cancel should advance to Confirm");
     await page.keyboard.press("Shift+Tab");
-    assert.equal(await taskConfirmDialog.locator("[data-dialog-cancel]").evaluate(el => document.activeElement === el), true,
+    assert.equal(await taskConfirmDialog.locator("[data-dialog-confirm]").evaluate(el => document.activeElement === el), true,
       "Shift+Tab from the first dialog control should wrap to Confirm");
+    await page.keyboard.press("Tab");
+    assert.equal(await taskConfirmDialog.locator("[data-dialog-cancel]").evaluate(el => document.activeElement === el), true,
+      "Tab from Confirm should wrap back to Cancel");
     await page.keyboard.press("Enter");
     await taskConfirmDialog.waitFor({ state: "detached" });
     assert.equal(
