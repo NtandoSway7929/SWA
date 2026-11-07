@@ -1,14 +1,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ImapFlow } from "npm:imapflow@2.0.5";
+import PostalMime from "npm:postal-mime@4.2.0";
 import {
   getSyncStartUid,
   resolveMatchingThreadMessage,
   selectUidBatch,
 } from "./inbox-helpers.mjs";
-import {
-  collectEmailMimeParts,
-  sanitizeEmailFilename,
-} from "./email-mime-helpers.mjs";
+import { sanitizeEmailFilename } from "./email-mime-helpers.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://swayphics.co.za",
@@ -22,9 +20,9 @@ const MAILBOX = "info@swayphics.co.za";
 
 const INITIAL_SYNC_LIMIT = 25;
 const MAX_MESSAGES_PER_SYNC = 10;
-const MAX_SOURCE_LENGTH = 32768;
+// Bound raw RFC822 retrieval and MIME parsing to protect Edge Function memory.
+const MAX_SOURCE_LENGTH = 32 * 1024 * 1024;
 const EMAIL_ATTACHMENT_BUCKET = "swayphics-email-attachments";
-const MAX_EMAIL_BODY_BYTES = 1024 * 1024;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const MAX_STORED_ATTACHMENTS = 12;
@@ -72,41 +70,6 @@ function messageIds(value: unknown) {
   return String(value || "").match(/<[^>]+>/g) || [];
 }
 
-function decodeMimeText(value: string, encoding: string) {
-  const normalizedEncoding = String(encoding || "").toLowerCase();
-
-  if (normalizedEncoding === "base64") {
-    try {
-      return atob(
-        value
-          .replace(/\s+/g, "")
-          .replace(/-/g, "+")
-          .replace(/_/g, "/")
-      );
-    } catch {
-      return value;
-    }
-  }
-
-  if (
-    normalizedEncoding === "quoted-printable" ||
-    normalizedEncoding === "quopri"
-  ) {
-    return value
-      .replace(/=\r?\n/g, "")
-      .replace(
-        /=([0-9A-Fa-f]{2})/g,
-        function (_match, hex) {
-          return String.fromCharCode(
-            parseInt(hex, 16)
-          );
-        }
-      );
-  }
-
-  return value;
-}
-
 function stripHtml(value: string) {
   return value
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -126,142 +89,86 @@ function stripHtml(value: string) {
     .trim();
 }
 
-async function downloadMimePartBytes(
-  imapClient: any,
-  uid: number,
-  part: any,
-  maxBytes: number
-): Promise<Uint8Array> {
-  if (!part?.part) {
-    throw new Error("The email MIME part does not have a downloadable part identifier.");
+function attachmentContentBytes(value: any): Uint8Array {
+  if (value instanceof Uint8Array) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
   }
-
-  const expectedSize = Number(part.size || 0);
-  if (expectedSize > maxBytes) {
-    throw new Error("The email MIME part exceeds the permitted download size.");
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
   }
-
-  const downloaded = await imapClient.download(
-    uid,
-    String(part.part),
-    {
-      uid: true,
-      maxBytes
-    }
-  );
-
-  if (!downloaded?.content) {
-    throw new Error("The email MIME part could not be downloaded from the mailbox.");
-  }
-
-  const chunks: Uint8Array[] = [];
-  let totalLength = 0;
-
-  for await (const chunk of downloaded.content) {
-    const bytes = chunk instanceof Uint8Array
-      ? chunk
-      : new Uint8Array(chunk);
-    totalLength += bytes.byteLength;
-    if (totalLength > maxBytes) {
-      throw new Error("The email MIME part exceeds the permitted download size.");
-    }
-    chunks.push(bytes);
-  }
-
-  const output = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return output;
+  throw new Error("The MIME parser returned attachment content in an unsupported format.");
 }
 
-async function decodeMimeTextPart(
-  imapClient: any,
-  uid: number,
-  part: any
-): Promise<string> {
-  if (!part?.part) return "";
-  const bytes = await downloadMimePartBytes(
-    imapClient,
-    uid,
-    part,
-    MAX_EMAIL_BODY_BYTES
-  );
-  // ImapFlow download() has already removed transfer encoding and converted
-  // text parts to UTF-8. Decode the returned bytes as UTF-8, not the original
-  // MIME charset, or non-UTF-8 source charsets would be applied twice.
-  return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-}
+async function fetchMessageBody(source: any, reportedSize: number | null | undefined) {
+  if (!source) throw new Error("The IMAP server did not return the full message source.");
 
-async function fetchMessageBody(
-  imapClient: any,
-  uid: number,
-  bodyStructure: any
-) {
-  const parts = collectEmailMimeParts(bodyStructure);
-  let plainText = "";
-  let html: string | null = null;
-  let plainTextDownloaded = !parts.plain;
-  let htmlDownloaded = !parts.html;
+  const sourceBytes = source instanceof Uint8Array
+    ? new Uint8Array(source.buffer, source.byteOffset, source.byteLength)
+    : source instanceof ArrayBuffer
+      ? new Uint8Array(source)
+      : ArrayBuffer.isView(source)
+        ? new Uint8Array(source.buffer, source.byteOffset, source.byteLength)
+        : null;
 
-  // One oversized or malformed MIME body part must not stop the mailbox
-  // cursor. Try the alternate representation independently, then retain the
-  // email headers and any downloadable attachments if both body parts fail.
-  if (parts.plain) {
-    try {
-      plainText = await decodeMimeTextPart(imapClient, uid, parts.plain);
-      plainTextDownloaded = true;
-    } catch (error) {
-      console.warn("Unable to download inbound text/plain body part:", {
-        uid,
-        error: String((error as any)?.message || error || "Unknown error")
-      });
-    }
+  if (!sourceBytes || !sourceBytes.byteLength) {
+    throw new Error("The IMAP server returned an empty or unsupported message source.");
   }
 
-  if (parts.html) {
-    try {
-      html = await decodeMimeTextPart(imapClient, uid, parts.html);
-      htmlDownloaded = true;
-    } catch (error) {
-      console.warn("Unable to download inbound text/html body part:", {
-        uid,
-        error: String((error as any)?.message || error || "Unknown error")
-      });
-    }
+  if (
+    Number(reportedSize || 0) > MAX_SOURCE_LENGTH ||
+    sourceBytes.byteLength > MAX_SOURCE_LENGTH ||
+    (Number(reportedSize || 0) > 0 && Number(reportedSize) !== sourceBytes.byteLength)
+  ) {
+    throw new Error("The full email source exceeds the permitted download size or was truncated.");
   }
+
+  const parsed = await PostalMime.parse(sourceBytes, {
+    attachmentEncoding: "arraybuffer",
+    maxNestingDepth: 64,
+    maxHeadersSize: 1024 * 1024,
+    maxPartCount: 256,
+    maxRfc822NestingDepth: 5,
+    maxForwardedAddresses: 1000
+  });
+
+  const attachments = (Array.isArray(parsed.attachments) ? parsed.attachments : [])
+    .map((attachment: any, index: number) => {
+      const contentBytes = attachmentContentBytes(attachment.content);
+      return {
+        part: String(index + 1),
+        filename: sanitizeEmailFilename(attachment.filename, "attachment-" + String(index + 1)),
+        contentType: String(attachment.mimeType || "application/octet-stream"),
+        sizeBytes: contentBytes.byteLength,
+        contentId: String(attachment.contentId || "").trim().replace(/^<|>$/g, ""),
+        disposition: String(attachment.disposition || (attachment.related ? "inline" : "attachment")),
+        contentBytes
+      };
+    });
+
+  const html = typeof parsed.html === "string" && parsed.html.trim() ? parsed.html : null;
+  const plainText = typeof parsed.text === "string" ? parsed.text.trim() : "";
 
   return {
-    text: plainText.trim() || (html ? stripHtml(html) : ""),
-    html: html || null,
-    bodyDownloadSucceeded: plainTextDownloaded && htmlDownloaded,
-    mimeParts: parts
+    text: plainText || (html ? stripHtml(html) : ""),
+    html,
+    bodyDownloadSucceeded: true,
+    mimeParts: { attachments }
   };
 }
 
 function attachmentStoragePath(messageRecordId: string, part: any) {
-  const partKey = String(part.part || "part")
-    .replace(/[^0-9.]/g, "_")
-    .replace(/\.+/g, "-");
-  const filename = sanitizeEmailFilename(part.filename);
-  return messageRecordId + "/" + partKey + "-" + filename;
+  const partKey = String(part.part || "part").replace(/[^0-9.]/g, "_").replace(/\.+/g, "-");
+  return messageRecordId + "/" + partKey + "-" + sanitizeEmailFilename(part.filename);
 }
 
-async function storeEmailAttachments(
-  imapClient: any,
-  uid: number,
-  mimeAttachments: any[],
-  supabase: any,
-  messageRecordId: string
-) {
+async function storeEmailAttachments(mimeAttachments: any[], supabase: any, messageRecordId: string) {
   const stored: any[] = [];
   const uploadedPaths: string[] = [];
   let totalStoredBytes = 0;
+  const descriptors = Array.isArray(mimeAttachments) ? mimeAttachments : [];
 
-  for (const descriptor of (Array.isArray(mimeAttachments) ? mimeAttachments : [])
-    .slice(0, MAX_STORED_ATTACHMENTS)) {
+  for (const descriptor of descriptors.slice(0, MAX_STORED_ATTACHMENTS)) {
     const entry: Record<string, unknown> = {
       filename: sanitizeEmailFilename(descriptor.filename),
       content_type: String(descriptor.contentType || "application/octet-stream"),
@@ -273,71 +180,44 @@ async function storeEmailAttachments(
       status: "pending"
     };
 
-    if (Number(descriptor.sizeBytes || 0) > MAX_ATTACHMENT_BYTES) {
+    const bytes = descriptor.contentBytes instanceof Uint8Array
+      ? descriptor.contentBytes
+      : descriptor.contentBytes instanceof ArrayBuffer
+        ? new Uint8Array(descriptor.contentBytes)
+        : null;
+
+    if (!bytes) throw new Error("The parsed MIME attachment has no downloadable content.");
+    if (bytes.byteLength > MAX_ATTACHMENT_BYTES) {
       entry.status = "too_large";
       stored.push(entry);
       continue;
     }
-    if (totalStoredBytes >= MAX_TOTAL_ATTACHMENT_BYTES) {
+    if (totalStoredBytes + bytes.byteLength > MAX_TOTAL_ATTACHMENT_BYTES) {
       entry.status = "storage_limit";
       stored.push(entry);
       continue;
     }
 
-    const availableBytes = Math.min(
-      MAX_ATTACHMENT_BYTES,
-      MAX_TOTAL_ATTACHMENT_BYTES - totalStoredBytes
-    );
-
-    try {
-      const bytes = await downloadMimePartBytes(
-        imapClient,
-        uid,
-        { part: descriptor.part, size: descriptor.sizeBytes },
-        availableBytes
-      );
-
-      if (!bytes.byteLength) {
-        entry.status = "empty";
-        stored.push(entry);
-        continue;
-      }
-
-      const storagePath = attachmentStoragePath(messageRecordId, descriptor);
-      const uploadResult = await supabase.storage
-        .from(EMAIL_ATTACHMENT_BUCKET)
-        .upload(storagePath, bytes, {
-          contentType: String(descriptor.contentType || "application/octet-stream"),
-          cacheControl: "3600",
-          upsert: true
-        });
-
-      if (uploadResult.error) {
-        throw uploadResult.error;
-      }
-
-      uploadedPaths.push(storagePath);
-      totalStoredBytes += bytes.byteLength;
-      entry.size_bytes = bytes.byteLength;
-      entry.storage_path = storagePath;
-      entry.status = "stored";
-    } catch (error) {
-      if (String((error as any)?.message || "").toLowerCase().includes("permitted download size")) {
-        entry.status = "too_large";
-      } else {
-        // Do not commit partial attachment state. The caller will retry the
-        // message on the next scheduled or authenticated inbox sync.
-        if (uploadedPaths.length) {
-          await supabase.storage.from(EMAIL_ATTACHMENT_BUCKET).remove(uploadedPaths);
-        }
-        throw error;
-      }
+    const storagePath = attachmentStoragePath(messageRecordId, descriptor);
+    const uploadResult = await supabase.storage.from(EMAIL_ATTACHMENT_BUCKET).upload(storagePath, bytes, {
+      contentType: String(descriptor.contentType || "application/octet-stream"),
+      cacheControl: "3600",
+      upsert: true
+    });
+    if (uploadResult.error) {
+      if (uploadedPaths.length) await supabase.storage.from(EMAIL_ATTACHMENT_BUCKET).remove(uploadedPaths);
+      throw uploadResult.error;
     }
 
+    uploadedPaths.push(storagePath);
+    totalStoredBytes += bytes.byteLength;
+    entry.size_bytes = bytes.byteLength;
+    entry.storage_path = storagePath;
+    entry.status = "stored";
     stored.push(entry);
   }
 
-  for (const descriptor of (Array.isArray(mimeAttachments) ? mimeAttachments : []).slice(MAX_STORED_ATTACHMENTS)) {
+  for (const descriptor of descriptors.slice(MAX_STORED_ATTACHMENTS)) {
     stored.push({
       filename: sanitizeEmailFilename(descriptor.filename),
       content_type: String(descriptor.contentType || "application/octet-stream"),
@@ -349,7 +229,6 @@ async function storeEmailAttachments(
       status: "attachment_limit"
     });
   }
-
   return stored;
 }
 
@@ -816,7 +695,10 @@ Deno.serve(async (req) => {
               envelope: true,
               internalDate: true,
               flags: true,
-              bodyStructure: true
+              size: isAuthenticatedUser,
+              source: isAuthenticatedUser
+                ? { start: 0, maxLength: MAX_SOURCE_LENGTH }
+                : false
             },
             {
               uid: true
@@ -881,13 +763,10 @@ Deno.serve(async (req) => {
           if (!mediaAlreadyProcessed && isAuthenticatedUser) {
             mediaAttemptedMessageIds.add(String(existingInbound.id));
             const existingBody = await fetchMessageBody(
-              client,
-              targetUid,
-              message.bodyStructure
+              message.source,
+              message.size
             );
             const hydratedAttachments = await storeEmailAttachments(
-              client,
-              targetUid,
               existingBody.mimeParts.attachments,
               supabase,
               String(existingInbound.id)
@@ -1081,14 +960,11 @@ Deno.serve(async (req) => {
           if (isAuthenticatedUser) {
             try {
               const body = await fetchMessageBody(
-                client,
-                targetUid,
-                message.bodyStructure
+                message.source,
+                message.size
               );
               textBody = body.text || textBody;
               const attachmentMetadata = await storeEmailAttachments(
-                client,
-                targetUid,
                 body.mimeParts.attachments,
                 supabase,
                 emailRecordId
@@ -1196,7 +1072,11 @@ Deno.serve(async (req) => {
 
           const storedMessage = await client.fetchOne(
             storedUid,
-            { envelope: true, bodyStructure: true },
+            {
+              envelope: true,
+              size: true,
+              source: { start: 0, maxLength: MAX_SOURCE_LENGTH }
+            },
             { uid: true }
           );
 
@@ -1206,9 +1086,8 @@ Deno.serve(async (req) => {
           }
 
           const refreshedBody = await fetchMessageBody(
-            client,
-            storedUid,
-            storedMessage.bodyStructure
+            storedMessage.source,
+            storedMessage.size
           );
 
           if (!refreshedBody.bodyDownloadSucceeded) {
@@ -1219,8 +1098,6 @@ Deno.serve(async (req) => {
           }
 
           const refreshedAttachments = await storeEmailAttachments(
-            client,
-            storedUid,
             refreshedBody.mimeParts.attachments,
             supabase,
             String(record.id)
