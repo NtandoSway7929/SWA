@@ -49,6 +49,10 @@ assert.ok(
     "docked quick-create must use a non-fixed heading layout and a correctly anchored menu"
 );
 assert.ok(
+    dashboardHtml.includes("admin-dashboard-redesign.css?v=20261107-mobile-quick-create-dock-1"),
+    "the updated responsive stylesheet must be cache-busted"
+);
+assert.ok(
     dashboardHtml.indexOf("admin-workspace.js") <
     dashboardHtml.indexOf("admin-mobile-quick-create.js"),
     "the placement helper must load after the core workspace and its existing event handlers"
