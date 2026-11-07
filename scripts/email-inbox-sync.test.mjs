@@ -101,14 +101,15 @@ test("getSyncStartUid handles an empty mailbox and invalid limits safely", () =>
 });
 
 
+
 test("IMAP sync uses bounded connection and socket timeouts", () => {
-  assert.match(syncFunctionSource, /connectionTimeout:\\s*IMAP_CONNECTION_TIMEOUT_MS/);
-  assert.match(syncFunctionSource, /greetingTimeout:\\s*IMAP_GREETING_TIMEOUT_MS/);
-  assert.match(syncFunctionSource, /socketTimeout:\\s*IMAP_SOCKET_TIMEOUT_MS/);
-  assert.match(syncFunctionSource, /const IMAP_CONNECTION_TIMEOUT_MS = 8000;/);
-  assert.match(syncFunctionSource, /const IMAP_GREETING_TIMEOUT_MS = 8000;/);
-  assert.match(syncFunctionSource, /const IMAP_SOCKET_TIMEOUT_MS = 12000;/);
-  assert.match(syncFunctionSource, /client\\.on\\(["']error["']/);
+  assert.ok(syncFunctionSource.includes("connectionTimeout: IMAP_CONNECTION_TIMEOUT_MS"));
+  assert.ok(syncFunctionSource.includes("greetingTimeout: IMAP_GREETING_TIMEOUT_MS"));
+  assert.ok(syncFunctionSource.includes("socketTimeout: IMAP_SOCKET_TIMEOUT_MS"));
+  assert.ok(syncFunctionSource.includes("const IMAP_CONNECTION_TIMEOUT_MS = 8000;"));
+  assert.ok(syncFunctionSource.includes("const IMAP_GREETING_TIMEOUT_MS = 8000;"));
+  assert.ok(syncFunctionSource.includes("const IMAP_SOCKET_TIMEOUT_MS = 12000;"));
+  assert.ok(syncFunctionSource.includes('client.on("error"'));
 });
 
 test("new inbound email is persisted before MIME body or attachment downloads", () => {
@@ -128,10 +129,10 @@ test("new inbound email is persisted before MIME body or attachment downloads", 
   assert.ok(bodyDownloadIndex < attachmentDownloadIndex);
 
   const insertPayload = newMessageFlow.slice(insertCallIndex, bodyDownloadIndex);
-  assert.match(insertPayload, /text_body:\\s*textBody/);
-  assert.match(insertPayload, /html_body:\\s*null/);
-  assert.match(insertPayload, /attachments:\\s*\\[\\]/);
-  assert.match(insertPayload, /media_processed_at:\\s*null/);
+  assert.ok(insertPayload.includes("text_body:"));
+  assert.ok(insertPayload.includes("html_body: null"));
+  assert.ok(insertPayload.includes("attachments: []"));
+  assert.ok(insertPayload.includes("media_processed_at: null"));
 });
 
 test("scheduled ingestion does not block inbox persistence on optional media downloads", () => {
@@ -150,15 +151,9 @@ test("scheduled ingestion does not block inbox persistence on optional media dow
 });
 
 test("failed MIME body downloads remain pending for a later retry", () => {
-  assert.match(
-    syncFunctionSource,
-    /bodyDownloadSucceeded:\\s*plainTextDownloaded && htmlDownloaded/,
-  );
   assert.ok(
-    (syncFunctionSource.match(/bodyDownloadSucceeded\\s*\\?/g) || []).length >= 2,
+    syncFunctionSource.includes("bodyDownloadSucceeded: plainTextDownloaded && htmlDownloaded"),
   );
-  assert.match(
-    syncFunctionSource,
-    /\\.is\\("media_processed_at", null\\)/,
-  );
+  assert.equal(syncFunctionSource.split("bodyDownloadSucceeded ?").length - 1, 2);
+  assert.ok(syncFunctionSource.includes('.is("media_processed_at", null)'));
 });
