@@ -559,20 +559,22 @@ async function main() {
     ).length;
 
     const cancelScanDialog = page.waitForEvent("dialog");
-    await runFollowupScan.evaluate(button => button.click());
+    const triggerCancelledScan = runFollowupScan.evaluate(button => button.click());
     const cancelledScan = await cancelScanDialog;
     assert.match(cancelledScan.message(), /No email or WhatsApp messages will be sent/i,
       "the on-demand scan confirmation must disclose that it does not send messages");
     await cancelledScan.dismiss();
+    await triggerCancelledScan;
     assert.equal(metrics.mockedStartupCalls.filter(item =>
       item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
     ).length, followupScanCallsBefore,
       "cancelling the follow-up scan must not invoke the automation RPC");
 
     const acceptScanDialog = page.waitForEvent("dialog");
-    await runFollowupScan.evaluate(button => button.click());
+    const triggerAcceptedScan = runFollowupScan.evaluate(button => button.click());
     const acceptedScan = await acceptScanDialog;
     await acceptedScan.accept();
+    await triggerAcceptedScan;
     await page.waitForFunction(() =>
       (document.querySelector("[data-sales-automation-status]")?.textContent || "")
         .includes("Scan complete. 0 pending follow-ups created.")
