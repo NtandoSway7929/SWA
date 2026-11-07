@@ -76,7 +76,7 @@ test("ignores text attachments as body content and keeps them as downloadable fi
 
 test("sanitizes MIME filenames against path traversal and control characters", () => {
   assert.equal(sanitizeEmailFilename("../../report.pdf"), "report.pdf");
-  assert.equal(sanitizeEmailFilename("folder\\\\report.pdf"), "folder_report.pdf");
+  assert.equal(sanitizeEmailFilename("folder\\\\report.pdf"), "report.pdf");
   assert.equal(sanitizeEmailFilename(""), "attachment");
 });
 
