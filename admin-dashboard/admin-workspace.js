@@ -17048,7 +17048,7 @@ function simpleBars(items, color) {
                         '<span aria-hidden="true"></span>' +
                     "</label>" +
                     '<button type="button" class="sway-email-inbox-item ' + (unread ? "unread" : "") +
-                        '" data-email-thread="' + esc(threadId) + '"' +
+                        '" data-email-thread="' + esc(threadId) + '" aria-keyshortcuts="ArrowDown ArrowUp Home End"' +
                         (state.emailBulkDeleteRunning ? " disabled" : "") + '>' +
                         '<span class="sway-email-inbox-unread" aria-hidden="true"></span>' +
                         '<span class="sway-email-inbox-copy">' +
@@ -28286,6 +28286,36 @@ function simpleBars(items, color) {
         workspace
             .querySelectorAll("[data-email-thread]")
             .forEach(function (button) {
+                button.addEventListener("keydown", function (event) {
+                    const key = event.key;
+                    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(key)) return;
+
+                    const conversationButtons = Array.from(
+                        workspace.querySelectorAll("[data-email-thread]")
+                    ).filter(function (candidate) {
+                        return (
+                            !candidate.disabled &&
+                            !candidate.closest("[hidden]")
+                        );
+                    });
+                    const currentIndex = conversationButtons.indexOf(button);
+                    if (currentIndex < 0 || conversationButtons.length < 2) return;
+
+                    event.preventDefault();
+                    let nextIndex = currentIndex;
+                    if (key === "ArrowDown") {
+                        nextIndex = (currentIndex + 1) % conversationButtons.length;
+                    } else if (key === "ArrowUp") {
+                        nextIndex = (currentIndex - 1 + conversationButtons.length) % conversationButtons.length;
+                    } else if (key === "Home") {
+                        nextIndex = 0;
+                    } else if (key === "End") {
+                        nextIndex = conversationButtons.length - 1;
+                    }
+
+                    conversationButtons[nextIndex].focus();
+                });
+
                 button.addEventListener(
                     "click",
                     async function () {
