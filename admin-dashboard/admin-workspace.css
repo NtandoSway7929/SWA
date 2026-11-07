@@ -9590,6 +9590,11 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
         grid-template-columns: minmax(0, 1fr);
         gap: 10px;
     }
+    .sway-admin-table-control-grid[data-admin-table-control-grid-view="leads"],
+    .sway-admin-table-control-grid[data-admin-table-control-grid-view="tasks"],
+    .sway-admin-table-control-grid[data-admin-table-control-grid-view="followups"] {
+        grid-template-columns: minmax(0, 1fr);
+    }
     .sway-admin-table-search-label input,
     .sway-admin-table-field select {
         min-height: 44px;
