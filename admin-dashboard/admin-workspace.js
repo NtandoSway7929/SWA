@@ -16339,6 +16339,7 @@ function simpleBars(items, color) {
                 []
             );
 
+        updateInboxNavigationCount();
         saveWorkspaceSnapshot();
     }
 
