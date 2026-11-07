@@ -858,6 +858,7 @@ async function main() {
     assert.equal(communications.length, 0,
       "confirmed communication bulk deletion should remove only the selected synthetic log entry");
 
+    // Verify the updated read action and focus restoration after the Inbox rerender.
     // The Inbox operates on whole conversations. Its separate endpoint is mocked
     // here so no real mailbox or production email message can be touched.
     const inboxNavToggle = page.locator('[data-nav-group-toggle="crm"]').first();
