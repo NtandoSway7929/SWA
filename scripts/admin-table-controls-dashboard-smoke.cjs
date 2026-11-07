@@ -129,8 +129,18 @@ const emailMessages = [
 ];
 
 function dateOffset(days) {
-  const value = new Date();
-  value.setDate(value.getDate() + days);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Johannesburg",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const value = new Date(Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day) + days
+  ));
   return value.toISOString().slice(0, 10);
 }
 
