@@ -822,6 +822,16 @@ async function main() {
     if ((await inboxNavToggle.getAttribute("aria-expanded")) !== "true") await inboxNavToggle.click();
     await page.locator('[data-view="email"]').click();
     await page.locator('[data-email-thread="thread-ui-test"]').waitFor({ state: "visible", timeout: 20000 });
+    const inboxUnreadBadge = page.locator('[data-view="email"] .sway-workspace-count').first();
+    assert.equal(await inboxUnreadBadge.innerText(), "1",
+      "the Inbox navigation should show the number of unread conversations");
+    await page.locator('[data-email-thread="thread-ui-test"]').click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-view="email"] .sway-workspace-count') === null
+    );
+    assert.equal(await page.locator('[data-view="email"] .sway-workspace-count').count(), 0,
+      "opening the unread conversation should remove the navigation badge when no unread conversations remain");
+    await page.locator('[data-email-back]').click();
     await page.locator('[data-email-thread-select="thread-ui-test"]').check();
     assert.equal(await page.locator('[data-email-selection-toolbar]').isVisible(), true,
       "selecting an inbox conversation should reveal its separate bulk-delete toolbar");
