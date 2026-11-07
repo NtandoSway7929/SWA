@@ -16833,7 +16833,7 @@ function simpleBars(items, color) {
                             : "Swayphics";
                         const senderAddress = inbound
                             ? String(message.from_email || "")
-                            : String(message.to_email || "");
+                            : "";
                         const recipientAddress = String(message.to_email || "");
 
                         return (
