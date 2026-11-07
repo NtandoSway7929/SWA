@@ -157,6 +157,29 @@ async function fetchMessageBody(source: any, reportedSize: number | null | undef
   };
 }
 
+async function fetchMessageBodyFromMailbox(
+  imapClient: any,
+  uid: number,
+  reportedSize: number | null | undefined
+) {
+  if (Number(reportedSize || 0) > MAX_SOURCE_LENGTH) {
+    throw new Error("The full email source exceeds the permitted download size.");
+  }
+
+  const message = await imapClient.fetchOne(
+    uid,
+    { source: { start: 0, maxLength: MAX_SOURCE_LENGTH } },
+    { uid: true }
+  );
+
+  if (!message?.source) {
+    throw new Error("The IMAP server did not return the full message source.");
+  }
+
+  return fetchMessageBody(message.source, reportedSize ?? message.size);
+}
+
+
 function attachmentStoragePath(messageRecordId: string, part: any) {
   const partKey = String(part.part || "part").replace(/[^0-9.]/g, "_").replace(/\.+/g, "-");
   return messageRecordId + "/" + partKey + "-" + sanitizeEmailFilename(part.filename);
@@ -695,10 +718,7 @@ Deno.serve(async (req) => {
               envelope: true,
               internalDate: true,
               flags: true,
-              size: isAuthenticatedUser,
-              source: isAuthenticatedUser
-                ? { start: 0, maxLength: MAX_SOURCE_LENGTH }
-                : false
+              size: isAuthenticatedUser
             },
             {
               uid: true
@@ -762,8 +782,9 @@ Deno.serve(async (req) => {
           // after the message row already exists.
           if (!mediaAlreadyProcessed && isAuthenticatedUser) {
             mediaAttemptedMessageIds.add(String(existingInbound.id));
-            const existingBody = await fetchMessageBody(
-              message.source,
+            const existingBody = await fetchMessageBodyFromMailbox(
+              client,
+              targetUid,
               message.size
             );
             const hydratedAttachments = await storeEmailAttachments(
@@ -959,8 +980,9 @@ Deno.serve(async (req) => {
 
           if (isAuthenticatedUser) {
             try {
-              const body = await fetchMessageBody(
-                message.source,
+              const body = await fetchMessageBodyFromMailbox(
+                client,
+                targetUid,
                 message.size
               );
               textBody = body.text || textBody;
@@ -1074,8 +1096,7 @@ Deno.serve(async (req) => {
             storedUid,
             {
               envelope: true,
-              size: true,
-              source: { start: 0, maxLength: MAX_SOURCE_LENGTH }
+              size: true
             },
             { uid: true }
           );
@@ -1085,8 +1106,9 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          const refreshedBody = await fetchMessageBody(
-            storedMessage.source,
+          const refreshedBody = await fetchMessageBodyFromMailbox(
+            client,
+            storedUid,
             storedMessage.size
           );
 
