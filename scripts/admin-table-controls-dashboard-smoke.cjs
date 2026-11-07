@@ -652,23 +652,66 @@ async function main() {
     // Return to Tasks after invoice assertions; the taskRows locator resolves against the current view.
     await navigate("tasks", "delivery");
 
-    // Cancelling the confirmation must not mutate either mock records or write logs.
+    // Branded dialogs must announce their title/message, trap keyboard focus,
+    // preserve native Cancel activation, and return focus to the opening control.
     const writeCountBeforeCancel = metrics.mockedTableActionWrites.length;
     await taskRows.filter({ hasText: "Confirm scope" })
       .locator('[data-admin-table-select="tasks"]').check();
-    await page.locator('[data-admin-table-bulk-action="complete"]').click();
-    await page.locator(".sway-dialog").waitFor({ state: "visible" });
-    await page.locator(".sway-dialog [data-dialog-cancel]").click();
-    await page.locator(".sway-dialog").waitFor({ state: "detached" });
+    const completeSelectedButton = page.locator('[data-admin-table-bulk-action="complete"]');
+    await completeSelectedButton.click();
+    const taskConfirmDialog = page.locator(".sway-dialog");
+    await taskConfirmDialog.waitFor({ state: "visible" });
+    assert.equal(await taskConfirmDialog.getAttribute("role"), "dialog");
+    assert.equal(await taskConfirmDialog.getAttribute("aria-modal"), "true");
+    const dialogTitleId = await taskConfirmDialog.getAttribute("aria-labelledby");
+    const dialogMessageId = await taskConfirmDialog.getAttribute("aria-describedby");
+    assert.ok(dialogTitleId && dialogMessageId,
+      "the confirmation dialog should reference both its accessible title and message");
+    assert.equal((await page.locator("#" + dialogTitleId).innerText()).trim(), "Swayphics",
+      "the confirmation dialog should expose its title as its accessible name");
+    assert.match(await page.locator("#" + dialogMessageId).innerText(), /Mark 1 selected task as completed/,
+      "the confirmation dialog should expose its instructions as its accessible description");
+    assert.equal(await taskConfirmDialog.locator("[data-dialog-confirm]").evaluate(el => document.activeElement === el), true,
+      "the confirmation dialog should initially focus the primary action");
+
+    await page.keyboard.press("Tab");
+    assert.equal(await taskConfirmDialog.locator("[data-dialog-cancel]").evaluate(el => document.activeElement === el), true,
+      "Tab from the last dialog control should wrap to Cancel");
+    await page.keyboard.press("Tab");
+    assert.equal(await taskConfirmDialog.locator("[data-dialog-confirm]").evaluate(el => document.activeElement === el), true,
+      "Tab from Cancel should advance to Confirm");
+    await page.keyboard.press("Shift+Tab");
+    assert.equal(await taskConfirmDialog.locator("[data-dialog-cancel]").evaluate(el => document.activeElement === el), true,
+      "Shift+Tab from the first dialog control should wrap to Confirm");
+    await page.keyboard.press("Enter");
+    await taskConfirmDialog.waitFor({ state: "detached" });
+    assert.equal(
+      await page.evaluate(() => document.activeElement.getAttribute("data-admin-table-bulk-action")),
+      "complete",
+      "native Enter on Cancel should cancel and restore focus to the opening control"
+    );
     assert.equal(metrics.mockedTableActionWrites.length, writeCountBeforeCancel,
       "cancelled completion must not write to the mock API");
     assert.equal(tasks.find(item => item.id === "task-urgent").status, "todo",
       "cancelled completion must preserve the task status");
 
+    // Escape also cancels, closes the dialog, and restores the initiating control.
+    await completeSelectedButton.click();
+    await taskConfirmDialog.waitFor({ state: "visible" });
+    await page.keyboard.press("Escape");
+    await taskConfirmDialog.waitFor({ state: "detached" });
+    assert.equal(
+      await page.evaluate(() => document.activeElement.getAttribute("data-admin-table-bulk-action")),
+      "complete",
+      "Escape should cancel and restore focus to the opening control"
+    );
+    assert.equal(metrics.mockedTableActionWrites.length, writeCountBeforeCancel,
+      "Escape cancellation must not write to the mock API");
+
     // The positive confirmation path only updates the synthetic in-memory task.
-    await page.locator('[data-admin-table-bulk-action="complete"]').click();
-    await page.locator(".sway-dialog").waitFor({ state: "visible" });
-    await page.locator(".sway-dialog [data-dialog-confirm]").click();
+    await completeSelectedButton.click();
+    await taskConfirmDialog.waitFor({ state: "visible" });
+    await taskConfirmDialog.locator("[data-dialog-confirm]").click();
     await page.waitForFunction(() =>
       document.querySelectorAll('#sway-workspace-main [data-admin-table-row="tasks"]').length === 1
     );
