@@ -16644,65 +16644,51 @@ function simpleBars(items, color) {
         }
     }
 
-    async function markEmailThreadRead(
-        threadId
-    ) {
-        if (!threadId) {
-            return;
+    async function setEmailThreadReadState(threadId, isRead) {
+        if (!threadId || typeof isRead !== "boolean") {
+            throw new Error("A conversation and a valid read state are required.");
         }
 
-        const now =
-            new Date().toISOString();
+        const now = new Date().toISOString();
+
+        await api(
+            "/rest/v1/email_messages?thread_id=eq." +
+            encodeURIComponent(threadId) +
+            "&direction=eq.inbound",
+            {
+                method: "PATCH",
+                headers: headers({
+                    "Prefer": "return=minimal"
+                }),
+                body: JSON.stringify({
+                    is_read: isRead,
+                    updated_at: now
+                })
+            }
+        );
+
+        state.emailMessages = state.emailMessages.map(function (message) {
+            if (
+                String(message.thread_id) === String(threadId) &&
+                message.direction === "inbound"
+            ) {
+                return Object.assign({}, message, {
+                    is_read: isRead,
+                    updated_at: now
+                });
+            }
+
+            return message;
+        });
+
+        saveWorkspaceSnapshot();
+    }
+
+    async function markEmailThreadRead(threadId) {
+        if (!threadId) return;
 
         try {
-            await api(
-                "/rest/v1/email_messages?thread_id=eq." +
-                encodeURIComponent(
-                    threadId
-                ) +
-                "&direction=eq.inbound",
-                {
-                    method: "PATCH",
-                    headers: headers({
-                        "Prefer":
-                            "return=minimal"
-                    }),
-                    body:
-                        JSON.stringify({
-                            is_read:
-                                true,
-                            updated_at:
-                                now
-                        })
-                }
-            );
-
-            state.emailMessages =
-                state.emailMessages.map(
-                    function (message) {
-                        if (
-                            message.thread_id ===
-                                threadId &&
-                            message.direction ===
-                                "inbound"
-                        ) {
-                            return Object.assign(
-                                {},
-                                message,
-                                {
-                                    is_read:
-                                        true,
-                                    updated_at:
-                                        now
-                                }
-                            );
-                        }
-
-                        return message;
-                    }
-                );
-
-            saveWorkspaceSnapshot();
+            await setEmailThreadReadState(threadId, true);
         } catch (error) {
             console.warn(
                 "Unable to mark email thread as read.",
@@ -17057,6 +17043,20 @@ function simpleBars(items, color) {
                             '<span class="sway-email-inbox-preview">' + esc(preview.slice(0, 150)) + "</span>" +
                         "</span>" +
                         '<span class="sway-email-inbox-date">' + esc(dateTime(latest.received_at || latest.created_at)) + "</span>" +
+                    "</button>" +
+                    '<button type="button" class="sway-email-inbox-read-toggle" data-email-thread-read-toggle="' +
+                        esc(threadId) +
+                        '" data-email-read-value="' +
+                        (unread ? "true" : "false") +
+                        '" aria-label="Mark ' +
+                        esc(emailThreadSubject(thread)) +
+                        (unread ? " as read" : " as unread") +
+                        '" title="' +
+                        (unread ? "Mark as read" : "Mark as unread") +
+                        '"' +
+                        (state.emailBulkDeleteRunning ? " disabled" : "") +
+                    ">" +
+                        (unread ? "Mark read" : "Mark unread") +
                     "</button>" +
                 "</div>"
             );
@@ -28275,6 +28275,35 @@ function simpleBars(items, color) {
                             error && error.message
                                 ? error.message
                                 : "Unable to download this email attachment."
+                        );
+                    } finally {
+                        button.disabled = false;
+                        button.removeAttribute("aria-busy");
+                    }
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-email-thread-read-toggle]")
+            .forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    if (button.disabled) return;
+
+                    const threadId = String(button.dataset.emailThreadReadToggle || "");
+                    const isRead = button.dataset.emailReadValue === "true";
+                    if (!threadId) return;
+
+                    button.disabled = true;
+                    button.setAttribute("aria-busy", "true");
+
+                    try {
+                        await setEmailThreadReadState(threadId, isRead);
+                        renderView();
+                    } catch (error) {
+                        swayAlert(
+                            error && error.message
+                                ? error.message
+                                : "Unable to update this conversation's read status."
                         );
                     } finally {
                         button.disabled = false;
