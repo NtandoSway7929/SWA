@@ -12226,6 +12226,8 @@ html.dark-mode .sway-ai-revenue-opportunity {
     (function () {
         "use strict";
 
+        let dialogSequence = 0;
+
         if (window.swayAlert) {
             return;
         }
@@ -12242,6 +12244,8 @@ html.dark-mode .sway-ai-revenue-opportunity {
             }, options || {});
 
             return new Promise(function (resolve) {
+                const previousFocus = document.activeElement;
+                const dialogId = "sway-dialog-" + (++dialogSequence);
                 const backdrop = document.createElement("div");
                 backdrop.className = "sway-dialog-backdrop";
 
@@ -12249,6 +12253,9 @@ html.dark-mode .sway-ai-revenue-opportunity {
                 dialog.className = "sway-dialog";
                 dialog.setAttribute("role", "dialog");
                 dialog.setAttribute("aria-modal", "true");
+                dialog.setAttribute("aria-labelledby", dialogId + "-title");
+                dialog.setAttribute("aria-describedby", dialogId + "-message");
+                dialog.tabIndex = -1;
 
                 const needsInput =
                     settings.mode === "prompt";
@@ -12258,10 +12265,10 @@ html.dark-mode .sway-ai-revenue-opportunity {
                         '<img src="../swayphics-logo.png" alt="Swayphics">' +
                     "</div>" +
                     '<div class="sway-dialog-body">' +
-                        '<h3 class="sway-dialog-title">' +
+                        '<h3 id="' + dialogId + '-title" class="sway-dialog-title">' +
                             escapeDialogHtml(settings.title) +
                         "</h3>" +
-                        '<p class="sway-dialog-message">' +
+                        '<p id="' + dialogId + '-message" class="sway-dialog-message">' +
                             escapeDialogHtml(settings.message) +
                         "</p>" +
                         (
@@ -12301,6 +12308,10 @@ html.dark-mode .sway-ai-revenue-opportunity {
                 function finish(value) {
                     cleanup();
                     backdrop.remove();
+                    if (previousFocus && previousFocus.isConnected &&
+                        typeof previousFocus.focus === "function") {
+                        previousFocus.focus();
+                    }
                     resolve(value);
                 }
 
@@ -12335,23 +12346,51 @@ html.dark-mode .sway-ai-revenue-opportunity {
                 function onKeydown(event) {
                     if (event.key === "Escape") {
                         event.preventDefault();
-
+                        event.stopPropagation();
                         finish(
                             settings.mode === "confirm" || needsInput
                                 ? (needsInput ? null : false)
                                 : true
                         );
-
-                        cleanup();
+                        return;
                     }
 
-                    if (
-                        event.key === "Enter" &&
-                        !event.shiftKey &&
-                        document.activeElement !== input
-                    ) {
+                    if (event.key !== "Tab") return;
+
+                    const focusableElements = Array.from(dialog.querySelectorAll(
+                        'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                    )).filter(function (element) {
+                        return (
+                            !element.disabled &&
+                            !element.hidden &&
+                            element.getAttribute("aria-hidden") !== "true" &&
+                            typeof element.getClientRects === "function" &&
+                            element.getClientRects().length > 0
+                        );
+                    });
+
+                    if (!focusableElements.length) {
                         event.preventDefault();
-                        confirmButton.click();
+                        dialog.focus();
+                        return;
+                    }
+
+                    const first = focusableElements[0];
+                    const last = focusableElements[focusableElements.length - 1];
+                    const focusIsOutside = !dialog.contains(document.activeElement);
+
+                    if (event.shiftKey && (
+                        document.activeElement === first ||
+                        focusIsOutside
+                    )) {
+                        event.preventDefault();
+                        last.focus();
+                    } else if (!event.shiftKey && (
+                        document.activeElement === last ||
+                        focusIsOutside
+                    )) {
+                        event.preventDefault();
+                        first.focus();
                     }
                 }
 
