@@ -125,7 +125,7 @@ test("Sales workflow exposes a confirmed on-demand scan and reports its result",
   assert.match(settingsScript, /typeof created !== "number" \|\| !Number\.isInteger\(created\) \|\| created < 0/);
   assert.match(settingsScript, /pending follow-ups created/);
   assert.match(settingsScript, /Scan failed:/);
-  assert.match(settingsScript, /No email or WhatsApp messages are sent/);
+  assert.match(settingsScript, /No email or WhatsApp messages will be sent/i);
 });
 
 test("Governance classifies the latest scheduled run without overstating job freshness", () => {
