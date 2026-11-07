@@ -324,7 +324,7 @@ assert.deepEqual(controls.items("tasks", state.tasks), [],
 const activeResetMarkup = controls.renderControls("tasks");
 assert.match(activeResetMarkup, /data-admin-table-reset-filters="tasks"/,
     "eligible list controls should expose a dedicated clear-filters action");
-assert.match(activeResetMarkup, /aria-label="Clear search, status and date filters for tasks; keep sort order"/,
+assert.match(activeResetMarkup, /aria-label="Clear search, status, date and assignee filters for tasks; keep sort order"/,
     "the reset action should explain exactly what it changes and preserves");
 assert.match(activeResetMarkup, /data-admin-table-date-filter="tasks"/,
     "Tasks should expose a due-date filter");
