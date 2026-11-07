@@ -32,6 +32,7 @@
         tableBulkActionRunning: false,
         emailThreadSelection: [],
         emailBulkDeleteRunning: false,
+        emailBulkReadRunning: false,
         emailBulkDeleteFeedback: "",
         currentUser: null,
         currentAdmin: null,
@@ -16684,6 +16685,90 @@ function simpleBars(items, color) {
         saveWorkspaceSnapshot();
     }
 
+    async function setSelectedEmailThreadsReadState(isRead) {
+        if (typeof isRead !== "boolean" ||
+            state.emailBulkDeleteRunning ||
+            state.emailBulkReadRunning ||
+            state.emailSyncing) {
+            return;
+        }
+
+        const selectedThreadIds = new Set(
+            (state.emailThreadSelection || []).map(String)
+        );
+        if (!selectedThreadIds.size) return;
+
+        const threadsToUpdate = emailThreadGroups().filter(function (thread) {
+            return (
+                selectedThreadIds.has(String(thread.threadId)) &&
+                emailThreadHasInbound(thread) &&
+                emailThreadUnread(thread) === isRead
+            );
+        });
+
+        if (!threadsToUpdate.length) {
+            state.emailBulkDeleteFeedback = isRead
+                ? "All selected conversations are already marked as read."
+                : "All selected conversations are already marked as unread.";
+            renderView();
+            return;
+        }
+
+        state.emailBulkReadRunning = true;
+        state.emailBulkDeleteFeedback =
+            "Marking " + threadsToUpdate.length + " selected conversation" +
+            (threadsToUpdate.length === 1 ? "" : "s") +
+            (isRead ? " as read…" : " as unread…");
+        renderView();
+
+        let updatedCount = 0;
+        const failedThreadIds = [];
+
+        for (const thread of threadsToUpdate) {
+            try {
+                await setEmailThreadReadState(thread.threadId, isRead);
+                updatedCount += 1;
+            } catch (error) {
+                failedThreadIds.push(String(thread.threadId));
+                console.warn(
+                    "Unable to update the read state for an inbox conversation.",
+                    error
+                );
+            }
+        }
+
+        state.emailBulkReadRunning = false;
+
+        const stateLabel = isRead ? "read" : "unread";
+        if (failedThreadIds.length) {
+            state.emailBulkDeleteFeedback = updatedCount
+                ? (
+                    "Marked " + updatedCount + " of " + threadsToUpdate.length +
+                    " selected conversations as " + stateLabel + ". " +
+                    failedThreadIds.length +
+                    " could not be updated. The selection has been kept so you can retry."
+                )
+                : (
+                    "Unable to mark the selected conversations as " + stateLabel +
+                    ". They remain selected; check the inbox connection and try again."
+                );
+        } else {
+            state.emailBulkDeleteFeedback =
+                "Marked " + updatedCount + " selected conversation" +
+                (updatedCount === 1 ? "" : "s") + " as " + stateLabel + ".";
+        }
+
+        if (state.currentView === "email") {
+            renderView();
+            const nextAction = workspace.querySelector(
+                '[data-email-bulk-read="' + (isRead ? "false" : "true") + '"]'
+            ) || workspace.querySelector("[data-email-selection-clear]");
+            if (nextAction && typeof nextAction.focus === "function") {
+                nextAction.focus();
+            }
+        }
+    }
+
     async function markEmailThreadRead(threadId) {
         if (!threadId) return;
 
@@ -16698,7 +16783,7 @@ function simpleBars(items, color) {
     }
 
     async function deleteSelectedEmailThreads() {
-        if (state.emailBulkDeleteRunning || state.emailSyncing) return;
+        if (state.emailBulkDeleteRunning || state.emailBulkReadRunning || state.emailSyncing) return;
         const selectedThreads = new Set((state.emailThreadSelection || []).map(String));
         if (!selectedThreads.size) return;
 
@@ -17015,6 +17100,10 @@ function simpleBars(items, color) {
         const selectedEmailMessageCount = inboundThreads.reduce(function (count, thread) {
             return selectedThreadIds.has(String(thread.threadId)) ? count + thread.messages.length : count;
         }, 0);
+        const selectedUnreadThreadCount = inboundThreads.filter(function (thread) {
+            return selectedThreadIds.has(String(thread.threadId)) && emailThreadUnread(thread);
+        }).length;
+        const selectedReadThreadCount = state.emailThreadSelection.length - selectedUnreadThreadCount;
         const allInboxThreadsSelected = inboundThreads.length > 0 &&
             inboundThreads.every(function (thread) { return selectedThreadIds.has(String(thread.threadId)); });
 
@@ -17029,13 +17118,13 @@ function simpleBars(items, color) {
                     '<label class="sway-email-inbox-select">' +
                         '<input type="checkbox" data-email-thread-select="' + esc(threadId) + '"' +
                             (selectedThreadIds.has(threadId) ? " checked" : "") +
-                            (state.emailBulkDeleteRunning ? " disabled" : "") +
+                            (state.emailBulkDeleteRunning || state.emailBulkReadRunning ? " disabled" : "") +
                             ' aria-label="Select conversation: ' + esc(emailThreadSubject(thread)) + '">' +
                         '<span aria-hidden="true"></span>' +
                     "</label>" +
                     '<button type="button" class="sway-email-inbox-item ' + (unread ? "unread" : "") +
                         '" data-email-thread="' + esc(threadId) + '"' +
-                        (state.emailBulkDeleteRunning ? " disabled" : "") + '>' +
+                        (state.emailBulkDeleteRunning || state.emailBulkReadRunning ? " disabled" : "") + '>' +
                         '<span class="sway-email-inbox-unread" aria-hidden="true"></span>' +
                         '<span class="sway-email-inbox-copy">' +
                             "<strong>" + esc(sender) + "</strong>" +
@@ -17054,7 +17143,7 @@ function simpleBars(items, color) {
                         '" title="' +
                         (unread ? "Mark as read" : "Mark as unread") +
                         '"' +
-                        (state.emailBulkDeleteRunning ? " disabled" : "") +
+                        (state.emailBulkDeleteRunning || state.emailBulkReadRunning ? " disabled" : "") +
                     ">" +
                         (unread ? "Mark read" : "Mark unread") +
                     "</button>" +
@@ -17125,7 +17214,7 @@ function simpleBars(items, color) {
                     (inboundThreads.length
                         ? '<label class="sway-email-select-all"><input type="checkbox" data-email-select-all' +
                           (allInboxThreadsSelected ? " checked" : "") +
-                          (state.emailBulkDeleteRunning ? " disabled" : "") +
+                          (state.emailBulkDeleteRunning || state.emailBulkReadRunning ? " disabled" : "") +
                           ' aria-label="Select all inbox conversations"> Select all</label>'
                         : "") +
                     '<button type="button" class="sway-workspace-button" data-email-sync ' +
@@ -17144,10 +17233,16 @@ function simpleBars(items, color) {
                         esc(state.emailThreadSelection.length + " conversations · " + selectedEmailMessageCount + " messages selected") +
                     "</span>" +
                     '<div class="sway-email-selection-actions">' +
+                        '<button type="button" class="sway-workspace-button" data-email-bulk-read="true" aria-label="Mark selected conversations as read"' +
+                            (selectedUnreadThreadCount === 0 || state.emailBulkReadRunning || state.emailBulkDeleteRunning || state.emailSyncing ? " disabled" : "") +
+                            '>Mark selected read (' + selectedUnreadThreadCount + ')</button>' +
+                        '<button type="button" class="sway-workspace-button" data-email-bulk-read="false" aria-label="Mark selected conversations as unread"' +
+                            (selectedReadThreadCount === 0 || state.emailBulkReadRunning || state.emailBulkDeleteRunning || state.emailSyncing ? " disabled" : "") +
+                            '>Mark selected unread (' + selectedReadThreadCount + ')</button>' +
                         '<button type="button" class="sway-workspace-button danger" data-email-bulk-delete' +
-                            (state.emailBulkDeleteRunning || state.emailSyncing ? " disabled" : "") + '>Delete selected conversations</button>' +
+                            (state.emailBulkDeleteRunning || state.emailBulkReadRunning || state.emailSyncing ? " disabled" : "") + '>Delete selected conversations</button>' +
                         '<button type="button" class="sway-workspace-button" data-email-selection-clear' +
-                            (state.emailBulkDeleteRunning ? " disabled" : "") + '>Clear selection</button>' +
+                            (state.emailBulkDeleteRunning || state.emailBulkReadRunning ? " disabled" : "") + '>Clear selection</button>' +
                     "</div>" +
                 "</div>" +
                 '<p class="sway-email-bulk-feedback" data-email-bulk-feedback role="status" aria-live="polite"' +
@@ -28385,6 +28480,16 @@ function simpleBars(items, color) {
                     state.emailThreadSelection = [];
                     state.emailBulkDeleteFeedback = "";
                     renderView();
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-email-bulk-read]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    setSelectedEmailThreadsReadState(
+                        button.dataset.emailBulkRead === "true"
+                    );
                 });
             });
 
