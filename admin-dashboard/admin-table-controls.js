@@ -224,13 +224,16 @@
                 ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>' +
                   '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected leads">Delete selected leads</button>'
                 : view === "tasks"
-                    ? '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected tasks">Delete selected tasks</button>' +
+                    ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>' +
+                      '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected tasks">Delete selected tasks</button>' +
                       '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="complete">Complete selected</button>'
                 : view === "followups"
-                    ? '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected follow-ups">Delete selected follow-ups</button>' +
+                    ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>' +
+                      '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected follow-ups">Delete selected follow-ups</button>' +
                       '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="complete">Complete selected</button>'
                 : view === "communications"
-                    ? '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected communication log entries">Delete selected entries</button>'
+                    ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>' +
+                      '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected communication log entries">Delete selected entries</button>'
                 : view === "invoices" ? "" :
                 '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="complete">Complete selected</button>';
             const placeholder = view === "leads" ? "Business, contact, service or email" :
@@ -320,6 +323,15 @@
                 rows = selected.map(function (item) {
                     return [item.title, item.description, adminName(item.assigned_to), clientName(item.client_id),
                         item.priority, item.due_date, item.status];
+                });
+            } else if (view === "communications") {
+                headings = ["Contact", "Channel", "Direction", "Subject", "Message", "Communicated at", "Created by"];
+                rows = selected.map(function (item) {
+                    return [
+                        item.lead_id ? leadName(item.lead_id) : clientName(item.client_id),
+                        item.channel, item.direction, item.subject, item.message,
+                        item.contacted_at || item.created_at, adminName(item.created_by)
+                    ];
                 });
             } else {
                 headings = ["Contact", "Channel", "Scheduled for", "Assigned to", "Status", "Notes"];
