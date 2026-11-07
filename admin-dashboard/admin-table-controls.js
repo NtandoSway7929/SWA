@@ -259,6 +259,9 @@
                         bulk +
                         '<button type="button" class="sway-admin-table-clear-selection" data-admin-table-clear-selection="' + esc(view) + '">Clear selection</button>' +
                     '</div>') +
+                (view === "invoices" ? "" :
+                    '<span class="sway-admin-table-selection-status" data-admin-table-selection-status="' + esc(view) +
+                    '" role="status" aria-live="polite" aria-atomic="true">0 records selected.</span>') +
                 '<p class="sway-admin-table-feedback" data-admin-table-feedback="' + esc(view) +
                 '" role="status" aria-live="polite"' + (state.tableFeedback[view] ? "" : " hidden") + ">" +
                     esc(state.tableFeedback[view] || "") + "</p>" +
@@ -271,6 +274,15 @@
             const count = workspace.querySelector('[data-admin-table-selected-count="' + view + '"]');
             if (toolbar) toolbar.hidden = selected.length === 0;
             if (count) count.textContent = selected.length + " selected";
+            const selectionStatus = workspace.querySelector(
+                '[data-admin-table-selection-status="' + view + '"]'
+            );
+            const selectionMessage = selected.length + (selected.length === 1
+                ? " record selected."
+                : " records selected.");
+            if (selectionStatus && selectionStatus.textContent !== selectionMessage) {
+                selectionStatus.textContent = selectionMessage;
+            }
             workspace.querySelectorAll("[data-admin-table-bulk-action], [data-admin-table-clear-selection]")
                 .forEach(function (button) { button.disabled = state.tableBulkActionRunning; });
         }
