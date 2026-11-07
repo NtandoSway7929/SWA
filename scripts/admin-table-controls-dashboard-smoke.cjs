@@ -8,6 +8,7 @@ const { chromium } = require("playwright");
 const BASE_URL = "http://127.0.0.1:4173/admin-dashboard/index.html";
 const SUPABASE_ORIGIN = "https://sqifhribgsqfaxgtobsa.supabase.co";
 const TEST_USER_ID = "11111111-1111-4111-8111-111111111111";
+const OTHER_TEST_USER_ID = "22222222-2222-4222-8222-222222222222";
 const ARTIFACT_DIR = path.resolve("artifacts/admin-table-controls-dashboard");
 fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
 
@@ -16,28 +17,28 @@ const leads = [
     id: "lead-alpha", business_name: "Alpha Studio", contact_name: "Sam Dube",
     email: '=HYPERLINK("https://example.invalid","Open")', phone: "0000000000",
     service_interest: "Website", status: "new", source: "Referral",
-    estimated_value: 1500, next_follow_up: "2026-11-03",
+    estimated_value: 1500, next_follow_up: "2026-11-03", assigned_to: TEST_USER_ID,
     created_at: "2026-10-01T12:00:00Z"
   },
   {
     id: "lead-contact-toggle", business_name: "Contact Toggle Fixture", contact_name: "Test Contact",
     email: "contact-toggle@example.invalid", phone: "0000000003",
     service_interest: "Website", status: "new", source: "Synthetic Test",
-    estimated_value: 1200, next_follow_up: "2026-10-28",
+    estimated_value: 1200, next_follow_up: "2026-10-28", assigned_to: OTHER_TEST_USER_ID,
     contacted_manually: false, created_at: "2026-10-04T12:00:00Z"
   },
   {
     id: "lead-zulu", business_name: "Zulu Market", contact_name: "Lee Mokoena",
     email: "lee@example.invalid", phone: "0000000001", service_interest: "Branding",
     status: "interested", source: "Website", estimated_value: 4500,
-    next_follow_up: "2026-10-25", created_at: "2026-10-02T12:00:00Z",
+    next_follow_up: "2026-10-25", assigned_to: null, created_at: "2026-10-02T12:00:00Z",
     updated_at: new Date().toISOString()
   },
   {
     id: "lead-bravo", business_name: "Bravo Cafe", contact_name: "Ana Ndlovu",
     email: "ana@example.invalid", phone: "0000000002", service_interest: "Logo",
     status: "follow-up", source: "Instagram", estimated_value: 900,
-    next_follow_up: "2026-10-24", created_at: "2026-10-03T12:00:00Z"
+    next_follow_up: "2026-10-24", assigned_to: OTHER_TEST_USER_ID, created_at: "2026-10-03T12:00:00Z"
   }
 ];
 
@@ -45,7 +46,7 @@ const tasks = [
   {
     id: "task-low", title: "Prepare proposal", description: "Draft a website proposal",
     status: "todo", priority: "low", due_date: dateOffset(2),
-    assigned_to: TEST_USER_ID, client_id: null, created_at: "2026-10-01T12:00:00Z"
+    assigned_to: OTHER_TEST_USER_ID, client_id: null, created_at: "2026-10-01T12:00:00Z"
   },
   {
     id: "task-urgent", title: "Confirm scope", description: "Confirm project scope",
@@ -55,14 +56,14 @@ const tasks = [
   {
     id: "task-done", title: "Send invoice", description: "Prepare invoice draft",
     status: "completed", priority: "high", due_date: dateOffset(0),
-    assigned_to: TEST_USER_ID, client_id: null, created_at: "2026-10-03T12:00:00Z"
+    assigned_to: null, client_id: null, created_at: "2026-10-03T12:00:00Z"
   }
 ];
 
 const followups = [
   {
     id: "follow-later", lead_id: "lead-alpha", client_id: null, channel: "Email",
-    status: "pending", scheduled_for: dateOffset(2), assigned_to: TEST_USER_ID,
+    status: "pending", scheduled_for: dateOffset(2), assigned_to: OTHER_TEST_USER_ID,
     note: "Send follow-up"
   },
   {
@@ -72,7 +73,7 @@ const followups = [
   },
   {
     id: "follow-done", lead_id: "lead-zulu", client_id: null, channel: "Email",
-    status: "completed", scheduled_for: dateOffset(-2), assigned_to: TEST_USER_ID,
+    status: "completed", scheduled_for: dateOffset(-2), assigned_to: null,
     note: "Already contacted"
   }
 ];
@@ -231,11 +232,23 @@ function dataFor(url) {
     return { id: TEST_USER_ID, email: "admin-ui-test@example.invalid", role: "authenticated" };
   }
   if (url.pathname === "/rest/v1/admin_users") {
-    return [{
-      user_id: TEST_USER_ID, full_name: "Isolated Dashboard Test",
-      email: "admin-ui-test@example.invalid", role: "owner", active: true,
-      created_at: "2026-01-01T00:00:00Z"
-    }];
+    return [
+      {
+        user_id: TEST_USER_ID, full_name: "Isolated Dashboard Test",
+        email: "admin-ui-test@example.invalid", role: "owner", active: true,
+        created_at: "2026-01-01T00:00:00Z"
+      },
+      {
+        user_id: OTHER_TEST_USER_ID, full_name: "Other Test Admin",
+        email: "other-admin-ui-test@example.invalid", role: "admin", active: true,
+        created_at: "2026-01-02T00:00:00Z"
+      },
+      {
+        user_id: "33333333-3333-4333-8333-333333333333", full_name: "Inactive Test Admin",
+        email: "inactive-admin-ui-test@example.invalid", role: "admin", active: false,
+        created_at: "2026-01-03T00:00:00Z"
+      }
+    ];
   }
   if (url.pathname === "/rest/v1/leads") return leads;
   if (url.pathname === "/rest/v1/tasks") return tasks;
@@ -579,6 +592,17 @@ async function main() {
     assert.equal(await leadRows.filter({ visible: true }).count(), 2,
       "the actual dashboard should filter leads by status while retaining follow-up-stage leads separately");
     await leadView.locator('[data-admin-table-filter="leads"]').selectOption("all");
+    const leadAssigneeFilter = leadView.locator('[data-admin-table-assignee-filter="leads"]');
+    await leadAssigneeFilter.selectOption("me");
+    assert.equal(await leadRows.filter({ visible: true }).count(), 1);
+    assert.ok((await leadRows.filter({ visible: true }).first().innerText()).includes("Alpha Studio"));
+    await leadAssigneeFilter.selectOption("unassigned");
+    assert.equal(await leadRows.filter({ visible: true }).count(), 1);
+    assert.ok((await leadRows.filter({ visible: true }).first().innerText()).includes("Zulu Market"));
+    await leadAssigneeFilter.selectOption("user:" + OTHER_TEST_USER_ID);
+    assert.equal(await leadRows.filter({ visible: true }).count(), 2);
+    assert.equal(await leadAssigneeFilter.locator('option[value="user:33333333-3333-4333-8333-333333333333"]').count(), 0);
+    await leadAssigneeFilter.selectOption("all");
     await leadView.locator('[data-admin-table-sort="leads"]').selectOption("business_asc");
     assert.ok((await leadRows.first().innerText()).includes("Alpha Studio"),
       "the actual dashboard should sort lead rows by business name");
@@ -628,7 +652,17 @@ async function main() {
     await navigate("followups", "crm");
     const followupRows = page.locator('#sway-workspace-main [data-admin-table-row="followups"]');
     const followupDateFilter = page.locator('[data-admin-table-date-filter="followups"]');
+    const followupAssigneeFilter = page.locator('[data-admin-table-assignee-filter="followups"]');
     assert.equal(await followupRows.count(), 3, "the actual Follow-ups view should render synthetic follow-ups");
+    await followupAssigneeFilter.selectOption("me");
+    assert.equal(await followupRows.filter({ visible: true }).count(), 1);
+    assert.ok((await followupRows.filter({ visible: true }).first().innerText()).includes("Bravo Cafe"));
+    await followupAssigneeFilter.selectOption("unassigned");
+    assert.equal(await followupRows.filter({ visible: true }).count(), 1);
+    await followupAssigneeFilter.selectOption("user:" + OTHER_TEST_USER_ID);
+    assert.equal(await followupRows.filter({ visible: true }).count(), 1);
+    assert.ok((await followupRows.filter({ visible: true }).first().innerText()).includes("Alpha Studio"));
+    await followupAssigneeFilter.selectOption("all");
     await followupDateFilter.selectOption("overdue");
     assert.equal(await followupRows.filter({ visible: true }).count(), 1,
       "the Follow-ups date filter should isolate the overdue pending follow-up");
@@ -650,7 +684,17 @@ async function main() {
     await navigate("tasks", "delivery");
     const taskRows = page.locator('#sway-workspace-main [data-admin-table-row="tasks"]');
     const taskDateFilter = page.locator('[data-admin-table-date-filter="tasks"]');
+    const taskAssigneeFilter = page.locator('[data-admin-table-assignee-filter="tasks"]');
     assert.equal(await taskRows.count(), 3, "the actual Tasks view should render synthetic tasks");
+    await taskAssigneeFilter.selectOption("me");
+    assert.equal(await taskRows.filter({ visible: true }).count(), 1);
+    assert.ok((await taskRows.filter({ visible: true }).first().innerText()).includes("Confirm scope"));
+    await taskAssigneeFilter.selectOption("unassigned");
+    assert.equal(await taskRows.filter({ visible: true }).count(), 1);
+    await taskAssigneeFilter.selectOption("user:" + OTHER_TEST_USER_ID);
+    assert.equal(await taskRows.filter({ visible: true }).count(), 1);
+    assert.ok((await taskRows.filter({ visible: true }).first().innerText()).includes("Prepare proposal"));
+    await taskAssigneeFilter.selectOption("all");
     await taskDateFilter.selectOption("overdue");
     assert.equal(await taskRows.filter({ visible: true }).count(), 1,
       "the Tasks date filter should isolate the overdue active task");
