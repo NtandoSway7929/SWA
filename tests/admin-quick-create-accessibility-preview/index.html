@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quick-create accessibility preview</title>
+    <link rel="stylesheet" href="../../admin-dashboard/admin-quick-create-accessibility.css?v=20261107-quick-create-accessibility-1">
+    <style>
+        body { margin: 0; padding: 40px; font: 16px Arial, sans-serif; }
+        #sway-admin-workspace { min-height: 420px; }
+        .sway-quick-create { position: relative; display: inline-grid; gap: 12px; }
+        .sway-quick-create-toggle { min-height: 44px; padding: 10px 18px; border: 1px solid #CCD6E8; border-radius: 22px; background: #FFFFFF; color: #002096; font: inherit; cursor: pointer; }
+        .sway-quick-create-menu { width: 300px; padding: 12px; border: 1px solid #D9E1EE; border-radius: 12px; background: #FFFFFF; }
+        .sway-quick-create-menu[hidden] { display: none; }
+        .sway-quick-create-heading { margin-bottom: 10px; font-weight: 700; }
+        .sway-quick-create-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .sway-quick-create-item { min-height: 42px; padding: 8px; border: 1px solid #D9E1EE; border-radius: 8px; background: #FFFFFF; text-align: left; cursor: pointer; }
+        #after-create { margin-top: 24px; padding: 10px 16px; }
+    </style>
+</head>
+<body>
+    <main id="sway-admin-workspace">
+        <div class="sway-quick-create">
+            <button type="button" class="sway-quick-create-toggle" aria-expanded="false" aria-controls="sway-quick-create-menu">
+                <span aria-hidden="true">+</span> New
+            </button>
+            <div class="sway-quick-create-menu" id="sway-quick-create-menu" hidden>
+                <div class="sway-quick-create-heading">Quick actions</div>
+                <div class="sway-quick-create-grid">
+                    <button type="button" class="sway-quick-create-item" data-global-quick="client">Client</button>
+                    <button type="button" class="sway-quick-create-item" data-global-quick="lead">Lead</button>
+                    <button type="button" class="sway-quick-create-item" data-global-quick="project">Project</button>
+                    <button type="button" class="sway-quick-create-item" data-global-quick="task">Task</button>
+                    <button type="button" class="sway-quick-create-item" data-global-quick="followup">Follow-up</button>
+                    <button type="button" class="sway-quick-create-item" data-global-quick="communication">Communication</button>
+                    <button type="button" class="sway-quick-create-item" data-global-quick="quote">Quote</button>
+                    <button type="button" class="sway-quick-create-item" data-global-quick="invoice">Invoice</button>
+                    <button type="button" class="sway-quick-create-item" data-global-quick="payment">Payment</button>
+                </div>
+            </div>
+        </div>
+        <button id="after-create" type="button">After quick-create</button>
+    </main>
+
+    <script>
+        (function () {
+            const wrapper = document.querySelector(".sway-quick-create");
+            const toggle = wrapper.querySelector(".sway-quick-create-toggle");
+            const menu = wrapper.querySelector(".sway-quick-create-menu");
+
+            toggle.addEventListener("click", function () {
+                const open = menu.hidden;
+                menu.hidden = !open;
+                toggle.setAttribute("aria-expanded", String(open));
+                wrapper.classList.toggle("open", open);
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key !== "Escape") return;
+                menu.hidden = true;
+                toggle.setAttribute("aria-expanded", "false");
+                wrapper.classList.remove("open");
+            });
+        })();
+    </script>
+    <script src="../../admin-dashboard/admin-quick-create-accessibility.js?v=20261107-quick-create-accessibility-1"></script>
+</body>
+</html>
