@@ -6,6 +6,7 @@ on:
     paths:
       - "admin-dashboard/admin-dashboard-redesign.css"
       - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/admin-mobile-quick-create.js"
       - "admin-dashboard/index.html"
       - "scripts/admin-dashboard-redesign.test.cjs"
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
@@ -16,6 +17,7 @@ on:
       - "admin-dashboard/admin-table-controls.js"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/admin-mobile-quick-create.js"
       - "admin-dashboard/index.html"
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
       - "scripts/admin-table-controls-db-smoke.cjs"
