@@ -880,9 +880,12 @@ async function main() {
     await firstConversation.press("ArrowDown");
     await page.waitForFunction(id =>
       document.activeElement?.getAttribute("data-email-thread") === id, secondConversationId);
-    await secondConversation.press("ArrowDown");
+    await secondConversation.press("ArrowUp");
     await page.waitForFunction(id =>
       document.activeElement?.getAttribute("data-email-thread") === id, firstConversationId);
+    await firstConversation.press("ArrowUp");
+    await page.waitForFunction(id =>
+      document.activeElement?.getAttribute("data-email-thread") === id, secondConversationId);
     await firstConversation.press("End");
     await page.waitForFunction(id =>
       document.activeElement?.getAttribute("data-email-thread") === id, secondConversationId);
