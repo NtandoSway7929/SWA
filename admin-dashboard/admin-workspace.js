@@ -17219,7 +17219,9 @@ function simpleBars(items, color) {
                         : "") +
                     '<button type="button" class="sway-workspace-button" data-email-sync ' +
                         (
-                            state.emailSyncing
+                            state.emailSyncing ||
+                            state.emailBulkDeleteRunning ||
+                            state.emailBulkReadRunning
                                 ? "disabled"
                                 : ""
                         ) +
