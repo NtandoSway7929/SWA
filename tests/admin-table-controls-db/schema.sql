@@ -81,6 +81,16 @@ create table public.tasks (
   updated_at timestamptz not null default now()
 );
 
+create table public.invoices (
+  id uuid primary key default gen_random_uuid(),
+  invoice_number text,
+  client_id uuid references public.clients(id) on delete set null,
+  due_date date,
+  amount_outstanding numeric(12,2),
+  total numeric(12,2),
+  status text not null default 'draft'
+);
+
 create table public.workflow_settings (
   id smallint primary key default 1 check (id = 1),
   new_lead_response_hours integer not null default 24,
@@ -93,6 +103,19 @@ insert into public.workflow_settings (id, new_lead_response_hours, lead_no_respo
 values (1, 24, 3, 1);
 
 create schema if not exists innerme_private;
+
+create table public.test_notification_events (
+  id bigint generated always as identity primary key,
+  recipient_id uuid not null references public.admin_users(user_id) on delete cascade,
+  event_type text not null,
+  title text not null,
+  message text not null,
+  entity_type text,
+  entity_id uuid,
+  dedupe_key text,
+  created_at timestamptz not null default now(),
+  unique (recipient_id, dedupe_key)
+);
 
 create or replace function public.create_admin_notification(
   p_user_id uuid,
@@ -108,7 +131,19 @@ create or replace function public.create_admin_notification(
 )
 returns void
 language plpgsql
-as $notification$ begin return; end; $notification$;
+as $notification$
+begin
+  if exists (select 1 from public.admin_users where user_id = p_user_id and active = true)
+     and (p_actor_id is null or p_user_id <> p_actor_id) then
+    insert into public.test_notification_events (
+      recipient_id, event_type, title, message, entity_type, entity_id, dedupe_key
+    ) values (
+      p_user_id, p_event_type, p_title, p_message, p_entity_type, p_entity_id, p_dedupe_key
+    )
+    on conflict (recipient_id, dedupe_key) do nothing;
+  end if;
+end;
+$notification$;
 
 create or replace function public.notify_admins(
   p_actor_id uuid,
@@ -124,7 +159,24 @@ create or replace function public.notify_admins(
 )
 returns void
 language plpgsql
-as $notification$ begin return; end; $notification$;
+as $notification$
+declare
+  v_admin record;
+begin
+  for v_admin in
+    select user_id
+    from public.admin_users
+    where active = true
+  loop
+    perform public.create_admin_notification(
+      v_admin.user_id, p_actor_id, p_level, p_event_type, p_title, p_message,
+      p_entity_type, p_entity_id, p_target_view,
+      case when p_dedupe_key is null then null
+           else p_dedupe_key || ':' || v_admin.user_id::text end
+    );
+  end loop;
+end;
+$notification$;
 
 create table public.follow_ups (
   id uuid primary key default gen_random_uuid(),

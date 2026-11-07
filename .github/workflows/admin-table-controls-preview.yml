@@ -20,8 +20,11 @@ on:
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
       - "scripts/admin-table-controls-db-smoke.cjs"
       - "scripts/first-contact-automation-db-smoke.cjs"
+      - "scripts/due-work-notification-db-smoke.cjs"
       - "scripts/admin-dashboard-business-controls.test.cjs"
       - "supabase/migrations/20261107190000_swayphics_first_contact_task_automation.sql"
+      - "supabase/migrations/20261107210000_escalate_unassigned_due_work.sql"
+      - "supabase/swayphics-admin-notifications.sql"
       - "supabase/swayphics-business-flow.sql"
       - "tests/admin-table-controls-db/first-contact-automation-test.sql"
       - "tests/admin-table-controls-preview/**"
@@ -40,7 +43,7 @@ concurrency:
 
 jobs:
   isolated-browser-preview:
-    name: Test Phase 2 controls with synthetic data
+    name: Test admin automation with synthetic data
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -111,8 +114,10 @@ jobs:
             "supabase/migrations/20261023000000_admin_table_controls_test_schema.sql"
           cp "$GITHUB_WORKSPACE/supabase/migrations/20261107190000_swayphics_first_contact_task_automation.sql" \
             "supabase/migrations/20261107190000_swayphics_first_contact_task_automation.sql"
+          cp "$GITHUB_WORKSPACE/supabase/migrations/20261107210000_escalate_unassigned_due_work.sql" \
+            "supabase/migrations/20261107210000_escalate_unassigned_due_work.sql"
           cp "$GITHUB_WORKSPACE/tests/admin-table-controls-db/first-contact-automation-test.sql" \
-            "supabase/migrations/20261107190100_first_contact_automation_test_rpc.sql"
+            "supabase/migrations/20261107210100_automation_test_rpcs.sql"
           "$CLI" start
           # Replay the copied schema, production migration under test, and
           # test-only RPC against this throwaway database before exercising it.
@@ -127,6 +132,7 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           node scripts/admin-table-controls-db-smoke.cjs
           node scripts/first-contact-automation-db-smoke.cjs
+          node scripts/due-work-notification-db-smoke.cjs
 
       - name: Upload isolated test artifacts
         if: always()
