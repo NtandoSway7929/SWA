@@ -1,6 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ImapFlow } from "npm:imapflow@2.0.5";
-import { resolveInboxDeleteTargets } from "./delete-helpers.mjs";
+import {
+  resolveEmailAttachmentStoragePaths,
+  resolveInboxDeleteTargets,
+} from "./delete-helpers.mjs";
 
 const MAILBOX = "info@swayphics.co.za";
 const MAX_DELETE_MESSAGES = 150;
@@ -92,7 +95,7 @@ Deno.serve(async (req) => {
 
     const storedResult = await serviceClient
       .from("email_messages")
-      .select("id,direction,mailbox,imap_uid,imap_uid_validity,message_id,source_key")
+      .select("id,direction,mailbox,imap_uid,imap_uid_validity,message_id,source_key,attachments")
       .eq("mailbox", MAILBOX)
       .in("id", messageIds);
 
@@ -250,9 +253,31 @@ Deno.serve(async (req) => {
       throw new Error("The mailbox was updated, but the dashboard could not verify every selected message record.");
     }
 
+    const attachmentPaths = resolveEmailAttachmentStoragePaths(records);
+    let attachmentsRemoved = 0;
+    let attachmentCleanupWarning = false;
+    if (attachmentPaths.length) {
+      try {
+        const attachmentRemoval = await serviceClient.storage
+          .from("swayphics-email-attachments")
+          .remove(attachmentPaths);
+        if (attachmentRemoval.error) {
+          attachmentCleanupWarning = true;
+          console.error("Email rows were deleted, but private attachment cleanup failed:", attachmentRemoval.error);
+        } else {
+          attachmentsRemoved = attachmentPaths.length;
+        }
+      } catch (cleanupError) {
+        attachmentCleanupWarning = true;
+        console.error("Email rows were deleted, but private attachment cleanup failed:", cleanupError);
+      }
+    }
+
     return jsonResponse({
       success: true,
       deleted_ids: deletedIds,
+      attachments_removed: attachmentsRemoved,
+      attachment_cleanup_warning: attachmentCleanupWarning,
       mailbox_messages_removed: inboundRecords.length - mailboxMessagesNotFound,
       mailbox_messages_not_found: mailboxMessagesNotFound,
       mailbox_uids_reconciled: mailboxUidsReconciled,
