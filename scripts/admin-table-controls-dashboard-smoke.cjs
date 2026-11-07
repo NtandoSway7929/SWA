@@ -125,6 +125,23 @@ const emailMessages = [
     is_read: true,
     received_at: "2026-11-05T10:01:00Z",
     created_at: "2026-11-05T10:01:00Z"
+  },
+  {
+    id: "email-keyboard-nav-ui-test",
+    direction: "inbound",
+    mailbox: "info@swayphics.co.za",
+    thread_id: "thread-keyboard-nav-ui-test",
+    message_id: "<keyboard-nav-ui-test@example.invalid>",
+    imap_uid: 45,
+    source_key: "imap:INBOX:45",
+    from_name: "Navigation Test Sender",
+    from_email: "navigation@example.invalid",
+    to_email: "info@swayphics.co.za",
+    subject: "Keyboard navigation fixture",
+    text_body: "A second synthetic conversation for inbox keyboard navigation.",
+    is_read: true,
+    received_at: "2026-11-04T10:00:00Z",
+    created_at: "2026-11-04T10:00:00Z"
   }
 ];
 
@@ -367,6 +384,33 @@ async function main() {
           mailbox_messages_removed: removed.filter(item => item.direction === "inbound").length,
           dashboard_records_removed: removed.length
         }));
+      }
+
+      // The Inbox auto-read action is applied to synthetic fixtures only.
+      if (method === "PATCH" && url.pathname === "/rest/v1/email_messages") {
+        const threadFilter = String(url.searchParams.get("thread_id") || "");
+        const threadId = threadFilter.startsWith("eq.")
+          ? decodeURIComponent(threadFilter.slice(3))
+          : "";
+        const directionFilter = String(url.searchParams.get("direction") || "");
+        const body = JSON.parse(request.postData() || "{}");
+        const changed = emailMessages.filter(item =>
+          String(item.thread_id) === threadId &&
+          (!directionFilter || item.direction === directionFilter.slice(3))
+        );
+
+        if (threadId && typeof body.is_read === "boolean" && changed.length) {
+          changed.forEach(item => Object.assign(item, body));
+          metrics.mockedTableActionWrites.push({
+            method, path: url.pathname, thread_id: threadId,
+            is_read: body.is_read, updated_ids: changed.map(item => String(item.id))
+          });
+          return route.fulfill({
+            status: 204,
+            headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" },
+            body: ""
+          });
+        }
       }
 
       // Completion requests are applied to in-memory test arrays only.
@@ -822,6 +866,36 @@ async function main() {
     if ((await inboxNavToggle.getAttribute("aria-expanded")) !== "true") await inboxNavToggle.click();
     await page.locator('[data-view="email"]').click();
     await page.locator('[data-email-thread="thread-ui-test"]').waitFor({ state: "visible", timeout: 20000 });
+    const inboxConversationButtons = page.locator("[data-email-thread]");
+    assert.equal(await inboxConversationButtons.count(), 2,
+      "the synthetic Inbox should expose two conversations for keyboard navigation");
+    const firstConversation = inboxConversationButtons.nth(0);
+    const secondConversation = inboxConversationButtons.nth(1);
+    const firstConversationId = await firstConversation.getAttribute("data-email-thread");
+    const secondConversationId = await secondConversation.getAttribute("data-email-thread");
+    assert.notEqual(firstConversationId, secondConversationId,
+      "the keyboard test fixtures should represent distinct conversations");
+    assert.match(await firstConversation.getAttribute("aria-keyshortcuts"), /ArrowDown/);
+    await firstConversation.focus();
+    await firstConversation.press("ArrowDown");
+    await page.waitForFunction(id =>
+      document.activeElement?.getAttribute("data-email-thread") === id, secondConversationId);
+    await secondConversation.press("ArrowDown");
+    await page.waitForFunction(id =>
+      document.activeElement?.getAttribute("data-email-thread") === id, firstConversationId);
+    await firstConversation.press("End");
+    await page.waitForFunction(id =>
+      document.activeElement?.getAttribute("data-email-thread") === id, secondConversationId);
+    await secondConversation.press("Home");
+    await page.waitForFunction(id =>
+      document.activeElement?.getAttribute("data-email-thread") === id, firstConversationId);
+    await firstConversation.press("Enter");
+    await page.locator("[data-email-back]").waitFor({ state: "visible" });
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "PATCH" && item.path === "/rest/v1/email_messages" &&
+      item.thread_id === firstConversationId && item.is_read === true
+    ), "Enter should open the focused conversation and keep automatic mark-as-read inside the mock");
+    await page.locator("[data-email-back]").click();
     await page.locator('[data-email-thread-select="thread-ui-test"]').check();
     assert.equal(await page.locator('[data-email-selection-toolbar]').isVisible(), true,
       "selecting an inbox conversation should reveal its separate bulk-delete toolbar");
@@ -852,8 +926,10 @@ async function main() {
     await page.waitForFunction(() =>
       document.querySelectorAll('#sway-workspace-main [data-email-thread="thread-ui-test"]').length === 0
     );
-    assert.equal(emailMessages.length, 0,
-      "confirmed inbox conversation deletion should remove all messages in the selected synthetic thread");
+    assert.equal(emailMessages.length, 1,
+      "confirmed deletion should remove the selected synthetic conversation while preserving the other Inbox thread");
+    assert.equal(emailMessages[0].thread_id, "thread-keyboard-nav-ui-test",
+      "the unselected synthetic conversation should remain intact after deletion");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
       item.method === "POST" && item.path === "/functions/v1/delete-email-messages" &&
       item.ids.includes("email-inbound-ui-test") && item.ids.includes("email-outbound-ui-test")
