@@ -364,7 +364,7 @@ assert.match(controlsMarkup, /Assigned to me/);
 assert.match(controlsMarkup, /Other Admin/);
 assert.doesNotMatch(controlsMarkup, /Inactive Admin/,
     "inactive administrators should not appear in the assignee selector");
-assert.match(controlsMarkup, /Clear search and status filters for leads/);
+assert.match(controlsMarkup, /Clear search, status and assignee filters for leads/);
 assert.match(controlsMarkup, /Export selected CSV/);
 assert.match(controlsMarkup, /data-admin-table-bulk-action="delete"/,
     "the Leads bulk toolbar should expose a delete-selected action");
