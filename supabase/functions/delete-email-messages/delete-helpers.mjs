@@ -122,8 +122,8 @@ export function resolveEmailAttachmentStoragePaths(records) {
         parts[1] &&
         parts[1] !== "." &&
         parts[1] !== ".." &&
-        !parts[1].includes("\\\\") &&
-        !parts[1].includes("\\u0000")
+        !parts[1].includes("\\") &&
+        !parts[1].includes("\u0000")
       ) {
         paths.add(path);
       }
