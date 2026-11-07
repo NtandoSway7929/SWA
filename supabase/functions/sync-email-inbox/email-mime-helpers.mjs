@@ -3,10 +3,10 @@ const TEXT_BODY_TYPES = new Set(["text/plain", "text/html"]);
 export function sanitizeEmailFilename(value, fallback = "attachment") {
   let name = String(value || "")
     .normalize("NFKC")
-    .replace(/[\\/\\\\]/g, "_")
-    .replace(/[\\u0000-\\u001f\\u007f]/g, "")
-    .replace(/\\.{2,}/g, ".")
-    .replace(/^\\.+|\\.+$/g, "")
+    .replace(/[\/\\]/g, "_")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\.{2,}/g, ".")
+    .replace(/^\.+|\.+$/g, "")
     .trim();
 
   if (!name) name = fallback;
@@ -27,7 +27,7 @@ export function normalizeEmailContentId(value) {
 }
 
 export function isSafeInlineImageType(value) {
-  return /^image\\/(?:jpeg|png|gif|webp|avif)$/i.test(String(value || "").trim());
+  return /^image\/(?:jpeg|png|gif|webp|avif)$/i.test(String(value || "").trim());
 }
 
 export function collectEmailMimeParts(root) {
@@ -68,7 +68,7 @@ export function collectEmailMimeParts(root) {
         result.attachments.push({
           part,
           filename,
-          contentType: /^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$/i.test(type)
+          contentType: /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/i.test(type)
             ? type
             : "application/octet-stream",
           sizeBytes: Number.isSafeInteger(Number(node.size)) && Number(node.size) >= 0
