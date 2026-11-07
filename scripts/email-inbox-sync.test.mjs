@@ -171,6 +171,6 @@ test("failed MIME body downloads remain pending for a later retry", () => {
   assert.ok(
     syncFunctionSource.includes("bodyDownloadSucceeded: plainTextDownloaded && htmlDownloaded"),
   );
-  assert.equal(syncFunctionSource.split(".bodyDownloadSucceeded").length - 1, 2);
+  assert.equal(syncFunctionSource.split(".bodyDownloadSucceeded").length - 1, 3);
   assert.ok(syncFunctionSource.includes('.is("media_processed_at", null)'));
 });
