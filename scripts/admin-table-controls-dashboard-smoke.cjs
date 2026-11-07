@@ -582,6 +582,7 @@ async function main() {
 
     await returnToOverview();
     await navigate("leads", "crm");
+    await page.locator('[data-admin-table-filter="leads"]').selectOption("all");
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
