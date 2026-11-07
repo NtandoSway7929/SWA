@@ -11956,6 +11956,37 @@ function simpleBars(items, color) {
         );
     }
 
+    function applyOverviewMetricFilter(view, filter) {
+        const allowedFilters = {
+            tasks: "overview_my_open",
+            followups: "overview_due_today",
+            leads: "overview_open_pipeline",
+            invoices: "overview_outstanding"
+        };
+        const normalizedFilter = String(filter || "");
+        if (allowedFilters[view] !== normalizedFilter) return false;
+
+        if (!state.tableControls || typeof state.tableControls !== "object") {
+            state.tableControls = {};
+        }
+        if (!state.tableControls[view]) {
+            state.tableControls[view] = { search: "", filter: "all", sort: "" };
+        }
+        state.tableControls[view].search = "";
+        state.tableControls[view].filter = normalizedFilter;
+
+        if (!state.tableSelection || typeof state.tableSelection !== "object") {
+            state.tableSelection = {};
+        }
+        state.tableSelection[view] = [];
+
+        if (state.tableFeedback && typeof state.tableFeedback === "object") {
+            state.tableFeedback[view] = "";
+        }
+        if (view === "invoices") state.showArchivedInvoices = false;
+        return true;
+    }
+
     function renderOverview() {
         const today =
             dashboardTodayISO();
@@ -12045,10 +12076,10 @@ function simpleBars(items, color) {
                     '</div>' +
                 '</div>' +
                 '<div class="sway-overview-hero-metrics">' +
-                    '<div class="sway-overview-hero-metric"><span>My open tasks</span><strong>' + myOpenTasks.length + '</strong><small>' + tasksToday + ' due today</small></div>' +
-                    '<div class="sway-overview-hero-metric"><span>Follow-ups today</span><strong>' + followupsToday + '</strong><small>Scheduled for today</small></div>' +
-                    '<div class="sway-overview-hero-metric"><span>Open pipeline</span><strong>' + esc(money(pipeline)) + '</strong><small>' + activeLeads + ' active leads</small></div>' +
-                    '<div class="sway-overview-hero-metric"><span>Outstanding</span><strong>' + esc(money(outstanding)) + '</strong><small>' + unpaidItems + ' unpaid payment items</small></div>' +
+                    '<button type="button" class="sway-overview-hero-metric sway-overview-hero-metric-link" data-view-target="tasks" data-overview-filter="overview_my_open" aria-label="View my open tasks"><span>My open tasks</span><strong>' + myOpenTasks.length + '</strong><small>' + tasksToday + ' due today</small></button>' +
+                    '<button type="button" class="sway-overview-hero-metric sway-overview-hero-metric-link" data-view-target="followups" data-overview-filter="overview_due_today" aria-label="View follow-ups scheduled today"><span>Follow-ups today</span><strong>' + followupsToday + '</strong><small>Scheduled for today</small></button>' +
+                    '<button type="button" class="sway-overview-hero-metric sway-overview-hero-metric-link" data-view-target="leads" data-overview-filter="overview_open_pipeline" aria-label="View active pipeline leads"><span>Open pipeline</span><strong>' + esc(money(pipeline)) + '</strong><small>' + activeLeads + ' active leads</small></button>' +
+                    '<button type="button" class="sway-overview-hero-metric sway-overview-hero-metric-link" data-view-target="invoices" data-overview-filter="overview_outstanding" aria-label="View outstanding invoices"><span>Outstanding</span><strong>' + esc(money(outstanding)) + '</strong><small>' + unpaidItems + ' unpaid payment items</small></button>' +
                 '</div>' +
             '</section>' +
 
@@ -12265,6 +12296,8 @@ function simpleBars(items, color) {
         renderView: renderView,
         swayAlert: swayAlert,
         swayConfirm: swayConfirm,
+        dashboardTodayISO: dashboardTodayISO,
+        dateInput: dateInput,
         invoiceStatus: function (item) {
             if (item.archived !== true &&
                 item.status !== "paid" &&
@@ -28633,8 +28666,18 @@ function simpleBars(items, color) {
                 button.addEventListener(
                     "click",
                     function () {
-                        state.currentView =
-                            button.dataset.viewTarget;
+                        const viewTarget = button.dataset.viewTarget;
+                        const overviewFilter =
+                            button.getAttribute("data-overview-filter");
+
+                        if (
+                            overviewFilter &&
+                            !applyOverviewMetricFilter(viewTarget, overviewFilter)
+                        ) {
+                            return;
+                        }
+
+                        state.currentView = viewTarget;
 
                         persistWorkspaceView(
                             state.currentView
