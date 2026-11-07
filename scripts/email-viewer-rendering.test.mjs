@@ -59,6 +59,8 @@ test("Inbox navigation displays and refreshes the unread conversation count", ()
   assert.ok(workspaceJs.includes("emailThreadHasInbound(thread) && emailThreadUnread(thread)"));
   assert.ok(workspaceJs.includes('workspace.querySelectorAll(\'[data-view="email"]\')'));
   assert.ok(workspaceJs.includes("updateInboxNavigationCount();"));
+  assert.ok(workspaceJs.includes("async function loadEmailMessages()"));
+  assert.ok(workspaceJs.includes("updateInboxNavigationCount();\n        saveWorkspaceSnapshot();"));
   assert.ok(workspaceJs.includes("badge.textContent = String(unreadCount)"));
   assert.ok(workspaceJs.includes("badge.remove()"));
 });
