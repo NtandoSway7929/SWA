@@ -1,10 +1,15 @@
 (function () {
     "use strict";
 
-    // The Inbox is rendered again after a read-state PATCH. The original
-    // action handler can hold a reference to a button that has been removed
-    // from the document by that render. Observe the live document and restore
-    // focus to the replacement button only after its read state has changed.
+    const diagnostic = window.__swayInboxReadFocus = {
+        loaded: true,
+        clicks: 0,
+        observerStarted: 0,
+        changedStateDetected: 0,
+        focusAttempts: 0,
+        focusSucceeded: false
+    };
+
     document.addEventListener("click", function (event) {
         const source = event.target;
         const button = source && typeof source.closest === "function"
@@ -12,6 +17,7 @@
             : null;
         if (!button || button.disabled) return;
 
+        diagnostic.clicks += 1;
         const threadId = String(button.dataset.emailThreadReadToggle || "");
         const previousValue = String(button.dataset.emailReadValue || "");
         if (!threadId || (previousValue !== "true" && previousValue !== "false")) return;
@@ -42,9 +48,19 @@
                 return;
             }
 
+            diagnostic.changedStateDetected += 1;
             stopObserving();
-            currentButton.focus({ preventScroll: true });
-            if (document.activeElement !== currentButton) currentButton.focus();
+
+            // Re-query in the next animation frame: renderView can perform
+            // more than one DOM mutation, so focus the final live control.
+            window.requestAnimationFrame(function () {
+                const finalButton = findCurrentButton();
+                if (!finalButton || finalButton.disabled) return;
+                diagnostic.focusAttempts += 1;
+                finalButton.focus({ preventScroll: true });
+                if (document.activeElement !== finalButton) finalButton.focus();
+                diagnostic.focusSucceeded = document.activeElement === finalButton;
+            });
         }
 
         observer = new MutationObserver(restoreFocusAfterUpdate);
@@ -54,6 +70,7 @@
             attributes: true,
             attributeFilter: ["data-email-read-value", "disabled"]
         });
+        diagnostic.observerStarted += 1;
 
         timeoutId = window.setTimeout(stopObserving, 15000);
     }, true);
