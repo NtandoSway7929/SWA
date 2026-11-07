@@ -21,7 +21,8 @@ assert.ok(controlsScriptIndex >= 0 && workspaceScriptIndex > controlsScriptIndex
     "the table controls module must load before the dashboard workspace");
 assert.match(dashboardHtml, /admin-workspace\.css\?v=20261107-admin-table-selection-status-1/,
     "the selection live-region styling must use a refreshed workspace stylesheet cache key");
-assert.match(workspaceCss, /\.sway-admin-table-selection-status\s*\{[\\s\\S]*clip-path:\s*inset\(50%\)/,
+assert.ok(workspaceCss.includes(".sway-admin-table-selection-status {") &&
+    workspaceCss.includes("clip-path: inset(50%);"),
     "the selection live region must remain visually hidden without using display:none");
 for (const view of ["leads", "followups", "tasks", "communications"]) {
     assert.ok(workspaceSource.includes('adminTableControls.renderControls("' + view + '")'),
@@ -455,7 +456,9 @@ function verifySelectionAnnouncementBehavior() {
     assert.equal(toolbar.hidden, false,
         "the bulk toolbar should appear when a record is selected");
 
-    clearButton && listeners["clear:click"]();
+    assert.equal(typeof listeners["clear:click"], "function",
+        "the Clear selection action should have a bound handler");
+    listeners["clear:click"]();
     assert.deepEqual(testState.tableSelection.leads, [],
         "Clear selection should remove the selected record");
     assert.equal(checkbox.checked, false,
