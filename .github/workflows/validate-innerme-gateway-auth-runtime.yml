@@ -1,0 +1,79 @@
+name: Validate InnerMe Gateway Auth in Edge Runtime
+
+on:
+  pull_request:
+    branches:
+      - main
+      - agent/innerme-integration-registry-spec
+    paths:
+      - "supabase/functions/innerme-integration-gateway/index.ts"
+      - "supabase/tests/integration-gateway-runtime/**"
+      - ".github/workflows/validate-innerme-gateway-auth-runtime.yml"
+  push:
+    branches:
+      - main
+      - feature/innerme-municipal-money-gateway
+    paths:
+      - "supabase/functions/innerme-integration-gateway/index.ts"
+      - "supabase/tests/integration-gateway-runtime/**"
+      - ".github/workflows/validate-innerme-gateway-auth-runtime.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  gateway-auth-runtime:
+    name: Exercise auth and quota RPC calls in Supabase Edge Runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Create isolated test network
+        run: docker network create innerme-gateway-auth-ci
+
+      - name: Start mock Supabase Auth and PostgREST service
+        run: |
+          docker run -d --name innerme-gateway-auth-mock \
+            --network innerme-gateway-auth-ci --network-alias mock-supabase \
+            -p 54321:54321 \
+            -v "$GITHUB_WORKSPACE/supabase/tests/integration-gateway-runtime/mock-supabase.mjs:/app/mock-supabase.mjs:ro" \
+            node:22-alpine node /app/mock-supabase.mjs
+
+      - name: Start pinned Supabase Edge Runtime with gateway function
+        run: |
+          docker run -d --name innerme-gateway-auth-runtime \
+            --network innerme-gateway-auth-ci -p 9000:9000 \
+            -e SUPABASE_URL=http://mock-supabase:54321 \
+            -e SUPABASE_ANON_KEY=innerme-runtime-test-public-key \
+            -v "$GITHUB_WORKSPACE/supabase/tests/integration-gateway-runtime/main:/services/main:ro" \
+            -v "$GITHUB_WORKSPACE/supabase/functions/innerme-integration-gateway:/services/innerme-integration-gateway:ro" \
+            supabase/edge-runtime:v1.77.9 \
+            start --main-service /services/main -p 9000
+
+      - name: Wait for Edge Runtime health
+        run: |
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent http://127.0.0.1:9000/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs innerme-gateway-auth-runtime
+          exit 1
+
+      - name: Verify gateway authentication and quota RPC contract
+        run: node supabase/tests/integration-gateway-runtime/assert-auth-contract.mjs
+
+      - name: Print logs on failure
+        if: failure()
+        run: |
+          docker logs innerme-gateway-auth-runtime || true
+          docker logs innerme-gateway-auth-mock || true
+
+      - name: Clean up local CI resources
+        if: always()
+        run: |
+          docker rm -f innerme-gateway-auth-runtime innerme-gateway-auth-mock || true
+          docker network rm innerme-gateway-auth-ci || true

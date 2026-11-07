@@ -124,12 +124,13 @@ Before any production consideration, the isolated pilot must prove:
 2. Unknown municipality code, amount type, dataset, method, and malformed parameters are rejected before network access.
 3. Attempts to provide arbitrary URLs, private IPs, alternate hosts, redirects, or arbitrary query expressions are rejected.
 4. Large responses, slow responses, malformed JSON, provider errors, and rate limits fail safely.
-5. Missing/null source values remain distinguishable from numeric zero.
+5. The raw source amount is retained separately. For a null source amount, the normalized amount is set to zero in line with the provider's explicit guidance; the response labels the original null value and carries the source's caveat that null or zero may indicate no further value was submitted.
 6. Attribution, publication date, data-quality caveat, and freshness caveat survive normalization.
 7. Provider content cannot alter system instructions or trigger actions.
 8. No customer PII or credentials are transmitted or logged.
 9. No write request is possible.
 10. A failed provider request does not corrupt InnerMe knowledge, action, or execution state.
+11. The production security review addresses DNS resolution/IP-range controls. The fixed host/path and disabled redirects prevent model-controlled destination changes, but they do not by themselves prove DNS rebinding protection.
 
 ## 9. Go/no-go boundary
 

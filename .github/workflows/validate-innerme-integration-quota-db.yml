@@ -1,0 +1,73 @@
+name: Validate InnerMe Integration Quota Migration
+
+on:
+  pull_request:
+    branches:
+      - main
+      - agent/innerme-integration-registry-spec
+    paths:
+      - "supabase/migrations/20261104110000_innerme_integration_quota.sql"
+      - "supabase/tests/integration_quota_migration_test.sql"
+      - "supabase/tests/integration_quota_concurrency_setup.sql"
+      - "supabase/tests/integration_quota_concurrency_test.sh"
+      - ".github/workflows/validate-innerme-integration-quota-db.yml"
+  push:
+    branches:
+      - feature/innerme-municipal-money-gateway
+    paths:
+      - "supabase/migrations/20261104110000_innerme_integration_quota.sql"
+      - "supabase/tests/integration_quota_migration_test.sql"
+      - "supabase/tests/integration_quota_concurrency_setup.sql"
+      - "supabase/tests/integration_quota_concurrency_test.sh"
+      - ".github/workflows/validate-innerme-integration-quota-db.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-runtime:
+    name: Execute quota migration and RPC tests on PostgreSQL 17
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Execute migration and permission, quota, and lease tests
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: |
+          psql --set ON_ERROR_STOP=1 --file supabase/tests/integration_quota_migration_test.sql
+
+      - name: Verify simultaneous last-slot reservations across six sessions
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: |
+          bash supabase/tests/integration_quota_concurrency_test.sh
