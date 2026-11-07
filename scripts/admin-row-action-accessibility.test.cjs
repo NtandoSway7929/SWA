@@ -31,8 +31,9 @@ assert.ok(script.includes('cell.classList.contains("sway-admin-table-select-cell
     "selection controls must not be mistaken for a record identifier");
 assert.ok(script.includes('cell.querySelector(".sway-row-actions, .sway-lead-row-actions")'),
     "the action column must be excluded when deriving the record label");
-assert.ok(script.includes('"Actions for " + recordLabel'),
-    "each disclosure must receive a record-specific accessible name");
+assert.ok(script.includes('cell.querySelector("strong")') &&
+    script.includes('"Actions for " + recordLabel'),
+    "each disclosure must be named from the record's primary visible value");
 assert.ok(script.includes('summary.hasAttribute("aria-label") && !generated'),
     "an explicitly authored accessible name must not be overwritten");
 assert.ok(script.includes("new MutationObserver"),
