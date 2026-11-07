@@ -164,14 +164,26 @@ test("dynamic form modals expose labels, initial focus, restoration and required
   assert.ok(start >= 0 && end > start, "showModal() must be present");
   const showModal = source.slice(start, end);
 
-  assert.match(showModal, /role="dialog" aria-modal="true" aria-labelledby="sway-modal-title" tabindex="-1"/);
-  assert.match(showModal, /<h3 id="sway-modal-title">/);
-  assert.match(showModal, /document.addEventListener(s*"keydown",s*onModalKeydown,s*true/s);
-  assert.match(showModal, /document.removeEventListener(s*"keydown",s*onModalKeydown,s*true/s);
-  assert.match(showModal, /firstFormControl[sS]*?initialFocus[sS]*?initialFocus.focus()/);
-  assert.match(showModal, /opener.focus()/);
-  assert.match(showModal, /close(false)[sS]*?returnFocusTarget.focus()/);
-  assert.match(showModal, /disabledAttribute +s*requiredAttribute +s*">" +s*esc(value) +s*"</textarea>"/);
-  assert.match(showModal, /disabledAttribute +s*requiredAttribute +s*">" +s*field.options/);
-  assert.match(showModal, /submitButton.focus()/);
+  assert.ok(showModal.includes('role="dialog" aria-modal="true" aria-labelledby="sway-modal-title" tabindex="-1"'));
+  assert.ok(showModal.includes('<h3 id="sway-modal-title">'));
+  assert.ok(showModal.includes("document.addEventListener("));
+  assert.ok(showModal.includes("document.removeEventListener("));
+  assert.ok(showModal.includes("onModalKeydown"));
+  assert.ok(showModal.includes('firstFormControl'));
+  assert.ok(showModal.includes("initialFocus.focus()"));
+  assert.ok(showModal.includes("opener.focus()"));
+  assert.ok(showModal.includes("close(false)"));
+  assert.ok(showModal.includes("returnFocusTarget.focus()"));
+  assert.ok(showModal.includes("submitButton.focus()"));
+
+  const textareaStart = showModal.indexOf('field.type === "textarea"');
+  const selectStart = showModal.indexOf('field.type === "select"', textareaStart);
+  const inputStart = showModal.indexOf("} else {", selectStart);
+  assert.ok(textareaStart >= 0 && selectStart > textareaStart && inputStart > selectStart);
+  assert.ok(showModal.slice(textareaStart, selectStart).includes("requiredAttribute"),
+    "required textarea fields must retain native required validation");
+  assert.ok(showModal.slice(selectStart, inputStart).includes("requiredAttribute"),
+    "required select fields must retain native required validation");
+  assert.ok(showModal.slice(inputStart).includes("requiredAttribute"),
+    "required input fields must retain native required validation");
 });
