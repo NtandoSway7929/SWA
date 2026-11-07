@@ -84,9 +84,9 @@ assert.equal(typeof global.window.createSwayphicsAdminTableControls, "function")
 
 const state = {
     tableControls: {
-        leads: { search: "", filter: "all", sort: "value_desc" },
-        tasks: { search: "", filter: "all", sort: "priority_desc" },
-        followups: { search: "", filter: "all", sort: "scheduled_asc" },
+        leads: { search: "", filter: "all", sort: "value_desc", assigneeFilter: "all" },
+        tasks: { search: "", filter: "all", sort: "priority_desc", assigneeFilter: "all" },
+        followups: { search: "", filter: "all", sort: "scheduled_asc", assigneeFilter: "all" },
         communications: { search: "", filter: "all", sort: "contacted_desc" },
         invoices: { search: "", filter: "all", sort: "invoice_due_asc" }
     },
@@ -94,19 +94,19 @@ const state = {
     tableFeedback: { leads: "", tasks: "", followups: "", communications: "", invoices: "" },
     tableBulkActionRunning: false,
     leads: [
-        { id: "lead-low", business_name: "Alpha", contact_name: "Sam", email: "sam@example.com", status: "new", estimated_value: 250, next_follow_up: "2026-11-03" },
-        { id: "lead-high", business_name: "Zulu", contact_name: "Lee", email: "lee@example.com", status: "won", estimated_value: 2000, next_follow_up: "2026-10-25" },
-        { id: "lead-mid", business_name: "Bravo", contact_name: "Ana", email: "ana@example.com", status: "new", estimated_value: 900, next_follow_up: "2026-10-26" }
+        { id: "lead-low", business_name: "Alpha", contact_name: "Sam", email: "sam@example.com", status: "new", estimated_value: 250, next_follow_up: "2026-11-03", assigned_to: "admin-me" },
+        { id: "lead-high", business_name: "Zulu", contact_name: "Lee", email: "lee@example.com", status: "won", estimated_value: 2000, next_follow_up: "2026-10-25", assigned_to: null },
+        { id: "lead-mid", business_name: "Bravo", contact_name: "Ana", email: "ana@example.com", status: "new", estimated_value: 900, next_follow_up: "2026-10-26", assigned_to: "admin-other" }
     ],
     tasks: [
-        { id: "task-low", title: "Low priority task", priority: "low", status: "todo", due_date: "2026-11-01" },
-        { id: "task-urgent", title: "Urgent task", priority: "urgent", status: "todo", due_date: "2026-11-03" },
-        { id: "task-high", title: "High priority task", priority: "high", status: "completed", due_date: "2026-10-25" }
+        { id: "task-low", title: "Low priority task", priority: "low", status: "todo", due_date: "2026-11-01", assigned_to: "admin-other" },
+        { id: "task-urgent", title: "Urgent task", priority: "urgent", status: "todo", due_date: "2026-11-03", assigned_to: "admin-me" },
+        { id: "task-high", title: "High priority task", priority: "high", status: "completed", due_date: "2026-10-25", assigned_to: null }
     ],
     followups: [
-        { id: "followup-later", lead_id: "lead-low", channel: "Email", status: "pending", scheduled_for: "2026-11-02", note: "call later" },
-        { id: "followup-sooner", lead_id: "lead-mid", channel: "WhatsApp", status: "pending", scheduled_for: "2026-10-24" },
-        { id: "followup-done", lead_id: "lead-high", channel: "Email", status: "completed", scheduled_for: "2026-10-23" }
+        { id: "followup-later", lead_id: "lead-low", channel: "Email", status: "pending", scheduled_for: "2026-11-02", note: "call later", assigned_to: "admin-other" },
+        { id: "followup-sooner", lead_id: "lead-mid", channel: "WhatsApp", status: "pending", scheduled_for: "2026-10-24", assigned_to: "admin-me" },
+        { id: "followup-done", lead_id: "lead-high", channel: "Email", status: "completed", scheduled_for: "2026-10-23", assigned_to: null }
     ],
     communications: [
         { id: "communication-latest", lead_id: "lead-low", channel: "WhatsApp", direction: "outbound", subject: "Re: website", message: "Follow-up message", contacted_at: "2026-11-05T09:00:00Z" },
@@ -119,7 +119,11 @@ const state = {
         { id: "inv-overdue", invoice_number: "INV-099", client_id: "client-bravo", status: "sent", display_status: "overdue", total: 2100, amount_paid: 0, amount_outstanding: 2100, due_date: "2026-10-10", issue_date: "2026-09-10", created_at: "2026-09-10T12:00:00Z", archived: false, email: "accounts@bravo.example", email_status: "sent" }
     ],
     clients: [],
-    admins: []
+    admins: [
+        { user_id: "admin-me", full_name: "Current Admin", email: "me@example.test", active: true },
+        { user_id: "admin-other", full_name: "Other Admin", email: "other@example.test", active: true },
+        { user_id: "admin-inactive", full_name: "Inactive Admin", email: "inactive@example.test", active: false }
+    ]
 };
 
 const workspace = {
@@ -145,7 +149,9 @@ const controls = global.window.createSwayphicsAdminTableControls({
     renderView: () => {},
     swayAlert: () => {},
     swayConfirm: async () => true,
-    invoiceStatus: item => item.archived ? item.status : (item.display_status || item.status)
+    invoiceStatus: item => item.archived ? item.status : (item.display_status || item.status),
+    admins: () => state.admins,
+    currentUserId: () => "admin-me"
 });
 
 assert.deepEqual(
@@ -162,6 +168,25 @@ assert.deepEqual(
 );
 
 state.tableControls.leads.filter = "all";
+state.tableControls.leads.assigneeFilter = "me";
+assert.deepEqual(
+    controls.items("leads", state.leads).map(item => item.id),
+    ["lead-low"],
+    "Assigned to me should return only leads assigned to the current admin"
+);
+state.tableControls.leads.assigneeFilter = "unassigned";
+assert.deepEqual(
+    controls.items("leads", state.leads).map(item => item.id),
+    ["lead-high"],
+    "Unassigned should return leads without an assigned admin"
+);
+state.tableControls.leads.assigneeFilter = "user:admin-other";
+assert.deepEqual(
+    controls.items("leads", state.leads).map(item => item.id),
+    ["lead-mid"],
+    "a specific team-member filter should return that member's leads"
+);
+state.tableControls.leads.assigneeFilter = "all";
 assert.match(
     controls.searchText("leads", state.leads[0]),
     /sam@example\.com/,
@@ -173,6 +198,25 @@ assert.deepEqual(
     ["task-urgent", "task-high", "task-low"],
     "task priority sort should put urgent and high priorities first"
 );
+state.tableControls.tasks.assigneeFilter = "me";
+assert.deepEqual(
+    controls.items("tasks", state.tasks).map(item => item.id),
+    ["task-urgent"],
+    "the Tasks view should filter to work assigned to the current admin"
+);
+state.tableControls.tasks.assigneeFilter = "unassigned";
+assert.deepEqual(
+    controls.items("tasks", state.tasks).map(item => item.id),
+    ["task-high"],
+    "the Tasks view should identify unassigned work"
+);
+state.tableControls.tasks.assigneeFilter = "user:admin-other";
+assert.deepEqual(
+    controls.items("tasks", state.tasks).map(item => item.id),
+    ["task-low"],
+    "the Tasks view should filter to a selected team member"
+);
+state.tableControls.tasks.assigneeFilter = "all";
 
 state.tableControls.followups.filter = "pending";
 assert.deepEqual(
@@ -180,6 +224,26 @@ assert.deepEqual(
     ["followup-sooner", "followup-later"],
     "follow-up status filtering and scheduled-date ordering should work together"
 );
+state.tableControls.followups.assigneeFilter = "me";
+assert.deepEqual(
+    controls.items("followups", state.followups).map(item => item.id),
+    ["followup-sooner"],
+    "the Follow-ups view should filter to the current admin's queue"
+);
+state.tableControls.followups.assigneeFilter = "unassigned";
+assert.deepEqual(
+    controls.items("followups", state.followups),
+    [],
+    "the pending Follow-ups view should exclude completed unassigned records"
+);
+state.tableControls.followups.filter = "all";
+state.tableControls.followups.assigneeFilter = "unassigned";
+assert.deepEqual(
+    controls.items("followups", state.followups).map(item => item.id),
+    ["followup-done"],
+    "the Follow-ups view should identify unassigned records across statuses"
+);
+state.tableControls.followups.assigneeFilter = "all";
 
 assert.match(
     controls.searchText("followups", state.followups[0]),
@@ -206,6 +270,11 @@ const controlsMarkup = controls.renderControls("leads");
 assert.match(controlsMarkup, /data-admin-table-search-input="leads"/);
 assert.match(controlsMarkup, /data-admin-table-filter="leads"/);
 assert.match(controlsMarkup, /data-admin-table-sort="leads"/);
+assert.match(controlsMarkup, /data-admin-table-assignee-filter="leads"/);
+assert.match(controlsMarkup, /Assigned to me/);
+assert.match(controlsMarkup, /Other Admin/);
+assert.doesNotMatch(controlsMarkup, /Inactive Admin/,
+    "inactive administrators should not appear as assignable filter options");
 assert.match(controlsMarkup, /Export selected CSV/);
 assert.match(controlsMarkup, /data-admin-table-bulk-action="delete"/,
     "the Leads bulk toolbar should expose a delete-selected action");
@@ -215,6 +284,12 @@ for (const view of ["tasks", "followups", "communications"]) {
     assert.match(controls.renderControls(view), /data-admin-table-bulk-action="delete"/,
         view + " bulk toolbar should expose a delete-selected action");
 }
+assert.match(controls.renderControls("tasks"), /data-admin-table-assignee-filter="tasks"/,
+    "Tasks should expose an assignee filter");
+assert.match(controls.renderControls("followups"), /data-admin-table-assignee-filter="followups"/,
+    "Follow-ups should expose an assignee filter");
+assert.doesNotMatch(controls.renderControls("communications"), /data-admin-table-assignee-filter=/,
+    "Communication Log should not expose an assignee filter because entries record creators, not assignees");
 assert.match(controls.renderControls("tasks"), /Complete selected/,
     "task bulk completion should remain available alongside bulk deletion");
 assert.match(controls.renderControls("followups"), /Complete selected/,
