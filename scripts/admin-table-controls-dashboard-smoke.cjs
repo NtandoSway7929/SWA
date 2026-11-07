@@ -504,6 +504,13 @@ async function main() {
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
 
+    const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
+    assert.equal(
+      await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").getAttribute("aria-label"),
+      "Actions for Contact Toggle Fixture",
+      "a lead row action disclosure should identify its lead to assistive technology"
+    );
+
     const alphaValueCell = leadRows.filter({ hasText: "Alpha Studio" }).locator(".sway-lead-value-cell");
     assert.equal(await alphaValueCell.count(), 1,
       "each lead should render its estimated value in a dedicated amount cell");
@@ -579,6 +586,13 @@ async function main() {
     await navigate("tasks", "delivery");
     const taskRows = page.locator('#sway-workspace-main [data-admin-table-row="tasks"]');
     assert.equal(await taskRows.count(), 3, "the actual Tasks view should render synthetic tasks");
+
+    const urgentTaskRow = taskRows.filter({ hasText: "Confirm scope" });
+    assert.equal(
+      await urgentTaskRow.locator(".sway-actions-menu > summary").getAttribute("aria-label"),
+      "Actions for Confirm scope",
+      "a task row action disclosure should identify its task to assistive technology"
+    );
     await page.locator('[data-admin-table-sort="tasks"]').selectOption("priority_desc");
     assert.ok((await taskRows.first().innerText()).includes("Confirm scope"),
       "the actual Tasks view should sort urgent priority first");
