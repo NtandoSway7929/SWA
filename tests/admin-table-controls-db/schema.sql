@@ -107,8 +107,8 @@ create or replace function public.create_admin_notification(
   p_dedupe_key text
 )
 returns void
-language sql
-as $ select; $;
+language plpgsql
+as $notification$ begin return; end; $notification$;
 
 create or replace function public.notify_admins(
   p_actor_id uuid,
@@ -123,8 +123,8 @@ create or replace function public.notify_admins(
   p_force boolean
 )
 returns void
-language sql
-as $ select; $;
+language plpgsql
+as $notification$ begin return; end; $notification$;
 
 create table public.follow_ups (
   id uuid primary key default gen_random_uuid(),
