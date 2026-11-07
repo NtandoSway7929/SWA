@@ -263,6 +263,7 @@ assert.deepEqual(controls.items("communications", state.communications).map(item
 state.tableControls.communications.filter = "inbound";
 assert.deepEqual(controls.items("communications", state.communications).map(item => item.id),
     ["communication-earlier"], "communication direction should be filterable");
+state.tableControls.communications.filter = "all";
 const communicationControlsMarkup = controls.renderControls("communications");
 assert.match(communicationControlsMarkup, /<span>Direction<\/span>/,
     "the Communication Log filter should be labelled Direction");
