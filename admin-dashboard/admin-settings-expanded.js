@@ -1304,25 +1304,31 @@
             tab.addEventListener("click", function () {
                 selectTab(root, tab.getAttribute("data-settings-tab"));
             });
-            tab.addEventListener("keydown", function (event) {
-                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft" &&
-                    event.key !== "Home" && event.key !== "End") return;
-                event.preventDefault();
-                var tabs = Array.from(root.querySelectorAll("[data-settings-tab]"));
-                if (!tabs.length) return;
-                var index = tabs.indexOf(tab);
-                var next;
-                if (event.key === "Home") {
-                    next = tabs[0];
-                } else if (event.key === "End") {
-                    next = tabs[tabs.length - 1];
-                } else {
-                    var delta = event.key === "ArrowRight" ? 1 : -1;
-                    next = tabs[(index + delta + tabs.length) % tabs.length];
-                }
-                selectTab(root, next.getAttribute("data-settings-tab"));
-                next.focus();
-            });
+        });
+        // Delegate keyboard handling from the Settings root so dynamically-added
+        // tabs (such as the Campaign section) receive the same navigation rules.
+        root.addEventListener("keydown", function (event) {
+            var tab = event.target && typeof event.target.closest === "function"
+                ? event.target.closest("[data-settings-tab]")
+                : null;
+            if (!tab || !root.contains(tab)) return;
+            if (event.key !== "ArrowRight" && event.key !== "ArrowLeft" &&
+                event.key !== "Home" && event.key !== "End") return;
+            event.preventDefault();
+            var tabs = Array.from(root.querySelectorAll("[data-settings-tab]"));
+            if (!tabs.length) return;
+            var index = tabs.indexOf(tab);
+            var next;
+            if (event.key === "Home") {
+                next = tabs[0];
+            } else if (event.key === "End") {
+                next = tabs[tabs.length - 1];
+            } else {
+                var delta = event.key === "ArrowRight" ? 1 : -1;
+                next = tabs[(index + delta + tabs.length) % tabs.length];
+            }
+            selectTab(root, next.getAttribute("data-settings-tab"));
+            next.focus();
         });
 
         var resetButton = root.querySelector('[data-action="password-reset"]');
