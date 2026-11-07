@@ -8224,6 +8224,69 @@ function simpleBars(items, color) {
         );
     }
 
+    function insightDataTable(series, labels, currency, caption) {
+        const safeSeries = Array.isArray(series) ? series : [];
+        const safeLabels = Array.isArray(labels) ? labels : [];
+
+        const headings = safeSeries.map(function (item) {
+            return '<th scope="col">' + esc(item.name || "Series") + "</th>";
+        }).join("");
+
+        const rows = safeLabels.map(function (label, index) {
+            const cells = safeSeries.map(function (item) {
+                const value = Number(
+                    item.values &&
+                    item.values[index] ||
+                    0
+                );
+                const formatted =
+                    currency
+                        ? money(value)
+                        : String(Math.round(value));
+
+                return "<td>" + esc(formatted) + "</td>";
+            }).join("");
+
+            return (
+                "<tr>" +
+                    '<th scope="row">' +
+                        esc(label) +
+                    "</th>" +
+                    cells +
+                "</tr>"
+            );
+        }).join("");
+
+        const emptyRow =
+            '<tr><td colspan="' + (safeSeries.length + 1) +
+            '">No monthly data available.</td></tr>';
+
+        return (
+            '<details class="sway-bi-data-details">' +
+                "<summary>" +
+                    "<span>View monthly data</span>" +
+                    '<span class="sway-bi-data-hint">Exact values by month</span>' +
+                "</summary>" +
+                '<div class="sway-bi-data-table-wrap">' +
+                    '<table class="sway-bi-data-table">' +
+                        "<caption>" +
+                            esc(String(caption || "Chart") + " monthly data") +
+                        "</caption>" +
+                        "<thead>" +
+                            "<tr>" +
+                                '<th scope="col">Month</th>' +
+                                headings +
+                            "</tr>" +
+                        "</thead>" +
+                        "<tbody>" +
+                            (rows || emptyRow) +
+                        "</tbody>" +
+                    "</table>" +
+                "</div>" +
+            "</details>"
+        );
+    }
+
     function businessTrendChart(series, labels, currency, ariaLabel) {
         const left = 22;
         const right = 944;
@@ -8385,6 +8448,7 @@ function simpleBars(items, color) {
                         insightXAxis(labels) +
                     "</div>" +
                 "</div>" +
+                insightDataTable(series, labels, currency, ariaLabel) +
             "</div>"
         );
     }
@@ -8536,6 +8600,7 @@ function simpleBars(items, color) {
                         insightXAxis(labels) +
                     "</div>" +
                 "</div>" +
+                insightDataTable(series, labels, false, ariaLabel) +
             "</div>"
         );
     }
