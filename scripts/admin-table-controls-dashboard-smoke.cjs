@@ -930,9 +930,46 @@ async function main() {
       "an unread conversation should offer a Mark read action");
     await readToggle.focus();
     await readToggle.press("Enter");
+    try {
+      await page.waitForFunction(() =>
+        document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark unread"
+      );
+    } catch (error) {
+      const readStateDebug = await page.evaluate(() => ({
+        focusObserver: window.__swayInboxReadFocus || null,
+        activeElement: document.activeElement?.outerHTML || "",
+        readToggle: document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.outerHTML || "",
+        bulkReadRunning: document.querySelector("[data-email-bulk-read]")?.disabled ?? null
+      }));
+      console.error("Inbox read-state update diagnostic:", JSON.stringify(readStateDebug));
+      throw error;
+    }
     await page.waitForFunction(() =>
-      document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark unread"
-    );
+      document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
+    , null, { timeout: 5000 });
+    try {
+      await page.waitForFunction(() =>
+        document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
+      );
+    } catch (error) {
+      const focusDebug = await page.evaluate(() => ({
+        activeElement: document.activeElement?.outerHTML || "",
+        readActions: Array.from(document.querySelectorAll("[data-email-thread-read-toggle]")).map(button => ({
+          html: button.outerHTML,
+          connected: button.isConnected,
+          disabled: button.disabled,
+          rect: (() => {
+            const value = button.getBoundingClientRect();
+            return { x: value.x, y: value.y, width: value.width, height: value.height };
+          })()
+        })),
+        workspaceView: document.querySelector("#sway-admin-workspace")?.getAttribute("data-current-view") || "",
+        bulkReadRunning: document.querySelector("[data-email-bulk-read]")?.disabled ?? null,
+        inboxFocus: window.__swayInboxReadFocus || null
+      }));
+      console.error("Inbox read action focus diagnostic:", JSON.stringify(focusDebug));
+      throw error;
+    }
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute("data-email-thread-read-toggle") || ""),
       "thread-ui-test",
@@ -957,7 +994,35 @@ async function main() {
     ).length, 2, "both explicit read-state changes should be persisted through the existing email_messages endpoint");
     await page.locator('[data-email-thread-select="thread-ui-test"]').check();
     assert.equal(await page.locator('[data-email-selection-toolbar]').isVisible(), true,
-      "selecting an inbox conversation should reveal its separate bulk-delete toolbar");
+      "selecting an inbox conversation should reveal its separate bulk-action toolbar");
+    const markSelectedRead = page.locator('[data-email-bulk-read="true"]');
+    const markSelectedUnread = page.locator('[data-email-bulk-read="false"]');
+    assert.equal(await markSelectedRead.isEnabled(), true,
+      "an unread selected conversation should enable Mark selected read");
+    assert.equal(await markSelectedUnread.isEnabled(), false,
+      "Mark selected unread should be disabled when every selected conversation is already unread");
+    await markSelectedRead.click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.getAttribute("data-email-read-value") === "false" &&
+      document.activeElement?.getAttribute("data-email-bulk-read") === "false"
+    );
+    assert.equal(emailMessages.find(item => item.id === "email-inbound-ui-test").is_read, true,
+      "bulk Mark selected read should persist the inbound conversation's read state");
+    assert.equal(await markSelectedRead.isDisabled(), true,
+      "Mark selected read should become disabled when all selected conversations are read");
+    assert.equal(await markSelectedUnread.isEnabled(), true,
+      "Mark selected unread should become available after the selected conversation is read");
+    await markSelectedUnread.click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.getAttribute("data-email-read-value") === "true" &&
+      document.activeElement?.getAttribute("data-email-bulk-read") === "true"
+    );
+    assert.equal(emailMessages.find(item => item.id === "email-inbound-ui-test").is_read, false,
+      "bulk Mark selected unread should restore the inbound conversation's unread state");
+    assert.equal(metrics.mockedTableActionWrites.filter(item =>
+      item.method === "PATCH" && item.path === "/rest/v1/email_messages" &&
+      item.thread_id === "thread-ui-test"
+    ).length, 4, "both bulk actions should persist through the existing email_messages endpoint");
     await page.locator('[data-email-bulk-delete]').click();
     await page.locator(".sway-dialog").waitFor({ state: "visible" });
     const inboxDeleteConfirmation = await page.locator(".sway-dialog").innerText();

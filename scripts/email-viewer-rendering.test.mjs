@@ -48,7 +48,7 @@ test("background inbox polling does not reload an unchanged selected email", () 
 });
 
 test("the updated email viewer assets are cache-busted", () => {
-  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-read-state-actions-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-bulk-read-actions-1"));
   assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-task-followup-date-filters-1"));
 });
 
@@ -65,6 +65,37 @@ test("Inbox conversations can be marked read or unread from the list without ope
   assert.ok(workspaceJs.includes("if (focusTarget && !focusTarget.disabled &&"));
   assert.ok(workspaceCss.includes(".sway-email-inbox-read-toggle"));
   assert.ok(workspaceCss.includes("body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-read-toggle"));
-  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-read-state-actions-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-bulk-read-actions-1"));
   assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-task-followup-date-filters-1"));
+});
+
+test("selected Inbox conversations can be marked read or unread in bulk", () => {
+  assert.ok(workspaceJs.includes("async function setSelectedEmailThreadsReadState(isRead)"));
+  assert.ok(workspaceJs.includes('data-email-bulk-read="true"'));
+  assert.ok(workspaceJs.includes('data-email-bulk-read="false"'));
+  assert.ok(workspaceJs.includes("const selectedUnreadThreadCount = inboundThreads.filter"));
+  assert.ok(workspaceJs.includes("const selectedReadThreadCount = state.emailThreadSelection.length - selectedUnreadThreadCount"));
+  assert.ok(workspaceJs.includes("state.emailBulkReadRunning = true"));
+  assert.ok(workspaceJs.includes("await setEmailThreadReadState(thread.threadId, isRead)"));
+  assert.ok(workspaceJs.includes("The selection has been kept so you can retry."));
+  assert.ok(workspaceJs.includes("setSelectedEmailThreadsReadState("));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-bulk-read-actions-1"));
+});
+
+const inboxFocusJs = readFileSync(
+  new URL("../admin-dashboard/inbox-read-state-focus.js", import.meta.url),
+  "utf8",
+);
+
+test("Inbox read-state focus follows the replacement control after rerender", () => {
+  assert.ok(inboxFocusJs.includes('document.addEventListener("click"'));
+  assert.ok(inboxFocusJs.includes("}, true);"), "the focus observer must capture the action before workspace event handlers");
+  assert.ok(inboxFocusJs.includes('new MutationObserver(restoreFocusAfterUpdate)'));
+  assert.ok(inboxFocusJs.includes("findCurrentButton()"));
+  assert.ok(inboxFocusJs.includes('finalButton.focus({ preventScroll: true })'));
+  assert.ok(inboxFocusJs.includes('window.setTimeout(function () {'));
+  assert.ok(inboxFocusJs.includes("diagnostic.finalFocusSucceeded"));
+  assert.doesNotThrow(() => new Function(inboxFocusJs), "focus restoration script must parse as JavaScript");
+  assert.ok(inboxFocusJs.includes("currentButton.dataset.emailReadValue"));
+  assert.ok(dashboardHtml.includes("inbox-read-state-focus.js?v=20261107-inbox-read-state-focus-1"));
 });
