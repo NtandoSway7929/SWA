@@ -19,6 +19,11 @@ on:
       - "admin-dashboard/index.html"
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
       - "scripts/admin-table-controls-db-smoke.cjs"
+      - "scripts/first-contact-automation-db-smoke.cjs"
+      - "scripts/admin-dashboard-business-controls.test.cjs"
+      - "supabase/migrations/20261107190000_swayphics_first_contact_task_automation.sql"
+      - "supabase/swayphics-business-flow.sql"
+      - "tests/admin-table-controls-db/first-contact-automation-test.sql"
       - "tests/admin-table-controls-preview/**"
       - "tests/admin-table-controls-db/**"
       - "scripts/admin-table-controls-browser.test.cjs"
@@ -104,6 +109,10 @@ jobs:
           mkdir -p supabase/migrations
           cp "$GITHUB_WORKSPACE/tests/admin-table-controls-db/schema.sql" \
             "supabase/migrations/20261023000000_admin_table_controls_test_schema.sql"
+          cp "$GITHUB_WORKSPACE/supabase/migrations/20261107190000_swayphics_first_contact_task_automation.sql" \
+            "supabase/migrations/20261107190000_swayphics_first_contact_task_automation.sql"
+          cp "$GITHUB_WORKSPACE/tests/admin-table-controls-db/first-contact-automation-test.sql" \
+            "supabase/migrations/20261107190100_first_contact_automation_test_rpc.sql"
           "$CLI" start
           "$CLI" status --output env > "$RUNNER_TEMP/local-supabase.env"
 
@@ -114,6 +123,7 @@ jobs:
           export SUPABASE_LOCAL_API_URL="$API_URL"
           cd "$GITHUB_WORKSPACE"
           node scripts/admin-table-controls-db-smoke.cjs
+          node scripts/first-contact-automation-db-smoke.cjs
 
       - name: Upload isolated test artifacts
         if: always()
