@@ -31,19 +31,13 @@
             parts.heading.id = "sway-quick-create-heading";
         }
 
+        if (parts.menu && parts.menu.getAttribute("role") !== "group") {
+            parts.menu.setAttribute("role", "group");
+        }
+
         if (parts.menu && parts.heading &&
             parts.menu.getAttribute("aria-labelledby") !== parts.heading.id) {
             parts.menu.setAttribute("aria-labelledby", parts.heading.id);
-        }
-
-        if (parts.grid) {
-            if (parts.grid.getAttribute("role") !== "group") {
-                parts.grid.setAttribute("role", "group");
-            }
-
-            if (parts.grid.getAttribute("aria-label") !== "Create a new workspace record") {
-                parts.grid.setAttribute("aria-label", "Create a new workspace record");
-            }
         }
     }
 
