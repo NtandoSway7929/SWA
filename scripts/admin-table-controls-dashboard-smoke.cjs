@@ -174,6 +174,7 @@ const metrics = {
   apiMutationsBlocked: [],
   mockedStartupCalls: [],
   mockedTableActionWrites: [],
+  mockedNotificationWrites: [],
   unexpectedExternalRequests: [],
   pageErrors: [],
   consoleErrors: []
@@ -187,6 +188,26 @@ const defaultServiceNames = [
 ];
 
 const mockActivityLog = [];
+const adminNotifications = [
+  {
+    id: "notification-lead",
+    type: "info",
+    title: "Review new lead",
+    message: "Alpha Studio submitted a website enquiry.",
+    view: "leads",
+    created_at: new Date(Date.now() - 60_000).toISOString(),
+    is_read: false
+  },
+  {
+    id: "notification-task",
+    type: "warning",
+    title: "Task needs attention",
+    message: "Confirm scope is overdue.",
+    view: "tasks",
+    created_at: new Date(Date.now() - 120_000).toISOString(),
+    is_read: false
+  }
+];
 
 function jsonResponse(body, status = 200, extraHeaders = {}) {
   return {
@@ -252,7 +273,7 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/email_messages") return emailMessages;
   if (url.pathname === "/rest/v1/lead_stage_history") return [];
   if (url.pathname === "/rest/v1/client_portal_tokens") return [];
-  if (url.pathname === "/rest/v1/admin_notifications") return [];
+  if (url.pathname === "/rest/v1/admin_notifications") return adminNotifications;
   if (url.pathname.startsWith("/rest/v1/")) return [];
   if (url.pathname.startsWith("/functions/v1/")) return { ok: true, items: [] };
   if (url.pathname.startsWith("/storage/v1/")) return [];
@@ -371,6 +392,18 @@ async function main() {
 
       // Completion requests are applied to in-memory test arrays only.
       // Playwright intercepts them before a request can leave this browser.
+      if (method === "PATCH" && url.pathname === "/rest/v1/admin_notifications") {
+        const filter = String(url.searchParams.get("id") || "");
+        const id = filter.startsWith("eq.") ? filter.slice(3) : "";
+        const body = JSON.parse(request.postData() || "{}");
+        const record = adminNotifications.find(item => String(item.id) === id);
+        if (record && body.is_read === true) {
+          Object.assign(record, body);
+          metrics.mockedNotificationWrites.push({ method, path: url.pathname, id, is_read: true });
+          return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
+        }
+      }
+
       if (method === "PATCH" && url.pathname === "/rest/v1/tasks") {
         const filter = String(url.searchParams.get("id") || "");
         const id = filter.startsWith("eq.") ? filter.slice(3) : "";
@@ -963,6 +996,68 @@ async function main() {
     assert.equal(gridColumns, 1, "mobile table controls should stack in one column");
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-mobile.png"), fullPage: true });
 
+    // Notifications use separate native buttons so opening and clearing
+    // remain independently keyboard-operable.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const notificationToggle = page.locator("#sway-notification-toggle");
+    const notificationPanel = page.locator("#sway-notification-panel");
+    await notificationToggle.click();
+    await notificationPanel.waitFor({ state: "visible" });
+    assert.equal(await notificationToggle.getAttribute("aria-expanded"), "true");
+    assert.match(await notificationToggle.getAttribute("aria-label"), /2 unread/,
+      "the notification trigger should expose the current unread count");
+    const notificationList = page.locator("#sway-notification-list");
+    assert.equal(await notificationList.getAttribute("role"), "list");
+    assert.equal(await notificationList.locator('[role="listitem"]').count(), 2);
+    const leadNotification = notificationList.locator('[data-notification-key="notification-lead"]');
+    const taskNotification = notificationList.locator('[data-notification-key="notification-task"]');
+    assert.equal(await leadNotification.evaluate(el => el.tagName), "BUTTON",
+      "opening a notification must use a native button");
+    assert.equal(await leadNotification.getAttribute("aria-label"),
+      "Open notification: Review new lead. Alpha Studio submitted a website enquiry. Unread");
+    assert.equal(await taskNotification.evaluate(el => el.parentElement.getAttribute("role")), "listitem");
+    assert.equal(await taskNotification.evaluate(el => el.contains(el.parentElement.querySelector("[data-notification-clear]"))), false,
+      "the Clear action must not be nested inside the notification-open button");
+    assert.equal(await taskNotification.locator("xpath=following-sibling::button[@data-notification-clear]").count(), 1,
+      "each notification should expose a separate Clear button");
+
+    await leadNotification.focus();
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => document.querySelector("#sway-notification-panel").hidden);
+    assert.equal(await notificationToggle.getAttribute("aria-expanded"), "false");
+    assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id),
+      "sway-notification-toggle",
+      "Escape should close the notification panel and return focus to its trigger");
+
+    await notificationToggle.click();
+    await notificationPanel.waitFor({ state: "visible" });
+    const clearTaskNotification = notificationList.locator('[data-notification-key="notification-task"]')
+      .locator("xpath=following-sibling::button[@data-notification-clear]");
+    await clearTaskNotification.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() =>
+      !document.querySelector('#sway-notification-list [data-notification-key="notification-task"]')
+    );
+    assert.equal(await notificationList.locator('[role="listitem"]').count(), 1);
+    assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.dataset.notificationKey),
+      "notification-lead",
+      "clearing an item should move focus to the next remaining notification");
+
+    const readResponse = page.waitForResponse(response =>
+      response.request().method() === "PATCH" &&
+      new URL(response.url()).pathname === "/rest/v1/admin_notifications" &&
+      new URL(response.url()).searchParams.get("id") === "eq.notification-lead"
+    );
+    await page.keyboard.press("Enter");
+    await readResponse;
+    await page.locator('[data-admin-table-search-input="leads"]').waitFor({ state: "visible" });
+    assert.equal(await notificationToggle.getAttribute("aria-expanded"), "false",
+      "activating a notification should close the centre");
+    assert.equal(adminNotifications.find(item => item.id === "notification-lead").is_read, true,
+      "keyboard activation should mark the selected notification read");
+    assert.equal(metrics.mockedNotificationWrites.length, 1);
+    assert.equal(metrics.mockedNotificationWrites[0].id, "notification-lead");
+
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
     assert.ok(metrics.mockedTableActionWrites.length >= 15,
@@ -1011,7 +1106,12 @@ async function main() {
         "invoice status filtering and due-date/total sorting",
         "archive toggle preserves separate active and archived sets",
         "invoice filters and sorting do not change KPI totals",
-        "archived invoices retain their original status and can be filtered"
+        "archived invoices retain their original status and can be filtered",
+        "notification panel uses a labelled region and semantic list",
+        "notification actions are separate keyboard-operable native buttons",
+        "Escape returns focus to the notification trigger",
+        "clearing a notification preserves focus on a remaining item",
+        "Enter opens the selected notification and marks it read"
       ]
     };
     fs.writeFileSync(path.join(ARTIFACT_DIR, "dashboard-smoke-summary.json"), JSON.stringify(summary, null, 2));
