@@ -502,7 +502,7 @@ async function main() {
     // Settings uses a horizontal ARIA tablist: verify both sequential arrows
     // and direct first/last jumps against the mounted production module.
     await page.locator('[data-view="settings"]').first().click();
-    const settingsTabs = page.locator('#sway-settings-expanded [data-settings-tab]');
+    const settingsTabs = page.locator('#sway-settings-expanded .swe-tabs [role="tab"]');
     await settingsTabs.first().waitFor({ state: "visible", timeout: 20000 });
     assert.equal(await settingsTabs.count(), 12,
       "all twelve Settings sections should be available in the actual dashboard");
