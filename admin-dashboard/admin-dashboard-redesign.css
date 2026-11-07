@@ -727,3 +727,18 @@ body.sway-dark-mode #sway-admin-workspace .sway-overview-secondary-action {
         width: min(290px, calc(100vw - 24px)) !important;
     }
 }
+
+
+/* Global search keyboard selection and active-descendant feedback. */
+#admin-global-search-results .admin-global-search-result.is-active,
+#admin-global-search-results .admin-global-search-result[aria-selected="true"] {
+    outline: none;
+    background: rgba(1, 82, 244, 0.085);
+    box-shadow: inset 0 0 0 1px rgba(1, 82, 244, 0.2);
+}
+
+body.sway-dark-mode #admin-global-search-results .admin-global-search-result.is-active,
+body.sway-dark-mode #admin-global-search-results .admin-global-search-result[aria-selected="true"] {
+    background: rgba(119, 193, 252, 0.14);
+    box-shadow: inset 0 0 0 1px rgba(119, 193, 252, 0.24);
+}

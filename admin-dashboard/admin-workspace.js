@@ -5198,7 +5198,7 @@
 
         resultsBox.innerHTML = results.map(function (result, index) {
             return (
-                '<button type="button" class="admin-global-search-result" role="option" data-search-index="' +
+                '<button id="admin-global-search-option-' + index + '" type="button" class="admin-global-search-result" role="option" aria-selected="false" tabindex="-1" data-search-index="' +
                     index +
                 '">' +
                     '<span class="admin-global-search-result-icon" aria-hidden="true">' +
@@ -5258,6 +5258,7 @@
 
         if (input) {
             input.setAttribute("aria-expanded", "false");
+            input.removeAttribute("aria-activedescendant");
         }
     }
 
@@ -5292,7 +5293,50 @@
 
         if (!input || !resultsBox || !wrapper) return;
 
+        let activeResultIndex = -1;
+
+        function resetActiveResult() {
+            activeResultIndex = -1;
+            input.removeAttribute("aria-activedescendant");
+        }
+
+        function setActiveResult(index) {
+            const options = Array.from(
+                resultsBox.querySelectorAll("[data-search-index]")
+            );
+
+            if (!options.length) {
+                resetActiveResult();
+                return;
+            }
+
+            activeResultIndex =
+                ((index % options.length) + options.length) % options.length;
+
+            options.forEach(function (option, optionIndex) {
+                const isActive = optionIndex === activeResultIndex;
+                option.setAttribute(
+                    "aria-selected",
+                    isActive ? "true" : "false"
+                );
+                option.classList.toggle("is-active", isActive);
+            });
+
+            const activeOption = options[activeResultIndex];
+            if (activeOption.id) {
+                input.setAttribute(
+                    "aria-activedescendant",
+                    activeOption.id
+                );
+            }
+
+            if (typeof activeOption.scrollIntoView === "function") {
+                activeOption.scrollIntoView({ block: "nearest" });
+            }
+        }
+
         input.addEventListener("input", function () {
+            resetActiveResult();
             renderGlobalSearchResults(
                 searchWorkspace(input.value),
                 input.value
@@ -5302,6 +5346,7 @@
         });
 
         input.addEventListener("focus", function () {
+            resetActiveResult();
             renderGlobalSearchResults(
                 searchWorkspace(input.value),
                 input.value
@@ -5311,22 +5356,54 @@
         });
 
         input.addEventListener("keydown", function (event) {
-            if (
-                event.key === "Escape"
-            ) {
+            if (event.key === "Escape") {
                 closeGlobalSearch();
                 input.blur();
                 return;
             }
 
-            if (event.key === "Enter") {
-                const first =
-                    resultsBox.querySelector(
-                        "[data-search-index='0']"
-                    );
+            if (
+                event.key === "ArrowDown" ||
+                event.key === "ArrowUp" ||
+                event.key === "Home" ||
+                event.key === "End"
+            ) {
+                const optionCount =
+                    resultsBox.querySelectorAll("[data-search-index]").length;
 
-                if (first) {
-                    first.click();
+                if (!optionCount) return;
+
+                event.preventDefault();
+
+                if (event.key === "Home") {
+                    setActiveResult(0);
+                } else if (event.key === "End") {
+                    setActiveResult(optionCount - 1);
+                } else if (activeResultIndex < 0) {
+                    setActiveResult(
+                        event.key === "ArrowDown" ? 0 : optionCount - 1
+                    );
+                } else {
+                    setActiveResult(
+                        activeResultIndex +
+                        (event.key === "ArrowDown" ? 1 : -1)
+                    );
+                }
+
+                return;
+            }
+
+            if (event.key === "Enter") {
+                const options = Array.from(
+                    resultsBox.querySelectorAll("[data-search-index]")
+                );
+                const selectedOption =
+                    activeResultIndex >= 0
+                        ? options[activeResultIndex]
+                        : options[0];
+
+                if (selectedOption) {
+                    selectedOption.click();
                     event.preventDefault();
                 }
             }
@@ -5410,7 +5487,6 @@
             }
         });
     }
-
 
 
     function notificationStorageUserKey() {
