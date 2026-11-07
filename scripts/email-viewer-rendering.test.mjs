@@ -81,3 +81,17 @@ test("selected Inbox conversations can be marked read or unread in bulk", () => 
   assert.ok(workspaceJs.includes("setSelectedEmailThreadsReadState("));
   assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-bulk-read-actions-1"));
 });
+
+const inboxFocusJs = readFileSync(
+  new URL("../admin-dashboard/inbox-read-state-focus.js", import.meta.url),
+  "utf8",
+);
+
+test("Inbox read-state focus follows the replacement control after rerender", () => {
+  assert.ok(inboxFocusJs.includes('document.addEventListener("click"'));
+  assert.ok(inboxFocusJs.includes('new MutationObserver(restoreFocusAfterUpdate)'));
+  assert.ok(inboxFocusJs.includes("findCurrentButton()"));
+  assert.ok(inboxFocusJs.includes('currentButton.focus({ preventScroll: true })'));
+  assert.ok(inboxFocusJs.includes("currentButton.dataset.emailReadValue"));
+  assert.ok(dashboardHtml.includes("inbox-read-state-focus.js?v=20261107-inbox-read-state-focus-1"));
+});
