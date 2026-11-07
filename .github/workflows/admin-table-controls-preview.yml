@@ -13,6 +13,7 @@ on:
   pull_request:
     branches: ["main", "feature/admin-table-controls-phase-2"]
     paths:
+      - "admin-dashboard/admin-row-action-accessibility.js"
       - "admin-dashboard/admin-table-controls.js"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/admin-workspace.js"
