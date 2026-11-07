@@ -479,6 +479,65 @@ async function main() {
     assert.equal(await initialHero.locator('[data-quick="lead"]').count(), 1,
       "the hero should expose the existing quick-create lead action");
 
+    // Global search must support keyboard navigation without moving DOM focus
+    // away from the combobox, and Enter must activate the currently selected option.
+    const globalSearchInput = page.locator("#admin-global-search-input");
+    const globalSearchResults = page.locator("#admin-global-search-results");
+    await globalSearchInput.fill("a");
+    const globalSearchOptions = globalSearchResults.locator("[data-search-index]");
+    await globalSearchOptions.first().waitFor({ state: "visible", timeout: 10000 });
+    const globalSearchOptionCount = await globalSearchOptions.count();
+    assert.ok(globalSearchOptionCount >= 2,
+      "the synthetic workspace query should return multiple keyboard-search options");
+
+    await globalSearchInput.press("ArrowDown");
+    const firstSearchOptionId = await globalSearchOptions.nth(0).getAttribute("id");
+    assert.equal(await globalSearchInput.getAttribute("aria-activedescendant"), firstSearchOptionId,
+      "ArrowDown should activate the first search option");
+    assert.equal(await globalSearchOptions.nth(0).getAttribute("aria-selected"), "true",
+      "the active search option should expose aria-selected=true");
+
+    await globalSearchInput.press("ArrowDown");
+    const secondSearchOptionId = await globalSearchOptions.nth(1).getAttribute("id");
+    assert.equal(await globalSearchInput.getAttribute("aria-activedescendant"), secondSearchOptionId,
+      "a second ArrowDown should advance the active option");
+
+    await globalSearchInput.press("ArrowUp");
+    assert.equal(await globalSearchInput.getAttribute("aria-activedescendant"), firstSearchOptionId,
+      "ArrowUp should move back to the previous option");
+
+    await globalSearchInput.press("ArrowUp");
+    const lastSearchOptionId = await globalSearchOptions.nth(globalSearchOptionCount - 1).getAttribute("id");
+    assert.equal(await globalSearchInput.getAttribute("aria-activedescendant"), lastSearchOptionId,
+      "ArrowUp from the first option should wrap to the last result");
+
+    await globalSearchInput.press("Home");
+    assert.equal(await globalSearchInput.getAttribute("aria-activedescendant"), firstSearchOptionId,
+      "Home should select the first result");
+
+    await globalSearchInput.press("End");
+    assert.equal(await globalSearchInput.getAttribute("aria-activedescendant"), lastSearchOptionId,
+      "End should select the final result");
+    assert.equal(await globalSearchOptions.nth(globalSearchOptionCount - 1).getAttribute("aria-selected"), "true",
+      "the final active option should expose aria-selected=true");
+
+    await page.evaluate(() => {
+      window.__selectedGlobalSearchIndex = null;
+      document.querySelectorAll("#admin-global-search-results [data-search-index]").forEach(option => {
+        option.addEventListener("click", () => {
+          window.__selectedGlobalSearchIndex = option.getAttribute("data-search-index");
+        }, { once: true });
+      });
+    });
+    await globalSearchInput.press("Enter");
+    assert.equal(await page.evaluate(() => window.__selectedGlobalSearchIndex),
+      String(globalSearchOptionCount - 1),
+      "Enter should activate the highlighted result rather than always choosing the first");
+    assert.equal(await globalSearchInput.getAttribute("aria-expanded"), "false",
+      "activating a search result should close the results list");
+    assert.equal(await globalSearchInput.getAttribute("aria-activedescendant"), null,
+      "closing search should clear the active-descendant reference");
+
     async function navigate(view, group) {
       const toggle = page.locator('[data-nav-group-toggle="' + group + '"]').first();
       if (await toggle.count()) {
