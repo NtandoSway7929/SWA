@@ -930,9 +930,20 @@ async function main() {
       "an unread conversation should offer a Mark read action");
     await readToggle.focus();
     await readToggle.press("Enter");
-    await page.waitForFunction(() =>
-      document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark unread"
-    );
+    try {
+      await page.waitForFunction(() =>
+        document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark unread"
+      );
+    } catch (error) {
+      const readStateDebug = await page.evaluate(() => ({
+        focusObserver: window.__swayInboxReadFocus || null,
+        activeElement: document.activeElement?.outerHTML || "",
+        readToggle: document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.outerHTML || "",
+        bulkReadRunning: document.querySelector("[data-email-bulk-read]")?.disabled ?? null
+      }));
+      console.error("Inbox read-state update diagnostic:", JSON.stringify(readStateDebug));
+      throw error;
+    }
     await page.waitForFunction(() =>
       document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
     , null, { timeout: 5000 });
