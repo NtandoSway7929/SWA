@@ -14,16 +14,38 @@ const pushFunction = fs.readFileSync(path.join(root, "supabase", "functions", "s
 
 test("dashboard loads the expanded settings stylesheet and module after workspace initialization", () => {
   assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-3/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261025-business-invoices-4/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261107-settings-tab-home-end-1/);
   assert.ok(
     dashboardHtml.indexOf("admin-workspace.js") < dashboardHtml.indexOf("admin-settings-expanded.js"),
     "settings integration must load after the core workspace"
   );
 });
 
-test("all eleven settings sections are mounted and navigable", () => {
+test("Settings tab keyboard navigation is delegated to include dynamically-added tabs", () => {
+  const keydownStart = settingsScript.indexOf('root.addEventListener("keydown", function (event)');
+  const keydownEnd = settingsScript.indexOf("\n        });", keydownStart);
+  assert.ok(keydownStart >= 0 && keydownEnd > keydownStart, "the Settings root must delegate tab keyboard events");
+  const keydown = settingsScript.slice(keydownStart, keydownEnd);
+  for (const fragment of [
+    'event.target && typeof event.target.closest === "function"',
+    'event.target.closest("[data-settings-tab]")',
+    "root.contains(tab)",
+    'event.key !== "ArrowRight" && event.key !== "ArrowLeft"',
+    'event.key !== "Home" && event.key !== "End"',
+    'event.key === "Home"',
+    "next = tabs[0]",
+    'event.key === "End"',
+    "next = tabs[tabs.length - 1]",
+    'selectTab(root, next.getAttribute("data-settings-tab"))',
+    "next.focus()"
+  ]) {
+    assert.ok(keydown.includes(fragment), "missing Settings tab keyboard behaviour: " + fragment);
+  }
+});
+
+test("all twelve settings sections are mounted and navigable", () => {
   for (const section of [
-    "sales", "performance", "commercial", "business", "notifications", "templates",
+    "sales", "performance", "commercial", "delivery", "business", "notifications", "templates",
     "security", "preferences", "website", "innerme", "governance"
   ]) {
     assert.match(settingsScript, new RegExp('data-settings-panel="' + section + '"'));
@@ -44,7 +66,7 @@ test("greeting name is a Settings subpanel and Settings is a direct sidebar dest
   assert.match(settingsScript, /preferencesPanel\.insertBefore\(greetingPanel, preferencesPanel\.firstElementChild\)/);
   assert.match(settingsCss, /sway-settings-direct-nav/);
   assert.match(settingsCss, /swe-greeting-settings-panel/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261025-business-invoices-4/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261107-settings-tab-home-end-1/);
   assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-3/);
 });
 

@@ -16,7 +16,7 @@ const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "valida
 
 test("new Settings assets are cache-busted and loaded in the dashboard", () => {
   assert.ok(html.includes("admin-settings-expanded.css?v=20261025-business-invoices-3"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261025-business-invoices-4"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261107-settings-tab-home-end-1"));
   assert.ok(html.indexOf("admin-workspace.js") < html.indexOf("admin-settings-expanded.js"));
 });
 
