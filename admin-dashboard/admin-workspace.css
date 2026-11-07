@@ -9500,6 +9500,12 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
     font-size: .77rem;
     white-space: nowrap;
 }
+.sway-admin-table-reset-button {
+    align-self: end;
+    justify-self: start;
+    margin-bottom: 2px;
+    white-space: nowrap;
+}
 .sway-admin-table-bulk-toolbar {
     display: flex;
     align-items: center;
