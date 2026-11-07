@@ -14,7 +14,7 @@ const pushFunction = fs.readFileSync(path.join(root, "supabase", "functions", "s
 
 test("dashboard loads the expanded settings stylesheet and module after workspace initialization", () => {
   assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-3/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261025-business-invoices-4/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261107-followup-automation-5/);
   assert.ok(
     dashboardHtml.indexOf("admin-workspace.js") < dashboardHtml.indexOf("admin-settings-expanded.js"),
     "settings integration must load after the core workspace"
@@ -44,7 +44,7 @@ test("greeting name is a Settings subpanel and Settings is a direct sidebar dest
   assert.match(settingsScript, /preferencesPanel\.insertBefore\(greetingPanel, preferencesPanel\.firstElementChild\)/);
   assert.match(settingsCss, /sway-settings-direct-nav/);
   assert.match(settingsCss, /swe-greeting-settings-panel/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261025-business-invoices-4/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261107-followup-automation-5/);
   assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-3/);
 });
 
@@ -115,3 +115,24 @@ test("InnerMe controls do not expose provider or service-role secrets", () => {
   assert.match(settingsCss, /prefers-reduced-motion/);
 });
 
+
+
+test("Sales workflow exposes a confirmed on-demand scan and reports its result", () => {
+  assert.match(settingsScript, /data-action="run-stale-lead-automation"/);
+  assert.match(settingsScript, /data-sales-automation-status/);
+  assert.match(settingsScript, /request\("\/rest\/v1\/rpc\/process_swayphics_stale_leads"/);
+  assert.match(settingsScript, /Run the follow-up scan now\?/);
+  assert.match(settingsScript, /typeof created !== "number" \|\| !Number\.isInteger\(created\) \|\| created < 0/);
+  assert.match(settingsScript, /pending follow-ups created/);
+  assert.match(settingsScript, /Scan failed:/);
+  assert.match(settingsScript, /No email or WhatsApp messages will be sent/i);
+});
+
+test("Governance classifies the latest scheduled run without overstating job freshness", () => {
+  assert.match(settingsScript, /label: "Run health"/);
+  assert.match(settingsScript, /Last run succeeded/);
+  assert.match(settingsScript, /Last run failed/);
+  assert.match(settingsScript, /No run recorded/);
+  assert.match(settingsScript, /Currently running/);
+  assert.match(settingsScript, /Review result/);
+});

@@ -492,6 +492,10 @@ async function main() {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });
         return route.fulfill(jsonResponse(0));
       }
+      if (method === "POST" && url.pathname === "/rest/v1/rpc/get_swayphics_automation_status") {
+        metrics.mockedStartupCalls.push({ method, path: url.pathname });
+        return route.fulfill(jsonResponse([]));
+      }
       if (method === "POST" && url.pathname === "/rest/v1/services") {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });
         return route.fulfill({
@@ -548,6 +552,41 @@ async function main() {
       });
       await page.locator('[data-admin-table-row="' + view + '"]').first().waitFor({ timeout: 10000 });
     }
+
+    const settingsNavigation = page.locator('[data-view="settings"]').first();
+    await settingsNavigation.waitFor({ state: "visible", timeout: 15000 });
+    await settingsNavigation.click();
+    const runFollowupScan = page.locator('#sway-settings-expanded [data-action="run-stale-lead-automation"]');
+    await runFollowupScan.waitFor({ state: "visible", timeout: 20000 });
+    const followupScanCallsBefore = metrics.mockedStartupCalls.filter(item =>
+      item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
+    ).length;
+
+    const cancelScanDialog = page.waitForEvent("dialog");
+    const triggerCancelledScan = runFollowupScan.evaluate(button => button.click());
+    const cancelledScan = await cancelScanDialog;
+    assert.match(cancelledScan.message(), /No email or WhatsApp messages will be sent/i,
+      "the on-demand scan confirmation must disclose that it does not send messages");
+    await cancelledScan.dismiss();
+    await triggerCancelledScan;
+    assert.equal(metrics.mockedStartupCalls.filter(item =>
+      item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
+    ).length, followupScanCallsBefore,
+      "cancelling the follow-up scan must not invoke the automation RPC");
+
+    const acceptScanDialog = page.waitForEvent("dialog");
+    const triggerAcceptedScan = runFollowupScan.evaluate(button => button.click());
+    const acceptedScan = await acceptScanDialog;
+    await acceptedScan.accept();
+    await triggerAcceptedScan;
+    await page.waitForFunction(() =>
+      (document.querySelector("[data-sales-automation-status]")?.textContent || "")
+        .includes("Scan complete. 0 pending follow-ups created.")
+    );
+    assert.equal(metrics.mockedStartupCalls.filter(item =>
+      item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
+    ).length, followupScanCallsBefore + 1,
+      "confirming the follow-up scan must invoke the existing authenticated RPC exactly once");
 
     await navigate("leads", "crm");
     const leadView = page.locator("#sway-workspace-main");
@@ -988,13 +1027,10 @@ async function main() {
       console.error("Inbox read-state update diagnostic:", JSON.stringify(readStateDebug));
       throw error;
     }
-    await page.waitForFunction(() =>
-      document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
-    , null, { timeout: 5000 });
     try {
       await page.waitForFunction(() =>
         document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
-      );
+      , null, { timeout: 5000 });
     } catch (error) {
       const focusDebug = await page.evaluate(() => ({
         activeElement: document.activeElement?.outerHTML || "",

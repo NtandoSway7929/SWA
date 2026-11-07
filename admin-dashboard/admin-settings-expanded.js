@@ -387,6 +387,9 @@
         var salesPanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-sales" aria-labelledby="swe-tab-sales" data-settings-panel="sales">' +
             formCard("sales", "Lead follow-up rules", "Control the existing workflow clock without changing individual lead records.", salesFields, "Save workflow", true) +
+            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Run a follow-up scan</h3><p>The scheduled worker checks every 15 minutes. Run it now to process eligible leads immediately. Existing pending follow-ups and the configured attempt limit are respected; no email or WhatsApp messages are sent.</p></div></div>' +
+            '<div class="swe-actions"><button type="button" class="swe-button swe-button-primary" data-action="run-stale-lead-automation">Run follow-up scan now</button></div>' +
+            '<p class="swe-status" data-sales-automation-status role="status" aria-live="polite"></p></div>' +
             '<div class="swe-card"><h3>Workflow boundary</h3><p>These settings change the follow-up interval used by the current database workflow. Email and WhatsApp outreach still require the existing manual or approved sending steps.</p></div></section>';
 
         var performancePanel =
@@ -915,6 +918,15 @@
                 { label: "Automation", value: function (row) { return row.job_name; } },
                 { label: "Schedule", value: function (row) { return row.schedule; } },
                 { label: "Active", value: function (row) { return row.active ? "Yes" : "No"; } },
+                { label: "Run health", value: function (row) {
+                    if (!row.active) return "Paused";
+                    if (!row.last_status) return "No run recorded";
+                    var runStatus = String(row.last_status).toLowerCase();
+                    if (runStatus === "succeeded") return "Last run succeeded";
+                    if (runStatus === "failed") return "Last run failed";
+                    if (runStatus === "running") return "Currently running";
+                    return "Review result";
+                } },
                 { label: "Last run (SAST)", value: function (row) {
                     return row.last_run ? new Date(row.last_run).toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" }) : "Not run yet";
                 } },
@@ -1346,6 +1358,32 @@
         var healthButton = root.querySelector('[data-action="run-innerme-health"]');
         if (healthButton) healthButton.addEventListener("click", function () {
             runInnerMeHealth(root);
+        });
+
+        var followupAutomationButton = root.querySelector('[data-action="run-stale-lead-automation"]');
+        if (followupAutomationButton) followupAutomationButton.addEventListener("click", async function () {
+            if (!window.confirm("Run the follow-up scan now? It may create pending follow-up records for eligible leads. No email or WhatsApp messages will be sent.")) return;
+            var status = root.querySelector("[data-sales-automation-status]");
+            followupAutomationButton.disabled = true;
+            setStatus(status, "Scanning eligible leads…", "");
+            try {
+                var created = await request("/rest/v1/rpc/process_swayphics_stale_leads", {
+                    method: "POST",
+                    body: {}
+                });
+                if (typeof created !== "number" || !Number.isInteger(created) || created < 0) {
+                    throw new Error("The automation returned an unexpected result. Refresh the page and check Governance.");
+                }
+                setStatus(status,
+                    created === 1 ? "Scan complete. 1 pending follow-up created." :
+                        "Scan complete. " + created + " pending follow-ups created.",
+                    "success"
+                );
+            } catch (error) {
+                setStatus(status, "Scan failed: " + (error.message || "Unable to run follow-up automation."), "error");
+            } finally {
+                followupAutomationButton.disabled = false;
+            }
         });
 
         var governanceButton = root.querySelector('[data-action="refresh-governance"]');
