@@ -3,7 +3,8 @@ const TEXT_BODY_TYPES = new Set(["text/plain", "text/html"]);
 export function sanitizeEmailFilename(value, fallback = "attachment") {
   let name = String(value || "")
     .normalize("NFKC")
-    .replace(/[\/\\]/g, "_")
+    .split(/[\/\\]/)
+    .pop()
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/\.{2,}/g, ".")
     .replace(/^\.+|\.+$/g, "")
