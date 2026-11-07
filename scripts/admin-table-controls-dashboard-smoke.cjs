@@ -550,6 +550,15 @@ async function main() {
     await leadView.locator('[data-admin-table-select-all="leads"]').check();
     assert.ok((await leadView.locator('[data-admin-table-selected-count="leads"]').innerText()).includes("1 selected"),
       "select-all should select only currently visible rows");
+    const selectionStatus = leadView.locator('[data-admin-table-selection-status="leads"]');
+    assert.equal(await selectionStatus.getAttribute("role"), "status",
+      "the selected count should expose status semantics to assistive technology");
+    assert.equal(await selectionStatus.getAttribute("aria-live"), "polite",
+      "selection announcements should not interrupt current screen-reader speech");
+    assert.equal(await selectionStatus.getAttribute("aria-atomic"), "true",
+      "screen readers should announce the complete selected-record count");
+    assert.equal((await selectionStatus.textContent()).trim(), "1 record selected.",
+      "selecting a visible row should announce the current selection count");
 
     const [csvDownload] = await Promise.all([
       page.waitForEvent("download"),
@@ -564,6 +573,8 @@ async function main() {
     await leadView.locator('[data-admin-table-clear-selection="leads"]').click();
     assert.equal(await leadView.locator('[data-admin-table-bulk-toolbar="leads"]').isVisible(), false,
       "clear selection should hide the bulk toolbar");
+    assert.equal((await selectionStatus.textContent()).trim(), "0 records selected.",
+      "clearing selection should announce that no records remain selected");
     await leadView.locator('[data-admin-table-search-input="leads"]').fill("");
     // Allow the dashboard's initial visual intro to finish before saving screenshots.
     await page.waitForTimeout(11000);
