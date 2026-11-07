@@ -369,6 +369,36 @@ async function main() {
         }));
       }
 
+      // The inbox auto-read action is persisted only to synthetic in-memory fixtures.
+      if (method === "PATCH" && url.pathname === "/rest/v1/email_messages") {
+        const threadFilter = String(url.searchParams.get("thread_id") || "");
+        const threadId = threadFilter.startsWith("eq.")
+          ? decodeURIComponent(threadFilter.slice(3))
+          : "";
+        const directionFilter = String(url.searchParams.get("direction") || "");
+        const body = JSON.parse(request.postData() || "{}");
+        const changed = emailMessages.filter(item =>
+          String(item.thread_id) === threadId &&
+          (!directionFilter || item.direction === directionFilter.slice(3))
+        );
+
+        if (threadId && typeof body.is_read === "boolean" && changed.length) {
+          changed.forEach(item => Object.assign(item, body));
+          metrics.mockedTableActionWrites.push({
+            method,
+            path: url.pathname,
+            thread_id: threadId,
+            is_read: body.is_read,
+            updated_ids: changed.map(item => String(item.id))
+          });
+          return route.fulfill({
+            status: 204,
+            headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" },
+            body: ""
+          });
+        }
+      }
+
       // Completion requests are applied to in-memory test arrays only.
       // Playwright intercepts them before a request can leave this browser.
       if (method === "PATCH" && url.pathname === "/rest/v1/tasks") {
@@ -822,6 +852,22 @@ async function main() {
     if ((await inboxNavToggle.getAttribute("aria-expanded")) !== "true") await inboxNavToggle.click();
     await page.locator('[data-view="email"]').click();
     await page.locator('[data-email-thread="thread-ui-test"]').waitFor({ state: "visible", timeout: 20000 });
+    const inboxUnreadBadge = page.locator('[data-view="email"] .sway-workspace-count').first();
+    assert.equal(await inboxUnreadBadge.innerText(), "1",
+      "the Inbox navigation should show the number of unread conversations");
+    await page.locator('[data-email-thread="thread-ui-test"]').click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-view="email"] .sway-workspace-count') === null
+    );
+    assert.equal(await page.locator('[data-view="email"] .sway-workspace-count').count(), 0,
+      "opening the unread conversation should remove the navigation badge when no unread conversations remain");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "PATCH" &&
+      item.path === "/rest/v1/email_messages" &&
+      item.thread_id === "thread-ui-test" &&
+      item.is_read === true
+    ), "opening the conversation should update only the mocked inbound read state");
+    await page.locator('[data-email-back]').click();
     await page.locator('[data-email-thread-select="thread-ui-test"]').check();
     assert.equal(await page.locator('[data-email-selection-toolbar]').isVisible(), true,
       "selecting an inbox conversation should reveal its separate bulk-delete toolbar");
