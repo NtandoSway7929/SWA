@@ -98,11 +98,67 @@
             }).join(" ").toLowerCase();
         }
 
+        const overviewFilterLabels = {
+            overview_my_open: "My open tasks",
+            overview_due_today: "Due today",
+            overview_open_pipeline: "Active pipeline leads",
+            overview_outstanding: "Outstanding invoices"
+        };
+
+        function isOverviewFilter(view, filter) {
+            return (
+                (view === "tasks" && filter === "overview_my_open") ||
+                (view === "followups" && filter === "overview_due_today") ||
+                (view === "leads" && filter === "overview_open_pipeline") ||
+                (view === "invoices" && filter === "overview_outstanding")
+            );
+        }
+
+        function overviewFilterMatches(view, filter, item) {
+            if (view === "tasks" && filter === "overview_my_open") {
+                return (
+                    !!state.currentUser &&
+                    item.status !== "completed" &&
+                    item.assigned_to === state.currentUser.id
+                );
+            }
+            if (view === "followups" && filter === "overview_due_today") {
+                const today = typeof context.dashboardTodayISO === "function"
+                    ? context.dashboardTodayISO()
+                    : "";
+                const scheduledFor = typeof context.dateInput === "function"
+                    ? context.dateInput(item.scheduled_for)
+                    : String(item.scheduled_for || "").slice(0, 10);
+                return item.status === "pending" && scheduledFor === today;
+            }
+            if (view === "leads" && filter === "overview_open_pipeline") {
+                return !["won", "lost", "follow-up"].includes(item.status);
+            }
+            if (view === "invoices" && filter === "overview_outstanding") {
+                const balance = Number(
+                    item.amount_outstanding != null
+                        ? item.amount_outstanding
+                        : item.total || 0
+                );
+                return (
+                    item.archived !== true &&
+                    item.status !== "paid" &&
+                    item.status !== "cancelled" &&
+                    balance > 0
+                );
+            }
+            return false;
+        }
+
         function items(view, sourceItems) {
             const controls = settings(view);
             const filterValue = String(controls.filter || "all").toLowerCase();
             const result = (sourceItems || []).filter(function (item) {
-                return filterValue === "all" || statusValue(view, item) === filterValue;
+                if (filterValue === "all") return true;
+                if (isOverviewFilter(view, filterValue)) {
+                    return overviewFilterMatches(view, filterValue, item);
+                }
+                return statusValue(view, item) === filterValue;
             }).slice();
 
             function dateValue(value) {
@@ -213,7 +269,7 @@
                 .concat(statuses.map(function (status) {
                     return '<option value="' + esc(status) + '"' +
                         (controls.filter === status ? " selected" : "") + ">" +
-                        esc(formatDisplayText(status)) + "</option>";
+                        esc(overviewFilterLabels[status] || formatDisplayText(status)) + "</option>";
                 })).join("");
             const sortHtml = sortOptions(view).map(function (option) {
                 return '<option value="' + esc(option[0]) + '"' +
@@ -245,8 +301,8 @@
                         '" value="' + esc(controls.search) + '" placeholder="' + placeholder +
                         '" aria-label="Search ' + esc(view) + '">' +
                     '</label>' +
-                    '<label class="sway-admin-table-field"><span>Status</span>' +
-                        '<select data-admin-table-filter="' + esc(view) + '" aria-label="Filter ' + esc(view) + ' by status">' +
+                    '<label class="sway-admin-table-field"><span>Filter</span>' +
+                        '<select data-admin-table-filter="' + esc(view) + '" aria-label="Filter records in ' + esc(view) + '">' +
                             filterOptions + '</select></label>' +
                     '<label class="sway-admin-table-field"><span>Sort by</span>' +
                         '<select data-admin-table-sort="' + esc(view) + '" aria-label="Sort ' + esc(view) + '">' +
