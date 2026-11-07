@@ -252,6 +252,10 @@
                         '<select data-admin-table-sort="' + esc(view) + '" aria-label="Sort ' + esc(view) + '">' +
                             sortHtml + '</select></label>' +
                     '<div class="sway-admin-table-count" data-admin-table-count="' + esc(view) + '" aria-live="polite"></div>' +
+                    '<button type="button" class="sway-admin-table-reset-button" data-admin-table-reset-filters="' + esc(view) +
+                    '" aria-label="Clear search and status filters for ' + esc(view) + '; keep sort order"' +
+                    (String(controls.search || "").trim() || currentFilter !== "all" ? "" : " disabled") +
+                    '>Clear filters</button>' +
                 '</div>' +
                 (view === "invoices" ? "" :
                     '<div class="sway-admin-table-bulk-toolbar" data-admin-table-bulk-toolbar="' + esc(view) + '" hidden>' +
@@ -273,6 +277,14 @@
             if (count) count.textContent = selected.length + " selected";
             workspace.querySelectorAll("[data-admin-table-bulk-action], [data-admin-table-clear-selection]")
                 .forEach(function (button) { button.disabled = state.tableBulkActionRunning; });
+        }
+
+        function syncFilterReset(view) {
+            const controls = settings(view);
+            const hasFilters = String(controls.search || "").trim() !== "" ||
+                String(controls.filter || "all").trim().toLowerCase() !== "all";
+            const button = workspace.querySelector('[data-admin-table-reset-filters="' + view + '"]');
+            if (button) button.disabled = !hasFilters;
         }
 
         function applySearch(view) {
@@ -303,6 +315,7 @@
                 master.disabled = checkboxes.length === 0;
             }
             syncSelection(view);
+            syncFilterReset(view);
         }
 
         function exportSelection(view) {
@@ -548,6 +561,17 @@
                     settings(view).sort = select.value;
                     renderView();
                     const replacement = workspace.querySelector('[data-admin-table-sort="' + view + '"]');
+                    if (replacement) replacement.focus();
+                });
+            });
+            workspace.querySelectorAll("[data-admin-table-reset-filters]").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    const view = button.getAttribute("data-admin-table-reset-filters");
+                    const controls = settings(view);
+                    controls.search = "";
+                    controls.filter = "all";
+                    renderView();
+                    const replacement = workspace.querySelector('[data-admin-table-reset-filters="' + view + '"]');
                     if (replacement) replacement.focus();
                 });
             });
