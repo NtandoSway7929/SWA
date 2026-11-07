@@ -1,0 +1,29 @@
+name: Revenue Pipeline stage navigation
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "admin-dashboard/admin-workspace.js"
+      - "scripts/admin-revenue-pipeline-navigation.test.cjs"
+      - ".github/workflows/admin-revenue-pipeline-navigation.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate workspace JavaScript
+        run: node --check admin-dashboard/admin-workspace.js
+
+      - name: Test Revenue Pipeline stage navigation
+        run: node scripts/admin-revenue-pipeline-navigation.test.cjs
