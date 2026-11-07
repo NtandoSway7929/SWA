@@ -120,7 +120,7 @@ assert.ok(workspaceCss.includes("#sway-admin-workspace .sway-bi-data-table capti
     "the data table caption must remain available to assistive technology");
 
 assert.ok(dashboardHtml.includes(
-    'href="admin-workspace.css?v=20261107-insights-data-tables-1"'
+    'href="admin-workspace.css?v=20261107-email-viewer-refinements-1&amp;rev=20261107-insights-data-tables-1"'
 ), "the dashboard must use a refreshed stylesheet cache key");
 
 console.log("Admin Insights accessible chart data-table tests passed.");
