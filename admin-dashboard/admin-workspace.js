@@ -8956,6 +8956,54 @@ function simpleBars(items, color) {
     }
 
 
+    function cashFlowDataTable(values, labels, ariaLabel) {
+        const numbers = (values || []).map(function (value) {
+            return Number(value || 0);
+        });
+        const rows = numbers.map(function (value, index) {
+            const month =
+                labels && labels[index]
+                    ? labels[index]
+                    : "Period " + (index + 1);
+
+            return (
+                "<tr>" +
+                    '<th scope="row">' +
+                        esc(month) +
+                    "</th>" +
+                    "<td>" +
+                        esc(money(value)) +
+                    "</td>" +
+                "</tr>"
+            );
+        }).join("");
+
+        return (
+            '<details class="sway-cf-data-details">' +
+                "<summary>" +
+                    "<span>View monthly breakdown</span>" +
+                    '<span class="sway-cf-data-hint">Exact values by month</span>' +
+                "</summary>" +
+                '<div class="sway-cf-data-table-wrap">' +
+                    '<table class="sway-cf-data-table">' +
+                        "<caption>" +
+                            esc(String(ariaLabel || "Cash flow chart") + " monthly breakdown") +
+                        "</caption>" +
+                        "<thead>" +
+                            "<tr>" +
+                                '<th scope="col">Month</th>' +
+                                '<th scope="col">Amount</th>' +
+                            "</tr>" +
+                        "</thead>" +
+                        "<tbody>" +
+                            (rows || '<tr><td colspan="2">No monthly data available.</td></tr>') +
+                        "</tbody>" +
+                    "</table>" +
+                "</div>" +
+            "</details>"
+        );
+    }
+
     function businessCashFlowChart(values, labels, color, mode, ariaLabel) {
         const numbers =
             (values || []).map(function (value) {
@@ -9215,6 +9263,7 @@ function simpleBars(items, color) {
                         ) +
                     "</span>" +
                 "</div>" +
+                cashFlowDataTable(numbers, labels, ariaLabel) +
             "</div>"
         );
     }
