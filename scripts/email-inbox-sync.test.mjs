@@ -102,14 +102,31 @@ test("getSyncStartUid handles an empty mailbox and invalid limits safely", () =>
 
 
 
-test("IMAP sync uses bounded connection and socket timeouts", () => {
+test("IMAP sync uses bounded role-specific socket timeouts", () => {
   assert.ok(syncFunctionSource.includes("connectionTimeout: IMAP_CONNECTION_TIMEOUT_MS"));
   assert.ok(syncFunctionSource.includes("greetingTimeout: IMAP_GREETING_TIMEOUT_MS"));
-  assert.ok(syncFunctionSource.includes("socketTimeout: IMAP_SOCKET_TIMEOUT_MS"));
+  assert.ok(syncFunctionSource.includes("socketTimeout: isAuthenticatedUser"));
   assert.ok(syncFunctionSource.includes("const IMAP_CONNECTION_TIMEOUT_MS = 8000;"));
   assert.ok(syncFunctionSource.includes("const IMAP_GREETING_TIMEOUT_MS = 8000;"));
-  assert.ok(syncFunctionSource.includes("const IMAP_SOCKET_TIMEOUT_MS = 12000;"));
+  assert.ok(syncFunctionSource.includes("const IMAP_SCHEDULED_SOCKET_TIMEOUT_MS = 12000;"));
+  assert.ok(syncFunctionSource.includes("const IMAP_MEDIA_SOCKET_TIMEOUT_MS = 30000;"));
+  assert.ok(syncFunctionSource.includes("const EXISTING_MEDIA_BACKFILL_BATCH = 1;"));
   assert.ok(syncFunctionSource.includes('client.on("error"'));
+});
+
+test("existing inbound media backfill leaves incomplete body downloads retryable", () => {
+  const backfillStart = syncFunctionSource.indexOf("const refreshedBody = await fetchMessageBody(");
+  const bodyGuard = syncFunctionSource.indexOf("if (!refreshedBody.bodyDownloadSucceeded)", backfillStart);
+  const attachmentDownload = syncFunctionSource.indexOf("const refreshedAttachments = await storeEmailAttachments(", backfillStart);
+  const completionUpdate = syncFunctionSource.indexOf("media_processed_at: new Date().toISOString()", backfillStart);
+
+  assert.notEqual(backfillStart, -1);
+  assert.notEqual(bodyGuard, -1);
+  assert.notEqual(attachmentDownload, -1);
+  assert.notEqual(completionUpdate, -1);
+  assert.ok(backfillStart < bodyGuard);
+  assert.ok(bodyGuard < attachmentDownload);
+  assert.ok(attachmentDownload < completionUpdate);
 });
 
 test("new inbound email is persisted before MIME body or attachment downloads", () => {
