@@ -158,7 +158,11 @@ test("first-contact SLA creates one internal follow-up without changing a new le
   assert.match(firstContactBlock,
     /when nullif\(trim\(v_lead\.email\), ''\) is not null then 'Email'\s+when nullif\(trim\(v_lead\.phone\), ''\) is not null then 'Phone'\s+else 'Other'/i);
   assert.match(firstContactBlock,
-    /coalesce\(\s*v_lead\.assigned_to,\s*\(\s*select au\.user_id[\s\S]*?au\.active = true[\s\S]*?au\.role = 'owner'/i);
+    /where au\.user_id = v_lead\.assigned_to\s+and au\.active = true/i,
+    "the lead's assigned administrator should be reused only while active");
+  assert.match(firstContactBlock,
+    /select au\.user_id[\s\S]*?where au\.active = true[\s\S]*?au\.role = 'owner'/i,
+    "unassigned or inactive assignees should fall back to an active owner/admin");
 
   assert.ok(firstContactMigration.includes("coalesce(f.note, '') not like 'Automatic first-contact task:%'"),
     "first-contact reminders must not consume later-stage follow-up attempts");
