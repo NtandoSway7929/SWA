@@ -199,6 +199,8 @@ async function fetchMessageBody(
   const parts = collectEmailMimeParts(bodyStructure);
   let plainText = "";
   let html: string | null = null;
+  let plainTextDownloaded = !parts.plain;
+  let htmlDownloaded = !parts.html;
 
   // One oversized or malformed MIME body part must not stop the mailbox
   // cursor. Try the alternate representation independently, then retain the
@@ -206,6 +208,7 @@ async function fetchMessageBody(
   if (parts.plain) {
     try {
       plainText = await decodeMimeTextPart(imapClient, uid, parts.plain);
+      plainTextDownloaded = true;
     } catch (error) {
       console.warn("Unable to download inbound text/plain body part:", {
         uid,
@@ -217,6 +220,7 @@ async function fetchMessageBody(
   if (parts.html) {
     try {
       html = await decodeMimeTextPart(imapClient, uid, parts.html);
+      htmlDownloaded = true;
     } catch (error) {
       console.warn("Unable to download inbound text/html body part:", {
         uid,
@@ -228,6 +232,7 @@ async function fetchMessageBody(
   return {
     text: plainText.trim() || (html ? stripHtml(html) : ""),
     html: html || null,
+    bodyDownloadSucceeded: plainTextDownloaded && htmlDownloaded,
     mimeParts: parts
   };
 }
@@ -887,7 +892,9 @@ Deno.serve(async (req) => {
               text_body: existingBody.text || existingInbound.text_body || subject || "(Email received)",
               html_body: existingBody.html || existingInbound.html_body || null,
               attachments: hydratedAttachments,
-              media_processed_at: new Date().toISOString()
+              media_processed_at: existingBody.bodyDownloadSucceeded
+                ? new Date().toISOString()
+                : null
             };
           }
 
@@ -1088,7 +1095,9 @@ Deno.serve(async (req) => {
                   text_body: textBody,
                   html_body: body.html || null,
                   attachments: attachmentMetadata,
-                  media_processed_at: new Date().toISOString()
+                  media_processed_at: body.bodyDownloadSucceeded
+                    ? new Date().toISOString()
+                    : null
                 })
                 .eq("id", emailRecordId)
                 .is("media_processed_at", null);
