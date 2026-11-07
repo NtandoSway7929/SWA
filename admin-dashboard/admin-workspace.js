@@ -28299,6 +28299,19 @@ function simpleBars(items, color) {
                     try {
                         await setEmailThreadReadState(threadId, isRead);
                         renderView();
+
+                        const nextToggle = Array.from(
+                            workspace.querySelectorAll("[data-email-thread-read-toggle]")
+                        ).find(function (item) {
+                            return String(item.dataset.emailThreadReadToggle || "") === threadId;
+                        });
+                        const fallback = nextToggle || workspace.querySelector(
+                            "[data-email-inbox-search], [data-email-inbox-filter], [data-email-sync], [data-email-thread]"
+                        );
+
+                        if (fallback && typeof fallback.focus === "function") {
+                            fallback.focus();
+                        }
                     } catch (error) {
                         swayAlert(
                             error && error.message
