@@ -21,20 +21,24 @@ test("dashboard loads the expanded settings stylesheet and module after workspac
   );
 });
 
-test("Settings tab keyboard navigation supports arrow keys and Home/End", () => {
-  const keydownStart = settingsScript.indexOf('tab.addEventListener("keydown", function (event)');
-  const keydownEnd = settingsScript.indexOf("\n            });", keydownStart);
-  assert.ok(keydownStart >= 0 && keydownEnd > keydownStart, "Settings tabs must bind a keydown handler");
+test("Settings tab keyboard navigation is delegated to include dynamically-added tabs", () => {
+  const keydownStart = settingsScript.indexOf('root.addEventListener("keydown", function (event)');
+  const keydownEnd = settingsScript.indexOf("\\n        });", keydownStart);
+  assert.ok(keydownStart >= 0 && keydownEnd > keydownStart, "the Settings root must delegate tab keyboard events");
   const keydown = settingsScript.slice(keydownStart, keydownEnd);
-  assert.match(keydown, /event\.key !== "ArrowRight" && event\.key !== "ArrowLeft"/,
+  assert.match(keydown, /event\\.target[\\s\\S]*?closest\\("\\[data-settings-tab\\]"\\)/,
+    "keyboard events should resolve the focused tab, including dynamically-added tabs");
+  assert.match(keydown, /root\\.contains\\(tab\\)/,
+    "only tabs inside the Settings root should be handled");
+  assert.match(keydown, /event\\.key !== "ArrowRight" && event\\.key !== "ArrowLeft"/,
     "left and right arrow navigation must remain supported");
-  assert.match(keydown, /event\.key !== "Home" && event\.key !== "End"/,
+  assert.match(keydown, /event\\.key !== "Home" && event\\.key !== "End"/,
     "Settings tabs must also recognise Home and End");
-  assert.match(keydown, /event\.key === "Home"[\s\S]*?next = tabs\[0\]/,
+  assert.match(keydown, /event\\.key === "Home"[\\s\\S]*?next = tabs\\[0\\]/,
     "Home should select the first Settings section");
-  assert.match(keydown, /event\.key === "End"[\s\S]*?next = tabs\[tabs\.length - 1\]/,
-    "End should select the last Settings section");
-  assert.match(keydown, /selectTab\(root, next\.getAttribute\("data-settings-tab"\)\)[\s\S]*?next\.focus\(\)/,
+  assert.match(keydown, /event\\.key === "End"[\\s\\S]*?next = tabs\\[tabs\\.length - 1\\]/,
+    "End should select the last, including a dynamically-added tab");
+  assert.match(keydown, /selectTab\\(root, next\\.getAttribute\\("data-settings-tab"\\)\\)[\\s\\S]*?next\\.focus\\(\\)/,
     "keyboard navigation should select the destination and move focus to it");
 });
 
