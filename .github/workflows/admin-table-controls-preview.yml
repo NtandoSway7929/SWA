@@ -43,7 +43,7 @@ concurrency:
 
 jobs:
   isolated-browser-preview:
-    name: Test Phase 2 controls with synthetic data
+    name: Test admin automation with synthetic data
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
