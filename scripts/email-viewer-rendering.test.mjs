@@ -89,6 +89,7 @@ const inboxFocusJs = readFileSync(
 
 test("Inbox read-state focus follows the replacement control after rerender", () => {
   assert.ok(inboxFocusJs.includes('document.addEventListener("click"'));
+  assert.ok(inboxFocusJs.includes("}, true);"), "the focus observer must capture the action before workspace event handlers");
   assert.ok(inboxFocusJs.includes('new MutationObserver(restoreFocusAfterUpdate)'));
   assert.ok(inboxFocusJs.includes("findCurrentButton()"));
   assert.ok(inboxFocusJs.includes('currentButton.focus({ preventScroll: true })'));
