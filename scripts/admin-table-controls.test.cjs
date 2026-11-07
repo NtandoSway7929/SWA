@@ -16,6 +16,8 @@ const controlsScriptIndex = dashboardHtml.indexOf('src="admin-table-controls.js'
 const workspaceScriptIndex = dashboardHtml.indexOf('src="admin-workspace.js');
 assert.ok(controlsScriptIndex >= 0 && workspaceScriptIndex > controlsScriptIndex,
     "the table controls module must load before the dashboard workspace");
+assert.match(dashboardHtml, /admin-workspace\.css\?v=20261107-admin-table-filter-reset-1/,
+    "the updated table toolbar styles must use a refreshed workspace stylesheet cache key");
 for (const view of ["leads", "followups", "tasks", "communications"]) {
     assert.ok(workspaceSource.includes('adminTableControls.renderControls("' + view + '")'),
         view + " view must render the table controls");
@@ -202,6 +204,20 @@ assert.match(staleTodoFilterMarkup, /<option value="todo" selected>todo<\/option
 assert.deepEqual(controls.items("tasks", state.tasks), [],
     "preserving a stale filter must not silently reset the actual record filter");
 
+const activeResetMarkup = controls.renderControls("tasks");
+assert.match(activeResetMarkup, /data-admin-table-reset-filters="tasks"/,
+    "eligible list controls should expose a dedicated clear-filters action");
+assert.match(activeResetMarkup, /aria-label="Clear search and status filters for tasks; keep sort order"/,
+    "the reset action should explain exactly what it changes and preserves");
+assert.doesNotMatch(activeResetMarkup, /data-admin-table-reset-filters="tasks"[^>]* disabled/,
+    "the reset action should be enabled while a status filter is active");
+state.tableControls.tasks.filter = "all";
+state.tableControls.tasks.search = "";
+const idleResetMarkup = controls.renderControls("tasks");
+assert.match(idleResetMarkup, /data-admin-table-reset-filters="tasks"[^>]* disabled>Clear filters/,
+    "the reset action should be disabled when no search or status filter is active");
+state.tableControls.tasks.filter = "todo";
+
 const controlsMarkup = controls.renderControls("leads");
 assert.match(controlsMarkup, /data-admin-table-search-input="leads"/);
 assert.match(controlsMarkup, /data-admin-table-filter="leads"/);
@@ -360,6 +376,105 @@ assert.match(invoiceSaveSource, /if \(!selectedClient \|\| !selectedClient\.emai
 assert.ok(moduleSource.includes('["leads", "tasks", "followups", "communications", "invoices"].forEach(function (view)'),
     "invoice search should be reapplied after control-driven rerenders and archive-mode changes");
 
+
+function verifyFilterResetBehavior() {
+    const testState = {
+        tableControls: {
+            tasks: { search: "Confirm scope", filter: "todo", sort: "priority_desc" }
+        },
+        tableSelection: { tasks: ["task-urgent"] },
+        tableFeedback: { tasks: "" },
+        tableBulkActionRunning: false,
+        tasks: [{ id: "task-urgent", title: "Confirm scope", status: "todo", priority: "urgent" }]
+    };
+    const listeners = {};
+    let renderCount = 0;
+    let focusCount = 0;
+    const searchInput = {
+        value: "Confirm scope",
+        getAttribute: name => name === "data-admin-table-search-input" ? "tasks" : null,
+        addEventListener: (name, handler) => { listeners["search:" + name] = handler; }
+    };
+    const statusFilter = {
+        value: "todo",
+        getAttribute: name => name === "data-admin-table-filter" ? "tasks" : null,
+        addEventListener: (name, handler) => { listeners["filter:" + name] = handler; }
+    };
+    const sortControl = {
+        value: "priority_desc",
+        getAttribute: name => name === "data-admin-table-sort" ? "tasks" : null,
+        addEventListener: (name, handler) => { listeners["sort:" + name] = handler; }
+    };
+    const resetButton = {
+        disabled: false,
+        getAttribute: name => name === "data-admin-table-reset-filters" ? "tasks" : null,
+        addEventListener: (name, handler) => { listeners["reset:" + name] = handler; },
+        focus: () => { focusCount += 1; }
+    };
+    const countNode = { textContent: "" };
+    const testWorkspace = {
+        querySelector(selector) {
+            if (selector === '[data-admin-table-tools="tasks"]') return {};
+            if (selector === '[data-admin-table-count="tasks"]') return countNode;
+            if (selector === '[data-admin-table-reset-filters="tasks"]') return resetButton;
+            return null;
+        },
+        querySelectorAll(selector) {
+            if (selector === "[data-admin-table-search-input]") return [searchInput];
+            if (selector === "[data-admin-table-filter]") return [statusFilter];
+            if (selector === "[data-admin-table-sort]") return [sortControl];
+            if (selector === "[data-admin-table-reset-filters]") return [resetButton];
+            return [];
+        }
+    };
+    const instance = global.window.createSwayphicsAdminTableControls({
+        state: testState,
+        workspace: testWorkspace,
+        esc: value => String(value == null ? "" : value),
+        adminName: () => "Admin",
+        clientName: id => String(id),
+        leadName: id => String(id),
+        formatDisplayText: value => String(value),
+        completeTask: async () => {},
+        completeFollowup: async () => {},
+        renderView: () => {
+            renderCount += 1;
+            // Mirror the control values and disabled state rebuilt by the real renderer.
+            searchInput.value = testState.tableControls.tasks.search;
+            statusFilter.value = testState.tableControls.tasks.filter;
+            resetButton.disabled = !testState.tableControls.tasks.search &&
+                testState.tableControls.tasks.filter === "all";
+        },
+        swayAlert: message => { throw new Error(message); },
+        swayConfirm: async () => true
+    });
+
+    instance.bind();
+    assert.equal(resetButton.disabled, false,
+        "active table filters should enable the reset action");
+    assert.equal(typeof listeners["reset:click"], "function",
+        "the reset action should have a click handler");
+    listeners["reset:click"]();
+
+    assert.equal(testState.tableControls.tasks.search, "",
+        "reset should clear the current text search");
+    assert.equal(testState.tableControls.tasks.filter, "all",
+        "reset should restore the All statuses filter");
+    assert.equal(searchInput.value, "",
+        "the rendered search control should be reset");
+    assert.equal(statusFilter.value, "all",
+        "the rendered status selector should be reset");
+    assert.equal(testState.tableControls.tasks.sort, "priority_desc",
+        "reset should preserve the current sort order");
+    assert.deepEqual(testState.tableSelection.tasks, ["task-urgent"],
+        "reset should preserve the user's selected records");
+    assert.equal(renderCount, 1,
+        "reset should rerender the current view once");
+    assert.equal(focusCount, 1,
+        "focus should return to the reset action after its rerender");
+    assert.equal(resetButton.disabled, true,
+        "reset should become disabled once search and status filters are cleared");
+}
 
 async function verifyBulkLeadDeletion() {
     const testState = {
@@ -529,7 +644,8 @@ async function verifyBulkDeletionForOtherViews() {
     }
 }
 
-verifyBulkLeadDeletion().then(verifyBulkDeletionForOtherViews).then(function () {
+Promise.resolve().then(verifyFilterResetBehavior).then(verifyBulkLeadDeletion)
+    .then(verifyBulkDeletionForOtherViews).then(function () {
     console.log("Admin table controls tests passed.");
 }).catch(function (error) {
     console.error(error);
