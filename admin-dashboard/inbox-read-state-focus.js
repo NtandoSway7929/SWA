@@ -60,6 +60,18 @@
                 finalButton.focus({ preventScroll: true });
                 if (document.activeElement !== finalButton) finalButton.focus();
                 diagnostic.focusSucceeded = document.activeElement === finalButton;
+
+                // The legacy workspace callback also schedules a zero-delay
+                // focus attempt against its captured workspace node. That node
+                // can be detached after renderView(), which blurs the new
+                // control. Re-focus after that callback has had time to run.
+                window.setTimeout(function () {
+                    const settledButton = findCurrentButton();
+                    if (!settledButton || settledButton.disabled) return;
+                    settledButton.focus({ preventScroll: true });
+                    if (document.activeElement !== settledButton) settledButton.focus();
+                    diagnostic.finalFocusSucceeded = document.activeElement === settledButton;
+                }, 80);
             });
         }
 
