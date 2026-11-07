@@ -1,0 +1,78 @@
+name: Admin Quick-Create Accessibility Preview
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "admin-dashboard/admin-quick-create-accessibility.js"
+      - "admin-dashboard/admin-quick-create-accessibility.css"
+      - "admin-dashboard/index.html"
+      - "scripts/admin-quick-create-accessibility.test.cjs"
+      - "scripts/admin-quick-create-accessibility-browser.cjs"
+      - "tests/admin-quick-create-accessibility-preview/**"
+      - ".github/workflows/admin-quick-create-accessibility.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-quick-create-accessibility-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    name: Test quick-create keyboard behaviour with Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright
+        run: npm install --no-save --no-package-lock playwright@1.64.1
+
+      - name: Install headless Chromium
+        timeout-minutes: 7
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Start local-only preview server
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/admin-quick-create-preview.log 2>&1 &
+          echo $! > /tmp/admin-quick-create-preview.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/tests/admin-quick-create-accessibility-preview/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/admin-quick-create-preview.log
+          exit 1
+
+      - name: Run quick-create keyboard browser checks
+        run: |
+          mkdir -p artifacts
+          node scripts/admin-quick-create-accessibility-browser.cjs
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-quick-create-accessibility-preview
+          path: artifacts/admin-quick-create-accessibility/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop local preview server
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f /tmp/admin-quick-create-preview.pid ]]; then
+            kill "$(cat /tmp/admin-quick-create-preview.pid)" || true
+          fi
