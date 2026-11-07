@@ -203,6 +203,9 @@ assert.deepEqual(controls.items("tasks", state.tasks), [],
     "preserving a stale filter must not silently reset the actual record filter");
 
 const controlsMarkup = controls.renderControls("leads");
+assert.match(controlsMarkup, /<span>Status<\/span>/,
+    "standard operational lists should continue to label their status filter accurately");
+assert.match(controlsMarkup, /All statuses/);
 assert.match(controlsMarkup, /data-admin-table-search-input="leads"/);
 assert.match(controlsMarkup, /data-admin-table-filter="leads"/);
 assert.match(controlsMarkup, /data-admin-table-sort="leads"/);
@@ -260,6 +263,15 @@ assert.deepEqual(controls.items("communications", state.communications).map(item
 state.tableControls.communications.filter = "inbound";
 assert.deepEqual(controls.items("communications", state.communications).map(item => item.id),
     ["communication-earlier"], "communication direction should be filterable");
+const communicationControlsMarkup = controls.renderControls("communications");
+assert.match(communicationControlsMarkup, /<span>Direction<\/span>/,
+    "the Communication Log filter should be labelled Direction");
+assert.match(communicationControlsMarkup, /aria-label="Filter communications by direction"/,
+    "the Communication Log filter should expose an accurate accessible name");
+assert.match(communicationControlsMarkup, /<option value="all" selected>All directions<\/option>/,
+    "the Communication Log default filter option should refer to directions, not statuses");
+assert.doesNotMatch(communicationControlsMarkup, /All statuses|Filter communications by status|<span>Status<\/span>/,
+    "the Communication Log should not describe direction values as statuses");
 
 state.tableControls.invoices.filter = "overdue";
 assert.deepEqual(
