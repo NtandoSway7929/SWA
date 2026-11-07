@@ -439,7 +439,9 @@ function verifyFilterResetBehavior() {
         completeFollowup: async () => {},
         renderView: () => {
             renderCount += 1;
-            // The real renderer recreates this button using the now-reset filter state.
+            // Mirror the control values and disabled state rebuilt by the real renderer.
+            searchInput.value = testState.tableControls.tasks.search;
+            statusFilter.value = testState.tableControls.tasks.filter;
             resetButton.disabled = !testState.tableControls.tasks.search &&
                 testState.tableControls.tasks.filter === "all";
         },
