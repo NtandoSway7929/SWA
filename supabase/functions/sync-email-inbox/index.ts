@@ -910,12 +910,6 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const body = await fetchMessageBody(
-          client,
-          targetUid,
-          message.bodyStructure
-        );
-
         const references =
           cleanHeaderValue(
             envelope.references
@@ -958,8 +952,7 @@ Deno.serve(async (req) => {
         const fromEmail =
           from.email || "";
 
-        const textBody =
-          body.text ||
+        let textBody =
           subject ||
           "(Email received)";
 
@@ -1048,8 +1041,7 @@ Deno.serve(async (req) => {
                 textBody ||
                 subject ||
                 "(Email received)",
-              html_body:
-                body.html || null,
+              html_body: null,
               attachments: [],
               media_processed_at: null,
               received_at:
@@ -1065,7 +1057,6 @@ Deno.serve(async (req) => {
             .single();
 
         if (inserted.error) {
-          await cleanupStoredEmailAttachments(supabase, attachmentMetadata);
           if (
             inserted.error.code !==
             "23505"
@@ -1078,6 +1069,12 @@ Deno.serve(async (req) => {
 
           if (isAuthenticatedUser) {
             try {
+              const body = await fetchMessageBody(
+                client,
+                targetUid,
+                message.bodyStructure
+              );
+              textBody = body.text || textBody;
               const attachmentMetadata = await storeEmailAttachments(
                 client,
                 targetUid,
@@ -1088,6 +1085,8 @@ Deno.serve(async (req) => {
               const mediaUpdate = await supabase
                 .from("email_messages")
                 .update({
+                  text_body: textBody,
+                  html_body: body.html || null,
                   attachments: attachmentMetadata,
                   media_processed_at: new Date().toISOString()
                 })
