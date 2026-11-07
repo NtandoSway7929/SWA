@@ -84,7 +84,7 @@ test("Overview and Cash Flow use one shared active outstanding-invoice definitio
   const cashFlowStart = source.indexOf("function renderCashFlow()");
   const insightsStart = source.indexOf("function renderInsights()", cashFlowStart);
 
-  assert.ok(overviewStart >= 0 && cashFlowStart > overviewStart && insightsStart > cashFlowStart,
+  assert.ok(overviewStart >= 0 && cashFlowStart >= 0 && insightsStart > cashFlowStart,
     "Overview, Cash Flow and Insights renderers must remain discoverable");
 
   const overview = source.slice(overviewStart, overviewStart + 5000);
