@@ -9947,6 +9947,22 @@ body.sway-dark-mode .sway-email-selection-actions .sway-workspace-button.danger:
     color: var(--text,#17233A);
     text-decoration: none;
 }
+#sway-admin-workspace button.sway-email-attachment-file {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+#sway-admin-workspace button.sway-email-attachment-file:disabled {
+    opacity: .65;
+    cursor: progress;
+}
+#sway-admin-workspace button.sway-email-attachment-file:focus-visible {
+    outline: 2px solid #0152F4;
+    outline-offset: -2px;
+}
 #sway-admin-workspace .sway-email-attachment-file:hover {
     background: rgba(1,82,244,.045);
 }

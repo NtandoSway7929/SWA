@@ -12,6 +12,7 @@ on:
       - "scripts/delete-email-messages.test.mjs"
       - "scripts/admin-push-preferences-grant.test.mjs"
       - "scripts/email-mime-helpers.test.mjs"
+      - "scripts/email-viewer-rendering.test.mjs"
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/index.html"
@@ -28,6 +29,7 @@ on:
       - "scripts/delete-email-messages.test.mjs"
       - "scripts/admin-push-preferences-grant.test.mjs"
       - "scripts/email-mime-helpers.test.mjs"
+      - "scripts/email-viewer-rendering.test.mjs"
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/index.html"
@@ -63,6 +65,8 @@ jobs:
         run: |
           node --check supabase/functions/sync-email-inbox/inbox-helpers.mjs
           node --check supabase/functions/sync-email-inbox/email-mime-helpers.mjs
+          node --check scripts/email-viewer-rendering.test.mjs
+          node --test scripts/email-viewer-rendering.test.mjs
           node --check scripts/email-inbox-sync.test.mjs
           node --test scripts/email-inbox-sync.test.mjs
           node --check scripts/email-mime-helpers.test.mjs

@@ -15983,7 +15983,7 @@ function simpleBars(items, color) {
 
         const wrapperStyles = parsed.createElement("style");
         wrapperStyles.textContent =
-            "html{background:#fff;color:#202938}body{box-sizing:border-box;margin:0;padding:18px;max-width:100%;overflow-wrap:anywhere;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55}img{max-width:100%;height:auto}table{max-width:100%;border-collapse:collapse}a{overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere}*{box-sizing:border-box}";
+            "html{background:#fff;color:#202938}body{box-sizing:border-box;margin:0;padding:18px;max-width:100%;overflow-wrap:anywhere;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55}img{display:block;max-width:100%!important;max-height:340px!important;width:auto!important;height:auto!important;object-fit:contain!important;margin:8px 0}table{max-width:100%;border-collapse:collapse}a{overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere}*{box-sizing:border-box}";
         head.appendChild(wrapperStyles);
 
         return "<!doctype html>" + parsed.documentElement.outerHTML;
@@ -16037,11 +16037,11 @@ function simpleBars(items, color) {
                 visual = '<a class="sway-email-attachment-preview" href="' + esc(cached.previewUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Open image attachment: ' + esc(filename) + '">' +
                     '<img src="' + esc(cached.previewUrl) + '" alt="' + esc(filename) + '" loading="lazy" referrerpolicy="no-referrer">' +
                     "</a>";
-            } else if (status === "stored" && !isImage && cached && cached.downloadUrl) {
-                visual = '<a class="sway-email-attachment-file" href="' + esc(cached.downloadUrl) + '" target="_blank" rel="noopener noreferrer">' +
+            } else if (status === "stored" && !isImage) {
+                visual = '<button type="button" class="sway-email-attachment-file" data-email-attachment-download="' + esc(path) + '" data-email-attachment-filename="' + esc(filename) + '">' +
                     '<span class="sway-email-attachment-file-icon" aria-hidden="true">↓</span>' +
                     "<span><strong>" + esc(filename) + "</strong><small>" + esc(size || String(attachment.content_type || "File")) + " · Download</small></span>" +
-                    "</a>";
+                    "</button>";
             } else if (status === "stored") {
                 visual = '<div class="sway-email-attachment-pending"><span>↓</span><strong>' + esc(filename) + '</strong><small>Preparing secure link…</small></div>';
             } else {
@@ -16068,7 +16068,7 @@ function simpleBars(items, color) {
             "</span></div><div class=\"sway-email-attachments-grid\">" + cards + "</div></section>";
     }
 
-    async function signedEmailAttachmentUrl(storagePath, asDownload) {
+    async function signedEmailAttachmentUrl(storagePath) {
         const encodedPath = String(storagePath || "")
             .split("/")
             .map(function (segment) { return encodeURIComponent(segment); })
@@ -16084,17 +16084,67 @@ function simpleBars(items, color) {
         );
 
         const signedUrl = String(result && (result.signedURL || result.signedUrl) || "");
-        if (!signedUrl) throw new Error("Supabase did not return a signed attachment URL.");
-        const downloadUrl = asDownload
-            ? signedUrl + (signedUrl.indexOf("?") >= 0 ? "&" : "?") + "download="
-            : signedUrl;
-        if (/^https?:\/\//i.test(downloadUrl)) {
-            return downloadUrl;
-        }
-        const storageApiPath = downloadUrl.charAt(0) === "/"
-            ? downloadUrl
-            : "/" + downloadUrl;
+        if (!signedUrl) throw new Error("Supabase did not return a signed image URL.");
+        if (/^https?:\/\//i.test(signedUrl)) return signedUrl;
+        const storageApiPath = signedUrl.charAt(0) === "/"
+            ? signedUrl
+            : "/" + signedUrl;
         return SUPABASE_URL + "/storage/v1" + storageApiPath;
+    }
+
+    function emailAttachmentObjectUrl(storagePath) {
+        const encodedPath = String(storagePath || "")
+            .split("/")
+            .map(function (segment) { return encodeURIComponent(segment); })
+            .join("/");
+        return SUPABASE_URL + "/storage/v1/object/swayphics-email-attachments/" + encodedPath;
+    }
+
+    async function downloadEmailAttachment(storagePath, filename) {
+        const safeFilename = String(filename || "email-attachment")
+            .replace(/[\\/\u0000-\u001f\u007f]/g, "_")
+            .trim() || "email-attachment";
+
+        await ensureFreshAdminAccessToken();
+
+        let response = await fetch(
+            emailAttachmentObjectUrl(storagePath),
+            {
+                method: "GET",
+                headers: headers()
+            }
+        );
+
+        if (response.status === 401) {
+            const refreshed = await refreshAdminAccessToken();
+            if (refreshed) {
+                response = await fetch(
+                    emailAttachmentObjectUrl(storagePath),
+                    {
+                        method: "GET",
+                        headers: headers()
+                    }
+                );
+            }
+        }
+
+        if (!response.ok) {
+            throw new Error("The email attachment could not be downloaded (HTTP " + response.status + ").");
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = objectUrl;
+        downloadLink.download = safeFilename;
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        downloadLink.remove();
+
+        window.setTimeout(function () {
+            URL.revokeObjectURL(objectUrl);
+        }, 30000);
     }
 
     async function loadEmailThreadMedia(thread) {
@@ -16105,7 +16155,8 @@ function simpleBars(items, color) {
         thread.messages.forEach(function (message) {
             (Array.isArray(message && message.attachments) ? message.attachments : []).forEach(function (attachment) {
                 const path = String(attachment && attachment.storage_path || "");
-                if (!path || attachment.status !== "stored" || seen.has(path)) return;
+                const isImage = attachment && attachment.is_previewable_image === true;
+                if (!path || attachment.status !== "stored" || !isImage || seen.has(path)) return;
                 seen.add(path);
                 attachments.push({ attachment: attachment, path: path });
             });
@@ -16116,18 +16167,15 @@ function simpleBars(items, color) {
             if (current && current.expiresAt > Date.now() + 30000) return;
 
             try {
-                const isImage = entry.attachment.is_previewable_image === true;
-                const url = await signedEmailAttachmentUrl(entry.path, !isImage);
+                const url = await signedEmailAttachmentUrl(entry.path);
                 emailAttachmentUrlCache.set(entry.path, {
-                    previewUrl: isImage ? url : "",
-                    downloadUrl: isImage ? "" : url,
+                    previewUrl: url,
                     expiresAt: Date.now() + 8 * 60 * 1000
                 });
             } catch (error) {
-                console.warn("Unable to load a private email attachment:", error);
+                console.warn("Unable to load a private email image attachment:", error);
                 emailAttachmentUrlCache.set(entry.path, {
                     previewUrl: "",
-                    downloadUrl: "",
                     error: true,
                     expiresAt: Date.now() + 30000
                 });
@@ -16316,17 +16364,57 @@ function simpleBars(items, color) {
             }).join("|");
         };
 
+        const selectedThreadContentSignature = function (threadId) {
+            return state.emailMessages
+                .filter(function (message) {
+                    return String(message.thread_id || "") === String(threadId || "");
+                })
+                .map(function (message) {
+                    return JSON.stringify([
+                        message.id || "",
+                        message.subject || "",
+                        message.from_name || "",
+                        message.from_email || "",
+                        message.to_email || "",
+                        message.received_at || "",
+                        message.text_body || "",
+                        message.html_body || "",
+                        Array.isArray(message.attachments) ? message.attachments : []
+                    ]);
+                })
+                .join("|");
+        };
+
+        const viewBefore = state.currentView;
+        const selectedThreadIdBefore = String(state.emailSelectedThreadId || "");
         const before = signature();
+        const selectedThreadBefore = selectedThreadIdBefore
+            ? selectedThreadContentSignature(selectedThreadIdBefore)
+            : "";
 
         try {
             await loadEmailMessages();
 
+            // Avoid replacing an open HTML email iframe for unrelated inbox
+            // changes or read-state timestamp updates.
+            if (
+                state.currentView !== viewBefore ||
+                (viewBefore === "email" &&
+                    String(state.emailSelectedThreadId || "") !== selectedThreadIdBefore)
+            ) {
+                return;
+            }
+
+            if (viewBefore === "email" && selectedThreadIdBefore) {
+                if (selectedThreadBefore !== selectedThreadContentSignature(selectedThreadIdBefore)) {
+                    renderView();
+                }
+                return;
+            }
+
             if (
                 before !== signature() &&
-                (
-                    state.currentView === "email" ||
-                    state.currentView === "overview"
-                )
+                (viewBefore === "email" || viewBefore === "overview")
             ) {
                 renderView();
             }
@@ -28167,6 +28255,31 @@ function simpleBars(items, color) {
                     }
                     const notice = button.closest(".sway-email-remote-image-note");
                     if (notice) notice.remove();
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-email-attachment-download]")
+            .forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    const storagePath = String(button.dataset.emailAttachmentDownload || "");
+                    const filename = String(button.dataset.emailAttachmentFilename || "email-attachment");
+                    if (!storagePath || button.disabled) return;
+
+                    button.disabled = true;
+                    button.setAttribute("aria-busy", "true");
+                    try {
+                        await downloadEmailAttachment(storagePath, filename);
+                    } catch (error) {
+                        swayAlert(
+                            error && error.message
+                                ? error.message
+                                : "Unable to download this email attachment."
+                        );
+                    } finally {
+                        button.disabled = false;
+                        button.removeAttribute("aria-busy");
+                    }
                 });
             });
 
