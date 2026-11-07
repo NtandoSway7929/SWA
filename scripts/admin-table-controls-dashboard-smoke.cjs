@@ -504,9 +504,9 @@ async function main() {
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
 
-    const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
+    const leadActionRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     assert.equal(
-      await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").getAttribute("aria-label"),
+      await leadActionRow.locator(".sway-lead-actions-menu > summary").getAttribute("aria-label"),
       "Actions for Contact Toggle Fixture",
       "a lead row action disclosure should identify its lead to assistive technology"
     );
