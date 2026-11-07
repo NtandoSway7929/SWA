@@ -58,6 +58,11 @@
                     sort: (sortOptions(view)[0] || ["", ""])[0]
                 };
             }
+            if (view === "leads" || view === "tasks" || view === "followups") {
+                if (typeof state.tableControls[view].assigneeFilter !== "string") {
+                    state.tableControls[view].assigneeFilter = "all";
+                }
+            }
             if (!Array.isArray(state.tableSelection[view])) state.tableSelection[view] = [];
             if (typeof state.tableFeedback[view] !== "string") state.tableFeedback[view] = "";
             return state.tableControls[view];
@@ -70,6 +75,49 @@
             if (view === "invoices" && item.archived === true) return "archived";
             if (view === "communications") return String(item.direction || "unknown").trim().toLowerCase();
             return String(item.status || "").trim().toLowerCase();
+        }
+
+        function currentUserId() {
+            if (typeof context.currentUserId === "function") {
+                return String(context.currentUserId() || "").trim();
+            }
+            return String(context.currentUserId || "").trim();
+        }
+
+        function activeAdmins() {
+            const records = typeof context.admins === "function"
+                ? context.admins()
+                : context.admins;
+            return (Array.isArray(records) ? records : [])
+                .filter(function (admin) {
+                    return admin && admin.active !== false && String(admin.user_id || "").trim();
+                })
+                .slice()
+                .sort(function (a, b) {
+                    return String(a.full_name || a.email || a.user_id).localeCompare(
+                        String(b.full_name || b.email || b.user_id),
+                        undefined,
+                        { sensitivity: "base" }
+                    );
+                });
+        }
+
+        function assigneeFilterMatches(view, item, filter) {
+            if (view !== "leads" && view !== "tasks" && view !== "followups") {
+                return true;
+            }
+            if (!filter || filter === "all") return true;
+
+            const assignedTo = String(item.assigned_to || "").trim();
+            if (filter === "unassigned") return !assignedTo;
+            if (filter === "me") {
+                const userId = currentUserId();
+                return Boolean(userId) && assignedTo === userId;
+            }
+            if (filter.indexOf("user:") === 0) {
+                return assignedTo === filter.slice(5);
+            }
+            return true;
         }
 
         function searchText(view, item) {
@@ -101,8 +149,11 @@
         function items(view, sourceItems) {
             const controls = settings(view);
             const filterValue = String(controls.filter || "all").toLowerCase();
+            const assigneeFilter = String(controls.assigneeFilter || "all").trim();
             const result = (sourceItems || []).filter(function (item) {
-                return filterValue === "all" || statusValue(view, item) === filterValue;
+                const statusMatches = filterValue === "all" ||
+                    statusValue(view, item) === filterValue;
+                return statusMatches && assigneeFilterMatches(view, item, assigneeFilter);
             }).slice();
 
             function dateValue(value) {
@@ -220,6 +271,28 @@
                     (controls.sort === option[0] ? " selected" : "") + ">" +
                     esc(option[1]) + "</option>";
             }).join("");
+            const assigneeFilterValue = String(controls.assigneeFilter || "all").trim();
+            const assigneeFilterHtml = view === "leads" || view === "tasks" || view === "followups"
+                ? '<label class="sway-admin-table-field"><span>Assigned to</span>' +
+                    '<select data-admin-table-assignee-filter="' + esc(view) +
+                    '" aria-label="Filter ' + esc(view) + ' by assignee">' +
+                    '<option value="all"' + (assigneeFilterValue === "all" ? " selected" : "") +
+                    '>All assignees</option>' +
+                    '<option value="me"' + (assigneeFilterValue === "me" ? " selected" : "") +
+                    '>Assigned to me</option>' +
+                    '<option value="unassigned"' +
+                    (assigneeFilterValue === "unassigned" ? " selected" : "") +
+                    '>Unassigned</option>' +
+                    activeAdmins().filter(function (admin) {
+                        return String(admin.user_id) !== currentUserId();
+                    }).map(function (admin) {
+                        const optionValue = "user:" + String(admin.user_id);
+                        return '<option value="' + esc(optionValue) + '"' +
+                            (assigneeFilterValue === optionValue ? " selected" : "") + ">" +
+                            esc(admin.full_name || admin.email || admin.user_id) + "</option>";
+                    }).join("") +
+                    "</select></label>"
+                : "";
             const bulk = view === "leads"
                 ? '<button type="button" class="sway-admin-table-bulk-button" data-admin-table-bulk-action="export">Export selected CSV</button>' +
                   '<button type="button" class="sway-admin-table-bulk-button sway-admin-table-bulk-delete-button" data-admin-table-bulk-action="delete" aria-label="Permanently delete selected leads">Delete selected leads</button>'
@@ -239,7 +312,7 @@
                 view === "invoices" ? "Invoice number, client, status or date" :
                 "Contact, channel or assignee";
             return '<div class="sway-admin-table-tools" data-admin-table-tools="' + esc(view) + '">' +
-                '<div class="sway-admin-table-control-grid">' +
+                '<div class="sway-admin-table-control-grid" data-admin-table-control-grid-view="' + esc(view) + '">' +
                     '<label class="sway-admin-table-search-label"><span>Search</span>' +
                         '<input type="search" data-admin-table-search-input="' + esc(view) +
                         '" value="' + esc(controls.search) + '" placeholder="' + placeholder +
@@ -248,6 +321,7 @@
                     '<label class="sway-admin-table-field"><span>Status</span>' +
                         '<select data-admin-table-filter="' + esc(view) + '" aria-label="Filter ' + esc(view) + ' by status">' +
                             filterOptions + '</select></label>' +
+                    assigneeFilterHtml +
                     '<label class="sway-admin-table-field"><span>Sort by</span>' +
                         '<select data-admin-table-sort="' + esc(view) + '" aria-label="Sort ' + esc(view) + '">' +
                             sortHtml + '</select></label>' +
@@ -539,6 +613,15 @@
                     settings(view).filter = select.value;
                     renderView();
                     const replacement = workspace.querySelector('[data-admin-table-filter="' + view + '"]');
+                    if (replacement) replacement.focus();
+                });
+            });
+            workspace.querySelectorAll("[data-admin-table-assignee-filter]").forEach(function (select) {
+                select.addEventListener("change", function () {
+                    const view = select.getAttribute("data-admin-table-assignee-filter");
+                    settings(view).assigneeFilter = select.value;
+                    renderView();
+                    const replacement = workspace.querySelector('[data-admin-table-assignee-filter="' + view + '"]');
                     if (replacement) replacement.focus();
                 });
             });
