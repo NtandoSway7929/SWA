@@ -208,8 +208,10 @@
                 statuses.push(currentFilter);
             }
             statuses.sort();
+            const filterLabel = view === "communications" ? "Direction" : "Status";
+            const allFilterLabel = view === "communications" ? "All directions" : "All statuses";
             const filterOptions = ['<option value="all"' +
-                (controls.filter === "all" ? " selected" : "") + '>All statuses</option>']
+                (controls.filter === "all" ? " selected" : "") + ">" + allFilterLabel + "</option>"]
                 .concat(statuses.map(function (status) {
                     return '<option value="' + esc(status) + '"' +
                         (controls.filter === status ? " selected" : "") + ">" +
@@ -245,8 +247,8 @@
                         '" value="' + esc(controls.search) + '" placeholder="' + placeholder +
                         '" aria-label="Search ' + esc(view) + '">' +
                     '</label>' +
-                    '<label class="sway-admin-table-field"><span>Status</span>' +
-                        '<select data-admin-table-filter="' + esc(view) + '" aria-label="Filter ' + esc(view) + ' by status">' +
+                    '<label class="sway-admin-table-field"><span>' + esc(filterLabel) + '</span>' +
+                        '<select data-admin-table-filter="' + esc(view) + '" aria-label="Filter ' + esc(view) + ' by ' + esc(filterLabel.toLowerCase()) + '">' +
                             filterOptions + '</select></label>' +
                     '<label class="sway-admin-table-field"><span>Sort by</span>' +
                         '<select data-admin-table-sort="' + esc(view) + '" aria-label="Sort ' + esc(view) + '">' +
