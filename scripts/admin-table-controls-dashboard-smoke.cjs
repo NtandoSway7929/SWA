@@ -1027,13 +1027,10 @@ async function main() {
       console.error("Inbox read-state update diagnostic:", JSON.stringify(readStateDebug));
       throw error;
     }
-    await page.waitForFunction(() =>
-      document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
-    , null, { timeout: 5000 });
     try {
       await page.waitForFunction(() =>
         document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
-      );
+      , null, { timeout: 5000 });
     } catch (error) {
       const focusDebug = await page.evaluate(() => ({
         activeElement: document.activeElement?.outerHTML || "",
