@@ -81,6 +81,16 @@ create table public.tasks (
   updated_at timestamptz not null default now()
 );
 
+create table public.invoices (
+  id uuid primary key default gen_random_uuid(),
+  invoice_number text,
+  client_id uuid references public.clients(id) on delete set null,
+  due_date date,
+  amount_outstanding numeric(12,2),
+  total numeric(12,2),
+  status text not null default 'draft'
+);
+
 create table public.workflow_settings (
   id smallint primary key default 1 check (id = 1),
   new_lead_response_hours integer not null default 24,
