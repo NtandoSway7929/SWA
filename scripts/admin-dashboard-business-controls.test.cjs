@@ -11,6 +11,8 @@ const css = fs.readFileSync(path.join(root, "admin-dashboard", "admin-settings-e
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
 const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261025020000_admin_dashboard_business_controls.sql"), "utf8");
 const firstContactMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261107190000_swayphics_first_contact_task_automation.sql"), "utf8");
+const dueWorkMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261107210000_escalate_unassigned_due_work.sql"), "utf8");
+const notificationBaseline = fs.readFileSync(path.join(root, "supabase", "swayphics-admin-notifications.sql"), "utf8");
 const deliveryMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261025031000_swayphics_project_delivery_settings.sql"), "utf8");
 const baseline = fs.readFileSync(path.join(root, "supabase", "swayphics-business-flow.sql"), "utf8");
 const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "validate-site.yml"), "utf8");
@@ -181,6 +183,30 @@ test("first-contact SLA creates one internal follow-up without changing a new le
   assert.ok(html.includes("admin-settings-expanded.js?v=20261107-first-contact-automation-1"));
   assert.ok(baseline.includes("Automatic first-contact task: response target missed after "));
   assert.ok(baseline.includes("trg_complete_swayphics_first_contact_followups"));
+});
+
+
+test("due tasks and follow-ups escalate when assignees are missing or inactive", () => {
+  const workerStart = dueWorkMigration.indexOf("create or replace function innerme_private.generate_admin_due_notifications_internal()");
+  const worker = dueWorkMigration.slice(workerStart);
+
+  assert.ok(workerStart >= 0, "the private due-notification worker must be replaced");
+  assert.match(worker, /from public\.tasks t[\s\S]*?where t\.status <> 'completed'[\s\S]*?t\.due_date <= current_date/i);
+  assert.match(worker, /from public\.follow_ups f[\s\S]*?where f\.status = 'pending'[\s\S]*?f\.scheduled_for <= current_date/i);
+  assert.equal((worker.match(/where au\.user_id = [tf]\.assigned_to\s+and au\.active = true/gi) || []).length, 2,
+    "both task and follow-up assignees must be checked against active administrators");
+  assert.equal((worker.match(/if r\.assignee_active then/gi) || []).length, 2);
+  assert.equal((worker.match(/perform public\.notify_admins\(/gi) || []).length, 3,
+    "unassigned/inactive task and follow-up work should escalate to all active admins; invoice routing remains shared");
+  assert.match(worker, /No active assignee; administrator attention required\./);
+  assert.match(worker, /task-due:' \|\| r\.id::text \|\| ':' \|\| r\.due_date::text/);
+  assert.match(worker, /followup-due:' \|\| r\.id::text \|\| ':' \|\| r\.scheduled_for::text/);
+  assert.match(worker, /where coalesce\(i\.status, ''\) not in \('paid', 'cancelled'\)/,
+    "invoice due reminders must remain unchanged");
+  assert.ok(dueWorkMigration.includes("revoke all privileges"));
+  assert.ok(notificationBaseline.includes("No active assignee; administrator attention required."));
+  assert.ok(notificationBaseline.includes("where au.user_id = t.assigned_to and au.active = true"));
+  assert.ok(notificationBaseline.includes("where au.user_id = f.assigned_to and au.active = true"));
 });
 
 test("automation-health RPC requires an active admin and limits exposed jobs", () => {
