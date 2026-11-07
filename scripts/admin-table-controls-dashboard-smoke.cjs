@@ -933,9 +933,28 @@ async function main() {
     await page.waitForFunction(() =>
       document.querySelector('[data-email-thread-read-toggle="thread-ui-test"]')?.textContent.trim() === "Mark unread"
     );
-    await page.waitForFunction(() =>
-      document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
-    );
+    try {
+      await page.waitForFunction(() =>
+        document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
+      );
+    } catch (error) {
+      const focusDebug = await page.evaluate(() => ({
+        activeElement: document.activeElement?.outerHTML || "",
+        readActions: Array.from(document.querySelectorAll("[data-email-thread-read-toggle]")).map(button => ({
+          html: button.outerHTML,
+          connected: button.isConnected,
+          disabled: button.disabled,
+          rect: (() => {
+            const value = button.getBoundingClientRect();
+            return { x: value.x, y: value.y, width: value.width, height: value.height };
+          })()
+        })),
+        workspaceView: document.querySelector("#sway-admin-workspace")?.getAttribute("data-current-view") || "",
+        bulkReadRunning: document.querySelector("[data-email-bulk-read]")?.disabled ?? null
+      }));
+      console.error("Inbox read action focus diagnostic:", JSON.stringify(focusDebug));
+      throw error;
+    }
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute("data-email-thread-read-toggle") || ""),
       "thread-ui-test",
