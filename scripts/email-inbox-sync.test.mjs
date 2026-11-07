@@ -114,19 +114,31 @@ test("IMAP sync uses bounded role-specific socket timeouts", () => {
   assert.ok(syncFunctionSource.includes('client.on("error"'));
 });
 
-test("existing inbound media backfill leaves incomplete body downloads retryable", () => {
-  const backfillStart = syncFunctionSource.indexOf("const refreshedBody = await fetchMessageBody(");
-  const bodyGuard = syncFunctionSource.indexOf("if (!refreshedBody.bodyDownloadSucceeded)", backfillStart);
-  const attachmentDownload = syncFunctionSource.indexOf("const refreshedAttachments = await storeEmailAttachments(", backfillStart);
-  const completionUpdate = syncFunctionSource.indexOf("media_processed_at: new Date().toISOString()", backfillStart);
+test("authenticated inbox hydration parses bounded full RFC822 sources instead of fetching MIME parts individually", () => {
+  assert.ok(syncFunctionSource.includes('import PostalMime from "npm:postal-mime@4.2.0";'));
+  assert.ok(syncFunctionSource.includes("source: isAuthenticatedUser"));
+  assert.ok(syncFunctionSource.includes("maxLength: MAX_SOURCE_LENGTH"));
+  assert.ok(syncFunctionSource.includes("await PostalMime.parse(sourceBytes"));
+  assert.ok(syncFunctionSource.includes('attachmentEncoding: "arraybuffer"'));
+  assert.ok(syncFunctionSource.includes("const MAX_SOURCE_LENGTH = 32 * 1024 * 1024;"));
+  assert.ok(!syncFunctionSource.includes("imapClient.download("));
+  assert.ok(!syncFunctionSource.includes("collectEmailMimeParts"));
+});
+
+test("existing inbound media backfill parses full source before marking media processed", () => {
+  const backfillStart = syncFunctionSource.indexOf("const storedMessage = await client.fetchOne(");
+  const sourceParse = syncFunctionSource.indexOf("const refreshedBody = await fetchMessageBody(", backfillStart);
+  const attachmentStore = syncFunctionSource.indexOf("const refreshedAttachments = await storeEmailAttachments(", sourceParse);
+  const completionUpdate = syncFunctionSource.indexOf("media_processed_at: new Date().toISOString()", sourceParse);
 
   assert.notEqual(backfillStart, -1);
-  assert.notEqual(bodyGuard, -1);
-  assert.notEqual(attachmentDownload, -1);
+  assert.notEqual(sourceParse, -1);
+  assert.notEqual(attachmentStore, -1);
   assert.notEqual(completionUpdate, -1);
-  assert.ok(backfillStart < bodyGuard);
-  assert.ok(bodyGuard < attachmentDownload);
-  assert.ok(attachmentDownload < completionUpdate);
+  assert.ok(backfillStart < sourceParse);
+  assert.ok(sourceParse < attachmentStore);
+  assert.ok(attachmentStore < completionUpdate);
+  assert.ok(syncFunctionSource.includes("storedMessage.source"));
 });
 
 test("new inbound email is persisted before MIME body or attachment downloads", () => {
