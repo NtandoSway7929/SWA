@@ -372,6 +372,9 @@ async function verifyBulkLeadDeletion() {
     const toolbar = { hidden: false };
     const selectedCount = { textContent: "" };
     const feedback = { hidden: true, textContent: "" };
+    let focusedTarget = "";
+    const remainingSelectedCheckbox = { focus() { focusedTarget = "remaining-selected-checkbox"; } };
+    const searchInput = { focus() { focusedTarget = "search-input"; } };
     const handlers = {};
     let confirmResult = false;
     let confirmationText = "";
@@ -393,6 +396,10 @@ async function verifyBulkLeadDeletion() {
             if (selector === '[data-admin-table-bulk-toolbar="leads"]') return toolbar;
             if (selector === '[data-admin-table-selected-count="leads"]') return selectedCount;
             if (selector === '[data-admin-table-feedback="leads"]') return feedback;
+            if (selector === '[data-admin-table-row="leads"]:not([hidden]) [data-admin-table-select="leads"]:checked') {
+                return remainingSelectedCheckbox;
+            }
+            if (selector === '[data-admin-table-search-input="leads"]') return searchInput;
             return null;
         },
         querySelectorAll(selector) {
@@ -460,6 +467,8 @@ async function verifyBulkLeadDeletion() {
         "bulk toolbar controls must be re-enabled after the delete callback settles");
     assert.equal(renderCount, 1,
         "the Leads view should rerender once after the bulk delete attempt");
+    assert.equal(focusedTarget, "remaining-selected-checkbox",
+        "a partially failed bulk deletion should return focus to a visible record that remains selected");
 }
 
 
