@@ -92,7 +92,9 @@ test("Inbox read-state focus follows the replacement control after rerender", ()
   assert.ok(inboxFocusJs.includes("}, true);"), "the focus observer must capture the action before workspace event handlers");
   assert.ok(inboxFocusJs.includes('new MutationObserver(restoreFocusAfterUpdate)'));
   assert.ok(inboxFocusJs.includes("findCurrentButton()"));
-  assert.ok(inboxFocusJs.includes('currentButton.focus({ preventScroll: true })'));
+  assert.ok(inboxFocusJs.includes('finalButton.focus({ preventScroll: true })'));
+  assert.ok(inboxFocusJs.includes('window.setTimeout(function () {'));
+  assert.ok(inboxFocusJs.includes("diagnostic.finalFocusSucceeded"));
   assert.ok(inboxFocusJs.includes("currentButton.dataset.emailReadValue"));
   assert.ok(dashboardHtml.includes("inbox-read-state-focus.js?v=20261107-inbox-read-state-focus-1"));
 });
