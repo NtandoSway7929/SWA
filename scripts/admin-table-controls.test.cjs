@@ -26,6 +26,10 @@ for (const view of ["leads", "followups", "tasks", "communications"]) {
 }
 assert.ok(workspaceSource.includes("adminTableControls.bind();"),
     "dashboard view lifecycle must bind the table controls after rendering");
+assert.match(workspaceSource, /admins: function \(\) \{[\s\S]*?return state\.admins;/,
+    "assignee filter options must use the authenticated admin team data");
+assert.match(workspaceSource, /currentUserId: function \(\) \{[\s\S]*?state\.currentUser && state\.currentUser\.id/,
+    "Assigned to me must compare against the authenticated user ID");
 assert.match(workspaceSource, /data-toggle-lead-contacted=/,
     "each eligible lead row should expose the contacted toggle in its Actions dropdown");
 const bulkDeleteHandlerIndex = workspaceSource.indexOf("async function deleteSelectedTableRecords(view, ids)");
