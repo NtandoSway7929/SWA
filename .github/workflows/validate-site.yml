@@ -42,6 +42,9 @@ jobs:
       - name: Test admin dashboard redesign contracts
         run: node scripts/admin-dashboard-redesign.test.cjs
 
+      - name: Test admin notification accessibility
+        run: node scripts/admin-notification-accessibility.test.cjs
+
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
 
