@@ -1305,12 +1305,21 @@
                 selectTab(root, tab.getAttribute("data-settings-tab"));
             });
             tab.addEventListener("keydown", function (event) {
-                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft" &&
+                    event.key !== "Home" && event.key !== "End") return;
                 event.preventDefault();
                 var tabs = Array.from(root.querySelectorAll("[data-settings-tab]"));
+                if (!tabs.length) return;
                 var index = tabs.indexOf(tab);
-                var delta = event.key === "ArrowRight" ? 1 : -1;
-                var next = tabs[(index + delta + tabs.length) % tabs.length];
+                var next;
+                if (event.key === "Home") {
+                    next = tabs[0];
+                } else if (event.key === "End") {
+                    next = tabs[tabs.length - 1];
+                } else {
+                    var delta = event.key === "ArrowRight" ? 1 : -1;
+                    next = tabs[(index + delta + tabs.length) % tabs.length];
+                }
                 selectTab(root, next.getAttribute("data-settings-tab"));
                 next.focus();
             });
