@@ -1,0 +1,31 @@
+name: Cash Flow accessible monthly breakdowns
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/admin-cash-flow-data.css"
+      - "admin-dashboard/index.html"
+      - "scripts/admin-cash-flow-data-table.test.cjs"
+      - ".github/workflows/admin-cash-flow-data-table.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate workspace JavaScript
+        run: node --check admin-dashboard/admin-workspace.js
+
+      - name: Test Cash Flow monthly breakdowns
+        run: node scripts/admin-cash-flow-data-table.test.cjs
