@@ -9748,27 +9748,11 @@ function simpleBars(items, color) {
                 }, 0);
 
         const outstandingInvoices =
-            state.invoices.filter(function (invoice) {
-                return (
-                    invoice.archived !== true &&
-                    invoice.status !== "paid" &&
-                    invoice.status !== "cancelled" &&
-                    Number(
-                        invoice.amount_outstanding != null
-                            ? invoice.amount_outstanding
-                            : invoice.total || 0
-                    ) > 0
-                );
-            });
+            activeOutstandingInvoices();
 
         const outstanding =
             outstandingInvoices.reduce(function (sum, invoice) {
-                return sum +
-                    Number(
-                        invoice.amount_outstanding != null
-                            ? invoice.amount_outstanding
-                            : invoice.total || 0
-                    );
+                return sum + invoiceOutstandingBalance(invoice);
             }, 0);
 
         const overdue =
@@ -9781,12 +9765,7 @@ function simpleBars(items, color) {
 
         const overdueValue =
             overdue.reduce(function (sum, invoice) {
-                return sum +
-                    Number(
-                        invoice.amount_outstanding != null
-                            ? invoice.amount_outstanding
-                            : invoice.total || 0
-                    );
+                return sum + invoiceOutstandingBalance(invoice);
             }, 0);
 
         const next30 =
@@ -9857,12 +9836,7 @@ function simpleBars(items, color) {
                         );
                     })
                     .reduce(function (sum, invoice) {
-                        return sum +
-                            Number(
-                                invoice.amount_outstanding != null
-                                    ? invoice.amount_outstanding
-                                    : invoice.total || 0
-                            );
+                        return sum + invoiceOutstandingBalance(invoice);
                     }, 0);
             });
 
@@ -11956,6 +11930,27 @@ function simpleBars(items, color) {
         );
     }
 
+    function invoiceOutstandingBalance(invoice) {
+        if (!invoice) return 0;
+
+        return Number(
+            invoice.amount_outstanding != null
+                ? invoice.amount_outstanding
+                : invoice.total || 0
+        );
+    }
+
+    function activeOutstandingInvoices() {
+        return state.invoices.filter(function (invoice) {
+            return (
+                invoice.archived !== true &&
+                invoice.status !== "paid" &&
+                invoice.status !== "cancelled" &&
+                invoiceOutstandingBalance(invoice) > 0
+            );
+        });
+    }
+
     function renderOverview() {
         const today =
             dashboardTodayISO();
@@ -11982,20 +11977,9 @@ function simpleBars(items, color) {
             }).length;
 
         const outstanding =
-            state.invoices
-                .filter(function (invoice) {
-                    return invoice.status !== "cancelled";
-                })
-                .reduce(function (sum, invoice) {
-                    return (
-                        sum +
-                        Number(
-                            invoice.amount_outstanding != null
-                                ? invoice.amount_outstanding
-                                : invoice.total || 0
-                        )
-                    );
-                }, 0);
+            activeOutstandingInvoices().reduce(function (sum, invoice) {
+                return sum + invoiceOutstandingBalance(invoice);
+            }, 0);
 
         const pipeline =
             state.leads
