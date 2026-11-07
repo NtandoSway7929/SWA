@@ -84,12 +84,20 @@
                 }
             }
 
-            return new Intl.DateTimeFormat("en-CA", {
+            const parts = new Intl.DateTimeFormat("en-US", {
                 timeZone: "Africa/Johannesburg",
                 year: "numeric",
                 month: "2-digit",
                 day: "2-digit"
-            }).format(new Date());
+            }).formatToParts(new Date());
+            const dateParts = Object.fromEntries(parts
+                .filter(function (part) {
+                    return part.type !== "literal";
+                })
+                .map(function (part) {
+                    return [part.type, part.value];
+                }));
+            return dateParts.year + "-" + dateParts.month + "-" + dateParts.day;
         }
 
         function recordDateKey(view, item) {
@@ -280,7 +288,7 @@
             const dateFilterOptions = [
                 ["all", "All dates"],
                 ["overdue", "Overdue"],
-                ["today", "Due today"],
+                ["today", view === "tasks" ? "Due today" : "Scheduled today"],
                 ["upcoming", "Upcoming"],
                 ["undated", "No date"]
             ];
@@ -314,8 +322,11 @@
                 view === "communications" ? "Contact, channel, subject or message" :
                 view === "invoices" ? "Invoice number, client, status or date" :
                 "Contact, channel or assignee";
+            const resetFilterDescription = view === "tasks" || view === "followups"
+                ? "search, status and date filters"
+                : "search and status filters";
             return '<div class="sway-admin-table-tools" data-admin-table-tools="' + esc(view) + '">' +
-                '<div class="sway-admin-table-control-grid">' +
+                '<div class="sway-admin-table-control-grid" data-admin-table-control-grid-view="' + esc(view) + '">' +
                     '<label class="sway-admin-table-search-label"><span>Search</span>' +
                         '<input type="search" data-admin-table-search-input="' + esc(view) +
                         '" value="' + esc(controls.search) + '" placeholder="' + placeholder +
@@ -330,7 +341,7 @@
                             sortHtml + '</select></label>' +
                     '<div class="sway-admin-table-count" data-admin-table-count="' + esc(view) + '" aria-live="polite"></div>' +
                     '<button type="button" class="sway-admin-table-reset-button" data-admin-table-reset-filters="' + esc(view) +
-                    '" aria-label="Clear search, status and date filters for ' + esc(view) + '; keep sort order"' +
+                    '" aria-label="Clear ' + resetFilterDescription + ' for ' + esc(view) + '; keep sort order"' +
                     (String(controls.search || "").trim() ||
                         currentFilter !== "all" ||
                         ((view === "tasks" || view === "followups") && dateFilterValue !== "all")
