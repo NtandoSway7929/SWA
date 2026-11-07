@@ -143,6 +143,10 @@ async function downloadMimePartBytes(
     }
   );
 
+  if (!downloaded?.content) {
+    throw new Error("The email MIME part could not be downloaded from the mailbox.");
+  }
+
   const chunks: Uint8Array[] = [];
   let totalLength = 0;
 
@@ -178,12 +182,10 @@ async function decodeMimeTextPart(
     part,
     MAX_EMAIL_BODY_BYTES
   );
-  const charset = String(part.parameters?.charset || "utf-8");
-  try {
-    return new TextDecoder(charset, { fatal: false }).decode(bytes);
-  } catch {
-    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-  }
+  // ImapFlow download() has already removed transfer encoding and converted
+  // text parts to UTF-8. Decode the returned bytes as UTF-8, not the original
+  // MIME charset, or non-UTF-8 source charsets would be applied twice.
+  return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
 }
 
 async function fetchMessageBody(
@@ -1142,11 +1144,14 @@ Deno.serve(async (req) => {
               media_processed_at: new Date().toISOString()
             })
             .eq("id", record.id)
-            .is("media_processed_at", null);
+            .is("media_processed_at", null)
+            .select("id")
+            .maybeSingle();
 
-          if (updateResult.error) {
+          if (updateResult.error || !updateResult.data?.id) {
             await cleanupStoredEmailAttachments(supabase, refreshedAttachments);
-            throw updateResult.error;
+            if (updateResult.error) throw updateResult.error;
+            continue;
           }
 
           existingMediaHydrated += 1;
