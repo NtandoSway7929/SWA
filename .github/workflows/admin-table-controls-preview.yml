@@ -114,6 +114,9 @@ jobs:
           cp "$GITHUB_WORKSPACE/tests/admin-table-controls-db/first-contact-automation-test.sql" \
             "supabase/migrations/20261107190100_first_contact_automation_test_rpc.sql"
           "$CLI" start
+          # Replay the copied schema, production migration under test, and
+          # test-only RPC against this throwaway database before exercising it.
+          "$CLI" db reset --local --yes
           "$CLI" status --output env > "$RUNNER_TEMP/local-supabase.env"
 
           set -a
