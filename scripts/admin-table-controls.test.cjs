@@ -220,9 +220,9 @@ for (const view of ["tasks", "followups", "communications"]) {
     assert.match(viewControls, /Export selected CSV/,
         view + " export action should be clearly labelled");
 }
-assert.match(moduleSource, /view === "communications"[\\s\\S]*?\["Contact", "Channel", "Direction", "Subject", "Message", "Communicated at", "Created by"\]/,
+assert.ok(moduleSource.includes('headings = ["Contact", "Channel", "Direction", "Subject", "Message", "Communicated at", "Created by"]'),
     "Communication Log exports must use communication-specific columns rather than follow-up fields");
-assert.match(moduleSource, /item\.contacted_at \|\| item\.created_at/,
+assert.ok(moduleSource.includes("item.contacted_at || item.created_at"),
     "Communication Log exports should include the best available communication timestamp");
 assert.match(controls.renderControls("tasks"), /Complete selected/,
     "task bulk completion should remain available alongside bulk deletion");
