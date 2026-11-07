@@ -9459,9 +9459,13 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
 }
 .sway-admin-table-control-grid {
     display: grid;
-    grid-template-columns: minmax(220px, 1.7fr) minmax(140px, .8fr) minmax(190px, 1fr) auto;
+    grid-template-columns: minmax(220px, 1.7fr) minmax(140px, .8fr) minmax(190px, 1fr) auto auto;
     align-items: end;
     gap: 12px;
+}
+.sway-admin-table-control-grid[data-admin-table-control-grid-view="tasks"],
+.sway-admin-table-control-grid[data-admin-table-control-grid-view="followups"] {
+    grid-template-columns: minmax(180px, 1.5fr) minmax(115px, .75fr) minmax(125px, .85fr) minmax(170px, 1fr) auto auto;
 }
 .sway-admin-table-search-label,
 .sway-admin-table-field {
@@ -9498,6 +9502,12 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
     padding: 0 0 11px;
     color: var(--text-muted, #687385);
     font-size: .77rem;
+    white-space: nowrap;
+}
+.sway-admin-table-reset-button {
+    align-self: end;
+    justify-self: start;
+    margin-bottom: 2px;
     white-space: nowrap;
 }
 .sway-admin-table-bulk-toolbar {
@@ -9571,6 +9581,10 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
     .sway-admin-table-control-grid {
         grid-template-columns: minmax(200px, 1.4fr) minmax(130px, .8fr);
     }
+    .sway-admin-table-control-grid[data-admin-table-control-grid-view="tasks"],
+    .sway-admin-table-control-grid[data-admin-table-control-grid-view="followups"] {
+        grid-template-columns: minmax(200px, 1.4fr) minmax(130px, .8fr);
+    }
     .sway-admin-table-count {
         padding-bottom: 0;
     }
@@ -9579,6 +9593,10 @@ body.sway-dark-mode #sway-admin-workspace .sway-innerme-chat-view .sway-ai-retry
     .sway-admin-table-control-grid {
         grid-template-columns: minmax(0, 1fr);
         gap: 10px;
+    }
+    .sway-admin-table-control-grid[data-admin-table-control-grid-view="tasks"],
+    .sway-admin-table-control-grid[data-admin-table-control-grid-view="followups"] {
+        grid-template-columns: minmax(0, 1fr);
     }
     .sway-admin-table-search-label input,
     .sway-admin-table-field select {
@@ -10090,7 +10108,6 @@ body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-pending > span 
         flex-direction: column;
     }
 }
-
 
 /* Inbox conversation read-state action */
 #sway-admin-workspace .sway-email-inbox-row {

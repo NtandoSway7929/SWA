@@ -28393,22 +28393,11 @@ function simpleBars(items, color) {
                     button.disabled = true;
                     button.setAttribute("aria-busy", "true");
 
+                    let restoreFocus = false;
                     try {
                         await setEmailThreadReadState(threadId, isRead);
                         renderView();
-
-                        const nextToggle = Array.from(
-                            workspace.querySelectorAll("[data-email-thread-read-toggle]")
-                        ).find(function (item) {
-                            return String(item.dataset.emailThreadReadToggle || "") === threadId;
-                        });
-                        const fallback = nextToggle || workspace.querySelector(
-                            "[data-email-inbox-search], [data-email-inbox-filter], [data-email-sync], [data-email-thread]"
-                        );
-
-                        if (fallback && typeof fallback.focus === "function") {
-                            fallback.focus();
-                        }
+                        restoreFocus = true;
                     } catch (error) {
                         swayAlert(
                             error && error.message
@@ -28418,6 +28407,23 @@ function simpleBars(items, color) {
                     } finally {
                         button.disabled = false;
                         button.removeAttribute("aria-busy");
+
+                        if (restoreFocus) {
+                            window.setTimeout(function () {
+                                const nextToggle = Array.from(
+                                    workspace.querySelectorAll("[data-email-thread-read-toggle]")
+                                ).find(function (item) {
+                                    return String(item.dataset.emailThreadReadToggle || "") === threadId;
+                                });
+                                const focusTarget = nextToggle || workspace.querySelector(
+                                    "[data-email-inbox-search], [data-email-inbox-filter], [data-email-sync], [data-email-thread]"
+                                );
+                                if (focusTarget && !focusTarget.disabled &&
+                                    typeof focusTarget.focus === "function") {
+                                    focusTarget.focus();
+                                }
+                            }, 0);
+                        }
                     }
                 });
             });
