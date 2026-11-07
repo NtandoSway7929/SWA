@@ -428,7 +428,7 @@ async function findExistingInboundMessage(
 
   const result = await supabase
     .from("email_messages")
-    .select("id,attachments,media_processed_at")
+    .select("id,attachments,media_processed_at,text_body,html_body")
     .eq("mailbox", MAILBOX)
     .eq("direction", "inbound")
     .eq("message_id", messageId)
@@ -879,8 +879,8 @@ Deno.serve(async (req) => {
                 imap_uid_validity: uidValidity,
                 source_key: existingSourceKey,
                 ...(mediaAlreadyProcessed ? {} : {
-                  text_body: body.text || subject || "(Email received)",
-                  html_body: body.html || null,
+                  text_body: body.text || existingInbound.text_body || subject || "(Email received)",
+                  html_body: body.html || existingInbound.html_body || null,
                   attachments: hydratedAttachments,
                   media_processed_at: new Date().toISOString()
                 })
@@ -1119,7 +1119,7 @@ Deno.serve(async (req) => {
       try {
         const pendingMedia = await supabase
           .from("email_messages")
-          .select("id,imap_uid,imap_uid_validity,message_id,media_processed_at")
+          .select("id,imap_uid,imap_uid_validity,message_id,media_processed_at,text_body,html_body")
           .eq("mailbox", MAILBOX)
           .eq("direction", "inbound")
           .eq("imap_uid_validity", uidValidity)
@@ -1162,8 +1162,8 @@ Deno.serve(async (req) => {
           const updateResult = await supabase
             .from("email_messages")
             .update({
-              text_body: refreshedBody.text || "(Email received)",
-              html_body: refreshedBody.html || null,
+              text_body: refreshedBody.text || record.text_body || "(Email received)",
+              html_body: refreshedBody.html || record.html_body || null,
               attachments: refreshedAttachments,
               media_processed_at: new Date().toISOString()
             })
