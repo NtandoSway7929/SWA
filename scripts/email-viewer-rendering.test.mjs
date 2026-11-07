@@ -48,8 +48,8 @@ test("background inbox polling does not reload an unchanged selected email", () 
 });
 
 test("the updated email viewer assets are cache-busted", () => {
-  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-read-state-actions-1"));
-  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-admin-table-filter-reset-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-viewer-refinements-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-task-followup-date-filters-1"));
 });
 
 test("Inbox conversations can be marked read or unread from the list without opening them", () => {
@@ -66,5 +66,5 @@ test("Inbox conversations can be marked read or unread from the list without ope
   assert.ok(workspaceCss.includes(".sway-email-inbox-read-toggle"));
   assert.ok(workspaceCss.includes("body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-read-toggle"));
   assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-read-state-actions-1"));
-  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-admin-table-filter-reset-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-task-followup-date-filters-1"));
 });
