@@ -51,3 +51,14 @@ test("the updated email viewer assets are cache-busted", () => {
   assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261107-email-viewer-refinements-1"));
   assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261107-email-viewer-refinements-1"));
 });
+
+
+test("Inbox navigation displays and refreshes the unread conversation count", () => {
+  assert.ok(workspaceJs.includes("function updateInboxNavigationCount()"));
+  assert.ok(workspaceJs.includes("emailThreadGroups().filter(function (thread)"));
+  assert.ok(workspaceJs.includes("emailThreadHasInbound(thread) && emailThreadUnread(thread)"));
+  assert.ok(workspaceJs.includes('workspace.querySelectorAll(\'[data-view="email"]\')'));
+  assert.ok(workspaceJs.includes("updateInboxNavigationCount();"));
+  assert.ok(workspaceJs.includes("badge.textContent = String(unreadCount)"));
+  assert.ok(workspaceJs.includes("badge.remove()"));
+});
