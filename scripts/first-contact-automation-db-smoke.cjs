@@ -106,15 +106,15 @@ async function main() {
     });
 
     const leads = [
-      { id: emailLeadId, business_name: "CI First Contact Email", email: "email@example.invalid", status: "new", assigned_to: assigned.id, created_at: createdAt },
-      { id: phoneLeadId, business_name: "CI First Contact Phone", phone: "+27110000001", status: "new", assigned_to: null, created_at: createdAt },
-      { id: otherLeadId, business_name: "CI First Contact Other", status: "new", assigned_to: null, created_at: createdAt },
-      { id: contactLeadId, business_name: "CI First Contact Completed", email: "contact@example.invalid", status: "new", assigned_to: owner.id, created_at: createdAt },
-      { id: lostLeadId, business_name: "CI First Contact Lost", phone: "+27110000002", status: "new", assigned_to: owner.id, created_at: createdAt },
-      { id: notInterestedLeadId, business_name: "CI First Contact Not Interested", status: "new", assigned_to: owner.id, created_at: createdAt },
-      { id: recentLeadId, business_name: "CI Recent Lead", email: "recent@example.invalid", status: "new", assigned_to: owner.id, created_at: recentAt },
-      { id: priorTaskLeadId, business_name: "CI Lead With Prior Follow-up", email: "prior@example.invalid", status: "new", assigned_to: owner.id, created_at: createdAt },
-      { id: stageLeadId, business_name: "CI Later Stage Lead", email: "stage@example.invalid", status: "contacted", assigned_to: assigned.id, created_at: createdAt, last_contacted_at: oldContactAt }
+      { id: emailLeadId, business_name: "CI First Contact Email", email: "email@example.invalid", phone: null, status: "new", assigned_to: assigned.id, created_at: createdAt, last_contacted_at: null },
+      { id: phoneLeadId, business_name: "CI First Contact Phone", email: null, phone: "+27110000001", status: "new", assigned_to: null, created_at: createdAt, last_contacted_at: null },
+      { id: otherLeadId, business_name: "CI First Contact Other", email: null, phone: null, status: "new", assigned_to: null, created_at: createdAt, last_contacted_at: null },
+      { id: contactLeadId, business_name: "CI First Contact Completed", email: "contact@example.invalid", phone: null, status: "new", assigned_to: owner.id, created_at: createdAt, last_contacted_at: null },
+      { id: lostLeadId, business_name: "CI First Contact Lost", email: null, phone: "+27110000002", status: "new", assigned_to: owner.id, created_at: createdAt, last_contacted_at: null },
+      { id: notInterestedLeadId, business_name: "CI First Contact Not Interested", email: null, phone: null, status: "new", assigned_to: owner.id, created_at: createdAt, last_contacted_at: null },
+      { id: recentLeadId, business_name: "CI Recent Lead", email: "recent@example.invalid", phone: null, status: "new", assigned_to: owner.id, created_at: recentAt, last_contacted_at: null },
+      { id: priorTaskLeadId, business_name: "CI Lead With Prior Follow-up", email: "prior@example.invalid", phone: null, status: "new", assigned_to: owner.id, created_at: createdAt, last_contacted_at: null },
+      { id: stageLeadId, business_name: "CI Later Stage Lead", email: "stage@example.invalid", phone: null, status: "contacted", assigned_to: assigned.id, created_at: createdAt, last_contacted_at: oldContactAt }
     ];
     await rest("POST", "leads", "", leads);
     await rest("POST", "follow_ups", "", [{
