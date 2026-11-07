@@ -580,9 +580,20 @@ async function main() {
     assert.equal(await outstandingMetricRows.filter({ hasText: "INV-CI-ARCH" }).count(), 0,
       "Outstanding should exclude archived invoices");
 
-    await returnToOverview();
+    // Restore the standard list filters before running the older independent
+    // regression checks below. The dashboard intentionally remembers filters
+    // when moving between views; tests should reset their own shared state.
+    await navigate("tasks", "delivery");
+    await page.locator('[data-admin-table-filter="tasks"]').selectOption("all");
+    await navigate("followups", "crm");
+    await page.locator('[data-admin-table-filter="followups"]').selectOption("all");
     await navigate("leads", "crm");
     await page.locator('[data-admin-table-filter="leads"]').selectOption("all");
+    await navigate("invoices", "billing");
+    await page.locator('[data-admin-table-filter="invoices"]').selectOption("all");
+
+    await returnToOverview();
+    await navigate("leads", "crm");
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
