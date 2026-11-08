@@ -55,3 +55,7 @@ test("the migration changes routing only and does not add a scheduler or outboun
   assert.match(migration, /revoke all privileges[\s\S]*?from public, anon, authenticated, service_role/i);
   assert.match(migration, /notify pgrst, 'reload schema'/i);
 });
+
+test("the migration has balanced dollar-quote delimiters for both PL/pgSQL workers", () => {
+  assert.equal(migration.split("$$").length - 1, 4);
+});
