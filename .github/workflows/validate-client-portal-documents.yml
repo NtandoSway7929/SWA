@@ -1,0 +1,42 @@
+name: Validate client portal document delivery
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "supabase/functions/client-portal-documents/**"
+      - "supabase/config.toml"
+      - "scripts/client-portal-phase-5.test.cjs"
+      - ".github/workflows/validate-client-portal-documents.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "supabase/functions/client-portal-documents/**"
+      - "supabase/config.toml"
+      - "scripts/client-portal-phase-5.test.cjs"
+      - ".github/workflows/validate-client-portal-documents.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Type-check and test private client document access
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check client portal document Edge Function
+        run: deno check --no-lock supabase/functions/client-portal-documents/index.ts
+
+      - name: Test client document and invoice security contracts
+        run: |
+          node --check scripts/client-portal-phase-5.test.cjs
+          node --test scripts/client-portal-phase-5.test.cjs
