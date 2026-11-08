@@ -18,7 +18,13 @@ const leads = [
     email: '=HYPERLINK("https://example.invalid","Open")', phone: "0000000000",
     service_interest: "Website", status: "new", source: "Referral",
     estimated_value: 1500, next_follow_up: "2026-11-03", assigned_to: TEST_USER_ID,
-    created_at: "2026-10-01T12:00:00Z"
+    created_at: "2026-10-01T12:00:00Z",
+    business_assessment: "The website journey needs clearer service information and a stronger enquiry path.",
+    research_findings: "The current customer journey makes it difficult to understand the services and take the next step.",
+    swayphics_solution: "Build a focused website with a clear service structure and enquiry flow.",
+    recommended_services: "Website design and development; conversion-focused copy.",
+    research_sources: "https://example.invalid/business; public business profile",
+    notes: "Synthetic internal note for the lead details browser test."
   },
   {
     id: "lead-contact-toggle", business_name: "Contact Toggle Fixture", contact_name: "Test Contact",
@@ -46,7 +52,8 @@ const tasks = [
   {
     id: "task-low", title: "Prepare proposal", description: "Draft a website proposal",
     status: "todo", priority: "low", due_date: dateOffset(2),
-    assigned_to: OTHER_TEST_USER_ID, client_id: null, created_at: "2026-10-01T12:00:00Z"
+    assigned_to: OTHER_TEST_USER_ID, client_id: null, lead_id: "lead-alpha",
+    created_at: "2026-10-01T12:00:00Z"
   },
   {
     id: "task-urgent", title: "Confirm scope", description: "Confirm project scope",
@@ -682,13 +689,44 @@ async function main() {
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
 
-    const alphaValueCell = leadRows.filter({ hasText: "Alpha Studio" }).locator(".sway-lead-value-cell");
+    const alphaValueCell = leadRows.filter({ hasText: "Alpha Studio" }).locator(".sway-lead-card-metric-value");
     assert.equal(await alphaValueCell.count(), 1,
-      "each lead should render its estimated value in a dedicated amount cell");
+      "each lead card should render its estimated value");
     assert.equal(await alphaValueCell.evaluate(el => getComputedStyle(el).whiteSpace), "nowrap",
-      "grouped ZAR lead values must stay on one line instead of splitting the final zero onto another line");
+      "grouped ZAR lead values should stay on one line");
     assert.ok(parseFloat(await alphaValueCell.evaluate(el => getComputedStyle(el).minWidth)) >= 100,
-      "the lead amount cell must reserve enough width for a grouped currency value");
+      "the lead card should reserve enough width for a grouped currency value");
+
+    const alphaCard = leadRows.filter({ hasText: "Alpha Studio" });
+    await alphaCard.locator("[data-open-lead-details]").click();
+    const leadDetails = page.locator("#sway-lead-details-modal");
+    await leadDetails.waitFor({ state: "visible", timeout: 5000 });
+    const alphaDetailsText = await leadDetails.innerText();
+    for (const expectedDetail of [
+      "Lead overview",
+      "Business assessment",
+      "Research findings",
+      "How Swayphics can help",
+      "Recommended Swayphics services",
+      "Public information and sources",
+      "Assessment completeness",
+      "Follow-up activity",
+      "Linked tasks",
+      "Communication history",
+      "Lead stage history",
+      "General internal notes"
+    ]) {
+      assert.ok(alphaDetailsText.includes(expectedDetail),
+        "the lead details panel should expose the " + expectedDetail + " section");
+    }
+    assert.ok(alphaDetailsText.includes("Synthetic internal note for the lead details browser test."),
+      "the full lead details view should include saved internal notes");
+    assert.ok(alphaDetailsText.includes("Synthetic website enquiry"),
+      "the full lead details view should include the lead's communication history");
+    assert.ok(alphaDetailsText.includes("Prepare proposal"),
+      "the full lead details view should include tasks linked to the lead");
+    await leadDetails.locator("[data-close-lead-details]").last().click();
+    await leadDetails.waitFor({ state: "detached", timeout: 5000 });
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
