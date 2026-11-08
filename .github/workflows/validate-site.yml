@@ -60,6 +60,9 @@ jobs:
       - name: Test client portal premium styling
         run: node scripts/client-portal-premium-style.test.cjs
 
+      - name: Test client portal Phase 1 dashboard and navigation
+        run: node scripts/client-portal-phase-1.test.cjs
+
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
 
