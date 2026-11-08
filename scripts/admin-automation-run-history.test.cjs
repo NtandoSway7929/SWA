@@ -62,7 +62,7 @@ test("run history RPC is authenticated, bounded and restricted to known Swayphic
 test("business-flow baseline contains the same protected run-history capability", () => {
   const sql = functionSql(baseline);
   assert.match(sql, /auth\.uid\(\) is null or not public\.is_swayphics_admin\(\)/i);
-  assert.match(sql, /limit v_limit/i);
+  assert.match(sql, /partition by j\\.jobid[\\s\\S]*?where r\\.job_run_rank <= v_limit/i);
   assert.doesNotMatch(sql, /return_message|d\.command/i);
 });
 
