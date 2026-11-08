@@ -112,7 +112,7 @@ for (const field of [
         "the complete lead editor should include " + field);
 }
 
-assert.match(html, /admin-lead-cards\.css\?v=20261108-lead-cards-1/,
+assert.match(html, /admin-lead-cards\.css\?v=20261108-lead-profile-2/,
     "the isolated lead-card stylesheet must be loaded with a cache-busting version");
 assert.ok(
     html.indexOf("admin-workspace.css") < html.indexOf("admin-lead-cards.css"),
