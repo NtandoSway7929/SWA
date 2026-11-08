@@ -5543,7 +5543,9 @@
                     (item.business_name || item.name || "Website visitor") +
                     (item.service ? " · " + formatDisplayText(item.service) : ""),
                 timestamp: notificationTimeValue(item),
-                view: "enquiries"
+                view: "enquiries",
+                entityType: "enquiry",
+                entityId: item.id || ""
             });
         });
 
@@ -5566,7 +5568,9 @@
                     (item.title || "Untitled task") +
                     (item.client_id ? " · " + clientName(item.client_id) : ""),
                 timestamp: notificationTimeValue(item.due_date),
-                view: "tasks"
+                view: "tasks",
+                entityType: "task",
+                entityId: item.id || ""
             });
         });
 
@@ -5594,7 +5598,9 @@
                     : "Follow-up due today",
                 detail: contact || "Contact needs follow-up",
                 timestamp: notificationTimeValue(item.scheduled_for),
-                view: "followups"
+                view: "followups",
+                entityType: "follow_up",
+                entityId: item.id || ""
             });
         });
 
@@ -5626,7 +5632,9 @@
                         " · " + clientName(invoice.client_id) +
                         " · " + money(outstanding),
                     timestamp: notificationTimeValue(invoice.due_date || invoice.updated_at),
-                    view: "invoices"
+                    view: "invoices",
+                    entityType: "invoice",
+                    entityId: invoice.id || ""
                 });
             } else if (due === today) {
                 notifications.push({
@@ -5639,7 +5647,9 @@
                         " · " + clientName(invoice.client_id) +
                         " · " + money(outstanding),
                     timestamp: notificationTimeValue(invoice.due_date),
-                    view: "invoices"
+                    view: "invoices",
+                    entityType: "invoice",
+                    entityId: invoice.id || ""
                 });
             }
         });
@@ -5773,32 +5783,40 @@
                     '<div class="sway-notification-item ' +
                         notificationIconClass(item.type) +
                         (isRead ? " is-read" : "") +
-                        '" data-notification-key="' +
-                        esc(item.key) +
-                        '" data-notification-view="' +
-                        esc(item.view) +
                         '">' +
-                        '<span class="sway-notification-icon" aria-hidden="true">' +
-                            esc(item.icon) +
-                        "</span>" +
-                        '<span class="sway-notification-copy">' +
-                            "<strong>" +
-                                esc(item.title) +
-                            "</strong>" +
-                            "<span>" +
-                                esc(item.detail) +
+                        '<button type="button" class="sway-notification-open" data-notification-open data-notification-key="' +
+                            esc(item.key) +
+                            '" data-notification-view="' +
+                            esc(item.view) +
+                            '" data-notification-entity-type="' +
+                            esc(item.entityType || "") +
+                            '" data-notification-entity-id="' +
+                            esc(item.entityId || "") +
+                            '" aria-label="Open notification: ' +
+                            esc(item.title) +
+                            '">' +
+                            '<span class="sway-notification-icon" aria-hidden="true">' +
+                                esc(item.icon) +
                             "</span>" +
-                            (
-                                isRead
-                                    ? ""
-                                    : '<i aria-label="Unread"></i>'
-                            ) +
-                        "</span>" +
+                            '<span class="sway-notification-copy">' +
+                                "<strong>" +
+                                    esc(item.title) +
+                                "</strong>" +
+                                "<span>" +
+                                    esc(item.detail) +
+                                "</span>" +
+                                (
+                                    isRead
+                                        ? ""
+                                        : '<i aria-label="Unread"></i>'
+                                ) +
+                            "</span>" +
+                            '<span class="sway-notification-arrow" aria-hidden="true">›</span>' +
+                        "</button>" +
                         '<span class="sway-notification-actions">' +
                             '<button type="button" class="sway-notification-clear" data-notification-clear="' +
                                 esc(item.key) +
                                 '" aria-label="Clear notification" title="Clear notification">×</button>' +
-                            '<span class="sway-notification-arrow" aria-hidden="true">›</span>' +
                         "</span>" +
                     "</div>"
                 );
@@ -6104,7 +6122,7 @@
             toggleNotificationCenter();
         };
 
-        list.onclick = function (event) {
+        list.onclick = async function (event) {
             const clearButton =
                 event.target.closest(
                     "[data-notification-clear]"
@@ -6117,27 +6135,35 @@
                 return;
             }
 
-            const item =
+            const openButton =
                 event.target.closest(
-                    "[data-notification-key]"
+                    "[data-notification-open]"
                 );
 
-            if (!item) {
+            if (!openButton) {
                 return;
             }
 
             event.preventDefault();
             event.stopPropagation();
 
-            const key =
-                item.dataset.notificationKey;
+            const key = openButton.dataset.notificationKey;
+            const target = {
+                view: openButton.dataset.notificationView,
+                entityType: openButton.dataset.notificationEntityType,
+                entityId: openButton.dataset.notificationEntityId
+            };
 
-            const view =
-                item.dataset.notificationView;
-
-            markNotificationRead(key);
-            openNotificationTarget(view);
+            // Close immediately for responsive feedback. Mark-read is completed
+            // before navigation, but a failed read update must not block opening.
             closeNotificationCenter();
+
+            try {
+                await markNotificationRead(key);
+                await openRequestedNotificationTarget(target);
+            } catch (error) {
+                console.warn("Unable to open the selected notification target.", error);
+            }
         };
 
         if (markAll) {
@@ -29165,29 +29191,78 @@ function simpleBars(items, color) {
 
     }
 
+    const notificationEntityViewMap = {
+        lead: "leads",
+        task: "tasks",
+        follow_up: "followups",
+        quote: "quotes",
+        payment: "payments",
+        client: "clients",
+        project: "projects",
+        invoice: "invoices",
+        email: "email",
+        enquiry: "enquiries",
+        website_enquiry: "enquiries",
+        portal_request: "portal-requests",
+        client_portal_request: "portal-requests"
+    };
+
+    function normalizeNotificationTarget(target) {
+        if (!target || typeof target !== "object") {
+            return null;
+        }
+
+        const entityType =
+            String(target.entityType || target.entity_type || "")
+                .trim()
+                .toLowerCase();
+
+        const requestedView =
+            String(target.view || "").trim();
+
+        const expectedView =
+            notificationEntityViewMap[entityType] || "";
+
+        const view =
+            expectedView ||
+            (
+                nav.some(function (item) {
+                    return item[0] === requestedView;
+                })
+                    ? requestedView
+                    : ""
+            );
+
+        if (!view || !nav.some(function (item) { return item[0] === view; })) {
+            return null;
+        }
+
+        // entity_id is a UUID in admin_notifications. Reject malformed values
+        // before they reach a record selector or an opening action.
+        const rawEntityId =
+            String(target.entityId || target.entity_id || "").trim();
+
+        const isUuid =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+                .test(rawEntityId);
+
+        return {
+            view: view,
+            entityType: entityType,
+            entityId: isUuid ? rawEntityId : ""
+        };
+    }
+
     function getRequestedNotificationTarget() {
         try {
             const params =
                 new URLSearchParams(window.location.search);
 
-            const view =
-                params.get("view");
-
-            const entityType =
-                params.get("entity");
-
-            const entityId =
-                params.get("id");
-
-            if (!view) {
-                return null;
-            }
-
-            return {
-                view,
-                entityType: entityType || "",
-                entityId: entityId || ""
-            };
+            return normalizeNotificationTarget({
+                view: params.get("view"),
+                entityType: params.get("entity"),
+                entityId: params.get("id")
+            });
         } catch (error) {
             console.warn(
                 "Unable to read notification target.",
@@ -29198,30 +29273,149 @@ function simpleBars(items, color) {
         }
     }
 
-    async function openRequestedNotificationTarget(target) {
-        if (!target || !state.initialDataLoaded) {
+    function findNotificationRecordAction(entityType, entityId) {
+        const actionTargets = {
+            lead: {
+                selector: '[data-edit="leads"][data-id]',
+                attribute: "data-id"
+            },
+            task: {
+                selector: '[data-edit="tasks"][data-id]',
+                attribute: "data-id"
+            },
+            follow_up: {
+                selector: '[data-edit="followups"][data-id]',
+                attribute: "data-id"
+            },
+            quote: {
+                selector: '[data-edit="quotes"][data-id]',
+                attribute: "data-id"
+            },
+            payment: {
+                selector: '[data-edit="payments"][data-id]',
+                attribute: "data-id"
+            },
+            client: {
+                selector: "[data-client360]",
+                attribute: "data-client360"
+            },
+            project: {
+                selector: "[data-project-timeline]",
+                attribute: "data-project-timeline"
+            },
+            invoice: {
+                selector: '[data-invoice-action="edit"][data-id]',
+                attribute: "data-id"
+            },
+            enquiry: {
+                selector: '[data-edit="enquiries"][data-id]',
+                attribute: "data-id"
+            },
+            website_enquiry: {
+                selector: '[data-edit="enquiries"][data-id]',
+                attribute: "data-id"
+            },
+            portal_request: {
+                selector: "[data-portal-request-view]",
+                attribute: "data-portal-request-view"
+            },
+            client_portal_request: {
+                selector: "[data-portal-request-view]",
+                attribute: "data-portal-request-view"
+            }
+        };
+
+        const definition =
+            actionTargets[entityType];
+
+        if (!definition || !entityId) {
+            return null;
+        }
+
+        // Query with a fixed allowlisted selector, then compare the identifier
+        // as data. Never interpolate a URL/user-provided ID into CSS selector text.
+        return Array.from(
+            workspace.querySelectorAll(definition.selector)
+        ).find(function (element) {
+            return element.getAttribute(definition.attribute) === entityId;
+        }) || null;
+    }
+
+    function findNotificationRecordRow(view, entityId) {
+        if (!entityId) {
+            return null;
+        }
+
+        const tableRow =
+            Array.from(workspace.querySelectorAll("[data-admin-table-id]"))
+                .find(function (element) {
+                    return element.getAttribute("data-admin-table-id") === entityId;
+                });
+
+        if (tableRow) {
+            return tableRow.closest("tr") || tableRow;
+        }
+
+        const aiRecord =
+            view + ":" + entityId;
+
+        return Array.from(workspace.querySelectorAll("[data-ai-record]"))
+            .find(function (element) {
+                return element.getAttribute("data-ai-record") === aiRecord;
+            }) || null;
+    }
+
+    function highlightNotificationDestination(element) {
+        const target =
+            element ||
+            document.getElementById("sway-workspace-main");
+
+        if (!target) {
             return;
         }
 
+        target.scrollIntoView({
+            behavior: "smooth",
+            block: element ? "center" : "start"
+        });
+
+        if (!element) {
+            return;
+        }
+
+        target.classList.add("sway-ai-record-highlight");
+
+        window.setTimeout(function () {
+            target.classList.remove("sway-ai-record-highlight");
+        }, 1800);
+    }
+
+    async function openRequestedNotificationTarget(target) {
+        const normalizedTarget =
+            normalizeNotificationTarget(target);
+
+        if (!normalizedTarget || !state.initialDataLoaded) {
+            return false;
+        }
+
         const view =
-            target.view;
+            normalizedTarget.view;
 
         const entityType =
-            String(target.entityType || "").toLowerCase();
+            normalizedTarget.entityType;
 
         const entityId =
-            String(target.entityId || "");
+            normalizedTarget.entityId;
 
-        state.currentView =
-            view;
-
+        state.currentView = view;
         persistWorkspaceView(view);
-
         renderShell();
         renderView();
+        setStandaloneManagerVisibility(view);
 
         if (!entityId) {
-            return;
+            highlightNotificationDestination(null);
+            return true;
         }
 
         if (entityType === "email") {
@@ -29239,6 +29433,7 @@ function simpleBars(items, color) {
                 const selectedEmailThread = emailThreadGroups().find(function (thread) {
                     return String(thread.threadId) === String(message.thread_id);
                 });
+
                 if (selectedEmailThread) {
                     await loadEmailThreadMedia(selectedEmailThread);
                 }
@@ -29246,71 +29441,44 @@ function simpleBars(items, color) {
                 renderView();
 
                 const thread =
-                    workspace.querySelector(
-                        '[data-email-thread="' +
-                        String(message.thread_id) +
-                        '"]'
-                    );
+                    Array.from(workspace.querySelectorAll("[data-email-thread]"))
+                        .find(function (element) {
+                            return element.getAttribute("data-email-thread") === String(message.thread_id);
+                        });
 
                 if (thread) {
-                    thread.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center"
-                    });
+                    highlightNotificationDestination(thread);
+                    return true;
                 }
             }
 
-            return;
+            highlightNotificationDestination(null);
+            return false;
         }
 
-        const selectors = {
-            lead:
-                '[data-edit="leads"][data-id="' + entityId + '"]',
-            task:
-                '[data-edit="tasks"][data-id="' + entityId + '"]',
-            follow_up:
-                '[data-edit="followups"][data-id="' + entityId + '"]',
-            quote:
-                '[data-edit="quotes"][data-id="' + entityId + '"]',
-            payment:
-                '[data-edit="payments"][data-id="' + entityId + '"]',
-            client:
-                '[data-client360="' + entityId + '"]',
-            project:
-                '[data-project-timeline="' + entityId + '"]',
-            invoice:
-                '[data-invoice-action="edit"][data-id="' + entityId + '"]'
-        };
+        const action =
+            findNotificationRecordAction(entityType, entityId);
 
-        const selector =
-            selectors[entityType];
-
-        if (selector) {
-            const button =
-                workspace.querySelector(selector);
-
-            if (button) {
-                button.click();
-                return;
-            }
+        if (action) {
+            action.click();
+            return true;
         }
 
-        /*
-         * Some notification types have a useful workspace destination but
-         * no single-record modal yet. In those cases, leave the user on the
-         * correct section rather than opening an unrelated action.
-         */
-        const main =
-            document.getElementById(
-                "sway-workspace-main"
-            );
+        // Some valid destinations do not have a record modal (for example,
+        // sent invoices). Highlight the matching table/card row instead.
+        const recordRow =
+            findNotificationRecordRow(view, entityId);
 
-        if (main) {
-            main.scrollIntoView({
-                behavior: "smooth",
-                block: "start"
-            });
+        if (recordRow) {
+            highlightNotificationDestination(recordRow);
+            return true;
         }
+
+        // The notification may point to a record that was removed, archived,
+        // or is not represented by a single-record action in this workspace.
+        // Keep the administrator in the relevant section, never a stale modal.
+        highlightNotificationDestination(null);
+        return false;
     }
 
     function getRequestedWorkspaceView() {
