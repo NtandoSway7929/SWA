@@ -17,7 +17,8 @@ const payloadEnd = portal.indexOf("\nfunction collectOnboarding(", payloadStart)
 assert.ok(payloadStart >= 0 && payloadEnd > payloadStart, "The onboarding payload mapper must exist.");
 const context = {};
 vm.runInNewContext(
-  portal.slice(journeyStart, journeyEnd) +
+  'function onboardingValue(onboarding,key){return onboarding&&onboarding[key]!=null?onboarding[key]:"";}\n' +
+    portal.slice(journeyStart, journeyEnd) +
     "\n" +
     portal.slice(payloadStart, payloadEnd) +
     "\nthis.onboardingJourneyMode = onboardingJourneyMode;" +
@@ -58,8 +59,14 @@ test("guided onboarding exposes seven steps including a final review screen", ()
 });
 
 test("business journey options cover appointments, retail, online orders and enquiries", () => {
-  for (const mode of ["appointments", "retail", "ecommerce", "enquiries", "not_applicable"]) {
-    assert.ok(portal.includes('value="' + mode + '"'), "missing customer-journey option: " + mode);
+  for (const option of [
+    '["appointments","Appointments & bookings"]',
+    '["retail","In-person retail"]',
+    '["ecommerce","Online store / e-commerce"]',
+    '["enquiries","Enquiry-based business"]',
+    '["not_applicable","No bookings or structured orders"]'
+  ]) {
+    assert.ok(portal.includes(option), "missing customer-journey option definition: " + option);
   }
   assert.ok(portal.includes("function updateJourneyMode()"), "journey-specific field adaptation must be wired.");
   assert.ok(portal.includes("fields.hidden=!mode||mode===\"not_applicable\""), "irrelevant booking questions must be hidden when not applicable or not selected.");
