@@ -218,6 +218,100 @@ body{
 .onboarding-locked input,.onboarding-locked textarea,.onboarding-locked select{
   background:#F1F3F5;
 }
+
+/* Phase 1: guided overview and persistent client navigation. */
+.portal-section-nav{
+  position:sticky;
+  top:78px;
+  z-index:45;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  width:max-content;
+  max-width:100%;
+  margin:12px auto 0;
+  padding:6px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  border:1px solid rgba(52,58,64,.10);
+  border-radius:999px;
+  background:rgba(250,251,252,.98);
+  box-shadow:0 10px 28px rgba(37,43,49,.08);
+}
+.portal-section-nav::-webkit-scrollbar{display:none}
+.portal-section-nav a{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:34px;
+  padding:0 14px;
+  border-radius:999px;
+  color:#56616B;
+  font-size:.57rem;
+  font-weight:800;
+  text-decoration:none;
+  white-space:nowrap;
+  transition:background .18s ease,color .18s ease,box-shadow .18s ease;
+}
+.portal-section-nav a:hover{background:#EEF1F3;color:#252B31}
+.portal-section-nav a.active{background:#343A40;color:#fff;box-shadow:0 5px 14px rgba(37,43,49,.16)}
+.portal-section-nav a:focus-visible{outline:3px solid rgba(1,82,244,.32);outline-offset:2px}
+#overview-section,#projects-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:146px}
+#overview-section{margin-top:26px}
+#overview-section .portal-hero{padding:42px 2px 22px}
+.portal-hero h1{letter-spacing:-.055em}
+.next-step-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  margin-top:4px;
+  padding:22px 24px;
+  border:1px solid rgba(52,58,64,.11);
+  border-radius:22px;
+  background:linear-gradient(120deg,#FFFFFF 0%,#F4F6F7 100%);
+  box-shadow:0 15px 38px rgba(37,43,49,.075),inset 0 1px 0 rgba(255,255,255,.98);
+}
+.next-step-content{min-width:0;display:grid;gap:8px}
+.next-step-kicker{color:#0152F4;font-size:.51rem;font-weight:900;letter-spacing:.14em}
+.next-step-heading{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.next-step-heading h2{color:#252B31;font-size:clamp(1.05rem,2vw,1.38rem);line-height:1.2;letter-spacing:-.035em}
+.next-step-content p{max-width:690px;color:#59636D;font-size:.61rem;line-height:1.7}
+.next-step-action{flex:0 0 auto;white-space:nowrap}
+.next-step-action span{font-size:.9rem;line-height:1}
+.overview-stats{margin-top:26px}
+.overview-stats .portal-section-head{margin-bottom:12px}
+#projects-section .portal-section-head,#finances-section .portal-section-head,#request-section .portal-section-head{margin-bottom:14px}
+.portal-project-grid{grid-template-columns:1fr}
+.portal-finance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.portal-finance-grid>.portal-card{min-width:0;height:100%}
+#projects-section .portal-card.wide{grid-column:auto}
+@media(max-width:1040px){
+  .portal-finance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  .portal-section-nav{top:62px;width:100%;justify-content:flex-start;margin-top:9px;border-radius:15px}
+  .portal-section-nav a{padding:0 12px}
+  #overview-section,#projects-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:126px}
+  #overview-section .portal-hero{padding:32px 2px 20px}
+  .next-step-card{align-items:stretch;flex-direction:column;gap:16px;padding:18px}
+  .next-step-action{width:100%}
+  .portal-finance-grid{grid-template-columns:1fr}
+}
+@media(max-width:430px){
+  .portal-section-nav{gap:3px;padding:5px}
+  .portal-section-nav a{min-height:33px;padding:0 10px;font-size:.53rem}
+  .next-step-card{border-radius:18px;padding:16px}
+  .next-step-content p{font-size:.58rem}
+  .portal-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat-card{min-width:0;padding:12px}
+  .stat-card strong{font-size:1rem;overflow-wrap:anywhere}
+  .stat-card span{font-size:.47rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .portal-section-nav a{transition:none}
+  html{scroll-behavior:auto}
+}
 </style>
 </head>
 <body>
@@ -360,12 +454,71 @@ form.addEventListener("click",function(e){if(e.target.closest("[data-remove-serv
 async function saveOnboarding(submit){const payload=collectOnboarding(),buttons=form.querySelectorAll("button");buttons.forEach(function(b){b.disabled=true});statusBox.textContent=submit?"Submitting information...":"Saving progress...";message.hidden=false;message.textContent=submit?"Checking the required information before submission...":"Saving your information securely...";try{const result=await portalRpc("save_client_onboarding",{p_token:token,p_data:payload,p_submit:submit},15000);if(!result||!result.ok)throw new Error(result&&result.error||"Unable to save your information.");statusBox.textContent=submit?"Submitted "+date(new Date().toISOString()):"Last saved just now";message.textContent=submit?"Thank you. Your information has been submitted to Swayphics for review.":"Your progress has been saved. You can return to this private link later and continue.";if(submit){form.classList.add("onboarding-locked");form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});message.className="onboarding-submitted";message.innerHTML="<strong>Information submitted</strong>Your onboarding information is now with Swayphics. We will review it and contact you if anything needs clarification.";}}catch(error){message.textContent=error.message||"Unable to save your information."}finally{buttons.forEach(function(b){if(!submit||b.id!=="save-onboarding")b.disabled=false});}}
 saveButton.addEventListener("click",function(){saveOnboarding(false)});form.addEventListener("submit",function(e){e.preventDefault();if(form.reportValidity())saveOnboarding(true)});
 }
+function getClientNextStep(onboarding,invoices,quotes,active,projects){
+const saved=onboarding||{},invoiceRows=Array.isArray(invoices)?invoices:[],quoteRows=Array.isArray(quotes)?quotes:[],activeRows=Array.isArray(active)?active:[],projectRows=Array.isArray(projects)?projects:[];
+if(saved.status!=="submitted")return {badge:"Action needed",title:"Complete your onboarding",description:"Share your business details, services and brand information so we can prepare the right website experience for your business.",action:"Continue onboarding",target:"onboarding-section"};
+const overdue=invoiceRows.find(function(item){return String(item.status||"").toLowerCase()==="overdue"&&Number(item.amount_outstanding||0)>0});
+if(overdue)return {badge:"Payment overdue",title:"Review your outstanding invoice",description:"An invoice is marked overdue. Open your finances to review the balance and payment details.",action:"View finances",target:"finances-section"};
+const dueInvoice=invoiceRows.find(function(item){return Number(item.amount_outstanding||0)>0});
+if(dueInvoice)return {badge:"Payment due",title:"Review your invoice",description:"There is an outstanding invoice on your account. You can review its amount, due date and payment status in your finances.",action:"View finances",target:"finances-section"};
+const sentQuote=quoteRows.find(function(item){return String(item.status||"").toLowerCase()==="sent"});
+if(sentQuote)return {badge:"Awaiting your review",title:"Your quotation is ready",description:"A quotation has been sent for your review. Open your finances to see the quotation details and validity date.",action:"Review quotation",target:"finances-section"};
+if(activeRows.length)return {badge:"Project in progress",title:"See how your project is progressing",description:"Your Swayphics project is active. Visit your project area to review its current stage and available details.",action:"View my projects",target:"projects-section"};
+if(projectRows.length)return {badge:"Workspace update",title:"Your completed projects are here",description:"You can revisit the details and progress of work completed with Swayphics at any time.",action:"View my projects",target:"projects-section"};
+return {badge:"All clear",title:"Your workspace is up to date",description:"There are no outstanding onboarding actions or invoice balances currently recorded. Need something else? Send a request directly to Swayphics.",action:"Make a request",target:"request-section"};
+}
+function bindPortalNavigation(){
+const links=Array.from(document.querySelectorAll("[data-portal-nav-link]"));
+if(!links.length)return;
+function setActive(id){
+links.forEach(function(link){const active=link.getAttribute("href")==="#"+id;link.classList.toggle("active",active);if(active)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current")});
+}
+links.forEach(function(link){link.addEventListener("click",function(){setActive(link.getAttribute("href").slice(1))})});
+if("IntersectionObserver" in window){
+const observer=new IntersectionObserver(function(entries){
+const visible=entries.filter(function(entry){return entry.isIntersecting}).sort(function(a,b){return b.intersectionRatio-a.intersectionRatio})[0];
+if(visible)setActive(visible.target.id);
+},{rootMargin:"-18% 0px -68% 0px",threshold:[0,.1,.25,.5]});
+links.forEach(function(link){const target=document.getElementById(link.getAttribute("href").slice(1));if(target)observer.observe(target)});
+}
+}
 function render(data,onboarding){
 const c=data.client||{},projects=data.projects||[],active=activeProjects(data),invoices=data.invoices||[],quotes=data.quotes||[],payments=data.payments||[];
-const outstanding=invoices.reduce(function(sum,item){return sum+Math.max(0,Number(item.amount_outstanding||0))},0),quoteValue=quotes.reduce(function(sum,item){return sum+Number(item.amount||0)},0),paid=payments.reduce(function(sum,item){return sum+Number(item.amount||0)},0);
-app.className="portal-shell";app.innerHTML='<nav class="portal-nav"><img src="../swayphics-logo.png" class="portal-logo" alt="Swayphics"><div class="portal-nav-right"><span class="portal-secure">Secure access</span><span class="portal-badge">Private client portal</span></div></nav><section class="portal-hero"><span class="portal-kicker">SWAYPHICS CLIENT PORTAL</span><h1>Welcome, '+esc(c.contact_name||c.business_name||"Client")+'.</h1><p>Welcome to your private Swayphics workspace. Start with the onboarding form below so we can collect the information needed to build your website properly.</p><div class="portal-hero-actions"><button type="button" class="portal-button" data-scroll-onboarding>Complete onboarding</button><button type="button" class="portal-button secondary" data-scroll-request>Make a request</button></div></section><section class="portal-section"><div class="portal-section-head"><div><h2>At a glance</h2><p>Your current Swayphics workspace</p></div></div><div class="portal-stats"><article class="stat-card"><span>Active projects</span><strong>'+active.length+'</strong><small>'+(projects.length?projects.length+" total project"+(projects.length===1?"":"s"):"No projects yet")+'</small></article><article class="stat-card"><span>Outstanding</span><strong>'+esc(money(outstanding))+'</strong><small>Across open invoices</small></article><article class="stat-card"><span>Quoted value</span><strong>'+esc(money(quoteValue))+'</strong><small>Current quotations</small></article><article class="stat-card"><span>Recorded payments</span><strong>'+esc(money(paid))+'</strong><small>Payments recorded by Swayphics</small></article></div></section>'+onboardingForm(data,onboarding)+'<section class="portal-section portal-grid"><section class="portal-card"><div class="card-head"><div><h3>Project progress</h3><p>See where each piece of work currently sits.</p></div><span class="card-count">'+projects.length+'</span></div>'+(projects.length?'<div class="project-list">'+projects.map(renderProject).join("")+'</div>':'<div class="empty">No projects are currently listed for this workspace.</div>')+'</section><section class="portal-card"><div class="card-head"><div><h3>Invoices</h3><p>Amounts and payment status.</p></div><span class="card-count">'+invoices.length+'</span></div>'+(invoices.length?'<div class="financial-list">'+invoices.slice(0,5).map(renderInvoice).join("")+'</div>':'<div class="empty">No invoices are currently listed.</div>')+'</section><section class="portal-card"><div class="card-head"><div><h3>Quotes</h3><p>Current quotations from Swayphics.</p></div><span class="card-count">'+quotes.length+'</span></div>'+(quotes.length?'<div class="financial-list">'+quotes.slice(0,5).map(renderQuote).join("")+'</div>':'<div class="empty">No quotations are currently listed.</div>')+'</section><section class="portal-card"><div class="card-head"><div><h3>Payments</h3><p>Recorded payments on this client account.</p></div><span class="card-count">'+payments.length+'</span></div>'+(payments.length?'<div class="financial-list">'+payments.slice(0,5).map(renderPayment).join("")+'</div>':'<div class="empty">No recorded payments yet.</div>')+'</section></section><section class="portal-section" id="request-section"><section class="portal-card request-card"><div class="request-copy"><span class="kicker">DIRECT TO SWAYPHICS</span><h3>Need an update, change or something new?</h3><p>Send a request from the portal and it will be attached to this client account in the Swayphics workspace.</p></div><form class="request-form" id="request-form"><div class="field"><label for="request-subject">Subject</label><input id="request-subject" required maxlength="180" placeholder="What do you need help with?"></div><div class="field"><label for="request-message">Message</label><textarea id="request-message" required maxlength="5000" placeholder="Tell the Swayphics team what you need."></textarea></div><button class="portal-button" type="submit">Send request</button><div id="request-message-status" class="message" hidden></div></form></section></section><footer class="portal-footer"><span><strong>Swayphics</strong> · Creative & Design Lab</span><span>Private portal access · Keep this link confidential</span></footer>';
-document.querySelectorAll("[data-project-id]").forEach(function(button){button.addEventListener("click",function(){const project=projects.find(function(item){return item.id===button.dataset.projectId});if(project)openProjectModal(project)})});document.querySelectorAll("[data-scroll-onboarding]").forEach(function(button){button.addEventListener("click",function(){document.getElementById("onboarding-section").scrollIntoView({behavior:"smooth",block:"start"})})});document.querySelectorAll("[data-scroll-request]").forEach(function(button){button.addEventListener("click",function(){document.getElementById("request-section").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(function(){document.getElementById("request-subject")?.focus()},450)})});bindOnboarding();document.getElementById("request-form").addEventListener("submit",async function(event){event.preventDefault();const form=event.target,button=form.querySelector("button"),statusBox=document.getElementById("request-message-status");button.disabled=true;button.textContent="Sending...";statusBox.hidden=false;statusBox.textContent="Sending request...";try{const payload=await portalRpc("submit_client_portal_request",{p_token:token,p_subject:document.getElementById("request-subject").value,p_message:document.getElementById("request-message").value},15000);if(!payload||!payload.ok)throw new Error(payload&&payload.error||"Unable to send request.");statusBox.textContent="Your request has been sent to Swayphics.";form.reset()}catch(error){statusBox.textContent=error.message||"Unable to send request."}finally{button.disabled=false;button.textContent="Send request"}});
+const outstanding=invoices.reduce(function(sum,item){return sum+Math.max(0,Number(item.amount_outstanding||0))},0),quoteValue=quotes.reduce(function(sum,item){return sum+Number(item.amount||0)},0),paid=payments.reduce(function(sum,item){return sum+Number(item.amount||0)},0),nextStep=getClientNextStep(onboarding,invoices,quotes,active,projects);
+app.className="portal-shell";
+app.innerHTML=
+'<nav class="portal-nav"><img src="../swayphics-logo.png" class="portal-logo" alt="Swayphics"><div class="portal-nav-right"><span class="portal-secure">Secure access</span><span class="portal-badge">Private client portal</span></div></nav>'+
+'<nav class="portal-section-nav" aria-label="Your workspace">'+
+'<a href="#overview-section" data-portal-nav-link class="active" aria-current="location">Overview</a>'+
+'<a href="#projects-section" data-portal-nav-link>My projects</a>'+
+'<a href="#finances-section" data-portal-nav-link>Finances</a>'+
+'<a href="#onboarding-section" data-portal-nav-link>Onboarding</a>'+
+'<a href="#request-section" data-portal-nav-link>Requests</a>'+
+'</nav>'+
+'<section class="portal-section" id="overview-section">'+
+'<section class="portal-hero"><span class="portal-kicker">SWAYPHICS CLIENT PORTAL</span><h1>Welcome back, '+esc(c.contact_name||c.business_name||"Client")+'.</h1><p>Your private Swayphics workspace brings your projects, finances and next steps together in one place.</p><div class="portal-hero-actions"><a class="portal-button" href="#projects-section">View my projects</a><a class="portal-button secondary" href="#request-section">Make a request</a></div></section>'+
+'<section class="next-step-card" aria-labelledby="next-step-title"><div class="next-step-content"><span class="next-step-kicker">YOUR NEXT STEP</span><div class="next-step-heading"><h2 id="next-step-title">'+esc(nextStep.title)+'</h2>'+chip(nextStep.badge)+'</div><p>'+esc(nextStep.description)+'</p></div><a class="portal-button next-step-action" href="#'+esc(nextStep.target)+'">'+esc(nextStep.action)+' <span aria-hidden="true">→</span></a></section>'+
+'<section class="overview-stats"><div class="portal-section-head"><div><h2>At a glance</h2><p>A quick view of your Swayphics account.</p></div></div><div class="portal-stats">'+
+'<article class="stat-card"><span>Active projects</span><strong>'+active.length+'</strong><small>'+(projects.length?projects.length+" total project"+(projects.length===1?"":"s"):"No projects yet")+'</small></article>'+
+'<article class="stat-card"><span>Outstanding</span><strong>'+esc(money(outstanding))+'</strong><small>Across open invoices</small></article>'+
+'<article class="stat-card"><span>Quoted value</span><strong>'+esc(money(quoteValue))+'</strong><small>Current quotations</small></article>'+
+'<article class="stat-card"><span>Recorded payments</span><strong>'+esc(money(paid))+'</strong><small>Payments recorded by Swayphics</small></article>'+
+'</div></section></section>'+
+'<section class="portal-section" id="projects-section"><div class="portal-section-head"><div><h2>My projects</h2><p>Follow the progress of work managed by Swayphics.</p></div><span class="card-count">'+projects.length+' total</span></div><div class="portal-grid portal-project-grid"><section class="portal-card wide"><div class="card-head"><div><h3>Project progress</h3><p>See where each piece of work currently sits.</p></div><span class="card-count">'+active.length+' active</span></div>'+(projects.length?'<div class="project-list">'+projects.map(renderProject).join("")+'</div>':'<div class="empty">No projects are currently listed for this workspace. Your projects will appear here once work has been set up.</div>')+'</section></div></section>'+
+'<section class="portal-section" id="finances-section"><div class="portal-section-head"><div><h2>Finances</h2><p>Quotes, invoices and payments recorded on your account.</p></div></div><div class="portal-finance-grid">'+
+'<section class="portal-card"><div class="card-head"><div><h3>Invoices</h3><p>Amounts and payment status.</p></div><span class="card-count">'+invoices.length+'</span></div>'+(invoices.length?'<div class="financial-list">'+invoices.slice(0,5).map(renderInvoice).join("")+'</div>':'<div class="empty">No invoices are currently listed.</div>')+'</section>'+
+'<section class="portal-card"><div class="card-head"><div><h3>Quotes</h3><p>Current quotations from Swayphics.</p></div><span class="card-count">'+quotes.length+'</span></div>'+(quotes.length?'<div class="financial-list">'+quotes.slice(0,5).map(renderQuote).join("")+'</div>':'<div class="empty">No quotations are currently listed.</div>')+'</section>'+
+'<section class="portal-card"><div class="card-head"><div><h3>Payments</h3><p>Recorded payments on this client account.</p></div><span class="card-count">'+payments.length+'</span></div>'+(payments.length?'<div class="financial-list">'+payments.slice(0,5).map(renderPayment).join("")+'</div>':'<div class="empty">No recorded payments yet.</div>')+'</section>'+
+'</div></section>'+
+onboardingForm(data,onboarding)+
+'<section class="portal-section" id="request-section"><div class="portal-section-head"><div><h2>Requests & support</h2><p>Contact Swayphics about an update, change or something new.</p></div></div><section class="portal-card request-card"><div class="request-copy"><span class="kicker">DIRECT TO SWAYPHICS</span><h3>How can we help?</h3><p>Send a request from the portal and it will be attached to this client account in the Swayphics workspace.</p></div><form class="request-form" id="request-form"><div class="field"><label for="request-subject">Subject</label><input id="request-subject" required maxlength="180" placeholder="What do you need help with?"></div><div class="field"><label for="request-message">Message</label><textarea id="request-message" required maxlength="5000" placeholder="Tell the Swayphics team what you need."></textarea></div><button class="portal-button" type="submit">Send request</button><div id="request-message-status" class="message" hidden></div></form></section></section>'+
+'<footer class="portal-footer"><span><strong>Swayphics</strong> · Creative & Design Lab</span><span>Private portal access · Keep this link confidential</span></footer>';
+bindPortalNavigation();
+document.querySelectorAll("[data-project-id]").forEach(function(button){button.addEventListener("click",function(){const project=projects.find(function(item){return item.id===button.dataset.projectId});if(project)openProjectModal(project)})});
+bindOnboarding();
+document.getElementById("request-form").addEventListener("submit",async function(event){event.preventDefault();const form=event.target,button=form.querySelector("button"),statusBox=document.getElementById("request-message-status");button.disabled=true;button.textContent="Sending...";statusBox.hidden=false;statusBox.textContent="Sending request...";try{const payload=await portalRpc("submit_client_portal_request",{p_token:token,p_subject:document.getElementById("request-subject").value,p_message:document.getElementById("request-message").value},15000);if(!payload||!payload.ok)throw new Error(payload&&payload.error||"Unable to send request.");statusBox.textContent="Your request has been sent to Swayphics.";form.reset()}catch(error){statusBox.textContent=error.message||"Unable to send request."}finally{button.disabled=false;button.textContent="Send request"}});
 }
+
 function openProjectModal(project){
 document.getElementById("portal-project-modal")?.remove();
 const stages=["planning","in progress","review","completed"],current=projectStage(project.status),modal=document.createElement("div");
