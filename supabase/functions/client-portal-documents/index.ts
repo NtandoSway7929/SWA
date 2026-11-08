@@ -988,7 +988,7 @@ async function createAdminClient() {
   });
 }
 
-async function resolvePortalToken(admin: ReturnType<typeof createClient>, rawToken: string) {
+async function resolvePortalToken(admin: any, rawToken: string) {
   if (rawToken.length < 32 || rawToken.length > 512) return null;
   const tokenHash = await sha256Hex(rawToken);
   const { data, error } = await admin
@@ -1005,7 +1005,7 @@ async function resolvePortalToken(admin: ReturnType<typeof createClient>, rawTok
   return data;
 }
 
-async function listClientDocuments(admin: ReturnType<typeof createClient>, clientId: string) {
+async function listClientDocuments(admin: any, clientId: string) {
   const { data: rows, error } = await admin
     .from("client_documents")
     .select("id,client_id,project_id,file_name,storage_path,mime_type,size_bytes,created_at")
@@ -1036,7 +1036,7 @@ async function listClientDocuments(admin: ReturnType<typeof createClient>, clien
 }
 
 async function createClientDocumentUrl(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   clientId: string,
   documentId: string,
   download: boolean
@@ -1073,7 +1073,7 @@ async function createClientDocumentUrl(
   };
 }
 
-async function createClientInvoicePdf(admin: ReturnType<typeof createClient>, clientId: string, invoiceId: string) {
+async function createClientInvoicePdf(admin: any, clientId: string, invoiceId: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(invoiceId)) {
     return json({ ok: false, error: "Invoice not found." }, 404);
   }
@@ -1113,7 +1113,9 @@ async function createClientInvoicePdf(admin: ReturnType<typeof createClient>, cl
   const pdfBytes = await buildPdf(invoice, lineItems, settingsResult.data);
   const filename = safeDownloadName(String(invoice.invoice_number || "invoice") + ".pdf", "invoice.pdf");
 
-  return new Response(pdfBytes, {
+  const pdfBody = new ArrayBuffer(pdfBytes.byteLength);
+  new Uint8Array(pdfBody).set(pdfBytes);
+  return new Response(pdfBody, {
     status: 200,
     headers: {
       ...corsHeaders,
