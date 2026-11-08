@@ -947,10 +947,13 @@ try{return new Intl.NumberFormat("en-ZA",{style:"currency",currency:code,currenc
 catch(_){return code+" "+safeAmount.toFixed(2)}
 }
 function invoiceFinancialBreakdown(item){
-const total=Math.max(0,Number(item&&item.total||0)||0);
+const rawTotal=Number(item&&item.total);
+const hasTotal=!!item&&item.total!==null&&item.total!==undefined&&item.total!==""&&Number.isFinite(rawTotal);
 const rawOutstanding=Number(item&&item.amount_outstanding);
-const outstanding=Number.isFinite(rawOutstanding)?Math.min(total,Math.max(0,rawOutstanding)):0;
-const paid=Math.min(total,Math.max(0,total-outstanding));
+const fallbackOutstanding=Number.isFinite(rawOutstanding)?Math.max(0,rawOutstanding):0;
+const total=hasTotal?Math.max(0,rawTotal):fallbackOutstanding;
+const outstanding=Number.isFinite(rawOutstanding)?(hasTotal?Math.min(total,Math.max(0,rawOutstanding)):Math.max(0,rawOutstanding)):0;
+const paid=hasTotal?Math.min(total,Math.max(0,total-outstanding)):0;
 return {total:total,paid:paid,outstanding:outstanding,currency:String(item&&item.currency||"ZAR").toUpperCase()};
 }
 function invoiceDueState(item,todayValue){
