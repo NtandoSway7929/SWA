@@ -189,11 +189,15 @@ test("the overview resolver uses current client records instead of fixed onboard
   assert.ok(render.includes("bindPortalNavigation()"), "the section navigation must be initialised after rendering.");
 });
 
-test("navigation supports active-section tracking and keyboard-visible focus", () => {
-  assert.ok(portal.includes("new IntersectionObserver("), "visible section must update the active navigation item.");
+test("navigation tracks the section at the sticky-nav activation line while scrolling", () => {
+  assert.ok(portal.includes("window.addEventListener(\"scroll\",scheduleUpdate,{passive:true})"), "scrolling must schedule active-section updates.");
+  assert.ok(portal.includes("window.requestAnimationFrame(updateActive)"), "scroll updates must be coalesced into animation frames.");
+  assert.ok(portal.includes("getBoundingClientRect()"), "active section must be determined from actual section positions.");
+  assert.ok(portal.includes("const atBottom=window.scrollY+window.innerHeight>=document.documentElement.scrollHeight-2"), "the final section must become active at the bottom of the page.");
   assert.ok(portal.includes('setAttribute("aria-current","location")'), "active section must update aria-current.");
   assert.ok(portal.includes(".portal-section-nav a:focus-visible"), "navigation links must have visible keyboard focus.");
   assert.ok(portal.includes("scroll-margin-top:146px"), "anchored sections must account for sticky navigation.");
+  assert.ok(!portal.includes("new IntersectionObserver("), "the unreliable intersection-ratio selection must be removed.");
 });
 
 test("the compact navigation and finance grid adapt to mobile widths", () => {
