@@ -1,0 +1,21 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const portal = fs.readFileSync("client-portal/index.html", "utf8");
+const upload = fs.readFileSync("supabase/functions/upload-client-onboarding-assets/index.ts", "utf8");
+const admin = fs.readFileSync("supabase/functions/admin-client-onboarding-assets/index.ts", "utf8");
+const adminUi = fs.readFileSync("admin-dashboard/admin-onboarding-assets.js", "utf8");
+
+assert.match(portal, /functions\/v1\/upload-client-onboarding-assets/);
+assert.match(portal, /"apikey":\s*SUPABASE_PUBLISHABLE_KEY/);
+assert.match(portal, /"Authorization":\s*"Bearer "\s*\+\s*SUPABASE_PUBLISHABLE_KEY/);
+assert.match(upload, /client_onboarding_assets/);
+assert.match(upload, /uploadedPaths/);
+assert.match(upload, /portal\.assets_uploaded/);
+assert.match(upload, /MAX_BATCH_BYTES/);
+assert.match(admin, /auth\.getUser\(jwt\)/);
+assert.match(admin, /admin_users/);
+assert.match(admin, /createSignedUrl/);
+assert.match(adminUi, /Review business assets/);
+assert.match(adminUi, /Preview/);
+assert.match(adminUi, /Download/);
+console.log("Client onboarding asset delivery checks passed.");
