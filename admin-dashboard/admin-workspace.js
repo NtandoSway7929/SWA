@@ -12539,135 +12539,154 @@ function simpleBars(items, color) {
 
     function renderLeads() {
         /*
-         * Keep all records visible in the lead manager. Follow-up and
-         * Not Interested leads still need to be reviewable and actionable
-         * (including the option to return a lead to the active pipeline).
+         * Keep every lead reachable in the pipeline. The card's main action
+         * reuses the existing complete lead editor; operational actions remain
+         * separate so opening a card cannot trigger a write or external action.
          */
         const visibleLeads = adminTableControls.items("leads", state.leads);
 
-        const rows =
+        const cards =
             visibleLeads.map(function (item) {
                 const contactStatus = leadContactStatus(item);
                 const whatsappUrl = window.swayphicsLeadWhatsApp &&
                     typeof window.swayphicsLeadWhatsApp.buildUrl === "function"
                         ? window.swayphicsLeadWhatsApp.buildUrl(item.phone)
                         : "";
+                const isSelected = (state.tableSelection.leads || []).some(function (id) {
+                    return String(id) === String(item.id);
+                });
+                const businessName = item.business_name || "Unnamed business";
+                const leadLabel = item.business_name || item.contact_name || "lead";
+                const terminalStatus = ["won", "lost", "not interested"].includes(
+                    String(item.status || "").toLowerCase()
+                );
+
                 return (
-                    '<tr data-admin-table-row="leads" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableControls.searchText("leads", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="leads:' + esc(item.id) + '">' +
-                        adminTableControls.selectionCell("leads", item, item.business_name || item.contact_name || "lead") +
-                        "<td>" +
-                            "<strong>" +
-                                esc(
-                                    item.business_name ||
-                                    "Unnamed business"
-                                ) +
+                    '<article class="sway-lead-card" data-admin-table-row="leads" data-admin-table-id="' +
+                        esc(item.id) +
+                        '" data-admin-table-search="' +
+                        esc(adminTableControls.searchText("leads", item)) +
+                        '" data-admin-table-filter="' +
+                        esc(String(item.status || "").toLowerCase()) +
+                        '" data-ai-record="leads:' + esc(item.id) + '">' +
+                        '<div class="sway-lead-card-top">' +
+                            '<label class="sway-lead-card-select">' +
+                                '<input type="checkbox" data-admin-table-select="leads" data-id="' +
+                                    esc(item.id) +
+                                '" aria-label="Select ' + esc(leadLabel) + '"' +
+                                (isSelected ? " checked" : "") +
+                                '>' +
+                                "<span>Select</span>" +
+                            "</label>" +
+                            chip(item.status) +
+                        "</div>" +
+                        '<button type="button" class="sway-lead-card-open" data-edit="leads" data-id="' +
+                            esc(item.id) +
+                            '" aria-label="Open full details for ' + esc(leadLabel) + '">' +
+                            '<span class="sway-lead-card-kicker">LEAD RECORD</span>' +
+                            '<strong class="sway-lead-card-title">' +
+                                esc(businessName) +
                             "</strong>" +
                             (
                                 item.contact_name
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.contact_name) +
+                                    ? '<span class="sway-lead-card-contact">' +
+                                        esc(item.contact_name) +
                                       "</span>"
                                     : ""
                             ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                item.service_interest ||
-                                "—"
+                            '<span class="sway-lead-card-details">' +
+                                '<span class="sway-lead-card-detail"><span>Service interest</span><strong>' +
+                                    esc(item.service_interest || "Not provided") +
+                                "</strong></span>" +
+                                '<span class="sway-lead-card-detail"><span>Source</span><strong>' +
+                                    esc(formatDisplayText(item.source || "Unspecified")) +
+                                "</strong></span>" +
+                                '<span class="sway-lead-card-detail"><span>Estimated value</span><strong class="sway-lead-card-value">' +
+                                    esc(money(item.estimated_value)) +
+                                "</strong></span>" +
+                                '<span class="sway-lead-card-detail"><span>Next follow-up</span><strong>' +
+                                    esc(date(item.next_follow_up)) +
+                                "</strong></span>" +
+                                '<span class="sway-lead-card-detail"><span>Email</span><strong>' +
+                                    esc(item.email || "Not provided") +
+                                "</strong></span>" +
+                                '<span class="sway-lead-card-detail"><span>Phone / WhatsApp</span><strong>' +
+                                    esc(item.phone || "Not provided") +
+                                "</strong></span>" +
+                                '<span class="sway-lead-card-detail"><span>Assigned to</span><strong>' +
+                                    esc(adminName(item.assigned_to)) +
+                                "</strong></span>" +
+                                '<span class="sway-lead-card-detail"><span>Assessment</span><strong>' +
+                                    esc(leadAssessmentStatus(item)) +
+                                "</strong></span>" +
+                            "</span>" +
+                            '<span class="sway-lead-card-footer"><span>Open full details</span><span aria-hidden="true">↗</span></span>' +
+                        "</button>" +
+                        '<div class="sway-lead-card-actions">' +
+                            (
+                                item.email
+                                    ? '<button type="button" class="sway-row-action sway-lead-email-action" data-lead-email-id="' +
+                                        esc(item.id) +
+                                      '">Email</button>'
+                                    : ""
                             ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                formatDisplayText(
-                                    item.source ||
-                                    "Unspecified"
-                                )
-                            ) +
-                        "</td>" +
-                        '<td class="sway-lead-value-cell">' +
-                            esc(
-                                money(
-                                    item.estimated_value
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                date(
-                                    item.next_follow_up
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions sway-lead-row-actions">' +
-                                (
-                                    item.email
-                                        ? '<button type="button" class="sway-row-action sway-lead-email-action" data-lead-email-id="' +
-                                          esc(item.id) +
-                                          '">Email</button>'
-                                        : ""
-                                ) +
-                                '<details class="sway-lead-actions-menu">' +
-                                    '<summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
-                                    '<div class="sway-lead-actions-dropdown">' +
-                                        '<button type="button" class="sway-row-action" data-edit="leads" data-id="' +
-                                            esc(item.id) +
-                                        '">Edit</button>' +
-                                        '<button type="button" class="sway-row-action" data-export-lead-assessment="' +
-                                            esc(item.id) +
-                                        '">Assessment report</button>' +
-                                        (
-                                            whatsappUrl
-                                                ? '<a class="sway-row-action sway-lead-whatsapp-link" href="' + esc(whatsappUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Contact ' + esc(item.business_name || item.contact_name || "lead") + ' on WhatsApp">Contact on WhatsApp</a>'
-                                                : '<button type="button" class="sway-row-action" disabled title="Add a valid phone number to this lead record to enable WhatsApp contact.">WhatsApp unavailable · check number</button>'
-                                        ) +
-                                        '<button type="button" class="sway-row-action" data-draft-lead-proposal="' +
-                                            esc(item.id) +
-                                        '">Draft proposal</button>' +
-                                        (
-                                            contactStatus.source === "communication"
-                                                ? '<button type="button" class="sway-row-action" disabled title="An outbound communication is already recorded for this lead.">Contacted (logged)</button>'
-                                                : '<button type="button" class="sway-row-action" data-toggle-lead-contacted="' +
-                                                  esc(item.id) +
-                                                  '">' +
-                                                  (contactStatus.contacted ? "Undo contacted mark" : "Mark as contacted") +
-                                                  "</button>"
-                                        ) +
-                                        (
-                                            !["won", "lost", "not interested"].includes(
-                                                String(item.status || "").toLowerCase()
+                            '<details class="sway-lead-actions-menu">' +
+                                '<summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
+                                '<div class="sway-lead-actions-dropdown">' +
+                                    '<button type="button" class="sway-row-action" data-edit="leads" data-id="' +
+                                        esc(item.id) +
+                                    '">Edit</button>' +
+                                    '<button type="button" class="sway-row-action" data-export-lead-assessment="' +
+                                        esc(item.id) +
+                                    '">Assessment report</button>' +
+                                    (
+                                        whatsappUrl
+                                            ? '<a class="sway-row-action sway-lead-whatsapp-link" href="' +
+                                                esc(whatsappUrl) +
+                                                '" target="_blank" rel="noopener noreferrer" aria-label="Contact ' +
+                                                esc(leadLabel) +
+                                                ' on WhatsApp">Contact on WhatsApp</a>'
+                                            : '<button type="button" class="sway-row-action" disabled title="Add a valid phone number to this lead record to enable WhatsApp contact.">WhatsApp unavailable · check number</button>'
+                                    ) +
+                                    '<button type="button" class="sway-row-action" data-draft-lead-proposal="' +
+                                        esc(item.id) +
+                                    '">Draft proposal</button>' +
+                                    (
+                                        contactStatus.source === "communication"
+                                            ? '<button type="button" class="sway-row-action" disabled title="An outbound communication is already recorded for this lead.">Contacted (logged)</button>'
+                                            : '<button type="button" class="sway-row-action" data-toggle-lead-contacted="' +
+                                                esc(item.id) +
+                                                '">' +
+                                                (contactStatus.contacted ? "Undo contacted mark" : "Mark as contacted") +
+                                              "</button>"
+                                    ) +
+                                    (
+                                        !terminalStatus
+                                            ? '<button type="button" class="sway-row-action" data-mark-lead-not-interested="' +
+                                                esc(item.id) +
+                                              '">Not Interested</button>'
+                                            : (
+                                                String(item.status || "").toLowerCase() === "not interested"
+                                                    ? '<button type="button" class="sway-row-action" data-reactivate-lead="' +
+                                                        esc(item.id) +
+                                                      '">Return to active pipeline</button>'
+                                                    : ""
                                             )
-                                                ? '<button type="button" class="sway-row-action" data-mark-lead-not-interested="' +
-                                                  esc(item.id) +
-                                                  '">Not Interested</button>'
-                                                : (
-                                                    String(item.status || "").toLowerCase() === "not interested"
-                                                        ? '<button type="button" class="sway-row-action" data-reactivate-lead="' +
-                                                          esc(item.id) +
-                                                          '">Return to active pipeline</button>'
-                                                        : ""
-                                                )
-                                        ) +
-                                        (
-                                            !["won", "lost", "not interested"].includes(
-                                                String(item.status || "").toLowerCase()
-                                            )
-                                                ? '<button type="button" class="sway-row-action" data-convert-lead="' +
-                                                  esc(item.id) +
-                                                  '">Convert to client</button>'
-                                                : ""
-                                        ) +
-                                        '<button type="button" class="sway-row-action danger" data-delete="leads" data-id="' +
-                                            esc(item.id) +
-                                        '">Delete</button>' +
-                                    "</div>" +
-                                "</details>" +
-                            "</div>" +
-                        "</td>" +
-                    "</tr>"
+                                    ) +
+                                    (
+                                        !terminalStatus
+                                            ? '<button type="button" class="sway-row-action" data-convert-lead="' +
+                                                esc(item.id) +
+                                              '">Convert to client</button>'
+                                            : ""
+                                    ) +
+                                    '<button type="button" class="sway-row-action danger" data-delete="leads" data-id="' +
+                                        esc(item.id) +
+                                    '">Delete</button>' +
+                                "</div>" +
+                            "</details>" +
+                        "</div>" +
+                    "</article>"
                 );
             }).join("");
 
@@ -12677,14 +12696,22 @@ function simpleBars(items, color) {
             ) +
             panel(
                 "Lead pipeline",
-                "All lead records, including follow-up and long-term re-engagement stages. Scheduled follow-up tasks are managed in Follow-ups.",
+                "Each lead has its own record card. Open a card for the complete lead details and assessment; use Actions for outreach and pipeline operations.",
                 adminTableControls.renderControls("leads") +
-                (state.leads.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="leads" aria-label="Select all visible leads"></th><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      '<tr data-admin-table-no-results="leads" hidden><td colspan="8">No leads match these controls. Try another search or status.</td></tr>' +
-                      "</tbody></table></div>"
-                    : empty("No leads yet."))
+                (
+                    state.leads.length
+                        ? '<div class="sway-lead-card-selection-bar">' +
+                            '<label><input type="checkbox" data-admin-table-select-all="leads" aria-label="Select all visible leads"><span>Select all visible leads</span></label>' +
+                            '<span>Use the checkboxes to export or delete selected leads.</span>' +
+                          "</div>" +
+                          '<div class="sway-lead-card-grid">' +
+                            cards +
+                          "</div>" +
+                          '<div class="sway-lead-card-empty" data-admin-table-no-results="leads"' +
+                            (visibleLeads.length ? " hidden" : "") +
+                          '>No leads match these controls. Try another search or status.</div>'
+                        : empty("No leads yet.")
+                )
             )
         );
     }
