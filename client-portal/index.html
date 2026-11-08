@@ -318,6 +318,63 @@ body{
   .portal-section-nav a{transition:none}
   html{scroll-behavior:auto}
 }
+
+/* Phase 2: guided onboarding steps, progress feedback and business-aware customer journeys. */
+.onboarding-progress{display:grid;gap:11px;margin:0 0 16px;padding:15px 16px;border:1px solid rgba(52,58,64,.10);border-radius:16px;background:#F6F7F8}
+.onboarding-progress-copy{display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+.onboarding-progress-copy>div{display:grid;gap:4px}
+.onboarding-progress-copy>div>span{color:var(--soft);font-size:.47rem;font-weight:900;letter-spacing:.13em}
+.onboarding-progress-copy strong{color:var(--charcoal-deep);font-size:.78rem;font-weight:850;letter-spacing:-.02em}
+.onboarding-progress-copy>span{color:var(--charcoal-muted);font-size:.49rem;font-weight:650;text-align:right}
+.onboarding-progress-track{height:7px;overflow:hidden;border-radius:999px;background:#E2E6E9}
+.onboarding-progress-track>span{display:block;width:14.2857%;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--deep),var(--blue));transition:width .25s ease}
+.onboarding-section[hidden],.journey-fields[hidden],.journey-not-applicable[hidden]{display:none!important}
+.onboarding-section{scroll-margin-top:150px}
+.onboarding-step-label{color:var(--charcoal-deep);font-size:.62rem;font-weight:850}
+.onboarding-actions{align-items:center;padding-top:8px}
+.onboarding-actions-copy{display:grid;gap:4px;min-width:0}
+.onboarding-actions-right{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.onboarding-actions-right .portal-button{min-height:40px}
+.onboarding-actions-right [hidden]{display:none!important}
+.onboarding-skip{display:inline-flex;align-items:center;gap:8px;margin-top:13px;padding:7px 0;background:none;color:var(--charcoal-muted);font-size:.55rem;font-weight:800;cursor:pointer}
+.onboarding-skip:hover{color:var(--blue)}
+.onboarding-skip span{font-size:.8rem}
+.journey-not-applicable{margin-top:14px;padding:15px;border:1px solid rgba(52,58,64,.11);border-radius:14px;background:#F4F6F7}
+.journey-not-applicable strong{display:block;color:var(--charcoal-deep);font-size:.62rem}
+.journey-not-applicable p{margin-top:5px;color:var(--charcoal-muted);font-size:.54rem;line-height:1.6}
+.onboarding-review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.onboarding-review-card{min-width:0;padding:14px;border:1px solid rgba(52,58,64,.10);border-radius:15px;background:#F7F8F9}
+.onboarding-review-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.onboarding-review-card-head h5{color:var(--charcoal-deep);font-size:.62rem;font-weight:850}
+.onboarding-review-card-body{display:grid;gap:6px;color:var(--charcoal-muted);font-size:.53rem;line-height:1.55;overflow-wrap:anywhere}
+.onboarding-review-card-body p{margin:0}
+.onboarding-review-card-body strong{color:var(--charcoal-deep);font-weight:800}
+.onboarding-review-card-body ul{display:grid;gap:7px;padding-left:16px}
+.onboarding-review-card-body li{padding-left:2px}
+.onboarding-review-card-body li small{display:block;margin-top:2px;color:var(--soft);font-size:.48rem}
+.onboarding-review-note{margin-top:12px;padding:12px 14px;border:1px solid rgba(1,82,244,.10);border-radius:13px;background:#F1F5FA;color:#475461;font-size:.53rem;line-height:1.6}
+.onboarding-form :focus-visible{outline:3px solid rgba(1,82,244,.28);outline-offset:2px}
+@media(max-width:760px){
+  .onboarding-progress{padding:13px}
+  .onboarding-progress-copy{align-items:flex-start;flex-direction:column;gap:6px}
+  .onboarding-progress-copy>span{text-align:left}
+  .onboarding-review-grid{grid-template-columns:1fr}
+  .onboarding-actions{align-items:stretch;flex-direction:column}
+  .onboarding-actions-right{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .onboarding-actions-right .portal-button{width:100%;padding-left:9px;padding-right:9px}
+  .onboarding-actions-copy{gap:5px}
+}
+@media(max-width:430px){
+  .onboarding-progress{border-radius:14px}
+  .onboarding-step-label{font-size:.58rem}
+  .onboarding-actions-right{gap:7px}
+  .onboarding-actions-right .portal-button{min-height:42px;font-size:.55rem}
+  .onboarding-review-card{padding:12px}
+}
+@media(prefers-reduced-motion:reduce){
+  .onboarding-progress-track>span{transition:none}
+}
+
 </style>
 </head>
 <body>
