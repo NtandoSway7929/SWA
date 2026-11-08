@@ -23,8 +23,13 @@ for (const view of ["leads", "followups", "tasks", "communications"]) {
         view + " view must render the table controls");
     assert.ok(workspaceSource.includes('adminTableControls.items("' + view + '", state.' + view + ")"),
         view + " view must use the shared filter/sort pipeline");
-    assert.ok(workspaceSource.includes('adminTableControls.selectionCell("' + view + '"'),
-        view + " view must render selection checkboxes");
+    if (view === "leads") {
+        assert.match(workspaceSource, /data-admin-table-select="leads"/,
+            "lead cards must render the shared selection checkbox contract");
+    } else {
+        assert.ok(workspaceSource.includes('adminTableControls.selectionCell("' + view + '"'),
+            view + " view must render selection checkboxes");
+    }
 }
 assert.ok(workspaceSource.includes("adminTableControls.bind();"),
     "dashboard view lifecycle must bind the table controls after rendering");
