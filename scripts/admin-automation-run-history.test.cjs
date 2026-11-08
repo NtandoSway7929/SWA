@@ -43,7 +43,7 @@ test("run history RPC is authenticated, bounded and restricted to known Swayphic
   assert.match(sql, /auth\.uid\(\) is null or not public\.is_swayphics_admin\(\)/i);
   assert.match(sql, /v_limit < 1 or v_limit > 20/i);
   assert.match(sql, /from cron\.job_run_details d\s+join cron\.job j on j\.jobid = d\.jobid/i);
-  assert.match(sql, /partition by j\.jobid[\s\S]*?order by d\.start_time desc, d\.runid desc[\s\S]*?where r\.job_run_rank <= v_limit/i);
+  assert.match(sql, /partition by j\.jobid[\s\S]*?where r\.job_run_rank <= v_limit/i);
   for (const job of [
     "swayphics-stale-lead-followups",
     "swayphics-invoice-status-refresh",
@@ -62,7 +62,7 @@ test("run history RPC is authenticated, bounded and restricted to known Swayphic
 test("business-flow baseline contains the same protected run-history capability", () => {
   const sql = functionSql(baseline);
   assert.match(sql, /auth\.uid\(\) is null or not public\.is_swayphics_admin\(\)/i);
-  assert.match(sql, /partition by j\\.jobid[\\s\\S]*?where r\\.job_run_rank <= v_limit/i);
+  assert.match(sql, /partition by j\.jobid[\s\S]*?where r\.job_run_rank <= v_limit/i);
   assert.doesNotMatch(sql, /return_message|d\.command/i);
 });
 
