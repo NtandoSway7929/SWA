@@ -238,8 +238,27 @@ Deno.serve(async request => {
             url: targetUrl
         });
 
+        if (subscriptions.length === 0) {
+            return new Response(
+                JSON.stringify({
+                    ok: true,
+                    sent: 0,
+                    removed: 0,
+                    failed: 0,
+                    subscriptions: 0,
+                    reason: "No registered browser-push subscriptions."
+                }),
+                { status: 200, headers: jsonHeaders }
+            );
+        }
+
         let sent = 0;
         let removed = 0;
+        let failed = 0;
+        const deliveryErrors: Array<{
+            statusCode: number | null;
+            operation: "send" | "remove_expired_subscription";
+        }> = [];
 
         for (const subscription of subscriptions) {
             try {
@@ -270,37 +289,70 @@ Deno.serve(async request => {
                     null;
 
                 if (statusCode === 404 || statusCode === 410) {
-                    await fetch(
-                        supabaseUrl +
-                            "/rest/v1/admin_push_subscriptions?id=eq." +
-                            encodeURIComponent(subscription.id),
-                        {
-                            method: "DELETE",
-                            headers: {
-                                apikey: serviceRoleKey,
-                                Authorization: "Bearer " + serviceRoleKey
+                    try {
+                        const cleanupResponse = await fetch(
+                            supabaseUrl +
+                                "/rest/v1/admin_push_subscriptions?id=eq." +
+                                encodeURIComponent(subscription.id),
+                            {
+                                method: "DELETE",
+                                headers: {
+                                    apikey: backendApiKey,
+                                    Authorization: "Bearer " + backendApiKey,
+                                    Prefer: "return=minimal"
+                                }
                             }
-                        }
-                    );
+                        );
 
-                    removed += 1;
+                        if (!cleanupResponse.ok) {
+                            failed += 1;
+                            deliveryErrors.push({
+                                statusCode: cleanupResponse.status,
+                                operation: "remove_expired_subscription"
+                            });
+                        } else {
+                            removed += 1;
+                        }
+                    } catch (cleanupError) {
+                        const responseError = cleanupError as {
+                            status?: number;
+                        } | null;
+                        failed += 1;
+                        deliveryErrors.push({
+                            statusCode: responseError?.status || null,
+                            operation: "remove_expired_subscription"
+                        });
+                    }
                 } else {
+                    failed += 1;
+                    deliveryErrors.push({
+                        statusCode,
+                        operation: "send"
+                    });
                     console.error(
-                        "Push delivery failed:",
-                        error
+                        "Push delivery failed for subscription:",
+                        statusCode ?? "unknown status"
                     );
                 }
             }
         }
 
+        const partialFailure = failed > 0;
+
         return new Response(
             JSON.stringify({
-                ok: true,
+                ok: !partialFailure,
+                partial: sent > 0 && partialFailure,
                 sent,
                 removed,
-                subscriptions: subscriptions.length
+                failed,
+                subscriptions: subscriptions.length,
+                errors: deliveryErrors
             }),
-            { status: 200, headers: jsonHeaders }
+            {
+                status: partialFailure ? 502 : 200,
+                headers: jsonHeaders
+            }
         );
     } catch (error) {
         const dispatcherError = error as { message?: string } | null;
