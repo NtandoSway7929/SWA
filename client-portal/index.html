@@ -60,6 +60,164 @@ button,input,textarea{font:inherit}button{border:0}
 @media(max-width:680px){.portal-shell{width:min(100% - 24px,1160px);padding-top:12px}.portal-nav{top:8px;padding:9px 10px 9px 12px}.portal-logo{width:108px}.portal-secure{display:none}.portal-hero{padding:48px 2px 24px}.portal-hero h1{font-size:clamp(2.45rem,14vw,4rem)}.portal-hero-actions{flex-direction:column}.portal-hero-actions .portal-button{width:100%}.portal-card{padding:16px;border-radius:19px}.portal-section{margin-top:22px}.portal-stats{grid-template-columns:1fr 1fr;gap:8px}.stat-card{padding:14px}.stat-card strong{font-size:1.05rem}.portal-footer{align-items:flex-start;flex-direction:column}.detail-grid{grid-template-columns:1fr 1fr}.modal-card{padding:17px;border-radius:20px}}
 @media(max-width:680px){.onboarding-intro{grid-template-columns:1fr}.onboarding-fields{grid-template-columns:1fr}.onboarding-fields .full{grid-column:auto}.service-row{grid-template-columns:1fr 1fr}.service-row .field:nth-child(3){grid-column:1/-1}.remove-service{width:100%}.onboarding-actions{align-items:stretch;flex-direction:column}.onboarding-actions-right{display:grid;grid-template-columns:1fr 1fr}.onboarding-actions-right .portal-button{width:100%;padding-left:10px;padding-right:10px}}@media(max-width:430px){.portal-badge{font-size:.49rem;padding:0 8px}.portal-stats{grid-template-columns:1fr}.project-top,.financial-top{flex-direction:column;gap:7px}}
 @media(prefers-reduced-motion:reduce){.sway-favicon-loader::before,.sway-favicon-loader-mark,.sway-favicon-loader-dot{animation:none}.portal-button{transition:none}}
+
+/* Premium client-portal visual system: opaque surfaces, graphite neutrals and restrained Swayphics blue. */
+:root{
+  --charcoal:#343A40;
+  --charcoal-deep:#252B31;
+  --charcoal-muted:#56616B;
+  --dark:var(--charcoal);
+  --muted:#59636D;
+  --soft:#737E88;
+  --line:rgba(52,58,64,.13);
+  --glass:rgba(255,255,255,.97);
+}
+body{
+  color:var(--charcoal);
+  background:linear-gradient(135deg,rgba(248,249,250,.965),rgba(246,247,248,.95) 48%,rgba(239,242,245,.97)),url("../background%20branded%20wallpaper.webp") center/cover fixed no-repeat;
+}
+.portal-nav{
+  border-color:rgba(52,58,64,.10);
+  background:rgba(250,251,252,.97);
+  box-shadow:0 14px 38px rgba(37,43,49,.10),inset 0 1px 0 rgba(255,255,255,.96);
+  backdrop-filter:blur(12px) saturate(110%);
+  -webkit-backdrop-filter:blur(12px) saturate(110%);
+}
+.portal-secure{
+  border-color:rgba(52,58,64,.10);
+  background:#F1F3F5;
+  color:#46515B;
+}
+.portal-hero h1,
+.portal-section-head h2,
+.card-head h3,
+.request-copy h3,
+.modal-head h3,
+.onboarding-section-head h4{
+  color:var(--charcoal-deep);
+}
+.portal-hero p,.request-copy p,.card-head p,.onboarding-section-head p{
+  color:var(--charcoal-muted);
+}
+.stat-card,.portal-card{
+  border-color:rgba(52,58,64,.10);
+  background:linear-gradient(145deg,rgba(255,255,255,.99),rgba(249,250,251,.98));
+  box-shadow:0 16px 42px rgba(37,43,49,.075),inset 0 1px 0 rgba(255,255,255,.98);
+  backdrop-filter:blur(8px) saturate(108%);
+  -webkit-backdrop-filter:blur(8px) saturate(108%);
+}
+.stat-card::after{
+  background:radial-gradient(circle,rgba(1,82,244,.075),rgba(1,82,244,0) 72%);
+}
+.stat-card span,.card-count,.project-item-footer small,.field-help,.asset-upload-status,.asset-item-meta{
+  color:var(--soft);
+}
+.project-item,.financial-item{
+  border-color:rgba(52,58,64,.085);
+  background:#F6F7F8;
+}
+.project-name,.financial-name,.financial-item b,.project-detail .detail-box strong{
+  color:var(--charcoal-deep);
+}
+.project-meta,.financial-meta,.empty{
+  color:var(--charcoal-muted);
+}
+.portal-button.secondary{
+  border-color:rgba(52,58,64,.14);
+  background:#F0F2F4;
+  color:var(--charcoal-deep);
+}
+.portal-button.secondary:hover{
+  background:#E8EBEE;
+  box-shadow:0 8px 20px rgba(37,43,49,.08);
+}
+.onboarding-section{
+  border-color:rgba(52,58,64,.10);
+  background:rgba(249,250,251,.98);
+}
+.onboarding-guide{
+  border-color:rgba(52,58,64,.10);
+  background:linear-gradient(135deg,#F0F2F4,#FAFBFC);
+}
+.onboarding-guide strong{
+  color:var(--charcoal-deep);
+}
+.onboarding-tip{
+  border-color:rgba(86,97,107,.24);
+  background:#F4F6F7;
+}
+.onboarding-tip span{
+  color:var(--charcoal-muted);
+}
+.onboarding-number{
+  background:linear-gradient(145deg,#414A53,#293139);
+  color:#fff;
+  box-shadow:0 5px 12px rgba(37,43,49,.14);
+}
+.onboarding-form .field input,
+.onboarding-form .field textarea,
+.onboarding-form .field select,
+.field input,.field textarea{
+  border-color:rgba(52,58,64,.16);
+  background:#fff;
+  color:var(--charcoal-deep);
+}
+.onboarding-form .field input:focus,
+.onboarding-form .field textarea:focus,
+.onboarding-form .field select:focus,
+.field input:focus,.field textarea:focus{
+  border-color:rgba(1,82,244,.42);
+  box-shadow:0 0 0 4px rgba(1,82,244,.075);
+  background:#fff;
+}
+.asset-upload{
+  border-color:rgba(86,97,107,.28);
+  background:#F5F6F7;
+}
+.asset-upload input[type=file]{
+  background:#fff;
+}
+.asset-item{
+  border-color:rgba(52,58,64,.09);
+  background:#fff;
+}
+.detail-box{
+  border-color:rgba(52,58,64,.10);
+  background:#F5F6F7;
+}
+.detail-description{
+  background:#F0F3F5;
+  color:var(--charcoal-muted);
+}
+.modal-backdrop{
+  background:rgba(37,43,49,.48);
+}
+.modal-card{
+  border-color:rgba(255,255,255,.88);
+  background:linear-gradient(145deg,#FFFFFF,#F5F7F8);
+  box-shadow:0 30px 90px rgba(37,43,49,.24);
+}
+.modal-close{
+  background:#EEF1F3;
+  color:var(--charcoal-deep);
+}
+.modal-close:hover{
+  background:#E2E7EA;
+  color:var(--blue);
+}
+.message{
+  background:#F0F3F5;
+  color:var(--charcoal-muted);
+}
+.portal-footer{
+  color:var(--charcoal-muted);
+}
+.portal-footer strong{
+  color:var(--charcoal-deep);
+}
+.onboarding-locked input,.onboarding-locked textarea,.onboarding-locked select{
+  background:#F1F3F5;
+}
 </style>
 </head>
 <body>
