@@ -27,15 +27,22 @@ function safeName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^\.+/, "").slice(0, 120) || "file";
 }
 async function tokenClient(token: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
+    supabaseUrl,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
+  const publicKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  if (!publicKey) return null;
 
   // Use the same database-side token validation as the client portal itself.
   // This keeps uploads aligned with get_client_portal and avoids maintaining
   // a second, subtly different token-verification implementation here.
-  const { data, error } = await admin.rpc("get_client_portal", { p_token: token });
+  // The RPC is intentionally called with the public role: its EXECUTE grant
+  // is available to anon, not service_role, and the private token is the
+  // authorization credential for this narrowly scoped portal operation.
+  const portalClient = createClient(supabaseUrl, publicKey);
+  const { data, error } = await portalClient.rpc("get_client_portal", { p_token: token });
   const clientId = data?.ok === true ? data.client?.id : null;
   if (error || !clientId) return null;
 
