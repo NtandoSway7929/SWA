@@ -95,9 +95,9 @@ assert.match(
     /Choose a project linked to the selected client/,
     "the uploader must reject project/client mismatches before Storage upload"
 );
-assert.match(uploadFunction, /"client_id":?\s*clientId/);
-assert.match(uploadFunction, /"storage_path":?\s*storagePath/);
-assert.match(uploadFunction, /"uploaded_by":?\s*state\.currentUser\.id/);
+assert.match(uploadFunction, /client_id:\s*clientId/);
+assert.match(uploadFunction, /storage_path:\s*storagePath/);
+assert.match(uploadFunction, /uploaded_by:\s*state\.currentUser\.id/);
 
 assert.match(
     html,
