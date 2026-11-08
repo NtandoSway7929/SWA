@@ -19,3 +19,8 @@ assert.match(adminUi, /Review business assets/);
 assert.match(adminUi, /Preview/);
 assert.match(adminUi, /Download/);
 console.log("Client onboarding asset delivery checks passed.");
+
+assert.match(adminUi, /sway-client360-modal/);
+assert.match(adminUi, /sway-client360-assets/);
+assert.match(adminUi, /data-client360/);
+assert.match(adminUi, /data-notification-entity-id/);
