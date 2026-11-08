@@ -1180,8 +1180,10 @@ return {link:link,id:id,target:id?document.getElementById(id):null};
 }).filter(function(item){return item.target});
 if(!items.length)return;
 const nav=links[0].closest(".portal-section-nav");
-let scheduled=false;
+let scheduled=false,activeId=null;
 function setActive(id){
+const changed=id!==activeId;
+activeId=id;
 let activeLink=null;
 links.forEach(function(link){
 const active=link.getAttribute("href")==="#"+id;
@@ -1189,7 +1191,7 @@ link.classList.toggle("active",active);
 if(active){link.setAttribute("aria-current","location");activeLink=link}
 else link.removeAttribute("aria-current");
 });
-if(activeLink&&nav){
+if(changed&&activeLink&&nav){
 const strip=nav.querySelector(".portal-section-links");
 if(strip&&strip.scrollWidth>strip.clientWidth){
 const left=activeLink.offsetLeft-strip.offsetLeft-(strip.clientWidth-activeLink.offsetWidth)/2;
