@@ -419,7 +419,7 @@
             '<div class="swe-card"><div class="swe-card-heading"><div><h3>Scheduled automation health</h3><p>Latest observed run for each allowlisted Swayphics background job. Missing history is shown as “Not run yet”, not as a success.</p></div><button type="button" class="swe-button" data-action="refresh-governance">Refresh status</button></div>' +
             '<div data-governance-automation><p class="swe-muted">Loading automation status…</p></div>' +
             '<p class="swe-status" data-governance-status role="status" aria-live="polite"></p></div>' +
-            '<div class="swe-card"><h3>Recent automation runs</h3><p>Latest 30 executions across the allowlisted Swayphics background jobs. Durations and safe status summaries are shown; raw database job output is not exposed.</p>' +
+            '<div class="swe-card"><h3>Recent automation runs</h3><p>Latest 10 executions per allowlisted Swayphics background job (up to 40 runs total). Durations and safe status summaries are shown; raw database job output is not exposed.</p>' +
             '<div data-governance-runs><p class="swe-muted">Loading recent automation runs…</p></div>' +
             '<p class="swe-status" data-governance-runs-status role="status" aria-live="polite"></p></div>' +
             '<div class="swe-card"><h3>Settings audit history</h3><p>Records who changed a settings area and which field names changed. Previous and new values are deliberately not stored here, so banking details and template contents are not copied into the audit trail.</p>' +
@@ -910,7 +910,7 @@
             request("/rest/v1/rpc/get_swayphics_automation_status", { method: "POST", body: {} }),
             request("/rest/v1/rpc/get_swayphics_automation_run_history", {
                 method: "POST",
-                body: { p_limit: 30 }
+                body: { p_limit: 10 }
             }),
             getRows("admin_settings_audit_log", {
                 select: "id,actor_id,setting_area,changed_fields,created_at",
@@ -968,6 +968,11 @@
             }
             renderSimpleTable(root.querySelector("[data-governance-runs]"), [
                 { label: "Started (SAST)", value: function (row) { return formatRunTime(row.started_at); } },
+                { label: "Finished (SAST)", value: function (row) {
+                    return row.finished_at
+                        ? formatRunTime(row.finished_at)
+                        : (String(row.run_status || "").toLowerCase() === "running" ? "In progress" : "Unavailable");
+                } },
                 { label: "Automation", value: function (row) { return row.job_name || "Unknown job"; } },
                 { label: "Outcome", value: function (row) {
                     var outcome = String(row.run_status || "").toLowerCase();
