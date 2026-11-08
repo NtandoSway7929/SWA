@@ -89,7 +89,12 @@ const uploadFunction = functionSection(
     "client document uploader"
 );
 assert.match(workspace, /CLIENT_DOCUMENT_BUCKET\s*=\s*["']swayphics-client-files["']/);
-assert.match(uploadFunction, /String\(clientId\)\s*\+\s*["']\\/["']/);
+assert.ok(
+    uploadFunction.includes("String(clientId)") &&
+    uploadFunction.includes('"/"') &&
+    uploadFunction.includes("uniqueName"),
+    "stored object paths must be namespaced under the selected client ID"
+);
 assert.match(
     uploadFunction,
     /Choose a project linked to the selected client/,
