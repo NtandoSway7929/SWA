@@ -1,5 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
+import { createClient } from "npm:@supabase/supabase-js@2.119.0";
+import { PDFDocument, PDFImage, PDFPage, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
 
 const ALLOWED_ORIGIN = "https://swayphics.co.za";
 const BUCKET = "swayphics-client-files";
@@ -167,7 +167,7 @@ async function buildPdf(
 
   const logoBytes = await loadLogo();
 
-  let logo: any = null;
+  let logo: PDFImage | null = null;
 
   if (logoBytes) {
     try {
@@ -180,7 +180,7 @@ async function buildPdf(
     }
   }
 
-  function drawWatermark(targetPage: any) {
+  function drawWatermark(targetPage: PDFPage) {
     if (!logo) return;
 
     const maxWatermarkSize = 260;
