@@ -7,6 +7,7 @@ on:
       - "supabase/functions/sync-email-inbox/**"
       - "supabase/functions/delete-email-messages/**"
       - "supabase/functions/send-admin-push/**"
+      - "supabase/functions/client-portal-documents/**"
       - "supabase/config.toml"
       - "scripts/email-inbox-sync.test.mjs"
       - "scripts/delete-email-messages.test.mjs"
@@ -25,6 +26,7 @@ on:
       - "supabase/functions/sync-email-inbox/**"
       - "supabase/functions/delete-email-messages/**"
       - "supabase/functions/send-admin-push/**"
+      - "supabase/functions/client-portal-documents/**"
       - "supabase/config.toml"
       - "scripts/email-inbox-sync.test.mjs"
       - "scripts/delete-email-messages.test.mjs"
@@ -85,3 +87,4 @@ jobs:
           deno check --no-lock supabase/functions/sync-email-inbox/index.ts
           deno check --no-lock supabase/functions/delete-email-messages/index.ts
           deno check --no-lock supabase/functions/send-admin-push/index.ts
+          deno check --no-lock supabase/functions/client-portal-documents/index.ts
