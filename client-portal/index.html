@@ -330,6 +330,44 @@ body{
 #projects-section .portal-section-head,#finances-section .portal-section-head,#request-section .portal-section-head{margin-bottom:14px}
 .portal-project-grid{grid-template-columns:1fr}
 .portal-finance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+
+.finance-overview-panel{display:grid;grid-template-columns:minmax(220px,.82fr) minmax(0,1.18fr);gap:22px;align-items:center;margin:4px 0 17px;padding:23px 25px;border:1px solid rgba(52,58,64,.13);border-radius:22px;background:linear-gradient(125deg,#252B31 0%,#343A40 68%,#26394E 100%);box-shadow:0 18px 42px rgba(37,43,49,.16);color:#fff}
+.finance-overview-main{display:grid;gap:8px;min-width:0}
+.finance-overview-main>span,.finance-overview-metrics>div>span{color:#B9C2CB;font-size:.48rem;font-weight:900;letter-spacing:.14em}
+.finance-overview-main>strong{color:#fff;font-size:clamp(1.65rem,3vw,2.35rem);line-height:1.08;letter-spacing:-.045em;overflow-wrap:anywhere}
+.finance-overview-main>p{color:#D2D8DE;font-size:.54rem;line-height:1.55}
+.finance-overview-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.finance-overview-metrics>div{display:grid;align-content:center;gap:7px;min-width:0;min-height:92px;padding:13px;border:1px solid rgba(255,255,255,.11);border-radius:15px;background:rgba(255,255,255,.065)}
+.finance-overview-metrics>div>b{color:#fff;font-size:.9rem;line-height:1.3;letter-spacing:-.025em;overflow-wrap:anywhere}
+.finance-overview-metrics>div>small{color:#B9C2CB;font-size:.46rem;line-height:1.45}
+.finance-filter-group{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 11px}
+.finance-filter-group button{display:inline-flex;align-items:center;gap:6px;min-height:29px;padding:0 10px;border:1px solid rgba(52,58,64,.10);border-radius:999px;background:#F3F5F6;color:#56616B;font-size:.49rem;font-weight:850;cursor:pointer;transition:background .16s ease,color .16s ease,border-color .16s ease}
+.finance-filter-group button span{color:inherit;opacity:.75;font-variant-numeric:tabular-nums}
+.finance-filter-group button:hover{border-color:rgba(1,82,244,.20);background:#EDF3FF;color:#0152F4}
+.finance-filter-group button.active{border-color:#343A40;background:#343A40;color:#fff}
+.finance-invoice-breakdown{display:flex;flex-wrap:wrap;gap:5px 10px;margin-top:7px;color:#59636D;font-size:.49rem;font-weight:750}
+.finance-amount-stack{display:grid;justify-items:end;gap:5px;flex:0 0 auto;text-align:right}
+.finance-amount-stack>b{color:#252B31;font-size:.69rem;font-weight:900;letter-spacing:-.025em}
+.finance-item-actions{display:flex;justify-content:flex-end;margin-top:10px;padding-top:8px;border-top:1px solid rgba(52,58,64,.07)}
+.finance-due-note{display:inline-flex;width:max-content;max-width:100%;margin-top:8px;padding:5px 8px;border-radius:8px;background:#F0F2F4;color:#59636D;font-size:.47rem;font-weight:850}
+.finance-due-note.overdue{background:#FBEEEE;color:#9A3535}
+.finance-due-note.today,.finance-due-note.soon{background:#FBF6E9;color:#8A641E}
+.finance-due-description{padding:12px 14px;border:1px solid rgba(52,58,64,.10);border-radius:14px;background:#F4F6F7}
+.finance-due-description[data-state="overdue"]{border-color:rgba(154,37,37,.15);background:#FBF1F0}
+.finance-due-description[data-state="overdue"]>strong{color:#9A3535}
+.finance-due-description>strong{display:block;color:#343A40;font-size:.62rem}
+.finance-due-description>p{margin-top:4px;color:#59636D;font-size:.52rem;line-height:1.6}
+.finance-detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.finance-notes{display:grid;gap:6px;white-space:pre-line}
+.finance-notes>strong{color:#343A40;font-size:.56rem}
+.finance-notes>p{color:#59636D;font-size:.54rem;line-height:1.65}
+.finance-payment-guidance{padding:11px 13px;border:1px solid rgba(1,82,244,.10);border-radius:12px;background:#F1F5FF;color:#45546B;font-size:.53rem;line-height:1.6}
+.finance-modal-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding-top:3px}
+.finance-modal-card .project-detail{gap:12px}
+@media(max-width:900px){.finance-overview-panel{grid-template-columns:1fr}.finance-overview-main{gap:6px}}
+@media(max-width:560px){.finance-overview-panel{padding:18px;border-radius:18px}.finance-overview-metrics{grid-template-columns:1fr}.finance-overview-metrics>div{min-height:0;padding:11px}.finance-overview-metrics>div>b{font-size:.8rem}.finance-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.finance-modal-actions{flex-direction:column-reverse}.finance-modal-actions .portal-button{width:100%}.financial-top{gap:9px}.finance-amount-stack>b{font-size:.62rem}}
+@media(prefers-reduced-motion:reduce){.finance-filter-group button{transition:none}}
+
 .portal-finance-grid>.portal-card{min-width:0;height:100%}
 #projects-section .portal-card.wide{grid-column:auto}
 @media(max-width:1040px){
@@ -563,9 +601,20 @@ const milestone=projectMilestoneSummary(item);
 const schedule=projectDeadline(item);
 return '<article class="project-item"><div class="project-top"><div><div class="project-name">'+esc(item.name||"Untitled project")+'</div><div class="project-meta">'+esc(item.service||"Swayphics project")+(item.due_date?" · Target date "+esc(date(item.due_date)):"")+"</div></div>"+chip(item.status)+"</div>"+projectProgress(item.status)+'<div class="project-stage-summary"><span>Current delivery stage</span><strong>'+esc(milestone.statusLabel)+'</strong><small>'+esc(milestone.message)+'</small></div><div class="project-item-footer"><small>'+esc(schedule.label)+'</small><button type="button" class="text-button" data-project-id="'+esc(item.id)+'">View milestones</button></div></article>';
 }
-function renderInvoice(item){const outstanding=Number(item.amount_outstanding||0);return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.invoice_number||"Invoice")+'<div class="financial-meta">Issued '+esc(date(item.issue_date))+(item.due_date?" · Due "+esc(date(item.due_date)):"")+(outstanding>0?" · Outstanding "+money(outstanding):"")+"</div></div><div><b>"+esc(money(item.total))+"</b><div style='margin-top:5px;text-align:right;'>"+chip(item.status)+"</div></div></div></article>"}
-function renderQuote(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.quote_number||item.title||"Quote")+'<div class="financial-meta">'+esc(item.title||"Swayphics quotation")+(item.valid_until?" · Valid until "+esc(date(item.valid_until)):"")+"</div></div><div><b>"+esc(money(item.amount))+"</b><div style='margin-top:5px;text-align:right;'>"+chip(item.status)+"</div></div></div></article>"}
-function renderPayment(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.reference||"Payment")+'<div class="financial-meta">'+esc(date(item.paid_at))+(item.method?" · "+esc(item.method):"")+"</div></div><div><b>"+esc(money(item.amount))+"</b><div style='margin-top:5px;text-align:right;'>"+chip("paid")+"</div></div></div></article>"}
+function renderInvoice(item){
+const amounts=invoiceFinancialBreakdown(item),due=invoiceDueState(item);
+return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.invoice_number||"Invoice")+'<div class="financial-meta">Issued '+esc(date(item.issue_date))+(item.due_date?" · Due "+esc(date(item.due_date)):"")+'</div><div class="finance-invoice-breakdown"><span>Paid '+esc(financialMoney(amounts.paid,amounts.currency))+'</span><span>Balance '+esc(financialMoney(amounts.outstanding,amounts.currency))+'</span></div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(amounts.total,amounts.currency))+'</b><div>'+chip(item.status)+'</div></div></div>'+(amounts.outstanding>0?'<div class="finance-due-note '+esc(due.state)+'">'+esc(due.label)+'</div>':'')+'<div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="invoice" data-financial-id="'+esc(item.id)+'">View invoice details</button></div></article>';
+}
+function renderQuote(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.quote_number||item.title||"Quote")+'<div class="financial-meta">'+esc(item.title||"Swayphics quotation")+(item.valid_until?" · Valid until "+esc(date(item.valid_until)):"")+'</div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(item.amount,"ZAR"))+'</b><div>'+chip(item.status)+'</div></div></div><div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="quote" data-financial-id="'+esc(item.id)+'">View quotation details</button></div></article>'}
+function renderPayment(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.reference||"Payment")+'<div class="financial-meta">'+esc(date(item.paid_at))+(item.method?" · "+esc(item.method):"")+'</div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(item.amount,"ZAR"))+'</b><div>'+chip("paid")+'</div></div></div><div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="payment" data-financial-id="'+esc(item.id)+'">View payment record</button></div></article>'}
+function renderFinanceInvoiceList(invoices,filter){
+const rows=filterPortalInvoices(invoices,filter);
+if(!rows.length){
+const message=filter==="outstanding"?"There are no outstanding invoices recorded on this account.":(filter==="paid"?"No paid invoices are currently listed.":"No invoices are currently available to review.");
+return '<div class="empty">'+message+'</div>';
+}
+return '<div class="financial-list">'+rows.map(renderInvoice).join("")+'</div>';
+}
 function onboardingValue(onboarding,key){return onboarding&&onboarding[key]!=null?onboarding[key]:""}
 function onboardingJourneyMode(onboarding){
 const raw=String(onboardingValue(onboarding,"booking_process")||"");
@@ -891,12 +940,82 @@ if(nextButton)nextButton.textContent="Next";
 if(backButton)backButton.disabled=true;
 }
 }
-function isClientInvoicePayable(item){return ["sent","partially paid","overdue"].includes(String(item&&item.status||"").toLowerCase())&&Number(item&&item.amount_outstanding||0)>0}
+function financialMoney(value,currency){
+const amount=Number(value||0),code=String(currency||"ZAR").trim().toUpperCase()||"ZAR";
+const safeAmount=Number.isFinite(amount)?amount:0;
+try{return new Intl.NumberFormat("en-ZA",{style:"currency",currency:code,currencyDisplay:"symbol",minimumFractionDigits:2,maximumFractionDigits:2}).format(safeAmount)+" ("+code+")"}
+catch(_){return code+" "+safeAmount.toFixed(2)}
+}
+function invoiceFinancialBreakdown(item){
+const total=Math.max(0,Number(item&&item.total||0)||0);
+const rawOutstanding=Number(item&&item.amount_outstanding);
+const outstanding=Number.isFinite(rawOutstanding)?Math.min(total,Math.max(0,rawOutstanding)):0;
+const paid=Math.min(total,Math.max(0,total-outstanding));
+return {total:total,paid:paid,outstanding:outstanding,currency:String(item&&item.currency||"ZAR").toUpperCase()};
+}
+function invoiceDueState(item,todayValue){
+const amounts=invoiceFinancialBreakdown(item),status=String(item&&item.status||"").toLowerCase();
+if(amounts.outstanding<=0||status==="paid")return {state:"settled",label:"Settled",description:"No outstanding balance is recorded for this invoice."};
+if(status==="overdue")return {state:"overdue",label:"Overdue",description:"This invoice is marked overdue. Please contact Swayphics if you have already made the payment."};
+const dueDate=String(item&&item.due_date||"").slice(0,10);
+if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate))return {state:"unscheduled",label:"No due date recorded",description:"A due date has not been recorded for this invoice."};
+const dueParts=dueDate.split("-").map(Number),dueUtc=Date.UTC(dueParts[0],dueParts[1]-1,dueParts[2]);
+if(new Date(dueUtc).toISOString().slice(0,10)!==dueDate)return {state:"unscheduled",label:"Invalid due date",description:"Please contact Swayphics to confirm the due date recorded for this invoice."};
+const today=String(todayValue||projectTodayDate());
+if(!/^\d{4}-\d{2}-\d{2}$/.test(today))return {state:"scheduled",label:"Due "+date(dueDate),description:"The recorded due date is "+date(dueDate)+"."};
+const todayParts=today.split("-").map(Number),todayUtc=Date.UTC(todayParts[0],todayParts[1]-1,todayParts[2]);
+const days=Math.round((dueUtc-todayUtc)/86400000);
+if(days<0)return {state:"overdue",label:"Past due",description:"The recorded due date was "+date(dueDate)+". Please contact Swayphics to confirm the next step."};
+if(days===0)return {state:"today",label:"Due today",description:"The recorded due date is today, "+date(dueDate)+"."};
+if(days===1)return {state:"soon",label:"Due tomorrow",description:"The recorded due date is "+date(dueDate)+"."};
+if(days<=7)return {state:"soon",label:"Due in "+days+" days",description:"The recorded due date is "+date(dueDate)+"."};
+return {state:"scheduled",label:"Due "+date(dueDate),description:"The recorded due date is "+date(dueDate)+"."};
+}
+function isClientInvoicePayable(item){
+const status=String(item&&item.status||"").toLowerCase();
+return ["sent","partially paid","overdue"].includes(status)&&invoiceFinancialBreakdown(item).outstanding>0;
+}
+function filterPortalInvoices(invoices,filter,todayValue){
+const rows=Array.isArray(invoices)?invoices:[];
+return rows.filter(function(item){
+const status=String(item&&item.status||"").toLowerCase();
+if(status==="draft"||status==="cancelled")return false;
+if(filter==="outstanding")return isClientInvoicePayable(item);
+if(filter==="paid")return status==="paid"||invoiceFinancialBreakdown(item).outstanding<=0;
+return true;
+});
+}
+function formatFinancialTotal(rows,amountSelector,currencySelector){
+const totals={};
+(rows||[]).forEach(function(item){
+const amount=Number(amountSelector(item)||0);
+if(!Number.isFinite(amount)||amount===0)return;
+const currency=String(currencySelector(item)||"ZAR").trim().toUpperCase()||"ZAR";
+totals[currency]=(totals[currency]||0)+amount;
+});
+const currencies=Object.keys(totals).sort();
+return currencies.length?currencies.map(function(currency){return financialMoney(totals[currency],currency)}).join(" · "):financialMoney(0,"ZAR");
+}
+function buildFinancialSummary(invoices,payments,todayValue){
+const visible=(Array.isArray(invoices)?invoices:[]).filter(function(item){return !["draft","cancelled"].includes(String(item&&item.status||"").toLowerCase())});
+const open=visible.filter(isClientInvoicePayable);
+const overdue=open.filter(function(item){return invoiceDueState(item,todayValue).state==="overdue"});
+return {
+outstanding:formatFinancialTotal(open,function(item){return invoiceFinancialBreakdown(item).outstanding},function(item){return item.currency}),
+overdue:formatFinancialTotal(overdue,function(item){return invoiceFinancialBreakdown(item).outstanding},function(item){return item.currency}),
+invoiced:formatFinancialTotal(visible,function(item){return invoiceFinancialBreakdown(item).total},function(item){return item.currency}),
+openCount:open.length,
+overdueCount:overdue.length,
+invoiceCount:visible.length,
+paymentCount:Array.isArray(payments)?payments.length:0
+};
+}
+
 function getClientNextStep(onboarding,invoices,quotes,active,projects){
 const saved=onboarding||{},invoiceRows=Array.isArray(invoices)?invoices:[],quoteRows=Array.isArray(quotes)?quotes:[],activeRows=Array.isArray(active)?active:[],projectRows=Array.isArray(projects)?projects:[];
 if(saved.status!=="submitted")return {badge:"Action needed",title:"Complete your onboarding",description:"Share your business details, services and brand information so we can prepare the right website experience for your business.",action:"Continue onboarding",target:"onboarding-section"};
-const overdue=invoiceRows.find(function(item){return String(item.status||"").toLowerCase()==="overdue"&&Number(item.amount_outstanding||0)>0});
-if(overdue)return {badge:"Payment overdue",title:"Review your outstanding invoice",description:"An invoice is marked overdue. Open your finances to review the balance and payment details.",action:"View finances",target:"finances-section"};
+const overdue=invoiceRows.find(function(item){return invoiceDueState(item).state==="overdue"&&invoiceFinancialBreakdown(item).outstanding>0});
+if(overdue)return {badge:"Payment overdue",title:"Review your outstanding invoice",description:"An invoice is past its recorded due date or marked overdue. Open your finances to review the balance and contact Swayphics if you need payment instructions.",action:"View finances",target:"finances-section"};
 const dueInvoice=invoiceRows.find(isClientInvoicePayable);
 if(dueInvoice)return {badge:"Payment due",title:"Review your invoice",description:"There is an outstanding invoice on your account. You can review its amount, due date and payment status in your finances.",action:"View finances",target:"finances-section"};
 const sentQuote=quoteRows.find(function(item){return String(item.status||"").toLowerCase()==="sent"});
@@ -924,8 +1043,9 @@ links.forEach(function(link){const target=document.getElementById(link.getAttrib
 }
 }
 function render(data,onboarding){
-const c=data.client||{},projects=data.projects||[],active=activeProjects(data),invoices=data.invoices||[],quotes=data.quotes||[],payments=data.payments||[];
-const outstanding=invoices.filter(isClientInvoicePayable).reduce(function(sum,item){return sum+Math.max(0,Number(item.amount_outstanding||0))},0),quoteValue=quotes.reduce(function(sum,item){return sum+Number(item.amount||0)},0),paid=payments.reduce(function(sum,item){return sum+Number(item.amount||0)},0),nextStep=getClientNextStep(onboarding,invoices,quotes,active,projects);
+const c=data.client||{},projects=data.projects||[],active=activeProjects(data),rawInvoices=data.invoices||[],invoices=rawInvoices.filter(function(item){return !["draft","cancelled"].includes(String(item&&item.status||"").toLowerCase())}),quotes=data.quotes||[],payments=data.payments||[];
+const financeSummary=buildFinancialSummary(invoices,payments),outstanding=financeSummary.outstanding,quoteValue=quotes.reduce(function(sum,item){return sum+Number(item.amount||0)},0),paid=payments.reduce(function(sum,item){return sum+Number(item.amount||0)},0),nextStep=getClientNextStep(onboarding,invoices,quotes,active,projects);
+let invoiceFilter="all";
 app.className="portal-shell";
 app.innerHTML=
 '<nav class="portal-nav"><img src="../swayphics-logo.png" class="portal-logo" alt="Swayphics"><div class="portal-nav-right"><span class="portal-secure">Secure access</span><span class="portal-badge">Private client portal</span></div></nav>'+
@@ -943,25 +1063,103 @@ app.innerHTML=
 '<section class="next-step-card" aria-labelledby="next-step-title"><div class="next-step-content"><span class="next-step-kicker">YOUR NEXT STEP</span><div class="next-step-heading"><h2 id="next-step-title">'+esc(nextStep.title)+'</h2>'+chip(nextStep.badge)+'</div><p>'+esc(nextStep.description)+'</p></div><a class="portal-button next-step-action" href="#'+esc(nextStep.target)+'">'+esc(nextStep.action)+' <span aria-hidden="true">→</span></a></section>'+
 '<section class="overview-stats"><div class="portal-section-head"><div><h2>At a glance</h2><p>A quick view of your Swayphics account.</p></div></div><div class="portal-stats">'+
 '<article class="stat-card"><span>Active projects</span><strong>'+active.length+'</strong><small>'+(projects.length?projects.length+" total project"+(projects.length===1?"":"s"):"No projects yet")+'</small></article>'+
-'<article class="stat-card"><span>Outstanding</span><strong>'+esc(money(outstanding))+'</strong><small>Across open invoices</small></article>'+
+'<article class="stat-card"><span>Outstanding</span><strong>'+esc(outstanding)+'</strong><small>Across open invoices</small></article>'+
 '<article class="stat-card"><span>Quoted value</span><strong>'+esc(money(quoteValue))+'</strong><small>Current quotations</small></article>'+
 '<article class="stat-card"><span>Recorded payments</span><strong>'+esc(money(paid))+'</strong><small>Payments recorded by Swayphics</small></article>'+
 '</div></section></section>'+
 '<section class="portal-section" id="projects-section"><div class="portal-section-head"><div><h2>My projects</h2><p>Follow the progress of work managed by Swayphics.</p></div><span class="card-count">'+projects.length+' total</span></div><div class="portal-grid portal-project-grid"><section class="portal-card wide"><div class="card-head"><div><h3>Project progress</h3><p>See where each piece of work currently sits.</p></div><span class="card-count">'+active.length+' active</span></div>'+(projects.length?'<div class="project-list">'+projects.map(renderProject).join("")+'</div>':'<div class="empty">No projects are currently listed for this workspace. Your projects will appear here once work has been set up.</div>')+'</section></div></section>'+
-'<section class="portal-section" id="finances-section"><div class="portal-section-head"><div><h2>Finances</h2><p>Quotes, invoices and payments recorded on your account.</p></div></div><div class="portal-finance-grid">'+
-'<section class="portal-card"><div class="card-head"><div><h3>Invoices</h3><p>Amounts and payment status.</p></div><span class="card-count">'+invoices.length+'</span></div>'+(invoices.length?'<div class="financial-list">'+invoices.slice(0,5).map(renderInvoice).join("")+'</div>':'<div class="empty">No invoices are currently listed.</div>')+'</section>'+
-'<section class="portal-card"><div class="card-head"><div><h3>Quotes</h3><p>Current quotations from Swayphics.</p></div><span class="card-count">'+quotes.length+'</span></div>'+(quotes.length?'<div class="financial-list">'+quotes.slice(0,5).map(renderQuote).join("")+'</div>':'<div class="empty">No quotations are currently listed.</div>')+'</section>'+
-'<section class="portal-card"><div class="card-head"><div><h3>Payments</h3><p>Recorded payments on this client account.</p></div><span class="card-count">'+payments.length+'</span></div>'+(payments.length?'<div class="financial-list">'+payments.slice(0,5).map(renderPayment).join("")+'</div>':'<div class="empty">No recorded payments yet.</div>')+'</section>'+
+'<section class="portal-section" id="finances-section"><div class="portal-section-head"><div><h2>Financial centre</h2><p>Review invoice balances, quotations and payments recorded on your account.</p></div><span class="card-count">'+financeSummary.invoiceCount+' invoices · '+financeSummary.paymentCount+' payments</span></div>'+
+'<section class="finance-overview-panel"><div class="finance-overview-main"><span>OUTSTANDING BALANCE</span><strong>'+esc(financeSummary.outstanding)+'</strong><p>'+financeSummary.openCount+' invoice'+(financeSummary.openCount===1?"":"s")+' with a remaining balance recorded.</p></div><div class="finance-overview-metrics"><div><span>OVERDUE BALANCE</span><b>'+esc(financeSummary.overdue)+'</b><small>'+financeSummary.overdueCount+' past-due invoice'+(financeSummary.overdueCount===1?"":"s")+'</small></div><div><span>TOTAL INVOICED</span><b>'+esc(financeSummary.invoiced)+'</b><small>Issued invoices only</small></div><div><span>PAYMENTS RECORDED</span><b>'+financeSummary.paymentCount+'</b><small>Recorded payment entries</small></div></div></section>'+
+'<div class="portal-finance-grid">'+
+'<section class="portal-card"><div class="card-head"><div><h3>Invoices</h3><p>See what has been issued, paid or remains outstanding.</p></div><span class="card-count">'+invoices.length+'</span></div><div class="finance-filter-group" role="group" aria-label="Filter invoices"><button type="button" class="active" data-invoice-filter="all" aria-pressed="true">All <span>'+invoices.length+'</span></button><button type="button" data-invoice-filter="outstanding" aria-pressed="false">Outstanding <span>'+invoices.filter(isClientInvoicePayable).length+'</span></button><button type="button" data-invoice-filter="paid" aria-pressed="false">Paid <span>'+filterPortalInvoices(invoices,"paid").length+'</span></button></div><div id="portal-invoice-list" aria-live="polite">'+renderFinanceInvoiceList(invoices,"all")+'</div></section>'+
+'<section class="portal-card"><div class="card-head"><div><h3>Quotes</h3><p>Review quotation amounts, status and validity.</p></div><span class="card-count">'+quotes.length+'</span></div>'+(quotes.length?'<div class="financial-list">'+quotes.map(renderQuote).join("")+'</div>':'<div class="empty">No quotations are currently listed.</div>')+'</section>'+
+'<section class="portal-card"><div class="card-head"><div><h3>Payment history</h3><p>Payments marked as received by Swayphics.</p></div><span class="card-count">'+payments.length+'</span></div>'+(payments.length?'<div class="financial-list">'+payments.map(renderPayment).join("")+'</div>':'<div class="empty">No recorded payments yet. Payments will appear here once Swayphics records them.</div>')+'</section>'+
 '</div></section>'+
 onboardingForm(data,onboarding)+
 '<section class="portal-section" id="request-section"><div class="portal-section-head"><div><h2>Requests & support</h2><p>Contact Swayphics about an update, change or something new.</p></div></div><section class="portal-card request-card"><div class="request-copy"><span class="kicker">DIRECT TO SWAYPHICS</span><h3>How can we help?</h3><p>Send a request from the portal and it will be attached to this client account in the Swayphics workspace.</p></div><form class="request-form" id="request-form"><div class="field"><label for="request-subject">Subject</label><input id="request-subject" required maxlength="180" placeholder="What do you need help with?"></div><div class="field"><label for="request-message">Message</label><textarea id="request-message" required maxlength="5000" placeholder="Tell the Swayphics team what you need."></textarea></div><button class="portal-button" type="submit">Send request</button><div id="request-message-status" class="message" hidden></div></form></section></section>'+
 '<footer class="portal-footer"><span><strong>Swayphics</strong> · Creative & Design Lab</span><span>Private portal access · Keep this link confidential</span></footer>';
 bindPortalNavigation();
 document.querySelectorAll("[data-project-id]").forEach(function(button){button.addEventListener("click",function(){const project=projects.find(function(item){return item.id===button.dataset.projectId});if(project)openProjectModal(project)})});
+const financeSection=document.getElementById("finances-section");
+financeSection?.addEventListener("click",function(event){
+const filterButton=event.target.closest("[data-invoice-filter]");
+if(filterButton){
+invoiceFilter=filterButton.dataset.invoiceFilter||"all";
+financeSection.querySelectorAll("[data-invoice-filter]").forEach(function(button){const active=button.dataset.invoiceFilter===invoiceFilter;button.classList.toggle("active",active);button.setAttribute("aria-pressed",active?"true":"false")});
+const invoiceList=document.getElementById("portal-invoice-list");
+if(invoiceList)invoiceList.innerHTML=renderFinanceInvoiceList(invoices,invoiceFilter);
+return;
+}
+const detailButton=event.target.closest("[data-financial-type][data-financial-id]");
+if(!detailButton)return;
+const type=detailButton.dataset.financialType,id=detailButton.dataset.financialId;
+const collection=type==="invoice"?invoices:(type==="quote"?quotes:payments);
+const item=collection.find(function(row){return String(row.id)===String(id)});
+if(item)openFinancialModal(type,item,detailButton);
+});
 bindOnboarding();
 document.getElementById("request-form").addEventListener("submit",async function(event){event.preventDefault();const form=event.target,button=form.querySelector("button"),statusBox=document.getElementById("request-message-status");button.disabled=true;button.textContent="Sending...";statusBox.hidden=false;statusBox.textContent="Sending request...";try{const payload=await portalRpc("submit_client_portal_request",{p_token:token,p_subject:document.getElementById("request-subject").value,p_message:document.getElementById("request-message").value},15000);if(!payload||!payload.ok)throw new Error(payload&&payload.error||"Unable to send request.");statusBox.textContent="Your request has been sent to Swayphics.";form.reset()}catch(error){statusBox.textContent=error.message||"Unable to send request."}finally{button.disabled=false;button.textContent="Send request"}});
 }
 
+function openPortalRequest(subject,message){
+const subjectInput=document.getElementById("request-subject"),messageInput=document.getElementById("request-message"),statusBox=document.getElementById("request-message-status"),section=document.getElementById("request-section");
+if(!subjectInput||!messageInput||!section)return;
+subjectInput.value=String(subject||"").slice(0,180);
+messageInput.value=String(message||"").slice(0,5000);
+if(statusBox){statusBox.hidden=true;statusBox.textContent=""}
+section.scrollIntoView({behavior:"smooth",block:"start"});
+subjectInput.focus({preventScroll:true});
+}
+function openFinancialModal(type,item,trigger){
+document.getElementById("portal-financial-modal")?.remove();
+const modal=document.createElement("div"),title=type==="invoice"?(item.invoice_number||"Invoice"):(type==="quote"?(item.quote_number||item.title||"Quotation"):(item.reference||"Payment record"));
+let subtitle="",details="",notes="",actionLabel="",requestSubject="",requestMessage="";
+if(type==="invoice"){
+const amounts=invoiceFinancialBreakdown(item),due=invoiceDueState(item);
+subtitle="INVOICE DETAILS";
+details='<div class="detail-grid finance-detail-grid">'+
+'<div class="detail-box"><span>Invoice status</span><strong>'+esc(nice(item.status||"Not set"))+'</strong></div>'+
+'<div class="detail-box"><span>Issued</span><strong>'+esc(date(item.issue_date))+'</strong></div>'+
+'<div class="detail-box"><span>Due date</span><strong>'+esc(item.due_date?date(item.due_date):"Not recorded")+'</strong></div>'+
+'<div class="detail-box"><span>Invoice total</span><strong>'+esc(financialMoney(amounts.total,amounts.currency))+'</strong></div>'+
+'<div class="detail-box"><span>Paid to date</span><strong>'+esc(financialMoney(amounts.paid,amounts.currency))+'</strong></div>'+
+'<div class="detail-box"><span>Remaining balance</span><strong>'+esc(financialMoney(amounts.outstanding,amounts.currency))+'</strong></div></div>'+
+'<div class="finance-due-description" data-state="'+esc(due.state)+'"><strong>'+esc(due.label)+'</strong><p>'+esc(due.description)+'</p></div>';
+notes=item.notes||"No additional invoice notes have been recorded.";
+actionLabel=amounts.outstanding>0?"Request payment instructions":"Request a payment receipt";
+requestSubject="Payment query · "+String(item.invoice_number||"Invoice");
+requestMessage="Please assist me with invoice "+String(item.invoice_number||"Invoice")+". The portal shows a total of "+financialMoney(amounts.total,amounts.currency)+", paid to date of "+financialMoney(amounts.paid,amounts.currency)+", and a remaining balance of "+financialMoney(amounts.outstanding,amounts.currency)+"."+(item.due_date?" The recorded due date is "+date(item.due_date)+".":"")+" Please share the relevant payment instructions or confirm the payment status.";
+}else if(type==="quote"){
+subtitle="QUOTATION DETAILS";
+details='<div class="detail-grid finance-detail-grid">'+
+'<div class="detail-box"><span>Quote status</span><strong>'+esc(nice(item.status||"Not set"))+'</strong></div>'+
+'<div class="detail-box"><span>Quote amount</span><strong>'+esc(financialMoney(item.amount,"ZAR"))+'</strong></div>'+
+'<div class="detail-box"><span>Valid until</span><strong>'+esc(item.valid_until?date(item.valid_until):"Not recorded")+'</strong></div></div>';
+notes=item.notes||"No additional quotation notes have been recorded.";
+actionLabel="Ask a question about this quote";
+requestSubject="Quotation query · "+String(item.quote_number||item.title||"Quotation");
+requestMessage="I have a question about quotation "+String(item.quote_number||item.title||"Quotation")+", recorded at "+financialMoney(item.amount,"ZAR")+". Please assist me with the next steps.";
+}else{
+subtitle="PAYMENT RECORD";
+details='<div class="detail-grid finance-detail-grid">'+
+'<div class="detail-box"><span>Amount received</span><strong>'+esc(financialMoney(item.amount,"ZAR"))+'</strong></div>'+
+'<div class="detail-box"><span>Payment date</span><strong>'+esc(date(item.paid_at))+'</strong></div>'+
+'<div class="detail-box"><span>Method</span><strong>'+esc(item.method||"Not recorded")+'</strong></div>'+
+'<div class="detail-box"><span>Reference</span><strong>'+esc(item.reference||"Not recorded")+'</strong></div></div>';
+notes="This payment is recorded as received by Swayphics. Contact us if you need a separate receipt or confirmation.";
+actionLabel="Request a payment receipt";
+requestSubject="Receipt request · "+String(item.reference||"Recorded payment");
+requestMessage="Please send me a receipt or payment confirmation for the payment of "+financialMoney(item.amount,"ZAR")+", recorded on "+date(item.paid_at)+"."+(item.reference?" The payment reference shown in my portal is "+String(item.reference)+".":"");
+}
+modal.className="portal-modal";modal.id="portal-financial-modal";
+modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&invoiceFinancialBreakdown(item).outstanding>0?'<p class="finance-payment-guidance">Online payment is not available through this portal. Use the request below to ask Swayphics for the correct payment instructions.</p>':"")+'<div class="finance-modal-actions"><button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div></div></section>';
+document.body.appendChild(modal);
+const close=function(){modal.remove();if(trigger&&typeof trigger.focus==="function")trigger.focus()};
+modal.querySelectorAll("[data-finance-close]").forEach(function(element){element.addEventListener("click",close)});
+modal.addEventListener("keydown",function(event){if(event.key==="Escape"){event.preventDefault();close()}});
+modal.querySelector("#finance-request-action")?.addEventListener("click",function(){modal.remove();openPortalRequest(requestSubject,requestMessage)});
+modal.querySelector(".modal-close")?.focus();
+}
 function openProjectModal(project){
 document.getElementById("portal-project-modal")?.remove();
 const summary=projectMilestoneSummary(project),schedule=projectDeadline(project),modal=document.createElement("div");
