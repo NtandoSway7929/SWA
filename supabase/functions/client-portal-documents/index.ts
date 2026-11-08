@@ -945,7 +945,7 @@ async function sha256Hex(value: string) {
 }
 
 function isClientOwnedStoragePath(storagePath: unknown, clientId: string) {
-  if (typeof storagePath !== "string" || !storagePath || storagePath.includes("\\\\") || storagePath.includes("\\0")) return false;
+  if (typeof storagePath !== "string" || !storagePath || storagePath.includes(String.fromCharCode(92)) || storagePath.includes(String.fromCharCode(0))) return false;
   const parts = storagePath.split("/");
   return parts.length === 2 &&
     parts[0] === clientId &&
@@ -969,12 +969,14 @@ function documentCategory(mimeType: unknown, fileName: unknown) {
 
 function safeDownloadName(value: unknown, fallback = "document") {
   const name = String(value || fallback)
-    .replace(/[\\r\\n\\0"]/g, "")
+    .replaceAll(String.fromCharCode(13), "")
+    .replaceAll(String.fromCharCode(10), "")
+    .replaceAll(String.fromCharCode(0), "")
+    .replaceAll('"', "")
     .replace(/[^a-zA-Z0-9._ -]+/g, "_")
-    .replace(/^\\.+/, "")
     .trim()
     .slice(0, 140);
-  return name || fallback;
+  return name && name !== "." && name !== ".." ? name : fallback;
 }
 
 async function createAdminClient() {
