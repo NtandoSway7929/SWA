@@ -154,7 +154,34 @@ const todayTimestamp = new Date().toISOString();
 const clients = [
   { id: "client-alpha", business_name: "Alpha Client", contact_name: "Alex", email: "billing@alpha.example", status: "active", created_at: todayTimestamp },
   { id: "client-bravo", business_name: "Bravo Cafe", contact_name: "Ana", email: "accounts@bravo.example", status: "active", created_at: todayTimestamp },
-  { id: "client-zulu", business_name: "Zulu Market", contact_name: "Lee", email: "finance@zulu.example", status: "active", created_at: todayTimestamp }
+  { id: "client-zulu", business_name: "Zulu Market", contact_name: "Lee", email: "finance@zulu.example", status: "active", created_at: todayTimestamp },
+  {
+    id: "44444444-4444-4444-8444-444444444444",
+    business_name: "Notification Target Client",
+    contact_name: "Notification Test Contact",
+    email: "notification-target@example.invalid",
+    status: "active",
+    created_at: todayTimestamp
+  }
+];
+
+const adminNotifications = [
+  {
+    id: "55555555-5555-4555-8555-555555555555",
+    recipient_id: TEST_USER_ID,
+    actor_id: null,
+    type: "info",
+    event_type: "client.status_update",
+    title: "Synthetic notification target",
+    message: "Open Notification Target Client",
+    entity_type: "client",
+    entity_id: "44444444-4444-4444-8444-444444444444",
+    view: "clients",
+    dedupe_key: "ui-test-client-notification",
+    is_read: false,
+    read_at: null,
+    created_at: todayTimestamp
+  }
 ];
 
 const invoices = [
@@ -279,7 +306,7 @@ function dataFor(url) {
   if (url.pathname === "/rest/v1/email_messages") return emailMessages;
   if (url.pathname === "/rest/v1/lead_stage_history") return [];
   if (url.pathname === "/rest/v1/client_portal_tokens") return [];
-  if (url.pathname === "/rest/v1/admin_notifications") return [];
+  if (url.pathname === "/rest/v1/admin_notifications") return adminNotifications;
   if (url.pathname.startsWith("/rest/v1/")) return [];
   if (url.pathname.startsWith("/functions/v1/")) return { ok: true, items: [] };
   if (url.pathname.startsWith("/storage/v1/")) return [];
@@ -340,6 +367,24 @@ async function main() {
     }
 
     if (method !== "GET" && method !== "HEAD") {
+      if (method === "PATCH" && url.pathname === "/rest/v1/admin_notifications") {
+        const filter = String(url.searchParams.get("id") || "");
+        const id = filter.startsWith("eq.") ? decodeURIComponent(filter.slice(3)) : "";
+        const body = JSON.parse(request.postData() || "{}");
+        const record = adminNotifications.find(item => String(item.id) === id);
+        if (record && body.is_read === true) {
+          Object.assign(record, body);
+          metrics.mockedTableActionWrites.push({
+            method, path: url.pathname, id, is_read: record.is_read
+          });
+          return route.fulfill({
+            status: 204,
+            headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" },
+            body: ""
+          });
+        }
+      }
+
       // Permanent lead deletions are applied to in-memory test records only.
       // The browser cannot send these requests to a hosted Supabase project.
       if (method === "DELETE" && url.pathname === "/rest/v1/leads") {
@@ -544,6 +589,38 @@ async function main() {
       "the hero should expose the existing quick-create task action");
     assert.equal(await initialHero.locator('[data-quick="lead"]').count(), 1,
       "the hero should expose the existing quick-create lead action");
+
+    // Exercise the real notification click handler against a synthetic UUID
+    // target. Both the notification read update and all data reads stay inside
+    // the in-memory Playwright route above; no hosted Supabase request is made.
+    await page.locator("#sway-notification-toggle").click();
+    const notificationAction = page.locator(
+      '#sway-notification-list [data-notification-open][data-notification-key="55555555-5555-4555-8555-555555555555"]'
+    );
+    await notificationAction.waitFor({ state: "visible", timeout: 10000 });
+    assert.equal(
+      await notificationAction.getAttribute("data-notification-entity-id"),
+      "44444444-4444-4444-8444-444444444444",
+      "the notification row should retain the exact stored client ID"
+    );
+    await notificationAction.click();
+    const clientDetails = page.locator("#sway-client360-modal");
+    await clientDetails.waitFor({ state: "visible", timeout: 10000 });
+    assert.equal(
+      (await clientDetails.locator("#sway-client360-title").innerText()).trim(),
+      "Notification Target Client",
+      "opening the notification should show the exact client referenced by entity_id"
+    );
+    assert.equal(adminNotifications[0].is_read, true,
+      "opening the notification should mark only the selected persistent notification read");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "PATCH" &&
+      item.path === "/rest/v1/admin_notifications" &&
+      item.id === "55555555-5555-4555-8555-555555555555" &&
+      item.is_read === true
+    ), "the selected notification read update must be intercepted by the in-memory mock");
+    await clientDetails.locator("[data-close-client360]").last().click();
+    await clientDetails.waitFor({ state: "detached", timeout: 5000 });
 
     async function navigate(view, group) {
       const toggle = page.locator('[data-nav-group-toggle="' + group + '"]').first();
@@ -1285,6 +1362,7 @@ async function main() {
       pageErrors: metrics.pageErrors.length,
       checks: [
         "admin session accepted by mocked auth endpoint",
+        "in-app admin notification marks the selected item read and opens the exact UUID-linked Client 360 record",
         "actual Leads, Follow-ups, Tasks, Communication Log and Inbox views render synthetic records",
         "lead email search, status filter and business-name sort",
         "visible-row selection, clear selection and formula-safe CSV download",

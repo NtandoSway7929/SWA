@@ -3853,17 +3853,14 @@
     width: 100%;
     min-width: 0;
     display: grid;
-    grid-template-columns: 32px minmax(0,1fr) 12px;
+    grid-template-columns: minmax(0,1fr) 28px;
     align-items: center;
-    gap: 10px;
-    padding: 10px;
+    gap: 6px;
+    padding: 4px 8px;
     border: 1px solid transparent;
     border-radius: 14px;
     background: transparent;
     color: inherit;
-    text-align: left;
-    font: inherit;
-    cursor: pointer;
     transition:
         background 0.18s ease,
         border-color 0.18s ease,
@@ -3871,11 +3868,39 @@
 }
 
 .sway-notification-item:hover,
-.sway-notification-item:focus-visible {
-    outline: none;
+.sway-notification-item:focus-within {
     background: rgba(1,82,244,0.05);
     border-color: rgba(1,82,244,0.075);
     transform: translateY(-1px);
+}
+
+.sway-notification-open {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    display: grid;
+    grid-template-columns: 32px minmax(0,1fr) 12px;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 2px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.sway-notification-open:focus-visible {
+    outline: 2px solid rgba(1,82,244,0.42);
+    outline-offset: 2px;
+}
+
+.sway-notification-open:hover .sway-notification-arrow,
+.sway-notification-open:focus-visible .sway-notification-arrow {
+    color: #0152F4;
+    transform: translateX(1px);
 }
 
 .sway-notification-item.is-read {
