@@ -12,6 +12,10 @@ verify_jwt = true
 [functions.generate-invoice]
 verify_jwt = true
 
+# This function validates the hashed private portal token before serving client-owned files.
+[functions.client-portal-documents]
+verify_jwt = false
+
 [functions.request-client-review]
 verify_jwt = true
 
