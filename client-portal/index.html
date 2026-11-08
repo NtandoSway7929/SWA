@@ -830,7 +830,7 @@ onboardingJourneySection(o)+
 '</div></section>'+
 '<section class="onboarding-section" data-onboarding-step="assets"><div class="onboarding-section-head"><span class="onboarding-number">06</span><div><h4>Files &amp; brand assets</h4><p>Attach any material that will help us build an accurate website. This step is optional and you can send more files later.</p></div></div><div class="onboarding-fields">'+
 '<div class="field full"><label for="ob-assets">Notes about your files</label><textarea id="ob-assets" placeholder="e.g. These are our product photos, logo, certificates and current price list.">'+esc(onboardingValue(o,"asset_notes"))+'</textarea><small class="field-help">Tell us what the files are and where you would like them used.</small></div>'+
-'<div class="field full"><div class="asset-upload"><div><strong style="font-size:.62rem">Attach your files</strong><small class="field-help" style="margin-top:3px">Upload your logo, photos, certificates, menus, product lists or other website assets. You can select multiple files at once. Maximum 15 MB per file.</small></div><input id="ob-assets-files" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,application/pdf,.zip,.doc,.docx"><div class="asset-upload-actions"><span class="asset-upload-status" id="asset-upload-status">No new files selected</span><button type="button" class="portal-button secondary" id="upload-assets">Attach files</button></div><div class="asset-list" id="asset-list"></div></div></div>'+
+'<div class="field full"><div class="asset-upload"><div><strong style="font-size:.62rem">Attach your files</strong><small class="field-help" style="margin-top:3px">Upload your logo, photos, certificates, menus, product lists or other website assets. You can select multiple files at once. Maximum 15 MB per file. You can attach them now, or they will be uploaded automatically when you submit your onboarding.</small></div><input id="ob-assets-files" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,application/pdf,.zip,.doc,.docx"><div class="asset-upload-actions"><span class="asset-upload-status" id="asset-upload-status">No new files selected</span><button type="button" class="portal-button secondary" id="upload-assets">Attach files</button></div><div class="asset-list" id="asset-list"></div></div></div>'+
 '</div><button type="button" class="onboarding-skip" data-onboarding-skip="assets">Skip for now <span aria-hidden="true">→</span></button></section>'+
 '<section class="onboarding-section" data-onboarding-step="review"><div class="onboarding-section-head"><span class="onboarding-number">07</span><div><h4>Review your information</h4><p>Check the details below before submitting them to Swayphics. You can go back and edit any step.</p></div></div><div id="onboarding-review-summary" class="onboarding-review-grid"></div><div class="onboarding-review-note">Your information will be submitted securely to Swayphics for review. You will not be able to edit this form after submission.</div></section>'+
 '<div class="onboarding-actions"><div class="onboarding-actions-copy"><div class="onboarding-step-label" id="onboarding-step-status">Step 1 of 7 · Business details</div><div class="required-note">* Required before submission. Optional steps can be skipped.</div><div class="save-status" id="onboarding-status">'+(o.updated_at?"Last saved "+esc(date(o.updated_at)):"Changes save automatically as you work")+'</div></div><div class="onboarding-actions-right"><button type="button" class="portal-button secondary" id="onboarding-back" disabled>Back</button><button type="button" class="portal-button secondary" id="save-onboarding">Save progress</button><button type="button" class="portal-button" id="onboarding-next">Continue</button><button type="submit" class="portal-button" id="submit-onboarding" hidden '+(o.status==="submitted"?"disabled":"")+'>Submit information</button></div></div>'+
@@ -882,6 +882,8 @@ const statusBox=document.getElementById("onboarding-status"),message=document.ge
 const locked=form.classList.contains("onboarding-locked");
 let currentStep=0,autosaveTimer=null;
 let saveQueue=Promise.resolve();
+let assetUploadPromise=null;
+let onboardingSubmitInProgress=false;
 const stepNames=sections.map(function(section){return section.querySelector("h4")?.textContent.trim()||"Onboarding";});
 if(locked){
 form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});
@@ -1032,18 +1034,44 @@ row.innerHTML='<div class="field"><label>Product or service '+(n+1)+'</label><in
 list.appendChild(row);row.querySelector("[data-service-name]")?.focus();scheduleAutosave();
 }
 document.getElementById("add-service")?.addEventListener("click",addService);
-assetInput?.addEventListener("change",function(){const files=Array.from(assetInput.files||[]);assetUploadStatus.textContent=files.length?files.length+" file"+(files.length===1?"":"s")+" selected":"No new files selected";});
-assetUploadButton?.addEventListener("click",async function(){
+async function uploadSelectedAssets(){
 const files=Array.from(assetInput?.files||[]);
-if(!files.length){assetUploadStatus.textContent="Choose one or more files first.";return;}
-assetUploadButton.disabled=true;assetUploadStatus.textContent="Uploading "+files.length+" file"+(files.length===1?"":"s")+"...";
+if(!files.length)return 0;
+if(assetUploadPromise)return assetUploadPromise;
+assetUploadPromise=(async function(){
+if(assetUploadButton)assetUploadButton.disabled=true;
+assetUploadStatus.textContent="Uploading "+files.length+" selected file"+(files.length===1?"":"s")+"...";
 try{
 const formData=new FormData();formData.append("token",token);files.forEach(function(file){formData.append("files",file,file.name)});
 const response=await fetch(SUPABASE_URL+"/functions/v1/upload-client-onboarding-assets",{method:"POST",body:formData});
-const result=await response.json();if(!response.ok||!result.ok)throw new Error(result&&result.error||"Unable to upload the selected files.");
-assetInput.value="";assetUploadStatus.textContent=(result.files||[]).length+" file"+((result.files||[]).length===1?"":"s")+" attached successfully.";await loadAssets();renderReview();
-}catch(error){assetUploadStatus.textContent=error.message||"Unable to upload the selected files.";}
-finally{assetUploadButton.disabled=locked;}
+let result={};try{result=await response.json()}catch(_){throw new Error("The upload service returned an unreadable response. Please try again.");}
+if(!response.ok||!result.ok)throw new Error(result&&result.error||"Unable to upload the selected files.");
+const uploaded=Array.isArray(result.files)?result.files:[];
+if(uploaded.length!==files.length)throw new Error("The upload service did not confirm every selected file. Please contact Swayphics before submitting.");
+assetInput.value="";
+assetUploadStatus.textContent=uploaded.length+" file"+(uploaded.length===1?"":"s")+" attached successfully and sent to Swayphics.";
+await loadAssets();renderReview();
+return uploaded.length;
+}catch(error){
+assetUploadStatus.textContent=error.message||"Unable to upload the selected files.";
+throw error;
+}finally{
+if(assetUploadButton)assetUploadButton.disabled=locked;
+assetUploadPromise=null;
+}
+})();
+return assetUploadPromise;
+}
+assetInput?.addEventListener("change",function(){
+const files=Array.from(assetInput.files||[]);
+assetUploadStatus.textContent=files.length
+?files.length+" file"+(files.length===1?"":"s")+" selected. They will be uploaded automatically when you submit."
+:"No new files selected";
+});
+assetUploadButton?.addEventListener("click",async function(){
+if(!assetInput?.files?.length){assetUploadStatus.textContent="Choose one or more files first.";return;}
+try{await uploadSelectedAssets();}
+catch(error){if(message){message.hidden=false;message.textContent=error.message||"Unable to upload the selected files."};}
 });
 loadAssets();
 form.addEventListener("click",function(e){
@@ -1066,10 +1094,26 @@ form.addEventListener("input",function(event){if(event.target&&event.target.type
 form.addEventListener("change",function(event){if(event.target&&event.target.type!=="file")scheduleAutosave();});
 form.addEventListener("submit",async function(event){
 event.preventDefault();
-if(locked)return;
+if(locked||onboardingSubmitInProgress)return;
 if(!validateBeforeSubmit())return;
+onboardingSubmitInProgress=true;
+if(submitButton)submitButton.disabled=true;
+try{
+if(assetInput?.files?.length){
+if(message){message.hidden=false;message.textContent="Attaching your selected business assets securely before submitting your onboarding...";}
+try{await uploadSelectedAssets();}
+catch(error){
+if(statusBox)statusBox.textContent="Assets not uploaded";
+if(message){message.hidden=false;message.textContent="Your onboarding has not been submitted because the selected assets could not be uploaded. "+(error.message||"Please try again or contact Swayphics.");}
+return;
+}
+}
 renderReview();
 await saveOnboarding(true,false);
+}finally{
+onboardingSubmitInProgress=false;
+if(submitButton&&!form.classList.contains("onboarding-locked"))submitButton.disabled=false;
+}
 });
 updateJourneyMode();
 showStep(0);
