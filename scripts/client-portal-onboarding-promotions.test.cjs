@@ -21,7 +21,7 @@ assert.ok(!/\srequired(?:\s|=|>)/i.test(section), "No field in the optional prom
 assert.ok(section.includes("Terms &amp; conditions"), "Offer terms must be described generically.");
 assert.ok(section.includes("How do customers redeem the offer?"), "Redemption instructions must be described generically.");
 
-const collectorStart = portal.indexOf("function collectOnboarding()");
+const collectorStart = portal.indexOf("function collectOnboarding(submit)");
 const collectorEnd = portal.indexOf("\nfunction formatFileSize", collectorStart);
 assert.ok(collectorStart >= 0 && collectorEnd > collectorStart, "Onboarding payload collector must exist.");
 const collector = portal.slice(collectorStart, collectorEnd);
