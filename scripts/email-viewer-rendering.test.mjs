@@ -10,6 +10,10 @@ const workspaceCss = readFileSync(
   new URL("../admin-dashboard/admin-workspace.css", import.meta.url),
   "utf8",
 );
+const inboxKeyboardNavJs = readFileSync(
+  new URL("../admin-dashboard/admin-inbox-keyboard-navigation.js", import.meta.url),
+  "utf8",
+);
 const dashboardHtml = readFileSync(
   new URL("../admin-dashboard/index.html", import.meta.url),
   "utf8",
@@ -98,4 +102,15 @@ test("Inbox read-state focus follows the replacement control after rerender", ()
   assert.doesNotThrow(() => new Function(inboxFocusJs), "focus restoration script must parse as JavaScript");
   assert.ok(inboxFocusJs.includes("currentButton.dataset.emailReadValue"));
   assert.ok(dashboardHtml.includes("inbox-read-state-focus.js?v=20261107-inbox-read-state-focus-1"));
+});
+
+test("Inbox conversation keyboard navigation is delegated and visibility-aware", () => {
+  assert.ok(dashboardHtml.includes("admin-inbox-keyboard-navigation.js?v=20261107-inbox-keyboard-navigation-1"));
+  assert.ok(inboxKeyboardNavJs.includes('document.addEventListener("keydown"'));
+  assert.ok(inboxKeyboardNavJs.includes('["ArrowDown", "ArrowUp", "Home", "End"]'));
+  assert.ok(inboxKeyboardNavJs.includes('button.closest("[hidden]")'));
+  assert.ok(inboxKeyboardNavJs.includes("button.getClientRects().length > 0"));
+  assert.ok(inboxKeyboardNavJs.includes("event.preventDefault()"));
+  assert.ok(workspaceCss.includes(".sway-email-inbox-item:focus-visible"));
+  assert.ok(workspaceCss.includes("body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-item:focus-visible"));
 });

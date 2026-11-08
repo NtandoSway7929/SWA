@@ -126,6 +126,23 @@ const emailMessages = [
     is_read: true,
     received_at: "2026-11-05T10:01:00Z",
     created_at: "2026-11-05T10:01:00Z"
+  },
+  {
+    id: "email-keyboard-nav-ui-test",
+    direction: "inbound",
+    mailbox: "info@swayphics.co.za",
+    thread_id: "thread-keyboard-nav-ui-test",
+    message_id: "<keyboard-nav-ui-test@example.invalid>",
+    imap_uid: 45,
+    source_key: "imap:INBOX:45",
+    from_name: "Navigation Test Sender",
+    from_email: "navigation@example.invalid",
+    to_email: "info@swayphics.co.za",
+    subject: "Keyboard navigation fixture",
+    text_body: "A second synthetic conversation for inbox keyboard navigation.",
+    is_read: true,
+    received_at: "2026-11-04T10:00:00Z",
+    created_at: "2026-11-04T10:00:00Z"
   }
 ];
 
@@ -1008,6 +1025,27 @@ async function main() {
     if ((await inboxNavToggle.getAttribute("aria-expanded")) !== "true") await inboxNavToggle.click();
     await page.locator('[data-view="email"]').click();
     await page.locator('[data-email-thread="thread-ui-test"]').waitFor({ state: "visible", timeout: 20000 });
+    const keyboardThreads = page.locator("[data-email-thread]");
+    assert.equal(await keyboardThreads.count(), 2,
+      "the actual Inbox should render two synthetic conversations for keyboard navigation");
+    const firstConversation = keyboardThreads.nth(0);
+    const secondConversation = keyboardThreads.nth(1);
+    const firstThreadId = await firstConversation.getAttribute("data-email-thread");
+    const secondThreadId = await secondConversation.getAttribute("data-email-thread");
+    assert.notEqual(firstThreadId, secondThreadId, "the two synthetic threads must have distinct IDs");
+    await firstConversation.focus();
+    assert.equal(await firstConversation.getAttribute("aria-keyshortcuts"), "ArrowDown ArrowUp Home End");
+    await firstConversation.press("ArrowDown");
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, secondThreadId);
+    await secondConversation.press("ArrowDown");
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, firstThreadId);
+    await firstConversation.press("ArrowUp");
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, secondThreadId);
+    await secondConversation.press("Home");
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, firstThreadId);
+    await firstConversation.press("End");
+    await page.waitForFunction(expected => document.activeElement?.getAttribute("data-email-thread") === expected, secondThreadId);
+
     const readToggle = page.locator('[data-email-thread-read-toggle="thread-ui-test"]');
     assert.equal(await readToggle.innerText(), "Mark read",
       "an unread conversation should offer a Mark read action");

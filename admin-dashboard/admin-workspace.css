@@ -10114,6 +10114,15 @@ body.sway-dark-mode #sway-admin-workspace .sway-email-attachment-pending > span 
     }
 }
 
+/* Keyboard navigation focus for Inbox conversations. */
+#sway-admin-workspace .sway-email-inbox-item:focus-visible {
+    outline: 3px solid rgba(1,82,244,0.62);
+    outline-offset: -3px;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-item:focus-visible {
+    outline-color: #77C1FC;
+}
+
 /* Inbox conversation read-state action */
 #sway-admin-workspace .sway-email-inbox-row {
     grid-template-columns: 28px minmax(0, 1fr) auto;
