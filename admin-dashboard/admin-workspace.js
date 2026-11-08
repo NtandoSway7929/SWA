@@ -13625,9 +13625,34 @@ function simpleBars(items, color) {
         return (n / (1024 * 1024)).toFixed(1) + " MB";
     }
 
-    function openClientOnboarding(clientId) {
+    async function openClientOnboarding(clientId) {
         const client = state.clients.find(function (item) { return item.id === clientId; });
         if (!client) return;
+
+        /* Refresh this client's onboarding files when the admin opens the record.
+           Clients can upload after the dashboard's initial data load. */
+        try {
+            const latestAssets = await api(
+                "/rest/v1/client_onboarding_assets?select=*&client_id=eq." +
+                encodeURIComponent(clientId) +
+                "&order=created_at.asc"
+            );
+            if (Array.isArray(latestAssets)) {
+                state.clientOnboardingAssets =
+                    (Array.isArray(state.clientOnboardingAssets)
+                        ? state.clientOnboardingAssets
+                        : []
+                    ).filter(function (asset) {
+                        return asset.client_id !== clientId;
+                    }).concat(latestAssets);
+            }
+        } catch (error) {
+            console.warn(
+                "Unable to refresh uploaded onboarding assets for this client.",
+                error
+            );
+        }
+
         const row = state.clientOnboarding.find(function (item) { return item.client_id === clientId; }) || null;
         const modalId = "sway-client-onboarding-modal";
         document.getElementById(modalId)?.remove();
