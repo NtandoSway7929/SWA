@@ -67,9 +67,10 @@ test("invoice filters separate open and paid records and never expose draft or c
     { id: "draft", status: "draft", total: 400, amount_outstanding: 400 },
     { id: "cancelled", status: "cancelled", total: 500, amount_outstanding: 500 }
   ];
-  assert.deepEqual(context.filterPortalInvoices(invoices, "all").map(item => item.id), ["open", "partial", "paid", "zero-balance"]);
-  assert.deepEqual(context.filterPortalInvoices(invoices, "outstanding").map(item => item.id), ["open", "partial"]);
-  assert.deepEqual(context.filterPortalInvoices(invoices, "paid").map(item => item.id), ["paid", "zero-balance"]);
+  const ids = filter => JSON.parse(JSON.stringify(context.filterPortalInvoices(invoices, filter).map(item => item.id)));
+  assert.deepEqual(ids("all"), ["open", "partial", "paid", "zero-balance"]);
+  assert.deepEqual(ids("outstanding"), ["open", "partial"]);
+  assert.deepEqual(ids("paid"), ["paid", "zero-balance"]);
 });
 
 test("financial summary groups invoice balances by currency and excludes unissued drafts", () => {
