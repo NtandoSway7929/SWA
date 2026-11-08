@@ -133,7 +133,7 @@ begin
 
     return v_count;
 end;
-$;
+$$;
 
 revoke all privileges
     on function innerme_private.generate_swayphics_due_lead_notifications_internal()
