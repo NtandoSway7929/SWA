@@ -89,6 +89,14 @@ for (const [key, name] of Object.entries(rendererNames)) {
     }
 }
 
+const selectionBar = section(
+    workspace,
+    "    function renderRecordCardSelectionBar(",
+    "shared card selection toolbar"
+);
+assert.match(selectionBar, /data-admin-table-select-all=/,
+    "the shared card-selection toolbar must expose select-all-visible");
+
 for (const view of ["tasks", "followups", "communications"]) {
     const renderer = section(
         workspace,
@@ -99,8 +107,8 @@ for (const view of ["tasks", "followups", "communications"]) {
         view + " must retain sorting and status/date/assignee filtering");
     assert.ok(renderer.includes('adminTableControls.renderControls("' + view + '")'),
         view + " must retain the shared control and bulk-action toolbar");
-    assert.ok(renderer.includes("data-admin-table-select-all=\"" + view + "\""),
-        view + " must retain select-all-visible");
+    assert.ok(renderer.includes('renderRecordCardSelectionBar("' + view + '"'),
+        view + " must retain select-all-visible through the shared card toolbar");
     assert.ok(renderer.includes("data-admin-table-no-results=\"" + view + "\""),
         view + " must retain its filtered-empty state");
 }
