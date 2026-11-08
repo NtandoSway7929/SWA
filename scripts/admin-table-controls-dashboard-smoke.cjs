@@ -673,8 +673,10 @@ async function main() {
     await page.locator('[data-view="insights"]').first().click();
     const insightsMain = page.locator("#sway-workspace-main");
     await insightsMain.getByText("Lead conversion analytics", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
-    assert.ok((await insightsMain.innerText()).includes("Leads ever entering stage"), "Insights should show historical lead-stage movement.");
-    assert.ok((await insightsMain.innerText()).includes("Currently here"), "Insights should show current lead counts by stage.");
+    const conversionHeaders = (await insightsMain.locator(".sway-lead-conversion-panel th").allTextContents())
+      .map(value => value.replace(/\\s+/g, " ").trim().toLowerCase());
+    assert.ok(conversionHeaders.includes("leads ever entering stage"), "Insights should show historical lead-stage movement.");
+    assert.ok(conversionHeaders.includes("currently here"), "Insights should show current lead counts by stage.");
     const settingsGroupToggle = page.locator('[data-nav-group-toggle="settings"]').first();
     if ((await settingsGroupToggle.getAttribute("aria-expanded")) !== "true") await settingsGroupToggle.click();
 
