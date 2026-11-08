@@ -331,6 +331,32 @@ body{
 .portal-project-grid{grid-template-columns:1fr}
 .portal-finance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
 
+.portal-documents-panel{padding:20px}
+.portal-documents-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.portal-document-card{display:grid;align-content:start;gap:9px;min-width:0;padding:15px;border:1px solid rgba(52,58,64,.11);border-radius:16px;background:linear-gradient(145deg,#FFFFFF,#F6F7F8);box-shadow:0 10px 26px rgba(37,43,49,.045)}
+.portal-document-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.portal-document-icon{width:39px;height:39px;display:grid;place-items:center;border-radius:12px;background:#343A40;color:#fff;font-size:.48rem;font-weight:900;letter-spacing:.04em}
+.portal-document-icon.pdf{background:#F4EEEE;color:#A13A3A}
+.portal-document-icon.image{background:#EDF3FF;color:#0152F4}
+.portal-document-category{color:#76818A;font-size:.45rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.portal-document-card h3{color:#252B31;font-size:.67rem;font-weight:850;line-height:1.45;overflow-wrap:anywhere}
+.portal-document-project{color:#66717B;font-size:.51rem;line-height:1.4}
+.portal-document-meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:5px;padding-top:8px;border-top:1px solid rgba(52,58,64,.08);color:#76818A;font-size:.46rem;font-weight:650}
+.portal-document-actions{display:flex;gap:7px;flex-wrap:wrap;padding-top:3px}
+.portal-document-actions .portal-button{min-height:33px;padding:0 11px;font-size:.5rem}
+.portal-document-filters{margin-bottom:14px}
+.portal-documents-error{display:grid;gap:8px;justify-items:start}
+.portal-documents-error strong{color:#343A40;font-size:.65rem}
+.portal-documents-error p{color:#66717B;font-size:.54rem;line-height:1.6}
+.portal-document-preview-card{width:min(940px,100%);height:min(820px,calc(100vh - 36px));display:flex;flex-direction:column;overflow:hidden}
+.portal-document-preview-stage{display:grid;place-items:center;min-height:0;flex:1;overflow:auto;margin-top:14px;border:1px solid rgba(52,58,64,.10);border-radius:15px;background:#E9ECEF}
+.portal-document-preview-image{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+.portal-document-preview-pdf{display:block;width:100%;height:100%;min-height:420px;border:0;background:#fff}
+.portal-document-preview-card .finance-modal-actions{padding-top:12px}
+@media(max-width:900px){.portal-documents-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.portal-documents-panel{padding:14px}.portal-documents-grid{grid-template-columns:1fr}.portal-document-preview-card{height:min(760px,calc(100vh - 24px));max-height:calc(100vh - 24px);padding:15px;border-radius:18px}.portal-document-preview-pdf{min-height:300px}}
+
+
 .finance-overview-panel{display:grid;grid-template-columns:minmax(220px,.82fr) minmax(0,1.18fr);gap:22px;align-items:center;margin:4px 0 17px;padding:23px 25px;border:1px solid rgba(52,58,64,.13);border-radius:22px;background:linear-gradient(125deg,#252B31 0%,#343A40 68%,#26394E 100%);box-shadow:0 18px 42px rgba(37,43,49,.16);color:#fff}
 .finance-overview-main{display:grid;gap:8px;min-width:0}
 .finance-overview-main>span,.finance-overview-metrics>div>span{color:#B9C2CB;font-size:.48rem;font-weight:900;letter-spacing:.14em}
@@ -1300,12 +1326,21 @@ requestSubject="Receipt request · "+String(item.reference||"Recorded payment");
 requestMessage="Please send me a receipt or payment confirmation for the payment of "+financialMoney(item.amount,"ZAR")+", recorded on "+date(item.paid_at)+"."+(item.reference?" The payment reference shown in my portal is "+String(item.reference)+".":"");
 }
 modal.className="portal-modal";modal.id="portal-financial-modal";
-modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&invoiceFinancialBreakdown(item).outstanding>0?'<p class="finance-payment-guidance">Online payment is not available through this portal. Use the request below to ask Swayphics for the correct payment instructions.</p>':"")+'<div class="finance-modal-actions"><button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div></div></section>';
+modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&invoiceFinancialBreakdown(item).outstanding>0?'<p class="finance-payment-guidance">Online payment is not available through this portal. Use the request below to ask Swayphics for the correct payment instructions.</p>':"")+'<div class="finance-modal-actions">'+(type==="invoice"?'<button type="button" class="portal-button secondary" id="finance-invoice-pdf">Download invoice PDF</button>':"")+'<button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div><div id="finance-pdf-status" class="message" hidden role="status"></div></div></section>';
 document.body.appendChild(modal);
 const close=function(){modal.remove();if(trigger&&typeof trigger.focus==="function")trigger.focus()};
 modal.querySelectorAll("[data-finance-close]").forEach(function(element){element.addEventListener("click",close)});
 modal.addEventListener("keydown",function(event){if(event.key==="Escape"){event.preventDefault();close()}});
 modal.querySelector("#finance-request-action")?.addEventListener("click",function(){modal.remove();openPortalRequest(requestSubject,requestMessage)});
+const invoicePdfButton=modal.querySelector("#finance-invoice-pdf");
+invoicePdfButton?.addEventListener("click",async function(){
+const statusBox=modal.querySelector("#finance-pdf-status");
+invoicePdfButton.disabled=true;invoicePdfButton.textContent="Preparing PDF...";
+if(statusBox){statusBox.hidden=false;statusBox.textContent="Generating your invoice PDF securely..."}
+try{await downloadPortalInvoicePdf(item);invoicePdfButton.textContent="PDF downloaded";if(statusBox)statusBox.textContent="Your invoice PDF has been downloaded."}
+catch(error){invoicePdfButton.textContent="Download invoice PDF";if(statusBox){statusBox.hidden=false;statusBox.textContent=error&&error.message||"The invoice PDF could not be downloaded."}}
+finally{invoicePdfButton.disabled=false}
+});
 modal.querySelector(".modal-close")?.focus();
 }
 function openProjectModal(project){
