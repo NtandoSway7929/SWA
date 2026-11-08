@@ -10,17 +10,17 @@ const root = path.resolve(__dirname, "..");
 const portal = fs.readFileSync(path.join(root, "client-portal", "index.html"), "utf8");
 
 const helperStart = portal.indexOf("function projectStage(");
-const helperEnd = portal.indexOf("\\nfunction activeProjects", helperStart);
+const helperEnd = portal.indexOf("\nfunction activeProjects", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "Project delivery helpers must be isolated for testing.");
 
 const context = {};
 vm.runInNewContext(
-  'function date(value){return value ? String(value).slice(0,10) : "—";}\\n' +
+  'function date(value){return value ? String(value).slice(0,10) : "—";}\n' +
     portal.slice(helperStart, helperEnd) +
-    "\\nthis.projectStage=projectStage;" +
-    "\\nthis.projectMilestoneSummary=projectMilestoneSummary;" +
-    "\\nthis.projectDeadline=projectDeadline;" +
-    "\\nthis.projectProgress=projectProgress;",
+    "\nthis.projectStage=projectStage;" +
+    "\nthis.projectMilestoneSummary=projectMilestoneSummary;" +
+    "\nthis.projectDeadline=projectDeadline;" +
+    "\nthis.projectProgress=projectProgress;",
   context
 );
 
