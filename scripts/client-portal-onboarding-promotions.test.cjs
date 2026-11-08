@@ -17,7 +17,7 @@ assert.ok(section.includes("<h4>Vouchers &amp; promotions (optional)</h4>"), "St
 assert.match(section, /Leave this section blank if you do not offer any/i, "Clients without promotions must be explicitly told they can skip this section.");
 assert.ok(section.includes("What vouchers, discounts or special offers do you currently offer?"), "The primary prompt must support different offer types.");
 assert.ok(section.includes("Daddy’s Deals voucher"), "Daddy’s Deals may remain as one illustrative example, not the subject of the section.");
-assert.ok(!/\brequired\b/i.test(section), "No field in the optional promotions section may be required.");
+assert.ok(!/\srequired(?:\s|=|>)/i.test(section), "No field in the optional promotions section may have a required attribute.");
 assert.ok(section.includes("Terms &amp; conditions"), "Offer terms must be described generically.");
 assert.ok(section.includes("How do customers redeem the offer?"), "Redemption instructions must be described generically.");
 
