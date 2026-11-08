@@ -9,7 +9,7 @@ const { test } = require("node:test");
 const root = path.resolve(__dirname, "..");
 const portal = fs.readFileSync(path.join(root, "client-portal", "index.html"), "utf8");
 
-const helperStart = portal.indexOf("function getClientNextStep(");
+const helperStart = portal.indexOf("function isClientInvoicePayable(");
 const helperEnd = portal.indexOf("\nfunction bindPortalNavigation", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "The next-step resolver must exist as an isolated helper.");
 const helperSource = portal.slice(helperStart, helperEnd);
@@ -34,6 +34,27 @@ test("an overdue invoice with a positive balance takes priority", () => {
   );
   assert.equal(result.target, "finances-section");
   assert.equal(result.badge, "Payment overdue");
+});
+
+test("only sent, partially paid and overdue invoices count as payable", () => {
+  assert.equal(isClientInvoicePayable({ status: "draft", amount_outstanding: 1200 }), false);
+  assert.equal(isClientInvoicePayable({ status: "cancelled", amount_outstanding: 1200 }), false);
+  assert.equal(isClientInvoicePayable({ status: "sent", amount_outstanding: 1200 }), true);
+  assert.equal(isClientInvoicePayable({ status: "partially paid", amount_outstanding: 300 }), true);
+  assert.equal(isClientInvoicePayable({ status: "overdue", amount_outstanding: 300 }), true);
+  assert.equal(isClientInvoicePayable({ status: "sent", amount_outstanding: 0 }), false);
+});
+
+test("a draft invoice cannot hide a quotation awaiting client review", () => {
+  const result = getNextStep(
+    { status: "submitted" },
+    [{ status: "draft", amount_outstanding: 1200 }],
+    [{ status: "sent", quote_number: "Q-101" }],
+    [],
+    []
+  );
+  assert.equal(result.action, "Review quotation");
+  assert.equal(result.badge, "Awaiting your review");
 });
 
 test("a sent quotation is surfaced when there is no outstanding invoice", () => {
@@ -112,6 +133,7 @@ test("the overview resolver uses current client records instead of fixed onboard
   assert.ok(renderStart >= 0 && renderEnd > renderStart, "The portal renderer must exist.");
   const render = portal.slice(renderStart, renderEnd);
   assert.ok(render.includes("getClientNextStep(onboarding,invoices,quotes,active,projects)"), "next-step guidance must be derived from loaded client records.");
+  assert.ok(render.includes("invoices.filter(isClientInvoicePayable)"), "draft invoices must not inflate the client-facing outstanding total.");
   assert.ok(render.includes("esc(nextStep.title)") && render.includes("esc(nextStep.description)"), "dynamic next-step copy must be HTML-escaped.");
   assert.ok(render.includes('href="#\'+esc(nextStep.target)'), "the next-step action must route to its matching section.");
   assert.ok(render.includes("bindPortalNavigation()"), "the section navigation must be initialised after rendering.");
