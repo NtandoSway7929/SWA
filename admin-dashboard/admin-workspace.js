@@ -20486,6 +20486,7 @@ function simpleBars(items, color) {
                     (lead.email
                         ? '<button type="button" class="sway-workspace-button" data-send-lead-email="' + esc(lead.id) + '">Email lead</button>'
                         : "") +
+                    '<button type="button" class="sway-workspace-button" data-export-lead-details="' + esc(lead.id) + '">Assessment report</button>' +
                     '<button type="button" class="sway-workspace-button primary" data-edit-lead-details="' + esc(lead.id) + '">Edit lead</button>' +
                 "</footer>" +
             "</section>";
@@ -20516,8 +20517,10 @@ function simpleBars(items, color) {
                 openEmailComposer("lead", button.dataset.sendLeadEmail);
             });
         });
-        modal.querySelector("[data-export-lead-details]")?.addEventListener("click", function () {
-            exportLeadAssessment(lead.id);
+        modal.querySelectorAll("[data-export-lead-details]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                exportLeadAssessment(lead.id);
+            });
         });
 
         document.addEventListener("keydown", handleKeydown);
