@@ -302,7 +302,7 @@ body{
 .portal-section-nav a:hover{background:#EEF1F3;color:#252B31}
 .portal-section-nav a.active{background:#343A40;color:#fff;box-shadow:0 5px 14px rgba(37,43,49,.16)}
 .portal-section-nav a:focus-visible{outline:3px solid rgba(1,82,244,.32);outline-offset:2px}
-#overview-section,#projects-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:146px}
+#overview-section,#projects-section,#documents-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:146px}
 #overview-section{margin-top:26px}
 #overview-section .portal-hero{padding:42px 2px 22px}
 .portal-hero h1{letter-spacing:-.055em}
@@ -380,7 +380,7 @@ body{
   .portal-section-nav a{padding:0 12px}
   .portal-section-nav a.portal-request-shortcut{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-height:34px;padding:0 11px;border-radius:11px;background:linear-gradient(135deg,var(--deep),var(--blue));color:#fff;font-size:.52rem;font-weight:850;text-decoration:none;white-space:nowrap}
   .portal-section-nav a.portal-request-shortcut:focus-visible{outline:3px solid rgba(1,82,244,.32);outline-offset:2px}
-  #overview-section,#projects-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:126px}
+  #overview-section,#projects-section,#documents-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:126px}
   #overview-section .portal-hero{padding:32px 2px 20px}
   .next-step-card{align-items:stretch;flex-direction:column;gap:16px;padding:18px}
   .next-step-action{width:100%}
@@ -1169,6 +1169,7 @@ app.innerHTML=
 '<div class="portal-section-links">'+
 '<a href="#overview-section" data-portal-nav-link class="active" aria-current="location">Overview</a>'+
 '<a href="#projects-section" data-portal-nav-link>My projects</a>'+
+'<a href="#documents-section" data-portal-nav-link>Documents</a>'+
 '<a href="#finances-section" data-portal-nav-link>Finances</a>'+
 '<a href="#onboarding-section" data-portal-nav-link>Onboarding</a>'+
 '<a href="#request-section" data-portal-nav-link>Requests</a>'+
@@ -1184,6 +1185,7 @@ app.innerHTML=
 '<article class="stat-card"><span>Recorded payments</span><strong>'+esc(money(paid))+'</strong><small>Payments recorded by Swayphics</small></article>'+
 '</div></section></section>'+
 '<section class="portal-section" id="projects-section"><div class="portal-section-head"><div><h2>My projects</h2><p>Follow the progress of work managed by Swayphics.</p></div><span class="card-count">'+projects.length+' total</span></div><div class="portal-grid portal-project-grid"><section class="portal-card wide"><div class="card-head"><div><h3>Project progress</h3><p>See where each piece of work currently sits.</p></div><span class="card-count">'+active.length+' active</span></div>'+(projects.length?'<div class="project-list">'+projects.map(renderProject).join("")+'</div>':'<div class="empty">No projects are currently listed for this workspace. Your projects will appear here once work has been set up.</div>')+'</section></div></section>'+
+renderPortalDocumentsSection()+
 '<section class="portal-section" id="finances-section"><div class="portal-section-head"><div><h2>Financial centre</h2><p>Review invoice balances, quotations and payments recorded on your account.</p></div><span class="card-count">'+financeSummary.invoiceCount+' invoices · '+financeSummary.paymentCount+' payments</span></div>'+
 '<section class="finance-overview-panel"><div class="finance-overview-main"><span>OUTSTANDING BALANCE</span><strong>'+esc(financeSummary.outstanding)+'</strong><p>'+financeSummary.openCount+' invoice'+(financeSummary.openCount===1?"":"s")+' with a remaining balance recorded.</p></div><div class="finance-overview-metrics"><div><span>OVERDUE BALANCE</span><b>'+esc(financeSummary.overdue)+'</b><small>'+financeSummary.overdueCount+' past-due invoice'+(financeSummary.overdueCount===1?"":"s")+'</small></div><div><span>TOTAL INVOICED</span><b>'+esc(financeSummary.invoiced)+'</b><small>Issued invoices only</small></div><div><span>PAYMENTS RECORDED</span><b>'+financeSummary.paymentCount+'</b><small>Recorded payment entries</small></div></div></section>'+
 '<div class="portal-finance-grid">'+
@@ -1195,6 +1197,36 @@ onboardingForm(data,onboarding)+
 '<section class="portal-section" id="request-section"><div class="portal-section-head"><div><h2>Requests & support</h2><p>Contact Swayphics about an update, change or something new.</p></div></div><section class="portal-card request-card"><div class="request-copy"><span class="kicker">DIRECT TO SWAYPHICS</span><h3>How can we help?</h3><p>Send a request from the portal and it will be attached to this client account in the Swayphics workspace.</p></div><form class="request-form" id="request-form"><div class="field"><label for="request-subject">Subject</label><input id="request-subject" required maxlength="180" placeholder="What do you need help with?"></div><div class="field"><label for="request-message">Message</label><textarea id="request-message" required maxlength="5000" placeholder="Tell the Swayphics team what you need."></textarea></div><button class="portal-button" type="submit">Send request</button><div id="request-message-status" class="message" hidden></div></form></section></section>'+
 '<footer class="portal-footer"><span><strong>Swayphics</strong> · Creative & Design Lab</span><span>Private portal access · Keep this link confidential</span></footer>';
 bindPortalNavigation();
+const documentsSection=document.getElementById("documents-section");
+documentsSection?.addEventListener("click",async function(event){
+const retry=event.target.closest("#portal-documents-retry");
+if(retry){loadPortalDocuments();return}
+const filterButton=event.target.closest("[data-document-filter]");
+if(filterButton){
+portalDocumentFilter=filterButton.dataset.documentFilter||"all";
+documentsSection.querySelectorAll("[data-document-filter]").forEach(function(button){const active=button.dataset.documentFilter===portalDocumentFilter;button.classList.toggle("active",active);button.setAttribute("aria-pressed",active?"true":"false")});
+const results=document.getElementById("portal-document-results");
+if(results)results.innerHTML=renderPortalDocumentList(portalDocuments,portalDocumentFilter);
+return;
+}
+const actionButton=event.target.closest("[data-document-action][data-document-id]");
+if(!actionButton)return;
+const item=portalDocuments.find(function(row){return String(row.id)===String(actionButton.dataset.documentId)});
+if(!item)return;
+const action=actionButton.dataset.documentAction,original=actionButton.textContent;
+actionButton.disabled=true;actionButton.textContent=action==="preview"?"Preparing preview...":"Preparing download...";
+try{
+const result=await portalDocumentApi({action:action,document_id:item.id});
+if(action==="preview")openPortalDocumentPreview(item,result.signed_url);
+else await downloadPortalDocument(item,result.signed_url);
+actionButton.textContent=action==="preview"?"Preview":"Downloaded";
+}catch(error){
+actionButton.textContent=original;
+const note=document.createElement("div");note.className="message portal-document-action-status";note.textContent=error&&error.message||"The file could not be opened.";
+const panel=documentsSection.querySelector(".portal-card");if(panel)panel.appendChild(note);
+}finally{actionButton.disabled=false}
+});
+loadPortalDocuments();
 document.querySelectorAll("[data-project-id]").forEach(function(button){button.addEventListener("click",function(){const project=projects.find(function(item){return item.id===button.dataset.projectId});if(project)openProjectModal(project)})});
 const financeSection=document.getElementById("finances-section");
 financeSection?.addEventListener("click",function(event){
