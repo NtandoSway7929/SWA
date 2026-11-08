@@ -2199,10 +2199,6 @@ $$;
 
 revoke all privileges on function public.get_swayphics_automation_status() from public, anon;
 grant execute on function public.get_swayphics_automation_status() to authenticated;
-
--- are deliberately excluded from the administrator-facing result.
-begin;
-
 create or replace function public.get_swayphics_automation_run_history(p_limit integer default 30)
 returns table (
     run_id bigint,
@@ -2216,7 +2212,7 @@ returns table (
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
     v_limit integer := coalesce(p_limit, 30);
 begin
@@ -2256,17 +2252,12 @@ begin
     order by d.start_time desc, d.runid desc
     limit v_limit;
 end;
-$;
+$$;
 
 revoke all privileges on function public.get_swayphics_automation_run_history(integer)
     from public, anon, service_role;
 grant execute on function public.get_swayphics_automation_run_history(integer)
     to authenticated;
-
-notify pgrst, 'reload schema';
-
-commit;
-
 
 
 -- Project delivery defaults: existing projects remain unchanged.
