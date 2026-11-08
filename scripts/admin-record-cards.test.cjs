@@ -9,12 +9,14 @@ const workspace = fs.readFileSync(path.join(root, "admin-dashboard", "admin-work
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
 const css = fs.readFileSync(path.join(root, "admin-dashboard", "admin-record-cards.css"), "utf8");
 
-function section(source, startMarker, endMarker, label) {
+function section(source, startMarker, label) {
     const start = source.indexOf(startMarker);
     assert.ok(start >= 0, label + " start must exist");
-    const end = source.indexOf(endMarker, start + startMarker.length);
-    assert.ok(end > start, label + " end must follow its start");
-    return source.slice(start, end);
+    const nextFunction = /\n    (?:async )?function [A-Za-z_$][\\w$]*\\(/g;
+    nextFunction.lastIndex = start + startMarker.length;
+    const match = nextFunction.exec(source);
+    assert.ok(match, label + " end must follow its start");
+    return source.slice(start, match.index);
 }
 
 const cards = {
@@ -77,10 +79,7 @@ const rendererNames = {
 };
 const names = Object.values(rendererNames);
 for (const [key, name] of Object.entries(rendererNames)) {
-    const index = names.indexOf(name);
-    const nextName = names[index + 1];
-    const endMarker = nextName ? "    function " + nextName + "(" : "    function renderLeadConversionAnalytics(";
-    const renderer = section(workspace, "    function " + name + "(", endMarker, name);
+    const renderer = section(workspace, "    function " + name + "(", name);
     assert.match(renderer, /sway-record-card/,
         name + " should render responsive record cards instead of table rows");
     assert.doesNotMatch(renderer, /<tr\b|<table\b/,
@@ -94,7 +93,6 @@ for (const view of ["tasks", "followups", "communications"]) {
     const renderer = section(
         workspace,
         "    function " + rendererNames[view] + "(",
-        "    function " + (rendererNames[Object.keys(rendererNames)[Object.keys(rendererNames).indexOf(view) + 1]] || "renderLeadConversionAnalytics") + "(",
         view + " card renderer"
     );
     assert.ok(renderer.includes('adminTableControls.items("' + view + '", state.' + view + ")"),
@@ -107,7 +105,7 @@ for (const view of ["tasks", "followups", "communications"]) {
         view + " must retain its filtered-empty state");
 }
 const invoiceRenderer = section(
-    workspace, "    function renderInvoices(", "    function renderServices(", "invoice card renderer"
+    workspace, "    function renderInvoices(", "invoice card renderer"
 );
 assert.ok(invoiceRenderer.includes('adminTableControls.items("invoices", visibleInvoices)'));
 assert.ok(invoiceRenderer.includes('adminTableControls.renderControls("invoices", visibleInvoices)'));
