@@ -10409,6 +10409,9 @@ body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-read-toggle:focus-vi
     grid-column: 1 / -1;
     width: 100%;
 }
+#sway-admin-workspace .sway-lead-cards-empty[hidden] {
+    display: none !important;
+}
 
 /* Full lead detail view, reusing the dashboard's modal shell. */
 #sway-admin-workspace .sway-lead-details-card {
