@@ -57,6 +57,9 @@ jobs:
       - name: Test client portal onboarding promotions
         run: node scripts/client-portal-onboarding-promotions.test.cjs
 
+      - name: Test client portal premium styling
+        run: node scripts/client-portal-premium-style.test.cjs
+
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
 
