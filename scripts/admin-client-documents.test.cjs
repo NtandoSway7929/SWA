@@ -54,7 +54,7 @@ const uploadModal = functionSection(
 );
 assert.match(
     uploadModal,
-    /function buildProjectOptions\(clientId, selectedProjectId\)/,
+    /const buildProjectOptions = function\(clientId, selectedProjectId\)/,
     "the uploader should build project choices for the selected client"
 );
 assert.match(
