@@ -302,7 +302,7 @@ body{
 .portal-section-nav a:hover{background:#EEF1F3;color:#252B31}
 .portal-section-nav a.active{background:#343A40;color:#fff;box-shadow:0 5px 14px rgba(37,43,49,.16)}
 .portal-section-nav a:focus-visible{outline:3px solid rgba(1,82,244,.32);outline-offset:2px}
-#overview-section,#projects-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:146px}
+#overview-section,#projects-section,#documents-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:146px}
 #overview-section{margin-top:26px}
 #overview-section .portal-hero{padding:42px 2px 22px}
 .portal-hero h1{letter-spacing:-.055em}
@@ -330,6 +330,32 @@ body{
 #projects-section .portal-section-head,#finances-section .portal-section-head,#request-section .portal-section-head{margin-bottom:14px}
 .portal-project-grid{grid-template-columns:1fr}
 .portal-finance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+
+.portal-documents-panel{padding:20px}
+.portal-documents-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.portal-document-card{display:grid;align-content:start;gap:9px;min-width:0;padding:15px;border:1px solid rgba(52,58,64,.11);border-radius:16px;background:linear-gradient(145deg,#FFFFFF,#F6F7F8);box-shadow:0 10px 26px rgba(37,43,49,.045)}
+.portal-document-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.portal-document-icon{width:39px;height:39px;display:grid;place-items:center;border-radius:12px;background:#343A40;color:#fff;font-size:.48rem;font-weight:900;letter-spacing:.04em}
+.portal-document-icon.pdf{background:#F4EEEE;color:#A13A3A}
+.portal-document-icon.image{background:#EDF3FF;color:#0152F4}
+.portal-document-category{color:#76818A;font-size:.45rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.portal-document-card h3{color:#252B31;font-size:.67rem;font-weight:850;line-height:1.45;overflow-wrap:anywhere}
+.portal-document-project{color:#66717B;font-size:.51rem;line-height:1.4}
+.portal-document-meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:5px;padding-top:8px;border-top:1px solid rgba(52,58,64,.08);color:#76818A;font-size:.46rem;font-weight:650}
+.portal-document-actions{display:flex;gap:7px;flex-wrap:wrap;padding-top:3px}
+.portal-document-actions .portal-button{min-height:33px;padding:0 11px;font-size:.5rem}
+.portal-document-filters{margin-bottom:14px}
+.portal-documents-error{display:grid;gap:8px;justify-items:start}
+.portal-documents-error strong{color:#343A40;font-size:.65rem}
+.portal-documents-error p{color:#66717B;font-size:.54rem;line-height:1.6}
+.portal-document-preview-card{width:min(940px,100%);height:min(820px,calc(100vh - 36px));display:flex;flex-direction:column;overflow:hidden}
+.portal-document-preview-stage{display:grid;place-items:center;min-height:0;flex:1;overflow:auto;margin-top:14px;border:1px solid rgba(52,58,64,.10);border-radius:15px;background:#E9ECEF}
+.portal-document-preview-image{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+.portal-document-preview-pdf{display:block;width:100%;height:100%;min-height:420px;border:0;background:#fff}
+.portal-document-preview-card .finance-modal-actions{padding-top:12px}
+@media(max-width:900px){.portal-documents-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.portal-documents-panel{padding:14px}.portal-documents-grid{grid-template-columns:1fr}.portal-document-preview-card{height:min(760px,calc(100vh - 24px));max-height:calc(100vh - 24px);padding:15px;border-radius:18px}.portal-document-preview-pdf{min-height:300px}}
+
 
 .finance-overview-panel{display:grid;grid-template-columns:minmax(220px,.82fr) minmax(0,1.18fr);gap:22px;align-items:center;margin:4px 0 17px;padding:23px 25px;border:1px solid rgba(52,58,64,.13);border-radius:22px;background:linear-gradient(125deg,#252B31 0%,#343A40 68%,#26394E 100%);box-shadow:0 18px 42px rgba(37,43,49,.16);color:#fff}
 .finance-overview-main{display:grid;gap:8px;min-width:0}
@@ -380,7 +406,7 @@ body{
   .portal-section-nav a{padding:0 12px}
   .portal-section-nav a.portal-request-shortcut{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-height:34px;padding:0 11px;border-radius:11px;background:linear-gradient(135deg,var(--deep),var(--blue));color:#fff;font-size:.52rem;font-weight:850;text-decoration:none;white-space:nowrap}
   .portal-section-nav a.portal-request-shortcut:focus-visible{outline:3px solid rgba(1,82,244,.32);outline-offset:2px}
-  #overview-section,#projects-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:126px}
+  #overview-section,#projects-section,#documents-section,#finances-section,#onboarding-section,#request-section{scroll-margin-top:126px}
   #overview-section .portal-hero{padding:32px 2px 20px}
   .next-step-card{align-items:stretch;flex-direction:column;gap:16px;padding:18px}
   .next-step-action{width:100%}
@@ -530,6 +556,8 @@ async function portalRpc(functionName,payload,timeoutMs){
 }
 const params=new URLSearchParams(window.location.search);
 const token=params.get("token")||"";
+let portalDocuments=[];
+let portalDocumentFilter="all";
 function esc(value){return String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
 function money(value){return new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(Number(value||0))}
 function date(value){if(!value)return "—";const d=new Date(value);if(Number.isNaN(d.getTime()))return String(value);return d.toLocaleDateString("en-ZA",{day:"2-digit",month:"short",year:"numeric",timeZone:"Africa/Johannesburg"})}
@@ -614,6 +642,117 @@ const message=filter==="outstanding"?"There are no outstanding invoices recorded
 return '<div class="empty">'+message+'</div>';
 }
 return '<div class="financial-list">'+rows.map(renderInvoice).join("")+'</div>';
+}
+function portalDocumentCategory(mimeType,fileName){
+const mime=String(mimeType||"").toLowerCase(),name=String(fileName||"").toLowerCase();
+if(mime.indexOf("image/")===0)return "image";
+if(mime==="application/pdf"||name.endsWith(".pdf"))return "pdf";
+return "other";
+}
+function formatPortalFileSize(value){
+const bytes=Math.max(0,Number(value||0)||0);
+if(bytes<1024)return bytes+" B";
+if(bytes<1024*1024)return (bytes/1024).toFixed(bytes<10240?1:0)+" KB";
+return (bytes/(1024*1024)).toFixed(bytes<10*1024*1024?1:0)+" MB";
+}
+function filterPortalDocuments(documents,filter){
+const rows=Array.isArray(documents)?documents:[];
+if(filter==="project")return rows.filter(function(item){return item.project_name&&item.project_name!=="General files"});
+if(filter==="pdf"||filter==="images")return rows.filter(function(item){return portalDocumentCategory(item.mime_type,item.file_name)===(filter==="pdf"?"pdf":"image")});
+return rows;
+}
+function renderPortalDocumentCard(item){
+const category=portalDocumentCategory(item.mime_type,item.file_name),typeLabel=category==="pdf"?"PDF":(category==="image"?"IMG":"FILE");
+return '<article class="portal-document-card"><div class="portal-document-card-top"><span class="portal-document-icon '+category+'">'+typeLabel+'</span><span class="portal-document-category">'+(category==="pdf"?"PDF document":(category==="image"?"Image":"Shared file"))+'</span></div><h3>'+esc(item.file_name||"Untitled document")+'</h3><p class="portal-document-project">'+esc(item.project_name||"General files")+'</p><div class="portal-document-meta"><span>'+esc(formatPortalFileSize(item.size_bytes))+'</span><span>Shared '+esc(date(item.created_at))+'</span></div><div class="portal-document-actions">'+(category!=="other"?'<button type="button" class="portal-button secondary" data-document-action="preview" data-document-id="'+esc(item.id)+'">Preview</button>':"")+'<button type="button" class="portal-button" data-document-action="download" data-document-id="'+esc(item.id)+'">Download</button></div></article>';
+}
+function renderPortalDocumentList(documents,filter){
+const rows=filterPortalDocuments(documents,filter);
+if(!rows.length){
+const message=documents.length?"There are no shared files in this category.":"No documents have been shared with you yet. Files uploaded by Swayphics will appear here.";
+return '<div class="empty">'+message+'</div>';
+}
+return '<div class="portal-documents-grid">'+rows.map(renderPortalDocumentCard).join("")+'</div>';
+}
+async function portalDocumentApi(payload){
+const response=await fetch(SUPABASE_URL+"/functions/v1/client-portal-documents",{
+method:"POST",
+headers:{"apikey":SUPABASE_PUBLISHABLE_KEY,"Authorization":"Bearer "+SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json","Accept":"application/json"},
+body:JSON.stringify(Object.assign({token:token},payload||{})),
+cache:"no-store"
+});
+const raw=await response.text();
+let result=null;
+try{result=raw?JSON.parse(raw):null}catch(_){result=null}
+if(!response.ok||!result||result.ok!==true)throw new Error(result&&result.error||"The document service could not complete the request.");
+return result;
+}
+function validatedPortalSignedUrl(value){
+const parsed=new URL(String(value||""),SUPABASE_URL),base=new URL(SUPABASE_URL);
+if(parsed.origin!==base.origin||parsed.pathname.indexOf("/storage/v1/object/sign/swayphics-client-files/")===-1)throw new Error("The secure file link was not valid.");
+return parsed.href;
+}
+async function downloadPortalBlob(blob,fileName){
+const safeName=String(fileName||"download").replace(/[\r\n]/g,"").replace(/"/g,"").slice(0,160)||"download";
+const url=URL.createObjectURL(blob),anchor=document.createElement("a");
+anchor.href=url;anchor.download=safeName;anchor.style.display="none";
+document.body.appendChild(anchor);anchor.click();anchor.remove();
+window.setTimeout(function(){URL.revokeObjectURL(url)},1500);
+}
+async function downloadPortalDocument(item,signedUrlOverride){
+const result=signedUrlOverride?{signed_url:signedUrlOverride}:await portalDocumentApi({action:"download",document_id:item.id});
+const response=await fetch(validatedPortalSignedUrl(result.signed_url),{cache:"no-store"});
+if(!response.ok)throw new Error("The file could not be downloaded. Please try again.");
+await downloadPortalBlob(await response.blob(),item.file_name);
+}
+async function downloadPortalInvoicePdf(invoice){
+const response=await fetch(SUPABASE_URL+"/functions/v1/client-portal-documents",{
+method:"POST",
+headers:{"apikey":SUPABASE_PUBLISHABLE_KEY,"Authorization":"Bearer "+SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json","Accept":"application/pdf, application/json"},
+body:JSON.stringify({action:"invoice-pdf",token:token,invoice_id:invoice.id}),
+cache:"no-store"
+});
+if(!response.ok){
+const raw=await response.text();let result=null;try{result=raw?JSON.parse(raw):null}catch(_){result=null}
+throw new Error(result&&result.error||"The invoice PDF could not be downloaded.");
+}
+const type=String(response.headers.get("content-type")||"").toLowerCase();
+if(type.indexOf("application/pdf")!==0)throw new Error("The invoice service did not return a PDF.");
+await downloadPortalBlob(await response.blob(),String(invoice.invoice_number||"invoice")+".pdf");
+}
+function openPortalDocumentPreview(item,signedUrl){
+const href=validatedPortalSignedUrl(signedUrl),category=portalDocumentCategory(item.mime_type,item.file_name);
+if(!["image","pdf"].includes(category))throw new Error("Preview is not available for this file type.");
+document.getElementById("portal-document-preview-modal")?.remove();
+const modal=document.createElement("div");
+const preview=category==="image"
+?'<img class="portal-document-preview-image" src="'+esc(href)+'" alt="'+esc(item.file_name||"Shared image")+'">'
+:'<iframe class="portal-document-preview-pdf" title="'+esc(item.file_name||"Shared PDF")+'" src="'+esc(href)+'" referrerpolicy="no-referrer"></iframe>';
+modal.className="portal-modal";modal.id="portal-document-preview-modal";
+modal.innerHTML='<div class="modal-backdrop" data-document-preview-close></div><section class="modal-card portal-document-preview-card" role="dialog" aria-modal="true" aria-labelledby="portal-document-preview-title"><div class="modal-head"><div><span class="portal-kicker">SHARED DELIVERABLE</span><h3 id="portal-document-preview-title">'+esc(item.file_name||"Document preview")+'</h3><p>'+esc(item.project_name||"General files")+'</p></div><button type="button" class="modal-close" data-document-preview-close aria-label="Close preview">×</button></div><div class="portal-document-preview-stage">'+preview+'</div><div class="finance-modal-actions"><button type="button" class="portal-button" id="portal-preview-download">Download file</button><button type="button" class="portal-button secondary" data-document-preview-close>Close</button></div></section>';
+document.body.appendChild(modal);
+const close=function(){modal.querySelectorAll("iframe,img").forEach(function(media){media.removeAttribute("src")});modal.remove()};
+modal.querySelectorAll("[data-document-preview-close]").forEach(function(button){button.addEventListener("click",close)});
+modal.addEventListener("keydown",function(event){if(event.key==="Escape"){event.preventDefault();close()}});
+modal.querySelector("#portal-preview-download")?.addEventListener("click",async function(event){const button=event.currentTarget;button.disabled=true;button.textContent="Preparing download...";try{await downloadPortalDocument(item);button.textContent="Downloaded"}catch(error){button.textContent="Try download again";const stage=modal.querySelector(".portal-document-preview-stage");if(stage){let note=stage.querySelector(".message");if(!note){note=document.createElement("div");note.className="message";stage.appendChild(note)}note.textContent=error.message||"Download failed."}}finally{button.disabled=false}});
+modal.querySelector(".modal-close")?.focus();
+}
+function renderPortalDocumentsSection(){
+return '<section class="portal-section" id="documents-section"><div class="portal-section-head"><div><h2>Documents & deliverables</h2><p>Files Swayphics has shared for your projects and business.</p></div><span class="card-count" id="portal-documents-count">Loading files...</span></div><section class="portal-card portal-documents-panel"><div class="card-head"><div><h3>Shared with you</h3><p>Private project files, approved designs and other deliverables.</p></div><span class="chip success">Private access</span></div><div id="portal-documents-content" aria-live="polite"><div class="empty">Loading your shared documents...</div></div></section></section>';
+}
+async function loadPortalDocuments(){
+const content=document.getElementById("portal-documents-content"),count=document.getElementById("portal-documents-count");
+if(!content)return;
+content.innerHTML='<div class="empty">Loading your shared documents...</div>';
+if(count)count.textContent="Loading files...";
+try{
+const result=await portalDocumentApi({action:"list"}),documents=Array.isArray(result.documents)?result.documents:[];
+portalDocuments=documents;portalDocumentFilter="all";
+if(count)count.textContent=documents.length+" shared file"+(documents.length===1?"":"s");
+content.innerHTML='<div class="finance-filter-group portal-document-filters" role="group" aria-label="Filter shared documents"><button type="button" class="active" data-document-filter="all" aria-pressed="true">All <span>'+documents.length+'</span></button><button type="button" data-document-filter="project" aria-pressed="false">Project files <span>'+documents.filter(function(item){return item.project_name&&item.project_name!=="General files"}).length+'</span></button><button type="button" data-document-filter="pdf" aria-pressed="false">PDFs <span>'+documents.filter(function(item){return portalDocumentCategory(item.mime_type,item.file_name)==="pdf"}).length+'</span></button><button type="button" data-document-filter="images" aria-pressed="false">Images <span>'+documents.filter(function(item){return portalDocumentCategory(item.mime_type,item.file_name)==="image"}).length+'</span></button></div><div id="portal-document-results">'+renderPortalDocumentList(documents,"all")+'</div>';
+}catch(error){
+content.innerHTML='<div class="empty portal-documents-error"><strong>Documents could not be loaded.</strong><p>'+esc(error&&error.message||"The secure document service is unavailable.")+'</p><button type="button" class="portal-button secondary" id="portal-documents-retry">Try again</button></div>';
+if(count)count.textContent="Unavailable";
+}
 }
 function onboardingValue(onboarding,key){return onboarding&&onboarding[key]!=null?onboarding[key]:""}
 function onboardingJourneyMode(onboarding){
@@ -1056,6 +1195,7 @@ app.innerHTML=
 '<div class="portal-section-links">'+
 '<a href="#overview-section" data-portal-nav-link class="active" aria-current="location">Overview</a>'+
 '<a href="#projects-section" data-portal-nav-link>My projects</a>'+
+'<a href="#documents-section" data-portal-nav-link>Documents</a>'+
 '<a href="#finances-section" data-portal-nav-link>Finances</a>'+
 '<a href="#onboarding-section" data-portal-nav-link>Onboarding</a>'+
 '<a href="#request-section" data-portal-nav-link>Requests</a>'+
@@ -1071,6 +1211,7 @@ app.innerHTML=
 '<article class="stat-card"><span>Recorded payments</span><strong>'+esc(money(paid))+'</strong><small>Payments recorded by Swayphics</small></article>'+
 '</div></section></section>'+
 '<section class="portal-section" id="projects-section"><div class="portal-section-head"><div><h2>My projects</h2><p>Follow the progress of work managed by Swayphics.</p></div><span class="card-count">'+projects.length+' total</span></div><div class="portal-grid portal-project-grid"><section class="portal-card wide"><div class="card-head"><div><h3>Project progress</h3><p>See where each piece of work currently sits.</p></div><span class="card-count">'+active.length+' active</span></div>'+(projects.length?'<div class="project-list">'+projects.map(renderProject).join("")+'</div>':'<div class="empty">No projects are currently listed for this workspace. Your projects will appear here once work has been set up.</div>')+'</section></div></section>'+
+renderPortalDocumentsSection()+
 '<section class="portal-section" id="finances-section"><div class="portal-section-head"><div><h2>Financial centre</h2><p>Review invoice balances, quotations and payments recorded on your account.</p></div><span class="card-count">'+financeSummary.invoiceCount+' invoices · '+financeSummary.paymentCount+' payments</span></div>'+
 '<section class="finance-overview-panel"><div class="finance-overview-main"><span>OUTSTANDING BALANCE</span><strong>'+esc(financeSummary.outstanding)+'</strong><p>'+financeSummary.openCount+' invoice'+(financeSummary.openCount===1?"":"s")+' with a remaining balance recorded.</p></div><div class="finance-overview-metrics"><div><span>OVERDUE BALANCE</span><b>'+esc(financeSummary.overdue)+'</b><small>'+financeSummary.overdueCount+' past-due invoice'+(financeSummary.overdueCount===1?"":"s")+'</small></div><div><span>TOTAL INVOICED</span><b>'+esc(financeSummary.invoiced)+'</b><small>Issued invoices only</small></div><div><span>PAYMENTS RECORDED</span><b>'+financeSummary.paymentCount+'</b><small>Recorded payment entries</small></div></div></section>'+
 '<div class="portal-finance-grid">'+
@@ -1082,6 +1223,36 @@ onboardingForm(data,onboarding)+
 '<section class="portal-section" id="request-section"><div class="portal-section-head"><div><h2>Requests & support</h2><p>Contact Swayphics about an update, change or something new.</p></div></div><section class="portal-card request-card"><div class="request-copy"><span class="kicker">DIRECT TO SWAYPHICS</span><h3>How can we help?</h3><p>Send a request from the portal and it will be attached to this client account in the Swayphics workspace.</p></div><form class="request-form" id="request-form"><div class="field"><label for="request-subject">Subject</label><input id="request-subject" required maxlength="180" placeholder="What do you need help with?"></div><div class="field"><label for="request-message">Message</label><textarea id="request-message" required maxlength="5000" placeholder="Tell the Swayphics team what you need."></textarea></div><button class="portal-button" type="submit">Send request</button><div id="request-message-status" class="message" hidden></div></form></section></section>'+
 '<footer class="portal-footer"><span><strong>Swayphics</strong> · Creative & Design Lab</span><span>Private portal access · Keep this link confidential</span></footer>';
 bindPortalNavigation();
+const documentsSection=document.getElementById("documents-section");
+documentsSection?.addEventListener("click",async function(event){
+const retry=event.target.closest("#portal-documents-retry");
+if(retry){loadPortalDocuments();return}
+const filterButton=event.target.closest("[data-document-filter]");
+if(filterButton){
+portalDocumentFilter=filterButton.dataset.documentFilter||"all";
+documentsSection.querySelectorAll("[data-document-filter]").forEach(function(button){const active=button.dataset.documentFilter===portalDocumentFilter;button.classList.toggle("active",active);button.setAttribute("aria-pressed",active?"true":"false")});
+const results=document.getElementById("portal-document-results");
+if(results)results.innerHTML=renderPortalDocumentList(portalDocuments,portalDocumentFilter);
+return;
+}
+const actionButton=event.target.closest("[data-document-action][data-document-id]");
+if(!actionButton)return;
+const item=portalDocuments.find(function(row){return String(row.id)===String(actionButton.dataset.documentId)});
+if(!item)return;
+const action=actionButton.dataset.documentAction,original=actionButton.textContent;
+actionButton.disabled=true;actionButton.textContent=action==="preview"?"Preparing preview...":"Preparing download...";
+try{
+const result=await portalDocumentApi({action:action,document_id:item.id});
+if(action==="preview")openPortalDocumentPreview(item,result.signed_url);
+else await downloadPortalDocument(item,result.signed_url);
+actionButton.textContent=action==="preview"?"Preview":"Downloaded";
+}catch(error){
+actionButton.textContent=original;
+const note=document.createElement("div");note.className="message portal-document-action-status";note.textContent=error&&error.message||"The file could not be opened.";
+const panel=documentsSection.querySelector(".portal-card");if(panel)panel.appendChild(note);
+}finally{actionButton.disabled=false}
+});
+loadPortalDocuments();
 document.querySelectorAll("[data-project-id]").forEach(function(button){button.addEventListener("click",function(){const project=projects.find(function(item){return item.id===button.dataset.projectId});if(project)openProjectModal(project)})});
 const financeSection=document.getElementById("finances-section");
 financeSection?.addEventListener("click",function(event){
@@ -1155,12 +1326,21 @@ requestSubject="Receipt request · "+String(item.reference||"Recorded payment");
 requestMessage="Please send me a receipt or payment confirmation for the payment of "+financialMoney(item.amount,"ZAR")+", recorded on "+date(item.paid_at)+"."+(item.reference?" The payment reference shown in my portal is "+String(item.reference)+".":"");
 }
 modal.className="portal-modal";modal.id="portal-financial-modal";
-modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&invoiceFinancialBreakdown(item).outstanding>0?'<p class="finance-payment-guidance">Online payment is not available through this portal. Use the request below to ask Swayphics for the correct payment instructions.</p>':"")+'<div class="finance-modal-actions"><button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div></div></section>';
+modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&invoiceFinancialBreakdown(item).outstanding>0?'<p class="finance-payment-guidance">Online payment is not available through this portal. Use the request below to ask Swayphics for the correct payment instructions.</p>':"")+'<div class="finance-modal-actions">'+(type==="invoice"?'<button type="button" class="portal-button secondary" id="finance-invoice-pdf">Download invoice PDF</button>':"")+'<button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div><div id="finance-pdf-status" class="message" hidden role="status"></div></div></section>';
 document.body.appendChild(modal);
 const close=function(){modal.remove();if(trigger&&typeof trigger.focus==="function")trigger.focus()};
 modal.querySelectorAll("[data-finance-close]").forEach(function(element){element.addEventListener("click",close)});
 modal.addEventListener("keydown",function(event){if(event.key==="Escape"){event.preventDefault();close()}});
 modal.querySelector("#finance-request-action")?.addEventListener("click",function(){modal.remove();openPortalRequest(requestSubject,requestMessage)});
+const invoicePdfButton=modal.querySelector("#finance-invoice-pdf");
+invoicePdfButton?.addEventListener("click",async function(){
+const statusBox=modal.querySelector("#finance-pdf-status");
+invoicePdfButton.disabled=true;invoicePdfButton.textContent="Preparing PDF...";
+if(statusBox){statusBox.hidden=false;statusBox.textContent="Generating your invoice PDF securely..."}
+try{await downloadPortalInvoicePdf(item);invoicePdfButton.textContent="PDF downloaded";if(statusBox)statusBox.textContent="Your invoice PDF has been downloaded."}
+catch(error){invoicePdfButton.textContent="Download invoice PDF";if(statusBox){statusBox.hidden=false;statusBox.textContent=error&&error.message||"The invoice PDF could not be downloaded."}}
+finally{invoicePdfButton.disabled=false}
+});
 modal.querySelector(".modal-close")?.focus();
 }
 function openProjectModal(project){
