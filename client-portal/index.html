@@ -883,6 +883,7 @@ const locked=form.classList.contains("onboarding-locked");
 let currentStep=0,autosaveTimer=null;
 let saveQueue=Promise.resolve();
 let assetUploadPromise=null;
+let onboardingSubmitInProgress=false;
 const stepNames=sections.map(function(section){return section.querySelector("h4")?.textContent.trim()||"Onboarding";});
 if(locked){
 form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});
@@ -1093,8 +1094,11 @@ form.addEventListener("input",function(event){if(event.target&&event.target.type
 form.addEventListener("change",function(event){if(event.target&&event.target.type!=="file")scheduleAutosave();});
 form.addEventListener("submit",async function(event){
 event.preventDefault();
-if(locked)return;
+if(locked||onboardingSubmitInProgress)return;
 if(!validateBeforeSubmit())return;
+onboardingSubmitInProgress=true;
+if(submitButton)submitButton.disabled=true;
+try{
 if(assetInput?.files?.length){
 if(message){message.hidden=false;message.textContent="Attaching your selected business assets securely before submitting your onboarding...";}
 try{await uploadSelectedAssets();}
@@ -1106,6 +1110,10 @@ return;
 }
 renderReview();
 await saveOnboarding(true,false);
+}finally{
+onboardingSubmitInProgress=false;
+if(submitButton&&!form.classList.contains("onboarding-locked"))submitButton.disabled=false;
+}
 });
 updateJourneyMode();
 showStep(0);
