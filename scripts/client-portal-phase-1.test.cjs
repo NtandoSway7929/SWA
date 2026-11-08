@@ -14,8 +14,9 @@ const helperEnd = portal.indexOf("\nfunction bindPortalNavigation", helperStart)
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "The next-step resolver must exist as an isolated helper.");
 const helperSource = portal.slice(helperStart, helperEnd);
 const context = {};
-vm.runInNewContext(helperSource + "\nthis.getClientNextStep = getClientNextStep;", context);
+vm.runInNewContext(helperSource + "\nthis.getClientNextStep = getClientNextStep; this.isClientInvoicePayable = isClientInvoicePayable;", context);
 const getNextStep = context.getClientNextStep;
+const isClientInvoicePayable = context.isClientInvoicePayable;
 
 test("incomplete onboarding is the first action shown to a client", () => {
   const result = getNextStep({ status: "in_progress" }, [], [], [], []);
