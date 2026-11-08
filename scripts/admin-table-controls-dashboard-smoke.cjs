@@ -683,6 +683,13 @@ async function main() {
     await settingsNavigation.click();
     const runFollowupScan = page.locator('#sway-settings-expanded [data-action="run-stale-lead-automation"]');
     await runFollowupScan.waitFor({ state: "visible", timeout: 20000 });
+    const staleLeadScanPath = "/rest/v1/rpc/process_swayphics_stale_leads";
+    if (!metrics.mockedStartupCalls.some(item => item.path === staleLeadScanPath)) {
+      await page.waitForResponse(response => {
+        try { return new URL(response.url()).pathname === staleLeadScanPath; }
+        catch (error) { return false; }
+      }, { timeout: 10000 });
+    }
     const followupScanCallsBefore = metrics.mockedStartupCalls.filter(item =>
       item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
     ).length;
