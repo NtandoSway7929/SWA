@@ -133,7 +133,7 @@ test("record routing uses fixed selectors and exact DOM attribute comparisons", 
     "function findNotificationRecordRow(",
     "notification record action finder"
   );
-  assert.match(finder, /'\[data-edit="leads"\]\[data-id\]'/);
+  assert.match(finder, /selector: "\[data-open-lead-details\]"/);
   assert.match(finder, /'\[data-edit="tasks"\]\[data-id\]'/);
   assert.match(finder, /'\[data-edit="followups"\]\[data-id\]'/);
   assert.match(finder, /'\[data-edit="quotes"\]\[data-id\]'/);
