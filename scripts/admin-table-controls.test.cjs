@@ -27,8 +27,8 @@ for (const view of ["leads", "followups", "tasks", "communications"]) {
         assert.match(workspaceSource, /data-admin-table-select="leads"/,
             "lead cards must render the shared selection checkbox contract");
     } else {
-        assert.ok(workspaceSource.includes('adminTableControls.selectionCell("' + view + '"'),
-            view + " view must render selection checkboxes");
+        assert.ok(workspaceSource.includes('data-admin-table-select="' + view + '"'),
+            view + " card view must render the shared selection checkbox contract");
     }
 }
 assert.ok(workspaceSource.includes("adminTableControls.bind();"),

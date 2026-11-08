@@ -1,0 +1,336 @@
+/* Shared responsive card presentation for Swayphics admin record lists. */
+#sway-admin-workspace .sway-record-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    align-items: stretch;
+    gap: 14px;
+    min-width: 0;
+}
+
+#sway-admin-workspace .sway-record-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid rgba(0, 32, 150, .10);
+    border-radius: 17px;
+    background: rgba(255, 255, 255, .95);
+    box-shadow: 0 9px 28px rgba(0, 32, 150, .045);
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+#sway-admin-workspace .sway-record-card:hover {
+    border-color: rgba(1, 82, 244, .25);
+    box-shadow: 0 13px 32px rgba(0, 32, 150, .075);
+    transform: translateY(-1px);
+}
+
+#sway-admin-workspace .sway-record-card[hidden] {
+    display: none !important;
+}
+
+#sway-admin-workspace .sway-record-card-top,
+#sway-admin-workspace .sway-record-card-badges,
+#sway-admin-workspace .sway-record-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+#sway-admin-workspace .sway-record-card-eyebrow {
+    color: #8492A8;
+    font-size: .54rem;
+    font-weight: 850;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+}
+
+#sway-admin-workspace .sway-record-card-badges {
+    justify-content: flex-end;
+}
+
+#sway-admin-workspace .sway-record-card-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #61718A;
+    font-size: .62rem;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+#sway-admin-workspace .sway-record-card-select input,
+#sway-admin-workspace .sway-record-card-selection-bar input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex: 0 0 auto;
+    accent-color: #0152F4;
+}
+
+#sway-admin-workspace .sway-record-card-open {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+#sway-admin-workspace .sway-record-card-open:hover .sway-record-card-title {
+    color: #0152F4;
+}
+
+#sway-admin-workspace .sway-record-card-open:focus-visible,
+#sway-admin-workspace .sway-record-card-select input:focus-visible,
+#sway-admin-workspace .sway-record-card-selection-bar input:focus-visible {
+    outline: 3px solid rgba(1, 82, 244, .28);
+    outline-offset: 4px;
+}
+
+#sway-admin-workspace .sway-record-card-title {
+    display: block;
+    margin: 0;
+    color: #0A1B3B;
+    font-size: .96rem;
+    font-weight: 850;
+    line-height: 1.38;
+    letter-spacing: -.02em;
+    overflow-wrap: anywhere;
+    transition: color .18s ease;
+}
+
+#sway-admin-workspace .sway-record-card-description {
+    display: block;
+    margin: 0;
+    color: #66758D;
+    font-size: .68rem;
+    font-weight: 600;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+#sway-admin-workspace .sway-record-card-static-heading {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+#sway-admin-workspace .sway-record-card-static-heading p {
+    margin: 0;
+}
+
+#sway-admin-workspace .sway-record-card-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 8px;
+    min-width: 0;
+}
+
+#sway-admin-workspace .sway-record-card-detail {
+    display: block;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid rgba(0, 32, 150, .065);
+    border-radius: 10px;
+    background: rgba(247, 250, 255, .74);
+}
+
+#sway-admin-workspace .sway-record-card-detail-wide {
+    grid-column: 1 / -1;
+}
+
+#sway-admin-workspace .sway-record-card-detail > span {
+    display: block;
+    color: #8492A8;
+    font-size: .51rem;
+    font-weight: 850;
+    letter-spacing: .055em;
+    text-transform: uppercase;
+}
+
+#sway-admin-workspace .sway-record-card-detail > strong {
+    display: block;
+    margin-top: 4px;
+    color: #2C3C58;
+    font-size: .66rem;
+    font-weight: 750;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+#sway-admin-workspace .sway-record-card-detail > strong .sway-chip {
+    vertical-align: middle;
+}
+
+#sway-admin-workspace .sway-record-card-copy-preview {
+    display: -webkit-box;
+    overflow: hidden;
+    padding: 11px 12px;
+    border: 1px solid rgba(0, 32, 150, .07);
+    border-radius: 11px;
+    background: rgba(247, 250, 255, .75);
+    color: #52627B;
+    font-size: .68rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+}
+
+#sway-admin-workspace .sway-record-card-filetype {
+    max-width: 55%;
+    overflow: hidden;
+    color: #7A89A0;
+    font-size: .57rem;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#sway-admin-workspace .sway-record-card-warning {
+    color: #A33B2E;
+    font-size: .56rem;
+    font-weight: 800;
+}
+
+#sway-admin-workspace .sway-record-card-actions {
+    justify-content: flex-end;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 32, 150, .075);
+}
+
+#sway-admin-workspace .sway-record-card-open-hint {
+    margin-right: auto;
+    color: #8492A8;
+    font-size: .59rem;
+    font-weight: 750;
+}
+
+#sway-admin-workspace .sway-record-card-selection-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 9px 14px;
+    margin: 13px 0 12px;
+    padding: 10px 13px;
+    border: 1px solid rgba(0, 32, 150, .09);
+    border-radius: 12px;
+    background: rgba(247, 250, 255, .78);
+    color: #61718A;
+    font-size: .63rem;
+    font-weight: 650;
+}
+
+#sway-admin-workspace .sway-record-card-selection-bar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #33415A;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+#sway-admin-workspace .sway-record-card-empty {
+    margin-top: 12px;
+    padding: 24px 16px;
+    border: 1px dashed rgba(0, 32, 150, .18);
+    border-radius: 14px;
+    color: #66758D;
+    font-size: .72rem;
+    font-weight: 650;
+    text-align: center;
+}
+
+#sway-admin-workspace .sway-record-card-empty[hidden] {
+    display: none !important;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-record-card {
+    border-color: rgba(119, 160, 255, .17);
+    background: rgba(12, 25, 52, .94);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .19);
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-record-card:hover {
+    border-color: rgba(119, 160, 255, .34);
+    box-shadow: 0 15px 38px rgba(0, 0, 0, .26);
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-title {
+    color: #F0F5FF;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-open:hover .sway-record-card-title {
+    color: #8FC4FF;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-description,
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-open-hint,
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-filetype,
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-select {
+    color: #B3C3DC;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-detail,
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-copy-preview,
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-selection-bar {
+    border-color: rgba(119, 160, 255, .11);
+    background: rgba(4, 15, 37, .62);
+    color: #B7C6DE;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-detail > span,
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-selection-bar {
+    color: #A9B9D2;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-detail > strong,
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-selection-bar label {
+    color: #D9E4F5;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-record-card-empty {
+    border-color: rgba(119, 160, 255, .22);
+    color: #B8C5DA;
+}
+
+@media (max-width: 620px) {
+    #sway-admin-workspace .sway-record-card {
+        padding: 13px;
+    }
+
+    #sway-admin-workspace .sway-record-card-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 11px;
+    }
+
+    #sway-admin-workspace .sway-record-card-selection-bar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #sway-admin-workspace .sway-record-card,
+    #sway-admin-workspace .sway-record-card-title {
+        transition: none;
+    }
+
+    #sway-admin-workspace .sway-record-card:hover {
+        transform: none;
+    }
+}

@@ -12302,97 +12302,82 @@ function simpleBars(items, color) {
         }
     });
 
+    function renderRecordCardSelectionBar(view, label) {
+        return (
+            '<div class="sway-record-card-selection-bar">' +
+                '<label><input type="checkbox" data-admin-table-select-all="' + esc(view) +
+                    '" aria-label="Select all visible ' + esc(label) + '">' +
+                    '<span>Select all visible ' + esc(label) + '</span></label>' +
+                '<span>Use the checkboxes on individual cards to select records for bulk actions.</span>' +
+            '</div>'
+        );
+    }
+
     function renderTasks() {
         const tableItems = adminTableControls.items("tasks", state.tasks);
-        const rows =
-            tableItems.map(function (item) {
-                return (
-                    '<tr data-admin-table-row="tasks" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableControls.searchText("tasks", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="tasks:' + esc(item.id) + '">' +
-                        adminTableControls.selectionCell("tasks", item, item.title || "task") +
-                        "<td>" +
-                            "<strong>" +
-                                esc(item.title) +
-                            "</strong>" +
-                            (
-                                item.description
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.description) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                adminName(
-                                    item.assigned_to
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                clientName(
-                                    item.client_id
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.priority) +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                item.due_date && isOverdue(item.due_date) && item.status !== "completed"
-                                    ? chip("overdue")
-                                    : esc(date(item.due_date))
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            (item.client_id ? clientHealthChip(item.client_id) : "—") +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                '<button class="sway-row-action" data-client-portal="' +
-                                    esc(item.id) +
-                                '">Portal</button>' +
-                                (
-                                    item.status !== "completed"
-                                        ? '<button class="sway-row-action" data-complete-task="' +
-                                          esc(item.id) +
-                                          '">Complete</button>'
-                                        : ""
-                                ) +
-                                '<button class="sway-row-action" data-edit="tasks" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
-                                '<button class="sway-row-action danger" data-delete="tasks" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const cards = tableItems.map(function (item) {
+            const selected = (state.tableSelection.tasks || []).some(function (id) {
+                return String(id) === String(item.id);
+            });
+            const overdue = item.due_date && isOverdue(item.due_date) && item.status !== "completed";
+            return (
+                '<article class="sway-record-card" data-admin-table-row="tasks" data-admin-table-id="' +
+                    esc(item.id) + '" data-admin-table-search="' +
+                    esc(adminTableControls.searchText("tasks", item)) +
+                    '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) +
+                    '" data-ai-record="tasks:' + esc(item.id) + '">' +
+                    '<div class="sway-record-card-top">' +
+                        '<label class="sway-record-card-select"><input type="checkbox" data-admin-table-select="tasks" data-id="' +
+                            esc(item.id) + '" aria-label="Select ' + esc(item.title || "task") + '"' +
+                            (selected ? " checked" : "") + '><span>Select</span></label>' +
+                        '<div class="sway-record-card-badges">' + chip(item.priority) + chip(item.status) + '</div>' +
+                    '</div>' +
+                    '<button type="button" class="sway-record-card-open" data-edit="tasks" data-id="' + esc(item.id) +
+                        '" aria-label="Open task ' + esc(item.title || "task") + '">' +
+                        '<span class="sway-record-card-eyebrow">TASK</span>' +
+                        '<strong class="sway-record-card-title">' + esc(item.title || "Untitled task") + '</strong>' +
+                        (
+                            item.description
+                                ? '<span class="sway-record-card-description">' + esc(item.description) + '</span>'
+                                : ""
+                        ) +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Assigned to</span><strong>' + esc(adminName(item.assigned_to)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Client</span><strong>' + esc(clientName(item.client_id)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Due date</span><strong>' + (overdue ? chip("overdue") : esc(date(item.due_date))) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Client health</span><strong>' + (item.client_id ? clientHealthChip(item.client_id) : "—") + '</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open task details</span>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
+                            '<div class="sway-actions-dropdown">' +
+                                '<button class="sway-row-action" data-client-portal="' + esc(item.id) + '">Portal</button>' +
+                                (item.status !== "completed" ? '<button class="sway-row-action" data-complete-task="' + esc(item.id) + '">Complete</button>' : "") +
+                                '<button class="sway-row-action" data-edit="tasks" data-id="' + esc(item.id) + '">Edit</button>' +
+                                '<button class="sway-row-action danger" data-delete="tasks" data-id="' + esc(item.id) + '">Delete</button>' +
+                            '</div>' +
+                        '</details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
-            heading(
-                '<button class="sway-workspace-button primary" data-add="tasks">+ New task</button>'
-            ) +
+            heading('<button class="sway-workspace-button primary" data-add="tasks">+ New task</button>') +
             panel(
                 "All tasks",
                 "Assignments, deadlines and delivery status.",
                 adminTableControls.renderControls("tasks") +
-                (state.tasks.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="tasks" aria-label="Select all visible tasks"></th><th>Task</th><th>Assigned</th><th>Client</th><th>Priority</th><th>Due</th><th>Client health</th><th>Status</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      '<tr data-admin-table-no-results="tasks" hidden><td colspan="9">No tasks match these controls. Try another search or status.</td></tr>' +
-                      "</tbody></table></div>"
-                    : empty("No tasks yet."))
+                (
+                    state.tasks.length
+                        ? renderRecordCardSelectionBar("tasks", "tasks") +
+                          '<div class="sway-record-card-grid">' + cards + '</div>' +
+                          '<div class="sway-record-card-empty" data-admin-table-no-results="tasks" hidden>No tasks match these controls. Try another search or status.</div>'
+                        : empty("No tasks yet.")
+                )
             )
         );
     }
-
     function leadHasCommunicationContact(leadId) {
         return state.communications.some(function (item) {
             return (
@@ -13083,89 +13068,65 @@ function simpleBars(items, color) {
 
     function renderFollowups() {
         const tableItems = adminTableControls.items("followups", state.followups);
-        const rows =
-            tableItems.map(function (item) {
-                const subject =
-                    item.lead_id
-                        ? leadName(item.lead_id)
-                        : clientName(item.client_id);
-
-                return (
-                    '<tr data-admin-table-row="followups" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableControls.searchText("followups", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="followups:' + esc(item.id) + '">' +
-                        adminTableControls.selectionCell("followups", item, item.lead_id ? leadName(item.lead_id) : clientName(item.client_id)) +
-                        "<td>" +
-                            "<strong>" +
-                                esc(subject) +
-                            "</strong>" +
-                            '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                esc(
-                                    item.channel ||
-                                    "—"
-                                ) +
-                            "</span>" +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                isOverdue(item.scheduled_for) &&
-                                item.status === "pending"
-                                    ? chip("overdue")
-                                    : esc(
-                                        date(
-                                            item.scheduled_for
-                                        )
-                                    )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                adminName(
-                                    item.assigned_to
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                (
-                                    item.status === "pending"
-                                        ? '<button class="sway-row-action" data-complete-followup="' +
-                                          esc(item.id) +
-                                          '">Complete</button>'
-                                        : ""
-                                ) +
-                                '<button class="sway-row-action" data-edit="followups" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
-                                '<button class="sway-row-action danger" data-delete="followups" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const cards = tableItems.map(function (item) {
+            const subject = item.lead_id ? leadName(item.lead_id) : clientName(item.client_id);
+            const overdue = isOverdue(item.scheduled_for) && item.status === "pending";
+            const selected = (state.tableSelection.followups || []).some(function (id) {
+                return String(id) === String(item.id);
+            });
+            return (
+                '<article class="sway-record-card" data-admin-table-row="followups" data-admin-table-id="' +
+                    esc(item.id) + '" data-admin-table-search="' +
+                    esc(adminTableControls.searchText("followups", item)) +
+                    '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) +
+                    '" data-ai-record="followups:' + esc(item.id) + '">' +
+                    '<div class="sway-record-card-top">' +
+                        '<label class="sway-record-card-select"><input type="checkbox" data-admin-table-select="followups" data-id="' +
+                            esc(item.id) + '" aria-label="Select follow-up for ' + esc(subject) + '"' +
+                            (selected ? " checked" : "") + '><span>Select</span></label>' +
+                        '<div class="sway-record-card-badges">' + (overdue ? chip("overdue") : "") + chip(item.status) + '</div>' +
+                    '</div>' +
+                    '<button type="button" class="sway-record-card-open" data-edit="followups" data-id="' + esc(item.id) +
+                        '" aria-label="Open follow-up for ' + esc(subject) + '">' +
+                        '<span class="sway-record-card-eyebrow">FOLLOW-UP</span>' +
+                        '<strong class="sway-record-card-title">' + esc(subject) + '</strong>' +
+                        '<span class="sway-record-card-description">' + esc(item.channel || "Channel not specified") + '</span>' +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Scheduled</span><strong>' + esc(date(item.scheduled_for)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Assigned to</span><strong>' + esc(adminName(item.assigned_to)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail sway-record-card-detail-wide"><span>Follow-up note</span><strong>' + esc(item.note || "No note recorded") + '</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open follow-up details</span>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
+                            '<div class="sway-actions-dropdown">' +
+                                (item.status === "pending" ? '<button class="sway-row-action" data-complete-followup="' + esc(item.id) + '">Complete</button>' : "") +
+                                '<button class="sway-row-action" data-edit="followups" data-id="' + esc(item.id) + '">Edit</button>' +
+                                '<button class="sway-row-action danger" data-delete="followups" data-id="' + esc(item.id) + '">Delete</button>' +
+                            '</div>' +
+                        '</details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
-            heading(
-                '<button class="sway-workspace-button primary" data-add="followups">+ New follow-up</button>'
-            ) +
+            heading('<button class="sway-workspace-button primary" data-add="followups">+ New follow-up</button>') +
             renderFollowupAutomation() +
             panel(
                 "Follow-up queue",
                 "Keep outreach and client communication from falling through the cracks.",
                 adminTableControls.renderControls("followups") +
-                (state.followups.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="followups" aria-label="Select all visible follow-ups"></th><th>Contact</th><th>Scheduled</th><th>Assigned</th><th>Status</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      '<tr data-admin-table-no-results="followups" hidden><td colspan="6">No follow-ups match these controls. Try another search or status.</td></tr>' +
-                      "</tbody></table></div>"
-                    : empty("No follow-ups scheduled."))
+                (
+                    state.followups.length
+                        ? renderRecordCardSelectionBar("followups", "follow-ups") +
+                          '<div class="sway-record-card-grid">' + cards + '</div>' +
+                          '<div class="sway-record-card-empty" data-admin-table-no-results="followups" hidden>No follow-ups match these controls. Try another search or status.</div>'
+                        : empty("No follow-ups scheduled.")
+                )
             )
         );
     }
-
     function client360List(items, emptyMessage, renderer) {
         if (!items.length) {
             return '<div class="sway-client360-empty">' +
@@ -14168,93 +14129,6 @@ function simpleBars(items, color) {
     }
 
     function renderClients() {
-        const rows =
-            state.clients.map(function (item) {
-                const count =
-                    state.projects.filter(function (project) {
-                        return project.client_id === item.id;
-                    }).length;
-
-                return (
-                    '<tr data-ai-record="clients:' + esc(item.id) + '">' +
-                        "<td>" +
-                            "<strong>" +
-                                esc(item.business_name) +
-                            "</strong>" +
-                            (
-                                item.contact_name
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.contact_name) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                item.email ||
-                                item.phone ||
-                                "—"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                adminName(
-                                    item.assigned_to
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            count +
-                        "</td>" +
-                        "<td>" +
-                            clientHealthChip(item.id) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                '<button class="sway-row-action" data-client-portal="' +
-                                    esc(item.id) +
-                                '">Portal</button>' +
-                                '<button class="sway-row-action" data-client360="' +
-                                    esc(item.id) +
-                                '">View</button>' +
-                                '<button class="sway-row-action" data-edit="clients" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
-                                (
-                                    item.email
-                                        ? '<button class="sway-row-action" data-send-email-type="client" data-send-email-id="' +
-                                          esc(item.id) +
-                                          '">Email</button>'
-                                        : ""
-                                ) +
-                                '<button class="sway-row-action" data-new-project-client="' +
-                                    esc(item.id) +
-                                '">Project</button>' +
-                                '<button class="sway-row-action" data-new-invoice-client="' +
-                                    esc(item.id) +
-                                '">Invoice</button>' +
-                                (
-                                    item.status === "archived"
-                                        ? '<button class="sway-row-action" data-restore-client="' +
-                                          esc(item.id) +
-                                          '">Restore</button>'
-                                        : '<button class="sway-row-action" data-archive-client="' +
-                                          esc(item.id) +
-                                          '">Archive</button>'
-                                ) +
-                                '<button class="sway-row-action danger" data-delete="clients" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
-
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
-
         const clientCounts = state.clients.reduce(function (acc, client) {
             acc[client.id] = {
                 documents: state.documents.filter(function (d) { return d.client_id === client.id; }).length,
@@ -14264,222 +14138,162 @@ function simpleBars(items, color) {
             return acc;
         }, {});
 
-                return (
-            heading(
-                '<button class="sway-workspace-button primary" data-add="clients">+ New client</button>'
-            ) +
+        const cards = state.clients.map(function (item) {
+            const projects = state.projects.filter(function (project) {
+                return String(project.client_id || "") === String(item.id);
+            }).length;
+            const counts = clientCounts[item.id] || { documents: 0, requests: 0, communications: 0 };
+            return (
+                '<article class="sway-record-card" data-ai-record="clients:' + esc(item.id) + '">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">CLIENT</span>' +
+                        '<div class="sway-record-card-badges">' + clientHealthChip(item.id) + chip(item.status) + '</div></div>' +
+                    '<button type="button" class="sway-record-card-open" data-client360="' + esc(item.id) +
+                        '" aria-label="Open Client 360 for ' + esc(item.business_name || "client") + '">' +
+                        '<strong class="sway-record-card-title">' + esc(item.business_name || "Unnamed client") + '</strong>' +
+                        (item.contact_name ? '<span class="sway-record-card-description">' + esc(item.contact_name) + '</span>' : "") +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Email</span><strong>' + esc(item.email || "Not provided") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Phone</span><strong>' + esc(item.phone || "Not provided") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Account owner</span><strong>' + esc(adminName(item.assigned_to)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Projects</span><strong>' + projects + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Documents</span><strong>' + counts.documents + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Open portal requests</span><strong>' + counts.requests + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Communication entries</span><strong>' + counts.communications + '</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><button type="button" class="sway-row-action" data-client360="' + esc(item.id) + '">Client 360</button>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
+                            '<div class="sway-actions-dropdown">' +
+                                '<button class="sway-row-action" data-client-portal="' + esc(item.id) + '">Portal</button>' +
+                                '<button class="sway-row-action" data-client360="' + esc(item.id) + '">View</button>' +
+                                '<button class="sway-row-action" data-edit="clients" data-id="' + esc(item.id) + '">Edit</button>' +
+                                (item.email ? '<button class="sway-row-action" data-send-email-type="client" data-send-email-id="' + esc(item.id) + '">Email</button>' : "") +
+                                '<button class="sway-row-action" data-new-project-client="' + esc(item.id) + '">Project</button>' +
+                                '<button class="sway-row-action" data-new-invoice-client="' + esc(item.id) + '">Invoice</button>' +
+                                (item.status === "archived"
+                                    ? '<button class="sway-row-action" data-restore-client="' + esc(item.id) + '">Restore</button>'
+                                    : '<button class="sway-row-action" data-archive-client="' + esc(item.id) + '">Archive</button>') +
+                                '<button class="sway-row-action danger" data-delete="clients" data-id="' + esc(item.id) + '">Delete</button>' +
+                            '</div>' +
+                        '</details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
+
+        return (
+            heading('<button class="sway-workspace-button primary" data-add="clients">+ New client</button>') +
             panel(
                 "Clients",
-                "Manage active and archived client relationships. Delete permanently when a client record and its linked history should be removed.",
+                "Manage active and archived client relationships. Open Client 360 for the full relationship record; use Actions for account operations.",
                 state.clients.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Business</th><th>Contact</th><th>Owner</th><th>Projects</th><th>Health</th><th>Status</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
+                    ? '<div class="sway-record-card-grid">' + cards + '</div>'
                     : empty("No clients yet.")
             )
         );
     }
-
     function renderProjects() {
-        const rows =
-            state.projects.map(function (item) {
-                const projectReviewAction =
-                    item.status === "completed" &&
-                    item.review_email_status !== "sent"
-                        ? '<button class="sway-row-action" data-request-review="' +
-                          esc(item.id) +
-                          '">' +
-                          (
-                              item.review_email_status === "failed"
-                                  ? "Retry review"
-                                  : "Send review"
-                          ) +
-                          "</button>"
-                        : "";
-
-                return (
-                    '<tr data-ai-record="projects:' + esc(item.id) + '">' +
-                        "<td>" +
-                            "<strong>" +
-                                esc(item.name) +
-                            "</strong>" +
-                            (
-                                item.service
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.service) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                clientName(
-                                    item.client_id
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                adminName(
-                                    item.assigned_to
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                item.due_date && isOverdue(item.due_date) && item.status !== "completed"
-                                    ? chip("overdue")
-                                    : esc(date(item.due_date))
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.payment_status) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                money(item.value)
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                Number(item.estimated_cost || 0)
-                                    ? esc(money(item.estimated_cost))
-                                    : "—"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                item.status === "completed"
-                                    ? chip(
-                                        item.review_email_status === "sent"
-                                            ? "review sent"
-                                            : item.review_email_status === "failed"
-                                                ? "review failed"
-                                                : "review queued"
-                                    )
-                                    : "—"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                '<button class="sway-row-action" data-project-timeline="' +
-                                    esc(item.id) +
-                                '">Timeline</button>' +
-                                '<button class="sway-row-action" data-edit="projects" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
+        const cards = state.projects.map(function (item) {
+            const projectReviewAction =
+                item.status === "completed" && item.review_email_status !== "sent"
+                    ? '<button class="sway-row-action" data-request-review="' + esc(item.id) + '">' +
+                        (item.review_email_status === "failed" ? "Retry review" : "Send review") +
+                      '</button>'
+                    : "";
+            const overdue = item.due_date && isOverdue(item.due_date) && item.status !== "completed";
+            return (
+                '<article class="sway-record-card" data-ai-record="projects:' + esc(item.id) + '">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">PROJECT</span>' +
+                        '<div class="sway-record-card-badges">' + (overdue ? chip("overdue") : "") + chip(item.status) + '</div></div>' +
+                    '<button type="button" class="sway-record-card-open" data-edit="projects" data-id="' + esc(item.id) +
+                        '" aria-label="Open project ' + esc(item.name || "project") + '">' +
+                        '<strong class="sway-record-card-title">' + esc(item.name || "Untitled project") + '</strong>' +
+                        '<span class="sway-record-card-description">' + esc(item.service || "Service not specified") + '</span>' +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Client</span><strong>' + esc(clientName(item.client_id)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Owner</span><strong>' + esc(adminName(item.assigned_to)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Due date</span><strong>' + esc(date(item.due_date)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Payment</span><strong>' + chip(item.payment_status) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Project value</span><strong>' + esc(money(item.value)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Estimated cost</span><strong>' + (Number(item.estimated_cost || 0) ? esc(money(item.estimated_cost)) : "—") + '</strong></div>' +
+                        (
+                            item.status === "completed"
+                                ? '<div class="sway-record-card-detail"><span>Review</span><strong>' +
+                                    chip(item.review_email_status === "sent" ? "review sent" : item.review_email_status === "failed" ? "review failed" : "review queued") +
+                                  '</strong></div>'
+                                : ""
+                        ) +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open project details</span>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
+                            '<div class="sway-actions-dropdown">' +
+                                '<button class="sway-row-action" data-project-timeline="' + esc(item.id) + '">Timeline</button>' +
+                                '<button class="sway-row-action" data-edit="projects" data-id="' + esc(item.id) + '">Edit</button>' +
                                 projectReviewAction +
-                                '<button class="sway-row-action danger" data-delete="projects" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+                                '<button class="sway-row-action danger" data-delete="projects" data-id="' + esc(item.id) + '">Delete</button>' +
+                            '</div>' +
+                        '</details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
-            heading(
-                '<button class="sway-workspace-button primary" data-add="projects">+ New project</button>'
-            ) +
+            heading('<button class="sway-workspace-button primary" data-add="projects">+ New project</button>') +
             panel(
                 "Projects",
                 "Track delivery, ownership, deadlines and payment state.",
                 state.projects.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Project</th><th>Client</th><th>Owner</th><th>Status</th><th>Due</th><th>Payment</th><th>Value</th><th>Cost</th><th>Review</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
+                    ? '<div class="sway-record-card-grid">' + cards + '</div>'
                     : empty("No projects yet.")
             )
         );
     }
-
     function renderQuotes() {
-        const rows =
-            state.quotes.map(function (item) {
-                const contactDetails =
-                    communicationContactDetails(item);
-
-                return (
-                    '<tr data-ai-record="quotes:' + esc(item.id) + '">' +
-                        "<td>" +
-                            "<strong>" +
-                                esc(
-                                    item.quote_number ||
-                                    "Unnumbered"
-                                ) +
-                            "</strong>" +
-                            (
-                                item.title
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.title) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(contact) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                money(
-                                    item.amount
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                date(
-                                    item.valid_until
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                (
-                                    item.status === "accepted" && !item.invoice_id
-                                        ? '<button class="sway-row-action" data-create-invoice-from-quote="' +
-                                          esc(item.id) +
-                                          '">Create invoice</button>'
-                                        : item.invoice_id
-                                            ? '<span class="sway-chip success">Invoice linked</span>'
-                                            : ""
-                                ) +
-                                '<button class="sway-row-action" data-edit="quotes" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
-                                '<button class="sway-row-action danger" data-delete="quotes" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const cards = state.quotes.map(function (item) {
+            const contactDetails = communicationContactDetails(item);
+            return (
+                '<article class="sway-record-card" data-ai-record="quotes:' + esc(item.id) + '">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">QUOTE</span>' +
+                        '<div class="sway-record-card-badges">' + chip(item.status) + '</div></div>' +
+                    '<button type="button" class="sway-record-card-open" data-edit="quotes" data-id="' + esc(item.id) +
+                        '" aria-label="Open quote ' + esc(item.quote_number || "quote") + '">' +
+                        '<strong class="sway-record-card-title">' + esc(item.quote_number || "Unnumbered quote") + '</strong>' +
+                        (item.title ? '<span class="sway-record-card-description">' + esc(item.title) + '</span>' : "") +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Contact</span><strong>' + esc(contactDetails.primary) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Amount</span><strong>' + esc(money(item.amount)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Valid until</span><strong>' + esc(date(item.valid_until)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Invoice</span><strong>' + (item.invoice_id ? '<span class="sway-chip success">Invoice linked</span>' : "Not linked") + '</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open quote details</span>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
+                            '<div class="sway-actions-dropdown">' +
+                                (item.status === "accepted" && !item.invoice_id
+                                    ? '<button class="sway-row-action" data-create-invoice-from-quote="' + esc(item.id) + '">Create invoice</button>'
+                                    : "") +
+                                '<button class="sway-row-action" data-edit="quotes" data-id="' + esc(item.id) + '">Edit</button>' +
+                                '<button class="sway-row-action danger" data-delete="quotes" data-id="' + esc(item.id) + '">Delete</button>' +
+                            '</div>' +
+                        '</details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
-            heading(
-                '<button class="sway-workspace-button primary" data-add="quotes">+ New quote</button>'
-            ) +
+            heading('<button class="sway-workspace-button primary" data-add="quotes">+ New quote</button>') +
             panel(
                 "Quotes",
                 "Track proposals and expected work value.",
                 state.quotes.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Quote</th><th>Contact</th><th>Amount</th><th>Status</th><th>Valid until</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
+                    ? '<div class="sway-record-card-grid">' + cards + '</div>'
                     : empty("No quotes yet.")
             )
         );
     }
-
-
     function invoiceServicePrice(service) {
         if (!service) {
             return 0;
@@ -18485,500 +18299,131 @@ function simpleBars(items, color) {
     }
 
     function renderInvoices() {
-        const showArchived =
-            state.showArchivedInvoices === true;
-
-        const activeInvoices =
-            state.invoices.filter(function (invoice) {
-                return invoice.archived !== true;
-            });
-
-        const archivedInvoices =
-            state.invoices.filter(function (invoice) {
-                return invoice.archived === true;
-            });
-
-        const visibleInvoices =
-            showArchived
-                ? archivedInvoices
-                : activeInvoices;
-
-        const totalBilled =
-            activeInvoices.reduce(function (sum, invoice) {
-                return sum +
-                    Number(invoice.total || 0);
-            }, 0);
-
-        const totalSent =
-            activeInvoices
-                .filter(function (invoice) {
-                    return [
-                        "sent",
-                        "partially paid",
-                        "paid",
-                        "overdue"
-                    ].includes(invoice.status);
-                })
-                .reduce(function (sum, invoice) {
-                    return sum +
-                        Number(invoice.total || 0);
-                }, 0);
-
-        const overdue =
-            activeInvoices.filter(function (invoice) {
-                return (
-                    invoice.status !== "paid" &&
-                    invoice.status !== "cancelled" &&
-                    invoice.due_date &&
-                    isOverdue(invoice.due_date)
-                );
-            });
-
-        const tableItems =
-            adminTableControls.items("invoices", visibleInvoices);
-
-        const rows =
-            tableItems.map(function (item) {
-                const overdueNow =
-                    !item.archived &&
-                    item.status !== "paid" &&
-                    item.status !== "cancelled" &&
-                    isOverdue(item.due_date);
-
-                const outstanding =
-                    Number(
-                        item.amount_outstanding != null
-                            ? item.amount_outstanding
-                            : item.total || 0
-                    );
-
-                return (
-                    '<tr data-admin-table-row="invoices" data-admin-table-id="' + esc(item.id) +
-                        '" data-admin-table-search="' + esc(adminTableControls.searchText("invoices", item)) +
-                        '" data-admin-table-filter="' + esc(adminTableControls.statusValue("invoices", item)) +
-                        '" data-ai-record="invoices:' + esc(item.id) + '">' +
-                        "<td>" +
-                            "<strong>" +
-                                esc(item.invoice_number) +
-                            "</strong>" +
-                            '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                esc(
-                                    clientName(
-                                        item.client_id
-                                    )
-                                ) +
-                            "</span>" +
-                        "</td>" +
-                        "<td>" +
-                            esc(money(item.total)) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                money(
-                                    item.amount_paid != null
-                                        ? item.amount_paid
-                                        : 0
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(money(outstanding)) +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                item.archived
-                                    ? chip("archived") + " " + chip(item.status)
-                                    : chip(
-                                        overdueNow
-                                            ? "overdue"
-                                            : item.status
-                                    )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(date(item.due_date)) +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                item.archived
-                                    ? "—"
-                                    : chip(item.email_status)
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                (
-                                    item.archived
-                                        ? '<button class="sway-row-action" data-invoice-action="restore" data-id="' +
-                                          esc(item.id) +
-                                          '">Restore</button>'
-                                        : ""
-                                ) +
-                                (
-                                    !item.archived &&
-                                    item.status === "draft"
-                                        ? '<button class="sway-row-action" data-invoice-action="edit" data-id="' +
-                                          esc(item.id) +
-                                          '">Edit</button>'
-                                        : ""
-                                ) +
-                                '<button class="sway-row-action" data-invoice-action="pdf" data-id="' +
-                                    esc(item.id) +
-                                '">PDF</button>' +
-                                (
-                                    !item.archived &&
-                                    item.status !== "paid" &&
-                                    item.status !== "cancelled"
-                                        ? '<button class="sway-row-action" data-new-payment-invoice="' +
-                                          esc(item.id) +
-                                        '">Payment</button>'
-                                        : ""
-                                ) +
-                                (
-                                    !item.archived &&
-                                    item.status !== "paid" &&
-                                    item.status !== "cancelled"
-                                        ? '<button class="sway-row-action" data-invoice-action="send" data-id="' +
-                                          esc(item.id) +
-                                          '">' +
-                                          (
-                                              item.email_status === "sent"
-                                                  ? "Resend"
-                                                  : "Send"
-                                          ) +
-                                          "</button>"
-                                        : ""
-                                ) +
-                                (
-                                    !item.archived
-                                        ? '<button class="sway-row-action" data-invoice-action="archive" data-id="' +
-                                          esc(item.id) +
-                                          '">Archive</button>'
-                                        : ""
-                                ) +
-                                (
-                                    item.status === "draft" ||
-                                    item.archived
-                                        ? '<button class="sway-row-action danger" data-invoice-action="delete" data-id="' +
-                                          esc(item.id) +
-                                          '">Delete</button>'
-                                        : ""
-                                ) +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const showArchived = state.showArchivedInvoices === true;
+        const activeInvoices = state.invoices.filter(function (invoice) { return invoice.archived !== true; });
+        const archivedInvoices = state.invoices.filter(function (invoice) { return invoice.archived === true; });
+        const visibleInvoices = showArchived ? archivedInvoices : activeInvoices;
+        const totalBilled = activeInvoices.reduce(function (sum, invoice) { return sum + Number(invoice.total || 0); }, 0);
+        const totalSent = activeInvoices.filter(function (invoice) {
+            return ["sent", "partially paid", "paid", "overdue"].includes(invoice.status);
+        }).reduce(function (sum, invoice) { return sum + Number(invoice.total || 0); }, 0);
+        const overdue = activeInvoices.filter(function (invoice) {
+            return invoice.status !== "paid" && invoice.status !== "cancelled" && invoice.due_date && isOverdue(invoice.due_date);
+        });
+        const tableItems = adminTableControls.items("invoices", visibleInvoices);
+        const cards = tableItems.map(function (item) {
+            const overdueNow = !item.archived && item.status !== "paid" && item.status !== "cancelled" && isOverdue(item.due_date);
+            const outstanding = Number(item.amount_outstanding != null ? item.amount_outstanding : item.total || 0);
+            const paid = Number(item.amount_paid != null ? item.amount_paid : 0);
+            return (
+                '<article class="sway-record-card" data-admin-table-row="invoices" data-admin-table-id="' + esc(item.id) +
+                    '" data-admin-table-search="' + esc(adminTableControls.searchText("invoices", item)) +
+                    '" data-admin-table-filter="' + esc(adminTableControls.statusValue("invoices", item)) +
+                    '" data-ai-record="invoices:' + esc(item.id) + '">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">INVOICE</span>' +
+                        '<div class="sway-record-card-badges">' +
+                            (item.archived ? chip("archived") : (overdueNow ? chip("overdue") : chip(item.status))) +
+                        '</div></div>' +
+                    '<button type="button" class="sway-record-card-open" data-invoice-action="pdf" data-id="' + esc(item.id) +
+                        '" aria-label="Open PDF for invoice ' + esc(item.invoice_number || "") + '">' +
+                        '<strong class="sway-record-card-title">' + esc(item.invoice_number || "Invoice") + '</strong>' +
+                        '<span class="sway-record-card-description">' + esc(clientName(item.client_id)) + '</span>' +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Total</span><strong>' + esc(money(item.total)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Paid</span><strong>' + esc(money(paid)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Outstanding</span><strong>' + esc(money(outstanding)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Due date</span><strong>' + esc(date(item.due_date)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Email delivery</span><strong>' + (item.archived ? "—" : chip(item.email_status)) + '</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open invoice PDF</span>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
+                            '<div class="sway-actions-dropdown">' +
+                                (item.archived ? '<button class="sway-row-action" data-invoice-action="restore" data-id="' + esc(item.id) + '">Restore</button>' : "") +
+                                (!item.archived && item.status === "draft" ? '<button class="sway-row-action" data-invoice-action="edit" data-id="' + esc(item.id) + '">Edit</button>' : "") +
+                                '<button class="sway-row-action" data-invoice-action="pdf" data-id="' + esc(item.id) + '">PDF</button>' +
+                                (!item.archived && item.status !== "paid" && item.status !== "cancelled" ? '<button class="sway-row-action" data-new-payment-invoice="' + esc(item.id) + '">Payment</button>' : "") +
+                                (!item.archived && item.status !== "paid" && item.status !== "cancelled"
+                                    ? '<button class="sway-row-action" data-invoice-action="send" data-id="' + esc(item.id) + '">' + (item.email_status === "sent" ? "Resend" : "Send") + '</button>'
+                                    : "") +
+                                (!item.archived ? '<button class="sway-row-action" data-invoice-action="archive" data-id="' + esc(item.id) + '">Archive</button>' : "") +
+                                (item.status === "draft" || item.archived ? '<button class="sway-row-action danger" data-invoice-action="delete" data-id="' + esc(item.id) + '">Delete</button>' : "") +
+                            '</div>' +
+                        '</details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
             heading(
                 '<button class="sway-workspace-button sway-heading-action" data-view-target="services">Manage services</button>' +
-                (
-                    archivedInvoices.length
-                        ? '<button class="sway-workspace-button" data-invoice-filter="archived">' +
-                          (
-                              showArchived
-                                  ? "Show active invoices"
-                                  : "Show archived (" +
-                                    archivedInvoices.length +
-                                    ")"
-                          ) +
-                          "</button>"
-                        : ""
-                ) +
+                (archivedInvoices.length
+                    ? '<button class="sway-workspace-button" data-invoice-filter="archived">' +
+                        (showArchived ? "Show active invoices" : "Show archived (" + archivedInvoices.length + ")") +
+                      '</button>'
+                    : "") +
                 '<button class="sway-workspace-button sway-heading-action primary" data-add-invoice>+ New invoice</button>'
             ) +
-
             '<div class="sway-workspace-grid">' +
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Total billed</span>' +
-                    '<div class="value">' +
-                        esc(money(totalBilled)) +
-                    "</div>" +
-                    '<div class="hint">' +
-                        activeInvoices.length +
-                        " active invoices recorded." +
-                    "</div>" +
-                "</div>" +
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Sent value</span>' +
-                    '<div class="value">' +
-                        esc(money(totalSent)) +
-                    "</div>" +
-                    '<div class="hint">Invoices that reached sent status.</div>' +
-                "</div>" +
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Overdue invoices</span>' +
-                    '<div class="value">' +
-                        overdue.length +
-                    "</div>" +
-                    '<div class="hint">Past due and not fully paid.</div>' +
-                "</div>" +
-                '<div class="sway-stat-card">' +
-                    '<span class="label">Invoice archive</span>' +
-                    '<div class="value">' +
-                        archivedInvoices.length +
-                    "</div>" +
-                    '<div class="hint">Archived records are kept separately from active billing.</div>' +
-                "</div>" +
-            "</div>" +
-
+                '<div class="sway-stat-card"><span class="label">Total billed</span><div class="value">' + esc(money(totalBilled)) + '</div><div class="hint">' + activeInvoices.length + ' active invoices recorded.</div></div>' +
+                '<div class="sway-stat-card"><span class="label">Sent value</span><div class="value">' + esc(money(totalSent)) + '</div><div class="hint">Invoices that reached sent status.</div></div>' +
+                '<div class="sway-stat-card"><span class="label">Overdue invoices</span><div class="value">' + overdue.length + '</div><div class="hint">Past due and not fully paid.</div></div>' +
+                '<div class="sway-stat-card"><span class="label">Invoice archive</span><div class="value">' + archivedInvoices.length + '</div><div class="hint">Archived records are kept separately from active billing.</div></div>' +
+            '</div>' +
             panel(
-                showArchived
-                    ? "Archived invoices"
-                    : "Invoices",
-                showArchived
-                    ? "Historical invoices kept out of the active billing workspace."
-                    : "Branded invoice records connected to clients and the finance layer.",
+                showArchived ? "Archived invoices" : "Invoices",
+                showArchived ? "Historical invoices kept out of the active billing workspace." : "Branded invoice records connected to clients and the finance layer.",
                 adminTableControls.renderControls("invoices", visibleInvoices) +
-                (visibleInvoices.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Invoice</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Due</th><th>Email</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      '<tr data-admin-table-no-results="invoices" hidden><td colspan="8">No invoices match these controls. Try another search or status.</td></tr>' +
-                      "</tbody></table></div>"
-                    : empty(
-                        showArchived
-                            ? "No archived invoices."
-                            : "No active invoices yet. Create the first invoice from the button above."
-                    )
+                (
+                    visibleInvoices.length
+                        ? '<div class="sway-record-card-grid">' + cards + '</div>' +
+                          '<div class="sway-record-card-empty" data-admin-table-no-results="invoices" hidden>No invoices match these controls. Try another search or status.</div>'
+                        : empty(showArchived ? "No archived invoices." : "No active invoices yet. Create the first invoice from the button above.")
                 )
             )
         );
     }
-
     function renderServices() {
-        const rows =
-            state.services.map(function (item) {
-                const pricing =
-                    item.price_label ||
+        const cards = state.services.map(function (item) {
+            const pricing = item.price_label || (item.default_price !== null ? money(item.default_price) : "Custom");
+            return (
+                '<article class="sway-record-card">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">SERVICE CATALOGUE</span>' +
+                        '<div class="sway-record-card-badges">' + chip(item.active ? "active" : "inactive") + '</div></div>' +
+                    '<div class="sway-record-card-static-heading"><strong class="sway-record-card-title">' + esc(item.name || "Unnamed service") + '</strong>' +
+                        (item.description ? '<p class="sway-record-card-description">' + esc(item.description) + '</p>' : "") +
+                    '</div>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Category</span><strong>' + esc(item.category || "—") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Price</span><strong>' + esc(pricing) + '</strong></div>' +
+                    '</div>' +
                     (
-                        item.default_price !== null
-                            ? money(item.default_price)
-                            : "Custom"
-                    );
-
-                return (
-                    "<tr>" +
-                        "<td>" +
-                            "<strong>" +
-                                esc(item.name) +
-                            "</strong>" +
-                            (
-                                item.description
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.description) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                item.category ||
-                                "—"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(pricing) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.active ? "active" : "inactive") +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                (
-                                    state.currentAdmin.role === "owner"
-                                        ? '<button class="sway-row-action" data-edit="services" data-id="' +
-                                          esc(item.id) +
-                                          '">Edit</button>' +
-                                          '<button class="sway-row-action danger" data-delete="services" data-id="' +
-                                          esc(item.id) +
-                                          '">Delete</button>'
-                                        : ""
-                                ) +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+                        state.currentAdmin.role === "owner"
+                            ? '<div class="sway-record-card-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
+                                '<button class="sway-row-action" data-edit="services" data-id="' + esc(item.id) + '">Edit</button>' +
+                                '<button class="sway-row-action danger" data-delete="services" data-id="' + esc(item.id) + '">Delete</button>' +
+                              '</div></details></div>'
+                            : ""
+                    ) +
+                '</article>'
+            );
+        }).join("");
 
         return (
             heading(
                 '<button class="sway-workspace-button" data-view-target="invoice-settings">Invoice settings</button>' +
-                (
-                    state.currentAdmin.role === "owner"
-                        ? '<button class="sway-workspace-button primary" data-add="services">+ New service</button>'
-                        : ""
-                )
+                (state.currentAdmin.role === "owner" ? '<button class="sway-workspace-button primary" data-add="services">+ New service</button>' : "")
             ) +
             panel(
                 "Service catalogue",
                 "These prices feed directly into the invoice builder. Owner access controls price changes.",
                 state.services.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Service</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
+                    ? '<div class="sway-record-card-grid">' + cards + '</div>'
                     : empty("No services configured.")
             )
         );
     }
-
-    async function editInvoiceSettings() {
-        if (
-            state.currentAdmin.role !== "owner"
-        ) {
-            swayAlert(
-                "Only the owner can change invoice settings."
-            );
-            return;
-        }
-
-        const settings =
-            state.invoiceSettings || {
-                id: 1
-            };
-
-        showModal(
-            "Invoice settings",
-            [
-                {
-                    key: "business_name",
-                    label: "Business name",
-                    type: "text",
-                    required: true,
-                    value: settings.business_name
-                },
-                {
-                    key: "slogan",
-                    label: "Slogan",
-                    type: "text",
-                    value: settings.slogan
-                },
-                {
-                    key: "email",
-                    label: "Business email",
-                    type: "email",
-                    value:
-                        settings.email ||
-                        "info@swayphics.co.za"
-                },
-                {
-                    key: "phone",
-                    label: "Business phone",
-                    type: "text",
-                    value: settings.phone
-                },
-                {
-                    key: "website",
-                    label: "Website",
-                    type: "url",
-                    value:
-                        settings.website ||
-                        "https://swayphics.co.za"
-                },
-                {
-                    key: "address",
-                    label: "Business address",
-                    type: "textarea",
-                    full: true,
-                    value: settings.address
-                },
-                {
-                    key: "bank_name",
-                    label: "Bank",
-                    type: "text",
-                    value: settings.bank_name
-                },
-                {
-                    key: "account_name",
-                    label: "Account holder",
-                    type: "text",
-                    value: settings.account_name
-                },
-                {
-                    key: "account_number",
-                    label: "Account number",
-                    type: "text",
-                    value: settings.account_number
-                },
-                {
-                    key: "account_type",
-                    label: "Account type",
-                    type: "text",
-                    value: settings.account_type
-                },
-                {
-                    key: "branch_code",
-                    label: "Branch code",
-                    type: "text",
-                    value: settings.branch_code
-                },
-                {
-                    key: "swift_bic",
-                    label: "SWIFT / BIC",
-                    type: "text",
-                    value: settings.swift_bic
-                },
-                {
-                    key: "payment_instructions",
-                    label: "Payment instructions",
-                    type: "textarea",
-                    full: true,
-                    value: settings.payment_instructions
-                },
-                {
-                    key: "vat_registered",
-                    label: "VAT registered",
-                    type: "select",
-                    options:
-                        '<option value="false"' +
-                        (
-                            settings.vat_registered
-                                ? ""
-                                : " selected"
-                        ) +
-                        ">No</option>" +
-                        '<option value="true"' +
-                        (
-                            settings.vat_registered
-                                ? " selected"
-                                : ""
-                        ) +
-                        ">Yes</option>"
-                },
-                {
-                    key: "vat_number",
-                    label: "VAT number",
-                    type: "text",
-                    value: settings.vat_number
-                }
-            ],
-            async function (payload) {
-                payload.id = 1;
-
-                await api(
-                    "/rest/v1/invoice_settings?id=eq.1",
-                    {
-                        method: "PATCH",
-                        headers: headers({
-                            "Prefer":
-                                "return=minimal"
-                        }),
-                        body:
-                            JSON.stringify(
-                                payload
-                            )
-                    }
-                );
-
-                await logActivity(
-                    "Updated invoice settings",
-                    "invoice_settings",
-                    null
-                );
-            }
-        );
-    }
-
     function saveGreetingName(value) {
         // The UI passes only the authenticated administrator's own preference.
         // The database RLS policy independently enforces that same ownership boundary.
@@ -19168,242 +18613,123 @@ function simpleBars(items, color) {
     }
 
     function renderPayments() {
-        const rows =
-            state.payments.map(function (item) {
-                const invoice =
-                    state.invoices.find(function (entry) {
-                        return entry.id === item.invoice_id;
-                    });
-
-                return (
-                    '<tr data-ai-record="payments:' + esc(item.id) + '">' +
-                        "<td>" +
-                            "<strong>" +
-                                esc(
-                                    clientName(
-                                        item.client_id
-                                    )
-                                ) +
-                            "</strong>" +
-                            '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                esc(
-                                    projectName(
-                                        item.project_id
-                                    )
-                                ) +
-                            "</span>" +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                invoice
-                                    ? invoice.invoice_number
-                                    : "No invoice"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                money(
-                                    item.amount
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                item.due_date &&
-                                isOverdue(item.due_date) &&
-                                item.status !== "paid"
-                                    ? chip("overdue")
-                                    : esc(
-                                        date(
-                                            item.due_date
-                                        )
-                                    )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                item.method ||
-                                "—"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                '<button class="sway-row-action" data-edit="payments" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
-                                '<button class="sway-row-action danger" data-delete="payments" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const cards = state.payments.map(function (item) {
+            const invoice = state.invoices.find(function (entry) { return entry.id === item.invoice_id; });
+            const overdue = item.due_date && isOverdue(item.due_date) && item.status !== "paid";
+            return (
+                '<article class="sway-record-card" data-ai-record="payments:' + esc(item.id) + '">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">PAYMENT</span>' +
+                        '<div class="sway-record-card-badges">' + (overdue ? chip("overdue") : "") + chip(item.status) + '</div></div>' +
+                    '<button type="button" class="sway-record-card-open" data-edit="payments" data-id="' + esc(item.id) +
+                        '" aria-label="Open payment for ' + esc(clientName(item.client_id)) + '">' +
+                        '<strong class="sway-record-card-title">' + esc(money(item.amount)) + '</strong>' +
+                        '<span class="sway-record-card-description">' + esc(clientName(item.client_id)) + '</span>' +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Project</span><strong>' + esc(projectName(item.project_id)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Invoice</span><strong>' + esc(invoice ? invoice.invoice_number : "No invoice") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Due date</span><strong>' + esc(date(item.due_date)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Method</span><strong>' + esc(item.method || "Not recorded") + '</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open payment details</span>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
+                            '<button class="sway-row-action" data-edit="payments" data-id="' + esc(item.id) + '">Edit</button>' +
+                            '<button class="sway-row-action danger" data-delete="payments" data-id="' + esc(item.id) + '">Delete</button>' +
+                        '</div></details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
-            heading(
-                '<button class="sway-workspace-button primary" data-add="payments">+ New payment</button>'
-            ) +
+            heading('<button class="sway-workspace-button primary" data-add="payments">+ New payment</button>') +
             panel(
                 "Payments",
                 "Every payment must be attached to a specific invoice. The invoice balance decreases automatically as money is recorded.",
                 state.payments.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Client / project</th><th>Invoice</th><th>Amount received</th><th>Status</th><th>Due</th><th>Method</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
+                    ? '<div class="sway-record-card-grid">' + cards + '</div>'
                     : empty("No payment records yet.")
             )
         );
     }
-
     function renderEnquiries() {
-        const activeEnquiries =
-            state.enquiries.filter(function (item) {
-                return item.status === "new";
-            });
-
-        const rows =
-            activeEnquiries.map(function (item) {
-                return (
-                    '<tr data-ai-record="enquiries:' + esc(item.id) + '">' +
-                        "<td>" +
-                            "<strong>" +
-                                esc(
-                                    item.business_name ||
-                                    item.name ||
-                                    "Website visitor"
-                                ) +
-                            "</strong>" +
-                            (
-                                item.email
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.email) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                item.service ||
-                                "—"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            '<span class="sway-activity-datetime">' +
-                                esc(
-                                    dateTime(
-                                        item.created_at
-                                    )
-                                ) +
-                            "</span>" +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                '<button class="sway-row-action" data-enquiry-status="' +
-                                    esc(item.id) +
-                                    '" data-status-next="contacted">Contacted → Lead</button>' +
-                                '<button class="sway-row-action danger" data-enquiry-status="' +
-                                    esc(item.id) +
-                                    '" data-status-next="closed">Close</button>' +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const activeEnquiries = state.enquiries.filter(function (item) {
+            return item.status === "new";
+        });
+        const cards = activeEnquiries.map(function (item) {
+            return (
+                '<article class="sway-record-card" data-ai-record="enquiries:' + esc(item.id) + '">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">WEBSITE ENQUIRY</span>' +
+                        '<div class="sway-record-card-badges">' + chip(item.status) + '</div></div>' +
+                    '<div class="sway-record-card-static-heading"><strong class="sway-record-card-title">' +
+                        esc(item.business_name || item.name || "Website visitor") + '</strong>' +
+                        (item.email ? '<p class="sway-record-card-description">' + esc(item.email) + '</p>' : "") +
+                    '</div>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Service interest</span><strong>' + esc(item.service || "Not specified") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Phone</span><strong>' + esc(item.phone || "Not provided") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Received</span><strong>' + esc(dateTime(item.created_at)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail sway-record-card-detail-wide"><span>Message</span><strong>' + esc(item.message || item.notes || "No message provided") + '</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions">' +
+                        '<button type="button" class="sway-workspace-button primary" data-enquiry-status="' + esc(item.id) +
+                            '" data-status-next="contacted">Contacted → Lead</button>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
+                            '<button class="sway-row-action danger" data-enquiry-status="' + esc(item.id) + '" data-status-next="closed">Close enquiry</button>' +
+                        '</div></details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
-            heading(
-                '<button class="sway-workspace-button" data-view-target="leads">Open lead pipeline</button>'
-            ) +
+            heading('<button class="sway-workspace-button" data-view-target="leads">Open lead pipeline</button>') +
             panel(
                 "Website enquiries",
                 "New enquiries are your inbox. Contacting one moves it directly into Leads.",
                 activeEnquiries.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Enquirer</th><th>Service</th><th>Status</th><th>Received</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
-                    : empty(
-                        "No new enquiries. Contacted enquiries now live in Leads."
-                    )
+                    ? '<div class="sway-record-card-grid">' + cards + '</div>'
+                    : empty("No new enquiries. Contacted enquiries now live in Leads.")
             )
         );
     }
-
     function renderContent() {
-        const rows =
-            state.announcements.map(function (item) {
-                return (
-                    "<tr>" +
-                        "<td>" +
-                            "<strong>" +
-                                esc(item.title) +
-                            "</strong>" +
-                            (
-                                item.message
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.message) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                formatDisplayText(
-                                    item.placement || "top-bar"
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            chip(
-                                item.published
-                                    ? "published"
-                                    : "draft"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                date(
-                                    item.created_at
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                '<button class="sway-row-action" data-edit="announcements" data-id="' +
-                                    esc(item.id) +
-                                '">Edit</button>' +
-                                '<button class="sway-row-action danger" data-delete="announcements" data-id="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const cards = state.announcements.map(function (item) {
+            return (
+                '<article class="sway-record-card">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">WEBSITE ANNOUNCEMENT</span>' +
+                        '<div class="sway-record-card-badges">' + chip(item.published ? "published" : "draft") + '</div></div>' +
+                    '<button type="button" class="sway-record-card-open" data-edit="announcements" data-id="' + esc(item.id) +
+                        '" aria-label="Edit announcement ' + esc(item.title || "") + '">' +
+                        '<strong class="sway-record-card-title">' + esc(item.title || "Untitled announcement") + '</strong>' +
+                        (item.message ? '<span class="sway-record-card-description">' + esc(item.message) + '</span>' : "") +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Placement</span><strong>' + esc(formatDisplayText(item.placement || "top-bar")) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Created</span><strong>' + esc(date(item.created_at)) + '</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Edit announcement</span>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
+                            '<button class="sway-row-action" data-edit="announcements" data-id="' + esc(item.id) + '">Edit</button>' +
+                            '<button class="sway-row-action danger" data-delete="announcements" data-id="' + esc(item.id) + '">Delete</button>' +
+                        '</div></details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
-            heading(
-                '<button class="sway-workspace-button primary" data-add="announcements">+ New announcement</button>'
-            ) +
+            heading('<button class="sway-workspace-button primary" data-add="announcements">+ New announcement</button>') +
             panel(
                 "Website announcements",
                 "Reusable notices for future public-site placements.",
                 state.announcements.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Announcement</th><th>Placement</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
+                    ? '<div class="sway-record-card-grid">' + cards + '</div>'
                     : empty("No announcements yet.")
             ) +
             '<div class="sway-inline-note">Portfolio and testimonials remain connected to the existing public-site managers below. This workspace does not change your current public pricing.</div>'
         );
     }
-
     function communicationContactDetails(item) {
         const record = item || {};
 
@@ -19482,293 +18808,125 @@ function simpleBars(items, color) {
 
     function renderCommunications() {
         const tableItems = adminTableControls.items("communications", state.communications);
-        const rows = tableItems.map(function (item) {
+        const cards = tableItems.map(function (item) {
             const contactDetails = communicationContactDetails(item);
+            const selected = (state.tableSelection.communications || []).some(function (id) {
+                return String(id) === String(item.id);
+            });
             return (
-                '<tr data-admin-table-row="communications" data-admin-table-id="' + esc(item.id) +
+                '<article class="sway-record-card" data-admin-table-row="communications" data-admin-table-id="' + esc(item.id) +
                     '" data-admin-table-search="' + esc(adminTableControls.searchText("communications", item)) +
                     '" data-admin-table-filter="' + esc(String(item.direction || "unknown").toLowerCase()) + '">' +
-                    adminTableControls.selectionCell("communications", item, contactDetails.primary) +
-                    "<td>" +
-                        "<strong>" + esc(contactDetails.primary) + "</strong>" +
-                        (contactDetails.secondary
-                            ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' + esc(contactDetails.secondary) + "</span>"
-                            : "") +
-                        (contactDetails.ambiguous
-                            ? '<br><span style="color:#B42318;font-size:.54rem;font-weight:800;">Needs contact review</span>'
-                            : "") +
-                        (item.subject
-                            ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' + esc(item.subject) + "</span>"
-                            : "") +
-                    "</td>" +
-                    "<td>" + esc(item.channel || "—") + "</td>" +
-                    "<td>" + chip(item.direction || "outbound") + "</td>" +
-                    "<td>" + esc(dateTime(item.contacted_at)) + "</td>" +
-                    "<td>" + '<div class="sway-communication-message">' + esc(item.message || "—") + "</div>" + "</td>" +
-                    "<td>" + esc(adminName(item.created_by)) + "</td>" +
-                    "<td>" +
-                        '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
+                    '<div class="sway-record-card-top">' +
+                        '<label class="sway-record-card-select"><input type="checkbox" data-admin-table-select="communications" data-id="' + esc(item.id) +
+                            '" aria-label="Select communication with ' + esc(contactDetails.primary) + '"' +
+                            (selected ? " checked" : "") + '><span>Select</span></label>' +
+                        '<div class="sway-record-card-badges">' + (contactDetails.ambiguous ? '<span class="sway-record-card-warning">Needs contact review</span>' : "") +
+                            chip(item.direction || "outbound") + '</div>' +
+                    '</div>' +
+                    '<button type="button" class="sway-record-card-open" data-edit="communications" data-id="' + esc(item.id) +
+                        '" aria-label="Open communication record for ' + esc(contactDetails.primary) + '">' +
+                        '<span class="sway-record-card-eyebrow">COMMUNICATION LOG</span>' +
+                        '<strong class="sway-record-card-title">' + esc(contactDetails.primary) + '</strong>' +
+                        (item.subject ? '<span class="sway-record-card-description">' + esc(item.subject) + '</span>' : "") +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Channel</span><strong>' + esc(item.channel || "—") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Date &amp; time</span><strong>' + esc(dateTime(item.contacted_at)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Logged by</span><strong>' + esc(adminName(item.created_by)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail sway-record-card-detail-wide"><span>Message / notes</span><strong>' + esc(item.message || "No notes recorded") + '</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open communication</span>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                             '<button class="sway-row-action" data-edit="communications" data-id="' + esc(item.id) + '">Edit</button>' +
                             '<button class="sway-row-action danger" data-delete="communications" data-id="' + esc(item.id) + '">Delete</button>' +
-                        "</div></details></div>" +
-                    "</td>" +
-                "</tr>"
+                        '</div></details>' +
+                    '</div>' +
+                '</article>'
             );
         }).join("");
 
         return (
             heading(
                 '<button type="button" class="sway-workspace-button" data-compose-email>+ Send email</button>' +
-                '<button class="sway-workspace-button primary" data-add="communications">+ Log communication</button>'
+                '<button type="button" class="sway-workspace-button primary" data-add="communications">+ Log communication</button>'
             ) +
             panel(
                 "Communication log",
                 "Keep a durable record of important client and lead conversations across every channel.",
                 adminTableControls.renderControls("communications") +
-                (state.communications.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr>' +
-                        '<th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="communications" aria-label="Select all visible communication log entries"></th>' +
-                        '<th>Contact</th><th>Channel</th><th>Direction</th><th>Date &amp; time</th><th>Notes</th><th>Logged by</th><th></th>' +
-                      "</tr></thead><tbody>" + rows +
-                      '<tr data-admin-table-no-results="communications" hidden><td colspan="8">No communication entries match these controls. Try another search or direction.</td></tr>' +
-                      "</tbody></table></div>"
-                    : empty("No communications logged yet. Use “Log communication” to start the relationship history.")
+                (
+                    state.communications.length
+                        ? renderRecordCardSelectionBar("communications", "communication entries") +
+                          '<div class="sway-record-card-grid">' + cards + '</div>' +
+                          '<div class="sway-record-card-empty" data-admin-table-no-results="communications" hidden>No communication entries match these controls. Try another search or direction.</div>'
+                        : empty("No communications logged yet. Use “Log communication” to start the relationship history.")
                 )
             )
         );
     }
-
     function renderActivity() {
-        const rows =
-            state.activities.map(function (item) {
-                return (
-                    "<tr>" +
-                        "<td>" +
-                            '<span class="sway-activity-datetime">' +
-                                esc(
-                                    dateTime(
-                                        item.created_at
-                                    )
-                                ) +
-                            "</span>" +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                adminName(
-                                    item.actor_id
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                item.action ||
-                                "—"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                item.entity_type ||
-                                "—"
-                            ) +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const cards = state.activities.map(function (item) {
+            return (
+                '<article class="sway-record-card">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">WORKSPACE ACTIVITY</span>' +
+                        '<span class="sway-record-card-filetype">' + esc(dateTime(item.created_at)) + '</span></div>' +
+                    '<strong class="sway-record-card-title">' + esc(item.action || "Activity recorded") + '</strong>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Who</span><strong>' + esc(adminName(item.actor_id)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Area</span><strong>' + esc(item.entity_type || "—") + '</strong></div>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
             heading() +
             panel(
                 "Activity log",
                 "A shared history of changes made inside the workspace.",
-                rows
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Date &amp; time</th><th>Who</th><th>Action</th><th>Area</th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
-                    : empty("No activity recorded.")
+                cards ? '<div class="sway-record-card-grid">' + cards + '</div>' : empty("No activity recorded.")
             )
         );
     }
-
     function renderTeam() {
-        const rows =
-            state.admins.map(function (item) {
-                const isCurrent =
-                    item.user_id === state.currentUser.id;
+        const cards = state.admins.map(function (item) {
+            const isCurrent = item.user_id === state.currentUser.id;
+            const memberActions = state.currentAdmin.role === "owner" && !isCurrent
+                ? '<div class="sway-record-card-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
+                    '<button class="sway-row-action" data-toggle-admin="' + esc(item.user_id) + '">' + (item.active ? "Deactivate" : "Activate") + '</button>' +
+                    '<button class="sway-row-action" data-edit="team" data-id="' + esc(item.user_id) + '">Edit</button>' +
+                  '</div></details></div>'
+                : '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">' + (isCurrent ? "Your admin account" : "Managed by the owner") + '</span></div>';
+            return (
+                '<article class="sway-record-card">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">TEAM MEMBER</span>' +
+                        '<div class="sway-record-card-badges">' + chip(item.active ? "active" : "inactive") + chip(item.role) + '</div></div>' +
+                    '<strong class="sway-record-card-title">' + esc(item.full_name || "Unnamed member") + '</strong>' +
+                    '<span class="sway-record-card-description">' + esc(item.email || item.user_id) + '</span>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Access role</span><strong>' + esc(formatDisplayText(item.role || "member")) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Added</span><strong>' + esc(date(item.created_at)) + '</strong></div>' +
+                    '</div>' +
+                    memberActions +
+                '</article>'
+            );
+        }).join("");
 
-                return (
-                    "<tr>" +
-                        "<td>" +
-                            "<strong>" +
-                                esc(
-                                    item.full_name ||
-                                    "Unnamed member"
-                                ) +
-                            "</strong>" +
-                            '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                esc(
-                                    item.email ||
-                                    item.user_id
-                                ) +
-                            "</span>" +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.role) +
-                        "</td>" +
-                        "<td>" +
-                            chip(
-                                item.active
-                                    ? "active"
-                                    : "inactive"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                date(
-                                    item.created_at
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                state.currentAdmin.role === "owner" &&
-                                !isCurrent
-                                    ? '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                      '<button class="sway-row-action" data-toggle-admin="' +
-                                          esc(item.user_id) +
-                                      '">' +
-                                          (
-                                              item.active
-                                                  ? "Deactivate"
-                                                  : "Activate"
-                                          ) +
-                                      "</button>" +
-                                      '<button class="sway-row-action" data-edit="team" data-id="' +
-                                          esc(item.user_id) +
-                                      '">Edit</button>' +
-                                      "</div></details></div>"
-                                    : "—"
-                            ) +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
-
-        const actions =
-            state.currentAdmin.role === "owner"
-                ? '<button class="sway-workspace-button primary" data-add="team">+ Add team member</button>'
-                : "";
+        const actions = state.currentAdmin.role === "owner"
+            ? '<button class="sway-workspace-button primary" data-add="team">+ Add team member</button>'
+            : "";
 
         return (
             heading(actions) +
             panel(
                 "Team access",
                 "Create the account in Supabase Authentication, then add that user's UUID here.",
-                rows
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Member</th><th>Role</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
-                    : empty(
-                        "No active Swayphics team members are configured."
-                    )
+                cards ? '<div class="sway-record-card-grid">' + cards + '</div>' : empty("No active Swayphics team members are configured.")
             ) +
             '<div class="sway-inline-note">Owner access controls who can activate, deactivate or edit team members. Team members can operate the shared business workspace but do not manage team access.</div>'
         );
     }
-
-
-        function renderLeadConversionAnalytics() {
-        const stages = [
-            "new",
-            "contacted",
-            "follow-up",
-            "interested",
-            "proposal sent",
-            "negotiating",
-            "won",
-            "lost"
-        ];
-
-        const stageCounts = {};
-
-        stages.forEach(function (stage) {
-            stageCounts[stage] = new Set();
-        });
-
-        state.leadStageHistory.forEach(function (entry) {
-            if (
-                entry.lead_id &&
-                stageCounts[entry.to_status]
-            ) {
-                stageCounts[entry.to_status].add(
-                    entry.lead_id
-                );
-            }
-        });
-
-        const rows =
-            stages.map(function (stage) {
-                const historical =
-                    stageCounts[stage].size;
-
-                const current =
-                    state.leads.filter(function (lead) {
-                        return lead.status === stage;
-                    }).length;
-
-                return {
-                    stage: stage,
-                    historical: historical,
-                    current: current
-                };
-            }).filter(function (item) {
-                return (
-                    item.historical ||
-                    item.current
-                );
-            });
-
-        return (
-            '<section class="sway-lead-conversion-panel">' +
-                '<div class="sway-lead-source-head">' +
-                    '<div>' +
-                        '<span class="admin-label">Pipeline movement</span>' +
-                        "<h3>Lead conversion analytics</h3>" +
-                        "<p>Historical stage entries are counted from the point stage tracking was enabled.</p>" +
-                    "</div>" +
-                "</div>" +
-                '<div class="sway-bi-conversion-wrap">' +
-                    '<div class="sway-bi-conversion-copy">' +
-                        "<strong>Won lead share</strong>" +
-                        "<span>Won records as a share of all leads currently tracked; this is not a cohort conversion rate.</span>" +
-                    "</div>" +
-                    businessConversionGauge() +
-                "</div>" +
-                '<div class="sway-table-wrap">' +
-                    '<table class="sway-table">' +
-                        "<thead><tr><th>Stage</th><th>Leads ever entering stage</th><th>Currently here</th></tr></thead>" +
-                        "<tbody>" +
-                            rows.map(function (item) {
-                                return (
-                                    "<tr>" +
-                                        "<td><strong>" +
-                                            esc(formatDisplayText(item.stage)) +
-                                        "</strong></td>" +
-                                        "<td>" +
-                                            item.historical +
-                                        "</td>" +
-                                        "<td>" +
-                                            item.current +
-                                        "</td>" +
-                                    "</tr>"
-                                );
-                            }).join("") +
-                        "</tbody>" +
-                    "</table>" +
-                "</div>" +
-            "</section>"
-        );
-    }
-
     function renderLeadSourceAnalytics() {
         const buckets = {};
 
@@ -21893,74 +21051,41 @@ function simpleBars(items, color) {
     }
 
     function renderDocuments() {
-        const rows =
-            state.documents.map(function (item) {
-                return (
-                    "<tr>" +
-                        "<td><strong>" +
-                            esc(item.file_name) +
-                        "</strong></td>" +
-                        "<td>" +
-                            esc(clientName(item.client_id)) +
-                        "</td>" +
-                        "<td>" +
-                            (
-                                item.project_id
-                                    ? esc(projectName(item.project_id))
-                                    : "—"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                item.mime_type ||
-                                "File"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                Math.max(
-                                    1,
-                                    Math.round(
-                                        Number(item.size_bytes || 0) /
-                                        1024
-                                    )
-                                ) +
-                                " KB"
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(dateTime(item.created_at)) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                '<button type="button" class="sway-row-action" data-download-document="' +
-                                    esc(item.id) +
-                                '">Download</button>' +
-                                '<button type="button" class="sway-row-action danger" data-delete-document="' +
-                                    esc(item.id) +
-                                '">Delete</button>' +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const cards = state.documents.map(function (item) {
+            const size = Math.max(1, Math.round(Number(item.size_bytes || 0) / 1024));
+            return (
+                '<article class="sway-record-card">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">PRIVATE DOCUMENT</span>' +
+                        '<span class="sway-record-card-filetype">' + esc(item.mime_type || "File") + '</span></div>' +
+                    '<button type="button" class="sway-record-card-open" data-download-document="' + esc(item.id) +
+                        '" aria-label="Download ' + esc(item.file_name || "document") + '">' +
+                        '<strong class="sway-record-card-title">' + esc(item.file_name || "Untitled document") + '</strong>' +
+                        '<span class="sway-record-card-description">Uploaded ' + esc(dateTime(item.created_at)) + '</span>' +
+                    '</button>' +
+                    '<div class="sway-record-card-details">' +
+                        '<div class="sway-record-card-detail"><span>Client</span><strong>' + esc(clientName(item.client_id)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Project</span><strong>' + (item.project_id ? esc(projectName(item.project_id)) : "—") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>File size</span><strong>' + size + ' KB</strong></div>' +
+                    '</div>' +
+                    '<div class="sway-record-card-actions"><button type="button" class="sway-row-action" data-download-document="' + esc(item.id) + '">Download</button>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
+                            '<button type="button" class="sway-row-action" data-download-document="' + esc(item.id) + '">Download</button>' +
+                            '<button type="button" class="sway-row-action danger" data-delete-document="' + esc(item.id) + '">Delete</button>' +
+                        '</div></details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
-            heading(
-                '<button type="button" class="sway-workspace-button primary" data-upload-document>+ Upload document</button>'
-            ) +
+            heading('<button type="button" class="sway-workspace-button primary" data-upload-document>+ Upload document</button>') +
             panel(
                 "Private documents",
                 "Client and project files stored in private Supabase Storage. Files are only accessible to authenticated Swayphics admins.",
-                rows
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>File</th><th>Client</th><th>Project</th><th>Type</th><th>Size</th><th>Uploaded</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
-                    : empty("No documents uploaded yet. Use Client 360 or Upload document to add files.")
+                cards ? '<div class="sway-record-card-grid">' + cards + '</div>' : empty("No documents uploaded yet. Use Client 360 or Upload document to add files.")
             )
         );
     }
-
     function openPortalRequest(requestId) {
         const request =
             state.portalRequests.find(function (item) {
@@ -22065,74 +21190,36 @@ function simpleBars(items, color) {
     }
 
     function renderPortalRequests() {
-        const rows =
-            state.portalRequests.map(function (item) {
-                return (
-                    '<tr data-ai-record="portal-requests:' + esc(item.id) + '">' +
-                        "<td><strong>" +
-                            esc(clientName(item.client_id)) +
-                        "</strong></td>" +
-                        "<td>" +
-                            '<button type="button" class="sway-portal-request-open" data-portal-request-view="' +
-                                esc(item.id) +
-                            '" aria-label="Open request from ' +
-                                esc(clientName(item.client_id)) +
-                            '">' +
-                                '<span class="sway-portal-request-open-title">' +
-                                    esc(item.subject || "Client request") +
-                                "</span>" +
-                                '<span class="sway-portal-request-open-hint">Tap to read full request</span>' +
-                            "</button>" +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-portal-request-message">' +
-                                esc(item.message) +
-                            "</div>" +
-                        "</td>" +
-                        "<td>" +
-                            esc(dateTime(item.created_at)) +
-                        "</td>" +
-                        "<td>" +
-                            chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions"><details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                                (
-                                    item.status !== "in progress"
-                                        ? '<button class="sway-row-action" data-portal-request-status="in progress" data-id="' +
-                                          esc(item.id) +
-                                          '">Start</button>'
-                                        : ""
-                                ) +
-                                (
-                                    item.status !== "completed"
-                                        ? '<button class="sway-row-action" data-portal-request-status="completed" data-id="' +
-                                          esc(item.id) +
-                                          '">Complete</button>'
-                                        : ""
-                                ) +
-                            "</div></details></div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+        const cards = state.portalRequests.map(function (item) {
+            return (
+                '<article class="sway-record-card" data-ai-record="portal-requests:' + esc(item.id) + '">' +
+                    '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">CLIENT PORTAL REQUEST</span>' +
+                        '<div class="sway-record-card-badges">' + chip(item.status) + '</div></div>' +
+                    '<button type="button" class="sway-record-card-open" data-portal-request-view="' + esc(item.id) +
+                        '" aria-label="Open request ' + esc(item.subject || "Client request") + '">' +
+                        '<strong class="sway-record-card-title">' + esc(item.subject || "Client request") + '</strong>' +
+                        '<span class="sway-record-card-description">' + esc(clientName(item.client_id)) + ' · ' + esc(dateTime(item.created_at)) + '</span>' +
+                    '</button>' +
+                    '<div class="sway-record-card-copy-preview">' + esc(item.message || "No message provided.") + '</div>' +
+                    '<div class="sway-record-card-actions"><button type="button" class="sway-row-action" data-portal-request-view="' + esc(item.id) + '">Read full request</button>' +
+                        '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
+                            (item.status !== "in progress" ? '<button class="sway-row-action" data-portal-request-status="in progress" data-id="' + esc(item.id) + '">Start</button>' : "") +
+                            (item.status !== "completed" ? '<button class="sway-row-action" data-portal-request-status="completed" data-id="' + esc(item.id) + '">Complete</button>' : "") +
+                        '</div></details>' +
+                    '</div>' +
+                '</article>'
+            );
+        }).join("");
 
         return (
-            heading(
-                '<button type="button" class="sway-workspace-button" data-refresh-workspace>Refresh data</button>'
-            ) +
+            heading('<button type="button" class="sway-workspace-button" data-refresh-workspace>Refresh data</button>') +
             panel(
                 "Client portal requests",
                 "Requests submitted by clients from their secure portal.",
-                rows
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th>Client</th><th>Subject</th><th>Request</th><th>Received</th><th>Status</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      "</tbody></table></div>"
-                    : empty("No portal requests yet.")
+                cards ? '<div class="sway-record-card-grid">' + cards + '</div>' : empty("No portal requests yet.")
             )
         );
     }
-
     function renderDataExport() {
         return (
             heading(
