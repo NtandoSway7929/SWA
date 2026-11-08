@@ -72,6 +72,9 @@ jobs:
       - name: Test client portal Phase 4 financial centre
         run: node scripts/client-portal-phase-4.test.cjs
 
+      - name: Test client portal Phase 5 documents and deliverables
+        run: node scripts/client-portal-phase-5.test.cjs
+
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
 
