@@ -294,3 +294,412 @@ body.sway-dark-mode #sway-admin-workspace .sway-lead-card-empty {
         transform: none;
     }
 }
+
+
+/* Read-only lead profile opened from the lead card's primary action. */
+.sway-lead-profile-modal {
+    z-index: 1200;
+}
+
+.sway-lead-profile-modal .sway-lead-profile-card {
+    width: min(980px, calc(100vw - 32px));
+    max-width: 980px;
+    max-height: calc(100dvh - 32px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sway-lead-profile-modal .sway-lead-profile-header {
+    flex: 0 0 auto;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.sway-lead-profile-header h3 {
+    overflow-wrap: anywhere;
+}
+
+.sway-lead-profile-header p {
+    margin: 5px 0 0;
+    color: var(--text-muted, #66758D);
+    font-size: .72rem;
+}
+
+.sway-lead-profile-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+.sway-lead-profile-body {
+    min-height: 0;
+    overflow: auto;
+    padding: 18px 24px 22px;
+}
+
+.sway-lead-profile-hero {
+    display: grid;
+    grid-template-columns: minmax(160px, .72fr) minmax(0, 1.5fr);
+    gap: 16px;
+    align-items: stretch;
+    padding: 16px;
+    border: 1px solid rgba(1, 82, 244, .13);
+    border-radius: 16px;
+    background: linear-gradient(115deg, rgba(1, 82, 244, .075), rgba(119, 193, 252, .06));
+}
+
+.sway-lead-profile-hero > div:first-child {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.sway-lead-profile-eyebrow,
+.sway-lead-profile-section-heading > div > span {
+    color: #6F83A6;
+    font-size: .56rem;
+    font-weight: 850;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+}
+
+.sway-lead-profile-hero > div:first-child > strong {
+    color: #08246C;
+    font-size: 1.05rem;
+    font-weight: 850;
+    text-transform: capitalize;
+}
+
+.sway-lead-profile-hero > div:first-child > small {
+    color: #60718B;
+    font-size: .65rem;
+    line-height: 1.45;
+}
+
+.sway-lead-profile-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.sway-lead-profile-metric,
+.sway-lead-profile-field {
+    min-width: 0;
+    padding: 10px 11px;
+    border: 1px solid rgba(0, 32, 150, .08);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, .72);
+}
+
+.sway-lead-profile-metric > span,
+.sway-lead-profile-field > span {
+    display: block;
+    color: #77869E;
+    font-size: .54rem;
+    font-weight: 800;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+}
+
+.sway-lead-profile-metric > strong,
+.sway-lead-profile-field > strong {
+    display: block;
+    margin-top: 5px;
+    color: #172A4B;
+    font-size: .69rem;
+    font-weight: 800;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.sway-lead-profile-section {
+    margin-top: 22px;
+}
+
+.sway-lead-profile-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 11px;
+}
+
+.sway-lead-profile-section-heading h4 {
+    margin: 4px 0 0;
+    color: #10254B;
+    font-size: .94rem;
+    font-weight: 850;
+}
+
+.sway-lead-profile-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.sway-lead-profile-copy {
+    margin-top: 9px;
+    padding: 13px 14px;
+    border: 1px solid rgba(0, 32, 150, .075);
+    border-radius: 12px;
+    background: rgba(248, 250, 255, .82);
+}
+
+.sway-lead-profile-copy h4 {
+    margin: 0 0 7px;
+    color: #263B5D;
+    font-size: .68rem;
+    font-weight: 850;
+}
+
+.sway-lead-profile-copy p {
+    margin: 0;
+    color: #50617B;
+    font-size: .7rem;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.sway-lead-profile-copy p.is-empty,
+.sway-lead-profile-empty {
+    color: #8794A8;
+    font-style: italic;
+}
+
+.sway-lead-profile-timeline {
+    position: relative;
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0 0 0 18px;
+    list-style: none;
+}
+
+.sway-lead-profile-timeline::before {
+    position: absolute;
+    top: 7px;
+    bottom: 8px;
+    left: 5px;
+    width: 1px;
+    background: rgba(1, 82, 244, .20);
+    content: "";
+}
+
+.sway-lead-profile-timeline-item {
+    position: relative;
+    padding: 0 0 15px 10px;
+}
+
+.sway-lead-profile-timeline-item::before {
+    position: absolute;
+    top: 4px;
+    left: -17px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #2C91FC;
+    box-shadow: 0 0 0 1px rgba(1, 82, 244, .25);
+    content: "";
+}
+
+.sway-lead-profile-timeline-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 5px 12px;
+}
+
+.sway-lead-profile-timeline-heading strong {
+    color: #263B5D;
+    font-size: .7rem;
+    font-weight: 800;
+}
+
+.sway-lead-profile-timeline-heading time {
+    color: #8190A5;
+    font-size: .58rem;
+    font-weight: 650;
+}
+
+.sway-lead-profile-timeline-item p {
+    margin: 4px 0 0;
+    color: #61718A;
+    font-size: .65rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.sway-lead-profile-proposals {
+    display: grid;
+    gap: 7px;
+}
+
+.sway-lead-profile-proposal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid rgba(0, 32, 150, .09);
+    border-radius: 11px;
+    background: #fff;
+    color: #1A2F54;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sway-lead-profile-proposal:hover {
+    border-color: rgba(1, 82, 244, .35);
+}
+
+.sway-lead-profile-proposal > span:first-child {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.sway-lead-profile-proposal strong {
+    overflow-wrap: anywhere;
+    font-size: .69rem;
+}
+
+.sway-lead-profile-proposal small {
+    color: #7C8AA1;
+    font-size: .58rem;
+}
+
+.sway-lead-profile-footer {
+    flex: 0 0 auto;
+    display: grid;
+    gap: 9px;
+    padding: 13px 24px 16px;
+    border-top: 1px solid rgba(0, 32, 150, .09);
+    background: #fff;
+}
+
+.sway-lead-profile-actions-primary,
+.sway-lead-profile-actions-secondary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sway-lead-profile-actions-secondary {
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 32, 150, .07);
+}
+
+.sway-lead-profile-actions-primary .sway-workspace-button,
+.sway-lead-profile-actions-secondary .sway-row-action {
+    min-height: 34px;
+    font-size: .64rem;
+}
+
+body.sway-dark-mode .sway-lead-profile-modal .sway-lead-profile-card {
+    background: #0B1730;
+}
+
+body.sway-dark-mode .sway-lead-profile-hero {
+    border-color: rgba(119, 160, 255, .18);
+    background: linear-gradient(115deg, rgba(30, 75, 160, .22), rgba(30, 80, 120, .12));
+}
+
+body.sway-dark-mode .sway-lead-profile-hero > div:first-child > strong,
+body.sway-dark-mode .sway-lead-profile-section-heading h4,
+body.sway-dark-mode .sway-lead-profile-metric > strong,
+body.sway-dark-mode .sway-lead-profile-field > strong,
+body.sway-dark-mode .sway-lead-profile-copy h4,
+body.sway-dark-mode .sway-lead-profile-timeline-heading strong {
+    color: #E5EDFC;
+}
+
+body.sway-dark-mode .sway-lead-profile-hero > div:first-child > small,
+body.sway-dark-mode .sway-lead-profile-copy p,
+body.sway-dark-mode .sway-lead-profile-timeline-item p {
+    color: #B4C3DB;
+}
+
+body.sway-dark-mode .sway-lead-profile-metric,
+body.sway-dark-mode .sway-lead-profile-field,
+body.sway-dark-mode .sway-lead-profile-copy,
+body.sway-dark-mode .sway-lead-profile-proposal,
+body.sway-dark-mode .sway-lead-profile-footer {
+    border-color: rgba(119, 160, 255, .13);
+    background: rgba(4, 15, 37, .72);
+}
+
+body.sway-dark-mode .sway-lead-profile-modal .sway-lead-profile-header p,
+body.sway-dark-mode .sway-lead-profile-header-actions,
+body.sway-dark-mode .sway-lead-profile-eyebrow,
+body.sway-dark-mode .sway-lead-profile-section-heading > div > span,
+body.sway-dark-mode .sway-lead-profile-metric > span,
+body.sway-dark-mode .sway-lead-profile-field > span,
+body.sway-dark-mode .sway-lead-profile-timeline-heading time,
+body.sway-dark-mode .sway-lead-profile-proposal small {
+    color: #A7B8D3;
+}
+
+@media (max-width: 680px) {
+    .sway-lead-profile-modal .sway-lead-profile-card {
+        width: calc(100vw - 16px);
+        max-height: calc(100dvh - 16px);
+    }
+
+    .sway-lead-profile-body {
+        padding: 14px 14px 18px;
+    }
+
+    .sway-lead-profile-hero {
+        grid-template-columns: 1fr;
+        padding: 12px;
+    }
+
+    .sway-lead-profile-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .sway-lead-profile-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-lead-profile-footer {
+        padding: 11px 14px 13px;
+    }
+
+    .sway-lead-profile-actions-primary .sway-workspace-button {
+        flex: 1 1 calc(50% - 8px);
+    }
+}
+
+@media (max-width: 430px) {
+    .sway-lead-profile-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .sway-lead-profile-header {
+        flex-direction: column;
+    }
+
+    .sway-lead-profile-header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .sway-lead-profile-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .sway-lead-profile-actions-primary .sway-workspace-button {
+        flex-basis: 100%;
+    }
+}

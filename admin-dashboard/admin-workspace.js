@@ -12537,6 +12537,371 @@ function simpleBars(items, color) {
     }
 
 
+    function openLeadProfile(leadId, trigger) {
+        const lead = state.leads.find(function (item) {
+            return String(item.id) === String(leadId);
+        });
+
+        if (!lead) {
+            swayAlert("That lead record is no longer available. Refresh the workspace and try again.");
+            return;
+        }
+
+        const modal = document.createElement("div");
+        modal.className = "sway-modal sway-lead-profile-modal";
+
+        const contactStatus = leadContactStatus(lead);
+        const whatsappUrl =
+            window.swayphicsLeadWhatsApp &&
+            typeof window.swayphicsLeadWhatsApp.buildUrl === "function"
+                ? window.swayphicsLeadWhatsApp.buildUrl(lead.phone)
+                : "";
+        const proposals = state.leadProposals
+            .filter(function (item) {
+                return String(item.lead_id || "") === String(lead.id);
+            })
+            .slice()
+            .sort(function (a, b) {
+                return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+            });
+        const terminalStatus = ["won", "lost", "not interested"].includes(
+            String(lead.status || "").toLowerCase()
+        );
+
+        function displayValue(value, fallback) {
+            const text = String(value == null ? "" : value).trim();
+            return text || (fallback || "Not recorded");
+        }
+
+        function displayTimestamp(value) {
+            if (!value) return "Not recorded";
+            const raw = String(value);
+            if (raw.indexOf("T") >= 0) {
+                return formatAIMessageTime(raw) || date(raw);
+            }
+            return date(raw);
+        }
+
+        function profileMetric(label, value) {
+            return (
+                '<div class="sway-lead-profile-metric">' +
+                    "<span>" + esc(label) + "</span>" +
+                    "<strong>" + esc(displayValue(value)) + "</strong>" +
+                "</div>"
+            );
+        }
+
+        function profileField(label, value, fallback) {
+            return (
+                '<div class="sway-lead-profile-field">' +
+                    "<span>" + esc(label) + "</span>" +
+                    "<strong>" + esc(displayValue(value, fallback)) + "</strong>" +
+                "</div>"
+            );
+        }
+
+        function profileCopy(label, value, fallback) {
+            const content = String(value == null ? "" : value).trim();
+            return (
+                '<section class="sway-lead-profile-copy">' +
+                    "<h4>" + esc(label) + "</h4>" +
+                    (
+                        content
+                            ? "<p>" + esc(content) + "</p>"
+                            : '<p class="is-empty">' + esc(fallback || "No information has been recorded yet.") + "</p>"
+                    ) +
+                "</section>"
+            );
+        }
+
+        const history = [];
+
+        function addHistory(timestamp, title, detail, kind) {
+            const parsed = timestamp ? new Date(timestamp).getTime() : 0;
+            history.push({
+                timestamp: Number.isFinite(parsed) ? parsed : 0,
+                date: displayTimestamp(timestamp),
+                title: title,
+                detail: detail || "",
+                kind: kind || "activity"
+            });
+        }
+
+        state.communications
+            .filter(function (item) {
+                return String(item.lead_id || "") === String(lead.id);
+            })
+            .forEach(function (item) {
+                const direction = String(item.direction || "").toLowerCase();
+                const label = direction === "outbound" ? "Outgoing contact" :
+                    direction === "inbound" ? "Incoming contact" : "Communication";
+                const detail = [
+                    item.channel || "",
+                    item.subject || "",
+                    item.message || item.notes || ""
+                ].filter(Boolean).join(" · ");
+                addHistory(item.contacted_at || item.created_at, label, detail, "communication");
+            });
+
+        state.followups
+            .filter(function (item) {
+                return String(item.lead_id || "") === String(lead.id);
+            })
+            .forEach(function (item) {
+                const label = "Follow-up · " + formatDisplayText(item.status || "scheduled");
+                const detail = [
+                    item.channel || "",
+                    item.note || item.notes || item.title || "",
+                    item.assigned_to ? "Assigned to " + adminName(item.assigned_to) : ""
+                ].filter(Boolean).join(" · ");
+                addHistory(item.scheduled_for || item.created_at, label, detail, "followup");
+            });
+
+        state.leadStageHistory
+            .filter(function (item) {
+                return String(item.lead_id || "") === String(lead.id);
+            })
+            .forEach(function (item) {
+                const from = item.from_status ? formatDisplayText(item.from_status) : "Created";
+                const to = item.to_status ? formatDisplayText(item.to_status) : "Updated";
+                addHistory(item.changed_at || item.created_at, "Pipeline changed", from + " → " + to, "stage");
+            });
+
+        state.activities
+            .filter(function (item) {
+                return String(item.entity_type || item.record_type || "") === "leads" &&
+                    String(item.entity_id || item.record_id || "") === String(lead.id);
+            })
+            .forEach(function (item) {
+                addHistory(
+                    item.created_at || item.occurred_at,
+                    item.description || item.action || item.activity || "Lead activity",
+                    item.details || item.note || "",
+                    "activity"
+                );
+            });
+
+        proposals.forEach(function (item) {
+            addHistory(
+                item.created_at || item.updated_at,
+                "Proposal · " + displayValue(item.title, "Untitled draft"),
+                "Status: " + formatDisplayText(item.status || "draft"),
+                "proposal"
+            );
+        });
+
+        history.sort(function (a, b) {
+            return b.timestamp - a.timestamp;
+        });
+
+        const historyMarkup = history.length
+            ? '<ol class="sway-lead-profile-timeline">' +
+                history.slice(0, 18).map(function (item) {
+                    return (
+                        '<li class="sway-lead-profile-timeline-item is-' + esc(item.kind) + '">' +
+                            '<div class="sway-lead-profile-timeline-heading">' +
+                                "<strong>" + esc(item.title) + "</strong>" +
+                                "<time>" + esc(item.date) + "</time>" +
+                            "</div>" +
+                            (
+                                item.detail
+                                    ? '<p>' + esc(item.detail) + "</p>"
+                                    : ""
+                            ) +
+                        "</li>"
+                    );
+                }).join("") +
+              "</ol>"
+            : '<p class="sway-lead-profile-empty">No follow-ups, communication entries or pipeline events are recorded for this lead yet.</p>';
+
+        const proposalMarkup = proposals.length
+            ? '<div class="sway-lead-profile-proposals">' +
+                proposals.map(function (item) {
+                    return (
+                        '<button type="button" class="sway-lead-profile-proposal" data-lead-profile-proposal="' +
+                            esc(item.id) + '">' +
+                            '<span><strong>' + esc(displayValue(item.title, "Untitled proposal")) + '</strong>' +
+                                '<small>' + esc(formatDisplayText(item.status || "draft")) + " · " +
+                                    esc(displayTimestamp(item.created_at || item.updated_at)) +
+                                "</small></span>" +
+                            '<span aria-hidden="true">↗</span>' +
+                        "</button>"
+                    );
+                }).join("") +
+              "</div>"
+            : '<p class="sway-lead-profile-empty">No proposal drafts are linked to this lead.</p>';
+
+        modal.innerHTML =
+            '<div class="sway-modal-backdrop" data-lead-profile-close></div>' +
+            '<div class="sway-modal-card sway-lead-profile-card" role="dialog" aria-modal="true" aria-labelledby="sway-lead-profile-heading">' +
+                '<div class="sway-modal-header sway-lead-profile-header">' +
+                    '<div>' +
+                        '<span class="admin-label">SWAYPHICS · LEAD PROFILE</span>' +
+                        '<h3 id="sway-lead-profile-heading">' + esc(displayValue(lead.business_name, "Unnamed business")) + '</h3>' +
+                        '<p>' + esc(displayValue(lead.contact_name, "Contact person not recorded")) + '</p>' +
+                    "</div>" +
+                    '<div class="sway-lead-profile-header-actions">' +
+                        chip(lead.status) +
+                        '<button class="sway-modal-close" type="button" aria-label="Close lead profile">×</button>' +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-lead-profile-body">' +
+                    '<section class="sway-lead-profile-hero">' +
+                        '<div><span class="sway-lead-profile-eyebrow">PIPELINE RECORD</span>' +
+                            '<strong>' + esc(formatDisplayText(lead.status || "new")) + '</strong>' +
+                            '<small>' + esc(contactStatus.label + " · " + contactStatus.detail) + "</small>" +
+                        "</div>" +
+                        '<div class="sway-lead-profile-metrics">' +
+                            profileMetric("Estimated value", money(lead.estimated_value)) +
+                            profileMetric("Next follow-up", date(lead.next_follow_up)) +
+                            profileMetric("Assigned to", adminName(lead.assigned_to)) +
+                        "</div>" +
+                    "</section>" +
+                    '<section class="sway-lead-profile-section">' +
+                        '<div class="sway-lead-profile-section-heading"><div><span>01 · CONTACT</span><h4>Contact information</h4></div></div>' +
+                        '<div class="sway-lead-profile-fields">' +
+                            profileField("Contact person", lead.contact_name) +
+                            profileField("Email address", lead.email) +
+                            profileField("Phone / WhatsApp", lead.phone) +
+                            profileField("Business name", lead.business_name) +
+                            profileField("Lead source", formatDisplayText(lead.source || "Unspecified")) +
+                            profileField("Service interest", lead.service_interest) +
+                            profileField("Created", displayTimestamp(lead.created_at)) +
+                            profileField("Last updated", displayTimestamp(lead.updated_at)) +
+                        "</div>" +
+                    "</section>" +
+                    '<section class="sway-lead-profile-section">' +
+                        '<div class="sway-lead-profile-section-heading"><div><span>02 · ASSESSMENT</span><h4>Business assessment & research</h4></div>' +
+                            '<button type="button" class="sway-workspace-button" data-lead-profile-action="edit">Edit assessment</button>' +
+                        "</div>" +
+                        profileCopy("Business assessment", lead.business_assessment) +
+                        profileCopy("Research findings", lead.research_findings) +
+                        profileCopy("How Swayphics can help", lead.swayphics_solution) +
+                        profileCopy("Recommended Swayphics services", lead.recommended_services) +
+                        profileCopy("Public information / research sources", lead.research_sources) +
+                        profileCopy("Internal notes", lead.notes) +
+                    "</section>" +
+                    '<section class="sway-lead-profile-section">' +
+                        '<div class="sway-lead-profile-section-heading"><div><span>03 · PIPELINE</span><h4>Follow-up & communication history</h4></div></div>' +
+                        historyMarkup +
+                    "</section>" +
+                    '<section class="sway-lead-profile-section">' +
+                        '<div class="sway-lead-profile-section-heading"><div><span>04 · PROPOSALS</span><h4>Swayphics proposal drafts</h4></div></div>' +
+                        proposalMarkup +
+                    "</section>" +
+                "</div>" +
+                '<div class="sway-lead-profile-footer">' +
+                    '<div class="sway-lead-profile-actions-primary">' +
+                        '<button type="button" class="sway-workspace-button primary" data-lead-profile-action="edit">Edit lead</button>' +
+                        '<button type="button" class="sway-workspace-button" data-lead-profile-action="followup">Schedule follow-up</button>' +
+                        '<button type="button" class="sway-workspace-button" data-lead-profile-action="email"' +
+                            (!lead.email ? " disabled" : "") + '>Email</button>' +
+                        (
+                            whatsappUrl
+                                ? '<a class="sway-workspace-button" href="' + esc(whatsappUrl) + '" target="_blank" rel="noopener noreferrer">WhatsApp</a>'
+                                : '<button type="button" class="sway-workspace-button" disabled title="Add a valid phone number to enable WhatsApp.">WhatsApp unavailable</button>'
+                        ) +
+                        '<button type="button" class="sway-workspace-button" data-lead-profile-action="draft-proposal">Draft proposal</button>' +
+                    "</div>" +
+                    '<div class="sway-lead-profile-actions-secondary">' +
+                        '<button type="button" class="sway-row-action" data-lead-profile-action="toggle-contact"' +
+                            (contactStatus.source === "communication" ? " disabled title=\"Contact is already recorded in the communication log.\"" : "") +
+                            '>' + (contactStatus.contacted ? "Undo contacted mark" : "Mark as contacted") + '</button>' +
+                        (
+                            String(lead.status || "").toLowerCase() === "not interested"
+                                ? '<button type="button" class="sway-row-action" data-lead-profile-action="reactivate">Return to active pipeline</button>'
+                                : (!terminalStatus
+                                    ? '<button type="button" class="sway-row-action" data-lead-profile-action="not-interested">Not interested</button>'
+                                    : "")
+                        ) +
+                        (
+                            !terminalStatus
+                                ? '<button type="button" class="sway-row-action" data-lead-profile-action="convert">Convert to client</button>'
+                                : ""
+                        ) +
+                        '<button type="button" class="sway-row-action danger" data-lead-profile-action="delete">Delete lead</button>' +
+                    "</div>" +
+                "</div>" +
+            "</div>";
+
+        document.body.appendChild(modal);
+
+        let closed = false;
+        function close() {
+            if (closed) return;
+            closed = true;
+            modal.remove();
+            if (trigger && trigger.isConnected && typeof trigger.focus === "function") {
+                trigger.focus();
+            }
+        }
+
+        modal.querySelectorAll("[data-lead-profile-close], .sway-modal-close").forEach(function (button) {
+            button.addEventListener("click", close);
+        });
+
+        modal.addEventListener("keydown", function (event) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                close();
+            }
+        });
+
+        modal.querySelectorAll("[data-lead-profile-action]").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                if (button.disabled) return;
+                const action = String(button.dataset.leadProfileAction || "");
+                close();
+
+                try {
+                    if (action === "edit") {
+                        await createOrEdit("leads", lead.id);
+                    } else if (action === "followup") {
+                        await createOrEdit("followups", null, {
+                            lead_id: lead.id,
+                            client_id: null,
+                            scheduled_for: dashboardTodayISO(),
+                            status: "pending"
+                        });
+                    } else if (action === "email") {
+                        openEmailComposer("lead", lead.id);
+                    } else if (action === "draft-proposal") {
+                        await draftLeadProposal(lead.id);
+                    } else if (action === "toggle-contact") {
+                        await toggleLeadContacted(lead.id);
+                    } else if (action === "not-interested") {
+                        await markLeadNotInterested(lead.id);
+                    } else if (action === "reactivate") {
+                        await reactivateLead(lead.id);
+                    } else if (action === "convert") {
+                        await convertLead(lead.id);
+                    } else if (action === "delete") {
+                        await removeRecord("leads", lead.id);
+                    }
+                } catch (error) {
+                    swayAlert(
+                        error && error.message
+                            ? error.message
+                            : "That lead action could not be completed."
+                    );
+                }
+            });
+        });
+
+        modal.querySelectorAll("[data-lead-profile-proposal]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const proposalId = String(button.dataset.leadProfileProposal || "");
+                if (!proposalId) return;
+                close();
+                openLeadProposalReview(proposalId);
+            });
+        });
+
+        const closeButton = modal.querySelector(".sway-modal-close");
+        if (closeButton) closeButton.focus();
+    }
+
+
     function renderLeads() {
         /*
          * Keep every lead reachable in the pipeline. The card's main action
@@ -28335,6 +28700,14 @@ function simpleBars(items, color) {
                 button.addEventListener(
                     "click",
                     function () {
+                        if (
+                            button.dataset.edit === "leads" &&
+                            button.classList.contains("sway-lead-card-open")
+                        ) {
+                            openLeadProfile(button.dataset.id, button);
+                            return;
+                        }
+
                         createOrEdit(
                             button.dataset.edit,
                             button.dataset.id
