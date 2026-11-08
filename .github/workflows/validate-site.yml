@@ -27,6 +27,9 @@ jobs:
       - name: Test admin welcome authentication handshake
         run: node scripts/admin-welcome-auth.test.cjs
 
+      - name: Test client document upload and portal sharing
+        run: node scripts/admin-client-documents.test.cjs
+
       - name: Test expanded admin settings
         run: node scripts/admin-settings-expanded.test.cjs
 
