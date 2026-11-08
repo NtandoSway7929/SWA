@@ -167,7 +167,7 @@ async function buildPdf(
 
   const logoBytes = await loadLogo();
 
-  let logo = null;
+  let logo: any = null;
 
   if (logoBytes) {
     try {
@@ -180,7 +180,7 @@ async function buildPdf(
     }
   }
 
-  function drawWatermark(targetPage) {
+  function drawWatermark(targetPage: any) {
     if (!logo) return;
 
     const maxWatermarkSize = 260;
@@ -360,7 +360,6 @@ async function buildPdf(
       size: 7,
       font: bold,
       color: BRAND,
-      characterSpacing: 1,
     },
   );
 
@@ -754,7 +753,6 @@ async function buildPdf(
       size: 7,
       font: bold,
       color: BRAND,
-      characterSpacing: 1,
     },
   );
 
@@ -792,7 +790,6 @@ async function buildPdf(
         size: 7,
         font: bold,
         color: BRAND,
-        characterSpacing: 1,
       },
     );
 
@@ -851,7 +848,6 @@ async function buildPdf(
         size: 7,
         font: bold,
         color: BRAND,
-        characterSpacing: 1,
       });
 
       y -= 16;
@@ -872,7 +868,6 @@ async function buildPdf(
         size: 10,
         font: bold,
         color: DARK,
-        characterSpacing: 0.8,
       });
 
       y -= 30;
