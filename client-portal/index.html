@@ -55,6 +55,50 @@ button,input,textarea{font:inherit}button{border:0}
 .sway-loading-button{display:inline-flex;align-items:center;justify-content:center;gap:7px}.sway-loading-button::before{content:"";width:14px;height:14px;flex:0 0 14px;background:conic-gradient(from -40deg,transparent 0 38deg,#0152F4 54deg 122deg,rgba(119,193,252,.82) 138deg 158deg,transparent 176deg 360deg);-webkit-mask:url("../FIST.webp") center/contain no-repeat;mask:url("../FIST.webp") center/contain no-repeat;animation:sway-button-favicon-draw 1.05s linear infinite}@keyframes sway-button-favicon-draw{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .portal-modal{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:18px}.modal-backdrop{position:absolute;inset:0;background:rgba(8,21,51,.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}.modal-card{position:relative;z-index:1;width:min(720px,100%);max-height:calc(100vh - 36px);overflow:auto;border:1px solid rgba(255,255,255,.74);border-radius:24px;padding:21px;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(247,250,255,.95));box-shadow:0 30px 90px rgba(0,32,150,.20)}.modal-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.modal-head h3{font-size:1.15rem;letter-spacing:-.04em}.modal-head p{margin-top:5px;color:var(--muted);font-size:.57rem}.modal-close{width:34px;height:34px;border-radius:50%;background:rgba(0,32,150,.05);color:var(--dark);font-size:1rem;cursor:pointer}.modal-close:hover{background:rgba(1,82,244,.08);color:var(--blue)}
 .timeline{display:grid;gap:9px;margin-top:18px}.timeline-step{display:grid;grid-template-columns:29px 1fr;gap:10px;align-items:center}.timeline-node{width:29px;height:29px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(0,32,150,.08);background:#fff;color:var(--soft);font-size:.5rem;font-weight:900}.timeline-step.complete .timeline-node{background:rgba(1,82,244,.08);color:var(--blue);border-color:rgba(1,82,244,.10)}.timeline-step.current strong{color:var(--blue)}.timeline-step strong{font-size:.61rem;font-weight:850}.timeline-step small{display:block;margin-top:2px;color:var(--soft);font-size:.49rem}.project-detail{display:grid;gap:14px;margin-top:18px}.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.detail-box{padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.65)}.detail-box span{display:block;color:var(--soft);font-size:.48rem;font-weight:800;text-transform:uppercase}.detail-box strong{display:block;margin-top:3px;font-size:.59rem}.detail-description{padding:12px;border-radius:13px;background:rgba(1,82,244,.035);color:var(--muted);font-size:.57rem;line-height:1.65}
+.project-stage-summary{display:grid;gap:4px;margin-top:10px;padding:11px 12px;border:1px solid rgba(52,58,64,.08);border-radius:13px;background:#F6F7F8}
+.project-stage-summary>span,.project-schedule-card>span,.project-next-milestone>span{color:#66717B;font-size:.46rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.project-stage-summary>strong{color:#252B31;font-size:.62rem;font-weight:850}
+.project-stage-summary>small{color:#59636D;font-size:.52rem;line-height:1.55}
+.progress span.current{box-shadow:0 0 0 2px rgba(1,82,244,.12)}
+.project-detail-overview{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(190px,.7fr);gap:12px;align-items:stretch}
+.project-detail-overview .detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.project-schedule-card{display:grid;align-content:start;gap:7px;padding:14px;border:1px solid rgba(52,58,64,.09);border-radius:15px;background:#F6F7F8}
+.project-schedule-card>strong{color:#252B31;font-size:.72rem;font-weight:850}
+.project-schedule-card>p,.project-overview-copy>p,.project-next-milestone>p{color:#59636D;font-size:.54rem;line-height:1.65}
+.project-schedule-card[data-state="passed"]{border-color:rgba(174,65,65,.19);background:#FBF3F2}
+.project-schedule-card[data-state="passed"]>strong{color:#9A3535}
+.project-schedule-card[data-state="soon"],.project-schedule-card[data-state="today"]{border-color:rgba(190,133,35,.20);background:#FBF7EE}
+.project-schedule-card[data-state="soon"]>strong,.project-schedule-card[data-state="today"]>strong{color:#8A641E}
+.project-state-note{padding:12px 14px;border:1px solid rgba(52,58,64,.1);border-radius:14px;background:#F3F4F5}
+.project-state-note[data-state="cancelled"]{background:#F7F1F1;border-color:rgba(154,37,37,.13)}
+.project-state-note>strong{display:block;color:#343A40;font-size:.62rem}
+.project-state-note>p{margin-top:4px;color:#59636D;font-size:.53rem;line-height:1.6}
+.project-overview-copy{display:grid;gap:7px;padding:13px 14px;border:1px solid rgba(52,58,64,.08);border-radius:14px;background:#FAFBFC}
+.project-overview-copy>h4,.project-milestones-head h4{color:#252B31;font-size:.69rem;font-weight:850}
+.project-milestones{display:grid;gap:12px}
+.project-milestones-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.project-milestones-head>div{display:grid;gap:5px}
+.project-milestones-head>div>.portal-kicker{font-size:.45rem}
+.project-milestones-head>div>p{color:#66717B;font-size:.52rem;line-height:1.5}
+.project-milestone-list{display:grid;gap:0}
+.project-milestone-step{position:relative;display:grid;grid-template-columns:29px minmax(0,1fr);gap:11px;padding:0 0 16px}
+.project-milestone-step:last-child{padding-bottom:0}
+.project-milestone-step:not(:last-child)::after{content:"";position:absolute;top:29px;bottom:0;left:13px;width:2px;background:#E1E5E8}
+.project-milestone-node{position:relative;z-index:1;width:29px;height:29px;display:grid;place-items:center;border:1px solid #DDE2E6;border-radius:50%;background:#fff;color:#77818A;font-size:.51rem;font-weight:900}
+.project-milestone-step.complete .project-milestone-node{border-color:rgba(1,82,244,.15);background:#EDF3FF;color:#0152F4}
+.project-milestone-step.current .project-milestone-node{border-color:#0152F4;background:#0152F4;color:#fff;box-shadow:0 0 0 4px rgba(1,82,244,.09)}
+.project-milestone-step.complete:not(:last-child)::after{background:rgba(1,82,244,.28)}
+.project-milestone-copy{display:grid;gap:4px;padding-top:2px}
+.project-milestone-copy>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.project-milestone-copy strong{color:#343A40;font-size:.59rem;font-weight:850}
+.project-milestone-copy small{color:#76818A;font-size:.47rem;font-weight:800}
+.project-milestone-step.current .project-milestone-copy strong{color:#0152F4}
+.project-milestone-copy>p{color:#66717B;font-size:.51rem;line-height:1.5}
+.project-next-milestone{display:grid;gap:5px;padding:13px 14px;border:1px solid rgba(1,82,244,.10);border-radius:14px;background:#F2F6FF}
+.project-next-milestone>strong{color:#252B31;font-size:.66rem;font-weight:850}
+.project-next-milestone.complete{border-color:rgba(34,140,95,.14);background:#F0F7F3}
+.project-modal-footer{display:flex;justify-content:flex-end;padding-top:2px}
+@media(max-width:560px){.project-detail-overview{grid-template-columns:1fr}.project-detail-overview .detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.project-milestones-head{align-items:flex-start;flex-direction:column}.project-milestone-copy>div{align-items:flex-start;flex-direction:column;gap:2px}}
 .onboarding-intro{display:grid;grid-template-columns:1.25fr .75fr;gap:14px;margin-bottom:14px}.onboarding-guide{padding:16px;border:1px solid rgba(1,82,244,.08);border-radius:16px;background:linear-gradient(135deg,rgba(1,82,244,.045),rgba(255,255,255,.72))}.onboarding-guide strong{display:block;font-size:.68rem}.onboarding-guide p{margin-top:5px;color:var(--muted);font-size:.55rem;line-height:1.6}.onboarding-tip{padding:16px;border:1px dashed rgba(1,82,244,.16);border-radius:16px;background:rgba(255,255,255,.58)}.onboarding-tip span{display:block;color:var(--blue);font-size:.48rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.onboarding-tip p{margin-top:5px;color:var(--muted);font-size:.53rem;line-height:1.6}.onboarding-form{display:grid;gap:16px}.onboarding-section{padding:17px;border:1px solid rgba(0,32,150,.065);border-radius:18px;background:rgba(255,255,255,.58)}.onboarding-section-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:13px}.onboarding-number{width:28px;height:28px;display:grid;place-items:center;flex:0 0 28px;border-radius:9px;background:rgba(1,82,244,.08);color:var(--blue);font-size:.55rem;font-weight:900}.onboarding-section-head h4{font-size:.72rem}.onboarding-section-head p{margin-top:3px;color:var(--muted);font-size:.53rem;line-height:1.5}.onboarding-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.onboarding-fields .full{grid-column:1/-1}.field-help{display:block;color:var(--soft);font-size:.48rem;line-height:1.45;font-weight:600}.field-help em{color:var(--blue);font-style:normal}.onboarding-form .field input,.onboarding-form .field textarea,.onboarding-form .field select{width:100%;border:1px solid rgba(0,32,150,.11);border-radius:12px;padding:11px 12px;color:var(--dark);background:rgba(255,255,255,.86);outline:none;font-size:.62rem}.onboarding-form .field textarea{min-height:92px;resize:vertical;line-height:1.55}.onboarding-form .field select{appearance:auto}.onboarding-form .field input:focus,.onboarding-form .field textarea:focus,.onboarding-form .field select:focus{border-color:rgba(1,82,244,.34);box-shadow:0 0 0 4px rgba(1,82,244,.06);background:#fff}.asset-upload{display:grid;gap:9px;padding:13px;border:1px dashed rgba(1,82,244,.18);border-radius:14px;background:rgba(1,82,244,.025)}.asset-upload input[type=file]{padding:9px;background:rgba(255,255,255,.75);cursor:pointer}.asset-upload-actions{display:flex;align-items:center;justify-content:space-between;gap:9px}.asset-upload-status{color:var(--muted);font-size:.51rem;line-height:1.45}.asset-list{display:grid;gap:6px;margin-top:8px}.asset-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid rgba(0,32,150,.06);border-radius:10px;background:rgba(255,255,255,.64)}.asset-item-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dark);font-size:.54rem;font-weight:750}.asset-item-meta{flex:0 0 auto;color:var(--soft);font-size:.47rem}.service-list{display:grid;gap:9px}.service-row{display:grid;grid-template-columns:1.1fr .55fr 1.25fr auto;gap:8px;align-items:end}.service-row .field{min-width:0}.remove-service{height:38px;padding:0 10px;border-radius:10px;background:rgba(190,44,44,.06);color:#9A2525;font-size:.5rem;font-weight:850;cursor:pointer}.add-service{margin-top:9px;background:rgba(1,82,244,.055);color:var(--blue);border:1px dashed rgba(1,82,244,.18);box-shadow:none}.onboarding-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:2px}.onboarding-actions-right{display:flex;gap:8px}.save-status{color:var(--muted);font-size:.52rem;line-height:1.45}.required-note{color:var(--soft);font-size:.49rem}.onboarding-submitted{padding:15px;border-radius:14px;background:rgba(34,160,107,.065);color:#18784F;font-size:.55rem;line-height:1.55}.onboarding-submitted strong{display:block;margin-bottom:3px}.onboarding-locked{opacity:.72}.onboarding-locked input,.onboarding-locked textarea,.onboarding-locked select{background:rgba(247,250,255,.8)}
 @media(max-width:920px){.portal-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.portal-grid{grid-template-columns:1fr}.request-card{grid-template-columns:1fr}}
 @media(max-width:680px){.portal-shell{width:min(100% - 24px,1160px);padding-top:12px}.portal-nav{top:8px;padding:9px 10px 9px 12px}.portal-logo{width:108px}.portal-secure{display:none}.portal-hero{padding:48px 2px 24px}.portal-hero h1{font-size:clamp(2.45rem,14vw,4rem)}.portal-hero-actions{flex-direction:column}.portal-hero-actions .portal-button{width:100%}.portal-card{padding:16px;border-radius:19px}.portal-section{margin-top:22px}.portal-stats{grid-template-columns:1fr 1fr;gap:8px}.stat-card{padding:14px}.stat-card strong{font-size:1.05rem}.portal-footer{align-items:flex-start;flex-direction:column}.detail-grid{grid-template-columns:1fr 1fr}.modal-card{padding:17px;border-radius:20px}}
@@ -453,10 +497,72 @@ function money(value){return new Intl.NumberFormat("en-ZA",{style:"currency",cur
 function date(value){if(!value)return "—";const d=new Date(value);if(Number.isNaN(d.getTime()))return String(value);return d.toLocaleDateString("en-ZA",{day:"2-digit",month:"short",year:"numeric",timeZone:"Africa/Johannesburg"})}
 function nice(value){return String(value||"").replace(/\b\w/g,function(m){return m.toUpperCase()})}
 function chip(value){const v=String(value||"").toLowerCase();const cls=v==="paid"||v==="completed"?"success":(v==="overdue"||v==="payment overdue"||v==="rejected"||v==="cancelled"?"danger":(["pending","review","in progress","action needed","payment due","awaiting your review"].includes(v)?"warning":""));return '<span class="chip '+cls+'">'+esc(nice(value||"Not set"))+"</span>"}
-function projectStage(value){const stages=["planning","in progress","review","completed"];const index=stages.indexOf(String(value||"").toLowerCase());return index<0?0:index}
-function projectProgress(value){const current=projectStage(value);return '<div class="progress">'+[0,1,2,3].map(function(i){return '<span class="'+(i<=current?"active":"")+'"></span>'}).join("")+"</div>"}
+function projectStage(value){
+const status=String(value||"").toLowerCase();
+const stages=["planning","in progress","review","completed"];
+if(["paused","cancelled"].includes(status))return -1;
+return stages.indexOf(status);
+}
+function projectMilestoneSummary(project){
+const stages=[
+{status:"planning",title:"Planning",description:"The project scope and requirements are being prepared."},
+{status:"in progress",title:"In progress",description:"The agreed project work is underway."},
+{status:"review",title:"Review",description:"The work is at the review stage for feedback or refinements."},
+{status:"completed",title:"Completed",description:"This project has been marked as complete."}
+];
+const status=String(project&&project.status||"").toLowerCase();
+const currentIndex=projectStage(status);
+const current=currentIndex>=0?stages[currentIndex]:null;
+const next=currentIndex>=0&&currentIndex<stages.length-1?stages[currentIndex+1]:null;
+let statusLabel=current?current.title:"Status not set";
+let message=current?current.description:"Swayphics has not recorded an active delivery stage for this project.";
+if(status==="paused"){
+statusLabel="Project paused";
+message="Work on this project is currently paused. Contact Swayphics if you need to discuss restarting it.";
+}else if(status==="cancelled"){
+statusLabel="Project closed";
+message="This project has been marked as cancelled and is no longer on the active delivery path.";
+}
+return {stages:stages,status:status,statusLabel:statusLabel,message:message,currentIndex:currentIndex,current:current,next:next,progressText:current?"Stage "+(currentIndex+1)+" of "+stages.length+": "+current.title:statusLabel};
+}
+function projectTodayDate(){
+const parts=new Intl.DateTimeFormat("en",{timeZone:"Africa/Johannesburg",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+const part=function(type){const item=parts.find(function(value){return value.type===type});return item?item.value:""};
+return part("year")+"-"+part("month")+"-"+part("day");
+}
+function projectDeadline(project,todayValue){
+const status=String(project&&project.status||"").toLowerCase();
+if(status==="completed")return {state:"complete",label:"Project completed",description:"This project has been marked as complete."};
+if(status==="paused")return {state:"paused",label:"Schedule paused",description:"The project is paused, so its target date should be confirmed with Swayphics."};
+if(status==="cancelled")return {state:"cancelled",label:"Project closed",description:"This project has been marked as cancelled."};
+const dueDate=String(project&&project.due_date||"").slice(0,10);
+if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate))return {state:"unset",label:"No target date",description:"A target date has not been recorded for this project."};
+const dueParts=dueDate.split("-").map(Number);
+const dueUtc=Date.UTC(dueParts[0],dueParts[1]-1,dueParts[2]);
+if(new Date(dueUtc).toISOString().slice(0,10)!==dueDate)return {state:"unset",label:"No valid target date",description:"A valid target date has not been recorded for this project."};
+const today=String(todayValue||projectTodayDate());
+if(!/^\d{4}-\d{2}-\d{2}$/.test(today))return {state:"unset",label:"Target date recorded",description:"Target date: "+date(dueDate)+"."};
+const todayParts=today.split("-").map(Number);
+const todayUtc=Date.UTC(todayParts[0],todayParts[1]-1,todayParts[2]);
+const days=Math.round((dueUtc-todayUtc)/86400000);
+if(days<0)return {state:"passed",label:"Target date has passed",description:"The recorded target date was "+date(dueDate)+". Please contact Swayphics for an updated schedule."};
+if(days===0)return {state:"today",label:"Target date is today",description:"The recorded target date is today, "+date(dueDate)+"."};
+if(days===1)return {state:"soon",label:"Target date is tomorrow",description:"The recorded target date is "+date(dueDate)+"."};
+if(days<=7)return {state:"soon",label:"Target date in "+days+" days",description:"The recorded target date is "+date(dueDate)+"."};
+return {state:"scheduled",label:"Target date scheduled",description:"The recorded target date is "+date(dueDate)+"."};
+}
+function projectProgress(value){
+const summary=projectMilestoneSummary({status:value});
+const current=summary.currentIndex;
+const currentValue=current>=0?current+1:0;
+return '<div class="progress" role="progressbar" aria-label="Project delivery stage" aria-valuemin="0" aria-valuemax="4" aria-valuenow="'+currentValue+'" aria-valuetext="'+esc(summary.progressText)+'">'+[0,1,2,3].map(function(i){return '<span class="'+(i<current?"active complete":(i===current?"active current":""))+'"></span>'}).join("")+"</div>";
+}
 function activeProjects(data){return (data.projects||[]).filter(function(p){return ["planning","in progress","review"].includes(String(p.status||"").toLowerCase())})}
-function renderProject(item){return '<article class="project-item"><div class="project-top"><div><div class="project-name">'+esc(item.name||"Untitled project")+'</div><div class="project-meta">'+esc(item.service||"Swayphics project")+(item.due_date?" · Due "+esc(date(item.due_date)):"")+"</div></div>"+chip(item.status)+"</div>"+projectProgress(item.status)+'<div class="project-item-footer"><small>'+esc(item.description||"Your Swayphics project is being managed here.")+'</small><button type="button" class="text-button" data-project-id="'+esc(item.id)+'">View details</button></div></article>'}
+function renderProject(item){
+const milestone=projectMilestoneSummary(item);
+const schedule=projectDeadline(item);
+return '<article class="project-item"><div class="project-top"><div><div class="project-name">'+esc(item.name||"Untitled project")+'</div><div class="project-meta">'+esc(item.service||"Swayphics project")+(item.due_date?" · Target date "+esc(date(item.due_date)):"")+"</div></div>"+chip(item.status)+"</div>"+projectProgress(item.status)+'<div class="project-stage-summary"><span>Current delivery stage</span><strong>'+esc(milestone.statusLabel)+'</strong><small>'+esc(milestone.message)+'</small></div><div class="project-item-footer"><small>'+esc(schedule.label)+'</small><button type="button" class="text-button" data-project-id="'+esc(item.id)+'">View milestones</button></div></article>';
+}
 function renderInvoice(item){const outstanding=Number(item.amount_outstanding||0);return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.invoice_number||"Invoice")+'<div class="financial-meta">Issued '+esc(date(item.issue_date))+(item.due_date?" · Due "+esc(date(item.due_date)):"")+(outstanding>0?" · Outstanding "+money(outstanding):"")+"</div></div><div><b>"+esc(money(item.total))+"</b><div style='margin-top:5px;text-align:right;'>"+chip(item.status)+"</div></div></div></article>"}
 function renderQuote(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.quote_number||item.title||"Quote")+'<div class="financial-meta">'+esc(item.title||"Swayphics quotation")+(item.valid_until?" · Valid until "+esc(date(item.valid_until)):"")+"</div></div><div><b>"+esc(money(item.amount))+"</b><div style='margin-top:5px;text-align:right;'>"+chip(item.status)+"</div></div></div></article>"}
 function renderPayment(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.reference||"Payment")+'<div class="financial-meta">'+esc(date(item.paid_at))+(item.method?" · "+esc(item.method):"")+"</div></div><div><b>"+esc(money(item.amount))+"</b><div style='margin-top:5px;text-align:right;'>"+chip("paid")+"</div></div></div></article>"}
@@ -858,10 +964,30 @@ document.getElementById("request-form").addEventListener("submit",async function
 
 function openProjectModal(project){
 document.getElementById("portal-project-modal")?.remove();
-const stages=["planning","in progress","review","completed"],current=projectStage(project.status),modal=document.createElement("div");
+const summary=projectMilestoneSummary(project),schedule=projectDeadline(project),modal=document.createElement("div");
+const milestones=summary.stages.map(function(stage,index){
+const state=summary.currentIndex<0?"upcoming":(index<summary.currentIndex?"complete":(index===summary.currentIndex?"current":"upcoming"));
+const stateLabel=state==="complete"?"Completed":(state==="current"?"Current milestone":"Upcoming");
+return '<div class="project-milestone-step '+state+'" role="listitem"'+(state==="current"?' aria-current="step"':"")+'><span class="project-milestone-node" aria-hidden="true">'+(state==="complete"?"✓":String(index+1))+'</span><div class="project-milestone-copy"><div><strong>'+esc(stage.title)+'</strong><small>'+stateLabel+'</small></div><p>'+esc(stage.description)+'</p></div></div>';
+}).join("");
+let scheduleNote="";
+if(["paused","cancelled"].includes(summary.status)){
+scheduleNote='<div class="project-state-note" data-state="'+esc(summary.status)+'"><strong>'+esc(summary.statusLabel)+'</strong><p>'+esc(summary.message)+'</p></div>';
+}
+const nextMarkup=summary.next
+?'<div class="project-next-milestone"><span>NEXT MILESTONE</span><strong>'+esc(summary.next.title)+'</strong><p>'+esc(summary.next.description)+'</p></div>'
+:(summary.status==="completed"?'<div class="project-next-milestone complete"><span>DELIVERY STATUS</span><strong>All delivery milestones complete</strong><p>This project has been marked as complete by Swayphics.</p></div>':"");
 modal.className="portal-modal";modal.id="portal-project-modal";
-modal.innerHTML='<div class="modal-backdrop" data-close></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-project-title"><div class="modal-head"><div><span class="portal-kicker">PROJECT</span><h3 id="portal-project-title">'+esc(project.name||"Project")+'</h3><p>'+esc(project.service||"Swayphics project")+'</p></div><button type="button" class="modal-close" data-close aria-label="Close">×</button></div><div class="project-detail"><div class="detail-grid"><div class="detail-box"><span>Status</span><strong>'+esc(nice(project.status||"Not set"))+'</strong></div><div class="detail-box"><span>Due</span><strong>'+esc(date(project.due_date))+'</strong></div><div class="detail-box"><span>Project value</span><strong>'+esc(money(project.value))+'</strong></div></div>'+(project.description?'<div class="detail-description">'+esc(project.description)+'</div>':"")+'<div class="timeline">'+stages.map(function(stage,i){const done=i<=current, currentLabel=i===current&&stage!=="completed"?"Current stage":(done?"Completed":"Upcoming");return '<div class="timeline-step '+(done?"complete":"")+' '+(i===current?"current":"")+'"><span class="timeline-node">'+(done?"✓":String(i+1))+'</span><div><strong>'+esc(nice(stage))+'</strong><small>'+esc(currentLabel)+'</small></div></div>'}).join("")+'</div><div style="display:flex;justify-content:flex-end;margin-top:3px"><button type="button" class="portal-button secondary" data-close>Close</button></div></div></section>';
-document.body.appendChild(modal);modal.querySelectorAll("[data-close]").forEach(function(el){el.addEventListener("click",function(){modal.remove()})});
+modal.innerHTML='<div class="modal-backdrop" data-close></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-project-title"><div class="modal-head"><div><span class="portal-kicker">PROJECT DETAILS</span><h3 id="portal-project-title">'+esc(project.name||"Project")+'</h3><p>'+esc(project.service||"Swayphics project")+'</p></div><button type="button" class="modal-close" data-close aria-label="Close project details">×</button></div><div class="project-detail">'+
+'<div class="project-detail-overview"><div class="detail-grid"><div class="detail-box"><span>Current status</span><strong>'+esc(nice(project.status||"Not set"))+'</strong></div><div class="detail-box"><span>Target date</span><strong>'+esc(project.due_date?date(project.due_date):"Not set")+'</strong></div><div class="detail-box"><span>Project value</span><strong>'+esc(money(project.value))+'</strong></div><div class="detail-box"><span>Payment status</span><strong>'+esc(nice(project.payment_status||"Not set"))+'</strong></div></div>'+
+'<div class="project-schedule-card" data-state="'+esc(schedule.state)+'"><span>PROJECT SCHEDULE</span><strong>'+esc(schedule.label)+'</strong><p>'+esc(schedule.description)+'</p></div></div>'+
+scheduleNote+
+(project.description?'<section class="project-overview-copy"><h4>Project overview</h4><p>'+esc(project.description)+'</p></section>':"")+
+'<section class="project-milestones" aria-labelledby="portal-project-milestones"><div class="project-milestones-head"><div><span class="portal-kicker">DELIVERY TRACKER</span><h4 id="portal-project-milestones">Project milestones</h4><p>'+esc(summary.current?"You are at stage "+(summary.currentIndex+1)+" of "+summary.stages.length+".":summary.message)+'</p></div>'+chip(project.status)+'</div>'+
+'<div class="project-milestone-list" role="list">'+milestones+'</div></section>'+nextMarkup+
+'<div class="project-modal-footer"><button type="button" class="portal-button secondary" data-close>Close</button></div></div></section>';
+document.body.appendChild(modal);
+modal.querySelectorAll("[data-close]").forEach(function(el){el.addEventListener("click",function(){modal.remove()})});
 }
 async function load(){
 if(!token){renderPortalError("Portal link required","This page needs a valid private Swayphics portal link.");return}
