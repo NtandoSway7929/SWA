@@ -36,6 +36,9 @@ jobs:
       - name: Test dashboard business controls and governance
         run: node scripts/admin-dashboard-business-controls.test.cjs
 
+      - name: Test admin automation run history
+        run: node scripts/admin-automation-run-history.test.cjs
+
       - name: Test due lead and quote notification escalation
         run: node scripts/due-lead-quote-escalation.test.cjs
 
