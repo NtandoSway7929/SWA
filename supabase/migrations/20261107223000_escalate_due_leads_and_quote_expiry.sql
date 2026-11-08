@@ -133,7 +133,11 @@ begin
 
     return v_count;
 end;
-$$;
+$;
+
+revoke all privileges
+    on function innerme_private.generate_swayphics_due_lead_notifications_internal()
+    from public, anon, authenticated, service_role;
 
 create or replace function innerme_private.generate_swayphics_quote_expiry_notifications_internal()
 returns integer
