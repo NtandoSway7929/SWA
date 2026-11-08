@@ -10,10 +10,10 @@ const root = path.resolve(__dirname, "..");
 const portal = fs.readFileSync(path.join(root, "client-portal", "index.html"), "utf8");
 
 const projectHelperStart = portal.indexOf("function activeProjects(data){");
-const projectHelperEnd = portal.indexOf("\\nfunction renderProject", projectHelperStart);
+const projectHelperEnd = portal.indexOf("\nfunction renderProject", projectHelperStart);
 assert.ok(projectHelperStart >= 0 && projectHelperEnd > projectHelperStart, "The active-project filter must exist as an isolated helper.");
 const projectContext = {};
-vm.runInNewContext(portal.slice(projectHelperStart, projectHelperEnd) + "\\nthis.activeProjects = activeProjects;", projectContext);
+vm.runInNewContext(portal.slice(projectHelperStart, projectHelperEnd) + "\nthis.activeProjects = activeProjects;", projectContext);
 const activeProjects = projectContext.activeProjects;
 
 test("only planning, in-progress and review projects count as active", () => {
