@@ -133,7 +133,7 @@ test("record routing uses fixed selectors and exact DOM attribute comparisons", 
     "function findNotificationRecordRow(",
     "notification record action finder"
   );
-  assert.match(finder, /'\[data-edit="leads"\]\[data-id\]'/);
+  assert.match(finder, /selector: "\[data-open-lead-details\]"/);
   assert.match(finder, /'\[data-edit="tasks"\]\[data-id\]'/);
   assert.match(finder, /'\[data-edit="followups"\]\[data-id\]'/);
   assert.match(finder, /'\[data-edit="quotes"\]\[data-id\]'/);
@@ -180,7 +180,7 @@ test("notification controls retain visible keyboard focus in light and dark them
   assert.match(workspaceCss, /\.sway-notification-open:focus-visible/);
   assert.match(workspaceCss, /\.sway-notification-item:focus-within/);
   assert.match(dashboardHtml, /body\.sway-dark-mode \.sway-notification-open:focus-visible/);
-  assert.match(dashboardHtml, /admin-workspace\.js\?v=20261108-notification-record-navigation-1/);
+  assert.match(dashboardHtml, /admin-workspace\.js\?v=20261108-lead-cards-1/);
 });
 
 console.log("Admin notification navigation regression checks passed.");

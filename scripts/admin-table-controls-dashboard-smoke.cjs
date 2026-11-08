@@ -14,11 +14,17 @@ fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 const leads = [
   {
-    id: "lead-alpha", business_name: "Alpha Studio", contact_name: "Sam Dube",
+    id: "66666666-6666-4666-8666-666666666666", business_name: "Alpha Studio", contact_name: "Sam Dube",
     email: '=HYPERLINK("https://example.invalid","Open")', phone: "0000000000",
     service_interest: "Website", status: "new", source: "Referral",
     estimated_value: 1500, next_follow_up: "2026-11-03", assigned_to: TEST_USER_ID,
-    created_at: "2026-10-01T12:00:00Z"
+    created_at: "2026-10-01T12:00:00Z",
+    business_assessment: "The website journey needs clearer service information and a stronger enquiry path.",
+    research_findings: "The current customer journey makes it difficult to understand the services and take the next step.",
+    swayphics_solution: "Build a focused website with a clear service structure and enquiry flow.",
+    recommended_services: "Website design and development; conversion-focused copy.",
+    research_sources: "https://example.invalid/business; public business profile",
+    notes: "Synthetic internal note for the lead details browser test."
   },
   {
     id: "lead-contact-toggle", business_name: "Contact Toggle Fixture", contact_name: "Test Contact",
@@ -46,7 +52,8 @@ const tasks = [
   {
     id: "task-low", title: "Prepare proposal", description: "Draft a website proposal",
     status: "todo", priority: "low", due_date: dateOffset(2),
-    assigned_to: OTHER_TEST_USER_ID, client_id: null, created_at: "2026-10-01T12:00:00Z"
+    assigned_to: OTHER_TEST_USER_ID, client_id: null, lead_id: "66666666-6666-4666-8666-666666666666",
+    created_at: "2026-10-01T12:00:00Z"
   },
   {
     id: "task-urgent", title: "Confirm scope", description: "Confirm project scope",
@@ -62,7 +69,7 @@ const tasks = [
 
 const followups = [
   {
-    id: "follow-later", lead_id: "lead-alpha", client_id: null, channel: "Email",
+    id: "follow-later", lead_id: "66666666-6666-4666-8666-666666666666", client_id: null, channel: "Email",
     status: "pending", scheduled_for: dateOffset(2), assigned_to: OTHER_TEST_USER_ID,
     note: "Send follow-up"
   },
@@ -81,7 +88,7 @@ const followups = [
 const communications = [
   {
     id: "communication-ui-test",
-    lead_id: "lead-alpha",
+    lead_id: "66666666-6666-4666-8666-666666666666",
     client_id: null,
     channel: "Email",
     direction: "inbound",
@@ -178,6 +185,22 @@ const adminNotifications = [
     entity_id: "44444444-4444-4444-8444-444444444444",
     view: "clients",
     dedupe_key: "ui-test-client-notification",
+    is_read: false,
+    read_at: null,
+    created_at: todayTimestamp
+  },
+  {
+    id: "55555555-5555-4555-8555-555555555556",
+    recipient_id: TEST_USER_ID,
+    actor_id: null,
+    type: "info",
+    event_type: "lead.follow_up_due",
+    title: "Synthetic lead notification",
+    message: "Open Alpha Studio",
+    entity_type: "lead",
+    entity_id: "66666666-6666-4666-8666-666666666666",
+    view: "leads",
+    dedupe_key: "ui-test-lead-notification",
     is_read: false,
     read_at: null,
     created_at: todayTimestamp
@@ -622,6 +645,36 @@ async function main() {
     await clientDetails.locator("[data-close-client360]").last().click();
     await clientDetails.waitFor({ state: "detached", timeout: 5000 });
 
+    // Lead notification deep-links must open the new full-details panel, not the edit form.
+    await page.locator("#sway-notification-toggle").click();
+    const leadNotificationAction = page.locator(
+      '#sway-notification-list [data-notification-open][data-notification-key="55555555-5555-4555-8555-555555555556"]'
+    );
+    await leadNotificationAction.waitFor({ state: "visible", timeout: 10000 });
+    assert.equal(
+      await leadNotificationAction.getAttribute("data-notification-entity-id"),
+      "66666666-6666-4666-8666-666666666666",
+      "the lead notification should preserve the exact saved lead ID"
+    );
+    await leadNotificationAction.click();
+    const notificationLeadDetails = page.locator("#sway-lead-details-modal");
+    await notificationLeadDetails.waitFor({ state: "visible", timeout: 10000 });
+    assert.equal(
+      (await notificationLeadDetails.locator("#sway-lead-details-title").innerText()).trim(),
+      "Alpha Studio",
+      "opening a lead notification should show full details for its exact lead record"
+    );
+    assert.equal(adminNotifications[1].is_read, true,
+      "opening the lead notification should mark the selected item read");
+    assert.ok(metrics.mockedTableActionWrites.some(item =>
+      item.method === "PATCH" &&
+      item.path === "/rest/v1/admin_notifications" &&
+      item.id === "55555555-5555-4555-8555-555555555556" &&
+      item.is_read === true
+    ), "the lead notification read update should remain inside the in-memory mock");
+    await notificationLeadDetails.locator("[data-close-lead-details]").last().click();
+    await notificationLeadDetails.waitFor({ state: "detached", timeout: 5000 });
+
     async function navigate(view, group) {
       const toggle = page.locator('[data-nav-group-toggle="' + group + '"]').first();
       if (await toggle.count()) {
@@ -682,13 +735,44 @@ async function main() {
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
 
-    const alphaValueCell = leadRows.filter({ hasText: "Alpha Studio" }).locator(".sway-lead-value-cell");
+    const alphaValueCell = leadRows.filter({ hasText: "Alpha Studio" }).locator(".sway-lead-card-metric-value");
     assert.equal(await alphaValueCell.count(), 1,
-      "each lead should render its estimated value in a dedicated amount cell");
+      "each lead card should render its estimated value");
     assert.equal(await alphaValueCell.evaluate(el => getComputedStyle(el).whiteSpace), "nowrap",
-      "grouped ZAR lead values must stay on one line instead of splitting the final zero onto another line");
+      "grouped ZAR lead values should stay on one line");
     assert.ok(parseFloat(await alphaValueCell.evaluate(el => getComputedStyle(el).minWidth)) >= 100,
-      "the lead amount cell must reserve enough width for a grouped currency value");
+      "the lead card should reserve enough width for a grouped currency value");
+
+    const alphaCard = leadRows.filter({ hasText: "Alpha Studio" });
+    await alphaCard.locator("[data-open-lead-details]").click();
+    const leadDetails = page.locator("#sway-lead-details-modal");
+    await leadDetails.waitFor({ state: "visible", timeout: 5000 });
+    const alphaDetailsText = await leadDetails.innerText();
+    for (const expectedDetail of [
+      "Lead overview",
+      "Business assessment",
+      "Research findings",
+      "How Swayphics can help",
+      "Recommended Swayphics services",
+      "Public information and sources",
+      "Assessment completeness",
+      "Follow-up activity",
+      "Linked tasks",
+      "Communication history",
+      "Lead stage history",
+      "General internal notes"
+    ]) {
+      assert.ok(alphaDetailsText.includes(expectedDetail),
+        "the lead details panel should expose the " + expectedDetail + " section");
+    }
+    assert.ok(alphaDetailsText.includes("Synthetic internal note for the lead details browser test."),
+      "the full lead details view should include saved internal notes");
+    assert.ok(alphaDetailsText.includes("Synthetic website enquiry"),
+      "the full lead details view should include the lead's communication history");
+    assert.ok(alphaDetailsText.includes("Prepare proposal"),
+      "the full lead details view should include tasks linked to the lead");
+    await leadDetails.locator("[data-close-lead-details]").last().click();
+    await leadDetails.waitFor({ state: "detached", timeout: 5000 });
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
@@ -1022,7 +1106,7 @@ async function main() {
     await page.locator(".sway-dialog").waitFor({ state: "detached" });
     assert.equal(metrics.mockedTableActionWrites.length, leadWritesBeforeDeleteCancel,
       "cancelling bulk lead deletion must not send any delete requests");
-    assert.equal(leads.some(item => item.id === "lead-alpha"), true,
+    assert.equal(leads.some(item => item.id === "66666666-6666-4666-8666-666666666666"), true,
       "cancelling bulk lead deletion must preserve the selected lead records");
     assert.equal((await page.locator('[data-admin-table-selected-count="leads"]').innerText()).trim(), "2 selected",
       "cancelling bulk deletion must keep the selected leads checked");
@@ -1033,14 +1117,14 @@ async function main() {
     await page.waitForFunction(() =>
       document.querySelectorAll('#sway-workspace-main [data-admin-table-row="leads"]').length === 2
     );
-    assert.equal(leads.some(item => item.id === "lead-alpha" || item.id === "lead-zulu"), false,
+    assert.equal(leads.some(item => item.id === "66666666-6666-4666-8666-666666666666" || item.id === "lead-zulu"), false,
       "confirmed bulk deletion should remove exactly the selected synthetic leads");
     assert.equal(metrics.mockedTableActionWrites.filter(item =>
       item.method === "DELETE" && item.path === "/rest/v1/leads" &&
-      ["lead-alpha", "lead-zulu"].includes(item.id)
+      ["66666666-6666-4666-8666-666666666666", "lead-zulu"].includes(item.id)
     ).length, 2, "the confirmed action should issue exactly one authenticated delete request per selected lead");
     assert.equal(mockActivityLog.filter(item =>
-      item.entity_type === "leads" && ["lead-alpha", "lead-zulu"].includes(item.entity_id)
+      item.entity_type === "leads" && ["66666666-6666-4666-8666-666666666666", "lead-zulu"].includes(item.entity_id)
     ).length, 2, "each deleted lead should receive its own activity-log entry");
     assert.equal(await page.locator('[data-admin-table-bulk-toolbar="leads"]').isVisible(), false,
       "successfully deleted leads should be removed from selection and hide the bulk toolbar");

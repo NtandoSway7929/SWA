@@ -12540,136 +12540,142 @@ function simpleBars(items, color) {
     function renderLeads() {
         /*
          * Keep all records visible in the lead manager. Follow-up and
-         * Not Interested leads still need to be reviewable and actionable
-         * (including the option to return a lead to the active pipeline).
+         * Not Interested leads still need to be reviewable and actionable.
          */
         const visibleLeads = adminTableControls.items("leads", state.leads);
 
-        const rows =
-            visibleLeads.map(function (item) {
-                const contactStatus = leadContactStatus(item);
-                const whatsappUrl = window.swayphicsLeadWhatsApp &&
-                    typeof window.swayphicsLeadWhatsApp.buildUrl === "function"
-                        ? window.swayphicsLeadWhatsApp.buildUrl(item.phone)
-                        : "";
-                return (
-                    '<tr data-admin-table-row="leads" data-admin-table-id="' + esc(item.id) + '" data-admin-table-search="' + esc(adminTableControls.searchText("leads", item)) + '" data-admin-table-filter="' + esc(String(item.status || "").toLowerCase()) + '" data-ai-record="leads:' + esc(item.id) + '">' +
-                        adminTableControls.selectionCell("leads", item, item.business_name || item.contact_name || "lead") +
-                        "<td>" +
-                            "<strong>" +
-                                esc(
-                                    item.business_name ||
-                                    "Unnamed business"
-                                ) +
-                            "</strong>" +
-                            (
-                                item.contact_name
-                                    ? '<br><span style="color:var(--text-muted);font-size:.58rem;">' +
-                                      esc(item.contact_name) +
-                                      "</span>"
-                                    : ""
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                item.service_interest ||
-                                "—"
-                            ) +
-                        "</td>" +
-                        "<td>" +
+        const cards = visibleLeads.map(function (item) {
+            const contactStatus = leadContactStatus(item);
+            const whatsappUrl = window.swayphicsLeadWhatsApp &&
+                typeof window.swayphicsLeadWhatsApp.buildUrl === "function"
+                    ? window.swayphicsLeadWhatsApp.buildUrl(item.phone)
+                    : "";
+            const businessName = item.business_name || "Unnamed business";
+            const selected = Array.isArray(state.tableSelection.leads) &&
+                state.tableSelection.leads.some(function (id) {
+                    return String(id) === String(item.id);
+                });
+
+            return (
+                '<article class="sway-lead-card" data-admin-table-row="leads" data-admin-table-id="' +
+                    esc(item.id) +
+                '" data-admin-table-search="' +
+                    esc(adminTableControls.searchText("leads", item)) +
+                '" data-admin-table-filter="' +
+                    esc(String(item.status || "").toLowerCase()) +
+                '" data-ai-record="leads:' + esc(item.id) + '">' +
+                    '<label class="sway-lead-card-select" title="Select lead">' +
+                        '<input type="checkbox" data-admin-table-select="leads" data-id="' +
+                            esc(item.id) +
+                        '" aria-label="Select ' + esc(businessName) + '"' +
+                        (selected ? " checked" : "") +
+                        ">" +
+                        '<span class="sway-lead-card-select-mark" aria-hidden="true"></span>' +
+                    "</label>" +
+                    '<button type="button" class="sway-lead-card-open" data-open-lead-details="' +
+                        esc(item.id) +
+                    '" aria-label="Open full details for ' + esc(businessName) + '">' +
+                        '<span class="sway-lead-card-topline">' +
+                            '<span class="sway-lead-card-kicker">LEAD RECORD</span>' +
                             chip(item.status) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                formatDisplayText(
-                                    item.source ||
-                                    "Unspecified"
-                                )
-                            ) +
-                        "</td>" +
-                        '<td class="sway-lead-value-cell">' +
-                            esc(
-                                money(
-                                    item.estimated_value
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            esc(
-                                date(
-                                    item.next_follow_up
-                                )
-                            ) +
-                        "</td>" +
-                        "<td>" +
-                            '<div class="sway-row-actions sway-lead-row-actions">' +
+                        "</span>" +
+                        '<strong class="sway-lead-card-title">' +
+                            esc(businessName) +
+                        "</strong>" +
+                        '<span class="sway-lead-card-contact">' +
+                            esc(item.contact_name || "Contact person not recorded") +
+                        "</span>" +
+                        '<span class="sway-lead-card-service">' +
+                            esc(item.service_interest || "No service interest recorded") +
+                        "</span>" +
+                        '<span class="sway-lead-card-metrics">' +
+                            '<span class="sway-lead-card-metric">' +
+                                "<span>Estimated value</span>" +
+                                '<strong class="sway-lead-card-metric-value">' + esc(money(item.estimated_value)) + "</strong>" +
+                            "</span>" +
+                            '<span class="sway-lead-card-metric">' +
+                                "<span>Next follow-up</span>" +
+                                "<strong>" + esc(date(item.next_follow_up)) + "</strong>" +
+                            "</span>" +
+                            '<span class="sway-lead-card-metric">' +
+                                "<span>Assigned to</span>" +
+                                "<strong>" + esc(item.assigned_to ? adminName(item.assigned_to) : "Unassigned") + "</strong>" +
+                            "</span>" +
+                        "</span>" +
+                        '<span class="sway-lead-card-bottomline">' +
+                            '<span class="sway-lead-card-assessment">Assessment · ' +
+                                esc(leadAssessmentStatus(item)) +
+                            "</span>" +
+                            '<span class="sway-lead-card-open-hint">Open full details <span aria-hidden="true">↗</span></span>' +
+                        "</span>" +
+                    "</button>" +
+                    '<div class="sway-row-actions sway-lead-row-actions sway-lead-card-actions">' +
+                        (
+                            item.email
+                                ? '<button type="button" class="sway-row-action sway-lead-email-action" data-lead-email-id="' +
+                                  esc(item.id) +
+                                  '">Email</button>'
+                                : ""
+                        ) +
+                        '<details class="sway-lead-actions-menu">' +
+                            '<summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
+                            '<div class="sway-lead-actions-dropdown">' +
+                                '<button type="button" class="sway-row-action" data-edit="leads" data-id="' +
+                                    esc(item.id) +
+                                '">Edit</button>' +
+                                '<button type="button" class="sway-row-action" data-export-lead-assessment="' +
+                                    esc(item.id) +
+                                '">Assessment report</button>' +
                                 (
-                                    item.email
-                                        ? '<button type="button" class="sway-row-action sway-lead-email-action" data-lead-email-id="' +
+                                    whatsappUrl
+                                        ? '<a class="sway-row-action sway-lead-whatsapp-link" href="' + esc(whatsappUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Contact ' + esc(item.business_name || item.contact_name || "lead") + ' on WhatsApp">Contact on WhatsApp</a>'
+                                        : '<button type="button" class="sway-row-action" disabled title="Add a valid phone number to this lead record to enable WhatsApp contact.">WhatsApp unavailable · check number</button>'
+                                ) +
+                                '<button type="button" class="sway-row-action" data-draft-lead-proposal="' +
+                                    esc(item.id) +
+                                '">Draft proposal</button>' +
+                                (
+                                    contactStatus.source === "communication"
+                                        ? '<button type="button" class="sway-row-action" disabled title="An outbound communication is already recorded for this lead.">Contacted (logged)</button>'
+                                        : '<button type="button" class="sway-row-action" data-toggle-lead-contacted="' +
                                           esc(item.id) +
-                                          '">Email</button>'
+                                          '">' +
+                                          (contactStatus.contacted ? "Undo contacted mark" : "Mark as contacted") +
+                                          "</button>"
+                                ) +
+                                (
+                                    !["won", "lost", "not interested"].includes(
+                                        String(item.status || "").toLowerCase()
+                                    )
+                                        ? '<button type="button" class="sway-row-action" data-mark-lead-not-interested="' +
+                                          esc(item.id) +
+                                          '">Not Interested</button>'
+                                        : (
+                                            String(item.status || "").toLowerCase() === "not interested"
+                                                ? '<button type="button" class="sway-row-action" data-reactivate-lead="' +
+                                                  esc(item.id) +
+                                                  '">Return to active pipeline</button>'
+                                                : ""
+                                        )
+                                ) +
+                                (
+                                    !["won", "lost", "not interested"].includes(
+                                        String(item.status || "").toLowerCase()
+                                    )
+                                        ? '<button type="button" class="sway-row-action" data-convert-lead="' +
+                                          esc(item.id) +
+                                          '">Convert to client</button>'
                                         : ""
                                 ) +
-                                '<details class="sway-lead-actions-menu">' +
-                                    '<summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
-                                    '<div class="sway-lead-actions-dropdown">' +
-                                        '<button type="button" class="sway-row-action" data-edit="leads" data-id="' +
-                                            esc(item.id) +
-                                        '">Edit</button>' +
-                                        '<button type="button" class="sway-row-action" data-export-lead-assessment="' +
-                                            esc(item.id) +
-                                        '">Assessment report</button>' +
-                                        (
-                                            whatsappUrl
-                                                ? '<a class="sway-row-action sway-lead-whatsapp-link" href="' + esc(whatsappUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Contact ' + esc(item.business_name || item.contact_name || "lead") + ' on WhatsApp">Contact on WhatsApp</a>'
-                                                : '<button type="button" class="sway-row-action" disabled title="Add a valid phone number to this lead record to enable WhatsApp contact.">WhatsApp unavailable · check number</button>'
-                                        ) +
-                                        '<button type="button" class="sway-row-action" data-draft-lead-proposal="' +
-                                            esc(item.id) +
-                                        '">Draft proposal</button>' +
-                                        (
-                                            contactStatus.source === "communication"
-                                                ? '<button type="button" class="sway-row-action" disabled title="An outbound communication is already recorded for this lead.">Contacted (logged)</button>'
-                                                : '<button type="button" class="sway-row-action" data-toggle-lead-contacted="' +
-                                                  esc(item.id) +
-                                                  '">' +
-                                                  (contactStatus.contacted ? "Undo contacted mark" : "Mark as contacted") +
-                                                  "</button>"
-                                        ) +
-                                        (
-                                            !["won", "lost", "not interested"].includes(
-                                                String(item.status || "").toLowerCase()
-                                            )
-                                                ? '<button type="button" class="sway-row-action" data-mark-lead-not-interested="' +
-                                                  esc(item.id) +
-                                                  '">Not Interested</button>'
-                                                : (
-                                                    String(item.status || "").toLowerCase() === "not interested"
-                                                        ? '<button type="button" class="sway-row-action" data-reactivate-lead="' +
-                                                          esc(item.id) +
-                                                          '">Return to active pipeline</button>'
-                                                        : ""
-                                                )
-                                        ) +
-                                        (
-                                            !["won", "lost", "not interested"].includes(
-                                                String(item.status || "").toLowerCase()
-                                            )
-                                                ? '<button type="button" class="sway-row-action" data-convert-lead="' +
-                                                  esc(item.id) +
-                                                  '">Convert to client</button>'
-                                                : ""
-                                        ) +
-                                        '<button type="button" class="sway-row-action danger" data-delete="leads" data-id="' +
-                                            esc(item.id) +
-                                        '">Delete</button>' +
-                                    "</div>" +
-                                "</details>" +
+                                '<button type="button" class="sway-row-action danger" data-delete="leads" data-id="' +
+                                    esc(item.id) +
+                                '">Delete</button>' +
                             "</div>" +
-                        "</td>" +
-                    "</tr>"
-                );
-            }).join("");
+                        "</details>" +
+                    "</div>" +
+                "</article>"
+            );
+        }).join("");
 
         return (
             heading(
@@ -12677,17 +12683,23 @@ function simpleBars(items, color) {
             ) +
             panel(
                 "Lead pipeline",
-                "All lead records, including follow-up and long-term re-engagement stages. Scheduled follow-up tasks are managed in Follow-ups.",
+                "All lead records, including follow-up and long-term re-engagement stages. Select a card to open the complete lead record.",
                 adminTableControls.renderControls("leads") +
-                (state.leads.length
-                    ? '<div class="sway-table-wrap"><table class="sway-table"><thead><tr><th scope="col" class="sway-admin-table-select-heading"><input type="checkbox" data-admin-table-select-all="leads" aria-label="Select all visible leads"></th><th>Business</th><th>Service</th><th>Status</th><th>Source</th><th>Value</th><th>Follow-up</th><th></th></tr></thead><tbody>' +
-                      rows +
-                      '<tr data-admin-table-no-results="leads" hidden><td colspan="8">No leads match these controls. Try another search or status.</td></tr>' +
-                      "</tbody></table></div>"
-                    : empty("No leads yet."))
+                (
+                    state.leads.length
+                        ? '<div class="sway-lead-cards-toolbar">' +
+                            '<label><input type="checkbox" data-admin-table-select-all="leads" aria-label="Select all visible leads"><span>Select all visible</span></label>' +
+                          "</div>" +
+                          '<div class="sway-lead-cards-grid">' +
+                            cards +
+                            '<div class="sway-table-empty sway-lead-cards-empty" data-admin-table-no-results="leads" hidden>No leads match these controls. Try another search or status.</div>' +
+                          "</div>"
+                        : empty("No leads yet.")
+                )
             )
         );
     }
+
 
     function renderFollowups() {
         const tableItems = adminTableControls.items("followups", state.followups);
@@ -20176,6 +20188,343 @@ function simpleBars(items, color) {
         window.setTimeout(function () {
             URL.revokeObjectURL(url);
         }, 1000);
+    }
+
+    function openLeadDetails(leadId) {
+        const lead = state.leads.find(function (item) {
+            return String(item.id) === String(leadId);
+        });
+
+        if (!lead) {
+            swayAlert("Unable to find this lead. Refresh the workspace and try again.");
+            return;
+        }
+
+        const related = function (items) {
+            return (Array.isArray(items) ? items : []).filter(function (item) {
+                return String(item.lead_id || "") === String(lead.id);
+            });
+        };
+        const followups = related(state.followups).sort(function (a, b) {
+            return (parseDashboardDate(b.scheduled_for)?.getTime() || 0) -
+                (parseDashboardDate(a.scheduled_for)?.getTime() || 0);
+        });
+        const communications = related(state.communications).sort(function (a, b) {
+            return (parseDashboardDate(b.contacted_at || b.created_at)?.getTime() || 0) -
+                (parseDashboardDate(a.contacted_at || a.created_at)?.getTime() || 0);
+        });
+        const quotes = related(state.quotes).sort(function (a, b) {
+            return (parseDashboardDate(b.created_at)?.getTime() || 0) -
+                (parseDashboardDate(a.created_at)?.getTime() || 0);
+        });
+        const tasks = related(state.tasks).sort(function (a, b) {
+            return (parseDashboardDate(b.created_at || b.due_date)?.getTime() || 0) -
+                (parseDashboardDate(a.created_at || a.due_date)?.getTime() || 0);
+        });
+        const history = related(state.leadStageHistory).sort(function (a, b) {
+            return (parseDashboardDate(b.changed_at || b.created_at)?.getTime() || 0) -
+                (parseDashboardDate(a.changed_at || a.created_at)?.getTime() || 0);
+        });
+        const convertedClient = lead.converted_client_id && Array.isArray(state.clients)
+            ? state.clients.find(function (client) {
+                return String(client.id) === String(lead.converted_client_id);
+            })
+            : null;
+
+        const fallback = function (value) {
+            const text = String(value == null ? "" : value).trim();
+            return text || "Not provided";
+        };
+        const safeText = function (value) {
+            const text = String(value == null ? "" : value).trim();
+            return text
+                ? esc(text).replace(/\r?\n/g, "<br>")
+                : '<span class="sway-lead-details-empty">Not provided</span>';
+        };
+        const field = function (label, value) {
+            return (
+                '<div class="sway-lead-details-field">' +
+                    "<span>" + esc(label) + "</span>" +
+                    "<strong>" + esc(fallback(value)) + "</strong>" +
+                "</div>"
+            );
+        };
+        const section = function (title, count, body, fullWidth) {
+            return (
+                '<section class="sway-client360-section sway-lead-details-section' +
+                    (fullWidth ? " full" : "") +
+                '">' +
+                    '<div class="sway-client360-section-head"><h4>' + esc(title) + "</h4>" +
+                    (count !== null && typeof count !== "undefined"
+                        ? "<span>" + esc(String(count)) + "</span>"
+                        : "") +
+                    "</div>" +
+                    body +
+                "</section>"
+            );
+        };
+        const copySection = function (title, description, value) {
+            return section(
+                title,
+                null,
+                '<p class="sway-lead-details-description">' + esc(description) + "</p>" +
+                '<div class="sway-lead-details-copy">' + safeText(value) + "</div>",
+                true
+            );
+        };
+        const recordList = function (items, renderer, emptyMessage) {
+            return items.length
+                ? '<div class="sway-lead-details-record-list">' +
+                    items.map(renderer).join("") +
+                  "</div>"
+                : '<div class="sway-lead-details-empty">' + esc(emptyMessage) + "</div>";
+        };
+        const statusLabel = function (value) {
+            return formatDisplayText(value || "Unspecified");
+        };
+
+        const assessmentFields = [
+            ["Business assessment", lead.business_assessment],
+            ["Research findings", lead.research_findings],
+            ["How Swayphics can help", lead.swayphics_solution],
+            ["Recommended Swayphics services", lead.recommended_services],
+            ["Public information and sources", lead.research_sources]
+        ];
+        const completedAssessmentFields = assessmentFields.filter(function (item) {
+            return String(item[1] || "").trim().length > 0;
+        }).length;
+        const completeness = Math.round(
+            completedAssessmentFields / assessmentFields.length * 100
+        );
+        const checklist = assessmentFields.map(function (item) {
+            const complete = String(item[1] || "").trim().length > 0;
+            return (
+                '<div class="sway-lead-details-check">' +
+                    '<span class="' + (complete ? "complete" : "") + '">' +
+                        (complete ? "✓" : "·") +
+                    "</span>" +
+                    "<strong>" + esc(item[0]) + "</strong>" +
+                    "<small>" + (complete ? "Recorded" : "Missing") + "</small>" +
+                "</div>"
+            );
+        }).join("");
+
+        const followupItems = recordList(followups, function (item) {
+            return (
+                '<article class="sway-lead-details-record">' +
+                    "<div><strong>" + esc(date(item.scheduled_for)) + "</strong>" +
+                    "<span>" + esc(formatDisplayText(item.channel || "Follow-up")) + " · " +
+                        esc(statusLabel(item.status)) + "</span></div>" +
+                    '<p class="sway-lead-details-record-copy">' + safeText(item.note) + "</p>" +
+                "</article>"
+            );
+        }, "No follow-ups are currently associated with this lead.");
+
+        const taskItems = recordList(tasks, function (item) {
+            return (
+                '<article class="sway-lead-details-record">' +
+                    "<div><strong>" + esc(item.title || "Task") + "</strong>" +
+                    "<span>" + esc(formatDisplayText(item.priority || "Normal")) + " priority · " +
+                        esc(statusLabel(item.status)) + "</span></div>" +
+                    '<small>Due ' + esc(date(item.due_date)) + "</small>" +
+                    (
+                        item.description
+                            ? '<p class="sway-lead-details-record-copy">' + safeText(item.description) + "</p>"
+                            : ""
+                    ) +
+                "</article>"
+            );
+        }, "No tasks are currently associated with this lead.");
+
+        const quoteItems = recordList(quotes, function (item) {
+            return (
+                '<article class="sway-lead-details-record">' +
+                    "<div><strong>" + esc(item.quote_number || item.title || "Quote") + "</strong>" +
+                    "<span>" + esc(statusLabel(item.status)) + "</span></div>" +
+                    '<small>' + esc(money(item.amount)) + " · Valid until " + esc(date(item.valid_until)) + "</small>" +
+                "</article>"
+            );
+        }, "No quotes are currently associated with this lead.");
+
+        const communicationItems = recordList(communications.slice(0, 20), function (item) {
+            return (
+                '<article class="sway-lead-details-record">' +
+                    '<div><strong>' + esc(formatDisplayText(item.channel || "Communication")) + "</strong>" +
+                    "<span>" + esc(item.direction === "inbound" ? "Inbound" : "Outbound") +
+                    " · " + esc(dateTime(item.contacted_at || item.created_at)) + "</span></div>" +
+                    (item.subject ? "<h5>" + esc(item.subject) + "</h5>" : "") +
+                    '<p class="sway-lead-details-record-copy">' + safeText(item.message) + "</p>" +
+                "</article>"
+            );
+        }, "No communication history is currently associated with this lead.");
+
+        const timelineItems = recordList(history, function (item) {
+            const stage = item.to_status || item.status || item.stage || "Stage update";
+            const transition = item.from_status
+                ? "From " + formatDisplayText(item.from_status) + " to " + formatDisplayText(stage)
+                : formatDisplayText(stage);
+            return (
+                '<article class="sway-lead-details-record sway-lead-details-timeline-item">' +
+                    "<div><strong>" + esc(transition) + "</strong>" +
+                    "<span>" + esc(dateTime(item.changed_at || item.created_at)) + "</span></div>" +
+                    (item.note ? '<p class="sway-lead-details-record-copy">' + safeText(item.note) + "</p>" : "") +
+                "</article>"
+            );
+        }, "No stage history is currently recorded for this lead.");
+
+        const modalId = "sway-lead-details-modal";
+        document.getElementById(modalId)?.remove();
+
+        const modal = document.createElement("div");
+        modal.className = "sway-client360-modal sway-lead-details-modal";
+        modal.id = modalId;
+        modal.innerHTML =
+            '<div class="sway-client360-backdrop" data-close-lead-details></div>' +
+            '<section class="sway-client360-card sway-lead-details-card" role="dialog" aria-modal="true" aria-labelledby="sway-lead-details-title">' +
+                '<header class="sway-client360-head">' +
+                    '<div class="sway-client360-head-copy">' +
+                        '<span class="admin-label">LEAD DETAILS</span>' +
+                        '<h3 id="sway-lead-details-title">' + esc(lead.business_name || "Unnamed business") + "</h3>" +
+                        '<p>' + esc(lead.contact_name || "Contact person not recorded") + " · " +
+                            esc(statusLabel(lead.status)) + "</p>" +
+                    "</div>" +
+                    '<div class="sway-client360-head-actions">' +
+                        (lead.email
+                            ? '<button type="button" class="sway-workspace-button" data-send-lead-email="' + esc(lead.id) + '">Email lead</button>'
+                            : "") +
+                        '<button type="button" class="sway-workspace-button" data-export-lead-details="' + esc(lead.id) + '">Assessment report</button>' +
+                        '<button type="button" class="sway-workspace-button primary" data-edit-lead-details="' + esc(lead.id) + '">Edit lead</button>' +
+                        '<button type="button" class="sway-client360-close" data-close-lead-details aria-label="Close lead details">×</button>' +
+                    "</div>" +
+                "</header>" +
+                '<div class="sway-client360-contact sway-lead-details-contact">' +
+                    "<span>" + esc(lead.email || "No email recorded") + "</span>" +
+                    "<span>" + esc(lead.phone || "No phone recorded") + "</span>" +
+                    "<span>Source: " + esc(formatDisplayText(lead.source || "Unspecified")) + "</span>" +
+                    "<span>Owner: " + esc(lead.assigned_to ? adminName(lead.assigned_to) : "Unassigned") + "</span>" +
+                    chip(lead.status) +
+                "</div>" +
+                '<div class="sway-client360-stats sway-lead-details-stats">' +
+                    "<div><span>Estimated value</span><strong>" + esc(money(lead.estimated_value)) + "</strong></div>" +
+                    "<div><span>Next follow-up</span><strong>" + esc(date(lead.next_follow_up)) + "</strong></div>" +
+                    "<div><span>Assessment</span><strong>" + esc(leadAssessmentStatus(lead)) + "</strong><small>" + completeness + "% of fields recorded</small></div>" +
+                    "<div><span>Follow-ups</span><strong>" + followups.length + "</strong></div>" +
+                    "<div><span>Related records</span><strong>" + (tasks.length + quotes.length + communications.length + history.length) + "</strong></div>" +
+                "</div>" +
+                '<div class="sway-lead-details-grid">' +
+                    section(
+                        "Lead overview",
+                        null,
+                        '<div class="sway-lead-details-fields">' +
+                            field("Business name", lead.business_name) +
+                            field("Contact person", lead.contact_name) +
+                            field("Email", lead.email) +
+                            field("Phone / WhatsApp", lead.phone) +
+                            field("Service interest", lead.service_interest) +
+                            field("Source", formatDisplayText(lead.source)) +
+                            field("Current status", statusLabel(lead.status)) +
+                            field("Assigned to", lead.assigned_to ? adminName(lead.assigned_to) : "Unassigned") +
+                            field("Next follow-up", date(lead.next_follow_up)) +
+                            field("Created", dateTime(lead.created_at)) +
+                            field("Last updated", dateTime(lead.updated_at)) +
+                            field("Assessment updated", dateTime(lead.assessment_updated_at)) +
+                            field("Assessment updated by", lead.assessment_updated_by ? adminName(lead.assessment_updated_by) : "Not recorded") +
+                            field("Converted client", convertedClient ? convertedClient.business_name : "Not converted") +
+                        "</div>",
+                        true
+                    ) +
+                    section(
+                        "Assessment completeness",
+                        completedAssessmentFields + " of " + assessmentFields.length,
+                        '<div class="sway-lead-details-checklist">' + checklist + "</div>",
+                        true
+                    ) +
+                    copySection(
+                        "Business assessment",
+                        "Overall assessment recorded for this business.",
+                        lead.business_assessment
+                    ) +
+                    copySection(
+                        "Research findings",
+                        "Observed strengths, gaps, customer-facing issues and opportunities.",
+                        lead.research_findings
+                    ) +
+                    copySection(
+                        "How Swayphics can help",
+                        "The proposed solution and intended business outcome.",
+                        lead.swayphics_solution
+                    ) +
+                    copySection(
+                        "Recommended Swayphics services",
+                        "Services recorded as directly relevant to the identified needs.",
+                        lead.recommended_services
+                    ) +
+                    copySection(
+                        "Public information and sources",
+                        "Public source names and URLs recorded during research.",
+                        lead.research_sources
+                    ) +
+                    section("Commercial context · quotes", quotes.length, quoteItems, true) +
+                    section("Follow-up activity", followups.length, followupItems, true) +
+                    section("Linked tasks", tasks.length, taskItems, true) +
+                    section(
+                        "Communication history",
+                        communications.length + " record" + (communications.length === 1 ? "" : "s") +
+                            (communications.length > 20 ? " · showing the 20 most recent" : ""),
+                        communicationItems,
+                        true
+                    ) +
+                    section("Lead stage history", history.length, timelineItems, true) +
+                    copySection(
+                        "General internal notes",
+                        "Private notes stored directly on this lead record.",
+                        lead.notes
+                    ) +
+                "</div>" +
+                '<footer class="sway-client360-footer sway-lead-details-footer">' +
+                    '<button type="button" class="sway-workspace-button" data-close-lead-details>Close</button>' +
+                    (lead.email
+                        ? '<button type="button" class="sway-workspace-button" data-send-lead-email="' + esc(lead.id) + '">Email lead</button>'
+                        : "") +
+                    '<button type="button" class="sway-workspace-button" data-export-lead-details="' + esc(lead.id) + '">Assessment report</button>' +
+                    '<button type="button" class="sway-workspace-button primary" data-edit-lead-details="' + esc(lead.id) + '">Edit lead</button>' +
+                "</footer>" +
+            "</section>";
+
+        workspace.appendChild(modal);
+
+        const handleKeydown = function (event) {
+            if (event.key === "Escape") {
+                close();
+            }
+        };
+        const close = function () {
+            modal.remove();
+            document.removeEventListener("keydown", handleKeydown);
+        };
+
+        modal.querySelectorAll("[data-close-lead-details]").forEach(function (button) {
+            button.addEventListener("click", close);
+        });
+        modal.querySelectorAll("[data-edit-lead-details]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                close();
+                createOrEdit("leads", button.dataset.editLeadDetails);
+            });
+        });
+        modal.querySelectorAll("[data-send-lead-email]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                openEmailComposer("lead", button.dataset.sendLeadEmail);
+            });
+        });
+        modal.querySelectorAll("[data-export-lead-details]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                exportLeadAssessment(lead.id);
+            });
+        });
+
+        document.addEventListener("keydown", handleKeydown);
+        modal.querySelector(".sway-client360-close")?.focus();
     }
 
     function exportLeadAssessment(leadId) {
@@ -28654,6 +29003,14 @@ function simpleBars(items, color) {
             });
 
         workspace
+            .querySelectorAll("[data-open-lead-details]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    openLeadDetails(button.dataset.openLeadDetails);
+                });
+            });
+
+        workspace
             .querySelectorAll("[data-export-lead-assessment]")
             .forEach(function (button) {
                 button.addEventListener(
@@ -29276,8 +29633,8 @@ function simpleBars(items, color) {
     function findNotificationRecordAction(entityType, entityId) {
         const actionTargets = {
             lead: {
-                selector: '[data-edit="leads"][data-id]',
-                attribute: "data-id"
+                selector: "[data-open-lead-details]",
+                attribute: "data-open-lead-details"
             },
             task: {
                 selector: '[data-edit="tasks"][data-id]',
