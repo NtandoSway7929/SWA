@@ -13412,11 +13412,12 @@ function simpleBars(items, color) {
 
                 '<div class="sway-client360-communications">' +
                     '<section class="sway-client360-section">' +
-                        '<div class="sway-client360-section-head"><h4>Documents</h4><span>' +
+                        '<div class="sway-client360-section-head"><h4>Documents &amp; deliverables</h4><span>' +
                             state.documents.filter(function (item) {
                                 return item.client_id === clientId;
                             }).length +
                         "</span></div>" +
+                        '<p style="margin:6px 0 12px;color:var(--sway-muted,#718096);font-size:12px;line-height:1.55;">Upload files here to make them available in this client\'s private portal under Documents &amp; deliverables.</p>' +
                         (
                             state.documents.filter(function (item) {
                                 return item.client_id === clientId;
@@ -13448,7 +13449,7 @@ function simpleBars(items, color) {
                         '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
                             '<button type="button" class="sway-workspace-button" data-upload-client-document="' +
                                 esc(clientId) +
-                            '">+ Upload document</button>' +
+                            '">+ Upload to client portal</button>' +
                         "</div>" +
                     "</section>" +
                 "</div>" +
@@ -13624,9 +13625,34 @@ function simpleBars(items, color) {
         return (n / (1024 * 1024)).toFixed(1) + " MB";
     }
 
-    function openClientOnboarding(clientId) {
+    async function openClientOnboarding(clientId) {
         const client = state.clients.find(function (item) { return item.id === clientId; });
         if (!client) return;
+
+        /* Refresh this client's onboarding files when the admin opens the record.
+           Clients can upload after the dashboard's initial data load. */
+        try {
+            const latestAssets = await api(
+                "/rest/v1/client_onboarding_assets?select=*&client_id=eq." +
+                encodeURIComponent(clientId) +
+                "&order=created_at.asc"
+            );
+            if (Array.isArray(latestAssets)) {
+                state.clientOnboardingAssets =
+                    (Array.isArray(state.clientOnboardingAssets)
+                        ? state.clientOnboardingAssets
+                        : []
+                    ).filter(function (asset) {
+                        return asset.client_id !== clientId;
+                    }).concat(latestAssets);
+            }
+        } catch (error) {
+            console.warn(
+                "Unable to refresh uploaded onboarding assets for this client.",
+                error
+            );
+        }
+
         const row = state.clientOnboarding.find(function (item) { return item.client_id === clientId; }) || null;
         const modalId = "sway-client-onboarding-modal";
         document.getElementById(modalId)?.remove();
@@ -20754,6 +20780,21 @@ function simpleBars(items, color) {
             );
         }
 
+        if (projectId) {
+            const linkedProject = state.projects.find(function (project) {
+                return (
+                    String(project.id) === String(projectId) &&
+                    String(project.client_id || "") === String(clientId)
+                );
+            });
+
+            if (!linkedProject) {
+                throw new Error(
+                    "Choose a project linked to the selected client."
+                );
+            }
+        }
+
         const maxBytes =
             20 * 1024 * 1024;
 
@@ -20987,7 +21028,10 @@ function simpleBars(items, color) {
             '<option value="">Select client...</option>' +
             state.clients
                 .filter(function (client) {
-                    return client.status !== "archived";
+                    return (
+                        client.status !== "archived" ||
+                        String(client.id) === String(prefillClientId || "")
+                    );
                 })
                 .map(function (client) {
                     return (
@@ -21005,39 +21049,57 @@ function simpleBars(items, color) {
                     );
                 }).join("");
 
+        const buildProjectOptions = function (clientId, selectedProjectId) {
+            return (
+                '<option value="">No project</option>' +
+                state.projects
+                    .filter(function (project) {
+                        return (
+                            Boolean(clientId) &&
+                            String(project.client_id || "") === String(clientId)
+                        );
+                    })
+                    .map(function (project) {
+                        return (
+                            '<option value="' +
+                            esc(project.id) +
+                            '"' +
+                            (
+                                String(project.id) === String(selectedProjectId || "")
+                                    ? " selected"
+                                    : ""
+                            ) +
+                            ">" +
+                            esc(project.name) +
+                            "</option>"
+                        );
+                    }).join("")
+            );
+        };
+
         const projectOptions =
-            '<option value="">No project</option>' +
-            state.projects.map(function (project) {
-                return (
-                    '<option value="' +
-                    esc(project.id) +
-                    '"' +
-                    (
-                        project.id === prefillProjectId
-                            ? " selected"
-                            : ""
-                    ) +
-                    ">" +
-                    esc(project.name) +
-                    " — " +
-                    esc(clientName(project.client_id)) +
-                    "</option>"
-                );
-            }).join("");
+            buildProjectOptions(prefillClientId, prefillProjectId);
 
         modal.innerHTML =
             '<div class="sway-modal-backdrop"></div>' +
             '<div class="sway-modal-card" role="dialog" aria-modal="true">' +
                 '<div class="sway-modal-header">' +
-                    '<div><span class="admin-label">Documents</span><h3>Upload document</h3></div>' +
+                    '<div><span class="admin-label">CLIENT DELIVERY</span><h3>Upload &amp; share document</h3></div>' +
                     '<button type="button" class="sway-modal-close" data-document-close aria-label="Close">×</button>' +
                 "</div>" +
                 '<div class="sway-form-grid">' +
                     '<div class="sway-form-field">' +
                         '<label for="sway-document-client">Client</label>' +
-                        '<select id="sway-document-client" required>' +
+                        '<select id="sway-document-client" required' +
+                            (prefillClientId ? " disabled" : "") +
+                        ">" +
                             clientOptions +
                         "</select>" +
+                        '<small style="display:block;margin-top:6px;color:var(--sway-muted,#718096);font-size:11px;line-height:1.5;">' +
+                            (prefillClientId
+                                ? "This upload is fixed to " + esc(clientName(prefillClientId)) + "."
+                                : "Select the client who should receive this file in their private portal.") +
+                        "</small>" +
                     "</div>" +
                     '<div class="sway-form-field">' +
                         '<label for="sway-document-project">Project</label>' +
@@ -21048,7 +21110,7 @@ function simpleBars(items, color) {
                     '<div class="sway-form-field full">' +
                         '<label for="sway-document-file">File</label>' +
                         '<input type="file" id="sway-document-file" required>' +
-                        '<small>Private storage · maximum 20 MB.</small>' +
+                        '<small>Private storage · maximum 20 MB. After upload, the file appears in the selected client\'s Documents &amp; deliverables area.</small>' +
                     "</div>" +
                     '<div class="sway-form-field full">' +
                         '<div class="sway-modal-actions">' +
@@ -21064,6 +21126,16 @@ function simpleBars(items, color) {
         function close() {
             modal.remove();
         }
+
+        const clientSelectForProjects =
+            modal.querySelector("#sway-document-client");
+        const projectSelectForClient =
+            modal.querySelector("#sway-document-project");
+
+        clientSelectForProjects.addEventListener("change", function () {
+            projectSelectForClient.innerHTML =
+                buildProjectOptions(clientSelectForProjects.value, "");
+        });
 
         modal
             .querySelectorAll("[data-document-close]")
@@ -21114,9 +21186,13 @@ function simpleBars(items, color) {
                     button.textContent =
                         "Uploading...";
 
+                    const selectedClientId = clientSelect.value;
+                    const returnToClient360 =
+                        Boolean(document.getElementById("sway-client360-modal"));
+
                     try {
                         await uploadClientDocument(
-                            clientSelect.value,
+                            selectedClientId,
                             file,
                             projectSelect.value || null
                         );
@@ -21126,8 +21202,12 @@ function simpleBars(items, color) {
                         renderShell();
                         renderView();
 
+                        if (returnToClient360) {
+                            openClient360(selectedClientId);
+                        }
+
                         swayAlert(
-                            "Document uploaded."
+                            "Document uploaded and added to the client's private portal."
                         );
                     } catch (error) {
                         swayAlert(
