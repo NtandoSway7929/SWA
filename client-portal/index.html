@@ -530,6 +530,8 @@ async function portalRpc(functionName,payload,timeoutMs){
 }
 const params=new URLSearchParams(window.location.search);
 const token=params.get("token")||"";
+let portalDocuments=[];
+let portalDocumentFilter="all";
 function esc(value){return String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
 function money(value){return new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(Number(value||0))}
 function date(value){if(!value)return "—";const d=new Date(value);if(Number.isNaN(d.getTime()))return String(value);return d.toLocaleDateString("en-ZA",{day:"2-digit",month:"short",year:"numeric",timeZone:"Africa/Johannesburg"})}
@@ -614,6 +616,117 @@ const message=filter==="outstanding"?"There are no outstanding invoices recorded
 return '<div class="empty">'+message+'</div>';
 }
 return '<div class="financial-list">'+rows.map(renderInvoice).join("")+'</div>';
+}
+function portalDocumentCategory(mimeType,fileName){
+const mime=String(mimeType||"").toLowerCase(),name=String(fileName||"").toLowerCase();
+if(mime.indexOf("image/")===0)return "image";
+if(mime==="application/pdf"||name.endsWith(".pdf"))return "pdf";
+return "other";
+}
+function formatPortalFileSize(value){
+const bytes=Math.max(0,Number(value||0)||0);
+if(bytes<1024)return bytes+" B";
+if(bytes<1024*1024)return (bytes/1024).toFixed(bytes<10240?1:0)+" KB";
+return (bytes/(1024*1024)).toFixed(bytes<10*1024*1024?1:0)+" MB";
+}
+function filterPortalDocuments(documents,filter){
+const rows=Array.isArray(documents)?documents:[];
+if(filter==="project")return rows.filter(function(item){return item.project_name&&item.project_name!=="General files"});
+if(filter==="pdf"||filter==="images")return rows.filter(function(item){return portalDocumentCategory(item.mime_type,item.file_name)===(filter==="pdf"?"pdf":"image")});
+return rows;
+}
+function renderPortalDocumentCard(item){
+const category=portalDocumentCategory(item.mime_type,item.file_name),typeLabel=category==="pdf"?"PDF":(category==="image"?"IMG":"FILE");
+return '<article class="portal-document-card"><div class="portal-document-card-top"><span class="portal-document-icon '+category+'">'+typeLabel+'</span><span class="portal-document-category">'+(category==="pdf"?"PDF document":(category==="image"?"Image":"Shared file"))+'</span></div><h3>'+esc(item.file_name||"Untitled document")+'</h3><p class="portal-document-project">'+esc(item.project_name||"General files")+'</p><div class="portal-document-meta"><span>'+esc(formatPortalFileSize(item.size_bytes))+'</span><span>Shared '+esc(date(item.created_at))+'</span></div><div class="portal-document-actions">'+(category!=="other"?'<button type="button" class="portal-button secondary" data-document-action="preview" data-document-id="'+esc(item.id)+'">Preview</button>':"")+'<button type="button" class="portal-button" data-document-action="download" data-document-id="'+esc(item.id)+'">Download</button></div></article>';
+}
+function renderPortalDocumentList(documents,filter){
+const rows=filterPortalDocuments(documents,filter);
+if(!rows.length){
+const message=documents.length?"There are no shared files in this category.":"No documents have been shared with you yet. Files uploaded by Swayphics will appear here.";
+return '<div class="empty">'+message+'</div>';
+}
+return '<div class="portal-documents-grid">'+rows.map(renderPortalDocumentCard).join("")+'</div>';
+}
+async function portalDocumentApi(payload){
+const response=await fetch(SUPABASE_URL+"/functions/v1/client-portal-documents",{
+method:"POST",
+headers:{"apikey":SUPABASE_PUBLISHABLE_KEY,"Authorization":"Bearer "+SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json","Accept":"application/json"},
+body:JSON.stringify(Object.assign({token:token},payload||{})),
+cache:"no-store"
+});
+const raw=await response.text();
+let result=null;
+try{result=raw?JSON.parse(raw):null}catch(_){result=null}
+if(!response.ok||!result||result.ok!==true)throw new Error(result&&result.error||"The document service could not complete the request.");
+return result;
+}
+function validatedPortalSignedUrl(value){
+const parsed=new URL(String(value||""),SUPABASE_URL),base=new URL(SUPABASE_URL);
+if(parsed.origin!==base.origin||parsed.pathname.indexOf("/storage/v1/object/sign/swayphics-client-files/")===-1)throw new Error("The secure file link was not valid.");
+return parsed.href;
+}
+async function downloadPortalBlob(blob,fileName){
+const safeName=String(fileName||"download").replace(/[\r\n]/g,"").replace(/"/g,"").slice(0,160)||"download";
+const url=URL.createObjectURL(blob),anchor=document.createElement("a");
+anchor.href=url;anchor.download=safeName;anchor.style.display="none";
+document.body.appendChild(anchor);anchor.click();anchor.remove();
+window.setTimeout(function(){URL.revokeObjectURL(url)},1500);
+}
+async function downloadPortalDocument(item,signedUrlOverride){
+const result=signedUrlOverride?{signed_url:signedUrlOverride}:await portalDocumentApi({action:"download",document_id:item.id});
+const response=await fetch(validatedPortalSignedUrl(result.signed_url),{cache:"no-store"});
+if(!response.ok)throw new Error("The file could not be downloaded. Please try again.");
+await downloadPortalBlob(await response.blob(),item.file_name);
+}
+async function downloadPortalInvoicePdf(invoice){
+const response=await fetch(SUPABASE_URL+"/functions/v1/client-portal-documents",{
+method:"POST",
+headers:{"apikey":SUPABASE_PUBLISHABLE_KEY,"Authorization":"Bearer "+SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json","Accept":"application/pdf, application/json"},
+body:JSON.stringify({action:"invoice-pdf",token:token,invoice_id:invoice.id}),
+cache:"no-store"
+});
+if(!response.ok){
+const raw=await response.text();let result=null;try{result=raw?JSON.parse(raw):null}catch(_){result=null}
+throw new Error(result&&result.error||"The invoice PDF could not be downloaded.");
+}
+const type=String(response.headers.get("content-type")||"").toLowerCase();
+if(type.indexOf("application/pdf")!==0)throw new Error("The invoice service did not return a PDF.");
+await downloadPortalBlob(await response.blob(),String(invoice.invoice_number||"invoice")+".pdf");
+}
+function openPortalDocumentPreview(item,signedUrl){
+const href=validatedPortalSignedUrl(signedUrl),category=portalDocumentCategory(item.mime_type,item.file_name);
+if(!["image","pdf"].includes(category))throw new Error("Preview is not available for this file type.");
+document.getElementById("portal-document-preview-modal")?.remove();
+const modal=document.createElement("div");
+const preview=category==="image"
+?'<img class="portal-document-preview-image" src="'+esc(href)+'" alt="'+esc(item.file_name||"Shared image")+'">'
+:'<iframe class="portal-document-preview-pdf" title="'+esc(item.file_name||"Shared PDF")+'" src="'+esc(href)+'" referrerpolicy="no-referrer"></iframe>';
+modal.className="portal-modal";modal.id="portal-document-preview-modal";
+modal.innerHTML='<div class="modal-backdrop" data-document-preview-close></div><section class="modal-card portal-document-preview-card" role="dialog" aria-modal="true" aria-labelledby="portal-document-preview-title"><div class="modal-head"><div><span class="portal-kicker">SHARED DELIVERABLE</span><h3 id="portal-document-preview-title">'+esc(item.file_name||"Document preview")+'</h3><p>'+esc(item.project_name||"General files")+'</p></div><button type="button" class="modal-close" data-document-preview-close aria-label="Close preview">×</button></div><div class="portal-document-preview-stage">'+preview+'</div><div class="finance-modal-actions"><button type="button" class="portal-button" id="portal-preview-download">Download file</button><button type="button" class="portal-button secondary" data-document-preview-close>Close</button></div></section>';
+document.body.appendChild(modal);
+const close=function(){modal.querySelectorAll("iframe,img").forEach(function(media){media.removeAttribute("src")});modal.remove()};
+modal.querySelectorAll("[data-document-preview-close]").forEach(function(button){button.addEventListener("click",close)});
+modal.addEventListener("keydown",function(event){if(event.key==="Escape"){event.preventDefault();close()}});
+modal.querySelector("#portal-preview-download")?.addEventListener("click",async function(event){const button=event.currentTarget;button.disabled=true;button.textContent="Preparing download...";try{await downloadPortalDocument(item);button.textContent="Downloaded"}catch(error){button.textContent="Try download again";const stage=modal.querySelector(".portal-document-preview-stage");if(stage){let note=stage.querySelector(".message");if(!note){note=document.createElement("div");note.className="message";stage.appendChild(note)}note.textContent=error.message||"Download failed."}}finally{button.disabled=false}});
+modal.querySelector(".modal-close")?.focus();
+}
+function renderPortalDocumentsSection(){
+return '<section class="portal-section" id="documents-section"><div class="portal-section-head"><div><h2>Documents & deliverables</h2><p>Files Swayphics has shared for your projects and business.</p></div><span class="card-count" id="portal-documents-count">Loading files...</span></div><section class="portal-card portal-documents-panel"><div class="card-head"><div><h3>Shared with you</h3><p>Private project files, approved designs and other deliverables.</p></div><span class="chip success">Private access</span></div><div id="portal-documents-content" aria-live="polite"><div class="empty">Loading your shared documents...</div></div></section></section>';
+}
+async function loadPortalDocuments(){
+const content=document.getElementById("portal-documents-content"),count=document.getElementById("portal-documents-count");
+if(!content)return;
+content.innerHTML='<div class="empty">Loading your shared documents...</div>';
+if(count)count.textContent="Loading files...";
+try{
+const result=await portalDocumentApi({action:"list"}),documents=Array.isArray(result.documents)?result.documents:[];
+portalDocuments=documents;portalDocumentFilter="all";
+if(count)count.textContent=documents.length+" shared file"+(documents.length===1?"":"s");
+content.innerHTML='<div class="finance-filter-group portal-document-filters" role="group" aria-label="Filter shared documents"><button type="button" class="active" data-document-filter="all" aria-pressed="true">All <span>'+documents.length+'</span></button><button type="button" data-document-filter="project" aria-pressed="false">Project files <span>'+documents.filter(function(item){return item.project_name&&item.project_name!=="General files"}).length+'</span></button><button type="button" data-document-filter="pdf" aria-pressed="false">PDFs <span>'+documents.filter(function(item){return portalDocumentCategory(item.mime_type,item.file_name)==="pdf"}).length+'</span></button><button type="button" data-document-filter="images" aria-pressed="false">Images <span>'+documents.filter(function(item){return portalDocumentCategory(item.mime_type,item.file_name)==="image"}).length+'</span></button></div><div id="portal-document-results">'+renderPortalDocumentList(documents,"all")+'</div>';
+}catch(error){
+content.innerHTML='<div class="empty portal-documents-error"><strong>Documents could not be loaded.</strong><p>'+esc(error&&error.message||"The secure document service is unavailable.")+'</p><button type="button" class="portal-button secondary" id="portal-documents-retry">Try again</button></div>';
+if(count)count.textContent="Unavailable";
+}
 }
 function onboardingValue(onboarding,key){return onboarding&&onboarding[key]!=null?onboarding[key]:""}
 function onboardingJourneyMode(onboarding){
