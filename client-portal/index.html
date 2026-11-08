@@ -1039,8 +1039,7 @@ if(!files.length){assetUploadStatus.textContent="Choose one or more files first.
 assetUploadButton.disabled=true;assetUploadStatus.textContent="Uploading "+files.length+" file"+(files.length===1?"":"s")+"...";
 try{
 const formData=new FormData();formData.append("token",token);files.forEach(function(file){formData.append("files",file,file.name)});
-const response=await fetch(SUPABASE_URL+"/functions/v1/upload-client-onboarding-assets",{method:"POST",body:formData});
-const result=await response.json();if(!response.ok||!result.ok)throw new Error(result&&result.error||"Unable to upload the selected files.");
+const response=await fetch(SUPABASE_URL+"/functions/v1/upload-client-onboarding-assets",{method:"POST",headers:{"apikey":SUPABASE_PUBLISHABLE_KEY,"Authorization":"Bearer "+SUPABASE_PUBLISHABLE_KEY},body:formData,cache:"no-store"});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result&&result.error||"Unable to upload the selected files.");
 assetInput.value="";assetUploadStatus.textContent=(result.files||[]).length+" file"+((result.files||[]).length===1?"":"s")+" attached successfully.";await loadAssets();renderReview();
 }catch(error){assetUploadStatus.textContent=error.message||"Unable to upload the selected files.";}
 finally{assetUploadButton.disabled=locked;}
