@@ -37,13 +37,13 @@ function functionSql(source) {
 
 test("run history RPC is authenticated, bounded and restricted to known Swayphics jobs", () => {
   const sql = functionSql(migration);
-  assert.match(sql, /p_limit integer default 30/i);
+  assert.match(sql, /p_limit integer default 10/i);
   assert.match(sql, /returns table\s*\([\s\S]*?run_id bigint[\s\S]*?job_name text[\s\S]*?started_at timestamptz[\s\S]*?finished_at timestamptz[\s\S]*?duration_ms bigint[\s\S]*?run_status text[\s\S]*?result_summary text/i);
   assert.match(sql, /security definer[\s\S]*?set search_path = ''/i);
   assert.match(sql, /auth\.uid\(\) is null or not public\.is_swayphics_admin\(\)/i);
-  assert.match(sql, /v_limit < 1 or v_limit > 50/i);
+  assert.match(sql, /v_limit < 1 or v_limit > 20/i);
   assert.match(sql, /from cron\.job_run_details d\s+join cron\.job j on j\.jobid = d\.jobid/i);
-  assert.match(sql, /order by d\.start_time desc, d\.runid desc\s+limit v_limit/i);
+  assert.match(sql, /partition by j\.jobid[\s\S]*?order by d\.start_time desc, d\.runid desc[\s\S]*?where r\.job_run_rank <= v_limit/i);
   for (const job of [
     "swayphics-stale-lead-followups",
     "swayphics-invoice-status-refresh",
@@ -71,8 +71,9 @@ test("Governance renders recent run status, SAST start times, durations and safe
   assert.match(settings, /data-governance-runs/);
   assert.match(settings, /data-governance-runs-status/);
   assert.match(settings, /get_swayphics_automation_run_history/);
-  assert.match(settings, /p_limit: 30/);
+  assert.match(settings, /p_limit: 10/);
   assert.match(settings, /row\.started_at/);
+  assert.match(settings, /row\.finished_at/);
   assert.match(settings, /row\.duration_ms/);
   assert.match(settings, /row\.run_status/);
   assert.match(settings, /row\.result_summary/);
