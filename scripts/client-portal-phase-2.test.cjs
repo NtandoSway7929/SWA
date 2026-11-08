@@ -140,6 +140,14 @@ test("progress autosaves through the existing secure onboarding RPC", () => {
   assert.ok(bind.includes("saveOnboarding(true,false)"), "the final review step must submit through the same RPC.");
 });
 
+test("step validation checks invalid optional inputs such as a malformed email address", () => {
+  const bindStart = portal.indexOf("function bindOnboarding()");
+  const bindEnd = portal.indexOf("\\nfunction isClientInvoicePayable", bindStart);
+  const bind = portal.slice(bindStart, bindEnd);
+  assert.ok(bind.includes('section.querySelectorAll("input,textarea,select")'), "all visible step fields must be checked for native validity.");
+  assert.ok(bind.includes("field.checkValidity()") && bind.includes("field.reportValidity()"), "invalid inputs must receive browser validation feedback.");
+});
+
 test("the form supports optional skips, asset upload and edit-from-review actions", () => {
   assert.ok(portal.includes('data-onboarding-skip="offers"'), "promotions must be skippable.");
   assert.ok(portal.includes('data-onboarding-skip="assets"'), "asset upload must be skippable.");
