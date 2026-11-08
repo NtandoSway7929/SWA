@@ -519,19 +519,212 @@ const journeyMode=document.getElementById("ob-journey-type")?.value||"";
 return buildOnboardingPayload(fields,services,journeyMode,Boolean(submit));
 }
 function formatFileSize(bytes){const n=Number(bytes||0);if(!n)return "0 B";if(n<1024)return n+" B";if(n<1024*1024)return (n/1024).toFixed(1)+" KB";return (n/(1024*1024)).toFixed(1)+" MB";}
-function renderAssets(files){if(!assetList)return;if(!files.length){assetList.innerHTML="";return}assetList.innerHTML=files.map(function(file){return '<div class="asset-item"><span class="asset-item-name" title="'+esc(file.original_name)+'">'+esc(file.original_name)+'</span><span class="asset-item-meta">'+esc(formatFileSize(file.size_bytes))+'</span></div>'}).join("");}
+function renderAssets(files){const assetList=document.getElementById("asset-list");if(!assetList)return;if(!files.length){assetList.innerHTML="";return}assetList.innerHTML=files.map(function(file){return '<div class="asset-item"><span class="asset-item-name" title="'+esc(file.original_name)+'">'+esc(file.original_name)+'</span><span class="asset-item-meta">'+esc(formatFileSize(file.size_bytes))+'</span></div>'}).join("");}
 async function loadAssets(){try{const result=await portalRpc("get_client_onboarding_assets",{p_token:token},15000);if(result&&result.ok)renderAssets(result.files||[])}catch(error){console.warn("Unable to load onboarding assets.",error)}}
 function bindOnboarding(){
-const form=document.getElementById("onboarding-form");if(!form||form.classList.contains("onboarding-locked"))return;
-const statusBox=document.getElementById("onboarding-status"),message=document.getElementById("onboarding-message"),saveButton=document.getElementById("save-onboarding"),assetInput=document.getElementById("ob-assets-files"),assetUploadButton=document.getElementById("upload-assets"),assetUploadStatus=document.getElementById("asset-upload-status"),assetList=document.getElementById("asset-list");
-function addService(){const list=document.getElementById("service-list"),n=list.querySelectorAll("[data-service-row]").length;const row=document.createElement("div");row.className="service-row";row.setAttribute("data-service-row","");row.innerHTML='<div class="field"><label>Service '+(n+1)+'</label><input data-service-name placeholder="e.g. Full Body Massage"></div><div class="field"><label>Price</label><input data-service-price placeholder="e.g. R650"></div><div class="field"><label>What is included?</label><input data-service-description placeholder="e.g. 60-minute treatment"></div><button type="button" class="remove-service" data-remove-service>Remove</button>';list.appendChild(row);row.querySelector("[data-service-name]")?.focus();}
+const form=document.getElementById("onboarding-form");if(!form)return;
+const sections=Array.from(form.querySelectorAll("[data-onboarding-step]"));
+if(!sections.length)return;
+const statusBox=document.getElementById("onboarding-status"),message=document.getElementById("onboarding-message"),saveState=document.getElementById("onboarding-save-state"),saveButton=document.getElementById("save-onboarding"),backButton=document.getElementById("onboarding-back"),nextButton=document.getElementById("onboarding-next"),submitButton=document.getElementById("submit-onboarding"),stepCount=document.getElementById("onboarding-step-count"),stepTitle=document.getElementById("onboarding-step-title"),stepStatus=document.getElementById("onboarding-step-status"),progressTrack=document.getElementById("onboarding-progress-track"),progressFill=document.getElementById("onboarding-progress-fill"),assetInput=document.getElementById("ob-assets-files"),assetUploadButton=document.getElementById("upload-assets"),assetUploadStatus=document.getElementById("asset-upload-status"),journeySelect=document.getElementById("ob-journey-type");
+const locked=form.classList.contains("onboarding-locked");
+let currentStep=0,autosaveTimer=null;
+let saveQueue=Promise.resolve();
+const stepNames=sections.map(function(section){return section.querySelector("h4")?.textContent.trim()||"Onboarding";});
+if(locked){
+form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});
+form.querySelectorAll("#add-service,[data-remove-service],#upload-assets,#save-onboarding").forEach(function(el){el.disabled=true});
+if(saveButton)saveButton.hidden=true;
+if(submitButton)submitButton.hidden=true;
+}
+function updateJourneyMode(){
+const mode=journeySelect?.value||"",copy=onboardingJourneyCopy(mode),fields=document.getElementById("journey-fields"),notApplicable=document.getElementById("journey-not-applicable"),choiceNeeded=document.getElementById("journey-choice-needed");
+if(fields)fields.hidden=!mode||mode==="not_applicable";
+if(notApplicable)notApplicable.hidden=mode!=="not_applicable";
+if(choiceNeeded)choiceNeeded.hidden=Boolean(mode);
+const setText=function(id,value){const el=document.getElementById(id);if(el)el.textContent=value};
+const setPlaceholder=function(id,value){const el=document.getElementById(id);if(el)el.placeholder=value};
+setText("journey-system-label",copy.systemLabel);
+setText("journey-contact-label",copy.contactLabel);
+setText("journey-process-label",copy.processLabel+" *");
+setText("journey-rules-label",copy.rulesLabel);
+setPlaceholder("ob-booking-system",copy.systemPlaceholder);
+setPlaceholder("ob-booking-whatsapp",copy.contactPlaceholder);
+setPlaceholder("ob-booking-process",copy.processPlaceholder);
+setPlaceholder("ob-booking-rules",copy.rulesPlaceholder);
+const process=document.getElementById("ob-booking-process");
+if(process)process.required=Boolean(mode&&mode!=="not_applicable");
+}
+function renderReview(){
+const root=document.getElementById("onboarding-review-summary");if(!root)return;
+const data=collectOnboarding(false),mode=journeySelect?.value||"",journeyLabels={appointments:"Appointments & bookings",retail:"In-person retail",ecommerce:"Online store / e-commerce",enquiries:"Enquiry-based business",not_applicable:"No bookings or structured orders"};
+const card=function(title,body,index){return '<section class="onboarding-review-card"><div class="onboarding-review-card-head"><h5>'+esc(title)+'</h5><button type="button" class="text-button" data-edit-onboarding-step="'+index+'">Edit</button></div><div class="onboarding-review-card-body">'+body+'</div></section>'};
+const line=function(label,value){return value?'<p><strong>'+esc(label)+':</strong> '+esc(value)+'</p>':""};
+const products=(data.services||[]).map(function(item){return '<li><strong>'+esc(item.name||"Product or service")+'</strong>'+(item.price?' · '+esc(item.price):"")+(item.description?'<small>'+esc(item.description)+'</small>':"")+'</li>'}).join("");
+const offers=data.daddy_deals_vouchers||"No current promotions";
+const journey=mode==="not_applicable"?"Not applicable":(journeyLabels[mode]||"Not selected");
+const journeyProcess=mode==="not_applicable"?"Not applicable":(document.getElementById("ob-booking-process")?.value.trim()||"Not provided");
+const files=Array.from(document.querySelectorAll("#asset-list .asset-item")).map(function(item){return item.querySelector(".asset-item-name")?.textContent||""});
+root.innerHTML=
+card("Business details",line("Business",data.business_name)+line("Contact",data.contact_name)+line("Email",data.email)+line("Phone",data.phone)+line("Address / service area",data.address)+line("Hours",data.operating_hours)+line("Social links",data.social_links),0)+
+card("Products & services",products?'<ul>'+products+'</ul>':'<p>No products or services added yet.</p>',1)+
+card("Vouchers & promotions",line("Offers",offers)+line("Terms",data.daddy_deals_terms)+line("Redemption",data.voucher_redemption_process),2)+
+card("Customer journey",line("Business model",journey)+line("Current method",data.booking_system)+line("Contact channel",data.booking_whatsapp)+line("Customer process",journeyProcess)+line("Rules",data.booking_rules),3)+
+card("About & brand",line("About the business",data.about_business)+line("Brand preferences",data.branding_notes)||"<p>No additional notes provided.</p>",4)+
+card("Files & assets",(files.length?'<p>'+files.map(esc).join(", ")+'</p>':'<p>No files attached yet.</p>')+line("Asset notes",data.asset_notes),5);
+}
+function showStep(index){
+currentStep=Math.max(0,Math.min(index,sections.length-1));
+sections.forEach(function(section,i){const active=i===currentStep;section.hidden=!active;section.setAttribute("aria-hidden",String(!active))});
+const count=currentStep+1,total=sections.length,title=stepNames[currentStep];
+if(stepCount)stepCount.textContent="STEP "+count+" OF "+total;
+if(stepTitle)stepTitle.textContent=title;
+if(stepStatus)stepStatus.textContent="Step "+count+" of "+total+" · "+title;
+if(progressTrack){progressTrack.setAttribute("aria-valuenow",String(count));progressTrack.setAttribute("aria-valuemax",String(total))}
+if(progressFill)progressFill.style.width=(count/total*100)+"%";
+if(backButton)backButton.disabled=currentStep===0;
+if(nextButton){nextButton.hidden=currentStep===sections.length-1;nextButton.textContent=currentStep===sections.length-2?"Review information":"Continue";}
+if(submitButton)submitButton.hidden=currentStep!==sections.length-1||locked;
+if(currentStep===sections.length-1)renderReview();
+}
+function validateStep(index){
+const section=sections[index],key=section?.dataset.onboardingStep;
+if(!section)return true;
+if(key==="catalogue"){
+const services=[];section.querySelectorAll("[data-service-row]").forEach(function(row){const name=row.querySelector("[data-service-name]")?.value.trim()||"",price=row.querySelector("[data-service-price]")?.value.trim()||"",description=row.querySelector("[data-service-description]")?.value.trim()||"";if(name||price||description)services.push({name:name,price:price,description:description})});
+if(!services.some(function(item){return item.name.length>0})){message.hidden=false;message.textContent="Add at least one product or service name before continuing.";section.querySelector("[data-service-name]")?.focus();return false;}
+}
+if(key==="journey"){
+const mode=journeySelect?.value||"";
+if(!mode){message.hidden=false;message.textContent="Choose the option that best describes how customers buy, book or contact your business.";journeySelect?.focus();return false;}
+if(mode!=="not_applicable"){
+const process=document.getElementById("ob-booking-process");
+if(!process||process.value.trim().length<2){message.hidden=false;message.textContent="Please describe how a customer buys, books or makes an enquiry.";process?.focus();return false;}
+}
+}
+const required=Array.from(section.querySelectorAll("input[required],textarea[required],select[required]")).filter(function(el){return !el.disabled&&!el.closest("[hidden]")});
+for(const field of required){if(!field.checkValidity()){field.reportValidity();return false;}}
+return true;
+}
+function validateBeforeSubmit(){
+for(let i=0;i<sections.length-1;i++){
+if(!validateStep(i)){showStep(i);return false;}
+}
+return true;
+}
+function scheduleAutosave(){
+if(locked)return;
+if(autosaveTimer)window.clearTimeout(autosaveTimer);
+if(saveState)saveState.textContent="Unsaved changes";
+autosaveTimer=window.setTimeout(function(){autosaveTimer=null;saveOnboarding(false,true)},900);
+}
+function saveOnboarding(submit,quiet){
+if(locked&&!submit)return Promise.resolve(false);
+if(autosaveTimer){window.clearTimeout(autosaveTimer);autosaveTimer=null;}
+const run=async function(){
+if(locked&&!submit)return false;
+const payload=collectOnboarding(Boolean(submit));
+if(saveButton)saveButton.disabled=true;
+if(nextButton)nextButton.disabled=true;
+if(submitButton)submitButton.disabled=true;
+if(statusBox&&!quiet)statusBox.textContent=submit?"Submitting information...":"Saving progress...";
+if(saveState)saveState.textContent=submit?"Submitting securely...":"Saving changes...";
+if(!quiet){message.hidden=false;message.textContent=submit?"Checking and submitting your information securely...":"Saving your progress securely...";}
+try{
+const result=await portalRpc("save_client_onboarding",{p_token:token,p_data:payload,p_submit:submit},15000);
+if(!result||!result.ok)throw new Error(result&&result.error||"Unable to save your information.");
+const savedAt=submit?"Submitted "+date(new Date().toISOString()):"Last saved just now";
+if(statusBox)statusBox.textContent=savedAt;
+if(saveState)saveState.textContent=submit?"Information submitted":"All changes saved";
+if(!quiet){message.hidden=false;message.textContent=submit?"Thank you. Your information has been submitted to Swayphics for review.":"Your progress has been saved. You can return to this private link later and continue.";}
+if(submit){
+form.classList.add("onboarding-locked");
+form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});
+form.querySelectorAll("#add-service,[data-remove-service],#upload-assets").forEach(function(el){el.disabled=true});
+if(saveButton)saveButton.hidden=true;
+if(nextButton)nextButton.hidden=true;
+if(submitButton)submitButton.hidden=true;
+message.className="onboarding-submitted";
+message.innerHTML="<strong>Information submitted</strong>Your onboarding information is now with Swayphics. We will review it and contact you if anything needs clarification.";
+}
+return true;
+}catch(error){
+if(saveState)saveState.textContent="Not saved";
+if(statusBox)statusBox.textContent="Unable to save changes";
+message.hidden=false;
+message.textContent=error.message||"Unable to save your information.";
+return false;
+}finally{
+if(saveButton&&!locked)saveButton.disabled=false;
+if(nextButton&&!locked)nextButton.disabled=false;
+if(submitButton&&!locked)submitButton.disabled=false;
+}
+};
+saveQueue=saveQueue.then(run,run);
+return saveQueue;
+}
+async function advance(skip){
+if(!validateStep(currentStep))return;
+if(!locked){
+const saved=await saveOnboarding(false,true);
+if(!saved)return;
+}
+showStep(currentStep+1);
+const section=sections[currentStep];
+section?.querySelector("h4")?.focus?.();
+}
+function addService(){
+const list=document.getElementById("service-list"),n=list.querySelectorAll("[data-service-row]").length,row=document.createElement("div");
+row.className="service-row";row.setAttribute("data-service-row","");
+row.innerHTML='<div class="field"><label>Product or service '+(n+1)+'</label><input data-service-name placeholder="e.g. Full Body Massage or Handmade candles"></div><div class="field"><label>Price</label><input data-service-price placeholder="e.g. R650"></div><div class="field"><label>Details</label><input data-service-description placeholder="e.g. 60-minute treatment or 250g jar"></div><button type="button" class="remove-service" data-remove-service>Remove</button>';
+list.appendChild(row);row.querySelector("[data-service-name]")?.focus();scheduleAutosave();
+}
 document.getElementById("add-service")?.addEventListener("click",addService);
 assetInput?.addEventListener("change",function(){const files=Array.from(assetInput.files||[]);assetUploadStatus.textContent=files.length?files.length+" file"+(files.length===1?"":"s")+" selected":"No new files selected";});
-assetUploadButton?.addEventListener("click",async function(){const files=Array.from(assetInput?.files||[]);if(!files.length){assetUploadStatus.textContent="Choose one or more files first.";return}assetUploadButton.disabled=true;assetUploadStatus.textContent="Uploading "+files.length+" file"+(files.length===1?"":"s")+"...";try{const formData=new FormData();formData.append("token",token);files.forEach(function(file){formData.append("files",file,file.name)});const response=await fetch(SUPABASE_URL+"/functions/v1/upload-client-onboarding-assets",{method:"POST",body:formData});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result&&result.error||"Unable to upload the selected files.");assetInput.value="";assetUploadStatus.textContent=(result.files||[]).length+" file"+((result.files||[]).length===1?"":"s")+" attached successfully.";await loadAssets();}catch(error){assetUploadStatus.textContent=error.message||"Unable to upload the selected files."}finally{assetUploadButton.disabled=false;}});
+assetUploadButton?.addEventListener("click",async function(){
+const files=Array.from(assetInput?.files||[]);
+if(!files.length){assetUploadStatus.textContent="Choose one or more files first.";return;}
+assetUploadButton.disabled=true;assetUploadStatus.textContent="Uploading "+files.length+" file"+(files.length===1?"":"s")+"...";
+try{
+const formData=new FormData();formData.append("token",token);files.forEach(function(file){formData.append("files",file,file.name)});
+const response=await fetch(SUPABASE_URL+"/functions/v1/upload-client-onboarding-assets",{method:"POST",body:formData});
+const result=await response.json();if(!response.ok||!result.ok)throw new Error(result&&result.error||"Unable to upload the selected files.");
+assetInput.value="";assetUploadStatus.textContent=(result.files||[]).length+" file"+((result.files||[]).length===1?"":"s")+" attached successfully.";await loadAssets();renderReview();
+}catch(error){assetUploadStatus.textContent=error.message||"Unable to upload the selected files.";}
+finally{assetUploadButton.disabled=locked;}
+});
 loadAssets();
-form.addEventListener("click",function(e){if(e.target.closest("[data-remove-service]")){const rows=form.querySelectorAll("[data-service-row]");if(rows.length>1)e.target.closest("[data-service-row]").remove();else e.target.closest("[data-service-row]").querySelectorAll("input").forEach(function(input){input.value=""});form.querySelectorAll("[data-service-row]").forEach(function(row,i){const label=row.querySelector("label");if(label)label.textContent="Service "+(i+1)});}});
-async function saveOnboarding(submit){const payload=collectOnboarding(),buttons=form.querySelectorAll("button");buttons.forEach(function(b){b.disabled=true});statusBox.textContent=submit?"Submitting information...":"Saving progress...";message.hidden=false;message.textContent=submit?"Checking the required information before submission...":"Saving your information securely...";try{const result=await portalRpc("save_client_onboarding",{p_token:token,p_data:payload,p_submit:submit},15000);if(!result||!result.ok)throw new Error(result&&result.error||"Unable to save your information.");statusBox.textContent=submit?"Submitted "+date(new Date().toISOString()):"Last saved just now";message.textContent=submit?"Thank you. Your information has been submitted to Swayphics for review.":"Your progress has been saved. You can return to this private link later and continue.";if(submit){form.classList.add("onboarding-locked");form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});message.className="onboarding-submitted";message.innerHTML="<strong>Information submitted</strong>Your onboarding information is now with Swayphics. We will review it and contact you if anything needs clarification.";}}catch(error){message.textContent=error.message||"Unable to save your information."}finally{buttons.forEach(function(b){if(!submit||b.id!=="save-onboarding")b.disabled=false});}}
-saveButton.addEventListener("click",function(){saveOnboarding(false)});form.addEventListener("submit",function(e){e.preventDefault();if(form.reportValidity())saveOnboarding(true)});
+form.addEventListener("click",function(e){
+const edit=e.target.closest("[data-edit-onboarding-step]");
+if(edit){showStep(Number(edit.dataset.editOnboardingStep));return;}
+if(e.target.closest("[data-remove-service]")){
+const rows=form.querySelectorAll("[data-service-row]"),row=e.target.closest("[data-service-row]");
+if(rows.length>1)row.remove();else row.querySelectorAll("input").forEach(function(input){input.value=""});
+form.querySelectorAll("[data-service-row]").forEach(function(item,i){const label=item.querySelector("label");if(label)label.textContent="Product or service "+(i+1)});
+scheduleAutosave();
+}
+const skip=e.target.closest("[data-onboarding-skip]");
+if(skip){advance(true);}
+});
+backButton?.addEventListener("click",function(){showStep(currentStep-1)});
+nextButton?.addEventListener("click",function(){advance(false)});
+saveButton?.addEventListener("click",async function(){const saved=await saveOnboarding(false,false);if(saved&&currentStep===sections.length-1)renderReview();});
+journeySelect?.addEventListener("change",function(){updateJourneyMode();scheduleAutosave();});
+form.addEventListener("input",function(event){if(event.target&&event.target.type!=="file")scheduleAutosave();});
+form.addEventListener("change",function(event){if(event.target&&event.target.type!=="file")scheduleAutosave();});
+form.addEventListener("submit",async function(event){
+event.preventDefault();
+if(locked)return;
+if(!validateBeforeSubmit())return;
+renderReview();
+await saveOnboarding(true,false);
+});
+updateJourneyMode();
+showStep(0);
+if(locked){
+if(saveState)saveState.textContent="Information already submitted";
+if(nextButton)nextButton.textContent="Next";
+if(backButton)backButton.disabled=true;
+}
 }
 function isClientInvoicePayable(item){return ["sent","partially paid","overdue"].includes(String(item&&item.status||"").toLowerCase())&&Number(item&&item.amount_outstanding||0)>0}
 function getClientNextStep(onboarding,invoices,quotes,active,projects){
