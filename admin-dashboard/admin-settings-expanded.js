@@ -416,9 +416,12 @@
 
         var governancePanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-governance" aria-labelledby="swe-tab-governance" data-settings-panel="governance" hidden>' +
-            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Scheduled automation health</h3><p>Latest recorded run for each Swayphics background job. No run history is reported as “Not run yet”, not as a success.</p></div><button type="button" class="swe-button" data-action="refresh-governance">Refresh status</button></div>' +
+            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Scheduled automation health</h3><p>Latest observed run for each allowlisted Swayphics background job. Missing history is shown as “Not run yet”, not as a success.</p></div><button type="button" class="swe-button" data-action="refresh-governance">Refresh status</button></div>' +
             '<div data-governance-automation><p class="swe-muted">Loading automation status…</p></div>' +
             '<p class="swe-status" data-governance-status role="status" aria-live="polite"></p></div>' +
+            '<div class="swe-card"><h3>Recent automation runs</h3><p>Latest 10 executions per allowlisted Swayphics background job (up to 40 runs total). Durations and safe status summaries are shown; raw database job output is not exposed.</p>' +
+            '<div data-governance-runs><p class="swe-muted">Loading recent automation runs…</p></div>' +
+            '<p class="swe-status" data-governance-runs-status role="status" aria-live="polite"></p></div>' +
             '<div class="swe-card"><h3>Settings audit history</h3><p>Records who changed a settings area and which field names changed. Previous and new values are deliberately not stored here, so banking details and template contents are not copied into the audit trail.</p>' +
             '<div data-governance-audit><p class="swe-muted">Loading settings history…</p></div>' +
             '<p class="swe-status" data-audit-status role="status" aria-live="polite"></p></div>' +
@@ -897,11 +900,18 @@
 
     async function loadGovernance(root) {
         var status = root.querySelector("[data-governance-status]");
+        var runStatus = root.querySelector("[data-governance-runs-status]");
         var auditStatus = root.querySelector("[data-audit-status]");
         setStatus(status, "Checking scheduled jobs…", "");
+        setStatus(runStatus, "Loading recent automation runs…", "");
         setStatus(auditStatus, "Loading audit records…", "");
+
         var results = await Promise.allSettled([
             request("/rest/v1/rpc/get_swayphics_automation_status", { method: "POST", body: {} }),
+            request("/rest/v1/rpc/get_swayphics_automation_run_history", {
+                method: "POST",
+                body: { p_limit: 10 }
+            }),
             getRows("admin_settings_audit_log", {
                 select: "id,actor_id,setting_area,changed_fields,created_at",
                 order: "created_at.desc",
@@ -912,6 +922,7 @@
                 limit: "100"
             })
         ]);
+
         var jobs = results[0].status === "fulfilled" && Array.isArray(results[0].value) ? results[0].value : null;
         if (jobs) {
             renderSimpleTable(root.querySelector("[data-governance-automation]"), [
@@ -921,10 +932,10 @@
                 { label: "Run health", value: function (row) {
                     if (!row.active) return "Paused";
                     if (!row.last_status) return "No run recorded";
-                    var runStatus = String(row.last_status).toLowerCase();
-                    if (runStatus === "succeeded") return "Last run succeeded";
-                    if (runStatus === "failed") return "Last run failed";
-                    if (runStatus === "running") return "Currently running";
+                    var runStatusValue = String(row.last_status).toLowerCase();
+                    if (runStatusValue === "succeeded") return "Last run succeeded";
+                    if (runStatusValue === "failed") return "Last run failed";
+                    if (runStatusValue === "running") return "Currently running";
                     return "Review result";
                 } },
                 { label: "Last run (SAST)", value: function (row) {
@@ -940,8 +951,56 @@
             setStatus(status, results[0].reason && results[0].reason.message ? results[0].reason.message : "Unable to inspect automation jobs.", "error");
         }
 
-        var auditRows = results[1].status === "fulfilled" ? results[1].value : null;
-        var admins = results[2].status === "fulfilled" ? results[2].value : [];
+        var runs = results[1].status === "fulfilled" && Array.isArray(results[1].value) ? results[1].value : null;
+        if (runs) {
+            function formatRunTime(value) {
+                if (!value) return "Unavailable";
+                var date = new Date(value);
+                return Number.isNaN(date.getTime())
+                    ? "Unavailable"
+                    : date.toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" });
+            }
+            function formatRunDuration(value) {
+                var milliseconds = Number(value);
+                if (!Number.isFinite(milliseconds) || milliseconds < 0) return "Unavailable";
+                if (milliseconds < 1000) return Math.round(milliseconds) + " ms";
+                return (milliseconds / 1000).toFixed(milliseconds < 10000 ? 2 : 1) + " s";
+            }
+            renderSimpleTable(root.querySelector("[data-governance-runs]"), [
+                { label: "Started (SAST)", value: function (row) { return formatRunTime(row.started_at); } },
+                { label: "Finished (SAST)", value: function (row) {
+                    return row.finished_at
+                        ? formatRunTime(row.finished_at)
+                        : (String(row.run_status || "").toLowerCase() === "running" ? "In progress" : "Unavailable");
+                } },
+                { label: "Automation", value: function (row) { return row.job_name || "Unknown job"; } },
+                { label: "Outcome", value: function (row) {
+                    var outcome = String(row.run_status || "").toLowerCase();
+                    if (outcome === "succeeded") return "Succeeded";
+                    if (outcome === "failed") return "Failed";
+                    if (outcome === "running") return "Running";
+                    return outcome || "Unknown";
+                } },
+                { label: "Duration", value: function (row) {
+                    return row.duration_ms == null
+                        ? (String(row.run_status || "").toLowerCase() === "running" ? "In progress" : "Unavailable")
+                        : formatRunDuration(row.duration_ms);
+                } },
+                { label: "Result", value: function (row) { return row.result_summary || "No summary available"; } }
+            ], runs, "No recent runs have been recorded for the allowlisted Swayphics jobs.");
+            setStatus(runStatus, runs.length + " recent automation runs loaded.", "success");
+        } else {
+            renderSimpleTable(root.querySelector("[data-governance-runs]"), [], [], "Recent automation run history is unavailable. Confirm the Phase 6 migration has been applied.");
+            setStatus(runStatus,
+                results[1].reason && results[1].reason.message
+                    ? results[1].reason.message
+                    : "Unable to load recent automation runs.",
+                "error"
+            );
+        }
+
+        var auditRows = results[2].status === "fulfilled" ? results[2].value : null;
+        var admins = results[3].status === "fulfilled" ? results[3].value : [];
         if (auditRows) {
             var byId = Object.create(null);
             admins.forEach(function (admin) {
@@ -962,7 +1021,7 @@
             setStatus(auditStatus, auditRows.length + " audit records loaded.", "success");
         } else {
             renderSimpleTable(root.querySelector("[data-governance-audit]"), [], [], "Settings audit history unavailable.");
-            setStatus(auditStatus, results[1].reason && results[1].reason.message ? results[1].reason.message : "Unable to load audit history.", "error");
+            setStatus(auditStatus, results[2].reason && results[2].reason.message ? results[2].reason.message : "Unable to load audit history.", "error");
         }
     }
 

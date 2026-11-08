@@ -476,7 +476,7 @@ async function main() {
         return route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4173" }, body: "" });
       }
 
-      // These three dashboard startup routines normally make a POST call.
+      // These dashboard startup routines normally make a POST call.
       // Intercept and stub them before the request can reach Supabase. They
       // are not part of table-control interactions and must never touch data
       // in this isolated browser run.
@@ -495,6 +495,18 @@ async function main() {
       if (method === "POST" && url.pathname === "/rest/v1/rpc/get_swayphics_automation_status") {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });
         return route.fulfill(jsonResponse([]));
+      }
+      if (method === "POST" && url.pathname === "/rest/v1/rpc/get_swayphics_automation_run_history") {
+        metrics.mockedStartupCalls.push({ method, path: url.pathname });
+        return route.fulfill(jsonResponse([{
+          run_id: 1,
+          job_name: "swayphics-stale-lead-followups",
+          started_at: "2026-11-08T06:30:00Z",
+          finished_at: "2026-11-08T06:30:00.050Z",
+          duration_ms: 50,
+          run_status: "succeeded",
+          result_summary: "Completed successfully."
+        }]));
       }
       if (method === "POST" && url.pathname === "/rest/v1/services") {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });

@@ -19,7 +19,7 @@ const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "valida
 
 test("new Settings assets are cache-busted and loaded in the dashboard", () => {
   assert.ok(html.includes("admin-settings-expanded.css?v=20261025-business-invoices-3"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261107-first-contact-automation-1"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261108-automation-run-history-1"));
   assert.ok(html.indexOf("admin-workspace.js") < html.indexOf("admin-settings-expanded.js"));
 });
 
@@ -180,7 +180,7 @@ test("first-contact SLA creates one internal follow-up without changing a new le
   assert.ok(settings.includes("Create an assigned first-contact task after a new lead exceeds this response target."));
   assert.ok(settings.includes("one assigned first-contact task for a New lead"));
   assert.ok(settings.includes("pending automatic first-contact task"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261107-first-contact-automation-1"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261108-automation-run-history-1"));
   assert.ok(baseline.includes("Automatic first-contact task: response target missed after "));
   assert.ok(baseline.includes("trg_complete_swayphics_first_contact_followups"));
 });
