@@ -23,8 +23,16 @@ for (const view of ["leads", "followups", "tasks", "communications"]) {
         view + " view must render the table controls");
     assert.ok(workspaceSource.includes('adminTableControls.items("' + view + '", state.' + view + ")"),
         view + " view must use the shared filter/sort pipeline");
-    assert.ok(workspaceSource.includes('adminTableControls.selectionCell("' + view + '"'),
-        view + " view must render selection checkboxes");
+    if (view === "leads") {
+        assert.ok(
+            workspaceSource.includes('data-admin-table-select="leads"') &&
+            workspaceSource.includes('data-admin-table-select-all="leads"'),
+            "lead cards must render record and select-all checkboxes"
+        );
+    } else {
+        assert.ok(workspaceSource.includes('adminTableControls.selectionCell("' + view + '"'),
+            view + " view must render selection checkboxes");
+    }
 }
 assert.ok(workspaceSource.includes("adminTableControls.bind();"),
     "dashboard view lifecycle must bind the table controls after rendering");
@@ -34,6 +42,10 @@ assert.ok(moduleSource.includes("state.currentUser && state.currentUser.id"),
     "Assigned to me must use the authenticated user ID in dashboard state");
 assert.match(workspaceSource, /data-toggle-lead-contacted=/,
     "each eligible lead row should expose the contacted toggle in its Actions dropdown");
+assert.match(workspaceSource, /function openLeadDetails\(leadId\)/,
+    "lead cards must expose a full in-dashboard record detail view");
+assert.match(workspaceSource, /data-open-lead-details=/,
+    "each lead card must provide a direct action to open its full details");
 const bulkDeleteHandlerIndex = workspaceSource.indexOf("async function deleteSelectedTableRecords(view, ids)");
 assert.ok(bulkDeleteHandlerIndex >= 0,
     "the dashboard must define the authenticated generic bulk-delete handler");
