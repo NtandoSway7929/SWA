@@ -682,13 +682,32 @@ async function main() {
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
 
-    const alphaValueCell = leadRows.filter({ hasText: "Alpha Studio" }).locator(".sway-lead-value-cell");
+    const alphaValueCell = leadRows.filter({ hasText: "Alpha Studio" }).locator(".sway-lead-card-value");
     assert.equal(await alphaValueCell.count(), 1,
       "each lead should render its estimated value in a dedicated amount cell");
     assert.equal(await alphaValueCell.evaluate(el => getComputedStyle(el).whiteSpace), "nowrap",
       "grouped ZAR lead values must stay on one line instead of splitting the final zero onto another line");
     assert.ok(parseFloat(await alphaValueCell.evaluate(el => getComputedStyle(el).minWidth)) >= 100,
       "the lead amount cell must reserve enough width for a grouped currency value");
+
+    const alphaLeadCard = leadRows.filter({ hasText: "Alpha Studio" });
+    assert.equal(await alphaLeadCard.locator(".sway-lead-card-open").count(), 1,
+      "each lead card should expose one primary full-details action");
+    await alphaLeadCard.locator(".sway-lead-card-open").click();
+    const leadDetailsModal = page.locator(".sway-modal");
+    await leadDetailsModal.waitFor({ state: "visible", timeout: 5000 });
+    assert.equal((await leadDetailsModal.locator(".sway-modal-header h3").innerText()).trim(), "Edit Lead",
+      "opening a lead card should reuse the full lead editor");
+    for (const field of [
+      "business_name", "contact_name", "email", "phone", "service_interest",
+      "business_assessment", "research_findings", "swayphics_solution",
+      "recommended_services", "research_sources", "notes"
+    ]) {
+      assert.equal(await leadDetailsModal.locator("#sway-field-" + field).count(), 1,
+        "the full lead details editor should expose " + field);
+    }
+    await leadDetailsModal.locator(".sway-modal-close").click();
+    await leadDetailsModal.waitFor({ state: "detached", timeout: 5000 });
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
