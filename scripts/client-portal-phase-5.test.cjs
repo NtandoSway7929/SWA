@@ -9,6 +9,7 @@ const { test } = require("node:test");
 const root = path.resolve(__dirname, "..");
 const portal = fs.readFileSync(path.join(root, "client-portal", "index.html"), "utf8");
 const edge = fs.readFileSync(path.join(root, "supabase", "functions", "client-portal-documents", "index.ts"), "utf8");
+const uploadEdge = fs.readFileSync(path.join(root, "supabase", "functions", "upload-client-onboarding-assets", "index.ts"), "utf8");
 const config = fs.readFileSync(path.join(root, "supabase", "config.toml"), "utf8");
 const workspace = fs.readFileSync(path.join(root, "admin-dashboard", "admin-workspace.js"), "utf8");
 
@@ -156,4 +157,14 @@ test("the client portal exposes a Documents section and the admin workspace reta
 test("the Edge Function is configured for application-level portal-token authentication", () => {
   assert.match(config, /\[functions\.client-portal-documents\]\s*verify_jwt = false/);
   assert.match(edge, /ALLOWED_ORIGIN = "https:\/\/swayphics\.co\.za"/);
+});
+
+
+test("business asset uploads use the same database-side portal token validation as portal access", () => {
+  assert.match(uploadEdge, /admin\.rpc\("get_client_portal",\s*\{\s*p_token:\s*token\s*\}\)/);
+  assert.match(uploadEdge, /data\?\.ok === true \? data\.client\?\.id : null/);
+  assert.match(uploadEdge, /if \(error \|\| !clientId\) return null/);
+  assert.match(uploadEdge, /auth\.clientId/);
+  assert.doesNotMatch(uploadEdge, /crypto\.subtle\.digest/);
+  assert.doesNotMatch(uploadEdge, /auth\.token\.client_id/);
 });
