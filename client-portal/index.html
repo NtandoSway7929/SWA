@@ -441,9 +441,39 @@ return '<section class="portal-section" id="onboarding-section"><section class="
 '<div class="onboarding-actions"><div><div class="required-note">* Required before you can submit</div><div class="save-status" id="onboarding-status">'+(o.updated_at?"Last saved "+esc(date(o.updated_at)):"Nothing saved yet")+'</div></div><div class="onboarding-actions-right"><button type="button" class="portal-button secondary" id="save-onboarding">Save progress</button><button type="submit" class="portal-button" '+(o.status==="submitted"?"disabled":"")+'>Submit information</button></div></div>'+
 '<div id="onboarding-message" class="message" hidden></div></form></section></section>';
 }
-function collectOnboarding(){
+function buildOnboardingPayload(fields,services,journeyMode,submit){
+const source=fields||{},mode=String(journeyMode||"").toLowerCase(),labels={appointments:"Appointments & bookings",retail:"In-person retail",ecommerce:"Online orders",enquiries:"Enquiry-based sales"};
+const rawProcess=String(source.booking_process||"").trim();
+let bookingProcess=rawProcess;
+if(mode==="not_applicable")bookingProcess="Not applicable";
+else if(labels[mode])bookingProcess="Customer journey type: "+labels[mode]+"\n\n"+rawProcess;
+return {
+business_name:source.business_name||"",
+contact_name:source.contact_name||"",
+email:source.email||"",
+phone:source.phone||"",
+address:source.address||"",
+operating_hours:source.operating_hours||"",
+social_links:source.social_links||"",
+services:Array.isArray(services)?services:[],
+daddy_deals_vouchers:submit&&!String(source.daddy_deals_vouchers||"").trim()?"No current promotions":(source.daddy_deals_vouchers||""),
+daddy_deals_terms:source.daddy_deals_terms||"",
+voucher_redemption_process:source.voucher_redemption_process||"",
+booking_system:mode==="not_applicable"?"":(source.booking_system||""),
+booking_process:bookingProcess,
+booking_rules:mode==="not_applicable"?"":(source.booking_rules||""),
+booking_whatsapp:mode==="not_applicable"?"":(source.booking_whatsapp||""),
+about_business:source.about_business||"",
+branding_notes:source.branding_notes||"",
+asset_notes:source.asset_notes||""
+};
+}
+function collectOnboarding(submit){
 const services=[];document.querySelectorAll("[data-service-row]").forEach(function(row){const name=row.querySelector("[data-service-name]")?.value.trim()||"",price=row.querySelector("[data-service-price]")?.value.trim()||"",description=row.querySelector("[data-service-description]")?.value.trim()||"";if(name||price||description)services.push({name:name,price:price,description:description})});
-return {business_name:document.getElementById("ob-business-name")?.value.trim()||"",contact_name:document.getElementById("ob-contact-name")?.value.trim()||"",email:document.getElementById("ob-email")?.value.trim()||"",phone:document.getElementById("ob-phone")?.value.trim()||"",address:document.getElementById("ob-address")?.value.trim()||"",operating_hours:document.getElementById("ob-hours")?.value.trim()||"",social_links:document.getElementById("ob-social")?.value.trim()||"",services:services,daddy_deals_vouchers:document.getElementById("ob-vouchers")?.value.trim()||"",daddy_deals_terms:document.getElementById("ob-voucher-terms")?.value.trim()||"",voucher_redemption_process:document.getElementById("ob-redemption")?.value.trim()||"",booking_system:document.getElementById("ob-booking-system")?.value.trim()||"",booking_process:document.getElementById("ob-booking-process")?.value.trim()||"",booking_rules:document.getElementById("ob-booking-rules")?.value.trim()||"",booking_whatsapp:document.getElementById("ob-booking-whatsapp")?.value.trim()||"",about_business:document.getElementById("ob-about")?.value.trim()||"",branding_notes:document.getElementById("ob-branding")?.value.trim()||"",asset_notes:document.getElementById("ob-assets")?.value.trim()||""};
+const value=function(id){return document.getElementById(id)?.value.trim()||""};
+const fields={business_name:value("ob-business-name"),contact_name:value("ob-contact-name"),email:value("ob-email"),phone:value("ob-phone"),address:value("ob-address"),operating_hours:value("ob-hours"),social_links:value("ob-social"),daddy_deals_vouchers:value("ob-vouchers"),daddy_deals_terms:value("ob-voucher-terms"),voucher_redemption_process:value("ob-redemption"),booking_system:value("ob-booking-system"),booking_process:value("ob-booking-process"),booking_rules:value("ob-booking-rules"),booking_whatsapp:value("ob-booking-whatsapp"),about_business:value("ob-about"),branding_notes:value("ob-branding"),asset_notes:value("ob-assets")};
+const journeyMode=document.getElementById("ob-journey-type")?.value||"";
+return buildOnboardingPayload(fields,services,journeyMode,Boolean(submit));
 }
 function formatFileSize(bytes){const n=Number(bytes||0);if(!n)return "0 B";if(n<1024)return n+" B";if(n<1024*1024)return (n/1024).toFixed(1)+" KB";return (n/(1024*1024)).toFixed(1)+" MB";}
 function renderAssets(files){if(!assetList)return;if(!files.length){assetList.innerHTML="";return}assetList.innerHTML=files.map(function(file){return '<div class="asset-item"><span class="asset-item-name" title="'+esc(file.original_name)+'">'+esc(file.original_name)+'</span><span class="asset-item-meta">'+esc(formatFileSize(file.size_bytes))+'</span></div>'}).join("");}
