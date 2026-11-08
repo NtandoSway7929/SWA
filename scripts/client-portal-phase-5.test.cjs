@@ -161,7 +161,8 @@ test("the Edge Function is configured for application-level portal-token authent
 
 
 test("business asset uploads use the same database-side portal token validation as portal access", () => {
-  assert.match(uploadEdge, /admin\.rpc\("get_client_portal",\s*\{\s*p_token:\s*token\s*\}\)/);
+  assert.match(uploadEdge, /portalClient\.rpc\("get_client_portal",\s*\{\s*p_token:\s*token\s*\}\)/);
+  assert.match(uploadEdge, /SUPABASE_ANON_KEY.*SUPABASE_PUBLISHABLE_KEY/);
   assert.match(uploadEdge, /data\?\.ok === true \? data\.client\?\.id : null/);
   assert.match(uploadEdge, /if \(error \|\| !clientId\) return null/);
   assert.match(uploadEdge, /auth\.clientId/);
