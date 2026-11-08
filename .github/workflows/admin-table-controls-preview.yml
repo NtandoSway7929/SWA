@@ -11,7 +11,6 @@ on:
       - "scripts/admin-dashboard-redesign.test.cjs"
       - "scripts/admin-lead-cards.test.cjs"
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
-      - "scripts/admin-lead-cards.test.cjs"
       - ".github/workflows/admin-table-controls-preview.yml"
   pull_request:
     branches: ["main", "feature/admin-table-controls-phase-2"]
@@ -22,6 +21,7 @@ on:
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/index.html"
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
+      - "scripts/admin-lead-cards.test.cjs"
       - "scripts/admin-table-controls-db-smoke.cjs"
       - "scripts/first-contact-automation-db-smoke.cjs"
       - "scripts/due-work-notification-db-smoke.cjs"
