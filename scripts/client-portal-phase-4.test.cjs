@@ -47,6 +47,13 @@ test("invoice breakdown separates total, paid-to-date and remaining balance with
   });
   assert.equal(overpaid.paid, 500);
   assert.equal(overpaid.outstanding, 0);
+
+  const legacyRecord = context.invoiceFinancialBreakdown({
+    status: "sent",
+    amount_outstanding: 75
+  });
+  assert.equal(legacyRecord.outstanding, 75);
+  assert.equal(legacyRecord.paid, 0);
 });
 
 test("invoice due guidance detects overdue, due today, upcoming and settled balances", () => {
