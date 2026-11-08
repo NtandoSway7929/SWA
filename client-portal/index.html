@@ -457,9 +457,9 @@ saveButton.addEventListener("click",function(){saveOnboarding(false)});form.addE
 function isClientInvoicePayable(item){return ["sent","partially paid","overdue"].includes(String(item&&item.status||"").toLowerCase())&&Number(item&&item.amount_outstanding||0)>0}
 function getClientNextStep(onboarding,invoices,quotes,active,projects){
 const saved=onboarding||{},invoiceRows=Array.isArray(invoices)?invoices:[],quoteRows=Array.isArray(quotes)?quotes:[],activeRows=Array.isArray(active)?active:[],projectRows=Array.isArray(projects)?projects:[];
-if(saved.status!=="submitted")return {badge:"Action needed",title:"Complete your onboarding",description:"Share your business details, services and brand information so we can prepare the right website experience for your business.",action:"Continue onboarding",target:"onboarding-section"};
 const overdue=invoiceRows.find(function(item){return String(item.status||"").toLowerCase()==="overdue"&&Number(item.amount_outstanding||0)>0});
 if(overdue)return {badge:"Payment overdue",title:"Review your outstanding invoice",description:"An invoice is marked overdue. Open your finances to review the balance and payment details.",action:"View finances",target:"finances-section"};
+if(saved.status!=="submitted")return {badge:"Action needed",title:"Complete your onboarding",description:"Share your business details, services and brand information so we can prepare the right website experience for your business.",action:"Continue onboarding",target:"onboarding-section"};
 const dueInvoice=invoiceRows.find(isClientInvoicePayable);
 if(dueInvoice)return {badge:"Payment due",title:"Review your invoice",description:"There is an outstanding invoice on your account. You can review its amount, due date and payment status in your finances.",action:"View finances",target:"finances-section"};
 const sentQuote=quoteRows.find(function(item){return String(item.status||"").toLowerCase()==="sent"});
@@ -497,7 +497,7 @@ app.innerHTML=
 '<a href="#request-section" data-portal-nav-link>Requests</a>'+
 '</nav>'+
 '<section class="portal-section" id="overview-section">'+
-'<section class="portal-hero"><span class="portal-kicker">SWAYPHICS CLIENT PORTAL</span><h1>Welcome back, '+esc(c.contact_name||c.business_name||"Client")+'.</h1><p>Your private Swayphics workspace brings your projects, finances and next steps together in one place.</p><div class="portal-hero-actions"><a class="portal-button" href="#projects-section">View my projects</a><a class="portal-button secondary" href="#request-section">Make a request</a></div></section>'+
+'<section class="portal-hero"><span class="portal-kicker">SWAYPHICS CLIENT PORTAL</span><h1>Welcome, '+esc(c.contact_name||c.business_name||"Client")+'.</h1><p>Your private Swayphics workspace brings your projects, finances and next steps together in one place.</p><div class="portal-hero-actions"><a class="portal-button" href="#projects-section">View my projects</a><a class="portal-button secondary" href="#request-section">Make a request</a></div></section>'+
 '<section class="next-step-card" aria-labelledby="next-step-title"><div class="next-step-content"><span class="next-step-kicker">YOUR NEXT STEP</span><div class="next-step-heading"><h2 id="next-step-title">'+esc(nextStep.title)+'</h2>'+chip(nextStep.badge)+'</div><p>'+esc(nextStep.description)+'</p></div><a class="portal-button next-step-action" href="#'+esc(nextStep.target)+'">'+esc(nextStep.action)+' <span aria-hidden="true">→</span></a></section>'+
 '<section class="overview-stats"><div class="portal-section-head"><div><h2>At a glance</h2><p>A quick view of your Swayphics account.</p></div></div><div class="portal-stats">'+
 '<article class="stat-card"><span>Active projects</span><strong>'+active.length+'</strong><small>'+(projects.length?projects.length+" total project"+(projects.length===1?"":"s"):"No projects yet")+'</small></article>'+
