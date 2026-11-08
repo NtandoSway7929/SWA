@@ -32,15 +32,21 @@
       #sway-onboarding-assets-admin .soa-file-actions a{padding:7px 9px;border:1px solid #dce3ef;border-radius:8px;color:#002096;text-decoration:none;font-size:.7rem;font-weight:750}
       #sway-onboarding-assets-admin .soa-state{padding:22px 12px;border:1px dashed #d6deeb;border-radius:12px;color:#697386;text-align:center;font-size:.82rem}
       #sway-onboarding-assets-admin .soa-close{background:#eef2f8;color:#25324a}
+      #sway-client360-assets .soa-client360-file{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-top:1px solid rgba(0,32,150,.06)}
+      #sway-client360-assets .soa-client360-file>span:first-child{min-width:0;display:grid;gap:3px}
+      #sway-client360-assets .soa-client360-file strong{overflow-wrap:anywhere;font-size:.64rem}
+      #sway-client360-assets .soa-client360-file small{color:#7b8494;font-size:.54rem}
+      #sway-client360-assets .soa-file-actions{display:flex;gap:6px;flex-shrink:0}
+      #sway-client360-assets .soa-file-actions a{padding:6px 8px;border:1px solid rgba(0,32,150,.12);border-radius:8px;color:#002096;text-decoration:none;font-size:.56rem;font-weight:800}
       @media(max-width:560px){#sway-onboarding-assets-admin .soa-toolbar{align-items:stretch;flex-direction:column}#sway-onboarding-assets-admin .soa-file{grid-template-columns:36px minmax(0,1fr)}#sway-onboarding-assets-admin .soa-thumb{width:36px;height:36px}#sway-onboarding-assets-admin .soa-file-actions{grid-column:2;justify-content:flex-start}}
     `;
     document.head.appendChild(el);
   }
   function token() { try { return localStorage.getItem("swayphics_admin_access_token") || ""; } catch (_) { return ""; } }
-  async function request() {
+  async function request(clientId) {
     const jwt = token();
     if (!jwt) throw new Error("Your admin session is missing. Please sign in again.");
-    const response = await fetch(endpoint,{method:"POST",headers:{"apikey":KEY,"Authorization":"Bearer "+jwt,"Content-Type":"application/json"},body:JSON.stringify({limit:200}),cache:"no-store"});
+    const response = await fetch(endpoint,{method:"POST",headers:{"apikey":KEY,"Authorization":"Bearer "+jwt,"Content-Type":"application/json"},body:JSON.stringify({limit:200,client_id:clientId || undefined}),cache:"no-store"});
     const result = await response.json().catch(()=>({}));
     if (!response.ok || !result.ok) throw new Error(result.error || "Unable to retrieve uploaded assets.");
     return result.files || [];
@@ -62,6 +68,67 @@
         }).join("")+'</article>';
     }).join("");
   }
+  let activeClientId = null;
+  document.addEventListener("click", function (event) {
+    const clientAction = event.target.closest("[data-client360]");
+    const notificationAction = event.target.closest("[data-notification-open]");
+    if (clientAction) activeClientId = clientAction.getAttribute("data-client360");
+    if (notificationAction) activeClientId = notificationAction.getAttribute("data-notification-entity-id");
+  }, true);
+
+  function mountClient360Assets() {
+    const modal = document.getElementById("sway-client360-modal");
+    if (!modal || !modal.querySelector(".sway-client360-card")) return;
+    const card = modal.querySelector(".sway-client360-card");
+    if (card.querySelector("#sway-client360-assets")) return;
+    const clientId = modal.getAttribute("data-client-id") ||
+      modal.getAttribute("data-client360-id") || activeClientId;
+    if (!clientId) return;
+
+    const section = document.createElement("section");
+    section.id = "sway-client360-assets";
+    section.className = "sway-client360-section";
+    section.style.marginTop = "14px";
+    section.innerHTML = '<div class="sway-client360-section-head"><h4>Business assets</h4><span id="sway-client360-assets-count">Loading</span></div><div id="sway-client360-assets-list" class="sway-client360-list"><p class="sway-client360-empty">Retrieving onboarding uploads…</p></div>';
+    const footer = card.querySelector(".sway-client360-footer");
+    const grid = card.querySelector(".sway-client360-grid");
+    if (grid) grid.insertAdjacentElement("afterend", section);
+    else if (footer) footer.insertAdjacentElement("beforebegin", section);
+    else card.appendChild(section);
+
+    request(clientId).then(files => {
+      const list = section.querySelector("#sway-client360-assets-list");
+      section.querySelector("#sway-client360-assets-count").textContent =
+        files.length + " file" + (files.length === 1 ? "" : "s");
+      if (!files.length) {
+        list.innerHTML = '<p class="sway-client360-empty">No business assets have been uploaded for this client yet.</p>';
+        return;
+      }
+      list.innerHTML = files.map(file =>
+        '<div class="soa-client360-file"><span><strong>' + esc(file.original_name) +
+        '</strong><small>' + esc(size(file.size_bytes)) + ' · ' + esc(date(file.created_at)) +
+        '</small></span><span class="soa-file-actions">' +
+        (file.preview_url ? '<a href="' + esc(file.preview_url) + '" target="_blank" rel="noopener">Preview</a>' : '') +
+        (file.download_url ? '<a href="' + esc(file.download_url) + '" target="_blank" rel="noopener">Download</a>' : '') +
+        '</span></div>'
+      ).join("");
+    }).catch(error => {
+      section.querySelector("#sway-client360-assets-count").textContent = "Unavailable";
+      section.querySelector("#sway-client360-assets-list").innerHTML =
+        '<p class="sway-client360-empty">' + esc(error.message) + '</p>';
+    });
+  }
+
+  function observeClient360() {
+    if (!document.body || window.swayClient360AssetsObserver) return;
+    window.swayClient360AssetsObserver = new MutationObserver(mountClient360Assets);
+    window.swayClient360AssetsObserver.observe(document.body, {
+      childList: true, subtree: true, attributes: true,
+      attributeFilter: ["class", "style", "hidden", "data-client-id"]
+    });
+    mountClient360Assets();
+  }
+
   function mount() {
     const intro=document.querySelector(".admin-intro");
     const workspace=document.getElementById("sway-admin-workspace");
@@ -81,7 +148,7 @@
   }
   function start() {
     const ready=window.swayphicsAdminSessionReady;
-    Promise.resolve(ready).then(valid=>{if(valid===false)return;mount();}).catch(()=>{});
+    Promise.resolve(ready).then(valid=>{if(valid===false)return;mount();observeClient360();}).catch(()=>{});
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
