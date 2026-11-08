@@ -28,7 +28,7 @@ test("only planning, in-progress and review projects count as active", () => {
   assert.deepEqual(Array.from(activeProjects({ projects: records }), item => item.id), ["planning", "progress", "review"]);
 });
 
-const helperStart = portal.indexOf("function isClientInvoicePayable(");
+const helperStart = portal.indexOf("function financialMoney(");
 const helperEnd = portal.indexOf("\nfunction bindPortalNavigation", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "The next-step resolver must exist as an isolated helper.");
 const helperSource = portal.slice(helperStart, helperEnd);
