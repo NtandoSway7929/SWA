@@ -660,8 +660,8 @@ const process=document.getElementById("ob-booking-process");
 if(!process||process.value.trim().length<2){message.hidden=false;message.textContent="Please describe how a customer buys, books or makes an enquiry.";process?.focus();return false;}
 }
 }
-const required=Array.from(section.querySelectorAll("input[required],textarea[required],select[required]")).filter(function(el){return !el.disabled&&!el.closest("[hidden]")});
-for(const field of required){if(!field.checkValidity()){field.reportValidity();return false;}}
+const controls=Array.from(section.querySelectorAll("input,textarea,select")).filter(function(el){return !el.disabled&&!el.closest("[hidden]")});
+for(const field of controls){if(!field.checkValidity()){field.reportValidity();return false;}}
 return true;
 }
 function validateBeforeSubmit(){
