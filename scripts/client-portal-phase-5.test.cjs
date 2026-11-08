@@ -150,7 +150,7 @@ test("the client portal exposes a Documents section and the admin workspace reta
   assert.match(portal, /data-document-filter="pdf"/);
   assert.match(portal, /data-document-filter="images"/);
   assert.match(workspace, /async function uploadClientDocument/);
-  assert.match(workspace, /from\("client_documents"\)/);
+  assert.match(workspace, /rest\/v1\/client_documents/);
 });
 
 test("the Edge Function is configured for application-level portal-token authentication", () => {
