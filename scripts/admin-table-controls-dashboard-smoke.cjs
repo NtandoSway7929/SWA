@@ -633,13 +633,13 @@ async function main() {
     assert.equal(await clientCards.count(), clients.length,
       "the Clients page should render one responsive card per client");
     const alphaClientCard = clientCards.filter({ hasText: "Alpha Client" });
-    assert.equal(await alphaClientCard.locator('[data-client360="client-alpha"]').count(), 1,
+    assert.equal(await alphaClientCard.locator('.sway-record-card-open[data-client360="client-alpha"]').count(), 1,
       "each client card should expose its Client 360 action");
     assert.equal(await alphaClientCard.locator('[data-archive-client="client-alpha"]').count(), 1,
       "the card's Actions menu should preserve client archiving");
     assert.equal(await alphaClientCard.locator('[data-new-project-client="client-alpha"]').count(), 1,
       "the card's Actions menu should preserve project creation");
-    await alphaClientCard.locator('[data-client360="client-alpha"]').first().click();
+    await alphaClientCard.locator('.sway-record-card-open[data-client360="client-alpha"]').click();
     const alphaClientDetails = page.locator("#sway-client360-modal");
     await alphaClientDetails.waitFor({ state: "visible", timeout: 5000 });
     assert.equal((await alphaClientDetails.locator("#sway-client360-title").innerText()).trim(), "Alpha Client",
