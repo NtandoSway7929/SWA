@@ -23,8 +23,12 @@ function worker(name) {
 
 test("due lead reminders route inactive or missing assignees to active admins", () => {
   const sql = worker("generate_swayphics_due_lead_notifications_internal");
-  assert.match(sql, /where l\.status not in \('won', 'lost'\)/);
-  assert.match(sql, /l\.next_follow_up = v_today/);
+  assert.match(sql, /where l\.status not in \('won', 'lost', 'not interested'\)/);
+  assert.match(sql, /l\.next_follow_up <= v_today/);
+  assert.match(sql, /l\.status = 'new'[\\s\\S]*?l\.created_at <= now\\(\\) - make_interval\\(hours => v_response_hours\\)/);
+  assert.match(sql, /v_event_type := 'lead\\.response_overdue'/);
+  assert.match(sql, /v_event_type := 'lead\\.overdue'/);
+  assert.match(sql, /v_event_type := 'lead\\.due_today'/);
   assert.match(sql, /where au\.user_id = l\.assigned_to\s+and au\.active = true/i);
   assert.match(sql, /if r\.assignee_active then[\s\S]*?create_admin_notification\([\s\S]*?else[\s\S]*?notify_admins\([\s\S]*?false\s*\)/i);
   assert.match(sql, /swayphics-lead-due-today:' \|\|\s*r\.id::text \|\| ':' \|\| v_today::text/);
