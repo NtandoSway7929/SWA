@@ -60,6 +60,9 @@ jobs:
       - name: Test client portal onboarding promotions
         run: node scripts/client-portal-onboarding-promotions.test.cjs
 
+      - name: Test client portal onboarding asset delivery
+        run: node scripts/client-portal-onboarding-assets.test.cjs
+
       - name: Test client portal premium styling
         run: node scripts/client-portal-premium-style.test.cjs
 
