@@ -339,7 +339,7 @@ body{
 .onboarding-skip{display:inline-flex;align-items:center;gap:8px;margin-top:13px;padding:7px 0;background:none;color:var(--charcoal-muted);font-size:.55rem;font-weight:800;cursor:pointer}
 .onboarding-skip:hover{color:var(--blue)}
 .onboarding-skip span{font-size:.8rem}
-.journey-not-applicable{margin-top:14px;padding:15px;border:1px solid rgba(52,58,64,.11);border-radius:14px;background:#F4F6F7}
+.journey-choice-needed{margin-top:12px;padding:12px 14px;border:1px dashed rgba(86,97,107,.25);border-radius:13px;background:#F7F8F9;color:var(--charcoal-muted);font-size:.54rem;line-height:1.6}\n.journey-not-applicable{margin-top:14px;padding:15px;border:1px solid rgba(52,58,64,.11);border-radius:14px;background:#F4F6F7}
 .journey-not-applicable strong{display:block;color:var(--charcoal-deep);font-size:.62rem}
 .journey-not-applicable p{margin-top:5px;color:var(--charcoal-muted);font-size:.54rem;line-height:1.6}
 .onboarding-review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -462,7 +462,7 @@ function renderPayment(item){return '<article class="financial-item"><div class=
 function onboardingValue(onboarding,key){return onboarding&&onboarding[key]!=null?onboarding[key]:""}
 function onboardingJourneyMode(onboarding){
 const raw=String(onboardingValue(onboarding,"booking_process")||"");
-const match=raw.match(/^\s*Customer journey type:\s*([^\r\n]+)(?:\r?\n)+/i);
+const match=raw.match(/^\s*Customer journey type:\s*([^\r\n]+)(?:\r?\n|$)/i);
 if(match){
 const value=match[1].trim().toLowerCase();
 if(value.includes("retail"))return "retail";
@@ -475,7 +475,7 @@ return raw.trim()?"appointments":"";
 }
 function onboardingJourneyText(onboarding){
 const raw=String(onboardingValue(onboarding,"booking_process")||"");
-const match=raw.match(/^\s*Customer journey type:\s*[^\r\n]+(?:\r?\n)+/i);
+const match=raw.match(/^\s*Customer journey type:\s*[^\r\n]+(?:\r?\n|$)/i);
 if(match)return raw.slice(match[0].length).trim();
 return raw.trim().toLowerCase()==="not applicable"?"":raw;
 }
@@ -497,6 +497,7 @@ const mode=onboardingJourneyMode(o),copy=onboardingJourneyCopy(mode),process=onb
 const options=[["appointments","Appointments & bookings"],["retail","In-person retail"],["ecommerce","Online store / e-commerce"],["enquiries","Enquiry-based business"],["not_applicable","No bookings or structured orders"]];
 return '<section class="onboarding-section" data-onboarding-step="journey"><div class="onboarding-section-head"><span class="onboarding-number">04</span><div><h4>Customer journey</h4><p>Choose the option that best describes how customers buy, book or contact your business. The questions below will adapt to your answer.</p></div></div>'+
 '<div class="onboarding-fields"><div class="field full"><label for="ob-journey-type">How do customers usually interact with your business? *</label><select id="ob-journey-type" required><option value="">Choose the closest match</option>'+options.map(function(item){return '<option value="'+item[0]+'" '+(mode===item[0]?'selected':'')+'>'+item[1]+'</option>'}).join("")+'</select><small class="field-help">We will only ask about bookings when appointments are relevant. Retail and online businesses will see purchase and order questions instead.</small></div></div>'+
+'<div class="journey-choice-needed" id="journey-choice-needed" '+(mode?"hidden":"")+'><p>Choose the closest match above to see questions relevant to your business.</p></div>'+
 '<div class="journey-not-applicable" id="journey-not-applicable" '+(mode==="not_applicable"?"":"hidden")+'><strong>No booking or structured order flow?</strong><p>That is fine. We will record this section as not applicable. You can still explain your business in the next step.</p></div>'+
 '<div class="onboarding-fields journey-fields" id="journey-fields" '+(mode==="not_applicable"?"hidden":"")+'>'+
 '<div class="field"><label for="ob-booking-system" id="journey-system-label">'+esc(copy.systemLabel)+'</label><input id="ob-booking-system" value="'+esc(onboardingValue(o,"booking_system"))+'" placeholder="'+esc(copy.systemPlaceholder)+'"><small class="field-help">Tell us what you currently use, even if the process is informal.</small></div>'+
