@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, "..");
 const portal = fs.readFileSync(path.join(root, "client-portal", "index.html"), "utf8");
 
 const sectionStart = portal.indexOf('<section class="onboarding-section" data-onboarding-step="offers"><div class="onboarding-section-head"><span class="onboarding-number">03</span>');
-const sectionEnd = portal.indexOf('</button></section>'+', sectionStart);
+const sectionEnd = portal.indexOf('Skip this step <span aria-hidden="true">→</span></button></section>', sectionStart);
 assert.ok(sectionStart >= 0, "Onboarding step 3 must exist.");
 assert.ok(sectionEnd > sectionStart, "Onboarding step 3 must end before step 4.");
 
