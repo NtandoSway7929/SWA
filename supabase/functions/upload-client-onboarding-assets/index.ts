@@ -27,16 +27,26 @@ function safeName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^\.+/, "").slice(0, 120) || "file";
 }
 async function tokenClient(token: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
+    supabaseUrl,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  const hash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
-  const { data, error } = await admin.from("client_portal_tokens")
-    .select("id,client_id,active,expires_at").eq("token_hash", hash).maybeSingle();
-  if (error || !data || !data.active || (data.expires_at && new Date(data.expires_at) <= new Date())) return null;
-  return { admin, token: data };
+  const publicKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  if (!publicKey) return null;
+
+  // Use the same database-side token validation as the client portal itself.
+  // This keeps uploads aligned with get_client_portal and avoids maintaining
+  // a second, subtly different token-verification implementation here.
+  // The RPC is intentionally called with the public role: its EXECUTE grant
+  // is available to anon, not service_role, and the private token is the
+  // authorization credential for this narrowly scoped portal operation.
+  const portalClient = createClient(supabaseUrl, publicKey);
+  const { data, error } = await portalClient.rpc("get_client_portal", { p_token: token });
+  const clientId = data?.ok === true ? data.client?.id : null;
+  if (error || !clientId) return null;
+
+  return { admin, clientId };
 }
 
 Deno.serve(async (req) => {
@@ -66,16 +76,16 @@ Deno.serve(async (req) => {
     }
 
     const onboarding = await auth.admin.from("client_onboarding").select("id")
-      .eq("client_id", auth.token.client_id).maybeSingle();
+      .eq("client_id", auth.clientId).maybeSingle();
     if (onboarding.error) throw new Error("We could not prepare your onboarding record. Please try again.");
 
     const { data: client, error: clientError } = await auth.admin.from("clients")
-      .select("business_name").eq("id", auth.token.client_id).single();
+      .select("business_name").eq("id", auth.clientId).single();
     if (clientError || !client) throw new Error("The client record could not be verified.");
 
     const uploaded = [];
     for (const file of files) {
-      const path = auth.token.client_id + "/" + crypto.randomUUID() + "-" + safeName(file.name);
+      const path = auth.clientId + "/" + crypto.randomUUID() + "-" + safeName(file.name);
       const { error: storageError } = await auth.admin.storage.from(BUCKET).upload(path, file, {
         contentType: file.type || "application/octet-stream", cacheControl: "3600", upsert: false
       });
@@ -83,7 +93,7 @@ Deno.serve(async (req) => {
       uploadedPaths.push(path);
 
       const { data: row, error: rowError } = await auth.admin.from("client_onboarding_assets").insert({
-        client_id: auth.token.client_id,
+        client_id: auth.clientId,
         onboarding_id: onboarding.data?.id ?? null,
         file_path: path,
         original_name: file.name.slice(0, 255),
@@ -93,8 +103,6 @@ Deno.serve(async (req) => {
       if (rowError || !row) throw new Error("The upload could not be registered for " + file.name + ".");
       uploaded.push(row);
     }
-
-    await auth.admin.from("client_portal_tokens").update({ last_used_at: new Date().toISOString() }).eq("id", auth.token.id);
 
     const batchId = crypto.randomUUID();
     const { data: admins } = await auth.admin.from("admin_users").select("user_id").eq("active", true);
@@ -107,7 +115,7 @@ Deno.serve(async (req) => {
         p_title: "New client business assets",
         p_message: client.business_name + " uploaded " + uploaded.length + " onboarding asset" + (uploaded.length === 1 ? "" : "s") + ".",
         p_entity_type: "client",
-        p_entity_id: auth.token.client_id,
+        p_entity_id: auth.clientId,
         p_view: "clients",
         p_dedupe_key: "portal-assets:" + batchId + ":" + admin.user_id
       })

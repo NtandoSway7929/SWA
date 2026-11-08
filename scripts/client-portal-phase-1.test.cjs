@@ -160,17 +160,21 @@ test("the dashboard has five navigation destinations with matching section IDs",
   const destinations = [
     "overview-section",
     "projects-section",
+    "documents-section",
     "finances-section",
-    "onboarding-section",
     "request-section"
   ];
   for (const id of destinations) {
     assert.ok(portal.includes('href="#' + id + '"'), "navigation/action must link to " + id);
     assert.ok(portal.includes('id="' + id + '"'), "the destination section must exist: " + id);
   }
+  assert.ok(portal.includes('id="onboarding-section"'), "the onboarding destination must exist.");
+  assert.ok(portal.includes('id="business-assets-section"'), "the completed-onboarding business assets destination must exist.");
+  assert.ok(portal.includes('"business-assets-section":"onboarding-section"'), "the onboarding navigation destination must adapt to submission status.");
   assert.ok(portal.includes('aria-label="Your workspace"'), "navigation must have an accessible label.");
   assert.ok(portal.includes('aria-current="location"'), "the active navigation item must be exposed to assistive technology.");
-  assert.ok(portal.includes('class="portal-request-shortcut" href="#request-section"'), "a dedicated request action must remain visible in the compact mobile navigation.");
+  assert.ok(!portal.includes('class="portal-request-shortcut"'), "the removed standalone request shortcut must not return.");
+  assert.ok(portal.includes('href="#request-section">Make a request</a>'), "the main portal request action must remain available.");
 });
 
 test("the overview resolver uses current client records instead of fixed onboarding copy", () => {
