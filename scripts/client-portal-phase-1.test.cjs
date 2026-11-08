@@ -9,6 +9,25 @@ const { test } = require("node:test");
 const root = path.resolve(__dirname, "..");
 const portal = fs.readFileSync(path.join(root, "client-portal", "index.html"), "utf8");
 
+const projectHelperStart = portal.indexOf("function activeProjects(data){");
+const projectHelperEnd = portal.indexOf("\\nfunction renderProject", projectHelperStart);
+assert.ok(projectHelperStart >= 0 && projectHelperEnd > projectHelperStart, "The active-project filter must exist as an isolated helper.");
+const projectContext = {};
+vm.runInNewContext(portal.slice(projectHelperStart, projectHelperEnd) + "\\nthis.activeProjects = activeProjects;", projectContext);
+const activeProjects = projectContext.activeProjects;
+
+test("only planning, in-progress and review projects count as active", () => {
+  const records = [
+    { id: "planning", status: "planning" },
+    { id: "progress", status: "in progress" },
+    { id: "review", status: "review" },
+    { id: "paused", status: "paused" },
+    { id: "completed", status: "completed" },
+    { id: "cancelled", status: "cancelled" }
+  ];
+  assert.deepEqual(Array.from(activeProjects({ projects: records }), item => item.id), ["planning", "progress", "review"]);
+});
+
 const helperStart = portal.indexOf("function isClientInvoicePayable(");
 const helperEnd = portal.indexOf("\nfunction bindPortalNavigation", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "The next-step resolver must exist as an isolated helper.");
@@ -25,7 +44,19 @@ test("incomplete onboarding is the first action shown to a client", () => {
   assert.equal(result.badge, "Action needed");
 });
 
-test("an overdue invoice with a positive balance takes priority", () => {
+test("incomplete onboarding remains the primary next step even when an invoice is overdue", () => {
+  const result = getNextStep(
+    { status: "in_progress" },
+    [{ status: "overdue", amount_outstanding: 850 }],
+    [],
+    [],
+    []
+  );
+  assert.equal(result.target, "onboarding-section");
+  assert.equal(result.action, "Continue onboarding");
+});
+
+test("an overdue invoice with a positive balance takes priority after onboarding is complete", () => {
   const result = getNextStep(
     { status: "submitted" },
     [{ status: "overdue", amount_outstanding: 850 }],
@@ -94,6 +125,19 @@ test("active projects become the next action after financial and onboarding acti
   assert.equal(result.action, "View my projects");
 });
 
+test("a paused project is not treated as active and is clearly identified", () => {
+  const result = getNextStep(
+    { status: "submitted" },
+    [],
+    [],
+    [],
+    [{ status: "paused" }]
+  );
+  assert.equal(result.target, "projects-section");
+  assert.equal(result.badge, "Project update");
+  assert.match(result.title, /paused/i);
+});
+
 test("completed projects remain accessible without being counted as active actions", () => {
   const result = getNextStep(
     { status: "submitted" },
@@ -126,6 +170,7 @@ test("the dashboard has five navigation destinations with matching section IDs",
   }
   assert.ok(portal.includes('aria-label="Your workspace"'), "navigation must have an accessible label.");
   assert.ok(portal.includes('aria-current="location"'), "the active navigation item must be exposed to assistive technology.");
+  assert.ok(portal.includes('class="portal-request-shortcut" href="#request-section"'), "a dedicated request action must remain visible in the compact mobile navigation.");
 });
 
 test("the overview resolver uses current client records instead of fixed onboarding copy", () => {
