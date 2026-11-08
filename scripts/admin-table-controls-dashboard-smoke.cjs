@@ -667,11 +667,29 @@ async function main() {
       await page.locator('[data-admin-table-row="' + view + '"]').first().waitFor({ timeout: 10000 });
     }
 
+    // Exercise Insights against the synthetic lead and stage-history records.
+    const overviewNavToggle = page.locator('[data-nav-group-toggle="overview"]').first();
+    if ((await overviewNavToggle.getAttribute("aria-expanded")) !== "true") await overviewNavToggle.click();
+    await page.locator('[data-view="insights"]').first().click();
+    const insightsMain = page.locator("#sway-workspace-main");
+    await insightsMain.getByText("Lead conversion analytics", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
+    const conversionHeaders = (await insightsMain.locator(".sway-lead-conversion-panel th").allTextContents())
+      .map(value => value.replace(/\\s+/g, " ").trim().toLowerCase());
+    assert.ok(conversionHeaders.includes("leads ever entering stage"), "Insights should show historical lead-stage movement.");
+    assert.ok(conversionHeaders.includes("currently here"), "Insights should show current lead counts by stage.");
+
     const settingsNavigation = page.locator('[data-view="settings"]').first();
     await settingsNavigation.waitFor({ state: "visible", timeout: 15000 });
     await settingsNavigation.click();
     const runFollowupScan = page.locator('#sway-settings-expanded [data-action="run-stale-lead-automation"]');
     await runFollowupScan.waitFor({ state: "visible", timeout: 20000 });
+    const staleLeadScanPath = "/rest/v1/rpc/process_swayphics_stale_leads";
+    if (!metrics.mockedStartupCalls.some(item => item.path === staleLeadScanPath)) {
+      await page.waitForResponse(response => {
+        try { return new URL(response.url()).pathname === staleLeadScanPath; }
+        catch (error) { return false; }
+      }, { timeout: 10000 });
+    }
     const followupScanCallsBefore = metrics.mockedStartupCalls.filter(item =>
       item.path === "/rest/v1/rpc/process_swayphics_stale_leads"
     ).length;

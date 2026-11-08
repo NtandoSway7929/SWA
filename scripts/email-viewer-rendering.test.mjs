@@ -48,7 +48,7 @@ test("background inbox polling does not reload an unchanged selected email", () 
 });
 
 test("the updated email viewer assets are cache-busted", () => {
-  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261108-notification-record-navigation-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261108-insights-lead-conversion-1"));
   assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261108-notification-record-navigation-1"));
 });
 
@@ -65,7 +65,7 @@ test("Inbox conversations can be marked read or unread from the list without ope
   assert.ok(workspaceJs.includes("if (focusTarget && !focusTarget.disabled &&"));
   assert.ok(workspaceCss.includes(".sway-email-inbox-read-toggle"));
   assert.ok(workspaceCss.includes("body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-read-toggle"));
-  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261108-notification-record-navigation-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261108-insights-lead-conversion-1"));
   assert.ok(dashboardHtml.includes("admin-workspace.css?v=20261108-notification-record-navigation-1"));
 });
 
@@ -79,7 +79,7 @@ test("selected Inbox conversations can be marked read or unread in bulk", () => 
   assert.ok(workspaceJs.includes("await setEmailThreadReadState(thread.threadId, isRead)"));
   assert.ok(workspaceJs.includes("The selection has been kept so you can retry."));
   assert.ok(workspaceJs.includes("setSelectedEmailThreadsReadState("));
-  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261108-notification-record-navigation-1"));
+  assert.ok(dashboardHtml.includes("admin-workspace.js?v=20261108-insights-lead-conversion-1"));
 });
 
 const inboxFocusJs = readFileSync(

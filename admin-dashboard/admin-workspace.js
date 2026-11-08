@@ -18927,6 +18927,99 @@ function simpleBars(items, color) {
             '<div class="sway-inline-note">Owner access controls who can activate, deactivate or edit team members. Team members can operate the shared business workspace but do not manage team access.</div>'
         );
     }
+    function renderLeadConversionAnalytics() {
+        const stages = [
+            "new",
+            "contacted",
+            "follow-up",
+            "interested",
+            "proposal sent",
+            "negotiating",
+            "won",
+            "lost"
+        ];
+
+        const stageCounts = {};
+
+        stages.forEach(function (stage) {
+            stageCounts[stage] = new Set();
+        });
+
+        state.leadStageHistory.forEach(function (entry) {
+            if (
+                entry.lead_id &&
+                stageCounts[entry.to_status]
+            ) {
+                stageCounts[entry.to_status].add(
+                    entry.lead_id
+                );
+            }
+        });
+
+        const rows =
+            stages.map(function (stage) {
+                const historical =
+                    stageCounts[stage].size;
+
+                const current =
+                    state.leads.filter(function (lead) {
+                        return lead.status === stage;
+                    }).length;
+
+                return {
+                    stage: stage,
+                    historical: historical,
+                    current: current
+                };
+            }).filter(function (item) {
+                return (
+                    item.historical ||
+                    item.current
+                );
+            });
+
+        return (
+            '<section class="sway-lead-conversion-panel">' +
+                '<div class="sway-lead-source-head">' +
+                    '<div>' +
+                        '<span class="admin-label">Pipeline movement</span>' +
+                        "<h3>Lead conversion analytics</h3>" +
+                        "<p>Historical stage entries are counted from the point stage tracking was enabled.</p>" +
+                    "</div>" +
+                "</div>" +
+                '<div class="sway-bi-conversion-wrap">' +
+                    '<div class="sway-bi-conversion-copy">' +
+                        "<strong>Won lead share</strong>" +
+                        "<span>Won records as a share of all leads currently tracked; this is not a cohort conversion rate.</span>" +
+                    "</div>" +
+                    businessConversionGauge() +
+                "</div>" +
+                '<div class="sway-table-wrap">' +
+                    '<table class="sway-table">' +
+                        "<thead><tr><th>Stage</th><th>Leads ever entering stage</th><th>Currently here</th></tr></thead>" +
+                        "<tbody>" +
+                            rows.map(function (item) {
+                                return (
+                                    "<tr>" +
+                                        "<td><strong>" +
+                                            esc(formatDisplayText(item.stage)) +
+                                        "</strong></td>" +
+                                        "<td>" +
+                                            item.historical +
+                                        "</td>" +
+                                        "<td>" +
+                                            item.current +
+                                        "</td>" +
+                                    "</tr>"
+                                );
+                            }).join("") +
+                        "</tbody>" +
+                    "</table>" +
+                "</div>" +
+            "</section>"
+        );
+    }
+
     function renderLeadSourceAnalytics() {
         const buckets = {};
 
