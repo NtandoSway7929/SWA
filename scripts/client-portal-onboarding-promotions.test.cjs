@@ -7,8 +7,8 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const portal = fs.readFileSync(path.join(root, "client-portal", "index.html"), "utf8");
 
-const sectionStart = portal.indexOf('<section class="onboarding-section"><div class="onboarding-section-head"><span class="onboarding-number">03</span>');
-const sectionEnd = portal.indexOf('<section class="onboarding-section"><div class="onboarding-section-head"><span class="onboarding-number">04</span>', sectionStart);
+const sectionStart = portal.indexOf('<section class="onboarding-section" data-onboarding-step="offers"><div class="onboarding-section-head"><span class="onboarding-number">03</span>');
+const sectionEnd = portal.indexOf('Skip this step <span aria-hidden="true">→</span></button></section>', sectionStart);
 assert.ok(sectionStart >= 0, "Onboarding step 3 must exist.");
 assert.ok(sectionEnd > sectionStart, "Onboarding step 3 must end before step 4.");
 
@@ -21,7 +21,7 @@ assert.ok(!/\srequired(?:\s|=|>)/i.test(section), "No field in the optional prom
 assert.ok(section.includes("Terms &amp; conditions"), "Offer terms must be described generically.");
 assert.ok(section.includes("How do customers redeem the offer?"), "Redemption instructions must be described generically.");
 
-const collectorStart = portal.indexOf("function collectOnboarding()");
+const collectorStart = portal.indexOf("function collectOnboarding(submit)");
 const collectorEnd = portal.indexOf("\nfunction formatFileSize", collectorStart);
 assert.ok(collectorStart >= 0 && collectorEnd > collectorStart, "Onboarding payload collector must exist.");
 const collector = portal.slice(collectorStart, collectorEnd);

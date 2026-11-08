@@ -318,6 +318,64 @@ body{
   .portal-section-nav a{transition:none}
   html{scroll-behavior:auto}
 }
+
+/* Phase 2: guided onboarding steps, progress feedback and business-aware customer journeys. */
+.onboarding-progress{display:grid;gap:11px;margin:0 0 16px;padding:15px 16px;border:1px solid rgba(52,58,64,.10);border-radius:16px;background:#F6F7F8}
+.onboarding-progress-copy{display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+.onboarding-progress-copy>div{display:grid;gap:4px}
+.onboarding-progress-copy>div>span{color:var(--soft);font-size:.47rem;font-weight:900;letter-spacing:.13em}
+.onboarding-progress-copy strong{color:var(--charcoal-deep);font-size:.78rem;font-weight:850;letter-spacing:-.02em}
+.onboarding-progress-copy>span{color:var(--charcoal-muted);font-size:.49rem;font-weight:650;text-align:right}
+.onboarding-progress-track{height:7px;overflow:hidden;border-radius:999px;background:#E2E6E9}
+.onboarding-progress-track>span{display:block;width:14.2857%;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--deep),var(--blue));transition:width .25s ease}
+.onboarding-section[hidden],.journey-fields[hidden],.journey-not-applicable[hidden]{display:none!important}
+.onboarding-section{scroll-margin-top:150px}
+.onboarding-step-label{color:var(--charcoal-deep);font-size:.62rem;font-weight:850}
+.onboarding-actions{align-items:center;padding-top:8px}
+.onboarding-actions-copy{display:grid;gap:4px;min-width:0}
+.onboarding-actions-right{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.onboarding-actions-right .portal-button{min-height:40px}
+.onboarding-actions-right [hidden]{display:none!important}
+.onboarding-skip{display:inline-flex;align-items:center;gap:8px;margin-top:13px;padding:7px 0;background:none;color:var(--charcoal-muted);font-size:.55rem;font-weight:800;cursor:pointer}
+.onboarding-skip:hover{color:var(--blue)}
+.onboarding-skip span{font-size:.8rem}
+.journey-choice-needed{margin-top:12px;padding:12px 14px;border:1px dashed rgba(86,97,107,.25);border-radius:13px;background:#F7F8F9;color:var(--charcoal-muted);font-size:.54rem;line-height:1.6}
+.journey-not-applicable{margin-top:14px;padding:15px;border:1px solid rgba(52,58,64,.11);border-radius:14px;background:#F4F6F7}
+.journey-not-applicable strong{display:block;color:var(--charcoal-deep);font-size:.62rem}
+.journey-not-applicable p{margin-top:5px;color:var(--charcoal-muted);font-size:.54rem;line-height:1.6}
+.onboarding-review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.onboarding-review-card{min-width:0;padding:14px;border:1px solid rgba(52,58,64,.10);border-radius:15px;background:#F7F8F9}
+.onboarding-review-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.onboarding-review-card-head h5{color:var(--charcoal-deep);font-size:.62rem;font-weight:850}
+.onboarding-review-card-body{display:grid;gap:6px;color:var(--charcoal-muted);font-size:.53rem;line-height:1.55;overflow-wrap:anywhere}
+.onboarding-review-card-body p{margin:0}
+.onboarding-review-card-body strong{color:var(--charcoal-deep);font-weight:800}
+.onboarding-review-card-body ul{display:grid;gap:7px;padding-left:16px}
+.onboarding-review-card-body li{padding-left:2px}
+.onboarding-review-card-body li small{display:block;margin-top:2px;color:var(--soft);font-size:.48rem}
+.onboarding-review-note{margin-top:12px;padding:12px 14px;border:1px solid rgba(1,82,244,.10);border-radius:13px;background:#F1F5FA;color:#475461;font-size:.53rem;line-height:1.6}
+.onboarding-form :focus-visible{outline:3px solid rgba(1,82,244,.28);outline-offset:2px}
+@media(max-width:760px){
+  .onboarding-progress{padding:13px}
+  .onboarding-progress-copy{align-items:flex-start;flex-direction:column;gap:6px}
+  .onboarding-progress-copy>span{text-align:left}
+  .onboarding-review-grid{grid-template-columns:1fr}
+  .onboarding-actions{align-items:stretch;flex-direction:column}
+  .onboarding-actions-right{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .onboarding-actions-right .portal-button{width:100%;padding-left:9px;padding-right:9px}
+  .onboarding-actions-copy{gap:5px}
+}
+@media(max-width:430px){
+  .onboarding-progress{border-radius:14px}
+  .onboarding-step-label{font-size:.58rem}
+  .onboarding-actions-right{gap:7px}
+  .onboarding-actions-right .portal-button{min-height:42px;font-size:.55rem}
+  .onboarding-review-card{padding:12px}
+}
+@media(prefers-reduced-motion:reduce){
+  .onboarding-progress-track>span{transition:none}
+}
+
 </style>
 </head>
 <body>
@@ -403,62 +461,329 @@ function renderInvoice(item){const outstanding=Number(item.amount_outstanding||0
 function renderQuote(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.quote_number||item.title||"Quote")+'<div class="financial-meta">'+esc(item.title||"Swayphics quotation")+(item.valid_until?" · Valid until "+esc(date(item.valid_until)):"")+"</div></div><div><b>"+esc(money(item.amount))+"</b><div style='margin-top:5px;text-align:right;'>"+chip(item.status)+"</div></div></div></article>"}
 function renderPayment(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.reference||"Payment")+'<div class="financial-meta">'+esc(date(item.paid_at))+(item.method?" · "+esc(item.method):"")+"</div></div><div><b>"+esc(money(item.amount))+"</b><div style='margin-top:5px;text-align:right;'>"+chip("paid")+"</div></div></div></article>"}
 function onboardingValue(onboarding,key){return onboarding&&onboarding[key]!=null?onboarding[key]:""}
+function onboardingJourneyMode(onboarding){
+const raw=String(onboardingValue(onboarding,"booking_process")||"");
+const match=raw.match(/^\s*Customer journey type:\s*([^\r\n]+)(?:\r?\n|$)/i);
+if(match){
+const value=match[1].trim().toLowerCase();
+if(value.includes("retail"))return "retail";
+if(value.includes("online"))return "ecommerce";
+if(value.includes("enquiry"))return "enquiries";
+if(value.includes("appointment")||value.includes("booking"))return "appointments";
+}
+if(raw.trim().toLowerCase()==="not applicable")return "not_applicable";
+return raw.trim()?"appointments":"";
+}
+function onboardingJourneyText(onboarding){
+const raw=String(onboardingValue(onboarding,"booking_process")||"");
+const match=raw.match(/^\s*Customer journey type:\s*[^\r\n]+(?:\r?\n|$)/i);
+if(match)return raw.slice(match[0].length).trim();
+return raw.trim().toLowerCase()==="not applicable"?"":raw;
+}
+function onboardingJourneyCopy(mode){
+const content={
+appointments:{title:"Appointments & bookings",description:"Tell us how customers arrange an appointment or reserve a service.",systemLabel:"Current booking system or method",systemPlaceholder:"e.g. WhatsApp, Fresha, phone calls",contactLabel:"Booking WhatsApp",contactPlaceholder:"e.g. 071 234 5678",processLabel:"How should a customer book?",processPlaceholder:"e.g. Customer chooses a service, selects a preferred date and time, then sends a booking request on WhatsApp.",rulesLabel:"Booking rules",rulesPlaceholder:"e.g. Deposits, notice periods, cancellations and late-arrival rules."},
+retail:{title:"In-person retail",description:"Tell us how customers browse, purchase and collect products at your premises.",systemLabel:"Sales or point-of-sale method",systemPlaceholder:"e.g. In-store checkout, POS system, WhatsApp orders",contactLabel:"Customer contact or order WhatsApp",contactPlaceholder:"e.g. 071 234 5678",processLabel:"How does a customer purchase in-store?",processPlaceholder:"e.g. Customer visits the store, chooses a product, pays at the till and collects it immediately.",rulesLabel:"Payment, collection or returns information",rulesPlaceholder:"e.g. Accepted payment methods, collection arrangements and returns policy."},
+ecommerce:{title:"Online store & e-commerce",description:"Tell us how customers place and receive orders online.",systemLabel:"Online store or selling platform",systemPlaceholder:"e.g. Shopify, WooCommerce, WhatsApp catalogue",contactLabel:"Customer support or order WhatsApp",contactPlaceholder:"e.g. 071 234 5678",processLabel:"How should a customer place an online order?",processPlaceholder:"e.g. Customer browses products, adds items to a cart, pays online and receives an order confirmation.",rulesLabel:"Delivery, collection, payment or returns rules",rulesPlaceholder:"e.g. Delivery areas, shipping fees, collection times and returns policy."},
+enquiries:{title:"Enquiries & consultations",description:"Tell us what should happen when a potential customer contacts your business.",systemLabel:"Main enquiry channel or system",systemPlaceholder:"e.g. WhatsApp, email, phone, enquiry form",contactLabel:"Main business contact or WhatsApp",contactPlaceholder:"e.g. 071 234 5678",processLabel:"What should happen when a customer makes an enquiry?",processPlaceholder:"e.g. Customer submits an enquiry, the business reviews it, provides a quote and confirms the next step.",rulesLabel:"Response times, quotations or other expectations",rulesPlaceholder:"e.g. Expected response time, consultation fees or quotation validity."}
+};
+return content[mode]||content.appointments;
+}
 function serviceRows(services){
 const rows=Array.isArray(services)&&services.length?services:[{name:"",price:"",description:""}];
-return rows.map(function(item,i){return '<div class="service-row" data-service-row><div class="field"><label>Service '+(i+1)+'</label><input data-service-name value="'+esc(item.name||"")+'" placeholder="e.g. Full Body Massage"></div><div class="field"><label>Price</label><input data-service-price value="'+esc(item.price||"")+'" placeholder="e.g. R650"></div><div class="field"><label>What is included?</label><input data-service-description value="'+esc(item.description||"")+'" placeholder="e.g. 60-minute treatment"></div><button type="button" class="remove-service" data-remove-service>Remove</button></div>'}).join("")}
+return rows.map(function(item,i){return '<div class="service-row" data-service-row><div class="field"><label>Product or service '+(i+1)+'</label><input data-service-name value="'+esc(item.name||"")+'" placeholder="e.g. Full Body Massage or Handmade candles"></div><div class="field"><label>Price</label><input data-service-price value="'+esc(item.price||"")+'" placeholder="e.g. R650"></div><div class="field"><label>Details</label><input data-service-description value="'+esc(item.description||"")+'" placeholder="e.g. 60-minute treatment or 250g jar"></div><button type="button" class="remove-service" data-remove-service>Remove</button></div>'}).join("");
+}
+function onboardingJourneySection(o){
+const mode=onboardingJourneyMode(o),copy=onboardingJourneyCopy(mode),process=onboardingJourneyText(o);
+const options=[["appointments","Appointments & bookings"],["retail","In-person retail"],["ecommerce","Online store / e-commerce"],["enquiries","Enquiry-based business"],["not_applicable","No bookings or structured orders"]];
+return '<section class="onboarding-section" data-onboarding-step="journey"><div class="onboarding-section-head"><span class="onboarding-number">04</span><div><h4>Customer journey</h4><p>Choose the option that best describes how customers buy, book or contact your business. The questions below will adapt to your answer.</p></div></div>'+
+'<div class="onboarding-fields"><div class="field full"><label for="ob-journey-type">How do customers usually interact with your business? *</label><select id="ob-journey-type" required><option value="">Choose the closest match</option>'+options.map(function(item){return '<option value="'+item[0]+'" '+(mode===item[0]?'selected':'')+'>'+item[1]+'</option>'}).join("")+'</select><small class="field-help">We will only ask about bookings when appointments are relevant. Retail and online businesses will see purchase and order questions instead.</small></div></div>'+
+'<div class="journey-choice-needed" id="journey-choice-needed" '+(mode?"hidden":"")+'><p>Choose the closest match above to see questions relevant to your business.</p></div>'+
+'<div class="journey-not-applicable" id="journey-not-applicable" '+(mode==="not_applicable"?"":"hidden")+'><strong>No booking or structured order flow?</strong><p>That is fine. We will record this section as not applicable. You can still explain your business in the next step.</p></div>'+
+'<div class="onboarding-fields journey-fields" id="journey-fields" '+(mode==="not_applicable"?"hidden":"")+'>'+
+'<div class="field"><label for="ob-booking-system" id="journey-system-label">'+esc(copy.systemLabel)+'</label><input id="ob-booking-system" value="'+esc(onboardingValue(o,"booking_system"))+'" placeholder="'+esc(copy.systemPlaceholder)+'"><small class="field-help">Tell us what you currently use, even if the process is informal.</small></div>'+
+'<div class="field"><label for="ob-booking-whatsapp" id="journey-contact-label">'+esc(copy.contactLabel)+'</label><input id="ob-booking-whatsapp" value="'+esc(onboardingValue(o,"booking_whatsapp"))+'" placeholder="'+esc(copy.contactPlaceholder)+'"><small class="field-help">Use the customer-facing number or contact channel for this process.</small></div>'+
+'<div class="field full"><label for="ob-booking-process" id="journey-process-label">'+esc(copy.processLabel)+' *</label><textarea id="ob-booking-process" '+(mode&&mode!=="not_applicable"?"required":"")+' placeholder="'+esc(copy.processPlaceholder)+'">'+esc(process)+'</textarea><small class="field-help">Describe the customer journey from their first action to the point where the purchase, booking or enquiry is confirmed.</small></div>'+
+'<div class="field full"><label for="ob-booking-rules" id="journey-rules-label">'+esc(copy.rulesLabel)+'</label><textarea id="ob-booking-rules" placeholder="'+esc(copy.rulesPlaceholder)+'">'+esc(onboardingValue(o,"booking_rules"))+'</textarea><small class="field-help">Add any terms or practical details customers should know.</small></div>'+
+'</div></section>';
+}
 function onboardingForm(data,onboarding){
 const c=data.client||{},o=onboarding||{};
 return '<section class="portal-section" id="onboarding-section"><section class="portal-card">'+
-'<div class="card-head"><div><h3>Website onboarding</h3><p>Tell us what your website needs to know about your business. You do not need to write it perfectly. We will refine the content with you.</p></div><span class="chip '+(o.status==="submitted"?"success":"warning")+'">'+esc(o.status==="submitted"?"Submitted":"In progress")+'</span></div>'+
-'<div class="onboarding-intro"><div class="onboarding-guide"><strong>How to use this form</strong><p>Work through each section and enter the information where the examples show you. If something does not apply, simply write <b>Not applicable</b>. You can save your progress and return later.</p></div><div class="onboarding-tip"><span>Helpful rule</span><p>Think like a customer. Give us the information someone would need before deciding to book, buy or contact you.</p></div></div>'+
+'<div class="card-head"><div><h3>Website onboarding</h3><p>Work through a few guided steps so we can understand your business and prepare the right website experience. You can save your progress and return later.</p></div><span class="chip '+(o.status==="submitted"?"success":"warning")+'">'+esc(o.status==="submitted"?"Submitted":"In progress")+'</span></div>'+
+'<div class="onboarding-intro"><div class="onboarding-guide"><strong>One step at a time</strong><p>Answer what applies to your business. Optional sections can be skipped, and your progress saves automatically as you work.</p></div><div class="onboarding-tip"><span>Helpful rule</span><p>Think like a customer. Give us the information someone would need before deciding to book, buy or contact you. Bullet points are fine.</p></div></div>'+
 '<form class="onboarding-form '+(o.status==="submitted"?"onboarding-locked":"")+'" id="onboarding-form">'+
-'<section class="onboarding-section"><div class="onboarding-section-head"><span class="onboarding-number">01</span><div><h4>Business details</h4><p>The basic information customers should see on the website.</p></div></div><div class="onboarding-fields">'+
+'<div class="onboarding-progress" aria-live="polite"><div class="onboarding-progress-copy"><div><span id="onboarding-step-count">STEP 1 OF 7</span><strong id="onboarding-step-title">Business details</strong></div><span id="onboarding-save-state">Your progress saves automatically</span></div><div class="onboarding-progress-track" id="onboarding-progress-track" role="progressbar" aria-label="Onboarding progress" aria-valuemin="1" aria-valuemax="7" aria-valuenow="1"><span id="onboarding-progress-fill"></span></div></div>'+
+'<section class="onboarding-section" data-onboarding-step="business"><div class="onboarding-section-head"><span class="onboarding-number">01</span><div><h4>Business details</h4><p>The essential information customers should see on your website.</p></div></div><div class="onboarding-fields">'+
 '<div class="field"><label for="ob-business-name">Business name *</label><input id="ob-business-name" required value="'+esc(onboardingValue(o,"business_name")||c.business_name)+'" placeholder="e.g. Maisha’s Touch"><small class="field-help">Enter the name customers know your business by.</small></div>'+
 '<div class="field"><label for="ob-contact-name">Main contact person</label><input id="ob-contact-name" value="'+esc(onboardingValue(o,"contact_name")||c.contact_name)+'" placeholder="e.g. Maisha"><small class="field-help">Who should Swayphics contact about website information?</small></div>'+
 '<div class="field"><label for="ob-email">Business email</label><input id="ob-email" type="email" value="'+esc(onboardingValue(o,"email")||c.email)+'" placeholder="e.g. hello@yourbusiness.co.za"><small class="field-help">Use the email customers should use to contact you.</small></div>'+
-'<div class="field"><label for="ob-phone">Business phone / WhatsApp</label><input id="ob-phone" value="'+esc(onboardingValue(o,"phone")||c.phone)+'" placeholder="e.g. 071 234 5678"><small class="field-help">Include the number customers should use for enquiries or bookings.</small></div>'+
-'<div class="field full"><label for="ob-address">Business address *</label><textarea id="ob-address" required placeholder="e.g. Shop 12, Edenvale, Gauteng, South Africa">'+esc(onboardingValue(o,"address"))+'</textarea><small class="field-help">Give the full location customers should use to find you. <em>If you operate from home or a private location, tell us what should be displayed publicly.</em></small></div>'+
-'<div class="field"><label for="ob-hours">Operating hours</label><textarea id="ob-hours" placeholder="e.g. Mon–Fri 09:00–17:00; Sat 09:00–14:00; Sun closed">'+esc(onboardingValue(o,"operating_hours"))+'</textarea><small class="field-help">Tell us which days and times you accept customers.</small></div>'+
+'<div class="field"><label for="ob-phone">Business phone / WhatsApp</label><input id="ob-phone" value="'+esc(onboardingValue(o,"phone")||c.phone)+'" placeholder="e.g. 071 234 5678"><small class="field-help">Include the number customers should use for enquiries.</small></div>'+
+'<div class="field full"><label for="ob-address">Business address or service area *</label><textarea id="ob-address" required placeholder="e.g. Shop 12, Edenvale, Gauteng, South Africa">'+esc(onboardingValue(o,"address"))+'</textarea><small class="field-help">Give the location customers should use to find you, or the area you serve. If you operate from home or a private location, tell us what should be displayed publicly.</small></div>'+
+'<div class="field"><label for="ob-hours">Operating hours</label><textarea id="ob-hours" placeholder="e.g. Mon–Fri 09:00–17:00; Sat 09:00–14:00; Sun closed">'+esc(onboardingValue(o,"operating_hours"))+'</textarea><small class="field-help">Tell us when customers can visit, call or expect a response.</small></div>'+
 '<div class="field"><label for="ob-social">Social media links</label><textarea id="ob-social" placeholder="Instagram: ...&#10;Facebook: ...&#10;TikTok: ...">'+esc(onboardingValue(o,"social_links"))+'</textarea><small class="field-help">Paste the full links to your active social pages.</small></div>'+
 '</div></section>'+
-'<section class="onboarding-section"><div class="onboarding-section-head"><span class="onboarding-number">02</span><div><h4>Services & pricing</h4><p>List the services customers can book or enquire about.</p></div></div><div class="service-list" id="service-list">'+serviceRows(o.services)+'</div><button type="button" class="portal-button add-service" id="add-service">+ Add another service</button><small class="field-help" style="margin-top:8px">Example: <em>Full Body Massage · R650 · 60-minute treatment</em>. Add as many services as you currently offer.</small></section>'+
-'<section class="onboarding-section"><div class="onboarding-section-head"><span class="onboarding-number">03</span><div><h4>Vouchers &amp; promotions (optional)</h4><p>Share details of any vouchers, discounts or special offers customers can redeem. Leave this section blank if you do not offer any.</p></div></div><div class="onboarding-fields">'+
-'<div class="field full"><label for="ob-vouchers">What vouchers, discounts or special offers do you currently offer?</label><textarea id="ob-vouchers" placeholder="e.g. A Daddy’s Deals voucher, a seasonal discount, a package deal or a first-time customer offer.">'+esc(onboardingValue(o,"daddy_deals_vouchers"))+'</textarea><small class="field-help">Include the platform or partner name and a link if customers purchase or redeem the offer online.</small></div>'+
-'<div class="field"><label for="ob-voucher-terms">Terms &amp; conditions</label><textarea id="ob-voucher-terms" placeholder="e.g. Valid Monday–Friday. Appointment required. One offer per person.">'+esc(onboardingValue(o,"daddy_deals_terms"))+'</textarea><small class="field-help">Add any expiry dates, exclusions, restrictions or booking conditions.</small></div>'+
-'<div class="field"><label for="ob-redemption">How do customers redeem the offer?</label><textarea id="ob-redemption" placeholder="e.g. Customers enter a promo code at checkout or mention the offer when booking on WhatsApp.">'+esc(onboardingValue(o,"voucher_redemption_process"))+'</textarea><small class="field-help">Describe any steps customers must follow when booking, paying or visiting your business. Leave blank if not relevant.</small></div>'+
+'<section class="onboarding-section" data-onboarding-step="catalogue"><div class="onboarding-section-head"><span class="onboarding-number">02</span><div><h4>Products &amp; services</h4><p>List the main things customers can buy, book or enquire about.</p></div></div><div class="service-list" id="service-list">'+serviceRows(o.services)+'</div><button type="button" class="portal-button add-service" id="add-service">+ Add another product or service</button><small class="field-help" style="margin-top:8px">Examples: Full Body Massage · R650 · 60-minute treatment; Handmade candle · R180 · 250g jar. Add at least one item before submitting.</small></section>'+
+'<section class="onboarding-section" data-onboarding-step="offers"><div class="onboarding-section-head"><span class="onboarding-number">03</span><div><h4>Vouchers &amp; promotions (optional)</h4><p>Share details of any vouchers, discounts, bundles or special offers. Leave this section blank if you do not offer any current promotions.</p></div></div><div class="onboarding-fields">'+
+'<div class="field full"><label for="ob-vouchers">What vouchers, discounts or special offers do you currently offer?</label><textarea id="ob-vouchers" placeholder="e.g. A seasonal discount, bundle deal, first-time customer offer or a Daddy’s Deals voucher.">'+esc(onboardingValue(o,"daddy_deals_vouchers"))+'</textarea><small class="field-help">Include the offer name, platform and link where relevant. Blank means you have no current promotions.</small></div>'+
+'<div class="field"><label for="ob-voucher-terms">Terms &amp; conditions</label><textarea id="ob-voucher-terms" placeholder="e.g. Valid Monday–Friday. Appointment required. One offer per person.">'+esc(onboardingValue(o,"daddy_deals_terms"))+'</textarea><small class="field-help">Add expiry dates, exclusions, restrictions or conditions.</small></div>'+
+'<div class="field"><label for="ob-redemption">How do customers redeem the offer?</label><textarea id="ob-redemption" placeholder="e.g. Enter a promo code at checkout or mention the offer on WhatsApp.">'+esc(onboardingValue(o,"voucher_redemption_process"))+'</textarea><small class="field-help">Describe any steps customers follow to use an offer.</small></div>'+
+'</div><button type="button" class="onboarding-skip" data-onboarding-skip="offers">Skip this step <span aria-hidden="true">→</span></button></section>'+
+onboardingJourneySection(o)+
+'<section class="onboarding-section" data-onboarding-step="story"><div class="onboarding-section-head"><span class="onboarding-number">05</span><div><h4>About your business &amp; brand</h4><p>Help us make the website sound and feel like your business, not a generic template.</p></div></div><div class="onboarding-fields">'+
+'<div class="field full"><label for="ob-about">Tell us about the business</label><textarea id="ob-about" placeholder="e.g. Who you are, what you offer, where you are based and what makes the business different.">'+esc(onboardingValue(o,"about_business"))+'</textarea><small class="field-help">Share your story, audience, strengths and what customers should know. Bullet points are completely fine.</small></div>'+
+'<div class="field full"><label for="ob-branding">Brand and design preferences</label><textarea id="ob-branding" placeholder="e.g. Use our existing logo. Preferred colours are... We want the website to feel...">'+esc(onboardingValue(o,"branding_notes"))+'</textarea><small class="field-help">Mention colours, tone, logo preferences, fonts, design references or anything we should preserve.</small></div>'+
 '</div></section>'+
-'<section class="onboarding-section"><div class="onboarding-section-head"><span class="onboarding-number">04</span><div><h4>Booking setup</h4><p>Explain how a customer currently makes an appointment.</p></div></div><div class="onboarding-fields">'+
-'<div class="field"><label for="ob-booking-system">Current booking system</label><input id="ob-booking-system" value="'+esc(onboardingValue(o,"booking_system"))+'" placeholder="e.g. WhatsApp / Fresha / phone calls"><small class="field-help">Tell us what you currently use, even if it is informal.</small></div>'+
-'<div class="field"><label for="ob-booking-whatsapp">Booking WhatsApp</label><input id="ob-booking-whatsapp" value="'+esc(onboardingValue(o,"booking_whatsapp"))+'" placeholder="e.g. 071 234 5678"><small class="field-help">The WhatsApp number the website should send customers to.</small></div>'+
-'<div class="field full"><label for="ob-booking-process">How should a customer book? *</label><textarea id="ob-booking-process" required placeholder="e.g. Customer chooses a service, clicks Book Now, then sends their preferred date and time on WhatsApp.">'+esc(onboardingValue(o,"booking_process"))+'</textarea><small class="field-help">Describe the ideal customer journey from choosing a service to receiving confirmation.</small></div>'+
-'<div class="field full"><label for="ob-booking-rules">Booking rules</label><textarea id="ob-booking-rules" placeholder="e.g. 24-hour notice required. A 50% deposit is required to secure an appointment.">'+esc(onboardingValue(o,"booking_rules"))+'</textarea><small class="field-help">Include deposits, cancellations, late arrivals, notice periods or anything else customers must know.</small></div>'+
-'</div></section>'+
-'<section class="onboarding-section"><div class="onboarding-section-head"><span class="onboarding-number">05</span><div><h4>About the business & brand</h4><p>Help us make the website sound like your business, not a generic template.</p></div></div><div class="onboarding-fields">'+
-'<div class="field full"><label for="ob-about">Tell us about the business</label><textarea id="ob-about" placeholder="e.g. Maisha’s Touch is a beauty and wellness spa in Edenvale offering...">'+esc(onboardingValue(o,"about_business"))+'</textarea><small class="field-help">Tell us who you are, what you offer, where you are based and what makes the business different. <em>Bullet points are completely fine.</em></small></div>'+
-'<div class="field"><label for="ob-branding">Branding notes</label><textarea id="ob-branding" placeholder="e.g. Use our existing logo. Preferred colours are...">'+esc(onboardingValue(o,"branding_notes"))+'</textarea><small class="field-help">Mention colours, tone, logo preferences, fonts or anything we should preserve.</small></div>'+
-'<div class="field"><label for="ob-assets">Photos, logos & other assets</label><textarea id="ob-assets" placeholder="e.g. These are our treatment photos, logo and price list.">'+esc(onboardingValue(o,"asset_notes"))+'</textarea><small class="field-help">Add a note if there is anything we should know about the files you are uploading.</small></div><div class="field full"><div class="asset-upload"><div><strong style="font-size:.62rem">Attach your files</strong><small class="field-help" style="margin-top:3px">Upload your logo, photos, certificates, menus, price lists or other website assets. You can select multiple files at once. Maximum 15 MB per file.</small></div><input id="ob-assets-files" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,application/pdf,.zip,.doc,.docx"><div class="asset-upload-actions"><span class="asset-upload-status" id="asset-upload-status">No new files selected</span><button type="button" class="portal-button secondary" id="upload-assets">Attach files</button></div><div class="asset-list" id="asset-list"></div></div></div>'+
-'</div></section>'+
-'<div class="onboarding-actions"><div><div class="required-note">* Required before you can submit</div><div class="save-status" id="onboarding-status">'+(o.updated_at?"Last saved "+esc(date(o.updated_at)):"Nothing saved yet")+'</div></div><div class="onboarding-actions-right"><button type="button" class="portal-button secondary" id="save-onboarding">Save progress</button><button type="submit" class="portal-button" '+(o.status==="submitted"?"disabled":"")+'>Submit information</button></div></div>'+
-'<div id="onboarding-message" class="message" hidden></div></form></section></section>';
+'<section class="onboarding-section" data-onboarding-step="assets"><div class="onboarding-section-head"><span class="onboarding-number">06</span><div><h4>Files &amp; brand assets</h4><p>Attach any material that will help us build an accurate website. This step is optional and you can send more files later.</p></div></div><div class="onboarding-fields">'+
+'<div class="field full"><label for="ob-assets">Notes about your files</label><textarea id="ob-assets" placeholder="e.g. These are our product photos, logo, certificates and current price list.">'+esc(onboardingValue(o,"asset_notes"))+'</textarea><small class="field-help">Tell us what the files are and where you would like them used.</small></div>'+
+'<div class="field full"><div class="asset-upload"><div><strong style="font-size:.62rem">Attach your files</strong><small class="field-help" style="margin-top:3px">Upload your logo, photos, certificates, menus, product lists or other website assets. You can select multiple files at once. Maximum 15 MB per file.</small></div><input id="ob-assets-files" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,application/pdf,.zip,.doc,.docx"><div class="asset-upload-actions"><span class="asset-upload-status" id="asset-upload-status">No new files selected</span><button type="button" class="portal-button secondary" id="upload-assets">Attach files</button></div><div class="asset-list" id="asset-list"></div></div></div>'+
+'</div><button type="button" class="onboarding-skip" data-onboarding-skip="assets">Skip for now <span aria-hidden="true">→</span></button></section>'+
+'<section class="onboarding-section" data-onboarding-step="review"><div class="onboarding-section-head"><span class="onboarding-number">07</span><div><h4>Review your information</h4><p>Check the details below before submitting them to Swayphics. You can go back and edit any step.</p></div></div><div id="onboarding-review-summary" class="onboarding-review-grid"></div><div class="onboarding-review-note">Your information will be submitted securely to Swayphics for review. You will not be able to edit this form after submission.</div></section>'+
+'<div class="onboarding-actions"><div class="onboarding-actions-copy"><div class="onboarding-step-label" id="onboarding-step-status">Step 1 of 7 · Business details</div><div class="required-note">* Required before submission. Optional steps can be skipped.</div><div class="save-status" id="onboarding-status">'+(o.updated_at?"Last saved "+esc(date(o.updated_at)):"Changes save automatically as you work")+'</div></div><div class="onboarding-actions-right"><button type="button" class="portal-button secondary" id="onboarding-back" disabled>Back</button><button type="button" class="portal-button secondary" id="save-onboarding">Save progress</button><button type="button" class="portal-button" id="onboarding-next">Continue</button><button type="submit" class="portal-button" id="submit-onboarding" hidden '+(o.status==="submitted"?"disabled":"")+'>Submit information</button></div></div>'+
+'<div id="onboarding-message" class="message" role="status" aria-live="polite" hidden></div></form></section></section>';
 }
-function collectOnboarding(){
+
+function buildOnboardingPayload(fields,services,journeyMode,submit){
+const source=fields||{},mode=String(journeyMode||"").toLowerCase(),labels={appointments:"Appointments & bookings",retail:"In-person retail",ecommerce:"Online orders",enquiries:"Enquiry-based sales"};
+const rawProcess=String(source.booking_process||"").trim();
+let bookingProcess=rawProcess;
+if(mode==="not_applicable")bookingProcess="Not applicable";
+else if(labels[mode])bookingProcess="Customer journey type: "+labels[mode]+"\n\n"+rawProcess;
+return {
+business_name:source.business_name||"",
+contact_name:source.contact_name||"",
+email:source.email||"",
+phone:source.phone||"",
+address:source.address||"",
+operating_hours:source.operating_hours||"",
+social_links:source.social_links||"",
+services:Array.isArray(services)?services:[],
+daddy_deals_vouchers:submit&&!String(source.daddy_deals_vouchers||"").trim()?"No current promotions":(source.daddy_deals_vouchers||""),
+daddy_deals_terms:source.daddy_deals_terms||"",
+voucher_redemption_process:source.voucher_redemption_process||"",
+booking_system:mode==="not_applicable"?"":(source.booking_system||""),
+booking_process:bookingProcess,
+booking_rules:mode==="not_applicable"?"":(source.booking_rules||""),
+booking_whatsapp:mode==="not_applicable"?"":(source.booking_whatsapp||""),
+about_business:source.about_business||"",
+branding_notes:source.branding_notes||"",
+asset_notes:source.asset_notes||""
+};
+}
+function collectOnboarding(submit){
 const services=[];document.querySelectorAll("[data-service-row]").forEach(function(row){const name=row.querySelector("[data-service-name]")?.value.trim()||"",price=row.querySelector("[data-service-price]")?.value.trim()||"",description=row.querySelector("[data-service-description]")?.value.trim()||"";if(name||price||description)services.push({name:name,price:price,description:description})});
-return {business_name:document.getElementById("ob-business-name")?.value.trim()||"",contact_name:document.getElementById("ob-contact-name")?.value.trim()||"",email:document.getElementById("ob-email")?.value.trim()||"",phone:document.getElementById("ob-phone")?.value.trim()||"",address:document.getElementById("ob-address")?.value.trim()||"",operating_hours:document.getElementById("ob-hours")?.value.trim()||"",social_links:document.getElementById("ob-social")?.value.trim()||"",services:services,daddy_deals_vouchers:document.getElementById("ob-vouchers")?.value.trim()||"",daddy_deals_terms:document.getElementById("ob-voucher-terms")?.value.trim()||"",voucher_redemption_process:document.getElementById("ob-redemption")?.value.trim()||"",booking_system:document.getElementById("ob-booking-system")?.value.trim()||"",booking_process:document.getElementById("ob-booking-process")?.value.trim()||"",booking_rules:document.getElementById("ob-booking-rules")?.value.trim()||"",booking_whatsapp:document.getElementById("ob-booking-whatsapp")?.value.trim()||"",about_business:document.getElementById("ob-about")?.value.trim()||"",branding_notes:document.getElementById("ob-branding")?.value.trim()||"",asset_notes:document.getElementById("ob-assets")?.value.trim()||""};
+const value=function(id){return document.getElementById(id)?.value.trim()||""};
+const fields={business_name:value("ob-business-name"),contact_name:value("ob-contact-name"),email:value("ob-email"),phone:value("ob-phone"),address:value("ob-address"),operating_hours:value("ob-hours"),social_links:value("ob-social"),daddy_deals_vouchers:value("ob-vouchers"),daddy_deals_terms:value("ob-voucher-terms"),voucher_redemption_process:value("ob-redemption"),booking_system:value("ob-booking-system"),booking_process:value("ob-booking-process"),booking_rules:value("ob-booking-rules"),booking_whatsapp:value("ob-booking-whatsapp"),about_business:value("ob-about"),branding_notes:value("ob-branding"),asset_notes:value("ob-assets")};
+const journeyMode=document.getElementById("ob-journey-type")?.value||"";
+return buildOnboardingPayload(fields,services,journeyMode,Boolean(submit));
 }
 function formatFileSize(bytes){const n=Number(bytes||0);if(!n)return "0 B";if(n<1024)return n+" B";if(n<1024*1024)return (n/1024).toFixed(1)+" KB";return (n/(1024*1024)).toFixed(1)+" MB";}
-function renderAssets(files){if(!assetList)return;if(!files.length){assetList.innerHTML="";return}assetList.innerHTML=files.map(function(file){return '<div class="asset-item"><span class="asset-item-name" title="'+esc(file.original_name)+'">'+esc(file.original_name)+'</span><span class="asset-item-meta">'+esc(formatFileSize(file.size_bytes))+'</span></div>'}).join("");}
+function renderAssets(files){const assetList=document.getElementById("asset-list");if(!assetList)return;if(!files.length){assetList.innerHTML="";return}assetList.innerHTML=files.map(function(file){return '<div class="asset-item"><span class="asset-item-name" title="'+esc(file.original_name)+'">'+esc(file.original_name)+'</span><span class="asset-item-meta">'+esc(formatFileSize(file.size_bytes))+'</span></div>'}).join("");}
 async function loadAssets(){try{const result=await portalRpc("get_client_onboarding_assets",{p_token:token},15000);if(result&&result.ok)renderAssets(result.files||[])}catch(error){console.warn("Unable to load onboarding assets.",error)}}
 function bindOnboarding(){
-const form=document.getElementById("onboarding-form");if(!form||form.classList.contains("onboarding-locked"))return;
-const statusBox=document.getElementById("onboarding-status"),message=document.getElementById("onboarding-message"),saveButton=document.getElementById("save-onboarding"),assetInput=document.getElementById("ob-assets-files"),assetUploadButton=document.getElementById("upload-assets"),assetUploadStatus=document.getElementById("asset-upload-status"),assetList=document.getElementById("asset-list");
-function addService(){const list=document.getElementById("service-list"),n=list.querySelectorAll("[data-service-row]").length;const row=document.createElement("div");row.className="service-row";row.setAttribute("data-service-row","");row.innerHTML='<div class="field"><label>Service '+(n+1)+'</label><input data-service-name placeholder="e.g. Full Body Massage"></div><div class="field"><label>Price</label><input data-service-price placeholder="e.g. R650"></div><div class="field"><label>What is included?</label><input data-service-description placeholder="e.g. 60-minute treatment"></div><button type="button" class="remove-service" data-remove-service>Remove</button>';list.appendChild(row);row.querySelector("[data-service-name]")?.focus();}
+const form=document.getElementById("onboarding-form");if(!form)return;
+const sections=Array.from(form.querySelectorAll("[data-onboarding-step]"));
+if(!sections.length)return;
+const statusBox=document.getElementById("onboarding-status"),message=document.getElementById("onboarding-message"),saveState=document.getElementById("onboarding-save-state"),saveButton=document.getElementById("save-onboarding"),backButton=document.getElementById("onboarding-back"),nextButton=document.getElementById("onboarding-next"),submitButton=document.getElementById("submit-onboarding"),stepCount=document.getElementById("onboarding-step-count"),stepTitle=document.getElementById("onboarding-step-title"),stepStatus=document.getElementById("onboarding-step-status"),progressTrack=document.getElementById("onboarding-progress-track"),progressFill=document.getElementById("onboarding-progress-fill"),assetInput=document.getElementById("ob-assets-files"),assetUploadButton=document.getElementById("upload-assets"),assetUploadStatus=document.getElementById("asset-upload-status"),journeySelect=document.getElementById("ob-journey-type");
+const locked=form.classList.contains("onboarding-locked");
+let currentStep=0,autosaveTimer=null;
+let saveQueue=Promise.resolve();
+const stepNames=sections.map(function(section){return section.querySelector("h4")?.textContent.trim()||"Onboarding";});
+if(locked){
+form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});
+form.querySelectorAll("#add-service,[data-remove-service],#upload-assets,#save-onboarding").forEach(function(el){el.disabled=true});
+if(saveButton)saveButton.hidden=true;
+if(submitButton)submitButton.hidden=true;
+}
+function updateJourneyMode(){
+const mode=journeySelect?.value||"",copy=onboardingJourneyCopy(mode),fields=document.getElementById("journey-fields"),notApplicable=document.getElementById("journey-not-applicable"),choiceNeeded=document.getElementById("journey-choice-needed");
+if(fields)fields.hidden=!mode||mode==="not_applicable";
+if(notApplicable)notApplicable.hidden=mode!=="not_applicable";
+if(choiceNeeded)choiceNeeded.hidden=Boolean(mode);
+const setText=function(id,value){const el=document.getElementById(id);if(el)el.textContent=value};
+const setPlaceholder=function(id,value){const el=document.getElementById(id);if(el)el.placeholder=value};
+setText("journey-system-label",copy.systemLabel);
+setText("journey-contact-label",copy.contactLabel);
+setText("journey-process-label",copy.processLabel+" *");
+setText("journey-rules-label",copy.rulesLabel);
+setPlaceholder("ob-booking-system",copy.systemPlaceholder);
+setPlaceholder("ob-booking-whatsapp",copy.contactPlaceholder);
+setPlaceholder("ob-booking-process",copy.processPlaceholder);
+setPlaceholder("ob-booking-rules",copy.rulesPlaceholder);
+const process=document.getElementById("ob-booking-process");
+if(process)process.required=Boolean(mode&&mode!=="not_applicable");
+}
+function renderReview(){
+const root=document.getElementById("onboarding-review-summary");if(!root)return;
+const data=collectOnboarding(false),mode=journeySelect?.value||"",journeyLabels={appointments:"Appointments & bookings",retail:"In-person retail",ecommerce:"Online store / e-commerce",enquiries:"Enquiry-based business",not_applicable:"No bookings or structured orders"};
+const card=function(title,body,index){return '<section class="onboarding-review-card"><div class="onboarding-review-card-head"><h5>'+esc(title)+'</h5><button type="button" class="text-button" data-edit-onboarding-step="'+index+'">Edit</button></div><div class="onboarding-review-card-body">'+body+'</div></section>'};
+const line=function(label,value){return value?'<p><strong>'+esc(label)+':</strong> '+esc(value)+'</p>':""};
+const products=(data.services||[]).map(function(item){return '<li><strong>'+esc(item.name||"Product or service")+'</strong>'+(item.price?' · '+esc(item.price):"")+(item.description?'<small>'+esc(item.description)+'</small>':"")+'</li>'}).join("");
+const offers=data.daddy_deals_vouchers||"No current promotions";
+const journey=mode==="not_applicable"?"Not applicable":(journeyLabels[mode]||"Not selected");
+const journeyProcess=mode==="not_applicable"?"Not applicable":(document.getElementById("ob-booking-process")?.value.trim()||"Not provided");
+const files=Array.from(document.querySelectorAll("#asset-list .asset-item")).map(function(item){return item.querySelector(".asset-item-name")?.textContent||""});
+root.innerHTML=
+card("Business details",line("Business",data.business_name)+line("Contact",data.contact_name)+line("Email",data.email)+line("Phone",data.phone)+line("Address / service area",data.address)+line("Hours",data.operating_hours)+line("Social links",data.social_links),0)+
+card("Products & services",products?'<ul>'+products+'</ul>':'<p>No products or services added yet.</p>',1)+
+card("Vouchers & promotions",line("Offers",offers)+line("Terms",data.daddy_deals_terms)+line("Redemption",data.voucher_redemption_process),2)+
+card("Customer journey",line("Business model",journey)+line("Current method",data.booking_system)+line("Contact channel",data.booking_whatsapp)+line("Customer process",journeyProcess)+line("Rules",data.booking_rules),3)+
+card("About & brand",line("About the business",data.about_business)+line("Brand preferences",data.branding_notes)||"<p>No additional notes provided.</p>",4)+
+card("Files & assets",(files.length?'<p>'+files.map(esc).join(", ")+'</p>':'<p>No files attached yet.</p>')+line("Asset notes",data.asset_notes),5);
+}
+function showStep(index){
+currentStep=Math.max(0,Math.min(index,sections.length-1));
+sections.forEach(function(section,i){const active=i===currentStep;section.hidden=!active;section.setAttribute("aria-hidden",String(!active))});
+const count=currentStep+1,total=sections.length,title=stepNames[currentStep];
+if(stepCount)stepCount.textContent="STEP "+count+" OF "+total;
+if(stepTitle)stepTitle.textContent=title;
+if(stepStatus)stepStatus.textContent="Step "+count+" of "+total+" · "+title;
+if(progressTrack){progressTrack.setAttribute("aria-valuenow",String(count));progressTrack.setAttribute("aria-valuemax",String(total))}
+if(progressFill)progressFill.style.width=(count/total*100)+"%";
+if(backButton)backButton.disabled=currentStep===0;
+if(nextButton){nextButton.hidden=currentStep===sections.length-1;nextButton.textContent=currentStep===sections.length-2?"Review information":"Continue";}
+if(submitButton)submitButton.hidden=currentStep!==sections.length-1||locked;
+if(currentStep===sections.length-1)renderReview();
+}
+function validateStep(index){
+const section=sections[index],key=section?.dataset.onboardingStep;
+if(!section)return true;
+if(key==="catalogue"){
+const services=[];section.querySelectorAll("[data-service-row]").forEach(function(row){const name=row.querySelector("[data-service-name]")?.value.trim()||"",price=row.querySelector("[data-service-price]")?.value.trim()||"",description=row.querySelector("[data-service-description]")?.value.trim()||"";if(name||price||description)services.push({name:name,price:price,description:description})});
+if(!services.some(function(item){return item.name.length>0})){message.hidden=false;message.textContent="Add at least one product or service name before continuing.";section.querySelector("[data-service-name]")?.focus();return false;}
+}
+if(key==="journey"){
+const mode=journeySelect?.value||"";
+if(!mode){message.hidden=false;message.textContent="Choose the option that best describes how customers buy, book or contact your business.";journeySelect?.focus();return false;}
+if(mode!=="not_applicable"){
+const process=document.getElementById("ob-booking-process");
+if(!process||process.value.trim().length<2){message.hidden=false;message.textContent="Please describe how a customer buys, books or makes an enquiry.";process?.focus();return false;}
+}
+}
+const controls=Array.from(section.querySelectorAll("input,textarea,select")).filter(function(el){return !el.disabled&&!el.closest("[hidden]")});
+for(const field of controls){if(!field.checkValidity()){field.reportValidity();return false;}}
+return true;
+}
+function validateBeforeSubmit(){
+for(let i=0;i<sections.length-1;i++){
+if(!validateStep(i)){showStep(i);return false;}
+}
+return true;
+}
+function scheduleAutosave(){
+if(locked)return;
+if(autosaveTimer)window.clearTimeout(autosaveTimer);
+if(saveState)saveState.textContent="Unsaved changes";
+autosaveTimer=window.setTimeout(function(){autosaveTimer=null;saveOnboarding(false,true)},900);
+}
+function saveOnboarding(submit,quiet){
+if(locked&&!submit)return Promise.resolve(false);
+if(autosaveTimer){window.clearTimeout(autosaveTimer);autosaveTimer=null;}
+const run=async function(){
+if(locked&&!submit)return false;
+const payload=collectOnboarding(Boolean(submit));
+if(saveButton)saveButton.disabled=true;
+if(nextButton)nextButton.disabled=true;
+if(submitButton)submitButton.disabled=true;
+if(statusBox&&!quiet)statusBox.textContent=submit?"Submitting information...":"Saving progress...";
+if(saveState)saveState.textContent=submit?"Submitting securely...":"Saving changes...";
+if(!quiet){message.hidden=false;message.textContent=submit?"Checking and submitting your information securely...":"Saving your progress securely...";}
+try{
+const result=await portalRpc("save_client_onboarding",{p_token:token,p_data:payload,p_submit:submit},15000);
+if(!result||!result.ok)throw new Error(result&&result.error||"Unable to save your information.");
+const savedAt=submit?"Submitted "+date(new Date().toISOString()):"Last saved just now";
+if(statusBox)statusBox.textContent=savedAt;
+if(saveState)saveState.textContent=submit?"Information submitted":"All changes saved";
+if(!quiet){message.hidden=false;message.textContent=submit?"Thank you. Your information has been submitted to Swayphics for review.":"Your progress has been saved. You can return to this private link later and continue.";}
+if(submit){
+form.classList.add("onboarding-locked");
+form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});
+form.querySelectorAll("#add-service,[data-remove-service],#upload-assets").forEach(function(el){el.disabled=true});
+if(saveButton)saveButton.hidden=true;
+if(nextButton)nextButton.hidden=true;
+if(submitButton)submitButton.hidden=true;
+message.className="onboarding-submitted";
+message.innerHTML="<strong>Information submitted</strong>Your onboarding information is now with Swayphics. We will review it and contact you if anything needs clarification.";
+}
+return true;
+}catch(error){
+if(saveState)saveState.textContent="Not saved";
+if(statusBox)statusBox.textContent="Unable to save changes";
+message.hidden=false;
+message.textContent=error.message||"Unable to save your information.";
+return false;
+}finally{
+if(saveButton&&!locked)saveButton.disabled=false;
+if(nextButton&&!locked)nextButton.disabled=false;
+if(submitButton&&!locked)submitButton.disabled=false;
+}
+};
+saveQueue=saveQueue.then(run,run);
+return saveQueue;
+}
+async function advance(skip){
+if(!validateStep(currentStep))return;
+if(!locked){
+const saved=await saveOnboarding(false,true);
+if(!saved)return;
+}
+showStep(currentStep+1);
+const section=sections[currentStep];
+section?.querySelector("h4")?.focus?.();
+}
+function addService(){
+const list=document.getElementById("service-list"),n=list.querySelectorAll("[data-service-row]").length,row=document.createElement("div");
+row.className="service-row";row.setAttribute("data-service-row","");
+row.innerHTML='<div class="field"><label>Product or service '+(n+1)+'</label><input data-service-name placeholder="e.g. Full Body Massage or Handmade candles"></div><div class="field"><label>Price</label><input data-service-price placeholder="e.g. R650"></div><div class="field"><label>Details</label><input data-service-description placeholder="e.g. 60-minute treatment or 250g jar"></div><button type="button" class="remove-service" data-remove-service>Remove</button>';
+list.appendChild(row);row.querySelector("[data-service-name]")?.focus();scheduleAutosave();
+}
 document.getElementById("add-service")?.addEventListener("click",addService);
 assetInput?.addEventListener("change",function(){const files=Array.from(assetInput.files||[]);assetUploadStatus.textContent=files.length?files.length+" file"+(files.length===1?"":"s")+" selected":"No new files selected";});
-assetUploadButton?.addEventListener("click",async function(){const files=Array.from(assetInput?.files||[]);if(!files.length){assetUploadStatus.textContent="Choose one or more files first.";return}assetUploadButton.disabled=true;assetUploadStatus.textContent="Uploading "+files.length+" file"+(files.length===1?"":"s")+"...";try{const formData=new FormData();formData.append("token",token);files.forEach(function(file){formData.append("files",file,file.name)});const response=await fetch(SUPABASE_URL+"/functions/v1/upload-client-onboarding-assets",{method:"POST",body:formData});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result&&result.error||"Unable to upload the selected files.");assetInput.value="";assetUploadStatus.textContent=(result.files||[]).length+" file"+((result.files||[]).length===1?"":"s")+" attached successfully.";await loadAssets();}catch(error){assetUploadStatus.textContent=error.message||"Unable to upload the selected files."}finally{assetUploadButton.disabled=false;}});
+assetUploadButton?.addEventListener("click",async function(){
+const files=Array.from(assetInput?.files||[]);
+if(!files.length){assetUploadStatus.textContent="Choose one or more files first.";return;}
+assetUploadButton.disabled=true;assetUploadStatus.textContent="Uploading "+files.length+" file"+(files.length===1?"":"s")+"...";
+try{
+const formData=new FormData();formData.append("token",token);files.forEach(function(file){formData.append("files",file,file.name)});
+const response=await fetch(SUPABASE_URL+"/functions/v1/upload-client-onboarding-assets",{method:"POST",body:formData});
+const result=await response.json();if(!response.ok||!result.ok)throw new Error(result&&result.error||"Unable to upload the selected files.");
+assetInput.value="";assetUploadStatus.textContent=(result.files||[]).length+" file"+((result.files||[]).length===1?"":"s")+" attached successfully.";await loadAssets();renderReview();
+}catch(error){assetUploadStatus.textContent=error.message||"Unable to upload the selected files.";}
+finally{assetUploadButton.disabled=locked;}
+});
 loadAssets();
-form.addEventListener("click",function(e){if(e.target.closest("[data-remove-service]")){const rows=form.querySelectorAll("[data-service-row]");if(rows.length>1)e.target.closest("[data-service-row]").remove();else e.target.closest("[data-service-row]").querySelectorAll("input").forEach(function(input){input.value=""});form.querySelectorAll("[data-service-row]").forEach(function(row,i){const label=row.querySelector("label");if(label)label.textContent="Service "+(i+1)});}});
-async function saveOnboarding(submit){const payload=collectOnboarding(),buttons=form.querySelectorAll("button");buttons.forEach(function(b){b.disabled=true});statusBox.textContent=submit?"Submitting information...":"Saving progress...";message.hidden=false;message.textContent=submit?"Checking the required information before submission...":"Saving your information securely...";try{const result=await portalRpc("save_client_onboarding",{p_token:token,p_data:payload,p_submit:submit},15000);if(!result||!result.ok)throw new Error(result&&result.error||"Unable to save your information.");statusBox.textContent=submit?"Submitted "+date(new Date().toISOString()):"Last saved just now";message.textContent=submit?"Thank you. Your information has been submitted to Swayphics for review.":"Your progress has been saved. You can return to this private link later and continue.";if(submit){form.classList.add("onboarding-locked");form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});message.className="onboarding-submitted";message.innerHTML="<strong>Information submitted</strong>Your onboarding information is now with Swayphics. We will review it and contact you if anything needs clarification.";}}catch(error){message.textContent=error.message||"Unable to save your information."}finally{buttons.forEach(function(b){if(!submit||b.id!=="save-onboarding")b.disabled=false});}}
-saveButton.addEventListener("click",function(){saveOnboarding(false)});form.addEventListener("submit",function(e){e.preventDefault();if(form.reportValidity())saveOnboarding(true)});
+form.addEventListener("click",function(e){
+const edit=e.target.closest("[data-edit-onboarding-step]");
+if(edit){showStep(Number(edit.dataset.editOnboardingStep));return;}
+if(e.target.closest("[data-remove-service]")){
+const rows=form.querySelectorAll("[data-service-row]"),row=e.target.closest("[data-service-row]");
+if(rows.length>1)row.remove();else row.querySelectorAll("input").forEach(function(input){input.value=""});
+form.querySelectorAll("[data-service-row]").forEach(function(item,i){const label=item.querySelector("label");if(label)label.textContent="Product or service "+(i+1)});
+scheduleAutosave();
+}
+const skip=e.target.closest("[data-onboarding-skip]");
+if(skip){advance(true);}
+});
+backButton?.addEventListener("click",function(){showStep(currentStep-1)});
+nextButton?.addEventListener("click",function(){advance(false)});
+saveButton?.addEventListener("click",async function(){const saved=await saveOnboarding(false,false);if(saved&&currentStep===sections.length-1)renderReview();});
+journeySelect?.addEventListener("change",function(){updateJourneyMode();scheduleAutosave();});
+form.addEventListener("input",function(event){if(event.target&&event.target.type!=="file")scheduleAutosave();});
+form.addEventListener("change",function(event){if(event.target&&event.target.type!=="file")scheduleAutosave();});
+form.addEventListener("submit",async function(event){
+event.preventDefault();
+if(locked)return;
+if(!validateBeforeSubmit())return;
+renderReview();
+await saveOnboarding(true,false);
+});
+updateJourneyMode();
+showStep(0);
+if(locked){
+if(saveState)saveState.textContent="Information already submitted";
+if(nextButton)nextButton.textContent="Next";
+if(backButton)backButton.disabled=true;
+}
 }
 function isClientInvoicePayable(item){return ["sent","partially paid","overdue"].includes(String(item&&item.status||"").toLowerCase())&&Number(item&&item.amount_outstanding||0)>0}
 function getClientNextStep(onboarding,invoices,quotes,active,projects){
