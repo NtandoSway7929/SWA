@@ -88,7 +88,7 @@ const uploadFunction = functionSection(
     "    async function uploadClientDocument(",
     "client document uploader"
 );
-assert.match(uploadFunction, /swayphics-client-files/);
+assert.match(workspace, /CLIENT_DOCUMENT_BUCKET\s*=\s*["']swayphics-client-files["']/);
 assert.match(uploadFunction, /String\(clientId\)\s*\+\s*["']\\/["']/);
 assert.match(
     uploadFunction,
