@@ -6,10 +6,12 @@ on:
     paths:
       - "admin-dashboard/admin-dashboard-redesign.css"
       - "admin-dashboard/admin-lead-cards.css"
+      - "admin-dashboard/admin-record-cards.css"
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/index.html"
       - "scripts/admin-dashboard-redesign.test.cjs"
       - "scripts/admin-lead-cards.test.cjs"
+      - "scripts/admin-record-cards.test.cjs"
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
       - ".github/workflows/admin-table-controls-preview.yml"
   pull_request:
@@ -18,10 +20,12 @@ on:
       - "admin-dashboard/admin-table-controls.js"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/admin-lead-cards.css"
+      - "admin-dashboard/admin-record-cards.css"
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/index.html"
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
       - "scripts/admin-lead-cards.test.cjs"
+      - "scripts/admin-record-cards.test.cjs"
       - "scripts/admin-table-controls-db-smoke.cjs"
       - "scripts/first-contact-automation-db-smoke.cjs"
       - "scripts/due-work-notification-db-smoke.cjs"
@@ -85,6 +89,9 @@ jobs:
           done
           cat /tmp/admin-table-preview-server.log
           exit 1
+
+      - name: Verify responsive record-card renderers
+        run: node scripts/admin-record-cards.test.cjs
 
       - name: Verify lead-card structure and full-details entry point
         run: node scripts/admin-lead-cards.test.cjs
