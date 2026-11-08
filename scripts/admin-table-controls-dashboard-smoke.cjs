@@ -677,8 +677,6 @@ async function main() {
       .map(value => value.replace(/\\s+/g, " ").trim().toLowerCase());
     assert.ok(conversionHeaders.includes("leads ever entering stage"), "Insights should show historical lead-stage movement.");
     assert.ok(conversionHeaders.includes("currently here"), "Insights should show current lead counts by stage.");
-    const settingsGroupToggle = page.locator('[data-nav-group-toggle="settings"]').first();
-    if ((await settingsGroupToggle.getAttribute("aria-expanded")) !== "true") await settingsGroupToggle.click();
 
     const settingsNavigation = page.locator('[data-view="settings"]').first();
     await settingsNavigation.waitFor({ state: "visible", timeout: 15000 });
