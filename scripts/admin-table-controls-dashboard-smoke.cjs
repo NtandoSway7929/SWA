@@ -667,6 +667,17 @@ async function main() {
       await page.locator('[data-admin-table-row="' + view + '"]').first().waitFor({ timeout: 10000 });
     }
 
+    // Exercise Insights against the synthetic lead and stage-history records.
+    const overviewNavToggle = page.locator('[data-nav-group-toggle="overview"]').first();
+    if ((await overviewNavToggle.getAttribute("aria-expanded")) !== "true") await overviewNavToggle.click();
+    await page.locator('[data-view="insights"]').first().click();
+    const insightsMain = page.locator("#sway-workspace-main");
+    await insightsMain.getByText("Lead conversion analytics", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
+    assert.ok((await insightsMain.innerText()).includes("Leads ever entering stage"), "Insights should show historical lead-stage movement.");
+    assert.ok((await insightsMain.innerText()).includes("Currently here"), "Insights should show current lead counts by stage.");
+    const settingsGroupToggle = page.locator('[data-nav-group-toggle="settings"]').first();
+    if ((await settingsGroupToggle.getAttribute("aria-expanded")) !== "true") await settingsGroupToggle.click();
+
     const settingsNavigation = page.locator('[data-view="settings"]').first();
     await settingsNavigation.waitFor({ state: "visible", timeout: 15000 });
     await settingsNavigation.click();
