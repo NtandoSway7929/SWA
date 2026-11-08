@@ -13,7 +13,7 @@ const helperStart = portal.indexOf("function projectStage(");
 const helperEnd = portal.indexOf("\nfunction activeProjects", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "Project delivery helpers must be isolated for testing.");
 
-const context = {};
+const context = { esc: value => String(value == null ? "" : value) };
 vm.runInNewContext(
   'function date(value){return value ? String(value).slice(0,10) : "—";}\n' +
     portal.slice(helperStart, helperEnd) +
