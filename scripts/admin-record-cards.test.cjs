@@ -12,7 +12,7 @@ const css = fs.readFileSync(path.join(root, "admin-dashboard", "admin-record-car
 function section(source, startMarker, label) {
     const start = source.indexOf(startMarker);
     assert.ok(start >= 0, label + " start must exist");
-    const nextFunction = /\n    (?:async )?function [A-Za-z_$][\\w$]*\\(/g;
+    const nextFunction = /\n    (?:async )?function [A-Za-z_$][\w$]*\(/g;
     nextFunction.lastIndex = start + startMarker.length;
     const match = nextFunction.exec(source);
     assert.ok(match, label + " end must follow its start");
