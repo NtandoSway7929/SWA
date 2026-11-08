@@ -1,0 +1,296 @@
+/* Swayphics lead-record cards.
+   Kept isolated so the lead presentation can evolve without changing other tables. */
+
+#sway-admin-workspace .sway-lead-card-selection-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin: 14px 0 12px;
+    padding: 10px 13px;
+    border: 1px solid rgba(0, 32, 150, 0.09);
+    border-radius: 12px;
+    background: rgba(247, 250, 255, 0.78);
+    color: #56627A;
+    font-size: 0.68rem;
+    font-weight: 650;
+}
+
+#sway-admin-workspace .sway-lead-card-selection-bar label,
+#sway-admin-workspace .sway-lead-card-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: #33415A;
+    font-size: 0.67rem;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+#sway-admin-workspace .sway-lead-card-selection-bar input,
+#sway-admin-workspace .sway-lead-card-select input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: #0152F4;
+    flex: 0 0 auto;
+}
+
+#sway-admin-workspace .sway-lead-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
+    align-items: stretch;
+    gap: 14px;
+}
+
+#sway-admin-workspace .sway-lead-card {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    padding: 16px;
+    border: 1px solid rgba(0, 32, 150, 0.10);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 10px 30px rgba(0, 32, 150, 0.055);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+#sway-admin-workspace .sway-lead-card:hover {
+    border-color: rgba(1, 82, 244, 0.24);
+    box-shadow: 0 15px 36px rgba(0, 32, 150, 0.085);
+    transform: translateY(-1px);
+}
+
+#sway-admin-workspace .sway-lead-card[hidden] {
+    display: none !important;
+}
+
+#sway-admin-workspace .sway-lead-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+#sway-admin-workspace .sway-lead-card-open {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+#sway-admin-workspace .sway-lead-card-open:hover .sway-lead-card-footer {
+    color: #0152F4;
+}
+
+#sway-admin-workspace .sway-lead-card-open:focus-visible {
+    outline: 3px solid rgba(1, 82, 244, 0.30);
+    outline-offset: 5px;
+}
+
+#sway-admin-workspace .sway-lead-card-kicker {
+    color: #8190A5;
+    font-size: 0.53rem;
+    font-weight: 850;
+    letter-spacing: 0.14em;
+}
+
+#sway-admin-workspace .sway-lead-card-title {
+    display: block;
+    overflow-wrap: anywhere;
+    color: #081533;
+    font-size: 1rem;
+    font-weight: 850;
+    line-height: 1.35;
+    letter-spacing: -0.025em;
+}
+
+#sway-admin-workspace .sway-lead-card-contact {
+    color: #56627A;
+    font-size: 0.7rem;
+    font-weight: 650;
+}
+
+#sway-admin-workspace .sway-lead-card-details {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 5px;
+}
+
+#sway-admin-workspace .sway-lead-card-detail {
+    min-width: 0;
+    display: block;
+    padding: 9px 10px;
+    border: 1px solid rgba(0, 32, 150, 0.065);
+    border-radius: 10px;
+    background: rgba(247, 250, 255, 0.68);
+}
+
+#sway-admin-workspace .sway-lead-card-detail > span {
+    display: block;
+    color: #8190A5;
+    font-size: 0.51rem;
+    font-weight: 800;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+}
+
+#sway-admin-workspace .sway-lead-card-detail > strong {
+    display: block;
+    margin-top: 4px;
+    overflow: hidden;
+    color: #273650;
+    font-size: 0.66rem;
+    font-weight: 750;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
+}
+
+#sway-admin-workspace .sway-lead-card-detail > strong.sway-lead-card-value {
+    min-width: 6.5rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+#sway-admin-workspace .sway-lead-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 3px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(0, 32, 150, 0.075);
+    color: #56627A;
+    font-size: 0.65rem;
+    font-weight: 800;
+    transition: color 0.18s ease;
+}
+
+#sway-admin-workspace .sway-lead-card-actions {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 32, 150, 0.07);
+}
+
+#sway-admin-workspace .sway-lead-card-actions .sway-lead-actions-menu {
+    margin-left: auto;
+}
+
+#sway-admin-workspace .sway-lead-card-empty {
+    margin-top: 12px;
+    padding: 24px 16px;
+    border: 1px dashed rgba(0, 32, 150, 0.18);
+    border-radius: 14px;
+    color: #56627A;
+    font-size: 0.75rem;
+    font-weight: 650;
+    text-align: center;
+}
+
+#sway-admin-workspace .sway-lead-card-empty[hidden] {
+    display: none !important;
+}
+
+#sway-admin-workspace .sway-lead-card-selection-bar input:focus-visible,
+#sway-admin-workspace .sway-lead-card-select input:focus-visible {
+    outline: 3px solid rgba(1, 82, 244, 0.28);
+    outline-offset: 3px;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-selection-bar {
+    border-color: rgba(119, 160, 255, 0.18);
+    background: rgba(14, 28, 57, 0.74);
+    color: #AAB8D0;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-selection-bar label,
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-select,
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-contact,
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-footer {
+    color: #B8C5DA;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card {
+    border-color: rgba(119, 160, 255, 0.17);
+    background: rgba(12, 25, 52, 0.94);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.20);
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card:hover {
+    border-color: rgba(119, 160, 255, 0.34);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.27);
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-title {
+    color: #F2F6FF;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-detail {
+    border-color: rgba(119, 160, 255, 0.10);
+    background: rgba(4, 15, 37, 0.52);
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-detail > strong {
+    color: #D6E0F1;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-footer,
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-actions {
+    border-color: rgba(119, 160, 255, 0.13);
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-lead-card-empty {
+    border-color: rgba(119, 160, 255, 0.22);
+    color: #B8C5DA;
+}
+
+@media (max-width: 520px) {
+    #sway-admin-workspace .sway-lead-card {
+        padding: 13px;
+    }
+
+    #sway-admin-workspace .sway-lead-card-details {
+        gap: 7px;
+    }
+
+    #sway-admin-workspace .sway-lead-card-detail {
+        padding: 8px;
+    }
+
+    #sway-admin-workspace .sway-lead-card-selection-bar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #sway-admin-workspace .sway-lead-card,
+    #sway-admin-workspace .sway-lead-card-footer {
+        transition: none;
+    }
+
+    #sway-admin-workspace .sway-lead-card:hover {
+        transform: none;
+    }
+}
