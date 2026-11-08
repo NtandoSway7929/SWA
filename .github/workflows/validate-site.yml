@@ -54,6 +54,9 @@ jobs:
       - name: Test Insights lead conversion analytics
         run: node scripts/admin-insights-lead-conversion.test.cjs
 
+      - name: Test client portal onboarding promotions
+        run: node scripts/client-portal-onboarding-promotions.test.cjs
+
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
 
