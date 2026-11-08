@@ -18,7 +18,13 @@ const leads = [
     email: '=HYPERLINK("https://example.invalid","Open")', phone: "0000000000",
     service_interest: "Website", status: "new", source: "Referral",
     estimated_value: 1500, next_follow_up: "2026-11-03", assigned_to: TEST_USER_ID,
-    created_at: "2026-10-01T12:00:00Z"
+    created_at: "2026-10-01T12:00:00Z",
+    business_assessment: "The public website is missing a clear service enquiry path.",
+    research_findings: "The contact route is difficult to find and the service offer is not explained.",
+    swayphics_solution: "Build a focused website with a prominent enquiry flow.",
+    recommended_services: "Website design and development; booking or enquiry flow",
+    research_sources: "https://alpha.example.invalid",
+    notes: "Synthetic internal note for the isolated browser test."
   },
   {
     id: "lead-contact-toggle", business_name: "Contact Toggle Fixture", contact_name: "Test Contact",
@@ -694,20 +700,43 @@ async function main() {
     assert.equal(await alphaLeadCard.locator(".sway-lead-card-open").count(), 1,
       "each lead card should expose one primary full-details action");
     await alphaLeadCard.locator(".sway-lead-card-open").click();
-    const leadDetailsModal = page.locator(".sway-modal");
-    await leadDetailsModal.waitFor({ state: "visible", timeout: 5000 });
-    assert.equal((await leadDetailsModal.locator(".sway-modal-header h3").innerText()).trim(), "Edit Lead",
-      "opening a lead card should reuse the full lead editor");
+    const leadProfile = page.locator(".sway-lead-profile-modal");
+    await leadProfile.waitFor({ state: "visible", timeout: 5000 });
+    assert.equal((await leadProfile.locator(".sway-modal-header h3").innerText()).trim(), "Alpha Studio",
+      "opening the lead card should show the selected lead profile, not the editor");
+    for (const content of [
+      "Sam Dube", '=HYPERLINK("https://example.invalid","Open")',
+      "The public website is missing a clear service enquiry path.",
+      "The contact route is difficult to find and the service offer is not explained.",
+      "Build a focused website with a prominent enquiry flow.",
+      "Website design and development; booking or enquiry flow",
+      "Synthetic internal note for the isolated browser test.",
+      "Synthetic website enquiry", "Send follow-up"
+    ]) {
+      assert.ok((await leadProfile.innerText()).includes(content),
+        "the full lead profile should display " + content);
+    }
+    assert.equal(await leadProfile.locator("#sway-field-business_name").count(), 0,
+      "opening a lead card should be read-only and must not open editable inputs");
+    assert.equal(await leadProfile.locator('[data-lead-profile-action="edit"]').count(), 2,
+      "the profile should expose Edit lead actions without making the profile itself editable");
+
+    await leadProfile.locator('[data-lead-profile-action="edit"]').first().click();
+    await leadProfile.waitFor({ state: "detached", timeout: 5000 });
+    const leadEditorModal = page.locator(".sway-modal");
+    await leadEditorModal.waitFor({ state: "visible", timeout: 5000 });
+    assert.equal((await leadEditorModal.locator(".sway-modal-header h3").innerText()).trim(), "Edit Lead",
+      "the profile's Edit lead action should open the existing editor");
     for (const field of [
       "business_name", "contact_name", "email", "phone", "service_interest",
       "business_assessment", "research_findings", "swayphics_solution",
       "recommended_services", "research_sources", "notes"
     ]) {
-      assert.equal(await leadDetailsModal.locator("#sway-field-" + field).count(), 1,
-        "the full lead details editor should expose " + field);
+      assert.equal(await leadEditorModal.locator("#sway-field-" + field).count(), 1,
+        "the lead editor should continue exposing " + field);
     }
-    await leadDetailsModal.locator(".sway-modal-close").click();
-    await leadDetailsModal.waitFor({ state: "detached", timeout: 5000 });
+    await leadEditorModal.locator(".sway-modal-close").click();
+    await leadEditorModal.waitFor({ state: "detached", timeout: 5000 });
 
     const contactToggleLeadRow = leadRows.filter({ hasText: "Contact Toggle Fixture" });
     await contactToggleLeadRow.locator(".sway-lead-actions-menu > summary").click();
