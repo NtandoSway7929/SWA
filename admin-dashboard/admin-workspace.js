@@ -29630,8 +29630,8 @@ function simpleBars(items, color) {
     function findNotificationRecordAction(entityType, entityId) {
         const actionTargets = {
             lead: {
-                selector: '[data-edit="leads"][data-id]',
-                attribute: "data-id"
+                selector: "[data-open-lead-details]",
+                attribute: "data-open-lead-details"
             },
             task: {
                 selector: '[data-edit="tasks"][data-id]',
