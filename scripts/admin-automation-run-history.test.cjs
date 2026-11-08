@@ -50,7 +50,7 @@ test("run history RPC is authenticated, bounded and restricted to known Swayphic
     "swayphics-leads-due-today",
     "swayphics-quote-expiry-reminders"
   ]) assert.ok(sql.includes("'" + job + "'"), "Missing allowlisted job: " + job);
-  assert.match(sql, /round\(extract\(epoch from \(d\.end_time - d\.start_time\)\) \* 1000\)::bigint/i);
+  assert.match(sql, /round\(extract\(epoch from \(r\.finished_at - r\.started_at\)\) \* 1000\)::bigint/i);
   assert.match(sql, /when 'succeeded' then 'Completed successfully\.'/i);
   assert.match(sql, /when 'failed' then 'Failed\. Review Supabase job logs for details\.'/i);
   assert.match(sql, /when 'running' then 'Currently running\.'/i);
