@@ -803,6 +803,9 @@ return '<section class="onboarding-section" data-onboarding-step="journey"><div 
 }
 function onboardingForm(data,onboarding){
 const c=data.client||{},o=onboarding||{};
+if(o.status==="submitted"){
+return '<span id="onboarding-section" hidden></span><section class="portal-section" id="business-assets-section"><div class="portal-section-head"><div><h2>Business assets</h2><p>Your onboarding is complete. You can upload additional files for your website here whenever you need to.</p></div><span class="chip success">Onboarding complete</span></div><section class="portal-card"><div class="card-head"><div><h3>Share your business files</h3><p>Upload your logo, photos, certificates, menus, product lists or other materials Swayphics should use. You can add more files at any time.</p></div></div><form id="onboarding-form" class="onboarding-form"><section class="onboarding-section" data-onboarding-step="assets"><div class="onboarding-section-head"><span class="onboarding-number">↥</span><div><h4>Business assets</h4><p>Add or update the files Swayphics should use for your project.</p></div></div><div class="onboarding-fields"><div class="field full"><label for="ob-assets-files">Choose business assets</label><small class="field-help">Images, PDF, ZIP, DOC and DOCX files are supported. Maximum 15 MB per file.</small><div class="asset-upload"><input id="ob-assets-files" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,application/pdf,.zip,.doc,.docx"><div class="asset-upload-actions"><span class="asset-upload-status" id="asset-upload-status">No new files selected</span><button type="button" class="portal-button secondary" id="upload-assets">Upload files</button></div><div class="asset-list" id="asset-list"></div></div></div></div></section></form></section></section>';
+}
 return '<section class="portal-section" id="onboarding-section"><section class="portal-card">'+
 '<div class="card-head"><div><h3>Website onboarding</h3><p>Work through a few guided steps so we can understand your business and prepare the right website experience. You can save your progress and return later.</p></div><span class="chip '+(o.status==="submitted"?"success":"warning")+'">'+esc(o.status==="submitted"?"Submitted":"In progress")+'</span></div>'+
 '<div class="onboarding-intro"><div class="onboarding-guide"><strong>One step at a time</strong><p>Answer what applies to your business. Optional sections can be skipped, and your progress saves automatically as you work.</p></div><div class="onboarding-tip"><span>Helpful rule</span><p>Think like a customer. Give us the information someone would need before deciding to book, buy or contact you. Bullet points are fine.</p></div></div>'+
@@ -1196,7 +1199,7 @@ app.innerHTML=
 '<a href="#projects-section" data-portal-nav-link>My projects</a>'+
 '<a href="#documents-section" data-portal-nav-link>Documents</a>'+
 '<a href="#finances-section" data-portal-nav-link>Finances</a>'+
-'<a href="#onboarding-section" data-portal-nav-link>Onboarding</a>'+
+'<a href="#'+(onboarding&&onboarding.status==="submitted"?"business-assets-section":"onboarding-section")+'" data-portal-nav-link>'+(onboarding&&onboarding.status==="submitted"?"Business assets":"Onboarding")+'</a>'+
 '<a href="#request-section" data-portal-nav-link>Requests</a>'+
 '</div><a class="portal-request-shortcut" href="#request-section">Make a request</a>'+
 '</nav>'+
