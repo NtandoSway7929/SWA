@@ -16,8 +16,11 @@ const edgeHelperStart = edge.indexOf("function isClientOwnedStoragePath(");
 const edgeHelperEnd = edge.indexOf("\nfunction safeDownloadName(", edgeHelperStart);
 assert.ok(edgeHelperStart >= 0 && edgeHelperEnd > edgeHelperStart, "Document ownership helpers must exist.");
 const edgeContext = {};
+const edgeHelperSource = edge.slice(edgeHelperStart, edgeHelperEnd)
+  .replace(/: unknown/g, "")
+  .replace(/: string/g, "");
 vm.runInNewContext(
-  edge.slice(edgeHelperStart, edgeHelperEnd) +
+  edgeHelperSource +
     "\nthis.isClientOwnedStoragePath=isClientOwnedStoragePath;" +
     "\nthis.isInvoiceAvailableToClient=isInvoiceAvailableToClient;" +
     "\nthis.documentCategory=documentCategory;",
