@@ -26,7 +26,7 @@ const renderer = section(
 
 assert.match(renderer, /class="sway-lead-card"/);
 assert.match(renderer, /class="sway-lead-card-open" data-edit="leads" data-id=/,
-    "the primary card action must open the existing lead editor");
+    "the primary card action must open the dedicated read-only lead profile");
 assert.match(renderer, /data-admin-table-row="leads"/,
     "each card must retain the shared list filter/sort row contract");
 assert.match(renderer, /data-admin-table-search=/,
@@ -58,6 +58,44 @@ assert.match(renderer, /adminTableControls\.items\("leads", state\.leads\)/,
 assert.match(renderer, /adminTableControls\.renderControls\("leads"\)/,
     "cards must retain the existing lead controls");
 
+const leadProfile = section(
+    workspace,
+    "function openLeadProfile(",
+    "function renderLeads()",
+    "lead profile renderer"
+);
+for (const field of [
+    "business_assessment", "research_findings", "swayphics_solution",
+    "recommended_services", "research_sources", "notes"
+]) {
+    assert.ok(leadProfile.includes("lead." + field),
+        "the lead profile should display " + field);
+}
+for (const linkedRecord of [
+    "state.communications", "state.followups", "state.leadStageHistory",
+    "state.activities", "state.leadProposals"
+]) {
+    assert.ok(leadProfile.includes(linkedRecord),
+        "the lead profile should include related " + linkedRecord + " records");
+}
+assert.match(leadProfile, /data-lead-profile-action="edit"/);
+assert.match(leadProfile, /data-lead-profile-action="followup"/);
+assert.match(leadProfile, /data-lead-profile-action="draft-proposal"/);
+assert.match(leadProfile, /data-lead-profile-proposal/);
+
+const editBinding = section(
+    workspace,
+    'querySelectorAll("[data-edit]")',
+    'querySelectorAll("[data-lead-email-id]")',
+    "lead card and editor click binding"
+);
+assert.match(editBinding, /button\.classList\.contains\("sway-lead-card-open"\)/,
+    "only the main card action should open the read-only profile");
+assert.match(editBinding, /openLeadProfile\(button\.dataset\.id, button\)/,
+    "the card action should open the selected lead profile");
+assert.match(editBinding, /createOrEdit\(/,
+    "the separate Edit action must retain the existing editable form");
+
 const leadEditor = section(
     workspace,
     '        leads: {\n            table: "leads"',
@@ -86,4 +124,15 @@ assert.match(css, /body\.sway-dark-mode/);
 assert.match(css, /prefers-reduced-motion/);
 assert.match(css, /@media \(max-width: 520px\)/);
 
-console.log("Admin lead-card contract tests passed.");
+for (const selector of [
+    ".sway-lead-profile-card", ".sway-lead-profile-body",
+    ".sway-lead-profile-timeline", ".sway-lead-profile-footer"
+]) {
+    assert.ok(css.includes(selector),
+        "the profile stylesheet should include " + selector);
+}
+assert.match(css, /\.sway-lead-profile-modal[\s\S]*?max-height/);
+assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-lead-profile/);
+assert.match(css, /@media \(max-width: 680px\)/);
+
+console.log("Admin lead-card and profile contract tests passed.");
