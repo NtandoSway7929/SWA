@@ -14,7 +14,7 @@ const pushFunction = fs.readFileSync(path.join(root, "supabase", "functions", "s
 
 test("dashboard loads the expanded settings stylesheet and module after workspace initialization", () => {
   assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-3/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261109-two-stage-followups-2/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261110-greeting-animation-setting-1/);
   assert.ok(
     dashboardHtml.indexOf("admin-workspace.js") < dashboardHtml.indexOf("admin-settings-expanded.js"),
     "settings integration must load after the core workspace"
