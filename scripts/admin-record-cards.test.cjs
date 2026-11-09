@@ -139,7 +139,7 @@ assert.ok(invoiceRenderer.includes('adminTableControls.items("invoices", visible
 assert.ok(invoiceRenderer.includes('adminTableControls.renderControls("invoices", visibleInvoices)'));
 assert.ok(invoiceRenderer.includes('data-admin-table-no-results="invoices"'));
 
-assert.match(html, /admin-record-cards\.css\?v=20261110-communication-log-viewer-1/,
+assert.match(html, /admin-record-cards\.css\?v=20261110-settings-tab-order-icon-1/,
     "the shared card stylesheet should be loaded with a versioned URL");
 assert.ok(
     html.indexOf("admin-lead-cards.css") < html.indexOf("admin-record-cards.css"),
@@ -157,7 +157,7 @@ assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-record-card/);
 assert.match(css, /@media \(max-width: 620px\)/);
 assert.match(css, /prefers-reduced-motion/);
 
-assert.match(html, /admin-workspace\.js\?v=20261110-communication-log-viewer-1/,
+assert.match(html, /admin-workspace\.js\?v=20261110-settings-tab-order-icon-1/,
     "the communication viewer workspace script must use a refreshed cache key");
 
 console.log("Admin record-card contract tests passed for 15 dashboard views and communication viewing.");
