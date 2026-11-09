@@ -102,6 +102,7 @@ for (const contract of [
     "function findCommunicationEmailMessage(", "function loadCommunicationEmailMessage(",
     "function openCommunicationViewer(", "renderEmailMessageBody(emailMessage)",
     "buildSafeEmailDocument(emailMessage)", "renderEmailAttachmentCards(emailMessage)",
+    "loadEmailThreadMedia({ messages: [emailMessage] })",
     "[data-communication-card-open]", "[data-open-communication]"
 ]) {
     assert.ok(workspace.includes(contract),

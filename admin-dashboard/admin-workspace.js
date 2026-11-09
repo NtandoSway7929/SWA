@@ -19027,6 +19027,9 @@ function simpleBars(items, color) {
         if (String(communication.channel || "").toLowerCase().includes("email")) {
             try {
                 emailMessage = await loadCommunicationEmailMessage(communication);
+                if (emailMessage && Array.isArray(emailMessage.attachments) && emailMessage.attachments.length) {
+                    await loadEmailThreadMedia({ messages: [emailMessage] });
+                }
             } catch (error) {
                 console.warn("Unable to load the original sent email for this communication.", error);
             }

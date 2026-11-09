@@ -54,6 +54,9 @@ jobs:
       - name: Test admin notification record navigation
         run: node scripts/admin-notification-navigation.test.cjs
 
+      - name: Test admin communication record viewing
+        run: node scripts/admin-record-cards.test.cjs
+
       - name: Test Insights lead conversion analytics
         run: node scripts/admin-insights-lead-conversion.test.cjs
 
