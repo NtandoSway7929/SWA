@@ -254,6 +254,34 @@ assert.ok(
     "the hero must have responsive and dark-theme styles"
 );
 
+
+assert.ok(
+    !workspaceCss.includes(".sway-lead-assessment-status::before"),
+    "lead assessment status pills must not render an inner circle"
+);
+const liveBadgeRule = workspaceCss.match(/\.sway-live-badge\s*\{[^}]*\}/)?.[0] || "";
+assert.ok(
+    workspaceCss.includes(".sway-live-badge i {\n    display: none;") &&
+    liveBadgeRule.includes("gap: 0;"),
+    "live status pills must hide the indicator circle and remove its reserved gap"
+);
+assert.ok(
+    !dashboardHtml.includes(".sway-chip::before") &&
+    !dashboardHtml.includes(".testimonial-admin-status::before") &&
+    !dashboardHtml.includes(".portfolio-admin-status::before"),
+    "shared status chips, testimonial statuses and portfolio statuses must remain text-only"
+);
+assert.ok(
+    !dashboardHtml.includes("admin-status-dot"),
+    "the authenticated-state pill must not render an inner circle"
+);
+assert.ok(
+    dashboardHtml.includes(".sway-chip.success") &&
+    dashboardHtml.includes(".sway-chip.warning") &&
+    dashboardHtml.includes(".sway-chip.danger"),
+    "status colour variants must be retained after removing the decorative circles"
+);
+
 console.log(JSON.stringify({
     result: "PASS",
     checks: [

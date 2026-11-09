@@ -2002,7 +2002,7 @@
 .sway-live-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 0;
     width: fit-content;
     padding: 5px 8px;
     border-radius: 999px;
@@ -2014,30 +2014,18 @@
 }
 
 .sway-live-badge i {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #94A3B8;
+    display: none;
 }
+
 
 .sway-live-badge.live {
     background: rgba(22,163,74,0.08);
     color: #15803D;
 }
 
-.sway-live-badge.live i {
-    background: #16A34A;
-    animation: sway-live-pulse 1.6s ease-in-out infinite;
-}
-
 .sway-live-badge.polling {
     background: rgba(245,158,11,0.10);
     color: #A16207;
-}
-
-.sway-live-badge.polling i {
-    background: #D97706;
-    animation: sway-live-pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes sway-live-pulse {
@@ -6012,14 +6000,6 @@
     font-size: 0.53rem;
     font-weight: 800;
     white-space: nowrap;
-}
-
-.sway-lead-assessment-status::before {
-    content: "";
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: currentColor;
 }
 
 .sway-lead-assessment-status.complete {

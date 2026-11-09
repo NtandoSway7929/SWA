@@ -16,7 +16,7 @@ const controlsScriptIndex = dashboardHtml.indexOf('src="admin-table-controls.js'
 const workspaceScriptIndex = dashboardHtml.indexOf('src="admin-workspace.js');
 assert.ok(controlsScriptIndex >= 0 && workspaceScriptIndex > controlsScriptIndex,
     "the table controls module must load before the dashboard workspace");
-assert.match(dashboardHtml, /admin-workspace\.css\?v=20261108-notification-record-navigation-1/,
+assert.match(dashboardHtml, /admin-workspace\.css\?v=20261110-text-only-status-pills-1/,
     "the updated table toolbar styles must use a refreshed workspace stylesheet cache key");
 for (const view of ["leads", "followups", "tasks", "communications"]) {
     assert.ok(workspaceSource.includes('adminTableControls.renderControls("' + view + '")'),
