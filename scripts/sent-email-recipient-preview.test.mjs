@@ -17,7 +17,7 @@ test("sent email records retain the same branded HTML sent to Resend", () => {
 test("dashboard email previews embed the Swayphics logo and proposal media", () => {
   assert.ok(sendEmailSource.includes("async function emailImageDataUri(url: string)"));
   assert.ok(sendEmailSource.includes("async function buildDashboardEmailPreview("));
-  assert.ok(sendEmailSource.includes('source: \'src="https://swayphics.co.za/swayphics-logo.png\''));
+  assert.ok(sendEmailSource.includes('source: \'src="https://swayphics.co.za/swayphics-logo.png"\''));
   assert.ok(sendEmailSource.includes('src="cid:swayphics-improvement-website"'));
   assert.ok(sendEmailSource.includes('src="cid:swayphics-no-website"'));
   assert.ok(sendEmailSource.includes('return "data:" + contentType + ";base64,";'));
