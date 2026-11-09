@@ -134,8 +134,8 @@ test("lead follow-ups use a fixed two-stage business-day sequence", () => {
 
   assert.ok(settings.includes("Follow-up 1 is due two business days after the recorded contact date."));
   assert.ok(settings.includes("Follow-up 2 is due two business days after follow-up 1 is marked completed."));
-  assert.ok(settings.includes("the lead is moved to Lost"));
-  assert.ok(settings.includes("Public holidays are not currently excluded."));
+  assert.ok(settings.includes("moves the lead to Lost"));
+  assert.ok(settings.toLowerCase().includes("public holidays are not currently excluded."));
   assert.doesNotMatch(settings, /field\("new_lead_response_hours"/);
   assert.doesNotMatch(settings, /field\("max_followup_attempts"/);
   assert.doesNotMatch(settings, /bindForm\(root, "sales"/);
