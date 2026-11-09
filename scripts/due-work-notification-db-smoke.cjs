@@ -89,11 +89,12 @@ async function main() {
   const clientId = randomUUID();
   const [assignedTaskId, unassignedTaskId, inactiveTaskId, futureTaskId, completedTaskId] = taskIds;
   const [assignedFollowupId, unassignedFollowupId, inactiveFollowupId, skippedFollowupId] = followupIds;
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    .toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
-    .toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
+  // The SQL worker compares dates with PostgreSQL current_date. Build fixtures
+  // in UTC so the test dates match the disposable database's session date,
+  // including when CI runs near midnight in Africa/Johannesburg.
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const ownerEmail = "due-work-owner-" + runId + "@example.invalid";
   const assignedEmail = "due-work-assigned-" + runId + "@example.invalid";
   const inactiveEmail = "due-work-inactive-" + runId + "@example.invalid";
