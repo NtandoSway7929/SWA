@@ -16623,6 +16623,28 @@ function simpleBars(items, color) {
                 .join("|");
         };
 
+        function renderInboxRefreshPreservingReadFocus() {
+            const activeElement = document.activeElement;
+            const focusedThreadId = activeElement &&
+                typeof activeElement.matches === "function" &&
+                activeElement.matches("[data-email-thread-read-toggle]")
+                ? String(activeElement.dataset.emailThreadReadToggle || "")
+                : "";
+
+            renderView();
+
+            if (focusedThreadId) {
+                const replacementButton = Array.from(
+                    workspace.querySelectorAll("[data-email-thread-read-toggle]")
+                ).find(function (button) {
+                    return String(button.dataset.emailThreadReadToggle || "") === focusedThreadId;
+                });
+                if (replacementButton && !replacementButton.disabled) {
+                    replacementButton.focus({ preventScroll: true });
+                }
+            }
+        }
+
         const viewBefore = state.currentView;
         const selectedThreadIdBefore = String(state.emailSelectedThreadId || "");
         const before = signature();
@@ -16645,7 +16667,7 @@ function simpleBars(items, color) {
 
             if (viewBefore === "email" && selectedThreadIdBefore) {
                 if (selectedThreadBefore !== selectedThreadContentSignature(selectedThreadIdBefore)) {
-                    renderView();
+                    renderInboxRefreshPreservingReadFocus();
                 }
                 return;
             }
@@ -16654,7 +16676,7 @@ function simpleBars(items, color) {
                 before !== signature() &&
                 (viewBefore === "email" || viewBefore === "overview")
             ) {
-                renderView();
+                renderInboxRefreshPreservingReadFocus();
             }
         } catch (error) {
             console.warn("Background email inbox refresh failed.", error);

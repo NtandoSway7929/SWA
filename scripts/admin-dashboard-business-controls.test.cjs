@@ -10,7 +10,8 @@ const settings = fs.readFileSync(path.join(root, "admin-dashboard", "admin-setti
 const css = fs.readFileSync(path.join(root, "admin-dashboard", "admin-settings-expanded.css"), "utf8");
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
 const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261025020000_admin_dashboard_business_controls.sql"), "utf8");
-const firstContactMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261107190000_swayphics_first_contact_task_automation.sql"), "utf8");
+const followupSequenceMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261109190000_swayphics_two_stage_business_day_followups.sql"), "utf8");
+const contactClock = fs.readFileSync(path.join(root, "supabase", "swayphics-lead-followup-clock.sql"), "utf8");
 const dueWorkMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261107210000_escalate_unassigned_due_work.sql"), "utf8");
 const notificationBaseline = fs.readFileSync(path.join(root, "supabase", "swayphics-admin-notifications.sql"), "utf8");
 const deliveryMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261025031000_swayphics_project_delivery_settings.sql"), "utf8");
@@ -19,7 +20,7 @@ const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "valida
 
 test("new Settings assets are cache-busted and loaded in the dashboard", () => {
   assert.ok(html.includes("admin-settings-expanded.css?v=20261025-business-invoices-3"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261108-automation-run-history-1"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261109-two-stage-followups-2"));
   assert.ok(html.indexOf("admin-workspace.js") < html.indexOf("admin-settings-expanded.js"));
 });
 
@@ -38,33 +39,6 @@ test("selected settings panel is explicitly made visible", () => {
   assert.ok(settings.includes('targetPanel.removeAttribute("hidden")'));
   assert.ok(settings.includes('targetPanel.style.setProperty("display", "grid", "important")'));
   assert.ok(settings.includes("document.getElementById(targetId)"));
-});
-
-test("sales controls expose response SLA, stage intervals and an attempt cap", () => {
-  for (const field of [
-    "new_lead_response_hours", "lead_no_response_days", "stage_days_contacted",
-    "stage_days_interested", "stage_days_proposal_sent", "stage_days_negotiating",
-    "stage_days_follow_up", "max_followup_attempts"
-  ]) {
-    assert.ok(settings.includes('field("' + field + '"'), "Settings UI missing " + field);
-  }
-  assert.ok(settings.includes("followup_stage_days: stageDays"));
-  assert.ok(settings.includes('stage_days_contacted: stageDays.contacted == null ? "" : stageDays.contacted'));
-  assert.ok(settings.includes("if (value !== null) stageDays[entry[0]] = value"));
-  assert.ok(migration.includes("new_lead_response_hours integer not null default 24"));
-  assert.ok(migration.includes("followup_stage_days jsonb not null default '{}'::jsonb"));
-  assert.ok(migration.includes("max_followup_attempts integer not null default 5"));
-  assert.ok(migration.includes("'lead.followup_limit'"));
-  assert.ok(migration.includes("'lead.response_overdue'"));
-  assert.ok(migration.includes("l.created_at <= now() - make_interval(hours => v_response_hours)"));
-  assert.ok(migration.includes("l.last_contacted_at <= now() - make_interval("));
-  assert.ok(migration.includes("when coalesce(settings.stage_days, '') ~ '^[0-9]{1,3}$'"),
-    "migration must contain the complete stage-interval regex literal");
-  assert.ok(baseline.includes("l.last_contacted_at <= now() - make_interval("));
-  assert.ok(baseline.includes("when coalesce(settings.stage_days, '') ~ '^[0-9]{1,3}$'"),
-    "baseline must contain the complete stage-interval regex literal");
-  assert.ok(migration.includes("new.status is distinct from old.status"));
-  assert.ok(migration.includes("new.next_follow_up is not distinct from old.next_follow_up"));
 });
 
 test("monthly targets are saved and current-month actuals use live leads, quotes and invoices", () => {
@@ -137,54 +111,43 @@ test("settings audit records changed field names only and is protected by row-le
 });
 
 
-test("first-contact SLA creates one internal follow-up without changing a new lead's status", () => {
-  assert.ok(firstContactMigration.includes("coalesce(ws.new_lead_response_hours, 24)"));
-  assert.ok(firstContactMigration.includes("where l.status = 'new'"));
-  assert.ok(firstContactMigration.includes("l.created_at <= now() - make_interval(hours => v_response_hours)"));
-  assert.ok(firstContactMigration.includes("for update of l skip locked"));
-  assert.ok(firstContactMigration.includes("where f.lead_id = l.id"));
-  assert.ok(firstContactMigration.includes("Automatic first-contact task: response target missed after "));
-  assert.ok(firstContactMigration.includes("on conflict (lead_id)"));
-  assert.ok(firstContactMigration.includes("where lead_id is not null and status = 'pending'"));
-  assert.ok(firstContactMigration.includes("do nothing"));
+test("lead follow-ups use a fixed two-stage business-day sequence", () => {
+  assert.ok(followupSequenceMigration.includes("public.swayphics_add_business_days"));
+  assert.ok(followupSequenceMigration.includes("extract(isodow from v_date) between 1 and 5"));
+  assert.ok(followupSequenceMigration.includes("automation_sequence"));
+  assert.ok(followupSequenceMigration.includes("follow_ups_lead_automation_sequence_uidx"));
+  assert.ok(followupSequenceMigration.includes("v_next_sequence>2"));
+  assert.ok(followupSequenceMigration.includes("elsif new.automation_sequence=2"));
+  assert.ok(followupSequenceMigration.includes("status='lost'"));
+  assert.ok(followupSequenceMigration.includes("where coalesce(note,'') like 'Automatic first-contact task:%'"));
+  assert.ok(followupSequenceMigration.includes("new.automation_sequence=1"));
+  assert.ok(followupSequenceMigration.includes("v_first_completed_at at time zone"));
 
-  const firstContactBlock = firstContactMigration
-    .split("-- New leads receive a pending first-contact task")[1]
-    ?.split("-- Existing stage-based follow-ups retain")[0] || "";
-  assert.ok(firstContactBlock, "the dedicated first-contact processing block should exist");
-  assert.doesNotMatch(firstContactBlock, /update public\.leads/i,
-    "creating the internal reminder must leave the lead's New status unchanged");
-  assert.doesNotMatch(firstContactBlock, /send_?email|send_?whatsapp|net\.http_|functions\/v1/i,
-    "the first-contact task must not send outbound communications");
+  const workerStart = followupSequenceMigration.indexOf("create or replace function innerme_private.process_swayphics_stale_leads_internal()");
+  const worker = followupSequenceMigration.slice(workerStart);
+  assert.ok(workerStart >= 0);
+  assert.match(worker, /l\.status in \('contacted','interested','proposal sent','negotiating','follow-up'\)/i);
+  assert.doesNotMatch(worker, /l\.status\s*=\s*'new'/i);
+  assert.match(worker, /automation_sequence=1[\s\S]*?automation_sequence=2/i);
+  assert.match(worker, /v_due_date>v_today[\s\S]*?continue/i);
+  assert.match(worker, /on conflict do nothing/i);
 
-  assert.match(firstContactBlock,
-    /when nullif\(trim\(v_lead\.email\), ''\) is not null then 'Email'\s+when nullif\(trim\(v_lead\.phone\), ''\) is not null then 'Phone'\s+else 'Other'/i);
-  assert.match(firstContactBlock,
-    /where au\.user_id = v_lead\.assigned_to\s+and au\.active = true/i,
-    "the lead's assigned administrator should be reused only while active");
-  assert.match(firstContactBlock,
-    /select au\.user_id[\s\S]*?where au\.active = true[\s\S]*?au\.role = 'owner'/i,
-    "unassigned or inactive assignees should fall back to an active owner/admin");
+  assert.ok(settings.includes("Follow-up 1 is due two business days after the recorded contact date."));
+  assert.ok(settings.includes("Follow-up 2 is due two business days after follow-up 1 is marked completed."));
+  assert.ok(settings.includes("moves the lead to Lost"));
+  assert.ok(settings.toLowerCase().includes("public holidays are not currently excluded."));
+  assert.doesNotMatch(settings, /field\("new_lead_response_hours"/);
+  assert.doesNotMatch(settings, /field\("max_followup_attempts"/);
+  assert.doesNotMatch(settings, /bindForm\(root, "sales"/);
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261109-two-stage-followups-2"));
 
-  assert.ok(firstContactMigration.includes("coalesce(f.note, '') not like 'Automatic first-contact task:%'"),
-    "first-contact reminders must not consume later-stage follow-up attempts");
-  assert.ok(firstContactMigration.includes("new.status in ('won', 'lost', 'not interested')"),
-    "terminal lead outcomes must skip pending first-contact tasks");
-  assert.ok(firstContactMigration.includes("set status = case"));
-  assert.ok(firstContactMigration.includes("completed_at = case"));
-  assert.ok(firstContactMigration.includes("old.status = 'new' and new.status <> 'new'"));
-  assert.ok(firstContactMigration.includes("trg_complete_swayphics_first_contact_followups"));
-  assert.ok(!firstContactMigration.includes("cron.schedule("),
-    "the enhancement must reuse the existing 15-minute scheduler instead of adding a second job");
-
-  assert.ok(settings.includes("Create an assigned first-contact task after a new lead exceeds this response target."));
-  assert.ok(settings.includes("one assigned first-contact task for a New lead"));
-  assert.ok(settings.includes("pending automatic first-contact task"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261108-automation-run-history-1"));
-  assert.ok(baseline.includes("Automatic first-contact task: response target missed after "));
-  assert.ok(baseline.includes("trg_complete_swayphics_first_contact_followups"));
+  assert.ok(contactClock.includes("public.swayphics_add_business_days"));
+  assert.ok(contactClock.includes("new.last_contacted_at is null"));
+  assert.ok(baseline.includes("public.swayphics_add_business_days"));
+  assert.ok(baseline.includes("follow_ups_lead_automation_sequence_uidx"));
+  assert.ok(baseline.includes("Automatic follow-up 2 of 2"));
+  assert.match(followupSequenceMigration, /drop function if exists innerme_private\.complete_swayphics_first_contact_followups_on_status_change\(\)/i, "the new migration must retire the legacy first-contact completion trigger function");
 });
-
 
 test("due tasks and follow-ups escalate when assignees are missing or inactive", () => {
   const workerStart = dueWorkMigration.indexOf("create or replace function innerme_private.generate_admin_due_notifications_internal()");
@@ -225,15 +188,13 @@ test("automation-health RPC requires an active admin and limits exposed jobs", (
 
 test("the migration and baseline use balanced PL/pgSQL dollar delimiters", () => {
   function delimiterStats(source) {
-    const lines = source.split(/\r?\n/);
-    return {
-      malformedOpen: lines.filter(line => line === "as $" || line === "do $").length,
-      malformedClose: lines.filter(line => line === "$;").length,
-      opens: lines.filter(line => line === "as $$" || line === "do $$").length,
-      closes: lines.filter(line => line === "$$;").length
-    };
+    const malformedOpen = (source.match(/\b(?:as|do)\s+\$(?!\$)/gi) || []).length;
+    const malformedClose = (source.match(/(?<!\$)\$(?!\$);/g) || []).length;
+    const opens = (source.match(/\b(?:as|do)\s+\$\$/gi) || []).length;
+    const closes = (source.match(/\$\$;/g) || []).length;
+    return { malformedOpen, malformedClose, opens, closes };
   }
-  for (const [name, source] of [["migration", migration], ["baseline", baseline]]) {
+  for (const [name, source] of [["migration", migration], ["follow-up sequence migration", followupSequenceMigration], ["baseline", baseline]]) {
     const stats = delimiterStats(source);
     assert.equal(stats.malformedOpen, 0, name + " contains a malformed opening delimiter");
     assert.equal(stats.malformedClose, 0, name + " contains a malformed closing delimiter");

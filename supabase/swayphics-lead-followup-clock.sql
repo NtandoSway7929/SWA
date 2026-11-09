@@ -30,6 +30,22 @@ create index if not exists leads_contacted_manually_idx
 
 create index if not exists leads_contacted_manually_at_idx
     on public.leads(contacted_manually_at desc);
+-- Follow-up intervals are measured in South African business days (Mon-Fri).
+create or replace function public.swayphics_add_business_days(p_start_date date,p_days integer)
+returns date language plpgsql immutable strict set search_path = '' as $
+declare v_date date := p_start_date; v_remaining integer := p_days;
+begin
+    if p_days < 0 then raise exception 'Business-day offsets cannot be negative.'; end if;
+    while v_remaining > 0 loop
+        v_date := v_date + 1;
+        if extract(isodow from v_date) between 1 and 5 then v_remaining := v_remaining - 1; end if;
+    end loop;
+    return v_date;
+end;
+$;
+revoke all privileges on function public.swayphics_add_business_days(date,integer)
+from public,anon,authenticated,service_role;
+
 
 -- Recalculate the lead's contact clock from the latest available contact.
 create or replace function public.recalculate_swayphics_lead_contact_clock(
@@ -43,7 +59,6 @@ as $$
 declare
     v_lead public.leads%rowtype;
     v_latest_contact timestamptz;
-    v_days integer;
 begin
     -- This function is also called by a database trigger from communication_logs.
     -- Authorization is enforced by the public RPC wrapper, not by the trigger path.
@@ -57,11 +72,6 @@ begin
     if not found then
         raise exception 'Lead could not be found.';
     end if;
-
-    select coalesce(lead_no_response_days, 7)
-    into v_days
-    from public.workflow_settings
-    where id = 1;
 
     select max(contacted_at)
     into v_latest_contact
@@ -89,11 +99,9 @@ begin
     update public.leads
     set
         last_contacted_at = v_latest_contact,
-        next_follow_up =
-            (
-                v_latest_contact
-                at time zone 'Africa/Johannesburg'
-            )::date + coalesce(v_days, 7),
+        next_follow_up = public.swayphics_add_business_days(
+            (v_latest_contact at time zone 'Africa/Johannesburg')::date,2
+        ),
         status =
             case
                 when status = 'new' then 'contacted'
@@ -176,34 +184,14 @@ execute function public.sync_swayphics_lead_contact_from_communication();
 -- Keep the existing status-based contact clock aligned with the same
 -- follow-up calculation when a lead is moved into a contacted/progressed stage.
 create or replace function public.touch_swayphics_lead_contacted()
-returns trigger
-language plpgsql
-as $$
-declare
-    v_days integer;
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-    if (
-        new.status in (
-            'contacted',
-            'interested',
-            'proposal sent',
-            'negotiating'
-        )
-        and (
-            tg_op = 'INSERT'
-            or old.status is distinct from new.status
-        )
-    ) then
-        select coalesce(lead_no_response_days, 7)
-        into v_days
-        from public.workflow_settings
-        where id = 1;
-
-        new.last_contacted_at = now();
-        new.next_follow_up =
-            current_date + coalesce(v_days, 7);
+    if new.status in ('contacted','interested','proposal sent','negotiating','follow-up')
+       and new.last_contacted_at is null then
+        new.last_contacted_at := now();
+        new.next_follow_up := public.swayphics_add_business_days(
+            (new.last_contacted_at at time zone 'Africa/Johannesburg')::date,2);
     end if;
-
     return new;
 end;
 $$;
@@ -229,17 +217,11 @@ set search_path = public
 as $$
 declare
     v_lead public.leads%rowtype;
-    v_days integer;
     v_now timestamptz := now();
 begin
     if not public.is_swayphics_admin() then
         raise exception 'Active Swayphics admin access required.';
     end if;
-
-    select coalesce(lead_no_response_days, 7)
-    into v_days
-    from public.workflow_settings
-    where id = 1;
 
     select *
     into v_lead
@@ -258,11 +240,9 @@ begin
             contacted_manually_at = v_now,
             contacted_manually_by = auth.uid(),
             last_contacted_at = v_now,
-            next_follow_up =
-                (
-                    v_now
-                    at time zone 'Africa/Johannesburg'
-                )::date + coalesce(v_days, 7),
+            next_follow_up = public.swayphics_add_business_days(
+                (v_now at time zone 'Africa/Johannesburg')::date,2
+            ),
             status =
                 case
                     when status = 'new' then 'contacted'
