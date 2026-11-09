@@ -56,6 +56,9 @@ jobs:
 
       - name: Test admin communication record viewing
         run: node scripts/admin-record-cards.test.cjs
+      - name: Test premium invoice PDF and email design
+        run: node scripts/invoice-premium-design.test.cjs
+
 
       - name: Test Insights lead conversion analytics
         run: node scripts/admin-insights-lead-conversion.test.cjs
