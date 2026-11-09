@@ -55,6 +55,7 @@ function createBrowser(options) {
   );
   const sessionStorage = createStorage();
   const banner = createElement();
+  banner.hidden = true;
   const acceptButton = createElement();
   const rejectButton = createElement();
   const elements = {
@@ -297,6 +298,7 @@ function assertConsentEvent(browser, index, expected) {
 // Re-selecting the same preference should not create duplicate decision events.
 {
   const browser = createBrowser({ consent: "accepted" });
+  assert.equal(browser.banner.hidden, true);
   assert.equal(browser.appendedScripts.length, 1);
   browser.clickFooterPreferences();
   browser.clickAccept();
