@@ -146,7 +146,7 @@ test("lead follow-ups use a fixed two-stage business-day sequence", () => {
   assert.ok(baseline.includes("public.swayphics_add_business_days"));
   assert.ok(baseline.includes("follow_ups_lead_automation_sequence_uidx"));
   assert.ok(baseline.includes("Automatic follow-up 2 of 2"));
-  assert.doesNotMatch(baseline, /create or replace function innerme_private\.complete_swayphics_first_contact_followups_on_status_change/);
+  assert.match(followupSequenceMigration, /drop function if exists innerme_private\.complete_swayphics_first_contact_followups_on_status_change\(\)/i, "the new migration must retire the legacy first-contact completion trigger function");
 });
 
 test("due tasks and follow-ups escalate when assignees are missing or inactive", () => {
