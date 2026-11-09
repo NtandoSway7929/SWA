@@ -187,7 +187,7 @@
         {
             id: "admin",
             label: "Administration",
-            icon: "settings",
+            icon: "shield",
             items: [
                 ["activity", "Activity"],
                 ["portal-requests", "Portal requests"],
@@ -460,6 +460,8 @@
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.5" cy="12" r="2.5"></circle><circle cx="17.5" cy="5.5" r="2.5"></circle><circle cx="17.5" cy="18.5" r="2.5"></circle><path d="M8.7 10.8l6.5-3.8"></path><path d="M8.7 13.2l6.5 3.8"></path></svg>',
             sparkles:
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l1.65 6.1L19.8 10.5l-6.15 1.65L12 18.3l-1.65-6.15L4.2 10.5l6.15-1.6L12 2.8z"></path><path d="M19 15.8l.8 2.35 2.2.85-2.2.8L19 22l-.8-2.2-2.2-.8 2.2-.85L19 15.8z"></path><path d="M4.2 2.8l.65 1.9 1.85.7-1.85.7-.65 1.9-.7-1.9-1.8-.7 1.8-.7.7-1.9z"></path></svg>',
+            shield:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 20 6.5v5.1c0 4.3-3.2 7.5-8 9-4.8-1.5-8-4.7-8-9V6.5z"></path><path d="m8.7 12.2 2.1 2.1 4.6-4.6"></path></svg>',
             settings:
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.8l1.2 1.9 2.3.5 2 .2.7 2.2-.9 2.1 1.1 2 2 .9-.7 2.2-2.1.2-1.7 1.6.1 2.1-2 1.1-1.8-1.1-2.1.1-1.1 2-2.2-.7-.2-2.1-1.7-1.7-2.1-.2-.9-2.1 2-1.1 1-2-.9-2.1.7-2.2 2-.2 2.1.5L12 3.8z"></path><circle cx="12" cy="12" r="2.8"></circle></svg>'
         };
