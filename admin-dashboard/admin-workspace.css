@@ -2017,22 +2017,15 @@
     display: none;
 }
 
+
 .sway-live-badge.live {
     background: rgba(22,163,74,0.08);
     color: #15803D;
 }
 
-.sway-live-badge i {
-    display: none;
-}
-
 .sway-live-badge.polling {
     background: rgba(245,158,11,0.10);
     color: #A16207;
-}
-
-.sway-live-badge i {
-    display: none;
 }
 
 @keyframes sway-live-pulse {
