@@ -219,6 +219,72 @@ function brandedEmailHtml(
 </body>
 </html>`;
 }
+
+async function emailImageDataUri(url: string) {
+  const response = await fetch(url, {
+    headers: { Accept: "image/avif,image/webp,image/png,image/*" },
+  });
+  if (!response.ok) {
+    throw new Error("Email preview image request failed with HTTP " + response.status + ".");
+  }
+
+  const contentType = String(response.headers.get("content-type") || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+  if (!["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"].includes(contentType)) {
+    throw new Error("Email preview asset did not return a supported image.");
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > 3 * 1024 * 1024) {
+    throw new Error("Email preview image is empty or exceeds the 3 MB limit.");
+  }
+
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+
+  return "data:" + contentType + ";base64," + btoa(binary);
+}
+
+async function buildDashboardEmailPreview(
+  html: string,
+  proposalType: "improv-website" | "no-website" | "not-website-related",
+) {
+  let previewHtml = html;
+  const assets = [{
+    source: 'src="https://swayphics.co.za/swayphics-logo.png"',
+    url: "https://swayphics.co.za/swayphics-logo.png",
+  }];
+
+  if (proposalType === "improv-website") {
+    assets.push({
+      source: 'src="cid:swayphics-improvement-website"',
+      url: "https://raw.githubusercontent.com/NtandoSway7929/SWA/main/Improvement%20Website%20Proposal.webp",
+    });
+  } else if (proposalType === "no-website") {
+    assets.push({
+      source: 'src="cid:swayphics-no-website"',
+      url: "https://raw.githubusercontent.com/NtandoSway7929/SWA/main/No%20Website%20Proposal.webp",
+    });
+  }
+
+  for (const asset of assets) {
+    try {
+      const dataUri = await emailImageDataUri(asset.url);
+      previewHtml = previewHtml.replaceAll(asset.source, 'src="' + dataUri + '"');
+    } catch (error) {
+      // Keep sending even if a preview-only image cannot be embedded.
+      console.warn("Unable to embed a Swayphics email preview image:", error);
+    }
+  }
+
+  return previewHtml;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -654,6 +720,18 @@ Deno.serve(async (req) => {
 
     const emailHeaders: Record<string, string> = {};
 
+    const htmlBody = brandedEmailHtml(
+      recipientName,
+      recipientBusinessName,
+      message,
+      proposalType,
+    );
+    const dashboardPreviewHtml = await buildDashboardEmailPreview(
+      htmlBody,
+      proposalType,
+    );
+
+
     const proposalAttachments =
       proposalType === "improv-website"
         ? [{
@@ -698,13 +776,7 @@ Deno.serve(async (req) => {
             ...(Object.keys(emailHeaders).length
               ? { headers: emailHeaders }
               : {}),
-            html:
-              brandedEmailHtml(
-                recipientName,
-                recipientBusinessName,
-                message,
-                proposalType,
-              ),
+            html: htmlBody,
             ...(proposalAttachments.length
               ? { attachments: proposalAttachments }
               : {}),
@@ -823,37 +895,34 @@ Deno.serve(async (req) => {
     // Retry once using the normalized contact type. This protects against
     // stale client/lead selections after a contact has been converted.
     if (communicationInsert.error && canLogContact) {
-      const retryPayload =
-        resolvedContactType === "client"
-          ? {
-              client_id: contact.id,
-              lead_id: null,
-              channel: "Email",
-              direction: "outbound",
-              subject,
-              message,
-              contacted_at:
-                new Date().toISOString(),
-              created_by:
-                userData.user.id,
-            }
-          : {
-              client_id: null,
-              lead_id: contact.id,
-              channel: "Email",
-              direction: "outbound",
-              subject,
-              message,
-              contacted_at:
-                new Date().toISOString(),
-              created_by:
-                userData.user.id,
-            };
-
-      communicationInsert =
-        await supabase
+      const retryContactedAt = new Date().toISOString();
+      if (resolvedContactType === "client") {
+        communicationInsert = await supabase
           .from("communication_logs")
-          .insert(retryPayload);
+          .insert({
+            client_id: contact.id,
+            lead_id: null,
+            channel: "Email",
+            direction: "outbound",
+            subject,
+            message,
+            contacted_at: retryContactedAt,
+            created_by: userData.user.id,
+          });
+      } else {
+        communicationInsert = await supabase
+          .from("communication_logs")
+          .insert({
+            client_id: null,
+            lead_id: contact.id,
+            channel: "Email",
+            direction: "outbound",
+            subject,
+            message,
+            contacted_at: retryContactedAt,
+            created_by: userData.user.id,
+          });
+      }
     }
 
     if (communicationInsert.error) {
@@ -908,7 +977,7 @@ Deno.serve(async (req) => {
           text_body:
             message,
           html_body:
-            null,
+            dashboardPreviewHtml,
           received_at:
             new Date().toISOString(),
           is_read:
@@ -959,6 +1028,12 @@ Deno.serve(async (req) => {
             : null,
       });
 
+    const communicationError = communicationInsert.error;
+    const communicationErrorDetails =
+      communicationError && "details" in communicationError
+        ? communicationError.details
+        : null;
+
     return Response.json(
       {
         success: true,
@@ -975,7 +1050,7 @@ Deno.serve(async (req) => {
           communicationInsert.error
             ? String(
                 communicationInsert.error.message ||
-                communicationInsert.error.details ||
+                communicationErrorDetails ||
                 "Communication log insert failed."
               )
             : null,
