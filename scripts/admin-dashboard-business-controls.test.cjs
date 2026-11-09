@@ -20,7 +20,7 @@ const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "valida
 
 test("new Settings assets are cache-busted and loaded in the dashboard", () => {
   assert.ok(html.includes("admin-settings-expanded.css?v=20261025-business-invoices-3"));
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261109-two-stage-followups-1"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261109-two-stage-followups-2"));
   assert.ok(html.indexOf("admin-workspace.js") < html.indexOf("admin-settings-expanded.js"));
 });
 
@@ -139,7 +139,7 @@ test("lead follow-ups use a fixed two-stage business-day sequence", () => {
   assert.doesNotMatch(settings, /field\("new_lead_response_hours"/);
   assert.doesNotMatch(settings, /field\("max_followup_attempts"/);
   assert.doesNotMatch(settings, /bindForm\(root, "sales"/);
-  assert.ok(html.includes("admin-settings-expanded.js?v=20261109-two-stage-followups-1"));
+  assert.ok(html.includes("admin-settings-expanded.js?v=20261109-two-stage-followups-2"));
 
   assert.ok(contactClock.includes("public.swayphics_add_business_days"));
   assert.ok(contactClock.includes("new.last_contacted_at is null"));
