@@ -636,7 +636,7 @@
             <p>Google provides further information about its Analytics cookies and data collection in its own documentation.</p>
 
             <div class="legal-note">
-                <p><strong>Important:</strong> Selecting “Reject Analytics” stops the Swayphics website from loading Google Analytics through the consent script. The current implementation does not automatically delete Analytics cookies that may already exist from an earlier acceptance. Existing cookies can therefore remain in the browser until they expire or are cleared through browser controls.</p>
+                <p><strong>Important:</strong> Selecting “Reject Analytics” prevents the Swayphics consent script from loading Google Analytics and updates Google Analytics consent to denied. When analytics had previously been enabled, the website also attempts to remove accessible first-party Google Analytics cookies. Cookies that are inaccessible to the page, or are scoped to other paths or domains, may remain until they expire or are cleared through browser controls.</p>
             </div>
         </section>
 
