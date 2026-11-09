@@ -1406,7 +1406,10 @@
         var button = group.querySelector('[data-view="settings"]');
         if (!button) return;
 
-        var label = button.querySelector("span");
+        var label = button.querySelector(".sway-settings-direct-label");
+        if (!label) {
+            label = button.querySelector("span:not(.sway-workspace-nav-group-icon)");
+        }
         if (label) label.textContent = "Settings";
         else button.textContent = "Settings";
 
