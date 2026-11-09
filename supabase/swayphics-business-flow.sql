@@ -138,37 +138,39 @@ create unique index if not exists portfolio_source_project_unique_idx
 -- use their existing foreign-key delete behavior.
 
 -- When a lead enters a contacted/progressed stage, update the last-contacted clock.
-create or replace function public.touch_swayphics_lead_contacted()
-returns trigger
-language plpgsql
-as $$
+-- Weekdays only (Monday-Friday) in the South African local calendar.
+create or replace function public.swayphics_add_business_days(p_start_date date,p_days integer)
+returns date language plpgsql immutable strict set search_path = '' as $$
+declare v_date date := p_start_date; v_remaining integer := p_days;
 begin
-    if (
-        new.status in (
-            'contacted',
-            'interested',
-            'proposal sent',
-            'negotiating'
-        )
-        and (
-            tg_op = 'INSERT'
-            or old.status is distinct from new.status
-        )
-    ) then
-        new.last_contacted_at = now();
-    end if;
+    if p_days < 0 then raise exception 'Business-day offsets cannot be negative.'; end if;
+    while v_remaining > 0 loop
+        v_date := v_date + 1;
+        if extract(isodow from v_date) between 1 and 5 then v_remaining := v_remaining - 1; end if;
+    end loop;
+    return v_date;
+end;
+$$;
+revoke all privileges on function public.swayphics_add_business_days(date,integer)
+from public,anon,authenticated,service_role;
 
+-- Start the follow-up clock on first recorded contact only.
+create or replace function public.touch_swayphics_lead_contacted()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+    if new.status in ('contacted','interested','proposal sent','negotiating','follow-up')
+       and new.last_contacted_at is null then
+        new.last_contacted_at := now();
+        new.next_follow_up := public.swayphics_add_business_days(
+            (new.last_contacted_at at time zone 'Africa/Johannesburg')::date,2);
+    end if;
     return new;
 end;
 $$;
-
-drop trigger if exists trg_touch_swayphics_lead_contacted
-on public.leads;
-
+drop trigger if exists trg_touch_swayphics_lead_contacted on public.leads;
 create trigger trg_touch_swayphics_lead_contacted
 before insert or update of status on public.leads
-for each row
-execute function public.touch_swayphics_lead_contacted();
+for each row execute function public.touch_swayphics_lead_contacted();
 
 -- Atomic Enquiry -> Lead conversion used by the Contacted button.
 create or replace function public.convert_swayphics_enquiry_to_lead(
@@ -451,788 +453,195 @@ create unique index if not exists follow_ups_one_pending_per_lead_idx
     on public.follow_ups (lead_id)
     where lead_id is not null and status = 'pending';
 
-create or replace function innerme_private.process_swayphics_stale_leads_internal()
-returns integer
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-    v_created integer := 0;
-    v_inserted integer := 0;
-    v_assigned_to uuid;
-    v_days integer;
-    v_response_hours integer;
-    v_max_attempts integer;
-    v_attempt_count integer;
-    v_today date := (now() at time zone 'Africa/Johannesburg')::date;
-    v_dedupe_key text;
-    v_lead public.leads%rowtype;
+-- Persist a two-attempt sequence against each lead's actual follow-up records.
+alter table public.follow_ups add column if not exists automation_sequence smallint;
+
+-- Legacy first-contact tasks were internal reminders, not completed outreach.
+update public.follow_ups set status='skipped',completed_at=null,automation_sequence=null
+where coalesce(note,'') like 'Automatic first-contact task:%';
+
+-- Sequence existing, genuine pending/completed lead follow-ups in historical order.
+with ranked as (
+    select f.id,row_number() over(partition by f.lead_id order by f.created_at,f.id) as attempt_number
+    from public.follow_ups f
+    where f.lead_id is not null and f.status in ('pending','completed')
+      and f.automation_sequence is null
+)
+update public.follow_ups f set automation_sequence=ranked.attempt_number::smallint
+from ranked where f.id=ranked.id and ranked.attempt_number between 1 and 2;
+
+-- Retire historical pending reminders beyond the two-attempt cap.
+with ranked as (
+    select f.id,row_number() over(partition by f.lead_id order by f.created_at,f.id) as attempt_number
+    from public.follow_ups f
+    where f.lead_id is not null and f.status in ('pending','completed')
+)
+update public.follow_ups f set status='skipped',completed_at=null
+from ranked where f.id=ranked.id and ranked.attempt_number>2 and f.status='pending';
+
+alter table public.follow_ups drop constraint if exists follow_ups_automation_sequence_check;
+alter table public.follow_ups add constraint follow_ups_automation_sequence_check
+check (automation_sequence is null or automation_sequence in (1,2));
+create unique index if not exists follow_ups_lead_automation_sequence_uidx
+on public.follow_ups(lead_id,automation_sequence)
+where lead_id is not null and automation_sequence is not null;
+create unique index if not exists follow_ups_one_pending_per_lead_idx
+on public.follow_ups(lead_id) where lead_id is not null and status='pending';
+
+-- If two real attempts have already been completed, close the historical lead.
+update public.leads l set status='lost',next_follow_up=null,updated_at=now()
+where l.status not in ('won','lost','not interested')
+  and (select count(*) from public.follow_ups f where f.lead_id=l.id and f.status='completed')>=2;
+
+-- A completed first follow-up represents a real contact attempt. Ensure
+-- older records in that state are active contacted leads, not untouched New leads.
+update public.leads l
+set status='contacted',updated_at=now()
+where l.status='new'
+  and exists (
+      select 1 from public.follow_ups f
+      where f.lead_id=l.id
+        and f.automation_sequence=1
+        and f.status='completed'
+  );
+
+-- Backfill the next due date from initial contact or completion of follow-up one.
+update public.leads l
+set next_follow_up=coalesce(
+    (select public.swayphics_add_business_days((f.completed_at at time zone 'Africa/Johannesburg')::date,2)
+     from public.follow_ups f
+     where f.lead_id=l.id and f.automation_sequence=1 and f.status='completed'
+     order by f.created_at desc limit 1),
+    public.swayphics_add_business_days((l.last_contacted_at at time zone 'Africa/Johannesburg')::date,2)
+),updated_at=now()
+where l.status in ('contacted','interested','proposal sent','negotiating','follow-up')
+  and (l.last_contacted_at is not null or exists (
+      select 1 from public.follow_ups f where f.lead_id=l.id
+      and f.automation_sequence=1 and f.status='completed'));
+
+-- Keep old settings columns for compatibility, but pin them to the new policy.
+update public.workflow_settings set lead_no_response_days=2,followup_stage_days='{}'::jsonb,
+max_followup_attempts=2 where id=1;
+
+create or replace function innerme_private.assign_swayphics_followup_sequence()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare v_lead_status text; v_next_sequence integer;
 begin
-    select
-        coalesce(ws.max_followup_attempts, 5),
-        coalesce(ws.new_lead_response_hours, 24)
-    into v_max_attempts, v_response_hours
-    from public.workflow_settings ws
-    where ws.id = 1;
+    if new.status='skipped' then new.automation_sequence:=null; return new; end if;
+    if new.lead_id is null or new.status not in ('pending','completed') then return new; end if;
+    if new.status='completed' then new.completed_at:=coalesce(new.completed_at,now()); end if;
+    if new.automation_sequence is not null then return new; end if;
 
-    v_max_attempts := coalesce(v_max_attempts, 5);
-    v_response_hours := coalesce(v_response_hours, 24);
-
-    -- New leads receive a pending first-contact task only after the configured
-    -- response target has elapsed. Any existing follow-up record, regardless
-    -- of status, prevents a second first-contact task from being generated.
-    for v_lead in
-        select l.*
-        from public.leads l
-        where l.status = 'new'
-          and l.created_at <= now() - make_interval(hours => v_response_hours)
-          and not exists (
-              select 1
-              from public.follow_ups f
-              where f.lead_id = l.id
-          )
-        order by l.created_at asc, l.id
-        for update of l skip locked
-    loop
-        select coalesce(
-            (
-                select au.user_id
-                from public.admin_users au
-                where au.user_id = v_lead.assigned_to
-                  and au.active = true
-                limit 1
-            ),
-            (
-                select au.user_id
-                from public.admin_users au
-                where au.active = true
-                order by case when au.role = 'owner' then 0 else 1 end,
-                         au.user_id
-                limit 1
-            )
-        )
-        into v_assigned_to;
-
-        -- Never infer WhatsApp registration from a phone number. The task is
-        -- an internal reminder only; it does not send an email or message.
-        insert into public.follow_ups (
-            lead_id, assigned_to, scheduled_for, channel, status, note
-        )
-        values (
-            v_lead.id,
-            v_assigned_to,
-            v_today,
-            case
-                when nullif(trim(v_lead.email), '') is not null then 'Email'
-                when nullif(trim(v_lead.phone), '') is not null then 'Phone'
-                else 'Other'
-            end,
-            'pending',
-            'Automatic first-contact task: response target missed after ' ||
-                v_response_hours ||
-                ' hours. Verify the contact channel before outreach.'
-        )
-        on conflict (lead_id)
-        where lead_id is not null and status = 'pending'
-        do nothing;
-
-        get diagnostics v_inserted = row_count;
-        v_created := v_created + v_inserted;
-    end loop;
-
-    -- Existing stage-based follow-ups retain their current interval and
-    -- attempt-cap behavior. The first-contact task is not counted as a later
-    -- follow-up attempt once the lead has been contacted.
-    for v_lead in
-        select l.*
-        from public.leads l
-        cross join lateral (
-            select
-                ws.lead_no_response_days,
-                ws.followup_stage_days ->> l.status as stage_days
-            from public.workflow_settings ws
-            where ws.id = 1
-        ) settings
-        where l.status in (
-            'contacted',
-            'interested',
-            'proposal sent',
-            'negotiating',
-            'follow-up'
-        )
-          and l.last_contacted_at is not null
-          and l.last_contacted_at <= now() - make_interval(
-              days => case
-                  when coalesce(settings.stage_days, '') ~ '^[0-9]{1,3}$'
-                    then greatest(1, least(365, settings.stage_days::integer))
-                  else coalesce(settings.lead_no_response_days, 7)
-              end
-          )
-          and not exists (
-              select 1
-              from public.follow_ups f
-              where f.lead_id = l.id
-                and f.status = 'pending'
-          )
-        order by l.last_contacted_at asc
-        for update of l skip locked
-    loop
-        select
-            case
-                when coalesce(ws.followup_stage_days ->> v_lead.status, '') ~ '^[0-9]{1,3}$'
-                    then greatest(1, least(365, (ws.followup_stage_days ->> v_lead.status)::integer))
-                else coalesce(ws.lead_no_response_days, 7)
-            end
-        into v_days
-        from public.workflow_settings ws
-        where ws.id = 1;
-        v_days := coalesce(v_days, 7);
-
-        select count(*)
-        into v_attempt_count
-        from public.follow_ups f
-        where f.lead_id = v_lead.id
-          and f.status in ('pending', 'completed')
-          and coalesce(f.note, '') not like 'Automatic first-contact task:%';
-
-        select coalesce(
-            v_lead.assigned_to,
-            (
-                select au.user_id
-                from public.admin_users au
-                where au.active = true
-                order by case when au.role = 'owner' then 0 else 1 end,
-                         au.user_id
-                limit 1
-            )
-        )
-        into v_assigned_to;
-
-        if v_attempt_count >= v_max_attempts then
-            v_dedupe_key := 'swayphics-followup-limit:' ||
-                v_lead.id::text || ':' || v_today::text;
-
-            if v_assigned_to is not null then
-                perform public.create_admin_notification(
-                    v_assigned_to, null, 'warning', 'lead.followup_limit',
-                    'Follow-up limit reached',
-                    coalesce(nullif(trim(v_lead.business_name), ''), 'This lead') ||
-                        ' has reached the configured limit of ' || v_max_attempts ||
-                        ' follow-up attempts. Review the opportunity before further outreach.',
-                    'lead', v_lead.id, 'leads', v_dedupe_key
-                );
-            else
-                perform public.notify_admins(
-                    null, 'warning', 'lead.followup_limit',
-                    'Follow-up limit reached',
-                    coalesce(nullif(trim(v_lead.business_name), ''), 'This lead') ||
-                        ' has reached the configured limit of ' || v_max_attempts ||
-                        ' follow-up attempts. Review the opportunity before further outreach.',
-                    'lead', v_lead.id, 'leads', v_dedupe_key, true
-                );
-            end if;
-
-            update public.leads
-            set status = 'follow-up',
-                next_follow_up = v_today,
-                updated_at = now()
-            where id = v_lead.id
-              and status in ('contacted', 'interested', 'proposal sent', 'negotiating', 'follow-up');
-
-            continue;
-        end if;
-
-        insert into public.follow_ups (
-            lead_id, assigned_to, scheduled_for, channel, status, note
-        )
-        values (
-            v_lead.id,
-            v_assigned_to,
-            v_today,
-            case
-                when nullif(trim(v_lead.email), '') is not null then 'Email'
-                when nullif(trim(v_lead.phone), '') is not null then 'Phone'
-                else 'Other'
-            end,
-            'pending',
-            'Automatic follow-up: no response within ' ||
-                v_days ||
-                ' days for the current lead stage. Verify the contact channel before outreach.'
-        )
-        on conflict (lead_id)
-        where lead_id is not null and status = 'pending'
-        do nothing;
-
-        get diagnostics v_inserted = row_count;
-
-        if v_inserted > 0 then
-            update public.leads
-            set status = 'follow-up',
-                next_follow_up = v_today,
-                updated_at = now()
-            where id = v_lead.id
-              and status in (
-                  'contacted',
-                  'interested',
-                  'proposal sent',
-                  'negotiating',
-                  'follow-up'
-              );
-
-            v_created := v_created + v_inserted;
-        end if;
-    end loop;
-
-    return v_created;
-end;
-$$;
-
-revoke all privileges
-    on function innerme_private.process_swayphics_stale_leads_internal()
-    from public, anon, authenticated, service_role;
-
--- When a lead is moved out of New, close any still-pending automatic
--- first-contact task. Actual contact completes it; terminal dispositions
--- skip it. This keeps the Follow-ups page aligned with the lead's current
--- lifecycle even when the status is changed outside the manual-contact RPC.
-create or replace function innerme_private.complete_swayphics_first_contact_followups_on_status_change()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-    if old.status = 'new' and new.status <> 'new' then
-        update public.follow_ups f
-        set status = case
-                when new.status in ('won', 'lost', 'not interested') then 'skipped'
-                else 'completed'
-            end,
-            completed_at = case
-                when new.status in ('won', 'lost', 'not interested') then null
-                else coalesce(f.completed_at, now())
-            end
-        where f.lead_id = new.id
-          and f.status = 'pending'
-          and coalesce(f.note, '') like 'Automatic first-contact task:%';
+    select l.status into v_lead_status from public.leads l where l.id=new.lead_id for update;
+    if not found then raise exception 'The lead for this follow-up could not be found.'; end if;
+    if v_lead_status in ('won','lost','not interested') then
+        raise exception 'A closed or disqualified lead cannot receive another follow-up.';
     end if;
-
+    select coalesce(max(f.automation_sequence),0)+1 into v_next_sequence
+    from public.follow_ups f where f.lead_id=new.lead_id and f.automation_sequence is not null;
+    if v_next_sequence>2 then raise exception 'This lead has reached the maximum of two follow-ups.'; end if;
+    new.automation_sequence:=v_next_sequence::smallint;
     return new;
 end;
 $$;
+revoke all privileges on function innerme_private.assign_swayphics_followup_sequence()
+from public,anon,authenticated,service_role;
+drop trigger if exists trg_assign_swayphics_followup_sequence on public.follow_ups;
+create trigger trg_assign_swayphics_followup_sequence
+before insert or update on public.follow_ups
+for each row execute function innerme_private.assign_swayphics_followup_sequence();
 
-revoke all privileges
-    on function innerme_private.complete_swayphics_first_contact_followups_on_status_change()
-    from public, anon, authenticated, service_role;
+create or replace function innerme_private.apply_swayphics_followup_completion()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare v_completed_at timestamptz;
+begin
+    if new.lead_id is null or new.status<>'completed' then return new; end if;
+    if tg_op='UPDATE' and old.status='completed'
+       and old.completed_at is not distinct from new.completed_at then return new; end if;
+    v_completed_at:=coalesce(new.completed_at,now());
 
-drop trigger if exists trg_complete_swayphics_first_contact_followups on public.leads;
-create trigger trg_complete_swayphics_first_contact_followups
+    if new.automation_sequence=1 then
+        update public.leads l
+        set last_contacted_at=v_completed_at,
+            status=case when status='new' then 'contacted' else status end,
+            next_follow_up=public.swayphics_add_business_days(
+                (v_completed_at at time zone 'Africa/Johannesburg')::date,2),
+            updated_at=now()
+        where l.id=new.lead_id and l.status not in ('won','lost','not interested');
+    elsif new.automation_sequence=2 then
+        update public.leads l
+        set status='lost',last_contacted_at=v_completed_at,next_follow_up=null,updated_at=now()
+        where l.id=new.lead_id and l.status not in ('won','lost','not interested');
+    end if;
+    return new;
+end;
+$$;
+revoke all privileges on function innerme_private.apply_swayphics_followup_completion()
+from public,anon,authenticated,service_role;
+drop trigger if exists trg_apply_swayphics_followup_completion on public.follow_ups;
+create trigger trg_apply_swayphics_followup_completion
+after insert or update of status,completed_at on public.follow_ups
+for each row execute function innerme_private.apply_swayphics_followup_completion();
+
+create or replace function innerme_private.skip_swayphics_terminal_lead_followups()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+    if new.status in ('won','lost','not interested') and old.status is distinct from new.status then
+        update public.follow_ups f set status='skipped',completed_at=null,automation_sequence=null
+        where f.lead_id=new.id and f.status='pending';
+    end if;
+    return new;
+end;
+$$;
+revoke all privileges on function innerme_private.skip_swayphics_terminal_lead_followups()
+from public,anon,authenticated,service_role;
+drop trigger if exists trg_skip_swayphics_terminal_lead_followups on public.leads;
+create trigger trg_skip_swayphics_terminal_lead_followups
 after update of status on public.leads
-for each row
-when (old.status = 'new' and new.status <> 'new')
-execute function innerme_private.complete_swayphics_first_contact_followups_on_status_change();
+for each row execute function innerme_private.skip_swayphics_terminal_lead_followups();
 
--- Preserve the authenticated dashboard RPC but keep the privileged worker private.
-create or replace function public.process_swayphics_stale_leads()
-returns integer
-language plpgsql
-security definer
-set search_path = ''
-as $$
+-- Start the follow-up clock on first recorded contact only.
+create or replace function public.touch_swayphics_lead_contacted()
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-    if auth.uid() is null or not public.is_swayphics_admin() then
-        raise exception 'Active Swayphics admin access required.';
+    if new.status in ('contacted','interested','proposal sent','negotiating','follow-up')
+       and new.last_contacted_at is null then
+        new.last_contacted_at := now();
+        new.next_follow_up := public.swayphics_add_business_days(
+            (new.last_contacted_at at time zone 'Africa/Johannesburg')::date,2);
     end if;
-
-    return innerme_private.process_swayphics_stale_leads_internal();
-end;
-$$;
-
-revoke all privileges
-    on function public.process_swayphics_stale_leads()
-    from public, anon, service_role;
-grant execute
-    on function public.process_swayphics_stale_leads()
-    to authenticated;
-
-
--- Complete invoice/payment linkage.
-alter table public.invoices
-    add column if not exists amount_paid numeric(12,2) not null default 0;
-
-alter table public.invoices
-    add column if not exists amount_outstanding numeric(12,2) not null default 0;
-
-create or replace function public.recalculate_swayphics_invoice_balance(
-    p_invoice_id uuid
-)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-    v_total numeric(12,2);
-    v_paid numeric(12,2);
-    v_outstanding numeric(12,2);
-    v_due_date date;
-    v_status text;
-    v_today date := (now() at time zone 'Africa/Johannesburg')::date;
-begin
-    select i.total, i.due_date, i.status
-    into v_total, v_due_date, v_status
-    from public.invoices i
-    where i.id = p_invoice_id;
-
-    if not found then
-        return;
-    end if;
-
-    select coalesce(sum(
-        case
-            when p.status in ('paid', 'partially paid') then p.amount
-            else 0
-        end
-    ), 0)
-    into v_paid
-    from public.payments p
-    where p.invoice_id = p_invoice_id;
-
-    v_paid := greatest(
-        0,
-        least(coalesce(v_paid, 0), greatest(coalesce(v_total, 0), 0))
-    );
-    v_outstanding := greatest(coalesce(v_total, 0) - v_paid, 0);
-
-    update public.invoices i
-    set amount_paid = v_paid,
-        amount_outstanding = v_outstanding,
-        status = case
-            when v_status = 'cancelled' then 'cancelled'
-            when coalesce(v_total, 0) > 0
-                 and v_paid >= coalesce(v_total, 0) then 'paid'
-            when v_status = 'draft' and v_paid <= 0 then 'draft'
-            when v_due_date is not null
-                 and v_due_date < v_today
-                 and v_outstanding > 0 then 'overdue'
-            when v_paid > 0 then 'partially paid'
-            else 'sent'
-        end,
-        updated_at = now()
-    where i.id = p_invoice_id;
-end;
-$$;
-
--- Keep draft invoices distinct from invoices that have actually been sent.
-alter table public.client_projects
-    drop constraint if exists client_projects_payment_status_check;
-alter table public.client_projects
-    add constraint client_projects_payment_status_check
-    check (payment_status in (
-        'not invoiced',
-        'invoice drafted',
-        'invoice sent',
-        'partially paid',
-        'paid',
-        'overdue'
-    ));
-
-create or replace function public.sync_swayphics_project_payment_status(
-    p_project_id uuid
-)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-    if p_project_id is null then
-        return;
-    end if;
-
-    update public.client_projects cp
-    set payment_status = case
-        when exists (
-            select 1
-            from public.invoices i
-            where i.project_id = p_project_id
-              and i.status = 'overdue'
-              and coalesce(i.amount_outstanding, 0) > 0
-        ) then 'overdue'
-        when exists (
-            select 1
-            from public.invoices i
-            where i.project_id = p_project_id
-              and i.status = 'partially paid'
-        ) then 'partially paid'
-        when exists (
-            select 1
-            from public.invoices i
-            where i.project_id = p_project_id
-              and i.status = 'paid'
-        )
-        and not exists (
-            select 1
-            from public.invoices i
-            where i.project_id = p_project_id
-              and i.status not in ('paid', 'cancelled')
-        ) then 'paid'
-        when exists (
-            select 1
-            from public.invoices i
-            where i.project_id = p_project_id
-              and i.status = 'sent'
-        ) then 'invoice sent'
-        when exists (
-            select 1
-            from public.invoices i
-            where i.project_id = p_project_id
-              and i.status = 'draft'
-        ) then 'invoice drafted'
-        else 'not invoiced'
-    end,
-    updated_at = now()
-    where cp.id = p_project_id;
-end;
-$$;
-
-create or replace function public.sync_swayphics_payment_after_change()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-    if tg_op = 'DELETE' then
-        perform public.recalculate_swayphics_invoice_balance(old.invoice_id);
-        if old.project_id is not null then
-            perform public.sync_swayphics_project_payment_status(old.project_id);
-        end if;
-    else
-        if new.invoice_id is not null then
-            perform public.recalculate_swayphics_invoice_balance(new.invoice_id);
-        end if;
-
-        if old.invoice_id is not null
-           and old.invoice_id is distinct from new.invoice_id then
-            perform public.recalculate_swayphics_invoice_balance(old.invoice_id);
-        end if;
-
-        if new.project_id is not null then
-            perform public.sync_swayphics_project_payment_status(new.project_id);
-        end if;
-
-        if old.project_id is not null
-           and old.project_id is distinct from new.project_id then
-            perform public.sync_swayphics_project_payment_status(old.project_id);
-        end if;
-    end if;
-
-    return coalesce(new, old);
-end;
-$$;
-
-drop trigger if exists trg_sync_swayphics_payment_after_change
-on public.payments;
-
-create trigger trg_sync_swayphics_payment_after_change
-after insert or update or delete on public.payments
-for each row
-execute function public.sync_swayphics_payment_after_change();
-
--- Keep invoice balances correct when invoice totals/due dates change.
-create or replace function public.sync_swayphics_invoice_after_change()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-    v_paid numeric(12,2);
-    v_total numeric(12,2);
-    v_outstanding numeric(12,2);
-    v_today date := (now() at time zone 'Africa/Johannesburg')::date;
-begin
-    if tg_op = 'INSERT' then
-        new.amount_paid := 0;
-        new.amount_outstanding := greatest(coalesce(new.total, 0), 0);
-        new.status := case
-            when new.status = 'cancelled' then 'cancelled'
-            when new.status = 'draft' then 'draft'
-            when new.due_date is not null
-                 and new.due_date < v_today
-                 and coalesce(new.total, 0) > 0 then 'overdue'
-            else 'sent'
-        end;
-        return new;
-    end if;
-
-    if new.total is distinct from old.total
-       or new.due_date is distinct from old.due_date
-       or new.project_id is distinct from old.project_id
-       or new.status is distinct from old.status
-       or new.amount_paid is distinct from old.amount_paid
-       or new.amount_outstanding is distinct from old.amount_outstanding
-    then
-        select coalesce(sum(
-            case
-                when p.status in ('paid', 'partially paid') then p.amount
-                else 0
-            end
-        ), 0)
-        into v_paid
-        from public.payments p
-        where p.invoice_id = new.id;
-
-        v_total := greatest(coalesce(new.total, 0), 0);
-        v_paid := greatest(0, least(coalesce(v_paid, 0), v_total));
-        v_outstanding := greatest(v_total - v_paid, 0);
-
-        new.amount_paid := v_paid;
-        new.amount_outstanding := v_outstanding;
-        new.status := case
-            when new.status = 'cancelled' then 'cancelled'
-            when v_total > 0 and v_paid >= v_total then 'paid'
-            when new.status = 'draft' and v_paid <= 0 then 'draft'
-            when new.due_date is not null
-                 and new.due_date < v_today
-                 and v_outstanding > 0 then 'overdue'
-            when v_paid > 0 then 'partially paid'
-            else 'sent'
-        end;
-    end if;
-
     return new;
 end;
 $$;
+drop trigger if exists trg_touch_swayphics_lead_contacted on public.leads;
+create trigger trg_touch_swayphics_lead_contacted
+before insert or update of status on public.leads
+for each row execute function public.touch_swayphics_lead_contacted();
 
-drop trigger if exists trg_sync_swayphics_invoice_before_change
-on public.invoices;
-
-create trigger trg_sync_swayphics_invoice_before_change
-before insert or update on public.invoices
-for each row
-execute function public.sync_swayphics_invoice_after_change();
-
--- Project completion automation:
---   * create a portfolio record if one does not exist
---   * queue a client review request exactly once
-create or replace function public.auto_swayphics_project_completion()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-    v_review_link text;
-    v_client_email text;
-    v_year integer;
-begin
-    if new.status = 'completed'
-       and (
-           tg_op = 'INSERT'
-           or old.status is distinct from new.status
-       ) then
-
-        v_year :=
-            extract(
-                year from (
-                    now() at time zone 'Africa/Johannesburg'
-                )
-            )::integer;
-
-        insert into public.portfolio_projects (
-            title,
-            category,
-            description,
-            year,
-            published,
-            source_project_id
-        )
-        values (
-            new.name,
-            coalesce(new.service, 'Client work'),
-            coalesce(
-                new.description,
-                'Completed project delivered by Swayphics.'
-            ),
-            v_year,
-            false,
-            new.id
-        )
-        on conflict do nothing;
-
-        if new.client_id is not null then
-            select email
-            into v_client_email
-            from public.clients
-            where id = new.client_id;
-
-            select review_link
-            into v_review_link
-            from public.workflow_settings
-            where id = 1;
-
-            insert into public.client_review_requests (
-                project_id,
-                client_id,
-                email,
-                review_url,
-                status
-            )
-            values (
-                new.id,
-                new.client_id,
-                v_client_email,
-                coalesce(
-                    v_review_link,
-                    'https://swayphics.co.za/testimonial/'
-                ),
-                case
-                    when coalesce(
-                        trim(v_client_email),
-                        ''
-                    ) = ''
-                        then 'skipped'
-                    else 'queued'
-                end
-            )
-            on conflict (project_id) do nothing;
-        end if;
-    end if;
-
-    return new;
-end;
-$$;
-
-drop trigger if exists trg_auto_swayphics_project_completion
-on public.client_projects;
-
-create trigger trg_auto_swayphics_project_completion
-after insert or update of status on public.client_projects
-for each row
-execute function public.auto_swayphics_project_completion();
-
--- Set completed_at automatically in the South African timezone context.
-create or replace function public.set_swayphics_project_completed_at()
-returns trigger
-language plpgsql
-as $$
-begin
-    if new.status = 'completed'
-       and (
-           tg_op = 'INSERT'
-           or old.status is distinct from new.status
-       ) then
-        new.completed_at = coalesce(
-            new.completed_at,
-            now()
-        );
-    end if;
-
-    return new;
-end;
-$$;
-
-drop trigger if exists trg_set_swayphics_project_completed_at
-on public.client_projects;
-
-create trigger trg_set_swayphics_project_completed_at
-before insert or update of status on public.client_projects
-for each row
-execute function public.set_swayphics_project_completed_at();
-
--- Permissions and RLS for the new workflow tables.
-alter table public.workflow_settings enable row level security;
-alter table public.client_review_requests enable row level security;
-
-grant select on table public.workflow_settings to authenticated;
-grant select, insert, update, delete
-on table public.client_review_requests
-to authenticated;
-
-grant all privileges on table public.workflow_settings
-to service_role;
-
-grant all privileges on table public.client_review_requests
-to service_role;
-
-drop policy if exists "Swayphics admins can view workflow settings"
-on public.workflow_settings;
-
-create policy "Swayphics admins can view workflow settings"
-on public.workflow_settings
-for select
-to authenticated
-using (public.is_swayphics_admin());
-
-drop policy if exists "Swayphics admins can view review requests"
-on public.client_review_requests;
-
-create policy "Swayphics admins can view review requests"
-on public.client_review_requests
-for select
-to authenticated
-using (public.is_swayphics_admin());
-
-drop policy if exists "Swayphics admins can manage review requests"
-on public.client_review_requests;
-
-create policy "Swayphics admins can manage review requests"
-on public.client_review_requests
-for all
-to authenticated
-using (public.is_swayphics_admin())
-with check (public.is_swayphics_admin());
-
-grant all privileges on table public.clients to service_role;
-grant all privileges on table public.client_projects to service_role;
-grant all privileges on table public.payments to service_role;
-grant all privileges on table public.invoices to service_role;
-grant all privileges on table public.invoice_items to service_role;
-grant all privileges on table public.portfolio_projects to service_role;
-
--- Keep the next contact date populated when a completed follow-up updates the contact clock.
 create or replace function public.ensure_swayphics_next_followup_date()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-    v_days integer;
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
     if new.last_contacted_at is not null
-       and new.next_follow_up is null
-       and new.status in (
-           'contacted',
-           'interested',
-           'proposal sent',
-           'negotiating',
-           'follow-up'
-       )
+       and new.status in ('contacted','interested','proposal sent','negotiating','follow-up')
        and (
            tg_op = 'INSERT'
            or new.last_contacted_at is distinct from old.last_contacted_at
-       )
-    then
-        select coalesce(
-            (select ws.lead_no_response_days
-             from public.workflow_settings ws
-             where ws.id = 1),
-            7
-        )
-        into v_days;
-
-        new.next_follow_up :=
-            (new.last_contacted_at at time zone 'Africa/Johannesburg')::date
-            + v_days;
+           or (tg_op = 'UPDATE'
+               and new.next_follow_up is not distinct from old.next_follow_up
+               and new.status is distinct from old.status)
+       ) then
+        new.next_follow_up := public.swayphics_add_business_days(
+            (new.last_contacted_at at time zone 'Africa/Johannesburg')::date,2);
     end if;
-
     return new;
 end;
 $$;
+revoke all privileges on function public.ensure_swayphics_next_followup_date()
+from public,anon,authenticated,service_role;
+drop trigger if exists trg_z_ensure_swayphics_next_followup_date on public.leads;
+create trigger trg_z_ensure_swayphics_next_followup_date
+before insert or update on public.leads
+for each row execute function public.ensure_swayphics_next_followup_date();
 
 revoke all privileges
     on function public.ensure_swayphics_next_followup_date()

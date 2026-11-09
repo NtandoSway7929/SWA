@@ -1,4 +1,4 @@
--- CI-only RPC wrapper for the first-contact automation database smoke test.
+-- CI-only RPC wrapper for the two-stage lead follow-up database smoke test.
 -- Copied only into a disposable local Supabase project by GitHub Actions.
 create or replace function public.run_swayphics_first_contact_automation_test()
 returns integer
