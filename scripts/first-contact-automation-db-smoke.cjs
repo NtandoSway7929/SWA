@@ -149,7 +149,7 @@ async function main() {
     await rest("PATCH", "leads", "id=eq." + dueLeadId, { status: "interested" });
     const progressed = (await rest("GET", "leads", "select=status,last_contacted_at&id=eq." + dueLeadId)).data[0];
     assert.equal(progressed.status, "interested");
-    assert.equal(progressed.last_contacted_at, sastTimestamp(contactDate),
+    assert.equal(Date.parse(progressed.last_contacted_at), Date.parse(sastTimestamp(contactDate)),
       "moving from Contacted to Interested must not restart the follow-up timer");
 
     const firstScan = await request("/rest/v1/rpc/run_swayphics_first_contact_automation_test", {
