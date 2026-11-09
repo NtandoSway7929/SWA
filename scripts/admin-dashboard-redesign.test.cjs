@@ -73,7 +73,7 @@ assert.ok(
 const settingsButtonRenderer = extractConstant(
     workspace,
     "function navButton(item) {",
-    "\\n    function setStandaloneManagerVisibility(",
+    "\n    function setStandaloneManagerVisibility(",
     "Settings direct-navigation button renderer"
 );
 assert.ok(
