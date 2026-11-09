@@ -89,12 +89,11 @@ async function main() {
   const clientId = randomUUID();
   const [assignedTaskId, unassignedTaskId, inactiveTaskId, futureTaskId, completedTaskId] = taskIds;
   const [assignedFollowupId, unassignedFollowupId, inactiveFollowupId, skippedFollowupId] = followupIds;
-  // The SQL worker compares dates with PostgreSQL current_date. Build fixtures
-  // in UTC so the test dates match the disposable database's session date,
-  // including when CI runs near midnight in Africa/Johannesburg.
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  // Use dates far from the current date so the PostgreSQL session timezone,
+  // CI runner timezone, and midnight boundaries cannot change fixture eligibility.
+  const dueDate = "2000-01-01";
+  const futureDate = "2999-12-31";
   const ownerEmail = "due-work-owner-" + runId + "@example.invalid";
   const assignedEmail = "due-work-assigned-" + runId + "@example.invalid";
   const inactiveEmail = "due-work-inactive-" + runId + "@example.invalid";
@@ -117,18 +116,18 @@ async function main() {
     }]);
 
     await rest("POST", "tasks", "", [
-      { id: assignedTaskId, title: "CI Assigned Due Task", assigned_to: assigned.id, due_date: yesterday, status: "todo" },
-      { id: unassignedTaskId, title: "CI Unassigned Due Task", assigned_to: null, due_date: today, status: "todo" },
-      { id: inactiveTaskId, title: "CI Inactive Assignee Due Task", assigned_to: inactive.id, due_date: yesterday, status: "todo" },
-      { id: futureTaskId, title: "CI Future Task", assigned_to: null, due_date: tomorrow, status: "todo" },
-      { id: completedTaskId, title: "CI Completed Task", assigned_to: null, due_date: yesterday, status: "completed" }
+      { id: assignedTaskId, title: "CI Assigned Due Task", assigned_to: assigned.id, due_date: dueDate, status: "todo" },
+      { id: unassignedTaskId, title: "CI Unassigned Due Task", assigned_to: null, due_date: dueDate, status: "todo" },
+      { id: inactiveTaskId, title: "CI Inactive Assignee Due Task", assigned_to: inactive.id, due_date: dueDate, status: "todo" },
+      { id: futureTaskId, title: "CI Future Task", assigned_to: null, due_date: futureDate, status: "todo" },
+      { id: completedTaskId, title: "CI Completed Task", assigned_to: null, due_date: dueDate, status: "completed" }
     ]);
 
     await rest("POST", "follow_ups", "", [
-      { id: assignedFollowupId, client_id: clientId, assigned_to: assigned.id, scheduled_for: yesterday, channel: "Email", status: "pending", note: "CI assigned follow-up" },
-      { id: unassignedFollowupId, client_id: clientId, assigned_to: null, scheduled_for: today, channel: "Phone", status: "pending", note: "CI unassigned follow-up" },
-      { id: inactiveFollowupId, client_id: clientId, assigned_to: inactive.id, scheduled_for: yesterday, channel: "Other", status: "pending", note: "CI inactive assignee follow-up" },
-      { id: skippedFollowupId, client_id: clientId, assigned_to: null, scheduled_for: yesterday, channel: "Other", status: "skipped", note: "CI skipped follow-up" }
+      { id: assignedFollowupId, client_id: clientId, assigned_to: assigned.id, scheduled_for: dueDate, channel: "Email", status: "pending", note: "CI assigned follow-up" },
+      { id: unassignedFollowupId, client_id: clientId, assigned_to: null, scheduled_for: dueDate, channel: "Phone", status: "pending", note: "CI unassigned follow-up" },
+      { id: inactiveFollowupId, client_id: clientId, assigned_to: inactive.id, scheduled_for: dueDate, channel: "Other", status: "pending", note: "CI inactive assignee follow-up" },
+      { id: skippedFollowupId, client_id: clientId, assigned_to: null, scheduled_for: dueDate, channel: "Other", status: "skipped", note: "CI skipped follow-up" }
     ]);
 
     const firstRun = await request("/rest/v1/rpc/run_swayphics_due_work_notification_test", {
