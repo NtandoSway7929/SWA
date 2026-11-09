@@ -8,7 +8,7 @@
         name="description"
         content="Swayphics is a creative and design lab providing branding, websites and digital business solutions."
     >
-    <meta name="theme-color" content="#FFFFFF">
+    <meta name="theme-color" content="#36454F">
 
     <meta property="og:title" content="Swayphics | Digital Business Card">
     <meta
@@ -36,13 +36,16 @@
             --blue-deep: #002096;
             --blue-brand: #0031C5;
             --blue-accent: #0152F4;
+            --blue-light: #2C91FC;
+            --blue-highlight: #77C1FC;
             --charcoal: #36454F;
+            --charcoal-deep: #28363F;
             --ink: #202B33;
-            --muted: #65717A;
-            --line: #DCE2E6;
+            --muted: #69757D;
+            --line: #DDE3E6;
             --surface: #FFFFFF;
-            --canvas: #F4F6F7;
-            --soft: #F7F9FA;
+            --canvas: #F2F4F5;
+            --soft: #F7F8F9;
             --font-body: "Montserrat", sans-serif;
             --font-heading: "Raleway", "Montserrat", sans-serif;
         }
@@ -85,44 +88,64 @@
         }
 
         .page {
-            width: min(100% - 36px, 760px);
+            width: min(100% - 48px, 1080px);
             margin: 0 auto;
-            padding: 34px 0 28px;
+            padding: 48px 0 38px;
         }
 
         .topbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 16px;
+            gap: 18px;
+            margin-bottom: 17px;
+        }
+
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+        }
+
+        .topbar-mark {
+            width: 27px;
+            height: 2px;
+            background: var(--blue-accent);
         }
 
         .topbar-label {
+            margin: 0;
             color: var(--charcoal);
             font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.16em;
+            font-weight: 800;
+            letter-spacing: 0.17em;
             text-transform: uppercase;
         }
 
         .share-button {
             display: inline-flex;
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             align-items: center;
             justify-content: center;
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            background: var(--surface);
+            border: 1px solid #CFD7DC;
+            border-radius: 50%;
+            background: #FFFFFF;
             color: var(--charcoal);
             cursor: pointer;
-            transition: border-color 160ms ease, color 160ms ease;
+            transition: color 180ms ease, border-color 180ms ease, transform 180ms ease;
         }
 
         .share-button:hover {
+            transform: translateY(-2px);
             border-color: var(--blue-accent);
             color: var(--blue-accent);
+        }
+
+        .share-button:focus-visible,
+        a:focus-visible {
+            outline: 3px solid rgba(1, 82, 244, 0.35);
+            outline-offset: 3px;
         }
 
         .share-button svg {
@@ -130,107 +153,219 @@
             height: 18px;
             fill: none;
             stroke: currentColor;
-            stroke-width: 1.8;
+            stroke-width: 1.7;
             stroke-linecap: round;
             stroke-linejoin: round;
         }
 
-        .main-card {
-            overflow: hidden;
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            background: var(--surface);
-        }
-
-        .profile {
-            padding: clamp(26px, 6vw, 46px);
-        }
-
-        .identity {
+        .card {
             display: grid;
-            grid-template-columns: 124px minmax(0, 1fr);
-            align-items: center;
-            gap: 28px;
+            grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+            overflow: hidden;
+            border: 1px solid rgba(40, 54, 63, 0.12);
+            background: var(--surface);
+            box-shadow: 0 24px 58px rgba(31, 45, 54, 0.10);
         }
 
-        .brand-logo {
+        .brand-panel {
+            position: relative;
             display: flex;
-            min-height: 100px;
-            align-items: center;
-            justify-content: flex-start;
+            min-height: 650px;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: clamp(34px, 5vw, 58px);
+            overflow: hidden;
+            background: var(--charcoal);
+            color: #FFFFFF;
         }
 
-        .brand-logo img {
-            display: block;
-            width: 116px;
-            max-height: 100px;
-            object-fit: contain;
-            object-position: left center;
+        .brand-panel::after {
+            position: absolute;
+            right: -1px;
+            bottom: 0;
+            left: 0;
+            height: 5px;
+            background: var(--blue-accent);
+            content: "";
         }
 
-        .eyebrow {
-            margin: 0 0 7px;
-            color: var(--blue-accent);
-            font-size: 10px;
+        .brand-top {
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-classification {
+            margin: 0 0 31px;
+            color: rgba(255, 255, 255, 0.72);
+            font-size: 9px;
             font-weight: 800;
-            letter-spacing: 0.16em;
-            line-height: 1.5;
+            letter-spacing: 0.19em;
             text-transform: uppercase;
         }
 
-        h1 {
-            margin: 0;
-            color: var(--blue-deep);
-            font-family: var(--font-heading);
-            font-size: clamp(36px, 7vw, 54px);
-            font-weight: 800;
-            letter-spacing: -0.055em;
-            line-height: 1.02;
+        .logo-plaque {
+            display: flex;
+            width: 142px;
+            min-height: 106px;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            background: #FFFFFF;
         }
 
-        .positioning {
-            max-width: 430px;
-            margin: 13px 0 0;
-            color: var(--charcoal);
-            font-size: 14px;
-            font-weight: 500;
-            line-height: 1.75;
+        .logo-plaque img {
+            display: block;
+            width: 100%;
+            max-height: 76px;
+            object-fit: contain;
         }
 
-        .tagline {
-            margin: 10px 0 0;
-            color: var(--muted);
+        .brand-copy {
+            position: relative;
+            z-index: 1;
+            margin-top: 52px;
+        }
+
+        .brand-overline {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin: 0 0 13px;
+            color: var(--blue-highlight);
             font-size: 10px;
             font-weight: 800;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
         }
 
-        .action-row {
+        .brand-overline::before {
+            width: 24px;
+            height: 1px;
+            background: var(--blue-highlight);
+            content: "";
+        }
+
+        h1 {
+            max-width: 440px;
+            margin: 0;
+            color: #FFFFFF;
+            font-family: var(--font-heading);
+            font-size: clamp(44px, 6vw, 70px);
+            font-weight: 800;
+            letter-spacing: -0.065em;
+            line-height: 0.98;
+        }
+
+        .brand-description {
+            max-width: 380px;
+            margin: 23px 0 0;
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.9;
+        }
+
+        .brand-tagline {
+            margin: 25px 0 0;
+            color: #FFFFFF;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.19em;
+        }
+
+        .brand-bottom {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 50px;
+        }
+
+        .brand-bottom-label {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.57);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.13em;
+            line-height: 1.8;
+            text-transform: uppercase;
+        }
+
+        .brand-bottom-index {
+            color: rgba(255, 255, 255, 0.48);
+            font-family: var(--font-heading);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
+
+        .information-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: clamp(34px, 5vw, 58px);
+        }
+
+        .section-kicker {
+            margin: 0 0 10px;
+            color: var(--blue-accent);
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        .intro-heading {
+            max-width: 480px;
+            margin: 0;
+            color: var(--charcoal);
+            font-family: var(--font-heading);
+            font-size: clamp(27px, 3.1vw, 37px);
+            font-weight: 800;
+            letter-spacing: -0.045em;
+            line-height: 1.12;
+        }
+
+        .intro-copy {
+            max-width: 430px;
+            margin: 13px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.85;
+        }
+
+        .actions {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
             gap: 10px;
-            margin-top: 30px;
+            margin-top: 25px;
         }
 
         .action {
             display: inline-flex;
-            min-height: 50px;
+            min-height: 49px;
             align-items: center;
             justify-content: center;
             gap: 9px;
-            padding: 12px 16px;
+            padding: 12px 14px;
             border: 1px solid var(--charcoal);
-            border-radius: 9px;
-            font-size: 12px;
-            font-weight: 700;
-            line-height: 1.3;
-            transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1.35;
+            text-align: center;
+            transition: background 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
+        }
+
+        .action:hover {
+            transform: translateY(-2px);
         }
 
         .action svg {
-            width: 17px;
-            height: 17px;
-            flex: 0 0 17px;
+            width: 16px;
+            height: 16px;
+            flex: 0 0 16px;
             fill: none;
             stroke: currentColor;
             stroke-width: 1.7;
@@ -255,116 +390,168 @@
         }
 
         .action-secondary:hover {
-            border-color: var(--blue-deep);
+            border-color: var(--blue-accent);
             color: var(--blue-deep);
         }
 
-        .contact-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0;
-            margin-top: 28px;
+        .contact-block {
+            margin-top: 35px;
+            padding: 21px 0;
             border-top: 1px solid var(--line);
             border-bottom: 1px solid var(--line);
         }
 
+        .contact-heading {
+            margin: 0 0 15px;
+            color: var(--charcoal);
+            font-family: var(--font-heading);
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
         .contact-item {
             min-width: 0;
-            padding: 17px 16px 17px 0;
         }
 
-        .contact-item + .contact-item {
-            padding-left: 20px;
-            border-left: 1px solid var(--line);
-        }
-
-        .detail-label {
+        .contact-label {
             display: block;
             margin-bottom: 5px;
             color: var(--muted);
-            font-size: 9px;
+            font-size: 8px;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        .contact-value {
+            display: inline-block;
+            overflow-wrap: anywhere;
+            color: var(--charcoal);
+            font-size: 11px;
+            font-weight: 700;
+            transition: color 160ms ease;
+        }
+
+        .contact-value:hover {
+            color: var(--blue-accent);
+        }
+
+        .capabilities {
+            margin-top: 31px;
+        }
+
+        .capabilities-heading {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .capabilities-heading h2,
+        .social-heading {
+            margin: 0;
+            color: var(--charcoal);
+            font-family: var(--font-heading);
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+
+        .capabilities-heading span {
+            color: var(--muted);
+            font-size: 8px;
             font-weight: 800;
             letter-spacing: 0.13em;
             text-transform: uppercase;
         }
 
-        .detail-value {
-            display: inline-block;
-            overflow-wrap: anywhere;
-            color: var(--charcoal);
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .detail-value:hover {
-            color: var(--blue-accent);
-        }
-
-        .section {
-            padding: 27px clamp(26px, 6vw, 46px);
+        .service-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             border-top: 1px solid var(--line);
         }
 
-        .section-heading {
-            margin: 0 0 17px;
-            color: var(--charcoal);
-            font-family: var(--font-heading);
-            font-size: 20px;
-            font-weight: 800;
-            letter-spacing: -0.025em;
-        }
-
-        .service-list {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0 28px;
-        }
-
         .service {
-            display: flex;
-            min-height: 48px;
-            align-items: center;
-            gap: 11px;
+            display: grid;
+            grid-template-columns: 25px minmax(0, 1fr);
+            align-items: start;
+            gap: 8px;
+            min-height: 62px;
+            padding: 13px 12px 12px 0;
             border-bottom: 1px solid var(--line);
-            color: var(--ink);
-            font-size: 12px;
-            font-weight: 600;
         }
 
-        .service::before {
-            width: 6px;
-            height: 6px;
-            flex: 0 0 6px;
-            border-radius: 50%;
-            background: var(--blue-accent);
-            content: "";
+        .service:nth-child(odd) {
+            padding-right: 14px;
+        }
+
+        .service:nth-child(even) {
+            padding-left: 14px;
+            border-left: 1px solid var(--line);
+        }
+
+        .service-number {
+            padding-top: 2px;
+            color: var(--blue-accent);
+            font-family: var(--font-heading);
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .service-name {
+            color: var(--charcoal);
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1.6;
+        }
+
+        .social-block {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            margin-top: 25px;
+        }
+
+        .social-heading {
+            font-size: 13px;
         }
 
         .social-links {
             display: flex;
+            align-items: center;
             flex-wrap: wrap;
-            gap: 9px;
+            gap: 17px;
         }
 
         .social {
             display: inline-flex;
-            min-height: 40px;
             align-items: center;
-            justify-content: center;
-            padding: 9px 14px;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            background: var(--soft);
+            gap: 4px;
             color: var(--charcoal);
-            font-size: 11px;
+            font-size: 9px;
+            font-weight: 800;
+            transition: color 160ms ease;
+        }
+
+        .social::after {
+            color: var(--blue-accent);
+            content: "↗";
+            font-size: 10px;
             font-weight: 700;
-            transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
         }
 
         .social:hover {
-            border-color: var(--blue-accent);
-            background: #FFFFFF;
-            color: var(--blue-deep);
+            color: var(--blue-accent);
         }
 
         .footer {
@@ -372,43 +559,40 @@
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            padding: 19px clamp(26px, 6vw, 46px);
-            border-top: 1px solid var(--line);
-            background: var(--soft);
+            margin-top: 20px;
         }
 
-        .footer-name {
-            color: var(--charcoal);
-            font-family: var(--font-heading);
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-        }
-
-        .footer-copy {
+        .footer-note {
             margin: 0;
             color: var(--muted);
-            font-size: 10px;
-            text-align: right;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+        }
+
+        .footer-link {
+            color: var(--blue-deep);
+            font-size: 9px;
+            font-weight: 800;
         }
 
         .notice {
             position: fixed;
-            right: 18px;
-            bottom: 18px;
+            right: 20px;
+            bottom: 20px;
             z-index: 10;
-            max-width: calc(100vw - 36px);
+            max-width: calc(100vw - 40px);
             padding: 11px 15px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
-            background: var(--charcoal);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: var(--charcoal-deep);
             color: #FFFFFF;
             font-size: 11px;
             font-weight: 600;
             opacity: 0;
             pointer-events: none;
             transform: translateY(8px);
-            transition: opacity 160ms ease, transform 160ms ease;
+            transition: opacity 180ms ease, transform 180ms ease;
         }
 
         .notice.show {
@@ -416,57 +600,146 @@
             transform: translateY(0);
         }
 
-        @media (max-width: 560px) {
+        @media (max-width: 820px) {
             .page {
-                width: min(100% - 24px, 760px);
-                padding-top: 18px;
+                width: min(100% - 32px, 680px);
+                padding-top: 28px;
             }
 
-            .identity {
+            .card {
                 grid-template-columns: 1fr;
-                gap: 17px;
             }
 
-            .brand-logo {
+            .brand-panel {
                 min-height: 0;
+                padding: 36px;
             }
 
-            .brand-logo img {
-                width: 104px;
-                max-height: 80px;
+            .brand-copy {
+                margin-top: 36px;
             }
 
-            .action-row {
+            .brand-bottom {
+                margin-top: 38px;
+            }
+
+            .information-panel {
+                padding: 36px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .page {
+                width: min(100% - 22px, 460px);
+                padding-top: 17px;
+                padding-bottom: 22px;
+            }
+
+            .topbar {
+                margin-bottom: 12px;
+            }
+
+            .topbar-label {
+                font-size: 8px;
+                letter-spacing: 0.13em;
+            }
+
+            .share-button {
+                width: 38px;
+                height: 38px;
+            }
+
+            .brand-panel {
+                padding: 27px 25px 30px;
+            }
+
+            .brand-classification {
+                margin-bottom: 23px;
+            }
+
+            .logo-plaque {
+                width: 122px;
+                min-height: 91px;
+            }
+
+            .logo-plaque img {
+                max-height: 65px;
+            }
+
+            .brand-copy {
+                margin-top: 31px;
+            }
+
+            h1 {
+                font-size: clamp(43px, 12vw, 57px);
+            }
+
+            .brand-description {
+                margin-top: 17px;
+                font-size: 12px;
+            }
+
+            .brand-bottom {
+                margin-top: 29px;
+            }
+
+            .information-panel {
+                padding: 29px 25px 26px;
+            }
+
+            .intro-heading {
+                font-size: 31px;
+            }
+
+            .actions {
                 grid-template-columns: 1fr;
-                margin-top: 24px;
+                margin-top: 21px;
             }
 
-            .contact-details {
+            .action {
+                min-height: 48px;
+            }
+
+            .contact-block {
+                margin-top: 27px;
+            }
+
+            .contact-grid {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .capabilities {
+                margin-top: 26px;
+            }
+
+            .service-grid {
                 grid-template-columns: 1fr;
             }
 
-            .contact-item {
-                padding: 13px 0;
-            }
-
-            .contact-item + .contact-item {
+            .service:nth-child(even) {
                 padding-left: 0;
-                border-top: 1px solid var(--line);
                 border-left: 0;
             }
 
-            .service-list {
-                grid-template-columns: 1fr;
+            .service:nth-child(odd) {
+                padding-right: 0;
+            }
+
+            .service {
+                min-height: 48px;
+            }
+
+            .social-block {
+                align-items: flex-start;
+                flex-direction: column;
+                margin-top: 22px;
             }
 
             .footer {
                 align-items: flex-start;
                 flex-direction: column;
-                gap: 4px;
-            }
-
-            .footer-copy {
-                text-align: left;
+                gap: 7px;
             }
         }
 
@@ -489,7 +762,10 @@
 <body>
     <main class="page">
         <header class="topbar">
-            <p class="topbar-label">Swayphics / Digital Business Card</p>
+            <div class="topbar-brand">
+                <span class="topbar-mark" aria-hidden="true"></span>
+                <p class="topbar-label">Swayphics / Digital Business Card</p>
+            </div>
 
             <button
                 class="share-button"
@@ -507,112 +783,149 @@
             </button>
         </header>
 
-        <article class="main-card">
-            <section class="profile" aria-labelledby="card-title">
-                <div class="identity">
-                    <div class="brand-logo">
+        <article class="card">
+            <section class="brand-panel" aria-labelledby="card-title">
+                <div class="brand-top">
+                    <p class="brand-classification">Creative &amp; Design Lab</p>
+
+                    <div class="logo-plaque">
                         <img src="/swayphics-logo.png" alt="Swayphics logo">
                     </div>
-
-                    <div class="identity-copy">
-                        <p class="eyebrow">Creative &amp; Digital Solutions</p>
-                        <h1 id="card-title">Swayphics</h1>
-                        <p class="positioning">
-                            Creative and digital solutions for businesses ready to look the part.
-                        </p>
-                        <p class="tagline">EMPOWERING THROUGH DESIGN</p>
-                    </div>
                 </div>
 
-                <div class="action-row">
-                    <a
-                        class="action action-primary"
-                        href="https://wa.me/message/TNUQDUUWXFEIE1"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M20.2 11.5a8.2 8.2 0 0 1-11.9 7.2L4 20l1.3-4.1a8.2 8.2 0 1 1 14.9-4.4Z"></path>
-                            <path d="M8.7 8.6c.2-.4.4-.4.7-.4h.5c.2 0 .3.1.4.4l.6 1.3c.1.2.1.3-.1.5l-.4.5c-.1.1-.1.3 0 .5.4.7.9 1.2 1.6 1.6.2.1.3.1.5 0l.5-.4c.2-.1.3-.1.5 0l1.2.6c.2.1.3.2.2.5-.2.6-.6 1-1.2 1.2-.5.1-1.1-.1-1.9-.4-1-.4-1.8-1-2.5-1.8-.6-.7-1-1.4-1.2-2.1-.2-.7-.1-1.3.1-2Z"></path>
-                        </svg>
-                        Contact us on WhatsApp
-                    </a>
-
-                    <a class="action action-secondary" href="/card/swayphics.vcf" download="Swayphics.vcf">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 3v12"></path>
-                            <path d="m7 10 5 5 5-5"></path>
-                            <path d="M4 20h16"></path>
-                        </svg>
-                        Save contact
-                    </a>
+                <div class="brand-copy">
+                    <p class="brand-overline">Creative &amp; Digital Solutions</p>
+                    <h1 id="card-title">Swayphics</h1>
+                    <p class="brand-description">
+                        Creative and digital solutions for businesses ready to look the part.
+                    </p>
+                    <p class="brand-tagline">EMPOWERING THROUGH DESIGN</p>
                 </div>
 
-                <div class="contact-details">
-                    <div class="contact-item">
-                        <span class="detail-label">Email</span>
-                        <a class="detail-value" href="mailto:info@swayphics.co.za">
-                            info@swayphics.co.za
+                <div class="brand-bottom">
+                    <p class="brand-bottom-label">Branding<br>Digital experiences<br>Business design</p>
+                    <span class="brand-bottom-index">01 / 02</span>
+                </div>
+            </section>
+
+            <section class="information-panel" aria-label="Swayphics contact and services">
+                <div class="intro">
+                    <p class="section-kicker">Make your introduction</p>
+                    <h2 class="intro-heading">Let's make something meaningful.</h2>
+                    <p class="intro-copy">
+                        Have a project in mind or need a stronger digital presence?
+                        Start a conversation with our team.
+                    </p>
+
+                    <div class="actions">
+                        <a
+                            class="action action-primary"
+                            href="https://wa.me/message/TNUQDUUWXFEIE1"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M20.2 11.5a8.2 8.2 0 0 1-11.9 7.2L4 20l1.3-4.1a8.2 8.2 0 1 1 14.9-4.4Z"></path>
+                                <path d="M8.7 8.6c.2-.4.4-.4.7-.4h.5c.2 0 .3.1.4.4l.6 1.3c.1.2.1.3-.1.5l-.4.5c-.1.1-.1.3 0 .5.4.7.9 1.2 1.6 1.6.2.1.3.1.5 0l.5-.4c.2-.1.3-.1.5 0l1.2.6c.2.1.3.2.2.5-.2.6-.6 1-1.2 1.2-.5.1-1.1-.1-1.9-.4-1-.4-1.8-1-2.5-1.8-.6-.7-1-1.4-1.2-2.1-.2-.7-.1-1.3.1-2Z"></path>
+                            </svg>
+                            Start a WhatsApp conversation
+                        </a>
+
+                        <a class="action action-secondary" href="/card/swayphics.vcf" download="Swayphics.vcf">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 3v12"></path>
+                                <path d="m7 10 5 5 5-5"></path>
+                                <path d="M4 20h16"></path>
+                            </svg>
+                            Save contact
                         </a>
                     </div>
+                </div>
 
-                    <div class="contact-item">
-                        <span class="detail-label">Website</span>
-                        <a class="detail-value" href="https://swayphics.co.za/">
-                            swayphics.co.za
-                        </a>
+                <section class="contact-block" aria-labelledby="contact-heading">
+                    <h2 class="contact-heading" id="contact-heading">Direct contact</h2>
+
+                    <div class="contact-grid">
+                        <div class="contact-item">
+                            <span class="contact-label">Email</span>
+                            <a class="contact-value" href="mailto:info@swayphics.co.za">
+                                info@swayphics.co.za
+                            </a>
+                        </div>
+
+                        <div class="contact-item">
+                            <span class="contact-label">Website</span>
+                            <a class="contact-value" href="https://swayphics.co.za/">
+                                swayphics.co.za
+                            </a>
+                        </div>
                     </div>
-                </div>
+                </section>
+
+                <section class="capabilities" aria-labelledby="capabilities-heading">
+                    <div class="capabilities-heading">
+                        <h2 id="capabilities-heading">Our capabilities</h2>
+                        <span>Selected services</span>
+                    </div>
+
+                    <div class="service-grid">
+                        <div class="service">
+                            <span class="service-number">01</span>
+                            <span class="service-name">Branding &amp; Identity</span>
+                        </div>
+                        <div class="service">
+                            <span class="service-number">02</span>
+                            <span class="service-name">Websites &amp; Digital Experiences</span>
+                        </div>
+                        <div class="service">
+                            <span class="service-number">03</span>
+                            <span class="service-name">Business Design Solutions</span>
+                        </div>
+                        <div class="service">
+                            <span class="service-number">04</span>
+                            <span class="service-name">Digital Setup &amp; Systems</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="social-block" aria-labelledby="social-heading">
+                    <h2 class="social-heading" id="social-heading">Follow our work</h2>
+
+                    <nav class="social-links" aria-label="Swayphics social media">
+                        <a
+                            class="social"
+                            href="https://instagram.com/swayphics"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Instagram
+                        </a>
+
+                        <a
+                            class="social"
+                            href="https://www.tiktok.com/@swayphics"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            TikTok
+                        </a>
+
+                        <a
+                            class="social"
+                            href="https://www.facebook.com/share/1EiFqLLcj8/?mibextid=wwXIfr"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Facebook
+                        </a>
+                    </nav>
+                </section>
+
+                <footer class="footer">
+                    <p class="footer-note">Empowering through design.</p>
+                    <a class="footer-link" href="/">Visit swayphics.co.za ↗</a>
+                </footer>
             </section>
-
-            <section class="section" aria-labelledby="services-heading">
-                <h2 class="section-heading" id="services-heading">What we do</h2>
-
-                <div class="service-list">
-                    <div class="service">Branding &amp; Identity</div>
-                    <div class="service">Websites &amp; Digital Experiences</div>
-                    <div class="service">Business Design Solutions</div>
-                    <div class="service">Digital Setup &amp; Systems</div>
-                </div>
-            </section>
-
-            <section class="section" aria-labelledby="connect-heading">
-                <h2 class="section-heading" id="connect-heading">Connect with us</h2>
-
-                <nav class="social-links" aria-label="Swayphics social media">
-                    <a
-                        class="social"
-                        href="https://instagram.com/swayphics"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Instagram
-                    </a>
-
-                    <a
-                        class="social"
-                        href="https://www.tiktok.com/@swayphics"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        TikTok
-                    </a>
-
-                    <a
-                        class="social"
-                        href="https://www.facebook.com/share/1EiFqLLcj8/?mibextid=wwXIfr"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Facebook
-                    </a>
-                </nav>
-            </section>
-
-            <footer class="footer">
-                <span class="footer-name">SWAYPHICS</span>
-                <p class="footer-copy">Empowering through design.</p>
-            </footer>
         </article>
     </main>
 
