@@ -334,3 +334,168 @@ body.sway-dark-mode #sway-admin-workspace .sway-record-card-empty {
         transform: none;
     }
 }
+
+
+/* Read-only communication viewer and full-card navigation. */
+#sway-admin-workspace .sway-communication-card { cursor: pointer; }
+#sway-admin-workspace .sway-communication-card:focus-visible {
+    outline: 3px solid rgba(1,82,244,.28);
+    outline-offset: 3px;
+}
+#sway-admin-workspace .sway-communication-card .sway-record-card-open-hint {
+    color: #0152F4;
+    font-weight: 800;
+}
+#sway-admin-workspace .sway-communication-viewer { z-index: 2300; }
+#sway-admin-workspace .sway-communication-viewer-card {
+    width: min(920px, 100%);
+    padding: 26px;
+}
+#sway-admin-workspace .sway-communication-viewer-header {
+    align-items: flex-start;
+    margin-bottom: 18px;
+}
+#sway-admin-workspace .sway-communication-viewer-header h3 {
+    margin-top: 5px;
+    color: #081533;
+    font-size: clamp(19px, 2.4vw, 25px);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+#sway-admin-workspace .sway-communication-viewer-header p {
+    margin-top: 6px;
+    color: #68758A;
+    font-size: 11px;
+}
+#sway-admin-workspace .sway-communication-viewer-meta {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 9px;
+    margin-bottom: 16px;
+}
+#sway-admin-workspace .sway-communication-viewer-meta-item,
+#sway-admin-workspace .sway-communication-viewer-subject {
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid rgba(0,32,150,.09);
+    border-radius: 12px;
+    background: rgba(247,250,255,.8);
+}
+#sway-admin-workspace .sway-communication-viewer-meta-item span,
+#sway-admin-workspace .sway-communication-viewer-subject span {
+    display: block;
+    margin-bottom: 5px;
+    color: #7C899D;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+#sway-admin-workspace .sway-communication-viewer-meta-item strong,
+#sway-admin-workspace .sway-communication-viewer-subject strong {
+    display: block;
+    color: #1B2B47;
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+#sway-admin-workspace .sway-communication-viewer-subject { margin-bottom: 16px; }
+#sway-admin-workspace .sway-communication-viewer-content {
+    min-width: 0;
+    padding: 17px;
+    border: 1px solid rgba(0,32,150,.10);
+    border-radius: 15px;
+    background: #fff;
+}
+#sway-admin-workspace .sway-communication-viewer-content-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 13px;
+    padding-bottom: 11px;
+    border-bottom: 1px solid rgba(8,21,51,.08);
+}
+#sway-admin-workspace .sway-communication-viewer-content-heading span {
+    color: #66758D;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: .11em;
+}
+#sway-admin-workspace .sway-communication-viewer-content-heading small {
+    color: #8492A8;
+    font-size: 9px;
+}
+#sway-admin-workspace .sway-communication-viewer-copy {
+    color: #283449;
+    font-size: 13px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+#sway-admin-workspace .sway-communication-viewer-note {
+    margin: 0 0 13px;
+    padding: 10px 12px;
+    border: 1px solid rgba(1,82,244,.12);
+    border-radius: 10px;
+    background: rgba(1,82,244,.045);
+    color: #64728A;
+    font-size: 10px;
+    line-height: 1.55;
+}
+#sway-admin-workspace .sway-communication-viewer-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 17px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(0,32,150,.08);
+}
+#sway-admin-workspace .sway-communication-viewer-footer > span {
+    color: #8492A8;
+    font-size: 9px;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-header h3,
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-meta-item strong,
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-subject strong {
+    color: #EEF4FF;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-header p,
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-footer > span {
+    color: #A8B4C7;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-meta-item,
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-subject {
+    border-color: rgba(119,193,252,.15);
+    background: rgba(16,31,57,.86);
+}
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-meta-item span,
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-subject span,
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-content-heading span {
+    color: #A8B4C7;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-content {
+    border-color: rgba(119,193,252,.16);
+    background: #fff;
+}
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-copy { color: #283449; }
+body.sway-dark-mode #sway-admin-workspace .sway-communication-viewer-note {
+    border-color: rgba(119,193,252,.18);
+    background: rgba(119,193,252,.07);
+    color: #C4D1E4;
+}
+@media (max-width: 680px) {
+    #sway-admin-workspace .sway-communication-viewer-card { padding: 18px 14px; }
+    #sway-admin-workspace .sway-communication-viewer-meta { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    #sway-admin-workspace .sway-communication-viewer-content { padding: 13px; }
+    #sway-admin-workspace .sway-communication-viewer-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+@media (max-width: 420px) {
+    #sway-admin-workspace .sway-communication-viewer-meta { grid-template-columns: minmax(0,1fr); }
+}

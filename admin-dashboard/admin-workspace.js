@@ -18833,6 +18833,210 @@ function simpleBars(items, color) {
         };
     }
 
+
+
+    function normalizeCommunicationMessage(value) {
+        return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    }
+
+    function findCommunicationEmailMessage(communication) {
+        const record = communication || {};
+        const body = normalizeCommunicationMessage(record.message);
+        const subject = normalizeCommunicationMessage(record.subject);
+        const contactField = record.client_id ? "client_id" : record.lead_id ? "lead_id" : "";
+        const contactId = record.client_id || record.lead_id || "";
+        if (!contactField || !contactId) return null;
+
+        const ranked = (Array.isArray(state.emailMessages) ? state.emailMessages : [])
+            .filter(function (message) {
+                return message && message.direction === "outbound" &&
+                    String(message[contactField] || "") === String(contactId);
+            })
+            .map(function (message) {
+                const bodyMatches = Boolean(body) &&
+                    body === normalizeCommunicationMessage(message.text_body);
+                const subjectMatches = Boolean(subject) &&
+                    subject === normalizeCommunicationMessage(message.subject);
+                const communicationTime = new Date(record.contacted_at || 0).getTime();
+                const emailTime = new Date(message.received_at || message.created_at || 0).getTime();
+                const timeDelta = Number.isFinite(communicationTime) && Number.isFinite(emailTime) &&
+                    communicationTime > 0 && emailTime > 0
+                    ? Math.abs(communicationTime - emailTime)
+                    : Number.MAX_SAFE_INTEGER;
+                let score = bodyMatches ? 100 : 0;
+                if (subjectMatches) score += 25;
+                if (!bodyMatches && (!subjectMatches || timeDelta > 30 * 60 * 1000)) return null;
+                return { message: message, score: score, timeDelta: timeDelta };
+            })
+            .filter(Boolean);
+
+        ranked.sort(function (a, b) {
+            return b.score !== a.score ? b.score - a.score : a.timeDelta - b.timeDelta;
+        });
+        return ranked.length ? ranked[0].message : null;
+    }
+
+    async function loadCommunicationEmailMessage(communication) {
+        let message = findCommunicationEmailMessage(communication);
+        if (message) return message;
+
+        const record = communication || {};
+        const contactField = record.client_id ? "client_id" : record.lead_id ? "lead_id" : "";
+        const contactId = record.client_id || record.lead_id || "";
+        if (!contactField || !contactId) return null;
+
+        const rows = await optionalApi(
+            "/rest/v1/email_messages?select=*&mailbox=eq.info%40swayphics.co.za&direction=eq.outbound&" +
+                contactField + "=eq." + encodeURIComponent(String(contactId)) +
+                "&order=received_at.desc&limit=100",
+            []
+        );
+        if (Array.isArray(rows) && rows.length) {
+            const known = new Map((Array.isArray(state.emailMessages) ? state.emailMessages : [])
+                .map(function (entry) { return [String(entry.id || ""), entry]; }));
+            rows.forEach(function (entry) {
+                if (entry && entry.id) known.set(String(entry.id), entry);
+            });
+            state.emailMessages = Array.from(known.values()).sort(function (a, b) {
+                return new Date(b.received_at || b.created_at || 0).getTime() -
+                    new Date(a.received_at || a.created_at || 0).getTime();
+            });
+        }
+        return findCommunicationEmailMessage(record);
+    }
+
+    function showCommunicationViewer(communication, emailMessage, trigger) {
+        const record = communication || {};
+        const contact = communicationContactDetails(record);
+        const isEmail = String(record.channel || "").toLowerCase().includes("email");
+        const subject = String((emailMessage && emailMessage.subject) || record.subject || "").trim();
+        const sender = emailMessage
+            ? [emailMessage.from_name || "Swayphics", emailMessage.from_email || ""].filter(Boolean).join(" · ")
+            : "";
+        const recipient = emailMessage ? String(emailMessage.to_email || "") : "";
+        const sentAt = emailMessage ? (emailMessage.received_at || record.contacted_at) : record.contacted_at;
+        const messageContent = emailMessage
+            ? renderEmailMessageBody(emailMessage) + renderEmailAttachmentCards(emailMessage)
+            : '<div class="sway-communication-viewer-copy">' +
+                emailLinkifyPlainText(String(record.message || "No message content was recorded.")) +
+              "</div>";
+        const fallbackNote = isEmail && !emailMessage
+            ? '<p class="sway-communication-viewer-note">The stored email preview could not be matched to this log entry. The saved communication-log copy is shown below.</p>'
+            : "";
+        const metadata = [
+            ["Contact", contact.primary],
+            ["Channel", record.channel || "—"],
+            ["Direction", formatDisplayText(record.direction || "outbound")],
+            ["Date & time", dateTime(sentAt)],
+            ["Logged by", adminName(record.created_by)]
+        ];
+        if (emailMessage) {
+            metadata.push(["From", sender || "—"], ["To", recipient || "—"]);
+        } else if (contact.secondary) {
+            metadata.push(["Contact details", contact.secondary]);
+        }
+
+        const modal = document.createElement("div");
+        modal.className = "sway-modal sway-communication-viewer";
+        modal.innerHTML =
+            '<div class="sway-modal-backdrop" data-communication-viewer-close></div>' +
+            '<section class="sway-modal-card sway-communication-viewer-card" role="dialog" aria-modal="true" aria-labelledby="sway-communication-viewer-title">' +
+                '<header class="sway-modal-header sway-communication-viewer-header">' +
+                    '<div><span class="admin-label">Swayphics communication history</span>' +
+                    '<h3 id="sway-communication-viewer-title">' + esc(subject || (contact.primary + " · " + (record.channel || "Message"))) + '</h3>' +
+                    (subject ? '<p>' + esc(contact.primary) + '</p>' : "") +
+                    '</div>' +
+                    '<button class="sway-modal-close" type="button" data-communication-viewer-close aria-label="Close communication details">×</button>' +
+                '</header>' +
+                '<div class="sway-communication-viewer-meta">' +
+                    metadata.map(function (entry) {
+                        return '<div class="sway-communication-viewer-meta-item"><span>' +
+                            esc(entry[0]) + '</span><strong>' + esc(entry[1]) + '</strong></div>';
+                    }).join("") +
+                '</div>' +
+                (isEmail && subject ? '<div class="sway-communication-viewer-subject"><span>Subject</span><strong>' + esc(subject) + '</strong></div>' : "") +
+                '<section class="sway-communication-viewer-content" aria-label="' + (isEmail ? "Email content" : "Message content") + '">' +
+                    '<div class="sway-communication-viewer-content-heading"><span>' + (isEmail ? "EMAIL CONTENT" : "FULL MESSAGE") + '</span>' +
+                    (emailMessage ? '<small>Stored sent-email copy</small>' : '<small>Communication log record</small>') + '</div>' +
+                    fallbackNote + messageContent +
+                '</section>' +
+                '<footer class="sway-communication-viewer-footer"><span>Read-only record · No changes will be made</span>' +
+                    '<button type="button" class="sway-workspace-button" data-communication-viewer-close>Close</button></footer>' +
+            '</section>';
+
+        workspace.appendChild(modal);
+        function closeViewer() {
+            document.removeEventListener("keydown", handleEscape);
+            modal.remove();
+            if (trigger && typeof trigger.focus === "function" && trigger.isConnected) {
+                trigger.focus({ preventScroll: true });
+            }
+        }
+        function handleEscape(event) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeViewer();
+            }
+        }
+        modal.querySelectorAll("[data-communication-viewer-close]").forEach(function (button) {
+            button.addEventListener("click", closeViewer);
+        });
+        document.addEventListener("keydown", handleEscape);
+
+        const emailFrame = modal.querySelector("[data-email-html-frame]");
+        if (emailFrame && emailMessage) emailFrame.srcdoc = buildSafeEmailDocument(emailMessage);
+
+        modal.querySelectorAll("[data-email-load-images]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const messageId = String(button.dataset.emailLoadImages || "");
+                if (!messageId || !emailMessage) return;
+                emailRemoteImagesEnabled.add(messageId);
+                const frame = modal.querySelector("[data-email-html-frame]");
+                if (frame) frame.srcdoc = buildSafeEmailDocument(emailMessage);
+                const notice = button.closest(".sway-email-remote-image-note");
+                if (notice) notice.remove();
+            });
+        });
+        modal.querySelectorAll("[data-email-attachment-download]").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                const storagePath = String(button.dataset.emailAttachmentDownload || "");
+                const filename = String(button.dataset.emailAttachmentFilename || "email-attachment");
+                if (!storagePath || button.disabled) return;
+                button.disabled = true;
+                try {
+                    await downloadEmailAttachment(storagePath, filename);
+                } catch (error) {
+                    swayAlert(error && error.message ? error.message : "Unable to download this email attachment.");
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+        const closeButton = modal.querySelector(".sway-modal-close");
+        if (closeButton) closeButton.focus({ preventScroll: true });
+    }
+
+    async function openCommunicationViewer(id, trigger) {
+        const communication = (Array.isArray(state.communications) ? state.communications : [])
+            .find(function (entry) { return String(entry.id || "") === String(id || ""); });
+        if (!communication) {
+            swayAlert("This communication record could not be found. Refresh the workspace and try again.");
+            return;
+        }
+        let emailMessage = null;
+        if (String(communication.channel || "").toLowerCase().includes("email")) {
+            try {
+                emailMessage = await loadCommunicationEmailMessage(communication);
+                if (emailMessage && Array.isArray(emailMessage.attachments) && emailMessage.attachments.length) {
+                    await loadEmailThreadMedia({ messages: [emailMessage] });
+                }
+            } catch (error) {
+                console.warn("Unable to load the original sent email for this communication.", error);
+            }
+        }
+        showCommunicationViewer(communication, emailMessage, trigger);
+    }
+
     function renderCommunications() {
         const tableItems = adminTableControls.items("communications", state.communications);
         const cards = tableItems.map(function (item) {
@@ -18841,7 +19045,9 @@ function simpleBars(items, color) {
                 return String(id) === String(item.id);
             });
             return (
-                '<article class="sway-record-card" data-admin-table-row="communications" data-admin-table-id="' + esc(item.id) +
+                '<article class="sway-record-card sway-communication-card" data-communication-card-open="' + esc(item.id) +
+                    '" tabindex="0" role="group" aria-label="Open communication details for ' + esc(contactDetails.primary) +
+                    '" data-admin-table-row="communications" data-admin-table-id="' + esc(item.id) +
                     '" data-admin-table-search="' + esc(adminTableControls.searchText("communications", item)) +
                     '" data-admin-table-filter="' + esc(String(item.direction || "unknown").toLowerCase()) + '">' +
                     '<div class="sway-record-card-top">' +
@@ -18851,7 +19057,7 @@ function simpleBars(items, color) {
                         '<div class="sway-record-card-badges">' + (contactDetails.ambiguous ? '<span class="sway-record-card-warning">Needs contact review</span>' : "") +
                             chip(item.direction || "outbound") + '</div>' +
                     '</div>' +
-                    '<button type="button" class="sway-record-card-open" data-edit="communications" data-id="' + esc(item.id) +
+                    '<button type="button" class="sway-record-card-open" data-open-communication="' + esc(item.id) +
                         '" aria-label="Open communication record for ' + esc(contactDetails.primary) + '">' +
                         '<span class="sway-record-card-eyebrow">COMMUNICATION LOG</span>' +
                         '<strong class="sway-record-card-title">' + esc(contactDetails.primary) + '</strong>' +
@@ -18863,7 +19069,7 @@ function simpleBars(items, color) {
                         '<div class="sway-record-card-detail"><span>Logged by</span><strong>' + esc(adminName(item.created_by)) + '</strong></div>' +
                         '<div class="sway-record-card-detail sway-record-card-detail-wide"><span>Message / notes</span><strong>' + esc(item.message || "No notes recorded") + '</strong></div>' +
                     '</div>' +
-                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open communication</span>' +
+                    '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">View full message</span>' +
                         '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                             '<button class="sway-row-action" data-edit="communications" data-id="' + esc(item.id) + '">Edit</button>' +
                             '<button class="sway-row-action danger" data-delete="communications" data-id="' + esc(item.id) + '">Delete</button>' +
@@ -28121,6 +28327,30 @@ function simpleBars(items, color) {
                         );
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-open-communication]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    openCommunicationViewer(button.dataset.openCommunication, button);
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-communication-card-open]")
+            .forEach(function (card) {
+                card.addEventListener("click", function (event) {
+                    const target = event.target;
+                    if (target && target.closest &&
+                        target.closest("button,input,label,a,summary,details,select,textarea")) return;
+                    openCommunicationViewer(card.dataset.communicationCardOpen, card);
+                });
+                card.addEventListener("keydown", function (event) {
+                    if (event.target !== card || (event.key !== "Enter" && event.key !== " ")) return;
+                    event.preventDefault();
+                    openCommunicationViewer(card.dataset.communicationCardOpen, card);
+                });
             });
 
         workspace

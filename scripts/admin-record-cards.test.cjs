@@ -89,6 +89,26 @@ for (const [key, name] of Object.entries(rendererNames)) {
     }
 }
 
+const communicationRenderer = section(
+    workspace, "    function renderCommunications(", "communication card renderer"
+);
+for (const contract of [
+    "data-communication-card-open=", "data-open-communication=", "View full message"
+]) {
+    assert.ok(communicationRenderer.includes(contract),
+        "communication cards must expose " + contract);
+}
+for (const contract of [
+    "function findCommunicationEmailMessage(", "function loadCommunicationEmailMessage(",
+    "function openCommunicationViewer(", "renderEmailMessageBody(emailMessage)",
+    "buildSafeEmailDocument(emailMessage)", "renderEmailAttachmentCards(emailMessage)",
+    "loadEmailThreadMedia({ messages: [emailMessage] })",
+    "[data-communication-card-open]", "[data-open-communication]"
+]) {
+    assert.ok(workspace.includes(contract),
+        "communication viewer must include " + contract);
+}
+
 const selectionBar = section(
     workspace,
     "    function renderRecordCardSelectionBar(",
@@ -119,7 +139,7 @@ assert.ok(invoiceRenderer.includes('adminTableControls.items("invoices", visible
 assert.ok(invoiceRenderer.includes('adminTableControls.renderControls("invoices", visibleInvoices)'));
 assert.ok(invoiceRenderer.includes('data-admin-table-no-results="invoices"'));
 
-assert.match(html, /admin-record-cards\.css\?v=20261108-record-cards-1/,
+assert.match(html, /admin-record-cards\.css\?v=20261110-communication-log-viewer-1/,
     "the shared card stylesheet should be loaded with a versioned URL");
 assert.ok(
     html.indexOf("admin-lead-cards.css") < html.indexOf("admin-record-cards.css"),
@@ -127,7 +147,9 @@ assert.ok(
 );
 for (const selector of [
     ".sway-record-card-grid", ".sway-record-card-open:focus-visible",
-    ".sway-record-card-selection-bar", ".sway-record-card-detail-wide"
+    ".sway-record-card-selection-bar", ".sway-record-card-detail-wide",
+    ".sway-communication-card:focus-visible", ".sway-communication-viewer-card",
+    ".sway-communication-viewer-meta", ".sway-communication-viewer-content"
 ]) {
     assert.ok(css.includes(selector), "card stylesheet should include " + selector);
 }
@@ -135,4 +157,7 @@ assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-record-card/);
 assert.match(css, /@media \(max-width: 620px\)/);
 assert.match(css, /prefers-reduced-motion/);
 
-console.log("Admin record-card contract tests passed for 15 dashboard views.");
+assert.match(html, /admin-workspace\.js\?v=20261110-communication-log-viewer-1/,
+    "the communication viewer workspace script must use a refreshed cache key");
+
+console.log("Admin record-card contract tests passed for 15 dashboard views and communication viewing.");
