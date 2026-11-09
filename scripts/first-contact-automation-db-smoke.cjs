@@ -138,7 +138,7 @@ async function main() {
 
     const oldCreated = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
     const leads = [
-      { id: untouchedLeadId, business_name: "CI Untouched Lead", email: "untouched@example.invalid", status: "new", created_at: oldCreated, last_contacted_at: null },
+      { id: untouchedLeadId, business_name: "CI Untouched Lead", email: "untouched@example.invalid", status: "new", assigned_to: null, created_at: oldCreated, last_contacted_at: null },
       { id: dueLeadId, business_name: "CI Contacted Lead", email: "contacted@example.invalid", status: "contacted", assigned_to: assigned.id, created_at: oldCreated, last_contacted_at: sastTimestamp(contactDate) },
       { id: recentLeadId, business_name: "CI Recently Contacted Lead", email: "recent@example.invalid", status: "contacted", assigned_to: owner.id, created_at: oldCreated, last_contacted_at: new Date().toISOString() },
       { id: notInterestedLeadId, business_name: "CI Disqualified Lead", email: null, status: "not interested", assigned_to: owner.id, created_at: oldCreated, last_contacted_at: sastTimestamp(contactDate) }
