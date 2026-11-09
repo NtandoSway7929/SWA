@@ -323,7 +323,7 @@ async function buildPdf(
     });
   }
 
-  page.drawText("EMPOWERING THROUGH DESIGN", {
+  page.drawText(String(settings.slogan || "EMPOWERING THROUGH DESIGN"), {
     x: margin,
     y: pageHeight - 112,
     size: 6.5,
@@ -424,7 +424,7 @@ async function buildPdf(
     );
   }
   if (invoice.client?.email) {
-    drawWrapped(
+    clientLineY = drawWrapped(
       page,
       invoice.client.email,
       margin,
@@ -444,22 +444,33 @@ async function buildPdf(
     font: bold,
     color: DARK,
   });
-  page.drawText(businessEmail, {
-    x: margin + 268,
-    y: infoTop - 37,
-    size: 8,
-    font: regular,
-    color: MUTED,
-  });
-  page.drawText("swayphics.co.za", {
-    x: margin + 268,
-    y: infoTop - 50,
-    size: 8,
-    font: regular,
-    color: MUTED,
-  });
 
-  y = infoTop - 82;
+  let issuerLineY = infoTop - 37;
+  const issuerDetails = [
+    businessEmail,
+    settings.phone ? String(settings.phone) : "",
+    settings.address ? String(settings.address) : "",
+    settings.vat_registered && settings.vat_number
+      ? "VAT registration: " + String(settings.vat_number)
+      : "",
+    settings.website ? String(settings.website) : "swayphics.co.za",
+  ].filter(Boolean);
+
+  for (const detail of issuerDetails) {
+    issuerLineY = drawWrapped(
+      page,
+      detail,
+      margin + 268,
+      issuerLineY,
+      235,
+      7.5,
+      regular,
+      MUTED,
+      10,
+    );
+  }
+
+  y = Math.min(clientLineY, issuerLineY) - 22;
   page.drawText("SERVICE BREAKDOWN", {
     x: margin,
     y,
@@ -824,7 +835,7 @@ function emailHtml(
     '<div style="height:4px;background:#0152F4;font-size:0;line-height:0;">&nbsp;</div>',
     '<div style="padding:28px 34px 26px;background:#202B3A;color:#FFFFFF;">',
     '<div style="font-size:22px;font-weight:800;letter-spacing:.035em;">SWAYPHICS</div>',
-    '<div style="margin-top:7px;font-size:9px;font-weight:700;letter-spacing:.19em;color:#C5D0E0;">EMPOWERING THROUGH DESIGN</div>',
+    '<div style="margin-top:7px;font-size:9px;font-weight:700;letter-spacing:.19em;color:#C5D0E0;">' + escapeHtml(settings.slogan || "EMPOWERING THROUGH DESIGN") + "</div>",
     "</div>",
     '<div style="padding:34px;">',
     '<div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:#0152F4;">INVOICE ' + escapeHtml(invoice.invoice_number) + "</div>",
@@ -860,7 +871,9 @@ function emailHtml(
     "</div>",
     '<div style="padding:22px 34px;background:#F7F9FC;border-top:1px solid #E7EBF2;font-size:10px;line-height:1.8;color:#778397;">',
     "<strong style=\"color:#26303C;\">" + escapeHtml(settings.business_name || "Swayphics") + "</strong><br>",
-    escapeHtml(settings.email || "info@swayphics.co.za") + ' · <a href="https://swayphics.co.za" style="color:#0152F4;text-decoration:none;">swayphics.co.za</a><br>',
+    escapeHtml(settings.email || "info@swayphics.co.za") + (settings.phone ? " · " + escapeHtml(settings.phone) : "") + "<br>",
+    settings.address ? escapeHtml(settings.address) + "<br>" : "",
+    '<a href="' + escapeHtml(settings.website || "https://swayphics.co.za") + '" style="color:#0152F4;text-decoration:none;">' + escapeHtml(settings.website || "swayphics.co.za") + "</a><br>",
     '<a href="https://swayphics.co.za/privacy-policy/" style="color:#778397;text-decoration:underline;">Privacy Policy</a><span style="padding:0 6px;color:#B4BFCE;">·</span><a href="https://swayphics.co.za/terms-and-conditions/" style="color:#778397;text-decoration:underline;">Terms &amp; Conditions</a><br>',
     '<span style="color:#9AA5B4;">© ' + new Date().getFullYear() + ' Swayphics. All rights reserved.</span><br>',
     '<span style="color:#9AA5B4;">This email and its attachments are intended only for the addressed recipient. If received in error, please notify the sender and delete it.</span>',
