@@ -259,10 +259,10 @@ assert.ok(
     !workspaceCss.includes(".sway-lead-assessment-status::before"),
     "lead assessment status pills must not render an inner circle"
 );
+const liveBadgeRule = workspaceCss.match(/\.sway-live-badge\\s*\\{[^}]*\\}/)?.[0] || "";
 assert.ok(
-    workspaceCss.includes(".sway-live-badge i {\n    display: none;") &&
-    workspaceCss.includes(".sway-live-badge {") &&
-    workspaceCss.includes("gap: 0;"),
+    workspaceCss.includes(".sway-live-badge i {\\n    display: none;") &&
+    liveBadgeRule.includes("gap: 0;"),
     "live status pills must hide the indicator circle and remove its reserved gap"
 );
 assert.ok(
