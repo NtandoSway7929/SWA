@@ -46,6 +46,7 @@ assert.ok(pdf.includes("pdfDoc.getPages()"), "PDF must add page numbering after 
 assert.ok(pdf.includes("wrapText("), "PDF must wrap long service descriptions and notes");
 assert.ok(pdf.includes("invoice.amount_outstanding"), "PDF must use the outstanding balance when available");
 assert.ok(pdf.includes("invoice.amount_paid"), "PDF must account for payments already received");
+assert.ok(pdf.includes('drawSummaryRow("Paid to date"'), "PDF must show payments already received");
 assert.ok(pdf.includes('invoice.status === "partially paid"'), "PDF must identify partially paid invoices");
 assert.ok(pdf.includes('invoice.status === "overdue"'), "PDF must identify overdue balances");
 assert.ok(pdf.includes("money(item.unit_price)"), "PDF must retain unit pricing");
@@ -67,7 +68,8 @@ assert.ok(email.includes("escapeHtml(item.description)"), "Email must safely ren
 assert.ok(email.includes("escapeHtml(invoice.notes)"), "Email must safely render invoice notes");
 assert.ok(email.includes("invoice.amount_outstanding"), "Email must display the outstanding balance");
 assert.ok(email.includes("invoice.amount_paid"), "Email must reflect payments already received");
-assert.ok(email.includes("attachments:" ) === false, "Attachment delivery remains in the send handler, not the HTML template");
+assert.ok(email.includes("Paid to date"), "Email must show payments already received");
+assert.equal(email.includes("attachments:"), false, "Attachment delivery must remain in the send handler, not the HTML template");
 
 assert.ok(source.includes('.from("invoice_items")'), "Invoice item lookup must remain intact");
 assert.ok(source.includes("pdf_base64:"), "PDF response contract must remain intact");
