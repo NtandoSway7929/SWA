@@ -132,8 +132,8 @@ test("lead follow-ups use a fixed two-stage business-day sequence", () => {
   assert.match(worker, /v_due_date>v_today[\s\S]*?continue/i);
   assert.match(worker, /on conflict do nothing/i);
 
-  assert.ok(settings.includes("Created two business days after the recorded contact date."));
-  assert.ok(settings.includes("Created two business days after follow-up 1 is marked completed."));
+  assert.ok(settings.includes("Follow-up 1 is due two business days after the recorded contact date."));
+  assert.ok(settings.includes("Follow-up 2 is due two business days after follow-up 1 is marked completed."));
   assert.ok(settings.includes("the lead is moved to Lost"));
   assert.ok(settings.includes("Public holidays are not currently excluded."));
   assert.doesNotMatch(settings, /field\("new_lead_response_hours"/);
