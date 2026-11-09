@@ -6,7 +6,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-const consentScriptMatch = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)]
+const consentScriptMatch = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
   .find(match => match[1].includes('const SESSION_KEY = "swayphics_cookie_analytics_session";'));
 
 assert.ok(consentScriptMatch, "the public homepage must include the cookie consent analytics script");
@@ -221,7 +221,7 @@ function assertConsentEvent(browser, index, expected) {
   assert.equal(browser.window.swayphicsAnalyticsLoaded, true);
   assert.equal(browser.window["ga-disable-G-YNVEVHGFTZ"], false);
   assert.equal(browser.appendedScripts.length, 1);
-  assert.match(browser.appendedScripts[0].src, /googletagmanager\\.com\\/gtag\\/js\\?id=G-YNVEVHGFTZ/);
+  assert.match(browser.appendedScripts[0].src, /googletagmanager\.com\/gtag\/js\?id=G-YNVEVHGFTZ/);
   assert.equal(browser.banner.hidden, true);
 }
 
