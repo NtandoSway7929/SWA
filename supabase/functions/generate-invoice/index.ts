@@ -170,6 +170,25 @@ async function buildPdf(
   const invoiceNumber = String(invoice.invoice_number || "INVOICE");
   const businessName = String(settings.business_name || "Swayphics");
   const businessEmail = String(settings.email || "info@swayphics.co.za");
+  const amountPaid = Number(invoice.amount_paid || 0);
+  const invoiceTotal = Number(invoice.total || 0);
+  const amountOutstanding = invoice.amount_outstanding == null
+    ? Math.max(invoiceTotal - amountPaid, 0)
+    : Number(invoice.amount_outstanding);
+  const payableAmount = invoice.status === "paid"
+    ? (amountPaid || invoiceTotal)
+    : invoice.status === "cancelled"
+      ? invoiceTotal
+      : amountOutstanding;
+  const totalLabel = invoice.status === "paid"
+    ? "TOTAL PAID"
+    : invoice.status === "partially paid"
+      ? "BALANCE DUE"
+      : invoice.status === "overdue"
+        ? "OVERDUE BALANCE"
+        : invoice.status === "cancelled"
+          ? "INVOICE TOTAL"
+          : "TOTAL DUE";
 
   function drawRight(
     targetPage: any,
@@ -232,14 +251,16 @@ async function buildPdf(
       color: accent,
     });
 
-    targetPage.drawText(title, {
-      x: margin,
-      y: pageHeight - 58,
-      size: continued ? 12 : 22,
-      font: bold,
-      color: BRAND,
-      characterSpacing: continued ? 0.6 : -0.5,
-    });
+    if (continued || !logo) {
+      targetPage.drawText(title, {
+        x: margin,
+        y: continued ? pageHeight - 58 : pageHeight - 80,
+        size: continued ? 12 : 22,
+        font: bold,
+        color: BRAND,
+        characterSpacing: continued ? 0.6 : -0.5,
+      });
+    }
 
     if (continued) {
       drawRight(
@@ -510,7 +531,8 @@ async function buildPdf(
   const summaryRows =
     1 +
     (Number(invoice.discount || 0) > 0 ? 1 : 0) +
-    (Number(invoice.vat_amount || 0) > 0 ? 1 : 0);
+    (Number(invoice.vat_amount || 0) > 0 ? 1 : 0) +
+    (amountPaid > 0 && invoice.status !== "paid" ? 1 : 0);
   const summaryHeight = summaryRows * 18 + 66;
 
   if (y - summaryHeight < 108) {
@@ -543,6 +565,10 @@ async function buildPdf(
     drawSummaryRow("VAT (" + Number(invoice.vat_rate || 0) + "%)", money(invoice.vat_amount));
   }
 
+  if (amountPaid > 0 && invoice.status !== "paid") {
+    drawSummaryRow("Paid to date", "-" + money(amountPaid));
+  }
+
   y -= 2;
   const totalBoxX = summaryX - 12;
   const totalBoxWidth = pageWidth - margin - totalBoxX;
@@ -562,7 +588,7 @@ async function buildPdf(
     color: accent,
   });
 
-  page.drawText(invoice.status === "paid" ? "TOTAL PAID" : "TOTAL DUE", {
+  page.drawText(totalLabel, {
     x: totalBoxX + 14,
     y: totalBoxY + 27,
     size: 7,
@@ -572,7 +598,7 @@ async function buildPdf(
   });
   drawRight(
     page,
-    money(invoice.total),
+    money(payableAmount),
     totalBoxX + totalBoxWidth - 14,
     totalBoxY + 15,
     15,
@@ -754,6 +780,26 @@ function emailHtml(
     "</tr>",
   ].join("")).join("");
 
+  const amountPaid = Number(invoice.amount_paid || 0);
+  const invoiceTotal = Number(invoice.total || 0);
+  const amountOutstanding = invoice.amount_outstanding == null
+    ? Math.max(invoiceTotal - amountPaid, 0)
+    : Number(invoice.amount_outstanding);
+  const payableAmount = invoice.status === "paid"
+    ? (amountPaid || invoiceTotal)
+    : invoice.status === "cancelled"
+      ? invoiceTotal
+      : amountOutstanding;
+  const totalLabel = invoice.status === "paid"
+    ? "TOTAL PAID"
+    : invoice.status === "partially paid"
+      ? "BALANCE DUE"
+      : invoice.status === "overdue"
+        ? "OVERDUE BALANCE"
+        : invoice.status === "cancelled"
+          ? "INVOICE TOTAL"
+          : "TOTAL DUE";
+
   const bankingDetails = [
     settings.bank_name ? "Bank: " + escapeHtml(settings.bank_name) : "",
     settings.account_name ? "Account holder: " + escapeHtml(settings.account_name) : "",
@@ -800,10 +846,11 @@ function emailHtml(
     '<tr><td style="padding:5px 0;color:#778397;font-size:12px;">Subtotal</td><td style="padding:5px 0;text-align:right;color:#26303C;font-size:12px;font-weight:700;">' + escapeHtml(money(invoice.subtotal)) + "</td></tr>",
     Number(invoice.discount || 0) > 0 ? '<tr><td style="padding:5px 0;color:#778397;font-size:12px;">Discount</td><td style="padding:5px 0;text-align:right;color:#26303C;font-size:12px;font-weight:700;">-' + escapeHtml(money(invoice.discount)) + "</td></tr>" : "",
     Number(invoice.vat_amount || 0) > 0 ? '<tr><td style="padding:5px 0;color:#778397;font-size:12px;">VAT (' + escapeHtml(Number(invoice.vat_rate || 0)) + '%)</td><td style="padding:5px 0;text-align:right;color:#26303C;font-size:12px;font-weight:700;">' + escapeHtml(money(invoice.vat_amount)) + "</td></tr>" : "",
+    amountPaid > 0 && invoice.status !== "paid" ? '<tr><td style="padding:5px 0;color:#778397;font-size:12px;">Paid to date</td><td style="padding:5px 0;text-align:right;color:#26303C;font-size:12px;font-weight:700;">-' + escapeHtml(money(amountPaid)) + "</td></tr>" : "",
     "</table>",
     '<div style="margin-top:15px;padding:19px 21px;background:#202B3A;border-left:4px solid #0152F4;"><table role="presentation" style="width:100%;border-collapse:collapse;"><tr>',
-    '<td style="color:#D3DCE8;font-size:10px;font-weight:700;letter-spacing:.14em;">' + (invoice.status === "paid" ? "TOTAL PAID" : "TOTAL DUE") + "</td>",
-    '<td style="text-align:right;color:#FFFFFF;font-size:23px;font-weight:800;letter-spacing:-.025em;white-space:nowrap;">' + escapeHtml(money(invoice.total)) + "</td>",
+    '<td style="color:#D3DCE8;font-size:10px;font-weight:700;letter-spacing:.14em;">' + totalLabel + "</td>",
+    '<td style="text-align:right;color:#FFFFFF;font-size:23px;font-weight:800;letter-spacing:-.025em;white-space:nowrap;">' + escapeHtml(money(payableAmount)) + "</td>",
     "</tr></table></div>",
     invoice.notes ? '<div style="margin-top:25px;padding:17px 19px;background:#F7F9FC;border:1px solid #E7EBF2;"><div style="margin-bottom:7px;font-size:9px;font-weight:700;letter-spacing:.13em;color:#0152F4;">PROJECT NOTES</div><div style="font-size:12px;line-height:1.7;color:#687487;">' + escapeHtml(invoice.notes) + "</div></div>" : "",
     settings.payment_instructions ? '<div style="margin-top:24px;font-size:12px;line-height:1.75;color:#687487;"><strong style="color:#26303C;">Payment instructions</strong><br>' + escapeHtml(settings.payment_instructions) + "</div>" : "",
