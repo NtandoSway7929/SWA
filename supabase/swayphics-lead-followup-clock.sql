@@ -115,11 +115,8 @@ begin
 end;
 $$;
 
-revoke all on function public.recalculate_swayphics_lead_contact_clock(uuid)
-from public;
-
-grant execute on function public.recalculate_swayphics_lead_contact_clock(uuid)
-to authenticated;
+revoke all privileges on function public.recalculate_swayphics_lead_contact_clock(uuid)
+from public, anon, authenticated, service_role;
 
 -- Automatically move the follow-up clock whenever an outbound communication
 -- is added or edited for a lead.
