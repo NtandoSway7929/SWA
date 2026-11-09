@@ -895,37 +895,34 @@ Deno.serve(async (req) => {
     // Retry once using the normalized contact type. This protects against
     // stale client/lead selections after a contact has been converted.
     if (communicationInsert.error && canLogContact) {
-      const retryPayload =
-        resolvedContactType === "client"
-          ? {
-              client_id: contact.id,
-              lead_id: null,
-              channel: "Email",
-              direction: "outbound",
-              subject,
-              message,
-              contacted_at:
-                new Date().toISOString(),
-              created_by:
-                userData.user.id,
-            }
-          : {
-              client_id: null,
-              lead_id: contact.id,
-              channel: "Email",
-              direction: "outbound",
-              subject,
-              message,
-              contacted_at:
-                new Date().toISOString(),
-              created_by:
-                userData.user.id,
-            };
-
-      communicationInsert =
-        await supabase
+      const retryContactedAt = new Date().toISOString();
+      if (resolvedContactType === "client") {
+        communicationInsert = await supabase
           .from("communication_logs")
-          .insert(retryPayload);
+          .insert({
+            client_id: contact.id,
+            lead_id: null,
+            channel: "Email",
+            direction: "outbound",
+            subject,
+            message,
+            contacted_at: retryContactedAt,
+            created_by: userData.user.id,
+          });
+      } else {
+        communicationInsert = await supabase
+          .from("communication_logs")
+          .insert({
+            client_id: null,
+            lead_id: contact.id,
+            channel: "Email",
+            direction: "outbound",
+            subject,
+            message,
+            contacted_at: retryContactedAt,
+            created_by: userData.user.id,
+          });
+      }
     }
 
     if (communicationInsert.error) {
@@ -1031,6 +1028,12 @@ Deno.serve(async (req) => {
             : null,
       });
 
+    const communicationError = communicationInsert.error;
+    const communicationErrorDetails =
+      communicationError && "details" in communicationError
+        ? communicationError.details
+        : null;
+
     return Response.json(
       {
         success: true,
@@ -1047,7 +1050,7 @@ Deno.serve(async (req) => {
           communicationInsert.error
             ? String(
                 communicationInsert.error.message ||
-                communicationInsert.error.details ||
+                communicationErrorDetails ||
                 "Communication log insert failed."
               )
             : null,
