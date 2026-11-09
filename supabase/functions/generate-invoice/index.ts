@@ -745,108 +745,80 @@ function emailHtml(
   items: LineItem[],
   settings: any,
 ) {
-  const rows = items
-    .map(
-      (item) => `
-        <tr>
-          <td style="padding:10px 8px;border-bottom:1px solid #E0E6F0;color:#081533;">
-            ${escapeHtml(item.description)}
-          </td>
-          <td style="padding:10px 8px;border-bottom:1px solid #E0E6F0;text-align:center;color:#56627A;">
-            ${escapeHtml(item.quantity)}
-          </td>
-          <td style="padding:10px 8px;border-bottom:1px solid #E0E6F0;text-align:right;color:#56627A;">
-            ${escapeHtml(money(item.unit_price))}
-          </td>
-          <td style="padding:10px 8px;border-bottom:1px solid #E0E6F0;text-align:right;color:#081533;font-weight:700;">
-            ${escapeHtml(money(item.line_total))}
-          </td>
-        </tr>
-      `,
-    )
-    .join("");
+  const rows = items.map((item) => [
+    "<tr>",
+    '<td style="padding:15px 12px;border-bottom:1px solid #E8ECF3;color:#26303C;font-size:13px;line-height:1.55;">' + escapeHtml(item.description) + "</td>",
+    '<td style="padding:15px 8px;border-bottom:1px solid #E8ECF3;text-align:center;color:#687487;font-size:12px;">' + escapeHtml(item.quantity) + "</td>",
+    '<td style="padding:15px 10px;border-bottom:1px solid #E8ECF3;text-align:right;color:#687487;font-size:12px;white-space:nowrap;">' + escapeHtml(money(item.unit_price)) + "</td>",
+    '<td style="padding:15px 12px;border-bottom:1px solid #E8ECF3;text-align:right;color:#26303C;font-size:12px;font-weight:700;white-space:nowrap;">' + escapeHtml(money(item.line_total)) + "</td>",
+    "</tr>",
+  ].join("")).join("");
 
-  return `
-<!doctype html>
-<html>
-<body style="margin:0;background:#F7FAFF;font-family:Arial,Helvetica,sans-serif;color:#081533;">
-  <div style="max-width:680px;margin:0 auto;padding:32px 18px;">
-    <div style="background:#FFFFFF;border-radius:18px;overflow:hidden;border:1px solid #E0E6F0;">
-      <div style="padding:26px 28px;background:linear-gradient(135deg,#002096,#0152F4);color:#FFFFFF;">
-        <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;">SWAYPHICS</div>
-        <div style="margin-top:6px;font-size:11px;letter-spacing:0.16em;font-weight:700;">EMPOWERING THROUGH DESIGN</div>
-      </div>
-      <div style="padding:28px;">
-        <div style="font-size:12px;color:#56627A;">Invoice ${escapeHtml(invoice.invoice_number)}</div>
-        <h1 style="margin:6px 0 18px;font-size:24px;color:#081533;">Your Swayphics invoice</h1>
-        <p style="font-size:14px;line-height:1.7;color:#56627A;">
-          Hi ${escapeHtml(
-            invoice.client?.contact_name ||
-              invoice.client?.business_name ||
-              "Business"
-          )},<br><br>
-          Please find your invoice attached. Thank you for choosing Swayphics.
-        </p>
-        <table style="width:100%;border-collapse:collapse;margin-top:24px;">
-          <thead>
-            <tr style="background:#F7FAFF;">
-              <th style="padding:10px 8px;text-align:left;font-size:11px;">Description</th>
-              <th style="padding:10px 8px;text-align:center;font-size:11px;">Qty</th>
-              <th style="padding:10px 8px;text-align:right;font-size:11px;">Price</th>
-              <th style="padding:10px 8px;text-align:right;font-size:11px;">Total</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div style="margin-top:22px;text-align:right;">
-          <div style="font-size:12px;color:#56627A;">Subtotal: <strong style="color:#081533;">${escapeHtml(money(invoice.subtotal))}</strong></div>
-          ${Number(invoice.discount || 0) > 0 ? `<div style="font-size:12px;color:#56627A;margin-top:5px;">Discount: <strong style="color:#081533;">-${escapeHtml(money(invoice.discount))}</strong></div>` : ""}
-          ${Number(invoice.vat_amount || 0) > 0 ? `<div style="font-size:12px;color:#56627A;margin-top:5px;">VAT: <strong style="color:#081533;">${escapeHtml(money(invoice.vat_amount))}</strong></div>` : ""}
-          <div style="display:inline-block;margin-top:12px;padding:12px 18px;border-radius:10px;background:#002096;color:#FFFFFF;font-size:17px;font-weight:800;">
-            Total ${escapeHtml(money(invoice.total))}
-          </div>
-        </div>
-        <div style="margin-top:28px;padding-top:18px;border-top:1px solid #E0E6F0;font-size:12px;line-height:1.7;color:#56627A;">
-          <strong style="color:#081533;">Due:</strong> ${escapeHtml(shortDate(invoice.due_date))}
-          ${settings.payment_instructions ? `<br><strong style="color:#081533;">Payment:</strong> ${escapeHtml(settings.payment_instructions)}` : ""}
-        </div>
-        ${
-          settings.bank_name ||
-          settings.account_name ||
-          settings.account_number ||
-          settings.account_type ||
-          settings.branch_code ||
-          settings.swift_bic
-            ? `
-        <div style="margin-top:18px;padding:16px 18px;border-radius:12px;background:#F7FAFF;border:1px solid #E0E6F0;font-size:12px;line-height:1.75;color:#56627A;">
-          <strong style="display:block;margin-bottom:8px;color:#081533;">Banking details</strong>
-          ${settings.bank_name ? `Bank: ${escapeHtml(settings.bank_name)}<br>` : ""}
-          ${settings.account_name ? `Account holder: ${escapeHtml(settings.account_name)}<br>` : ""}
-          ${settings.account_type ? `Account type: ${escapeHtml(settings.account_type)}<br>` : ""}
-          ${settings.branch_code ? `Branch code: ${escapeHtml(settings.branch_code)}<br>` : ""}
-          ${settings.swift_bic ? `SWIFT / BIC: ${escapeHtml(settings.swift_bic)}<br>` : ""}
-          ${settings.account_number ? `
-          <div style="margin-top:12px;padding:12px 14px;border-radius:10px;background:#FFFFFF;border:1px solid #D9E2F0;">
-            <div style="font-size:10px;font-weight:800;letter-spacing:.12em;color:#0152F4;">ACCOUNT NUMBER</div>
-            <div style="margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:17px;font-weight:800;letter-spacing:.08em;color:#081533;user-select:text;-webkit-user-select:text;">${escapeHtml(String(settings.account_number))}</div>
-          </div>` : ""}
-        </div>`
-            : ""
-        }
-      </div>
-      <div style="padding:18px 28px;background:#F7FAFF;font-size:11px;line-height:1.75;color:#56627A;">
-        ${escapeHtml(settings.email || "info@swayphics.co.za")} · <a href="https://swayphics.co.za" style="color:#0152F4;text-decoration:none;">swayphics.co.za</a><br>
-        <a href="https://swayphics.co.za/privacy-policy/" style="color:#56627A;text-decoration:underline;">Privacy Policy</a>
-        <span style="padding:0 6px;color:#B4BFCE;">·</span>
-        <a href="https://swayphics.co.za/terms-and-conditions/" style="color:#56627A;text-decoration:underline;">Terms &amp; Conditions</a><br>
-        <span style="color:#8A97A8;">© ${new Date().getFullYear()} Swayphics. All rights reserved.</span><br>
-        <span style="color:#8A97A8;">This email and any attachments are intended only for the addressed recipient. If received in error, please notify the sender and delete it.</span>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-`;
+  const bankingDetails = [
+    settings.bank_name ? "Bank: " + escapeHtml(settings.bank_name) : "",
+    settings.account_name ? "Account holder: " + escapeHtml(settings.account_name) : "",
+    settings.account_type ? "Account type: " + escapeHtml(settings.account_type) : "",
+    settings.branch_code ? "Branch code: " + escapeHtml(settings.branch_code) : "",
+    settings.swift_bic ? "SWIFT / BIC: " + escapeHtml(settings.swift_bic) : "",
+  ].filter(Boolean);
+
+  const hasBankingDetails = Boolean(
+    bankingDetails.length || settings.account_number
+  );
+  const clientName =
+    invoice.client?.contact_name ||
+    invoice.client?.business_name ||
+    "there";
+
+  return [
+    "<!doctype html>",
+    '<html><body style="margin:0;padding:0;background:#F3F5F9;font-family:Arial,Helvetica,sans-serif;color:#26303C;">',
+    '<div style="max-width:700px;margin:0 auto;padding:34px 16px;">',
+    '<div style="overflow:hidden;background:#FFFFFF;border:1px solid #E1E6EF;border-radius:8px;">',
+    '<div style="height:4px;background:#0152F4;font-size:0;line-height:0;">&nbsp;</div>',
+    '<div style="padding:28px 34px 26px;background:#202B3A;color:#FFFFFF;">',
+    '<div style="font-size:22px;font-weight:800;letter-spacing:.035em;">SWAYPHICS</div>',
+    '<div style="margin-top:7px;font-size:9px;font-weight:700;letter-spacing:.19em;color:#C5D0E0;">EMPOWERING THROUGH DESIGN</div>',
+    "</div>",
+    '<div style="padding:34px;">',
+    '<div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:#0152F4;">INVOICE ' + escapeHtml(invoice.invoice_number) + "</div>",
+    '<h1 style="margin:10px 0 8px;color:#202B3A;font-size:27px;line-height:1.2;letter-spacing:-.035em;">Your invoice is ready.</h1>',
+    '<p style="margin:0;color:#687487;font-size:14px;line-height:1.75;">Hello ' + escapeHtml(clientName) + ',<br><br>Please find your Swayphics invoice attached. The breakdown below gives you a clear view of the services, pricing and payment date.</p>',
+    '<table role="presentation" style="width:100%;margin:27px 0 30px;border-collapse:separate;border-spacing:8px 0;"><tr>',
+    '<td style="width:33.33%;padding:14px 13px;background:#F7F9FC;border:1px solid #E7EBF2;vertical-align:top;"><div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#778397;">INVOICE NUMBER</div><div style="margin-top:8px;font-size:12px;font-weight:700;color:#26303C;">' + escapeHtml(invoice.invoice_number) + "</div></td>",
+    '<td style="width:33.33%;padding:14px 13px;background:#F7F9FC;border:1px solid #E7EBF2;vertical-align:top;"><div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#778397;">ISSUED</div><div style="margin-top:8px;font-size:12px;font-weight:700;color:#26303C;">' + escapeHtml(shortDate(invoice.issue_date)) + "</div></td>",
+    '<td style="width:33.33%;padding:14px 13px;background:#F7F9FC;border:1px solid #E7EBF2;vertical-align:top;"><div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#778397;">PAYMENT DUE</div><div style="margin-top:8px;font-size:12px;font-weight:700;color:#26303C;">' + escapeHtml(shortDate(invoice.due_date)) + "</div></td>",
+    "</tr></table>",
+    '<div style="margin-bottom:12px;font-size:10px;font-weight:700;letter-spacing:.14em;color:#26303C;">SERVICE BREAKDOWN</div>',
+    '<table role="presentation" style="width:100%;border-collapse:collapse;"><thead><tr style="background:#26303C;">',
+    '<th style="padding:12px;text-align:left;font-size:9px;letter-spacing:.08em;color:#FFFFFF;">SERVICE / DESCRIPTION</th>',
+    '<th style="padding:12px 8px;text-align:center;font-size:9px;letter-spacing:.08em;color:#FFFFFF;">QTY</th>',
+    '<th style="padding:12px 10px;text-align:right;font-size:9px;letter-spacing:.08em;color:#FFFFFF;">UNIT PRICE</th>',
+    '<th style="padding:12px;text-align:right;font-size:9px;letter-spacing:.08em;color:#FFFFFF;">AMOUNT</th>',
+    "</tr></thead><tbody>" + rows + "</tbody></table>",
+    '<table role="presentation" style="width:100%;margin-top:22px;border-collapse:collapse;">',
+    '<tr><td style="padding:5px 0;color:#778397;font-size:12px;">Subtotal</td><td style="padding:5px 0;text-align:right;color:#26303C;font-size:12px;font-weight:700;">' + escapeHtml(money(invoice.subtotal)) + "</td></tr>",
+    Number(invoice.discount || 0) > 0 ? '<tr><td style="padding:5px 0;color:#778397;font-size:12px;">Discount</td><td style="padding:5px 0;text-align:right;color:#26303C;font-size:12px;font-weight:700;">-' + escapeHtml(money(invoice.discount)) + "</td></tr>" : "",
+    Number(invoice.vat_amount || 0) > 0 ? '<tr><td style="padding:5px 0;color:#778397;font-size:12px;">VAT (' + escapeHtml(Number(invoice.vat_rate || 0)) + '%)</td><td style="padding:5px 0;text-align:right;color:#26303C;font-size:12px;font-weight:700;">' + escapeHtml(money(invoice.vat_amount)) + "</td></tr>" : "",
+    "</table>",
+    '<div style="margin-top:15px;padding:19px 21px;background:#202B3A;border-left:4px solid #0152F4;"><table role="presentation" style="width:100%;border-collapse:collapse;"><tr>',
+    '<td style="color:#D3DCE8;font-size:10px;font-weight:700;letter-spacing:.14em;">' + (invoice.status === "paid" ? "TOTAL PAID" : "TOTAL DUE") + "</td>",
+    '<td style="text-align:right;color:#FFFFFF;font-size:23px;font-weight:800;letter-spacing:-.025em;white-space:nowrap;">' + escapeHtml(money(invoice.total)) + "</td>",
+    "</tr></table></div>",
+    invoice.notes ? '<div style="margin-top:25px;padding:17px 19px;background:#F7F9FC;border:1px solid #E7EBF2;"><div style="margin-bottom:7px;font-size:9px;font-weight:700;letter-spacing:.13em;color:#0152F4;">PROJECT NOTES</div><div style="font-size:12px;line-height:1.7;color:#687487;">' + escapeHtml(invoice.notes) + "</div></div>" : "",
+    settings.payment_instructions ? '<div style="margin-top:24px;font-size:12px;line-height:1.75;color:#687487;"><strong style="color:#26303C;">Payment instructions</strong><br>' + escapeHtml(settings.payment_instructions) + "</div>" : "",
+    hasBankingDetails ? '<div style="margin-top:18px;padding:19px 20px;background:#F1F6FF;border:1px solid #DCE6F7;"><div style="margin-bottom:11px;font-size:10px;font-weight:700;letter-spacing:.13em;color:#002096;">BANKING DETAILS</div><div style="font-size:12px;line-height:1.85;color:#687487;">' + bankingDetails.join("<br>") + "</div>" + (settings.account_number ? '<div style="margin-top:14px;padding:13px 15px;background:#FFFFFF;border:1px solid #DCE6F7;"><div style="font-size:9px;font-weight:700;letter-spacing:.13em;color:#0152F4;">ACCOUNT NUMBER</div><div style="margin-top:7px;font-family:Consolas,Menlo,monospace;font-size:17px;font-weight:700;letter-spacing:.07em;color:#202B3A;user-select:text;-webkit-user-select:text;">' + escapeHtml(String(settings.account_number)) + "</div></div>" : "") + "</div>" : "",
+    '<p style="margin:27px 0 0;color:#687487;font-size:12px;line-height:1.75;">Thank you for choosing Swayphics. We appreciate the opportunity to work with your business.</p>',
+    '<p style="margin:16px 0 0;color:#26303C;font-size:12px;line-height:1.7;font-weight:700;">Kind regards,<br>Swayphics</p>',
+    "</div>",
+    '<div style="padding:22px 34px;background:#F7F9FC;border-top:1px solid #E7EBF2;font-size:10px;line-height:1.8;color:#778397;">',
+    "<strong style=\"color:#26303C;\">" + escapeHtml(settings.business_name || "Swayphics") + "</strong><br>",
+    escapeHtml(settings.email || "info@swayphics.co.za") + ' · <a href="https://swayphics.co.za" style="color:#0152F4;text-decoration:none;">swayphics.co.za</a><br>',
+    '<a href="https://swayphics.co.za/privacy-policy/" style="color:#778397;text-decoration:underline;">Privacy Policy</a><span style="padding:0 6px;color:#B4BFCE;">·</span><a href="https://swayphics.co.za/terms-and-conditions/" style="color:#778397;text-decoration:underline;">Terms &amp; Conditions</a><br>',
+    '<span style="color:#9AA5B4;">© ' + new Date().getFullYear() + ' Swayphics. All rights reserved.</span><br>',
+    '<span style="color:#9AA5B4;">This email and its attachments are intended only for the addressed recipient. If received in error, please notify the sender and delete it.</span>',
+    "</div></div></div></body></html>",
+  ].join("\n");
 }
 
 Deno.serve(async (req) => {
