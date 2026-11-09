@@ -180,7 +180,8 @@
             icon: "globe",
             items: [
                 ["content", "Website content"],
-                ["testimonials", "Testimonials"]
+                ["testimonials", "Testimonials"],
+                ["cookie-analytics", "Cookie Analytics"]
             ]
         },
         {
@@ -4699,6 +4700,10 @@
             testimonials: [
                 "Testimonials",
                 "Review client feedback connected to the website."
+            ],
+            "cookie-analytics": [
+                "Cookie Analytics",
+                "Monitor anonymous cookie-consent decisions and preference changes."
             ],
             "social-overview": [
                 "Social media",
@@ -26465,6 +26470,196 @@ function simpleBars(items, color) {
         );
     }
 
+    let cookieAnalyticsDays = 30;
+    let cookieAnalyticsRequestId = 0;
+
+    function renderCookieAnalytics() {
+        return (
+            heading() +
+            '<section class="sway-cookie-analytics">' +
+                '<div class="sway-cookie-analytics-toolbar">' +
+                    '<div>' +
+                        '<strong>Consent activity</strong>' +
+                        '<p>Anonymous consent decisions recorded from the website after this feature is released.</p>' +
+                    '</div>' +
+                    '<div class="sway-cookie-analytics-controls">' +
+                        '<label for="sway-cookie-analytics-days">Period</label>' +
+                        '<select id="sway-cookie-analytics-days" aria-label="Cookie analytics reporting period">' +
+                            '<option value="7"' + (cookieAnalyticsDays === 7 ? " selected" : "") + '>7 days</option>' +
+                            '<option value="30"' + (cookieAnalyticsDays === 30 ? " selected" : "") + '>30 days</option>' +
+                            '<option value="90"' + (cookieAnalyticsDays === 90 ? " selected" : "") + '>90 days</option>' +
+                        '</select>' +
+                        '<button type="button" id="sway-cookie-analytics-refresh" class="sway-cookie-analytics-refresh">Refresh</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="sway-cookie-analytics-report" aria-live="polite">' +
+                    '<div class="sway-cookie-analytics-empty">Loading consent analytics…</div>' +
+                '</div>' +
+                '<p class="sway-cookie-analytics-footnote">Reports contain aggregate counts only. They do not identify individual visitors. Acceptance rate is calculated from initial accept/reject decisions; later changes and withdrawals are reported separately.</p>' +
+            '</section>'
+        );
+    }
+
+    function renderCookieAnalyticsReport(rows, days) {
+        const safeCount = function (value) {
+            const number = Number(value || 0);
+            return Number.isFinite(number) ? Math.max(0, number) : 0;
+        };
+        const totals = (Array.isArray(rows) ? rows : []).reduce(function (result, row) {
+            result.accepted += safeCount(row.accepted);
+            result.rejected += safeCount(row.rejected);
+            result.changed += safeCount(row.changed);
+            result.withdrawn += safeCount(row.withdrawn);
+            result.decisions += safeCount(row.total_decisions);
+            return result;
+        }, { accepted: 0, rejected: 0, changed: 0, withdrawn: 0, decisions: 0 });
+
+        const initialChoices = totals.accepted + totals.rejected;
+        const acceptanceRate = initialChoices
+            ? (totals.accepted / initialChoices * 100).toFixed(1) + "%"
+            : "—";
+        const preferenceUpdates = totals.changed + totals.withdrawn;
+
+        const metrics = [
+            ["Recorded decisions", totals.decisions.toLocaleString("en-ZA"), "All recorded consent actions"],
+            ["Accepted initially", totals.accepted.toLocaleString("en-ZA"), "First recorded accept decisions"],
+            ["Rejected initially", totals.rejected.toLocaleString("en-ZA"), "First recorded reject decisions"],
+            ["Acceptance rate", acceptanceRate, "Of initial accept/reject choices"],
+            ["Preference updates", preferenceUpdates.toLocaleString("en-ZA"), "Changes and withdrawals"]
+        ].map(function (metric) {
+            return (
+                '<article class="sway-cookie-analytics-metric">' +
+                    '<span>' + esc(metric[0]) + '</span>' +
+                    '<strong>' + esc(metric[1]) + '</strong>' +
+                    '<small>' + esc(metric[2]) + '</small>' +
+                '</article>'
+            );
+        }).join("");
+
+        const maxDaily = Math.max.apply(null, (rows || []).map(function (row) {
+            return safeCount(row.total_decisions);
+        }).concat([1]));
+
+        const chartRows = (rows || []).slice().reverse().map(function (row) {
+            const values = [
+                ["accepted", safeCount(row.accepted), "accepted"],
+                ["rejected", safeCount(row.rejected), "rejected"],
+                ["changed", safeCount(row.changed), "changed"],
+                ["withdrawn", safeCount(row.withdrawn), "withdrawn"]
+            ];
+            const segments = values.map(function (entry) {
+                if (!entry[1]) return "";
+                const width = Math.max(0, Math.min(100, entry[1] / maxDaily * 100));
+                return '<span class="sway-cookie-chart-segment is-' + entry[2] + '" style="width:' + width.toFixed(2) + '%"></span>';
+            }).join("");
+            let dateLabel = String(row.consent_date || "");
+            try {
+                const date = new Date(dateLabel + "T12:00:00");
+                if (!Number.isNaN(date.getTime())) {
+                    dateLabel = date.toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
+                }
+            } catch (error) {
+                // Keep the database date label.
+            }
+            return (
+                '<div class="sway-cookie-chart-row">' +
+                    '<span class="sway-cookie-chart-date">' + esc(dateLabel) + '</span>' +
+                    '<div class="sway-cookie-chart-track" aria-label="' + esc(safeCount(row.total_decisions)) + ' recorded decisions">' + segments + '</div>' +
+                    '<strong>' + safeCount(row.total_decisions).toLocaleString("en-ZA") + '</strong>' +
+                '</div>'
+            );
+        }).join("");
+
+        const chart = rows && rows.length
+            ? (
+                '<section class="sway-cookie-analytics-chart-panel">' +
+                    '<div class="sway-cookie-analytics-chart-heading">' +
+                        '<div><h3>Daily consent decisions</h3><p>Recorded decision events by South African calendar date.</p></div>' +
+                        '<span>Last ' + esc(days) + ' days</span>' +
+                    '</div>' +
+                    '<div class="sway-cookie-analytics-legend">' +
+                        '<span><i class="is-accepted"></i>Accepted</span>' +
+                        '<span><i class="is-rejected"></i>Rejected</span>' +
+                        '<span><i class="is-changed"></i>Changed</span>' +
+                        '<span><i class="is-withdrawn"></i>Withdrawn</span>' +
+                    '</div>' +
+                    '<div class="sway-cookie-analytics-chart">' + chartRows + '</div>' +
+                '</section>'
+            )
+            : (
+                '<div class="sway-cookie-analytics-empty">' +
+                    '<strong>No consent decisions recorded yet</strong>' +
+                    '<span>New accept, reject and preference-change decisions will appear here after the updated website is deployed.</span>' +
+                '</div>'
+            );
+
+        return (
+            '<div class="sway-cookie-analytics-metrics">' + metrics + '</div>' +
+            chart +
+            '<div class="sway-cookie-analytics-source-note">Source: Swayphics consent-decision records in Supabase. Existing browser choices made before this feature is released are not backfilled.</div>'
+        );
+    }
+
+    async function loadCookieAnalyticsReport(days) {
+        const report = document.getElementById("sway-cookie-analytics-report");
+        const refresh = document.getElementById("sway-cookie-analytics-refresh");
+        if (!report || state.currentView !== "cookie-analytics") return;
+
+        const requestId = ++cookieAnalyticsRequestId;
+        const selectedDays = [7, 30, 90].includes(Number(days)) ? Number(days) : 30;
+        cookieAnalyticsDays = selectedDays;
+        report.innerHTML = '<div class="sway-cookie-analytics-empty">Loading consent analytics…</div>';
+        if (refresh) refresh.disabled = true;
+
+        try {
+            const rows = await api(
+                "/rest/v1/rpc/get_swayphics_cookie_analytics",
+                {
+                    method: "POST",
+                    body: JSON.stringify({ p_days: selectedDays })
+                }
+            );
+
+            if (
+                requestId !== cookieAnalyticsRequestId ||
+                state.currentView !== "cookie-analytics" ||
+                !document.getElementById("sway-cookie-analytics-report")
+            ) return;
+
+            report.innerHTML = renderCookieAnalyticsReport(
+                Array.isArray(rows) ? rows : [],
+                selectedDays
+            );
+        } catch (error) {
+            if (requestId !== cookieAnalyticsRequestId) return;
+            report.innerHTML =
+                '<div class="sway-cookie-analytics-error">' +
+                    '<strong>Cookie analytics could not be loaded.</strong>' +
+                    '<span>' + esc(error && error.message ? error.message : "Please refresh and try again.") + '</span>' +
+                '</div>';
+        } finally {
+            if (requestId === cookieAnalyticsRequestId) {
+                const currentRefresh = document.getElementById("sway-cookie-analytics-refresh");
+                if (currentRefresh) currentRefresh.disabled = false;
+            }
+        }
+    }
+
+    function bindCookieAnalyticsActions() {
+        const period = document.getElementById("sway-cookie-analytics-days");
+        const refresh = document.getElementById("sway-cookie-analytics-refresh");
+        if (period) {
+            period.addEventListener("change", function () {
+                loadCookieAnalyticsReport(Number(period.value));
+            });
+        }
+        if (refresh) {
+            refresh.addEventListener("click", function () {
+                loadCookieAnalyticsReport(cookieAnalyticsDays);
+            });
+        }
+    }
+
     function renderView(forceInnerMeRender) {
         const main =
             document.getElementById(
@@ -26519,6 +26714,11 @@ function simpleBars(items, color) {
             if (state.currentView === "insights") {
                 main.innerHTML =
                     renderInsights();
+            }
+
+            if (state.currentView === "cookie-analytics") {
+                main.innerHTML =
+                    renderCookieAnalytics();
             }
 
             if (state.currentView === "reminders") {
@@ -26668,6 +26868,11 @@ function simpleBars(items, color) {
             }
 
             bindViewActions();
+
+            if (state.currentView === "cookie-analytics") {
+                bindCookieAnalyticsActions();
+                loadCookieAnalyticsReport(cookieAnalyticsDays);
+            }
 
             if (isInnerMeView(state.currentView)) {
                 applyInnerMeSubview(state.currentView);

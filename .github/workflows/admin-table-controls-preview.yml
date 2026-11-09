@@ -29,6 +29,8 @@ on:
       - "scripts/admin-table-controls-db-smoke.cjs"
       - "scripts/first-contact-automation-db-smoke.cjs"
       - "scripts/due-work-notification-db-smoke.cjs"
+      - "scripts/cookie-consent-analytics-db-smoke.cjs"
+      - "supabase/migrations/20261109103757_swayphics_cookie_consent_analytics.sql"
       - "scripts/admin-dashboard-business-controls.test.cjs"
       - "supabase/migrations/20261107190000_swayphics_first_contact_task_automation.sql"
       - "supabase/migrations/20261107210000_escalate_unassigned_due_work.sql"
@@ -130,6 +132,8 @@ jobs:
             "supabase/migrations/20261107190000_swayphics_first_contact_task_automation.sql"
           cp "$GITHUB_WORKSPACE/supabase/migrations/20261107210000_escalate_unassigned_due_work.sql" \
             "supabase/migrations/20261107210000_escalate_unassigned_due_work.sql"
+          cp "$GITHUB_WORKSPACE/supabase/migrations/20261109103757_swayphics_cookie_consent_analytics.sql" \
+            "supabase/migrations/20261109103757_swayphics_cookie_consent_analytics.sql"
           cp "$GITHUB_WORKSPACE/tests/admin-table-controls-db/first-contact-automation-test.sql" \
             "supabase/migrations/20261107210100_automation_test_rpcs.sql"
           "$CLI" start
@@ -147,6 +151,7 @@ jobs:
           node scripts/admin-table-controls-db-smoke.cjs
           node scripts/first-contact-automation-db-smoke.cjs
           node scripts/due-work-notification-db-smoke.cjs
+          node scripts/cookie-consent-analytics-db-smoke.cjs
 
       - name: Upload isolated test artifacts
         if: always()

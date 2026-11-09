@@ -44,7 +44,7 @@ const expectedGroups = [
     ["crm", "Clients & Pipeline", ["enquiries", "leads", "clients", "communications", "email", "documents", "followups"]],
     ["delivery", "Work & Portfolio", ["projects", "tasks", "portfolio"]],
     ["billing", "Sales & Billing", ["quotes", "invoices", "payments", "services", "invoice-settings"]],
-    ["website", "Website", ["content", "testimonials"]],
+    ["website", "Website", ["content", "testimonials", "cookie-analytics"]],
     ["settings", "Settings", ["settings"]],
     ["admin", "Administration", ["activity", "portal-requests", "data-export", "team"]]
 ];
@@ -65,8 +65,8 @@ groupMatches.forEach((match, index) => {
     actualViewIds.push(...items);
 });
 
-assert.equal(actualViewIds.length, 30, "all 30 current destinations must remain available");
-assert.equal(new Set(actualViewIds).size, 30, "navigation destination IDs must be unique");
+assert.equal(actualViewIds.length, 31, "all 31 current destinations must remain available");
+assert.equal(new Set(actualViewIds).size, 31, "navigation destination IDs must be unique");
 
 const renderShell = extractConstant(
     workspace,

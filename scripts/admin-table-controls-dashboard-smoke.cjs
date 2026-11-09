@@ -221,6 +221,7 @@ const metrics = {
   apiReads: 0,
   apiMutationsBlocked: [],
   mockedStartupCalls: [],
+  mockedReadOnlyFunctionCalls: [],
   mockedTableActionWrites: [],
   unexpectedExternalRequests: [],
   pageErrors: [],
@@ -427,6 +428,20 @@ async function main() {
       if (method === "POST" && url.pathname === "/functions/v1/sync-email-inbox") {
         metrics.mockedStartupCalls.push({ method, path: url.pathname });
         return route.fulfill(jsonResponse({ success: true, synced: 0, unread: 0 }));
+      }
+
+      // Client 360 retrieves onboarding uploads through a POST-based read
+      // endpoint. Stub it separately from mutation tracking so this real
+      // read operation never reaches Supabase during the synthetic browser run.
+      if (method === "POST" && url.pathname === "/functions/v1/admin-client-onboarding-assets") {
+        const payload = JSON.parse(request.postData() || "{}");
+        metrics.mockedReadOnlyFunctionCalls.push({
+          method,
+          path: url.pathname,
+          client_id: String(payload.client_id || ""),
+          limit: Number(payload.limit || 0)
+        });
+        return route.fulfill(jsonResponse({ ok: true, files: [] }));
       }
 
       if (method === "POST" && url.pathname === "/functions/v1/delete-email-messages") {
@@ -1417,6 +1432,14 @@ async function main() {
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
+    assert.deepEqual(
+      metrics.mockedReadOnlyFunctionCalls.map(item => item.client_id).sort(),
+      ["44444444-4444-4444-8444-444444444444", "client-alpha"].sort(),
+      "Client 360 onboarding-asset reads should be intercepted for the exact synthetic clients"
+    );
+    assert.ok(metrics.mockedReadOnlyFunctionCalls.every(item =>
+      item.path === "/functions/v1/admin-client-onboarding-assets" && item.limit === 200
+    ), "Client 360 onboarding-asset lookups should use the expected read-only endpoint contract");
     assert.ok(metrics.mockedTableActionWrites.length >= 15,
       "the in-memory mock should capture the expected lead, task, follow-up, communication and inbox delete operations");
     assert.ok(metrics.mockedTableActionWrites.some(item =>
@@ -1443,6 +1466,7 @@ async function main() {
       unexpectedApiWritesBlocked: metrics.apiMutationsBlocked.length,
       inMemoryActionWritesIntercepted: metrics.mockedTableActionWrites,
       startupCallsInterceptedBeforeNetwork: metrics.mockedStartupCalls,
+      readOnlyFunctionCallsInterceptedBeforeNetwork: metrics.mockedReadOnlyFunctionCalls,
       externalRequestsBlocked: metrics.unexpectedExternalRequests.length,
       pageErrors: metrics.pageErrors.length,
       checks: [

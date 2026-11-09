@@ -10201,3 +10201,55 @@ body.sway-dark-mode #sway-admin-workspace .sway-email-inbox-read-toggle:focus-vi
         padding: 6px 9px;
     }
 }
+
+
+/* =========================================================
+   COOKIE CONSENT ANALYTICS
+   ========================================================= */
+.sway-cookie-analytics{display:grid;gap:16px}
+.sway-cookie-analytics-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border:1px solid rgba(0,32,150,.09);border-radius:18px;background:rgba(255,255,255,.82);box-shadow:0 8px 25px rgba(8,21,51,.035)}
+.sway-cookie-analytics-toolbar>div:first-child{min-width:0}
+.sway-cookie-analytics-toolbar strong{display:block;color:#081533;font-size:13px;font-weight:850}
+.sway-cookie-analytics-toolbar p{margin:5px 0 0;color:#718096;font-size:10px;line-height:1.55}
+.sway-cookie-analytics-controls{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.sway-cookie-analytics-controls label{color:#66748a;font-size:10px;font-weight:750}
+.sway-cookie-analytics-controls select,.sway-cookie-analytics-refresh{min-height:36px;padding:0 12px;border:1px solid rgba(0,32,150,.12);border-radius:10px;background:#fff;color:#12203b;font:600 11px 'Montserrat',sans-serif}
+.sway-cookie-analytics-refresh{background:#002096;color:#fff;border-color:#002096;cursor:pointer}
+.sway-cookie-analytics-refresh:disabled{opacity:.55;cursor:wait}
+.sway-cookie-analytics-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+.sway-cookie-analytics-metric{min-width:0;padding:16px;border:1px solid rgba(0,32,150,.085);border-radius:16px;background:rgba(255,255,255,.86);box-shadow:0 8px 24px rgba(8,21,51,.03)}
+.sway-cookie-analytics-metric span,.sway-cookie-analytics-metric small{display:block;color:#77849a;font-size:9px;font-weight:700;line-height:1.45}
+.sway-cookie-analytics-metric strong{display:block;margin:10px 0 5px;color:#081533;font-size:clamp(20px,2.5vw,27px);font-weight:850;letter-spacing:-.045em;line-height:1.05;overflow-wrap:anywhere}
+.sway-cookie-analytics-chart-panel{padding:20px;border:1px solid rgba(0,32,150,.085);border-radius:18px;background:rgba(255,255,255,.86);box-shadow:0 8px 24px rgba(8,21,51,.03)}
+.sway-cookie-analytics-chart-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.sway-cookie-analytics-chart-heading h3{margin:0;color:#081533;font-size:13px;font-weight:850}
+.sway-cookie-analytics-chart-heading p{margin:5px 0 0;color:#77849a;font-size:10px;line-height:1.5}
+.sway-cookie-analytics-chart-heading>span{flex:0 0 auto;color:#66748a;font-size:10px;font-weight:750}
+.sway-cookie-analytics-legend{display:flex;flex-wrap:wrap;gap:13px;margin:18px 0 13px}
+.sway-cookie-analytics-legend span{display:inline-flex;align-items:center;gap:6px;color:#64708a;font-size:9px;font-weight:700}
+.sway-cookie-analytics-legend i{width:8px;height:8px;border-radius:3px;background:#176b48}
+.sway-cookie-analytics-legend i.is-rejected{background:#96a0af}
+.sway-cookie-analytics-legend i.is-changed{background:#2c91fc}
+.sway-cookie-analytics-legend i.is-withdrawn{background:#d59b39}
+.sway-cookie-analytics-chart{display:grid;gap:9px}
+.sway-cookie-chart-row{display:grid;grid-template-columns:58px minmax(0,1fr) 38px;align-items:center;gap:10px}
+.sway-cookie-chart-date{color:#748198;font-size:9px;font-weight:700}
+.sway-cookie-chart-row>strong{color:#45536b;font-size:9px;text-align:right}
+.sway-cookie-chart-track{display:flex;align-items:stretch;width:100%;height:11px;overflow:hidden;border-radius:99px;background:#edf1f7}
+.sway-cookie-chart-segment{display:block;min-width:0;height:100%}
+.sway-cookie-chart-segment.is-accepted{background:#176b48}
+.sway-cookie-chart-segment.is-rejected{background:#96a0af}
+.sway-cookie-chart-segment.is-changed{background:#2c91fc}
+.sway-cookie-chart-segment.is-withdrawn{background:#d59b39}
+.sway-cookie-analytics-empty,.sway-cookie-analytics-error{display:grid;gap:7px;justify-items:center;padding:34px 20px;border:1px dashed rgba(0,32,150,.18);border-radius:16px;background:rgba(255,255,255,.62);color:#748198;text-align:center;font-size:10px;line-height:1.6}
+.sway-cookie-analytics-empty strong,.sway-cookie-analytics-error strong{color:#152542;font-size:12px}
+.sway-cookie-analytics-error{border-color:rgba(185,70,70,.22);color:#9a4b4b}
+.sway-cookie-analytics-error strong{color:#9f3535}
+.sway-cookie-analytics-footnote,.sway-cookie-analytics-source-note{margin:0;color:#8490a3;font-size:9px;line-height:1.65}
+body.sway-dark-mode .sway-cookie-analytics-toolbar,body.sway-dark-mode .sway-cookie-analytics-metric,body.sway-dark-mode .sway-cookie-analytics-chart-panel{background:rgba(12,23,43,.9);border-color:rgba(119,193,252,.12);box-shadow:none}
+body.sway-dark-mode .sway-cookie-analytics-toolbar strong,body.sway-dark-mode .sway-cookie-analytics-metric strong,body.sway-dark-mode .sway-cookie-analytics-chart-heading h3,body.sway-dark-mode .sway-cookie-analytics-empty strong{color:#eef4ff}
+body.sway-dark-mode .sway-cookie-analytics-controls select{background:#101f39;color:#eef4ff;border-color:rgba(119,193,252,.18)}
+body.sway-dark-mode .sway-cookie-analytics-chart-track{background:#26344b}
+body.sway-dark-mode .sway-cookie-analytics-empty{background:rgba(12,23,43,.55);border-color:rgba(119,193,252,.18)}
+@media(max-width:1050px){.sway-cookie-analytics-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:680px){.sway-cookie-analytics-toolbar{align-items:flex-start;flex-direction:column;padding:15px}.sway-cookie-analytics-controls{width:100%;flex-wrap:wrap}.sway-cookie-analytics-controls select{flex:1}.sway-cookie-analytics-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-cookie-analytics-chart-panel{padding:15px}.sway-cookie-chart-row{grid-template-columns:48px minmax(0,1fr) 28px;gap:7px}.sway-cookie-analytics-chart-heading{flex-direction:column}}

@@ -583,7 +583,7 @@
         </p>
 
         <div class="legal-meta">
-            Last updated: 1 October 2026
+            Last updated: 9 November 2026
         </div>
 
     </header>
@@ -625,6 +625,8 @@
             <p>The consent banner stores the visitor's choice using browser local storage under the key <code>swayphics_cookie_consent</code>. This is local storage rather than a traditional HTTP cookie.</p>
             <p>The stored value records whether analytics consent was accepted or rejected so that the website can remember the choice on later visits. It is used for consent management and is not used by Swayphics as an advertising identifier.</p>
             <p>The local-storage preference remains in the browser until it is changed or removed, including through the browser's site-data controls.</p>
+            <p>When a visitor first selects Accept or Reject, or later changes that choice, Swayphics records an anonymous consent-decision event in its Supabase database. The record contains the decision type, consent outcome, date and time, Cookie Policy version, page path, whether the choice was made through the banner or preference controls, and a random identifier kept in session storage for that browser tab session. It does not contain a name, email address, IP address, browser user-agent string or persistent visitor identifier.</p>
+            <p>Authorised Swayphics administrators see aggregate counts and daily trends rather than an individual visitor activity profile. These records are used to monitor consent operation and preference changes, not for advertising.</p>
         </section>
 
         <section id="analytics">
@@ -654,15 +656,16 @@
 
         <section id="consent">
             <h2>07 · Consent choices</h2>
-            <p>The Swayphics cookie banner gives visitors a choice to accept or reject analytics cookies. Analytics is loaded only after an “Accept Analytics” selection has been recorded.</p>
+            <p>The Swayphics cookie banner gives visitors a choice to accept or reject analytics cookies. Google Analytics is loaded only after an “Accept Analytics” selection has been recorded. A rejection or withdrawal updates the analytics consent state to denied and the website attempts to remove accessible first-party Google Analytics cookies.</p>
             <p>Where consent is required by applicable law, Swayphics will use the consent mechanism described on this website to obtain that choice before enabling optional analytics storage.</p>
-            <p>A visitor can also control or remove cookies and local storage through the browser used to access the website. Removing site data may cause the consent banner to appear again.</p>
+            <p>Each new decision or preference change is recorded as anonymous consent metadata as described under Necessary storage. Existing browser choices made before the consent-monitoring feature was introduced are not reconstructed or backfilled.</p>
         </section>
 
         <section id="manage">
             <h2>08 · Managing cookies</h2>
             <p>Most browsers allow visitors to view, block, delete or restrict cookies and other site data through browser settings. The exact controls differ between browsers and devices.</p>
             <p>Blocking or deleting site data may affect how the website remembers preferences or may require a new consent choice. Visitors can also clear the Swayphics consent value by removing the site's stored data in their browser.</p>
+            <p>Visitors can reopen the consent banner at any time using the “Cookie preferences” control in the website footer, or by <a href="../?manage-cookies=1">opening cookie preferences here</a>. They can then accept analytics or reject it, including withdrawing a previous acceptance.</p>
         </section>
 
         <section id="third-party">
