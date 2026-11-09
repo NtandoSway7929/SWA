@@ -70,6 +70,21 @@ assert.ok(
     navSource.match(/\{\s*id:\s*"settings",\s*label:\s*"Settings",\s*icon:\s*"settings"/),
     "the final Settings destination must declare its settings icon"
 );
+assert.ok(
+    navSource.match(/\{\s*id:\s*"admin",\s*label:\s*"Administration",\s*icon:\s*"shield"/),
+    "Administration must retain a distinct shield icon"
+);
+const navGroupIconRenderer = extractConstant(
+    workspace,
+    "function navGroupIcon(name) {",
+    "\n    function token()",
+    "navigation icon renderer"
+);
+assert.ok(
+    navGroupIconRenderer.includes("shield:") &&
+    navGroupIconRenderer.includes("settings:"),
+    "both the Administration shield and Settings gear icons must resolve"
+);
 const settingsButtonRenderer = extractConstant(
     workspace,
     "function navButton(item) {",
