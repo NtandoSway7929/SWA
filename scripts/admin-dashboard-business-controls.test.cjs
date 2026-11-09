@@ -188,13 +188,11 @@ test("automation-health RPC requires an active admin and limits exposed jobs", (
 
 test("the migration and baseline use balanced PL/pgSQL dollar delimiters", () => {
   function delimiterStats(source) {
-    const lines = source.split(/\r?\n/);
-    return {
-      malformedOpen: lines.filter(line => line === "as $" || line === "do $").length,
-      malformedClose: lines.filter(line => line === "$;").length,
-      opens: lines.filter(line => line === "as $$" || line === "do $$").length,
-      closes: lines.filter(line => line === "$$;").length
-    };
+    const malformedOpen = (source.match(/\b(?:as|do)\s+\$(?!\$)/gi) || []).length;
+    const malformedClose = (source.match(/(?<!\$)\$(?!\$);/g) || []).length;
+    const opens = (source.match(/\b(?:as|do)\s+\$\$/gi) || []).length;
+    const closes = (source.match(/\$\$;/g) || []).length;
+    return { malformedOpen, malformedClose, opens, closes };
   }
   for (const [name, source] of [["migration", migration], ["follow-up sequence migration", followupSequenceMigration], ["baseline", baseline]]) {
     const stats = delimiterStats(source);
