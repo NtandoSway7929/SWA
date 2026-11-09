@@ -327,4 +327,12 @@ function assertConsentEvent(browser, index, expected) {
   assert.deepEqual(browser.replacements, ["/?source=cookie-policy#privacy"]);
 }
 
-console.log("Cookie consent analytics tests passed (7 scenarios).");
+const cookiePolicy = fs.readFileSync(path.join(__dirname, "..", "cookie-policy", "index.html"), "utf8");
+assert.ok(cookiePolicy.includes("attempts to remove accessible first-party Google Analytics cookies"),
+  "the Cookie Policy must accurately describe the cookie-removal attempt");
+assert.ok(cookiePolicy.includes("Cookies that are inaccessible to the page"),
+  "the Cookie Policy must disclose the limits of JavaScript-accessible cookie removal");
+assert.ok(!cookiePolicy.includes("does not automatically delete Analytics cookies"),
+  "the Cookie Policy must not retain the outdated claim that no cookie-removal attempt is made");
+
+console.log("Cookie consent analytics tests passed (7 scenarios plus policy-accuracy assertions).");
