@@ -243,8 +243,8 @@ begin
     return v_lead;
 end;
 $$;
-revoke all on function public.recalculate_swayphics_lead_contact_clock(uuid) from public;
-grant execute on function public.recalculate_swayphics_lead_contact_clock(uuid) to authenticated;
+revoke all privileges on function public.recalculate_swayphics_lead_contact_clock(uuid)
+from public, anon, authenticated, service_role;
 
 
 -- Central dashboard control for explicitly marking a lead as contacted.
