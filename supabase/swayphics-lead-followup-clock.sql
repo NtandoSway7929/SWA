@@ -204,6 +204,9 @@ before insert or update of status on public.leads
 for each row
 execute function public.touch_swayphics_lead_contacted();
 
+revoke all privileges on function public.touch_swayphics_lead_contacted()
+from public, anon, authenticated, service_role;
+
 -- Central function used by the admin dashboard's manual Contacted control.
 -- It also starts/resets the follow-up clock.
 create or replace function public.set_swayphics_lead_manual_contact(
