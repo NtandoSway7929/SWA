@@ -209,14 +209,6 @@ async function main() {
     assert.equal(second.scheduled_for, addBusinessDays(firstCompletionDueDate, 2));
     assert.equal(second.status, "pending");
 
-    await rest("PATCH", "follow_ups", "id=eq." + second.id, {
-      status: "completed",
-      completed_at: new Date().toISOString()
-    });
-    const disqualified = (await rest("GET", "leads", "select=status,next_follow_up&id=eq." + dueLeadId)).data[0];
-    assert.equal(disqualified.status, "lost", "completion of attempt two must disqualify the lead");
-    assert.equal(disqualified.next_follow_up, null, "a disqualified lead must have no next follow-up date");
-
     const thirdAttempt = await rest("POST", "follow_ups", "", [{
       lead_id: dueLeadId,
       assigned_to: owner.id,
@@ -225,7 +217,16 @@ async function main() {
       status: "pending",
       note: "This should be rejected by the two-attempt limit."
     }], { allowError: true });
-    assert.ok(thirdAttempt.status >= 400, "the database must reject a third follow-up on a disqualified lead");
+    assert.ok(thirdAttempt.status >= 400,
+      "the database must reject a third follow-up while the lead is still active");
+
+    await rest("PATCH", "follow_ups", "id=eq." + second.id, {
+      status: "completed",
+      completed_at: new Date().toISOString()
+    });
+    const disqualified = (await rest("GET", "leads", "select=status,next_follow_up&id=eq." + dueLeadId)).data[0];
+    assert.equal(disqualified.status, "lost", "completion of attempt two must disqualify the lead");
+    assert.equal(disqualified.next_follow_up, null, "a disqualified lead must have no next follow-up date");
 
     const finalScan = await request("/rest/v1/rpc/run_swayphics_first_contact_automation_test", {
       method: "POST", body: {}
