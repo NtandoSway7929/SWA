@@ -185,14 +185,6 @@
             ]
         },
         {
-            id: "settings",
-            label: "Settings",
-            icon: "settings",
-            items: [
-                ["settings", "Greeting name"]
-            ]
-        },
-        {
             id: "admin",
             label: "Administration",
             icon: "settings",
@@ -201,6 +193,14 @@
                 ["portal-requests", "Portal requests"],
                 ["data-export", "Data & backup"],
                 ["team", "Team"]
+            ]
+        },
+        {
+            id: "settings",
+            label: "Settings",
+            icon: "settings",
+            items: [
+                ["settings", "Greeting name"]
             ]
         }
     ];
@@ -4797,6 +4797,16 @@
 
     function navButton(item) {
         const view = item[0];
+        const settingsIcon =
+            view === "settings"
+                ? '<span class="sway-workspace-nav-group-icon" aria-hidden="true">' +
+                    navGroupIcon("settings") +
+                  '</span>'
+                : "";
+        const settingsLabelClass =
+            view === "settings"
+                ? ' class="sway-settings-direct-label"'
+                : "";
         let count = "";
 
         if (view === "tasks" && state.currentUser && state.currentUser.id) {
@@ -4838,7 +4848,10 @@
             '" data-view="' +
             esc(view) +
             '">' +
-            '<span>' +
+            settingsIcon +
+            '<span' +
+            settingsLabelClass +
+            '>' +
             esc(formatDisplayText(item[1])) +
             "</span>" +
             (
