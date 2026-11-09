@@ -365,7 +365,21 @@
             window.matchMedia &&
             window.matchMedia("(prefers-reduced-motion: reduce)").matches
         );
-        var shouldAnimate = event.detail.animate === true && !prefersReducedMotion;
+        var welcomeAnimationEnabled = true;
+        try {
+            var savedPreferences = JSON.parse(
+                window.localStorage.getItem("swayphics_admin_dashboard_preferences") || "{}"
+            );
+            if (savedPreferences && savedPreferences.welcome_animation_enabled === false) {
+                welcomeAnimationEnabled = false;
+            }
+        } catch (preferenceError) {
+            // A missing or unreadable preference preserves the existing animated default.
+        }
+        var shouldAnimate =
+            event.detail.animate === true &&
+            welcomeAnimationEnabled &&
+            !prefersReducedMotion;
 
         var greeting = document.createElement("section");
         greeting.id = "swayphics-admin-welcome";

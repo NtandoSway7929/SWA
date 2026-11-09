@@ -79,7 +79,7 @@ test("Governance renders recent run status, SAST start times, durations and safe
   assert.match(settings, /row\.result_summary/);
   assert.match(settings, /timeZone: "Africa\/Johannesburg"/);
   assert.match(settings, /Recent automation run history is unavailable/);
-  assert.match(html, /admin-settings-expanded\.js\?v=20261109-two-stage-followups-2/);
+  assert.match(html, /admin-settings-expanded\.js\?v=20261110-greeting-animation-setting-1/);
   assert.doesNotMatch(html, /20261107-first-contact-automation-1/);
 });
 

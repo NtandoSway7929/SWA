@@ -41,7 +41,8 @@
         table_density: "comfortable",
         date_format: "en-ZA",
         currency_display: "symbol",
-        reduced_motion: false
+        reduced_motion: false,
+        welcome_animation_enabled: true
     };
 
     function escapeHtml(value) {
@@ -336,7 +337,8 @@
                 ["symbol", "Currency symbol (R)"],
                 ["code", "Currency code (ZAR)"]
             ], "The ledger remains denominated in South African rand.") +
-            field("reduced_motion", "Reduce interface motion", "checkbox", "Reduce transitions and animations across the admin interface.", 'data-wide');
+            field("reduced_motion", "Reduce interface motion", "checkbox", "Reduce transitions and animations across the admin interface.", 'data-wide') +
+            field("welcome_animation_enabled", "Greeting animation", "checkbox", "Show the animated Swayphics welcome greeting when an administrator signs in.", 'data-wide');
 
         var securityPanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-security" aria-labelledby="swe-tab-security" data-settings-panel="security" hidden>' +
@@ -534,6 +536,7 @@
         try { localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(prefs)); } catch (error) {}
         document.body.classList.toggle("sway-admin-compact-tables", prefs.table_density === "compact");
         document.body.classList.toggle("sway-admin-reduced-motion", prefs.reduced_motion === true);
+        document.documentElement.setAttribute("data-sway-welcome-animation", prefs.welcome_animation_enabled === false ? "off" : "on");
         document.documentElement.setAttribute("data-sway-date-format", prefs.date_format);
         document.documentElement.setAttribute("data-sway-currency-display", prefs.currency_display);
         window.SwayphicsAdminSettings = window.SwayphicsAdminSettings || {};
