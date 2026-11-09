@@ -44,7 +44,7 @@ test("greeting name is a Settings subpanel and Settings is a direct sidebar dest
   assert.match(settingsScript, /preferencesPanel\.insertBefore\(greetingPanel, preferencesPanel\.firstElementChild\)/);
   assert.match(settingsCss, /sway-settings-direct-nav/);
   assert.match(settingsCss, /swe-greeting-settings-panel/);
-  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261109-two-stage-followups-2/);
+  assert.match(dashboardHtml, /admin-settings-expanded\.js\?v=20261110-greeting-animation-setting-1/);
   assert.match(dashboardHtml, /admin-settings-expanded\.css\?v=20261025-business-invoices-3/);
 });
 
