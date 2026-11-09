@@ -288,25 +288,6 @@
             field("vat_registered", "VAT registered", "checkbox", "Enable only if Swayphics is VAT registered.") +
             field("vat_number", "VAT number", "text", "Required when VAT registration is enabled.");
 
-        var salesFields =
-            field("new_lead_response_hours", "New enquiry response target (hours)", "number",
-                "Create an assigned first-contact task after a new lead exceeds this response target.", 'min="1" max="720" step="1" required') +
-            field("lead_no_response_days", "Fallback follow-up interval (days)", "number",
-                "Used only when a stage-specific interval has not been configured.", 'min="1" max="365" step="1" required') +
-            field("stage_days_contacted", "Contacted stage interval (days)", "number",
-                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
-            field("stage_days_interested", "Interested stage interval (days)", "number",
-                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
-            field("stage_days_proposal_sent", "Proposal sent interval (days)", "number",
-                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
-            field("stage_days_negotiating", "Negotiating stage interval (days)", "number",
-                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
-            field("stage_days_follow_up", "Follow-up stage interval (days)", "number",
-                "Leave blank to use the fallback interval.", 'min="1" max="365" step="1"') +
-            field("max_followup_attempts", "Maximum follow-up attempts", "number",
-                "After this many completed or pending attempts, flag the lead for owner review instead of creating more tasks.", 'min="1" max="20" step="1" required') +
-            '<div class="swe-notice swe-wide"><strong>Manual outreach remains protected:</strong> these rules schedule tasks and in-dashboard alerts. They do not automatically send emails or WhatsApp messages.</div>';
-
         var performanceFields =
             field("monthly_revenue_target", "Monthly invoiced revenue target (R)", "number",
                 "Use 0 when no target is set.", 'min="0" max="1000000000" step="0.01" required') +
@@ -386,11 +367,13 @@
 
         var salesPanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-sales" aria-labelledby="swe-tab-sales" data-settings-panel="sales">' +
-            formCard("sales", "Lead follow-up rules", "Control the existing workflow clock without changing individual lead records.", salesFields, "Save workflow", true) +
-            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Run a follow-up scan</h3><p>The scheduled worker checks every 15 minutes. After the response target expires, it creates one assigned first-contact task for a New lead. Later-stage follow-ups keep their stage intervals and attempt limit. Existing follow-up records prevent duplicates. No email or WhatsApp messages are sent.</p></div></div>' +
+            '<div class="swe-card"><h3>Automatic lead follow-ups</h3>' +
+            '<p>The sequence is fixed: no follow-up is created until a lead has been marked Contacted. Follow-up 1 is due two business days after the recorded contact date. Follow-up 2 is due two business days after follow-up 1 is marked completed. Completing follow-up 2 moves the lead to Lost.</p>' +
+            '<p>Only two automatic follow-ups are allowed. Weekends are excluded; public holidays are not currently excluded. Outreach remains manual: these tasks do not automatically send email or WhatsApp messages.</p>' +
+            '</div>' +
+            '<div class="swe-card"><div class="swe-card-heading"><div><h3>Run a follow-up scan</h3><p>The scheduled worker checks every 15 minutes. You can also run the same idempotent scan on demand. It creates only the next due follow-up for a contacted, active lead and will not create duplicates.</p></div></div>' +
             '<div class="swe-actions"><button type="button" class="swe-button swe-button-primary" data-action="run-stale-lead-automation">Run follow-up scan now</button></div>' +
-            '<p class="swe-status" data-sales-automation-status role="status" aria-live="polite"></p></div>' +
-            '<div class="swe-card"><h3>Workflow boundary</h3><p>The response target schedules an internal first-contact task; it does not change a lead from New or mark it contacted. When the lead is moved out of New, its pending automatic first-contact task is completed or skipped. Email and WhatsApp outreach still require the existing manual or approved sending steps.</p></div></section>';
+            '<p class="swe-status" data-sales-automation-status role="status" aria-live="polite"></p></div></section>';
 
         var performancePanel =
             '<section class="swe-panel" role="tabpanel" id="swe-panel-performance" aria-labelledby="swe-tab-performance" data-settings-panel="performance" hidden>' +
@@ -681,21 +664,12 @@
 
     async function loadWorkflow(root) {
         var rows = await getRows("workflow_settings", {
-            select: "id,lead_no_response_days,new_lead_response_hours,followup_stage_days,max_followup_attempts,monthly_revenue_target,monthly_new_leads_target,monthly_proposals_target,monthly_wins_target,target_conversion_rate,quote_validity_days,invoice_payment_terms_days,default_project_duration_days,default_project_task_template,review_link,updated_at",
+            select: "id,monthly_revenue_target,monthly_new_leads_target,monthly_proposals_target,monthly_wins_target,target_conversion_rate,quote_validity_days,invoice_payment_terms_days,default_project_duration_days,default_project_task_template,review_link,updated_at",
             id: "eq.1",
             limit: "1"
         });
         var row = rows[0];
         if (!row) throw new Error("The workflow_settings row is missing. Apply the existing business-flow SQL before using these controls.");
-        var stageDays = row.followup_stage_days && typeof row.followup_stage_days === "object" ? row.followup_stage_days : {};
-        var salesValues = Object.assign({}, row, {
-            stage_days_contacted: stageDays.contacted == null ? "" : stageDays.contacted,
-            stage_days_interested: stageDays.interested == null ? "" : stageDays.interested,
-            stage_days_proposal_sent: stageDays["proposal sent"] == null ? "" : stageDays["proposal sent"],
-            stage_days_negotiating: stageDays.negotiating == null ? "" : stageDays.negotiating,
-            stage_days_follow_up: stageDays["follow-up"] == null ? "" : stageDays["follow-up"]
-        });
-        setFormValues(root.querySelector('[data-settings-form="sales"]'), salesValues);
         setFormValues(root.querySelector('[data-settings-form="performance"]'), row);
         setFormValues(root.querySelector('[data-settings-form="commercial"]'), row);
         var taskTemplate = Array.isArray(row.default_project_task_template) ? row.default_project_task_template : [];
@@ -1101,45 +1075,6 @@
     }
 
     function bindForms(root, identity) {
-        bindForm(root, "sales", async function (form) {
-            if (!isOwner) throw new Error("Only the Swayphics owner can change workflow timing.");
-            function wholeNumber(name, min, max, label) {
-                var value = Number(form.querySelector('[name="' + name + '"]').value);
-                if (!Number.isInteger(value) || value < min || value > max) {
-                    throw new Error(label + " must be a whole number from " + min + " to " + max + ".");
-                }
-                return value;
-            }
-            var days = wholeNumber("lead_no_response_days", 1, 365, "Fallback interval");
-            var responseHours = wholeNumber("new_lead_response_hours", 1, 720, "New lead response target");
-            var maxAttempts = wholeNumber("max_followup_attempts", 1, 20, "Maximum follow-up attempts");
-            function optionalStageInterval(name, label) {
-                var raw = String(form.querySelector('[name="' + name + '"]').value || "").trim();
-                if (!raw) return null;
-                return wholeNumber(name, 1, 365, label);
-            }
-            var stageDays = {};
-            [
-                ["contacted", "stage_days_contacted", "Contacted interval"],
-                ["interested", "stage_days_interested", "Interested interval"],
-                ["proposal sent", "stage_days_proposal_sent", "Proposal-sent interval"],
-                ["negotiating", "stage_days_negotiating", "Negotiating interval"],
-                ["follow-up", "stage_days_follow_up", "Follow-up interval"]
-            ].forEach(function (entry) {
-                var value = optionalStageInterval(entry[1], entry[2]);
-                if (value !== null) stageDays[entry[0]] = value;
-            });
-            await updateRow("workflow_settings", "id=eq.1", {
-                lead_no_response_days: days,
-                new_lead_response_hours: responseHours,
-                followup_stage_days: stageDays,
-                max_followup_attempts: maxAttempts,
-                updated_at: new Date().toISOString()
-            });
-            await loadWorkflow(root);
-            await loadPerformance(root);
-        });
-
         bindForm(root, "performance", async function (form) {
             if (!isOwner) throw new Error("Only the Swayphics owner can change business targets.");
             function countValue(name, label) {
