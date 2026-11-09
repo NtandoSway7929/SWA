@@ -27,5 +27,5 @@ assert.match(conversionRenderer, /not a cohort conversion rate/i, "the cohort-me
 for (const stage of ["new", "contacted", "follow-up", "interested", "proposal sent", "negotiating", "won", "lost"]) {
   assert.ok(conversionRenderer.includes("\"" + stage + "\""), "pipeline stage must remain: " + stage);
 }
-assert.ok(html.includes("admin-workspace.js?v=20261110-communication-log-viewer-1"), "workspace script must use a fresh cache key.");
+assert.ok(html.includes("admin-workspace.js?v=20261110-settings-tab-order-icon-1"), "workspace script must use a fresh cache key.");
 console.log("Insights lead conversion analytics contract tests passed.");

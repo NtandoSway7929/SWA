@@ -45,8 +45,8 @@ const expectedGroups = [
     ["delivery", "Work & Portfolio", ["projects", "tasks", "portfolio"]],
     ["billing", "Sales & Billing", ["quotes", "invoices", "payments", "services", "invoice-settings"]],
     ["website", "Website", ["content", "testimonials", "cookie-analytics"]],
-    ["settings", "Settings", ["settings"]],
-    ["admin", "Administration", ["activity", "portal-requests", "data-export", "team"]]
+    ["admin", "Administration", ["activity", "portal-requests", "data-export", "team"]],
+    ["settings", "Settings", ["settings"]]
 ];
 
 assert.equal(groupMatches.length, expectedGroups.length, "all eight navigation groups must remain");
@@ -66,6 +66,37 @@ groupMatches.forEach((match, index) => {
 });
 
 assert.equal(actualViewIds.length, 31, "all 31 current destinations must remain available");
+assert.ok(
+    navSource.match(/\{\s*id:\s*"settings",\s*label:\s*"Settings",\s*icon:\s*"settings"/),
+    "the final Settings destination must declare its settings icon"
+);
+assert.ok(
+    navSource.match(/\{\s*id:\s*"admin",\s*label:\s*"Administration",\s*icon:\s*"shield"/),
+    "Administration must retain a distinct shield icon"
+);
+const navGroupIconRenderer = extractConstant(
+    workspace,
+    "function navGroupIcon(name) {",
+    "\n    function token()",
+    "navigation icon renderer"
+);
+assert.ok(
+    navGroupIconRenderer.includes("shield:") &&
+    navGroupIconRenderer.includes("settings:"),
+    "both the Administration shield and Settings gear icons must resolve"
+);
+const settingsButtonRenderer = extractConstant(
+    workspace,
+    "function navButton(item) {",
+    "\n    function setStandaloneManagerVisibility(",
+    "Settings direct-navigation button renderer"
+);
+assert.ok(
+    settingsButtonRenderer.includes('view === "settings"') &&
+    settingsButtonRenderer.includes('navGroupIcon("settings")') &&
+    settingsButtonRenderer.includes('class="sway-settings-direct-label"'),
+    "the standalone Settings tab must render its gear icon before its label"
+);
 assert.equal(new Set(actualViewIds).size, 31, "navigation destination IDs must be unique");
 
 const renderShell = extractConstant(
