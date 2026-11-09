@@ -144,782 +144,598 @@ async function buildPdf(
   settings: any,
 ) {
   const pdfDoc = await PDFDocument.create();
-
-  const regular =
-    await pdfDoc.embedFont(
-      StandardFonts.Helvetica,
-    );
-
-  const bold =
-    await pdfDoc.embedFont(
-      StandardFonts.HelveticaBold,
-    );
+  const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const pageWidth = 595.28;
   const pageHeight = 841.89;
-  const margin = 42;
+  const margin = 46;
+  const contentWidth = pageWidth - margin * 2;
+  const charcoal = rgb(38 / 255, 45 / 255, 56 / 255);
+  const accent = rgb(1 / 255, 82 / 255, 244 / 255);
+  const paleBlue = rgb(241 / 255, 246 / 255, 255 / 255);
+  const soft = rgb(250 / 255, 251 / 255, 253 / 255);
+  const white = rgb(1, 1, 1);
 
   const logoBytes = await loadLogo();
-
   let logo = null;
-
   if (logoBytes) {
     try {
-      logo =
-        await pdfDoc.embedPng(
-          logoBytes,
-        );
+      logo = await pdfDoc.embedPng(logoBytes);
     } catch {
       logo = null;
     }
   }
 
-  function drawWatermark(targetPage) {
-    if (!logo) return;
+  const invoiceNumber = String(invoice.invoice_number || "INVOICE");
+  const businessName = String(settings.business_name || "Swayphics");
+  const businessEmail = String(settings.email || "info@swayphics.co.za");
 
-    const maxWatermarkSize = 260;
-    const watermarkScale = Math.min(
-      maxWatermarkSize / logo.width,
-      maxWatermarkSize / logo.height,
-    );
-
-    const watermarkWidth =
-      logo.width * watermarkScale;
-
-    const watermarkHeight =
-      logo.height * watermarkScale;
-
-    targetPage.drawImage(logo, {
-      x:
-        (pageWidth - watermarkWidth) / 2,
-      y:
-        (pageHeight - watermarkHeight) / 2,
-      width: watermarkWidth,
-      height: watermarkHeight,
-      opacity: 0.075,
+  function drawRight(
+    targetPage: any,
+    value: unknown,
+    right: number,
+    y: number,
+    size: number,
+    font: any,
+    color: any,
+  ) {
+    const text = String(value ?? "");
+    targetPage.drawText(text, {
+      x: right - font.widthOfTextAtSize(text, size),
+      y,
+      size,
+      font,
+      color,
     });
   }
 
-  let page = pdfDoc.addPage([
-    pageWidth,
-    pageHeight,
-  ]);
+  function drawWrapped(
+    targetPage: any,
+    value: unknown,
+    x: number,
+    y: number,
+    maxWidth: number,
+    size: number,
+    font: any,
+    color: any,
+    lineHeight = 12,
+  ) {
+    const lines = wrapText(String(value ?? ""), font, size, maxWidth);
+    lines.forEach((line, index) => {
+      targetPage.drawText(line, {
+        x,
+        y: y - index * lineHeight,
+        size,
+        font,
+        color,
+      });
+    });
+    return y - lines.length * lineHeight;
+  }
 
-  drawWatermark(page);
+  function drawRule(targetPage: any, y: number, color = BORDER, thickness = 0.7) {
+    targetPage.drawLine({
+      start: { x: margin, y },
+      end: { x: pageWidth - margin, y },
+      thickness,
+      color,
+    });
+  }
 
+  function drawTopBrand(targetPage: any, title: string, continued = false) {
+    targetPage.drawRectangle({
+      x: 0,
+      y: pageHeight - 5,
+      width: pageWidth,
+      height: 5,
+      color: accent,
+    });
+
+    targetPage.drawText(title, {
+      x: margin,
+      y: pageHeight - 58,
+      size: continued ? 12 : 22,
+      font: bold,
+      color: BRAND,
+      characterSpacing: continued ? 0.6 : -0.5,
+    });
+
+    if (continued) {
+      drawRight(
+        targetPage,
+        "INVOICE " + invoiceNumber,
+        pageWidth - margin,
+        pageHeight - 58,
+        8,
+        bold,
+        MUTED,
+      );
+    }
+  }
+
+  function drawTableHeader(targetPage: any, topY: number) {
+    const headerHeight = 26;
+    targetPage.drawRectangle({
+      x: margin,
+      y: topY - headerHeight,
+      width: contentWidth,
+      height: headerHeight,
+      color: charcoal,
+    });
+    targetPage.drawRectangle({
+      x: margin,
+      y: topY - 2,
+      width: contentWidth,
+      height: 2,
+      color: accent,
+    });
+
+    targetPage.drawText("SERVICE / DESCRIPTION", {
+      x: margin + 12,
+      y: topY - 17,
+      size: 7,
+      font: bold,
+      color: white,
+      characterSpacing: 0.55,
+    });
+    drawRight(targetPage, "QTY", margin + 354, topY - 17, 7, bold, white);
+    drawRight(targetPage, "UNIT PRICE", margin + 438, topY - 17, 7, bold, white);
+    drawRight(targetPage, "AMOUNT", pageWidth - margin - 12, topY - 17, 7, bold, white);
+    return topY - headerHeight - 12;
+  }
+
+  let page = pdfDoc.addPage([pageWidth, pageHeight]);
   let y = pageHeight - margin;
 
-  if (logo) {
-    const maxWidth = 145;
-    const maxHeight = 55;
-    const scale = Math.min(
-      maxWidth / logo.width,
-      maxHeight / logo.height,
-    );
+  drawTopBrand(page, "SWAYPHICS");
 
+  if (logo) {
+    const maxWidth = 118;
+    const maxHeight = 40;
+    const scale = Math.min(maxWidth / logo.width, maxHeight / logo.height);
     page.drawImage(logo, {
       x: margin,
-      y:
-        y -
-        logo.height *
-          scale,
-      width:
-        logo.width *
-        scale,
-      height:
-        logo.height *
-        scale,
+      y: pageHeight - 101,
+      width: logo.width * scale,
+      height: logo.height * scale,
     });
-
-    y -=
-      logo.height *
-        scale +
-      24;
-  } else {
-    page.drawText(
-
-      settings.business_name ||
-        "SWAYPHICS",
-      {
-        x: margin,
-        y,
-        size: 24,
-        font: bold,
-        color: BRAND,
-      },
-    );
-
-    y -= 34;
   }
 
-  page.drawText(
-    "INVOICE",
-    {
-      x:
-        pageWidth -
-        margin -
-        bold.widthOfTextAtSize(
-          "INVOICE",
-          22,
-        ),
-      y:
-        pageHeight -
-        margin -
-        8,
-      size: 22,
-      font: bold,
-      color: BRAND,
-    },
-  );
-
-  y -= 36;
-
-  page.drawLine({
-    start: {
-      x: margin,
-      y,
-    },
-    end: {
-      x: pageWidth - margin,
-      y,
-    },
-    thickness: 1.2,
-    color: BORDER,
-  });
-
-  y -= 24;
-
-  const rightX = 390;
-
-  page.drawText(
-    invoice.invoice_number,
-    {
-      x: rightX,
-      y,
-      size: 10,
-      font: bold,
-      color: DARK,
-    },
-  );
-
-  page.drawText(
-    "Issue date",
-    {
-      x: rightX,
-      y: y - 18,
-      size: 7.5,
-      font: regular,
-      color: MUTED,
-    },
-  );
-
-  page.drawText(
-    shortDate(invoice.issue_date),
-    {
-      x: rightX + 70,
-      y: y - 18,
-      size: 7.5,
-      font: bold,
-      color: DARK,
-    },
-  );
-
-  page.drawText(
-    "Due date",
-    {
-      x: rightX,
-      y: y - 34,
-      size: 7.5,
-      font: regular,
-      color: MUTED,
-    },
-  );
-
-  page.drawText(
-    shortDate(invoice.due_date),
-    {
-      x: rightX + 70,
-      y: y - 34,
-      size: 7.5,
-      font: bold,
-      color: DARK,
-    },
-  );
-
-  page.drawText(
-    "BILL TO",
-    {
-      x: margin,
-      y,
-      size: 7,
-      font: bold,
-      color: BRAND,
-      characterSpacing: 1,
-    },
-  );
-
-  page.drawText(
-    invoice.client?.business_name ||
-      "Client",
-    {
-      x: margin,
-      y: y - 18,
-      size: 13,
-      font: bold,
-      color: DARK,
-    },
-  );
-
-  let clientY = y - 34;
-
-  if (invoice.client?.contact_name) {
-    page.drawText(
-      invoice.client.contact_name,
-      {
-        x: margin,
-        y: clientY,
-        size: 8,
-        font: regular,
-        color: MUTED,
-      },
-    );
-
-    clientY -= 13;
-  }
-
-  if (invoice.client?.email) {
-    page.drawText(
-      invoice.client.email,
-      {
-        x: margin,
-        y: clientY,
-        size: 8,
-        font: regular,
-        color: MUTED,
-      },
-    );
-  }
-
-  y -= 88;
-
-  const tableTop = y;
-  const colDescription = margin;
-  const colQty = 390;
-  const colPrice = 450;
-  const colTotal = 515;
-
-  page.drawRectangle({
+  page.drawText("EMPOWERING THROUGH DESIGN", {
     x: margin,
-    y: tableTop - 21,
-    width:
-      pageWidth -
-      margin * 2,
-    height: 21,
-    color: BRAND,
+    y: pageHeight - 112,
+    size: 6.5,
+    font: bold,
+    color: MUTED,
+    characterSpacing: 1.05,
   });
 
-  page.drawText(
-    "DESCRIPTION",
-    {
-      x: colDescription + 8,
-      y: tableTop - 14,
-      size: 7,
+  drawRight(page, "INVOICE", pageWidth - margin, pageHeight - 66, 24, bold, BRAND);
+  drawRight(page, invoiceNumber, pageWidth - margin, pageHeight - 86, 9, bold, DARK);
+  drawRight(page, "CREATIVE SERVICES", pageWidth - margin, pageHeight - 101, 6.5, regular, MUTED);
+
+  drawRule(page, pageHeight - 133, BORDER, 0.9);
+
+  const metaY = pageHeight - 207;
+  const metaGap = 10;
+  const metaWidth = (contentWidth - metaGap * 2) / 3;
+  const meta = [
+    { label: "INVOICE NUMBER", value: invoiceNumber },
+    { label: "ISSUE DATE", value: shortDate(invoice.issue_date) },
+    { label: "PAYMENT DUE", value: shortDate(invoice.due_date) },
+  ];
+
+  meta.forEach((entry, index) => {
+    const x = margin + index * (metaWidth + metaGap);
+    page.drawRectangle({
+      x,
+      y: metaY,
+      width: metaWidth,
+      height: 56,
+      color: soft,
+      borderColor: BORDER,
+      borderWidth: 0.65,
+    });
+    page.drawRectangle({
+      x,
+      y: metaY + 53,
+      width: metaWidth,
+      height: 3,
+      color: index === 2 ? accent : BRAND,
+    });
+    page.drawText(entry.label, {
+      x: x + 11,
+      y: metaY + 36,
+      size: 6.2,
       font: bold,
-      color: rgb(1, 1, 1),
-    },
-  );
-
-  page.drawText(
-    "QTY",
-    {
-      x: colQty,
-      y: tableTop - 14,
-      size: 7,
+      color: MUTED,
+      characterSpacing: 0.7,
+    });
+    page.drawText(String(entry.value), {
+      x: x + 11,
+      y: metaY + 15,
+      size: 9,
       font: bold,
-      color: rgb(1, 1, 1),
-    },
-  );
+      color: DARK,
+    });
+  });
 
-  page.drawText(
-    "PRICE",
-    {
-      x: colPrice,
-      y: tableTop - 14,
-      size: 7,
-      font: bold,
-      color: rgb(1, 1, 1),
-    },
-  );
+  const infoTop = metaY - 29;
+  page.drawText("BILLED TO", {
+    x: margin,
+    y: infoTop,
+    size: 7,
+    font: bold,
+    color: BRAND,
+    characterSpacing: 1,
+  });
+  page.drawText("ISSUED BY", {
+    x: margin + 268,
+    y: infoTop,
+    size: 7,
+    font: bold,
+    color: BRAND,
+    characterSpacing: 1,
+  });
 
-  page.drawText(
-    "TOTAL",
-    {
-      x: colTotal,
-      y: tableTop - 14,
-      size: 7,
-      font: bold,
-      color: rgb(1, 1, 1),
-    },
-  );
+  const clientName = String(invoice.client?.business_name || "Client");
+  page.drawText(clientName, {
+    x: margin,
+    y: infoTop - 22,
+    size: 12,
+    font: bold,
+    color: DARK,
+  });
 
-  y = tableTop - 36;
-
-  for (const item of items) {
-    const descriptionLines =
-      wrapText(
-        item.description,
-        regular,
-        8,
-        320,
-      );
-
-    const rowHeight = Math.max(
-      30,
-      descriptionLines.length *
-        11 +
-        13,
+  let clientLineY = infoTop - 37;
+  if (invoice.client?.contact_name) {
+    clientLineY = drawWrapped(
+      page,
+      invoice.client.contact_name,
+      margin,
+      clientLineY,
+      235,
+      8,
+      regular,
+      MUTED,
+      11,
     );
+  }
+  if (invoice.client?.email) {
+    drawWrapped(
+      page,
+      invoice.client.email,
+      margin,
+      clientLineY,
+      235,
+      8,
+      regular,
+      MUTED,
+      11,
+    );
+  }
 
-    if (y - rowHeight < 150) {
-      page = pdfDoc.addPage([
-        pageWidth,
-        pageHeight,
-      ]);
+  page.drawText(businessName, {
+    x: margin + 268,
+    y: infoTop - 22,
+    size: 12,
+    font: bold,
+    color: DARK,
+  });
+  page.drawText(businessEmail, {
+    x: margin + 268,
+    y: infoTop - 37,
+    size: 8,
+    font: regular,
+    color: MUTED,
+  });
+  page.drawText("swayphics.co.za", {
+    x: margin + 268,
+    y: infoTop - 50,
+    size: 8,
+    font: regular,
+    color: MUTED,
+  });
 
-      drawWatermark(page);
+  y = infoTop - 82;
+  page.drawText("SERVICE BREAKDOWN", {
+    x: margin,
+    y,
+    size: 8,
+    font: bold,
+    color: DARK,
+    characterSpacing: 0.75,
+  });
+  drawRight(page, "ITEMISED SUMMARY", pageWidth - margin, y, 6.5, bold, MUTED);
+  y = drawTableHeader(page, y - 13);
 
-      y = pageHeight - margin;
+  function startContinuation(title: string) {
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    drawTopBrand(page, title, true);
+    drawRule(page, pageHeight - 82, BORDER, 0.8);
+    y = pageHeight - 113;
+  }
 
-      page.drawText(
-        invoice.invoice_number,
-        {
-          x: margin,
-          y,
-          size: 9,
-          font: bold,
-          color: BRAND,
-        },
-      );
+  let rowIndex = 0;
+  for (const item of items) {
+    const descriptionLines = wrapText(
+      String(item.description || "Service"),
+      regular,
+      8.5,
+      268,
+    );
+    const rowHeight = Math.max(37, descriptionLines.length * 11 + 19);
 
-      y -= 30;
+    if (y - rowHeight < 108) {
+      startContinuation("SERVICE BREAKDOWN / CONTINUED");
+      y = drawTableHeader(page, y - 4);
     }
 
-    if (
-      Math.round(
-        (tableTop - y) /
-          30,
-      ) %
-        2 ===
-      0
-    ) {
+    if (rowIndex % 2 === 1) {
       page.drawRectangle({
         x: margin,
-        y:
-          y -
-          rowHeight +
-          5,
-        width:
-          pageWidth -
-          margin * 2,
+        y: y - rowHeight + 5,
+        width: contentWidth,
         height: rowHeight,
-        color: LIGHT,
+        color: soft,
       });
     }
 
-    descriptionLines.forEach(
-      (line, index) => {
-        page.drawText(line, {
-          x: colDescription + 8,
-          y:
-            y -
-            index * 11,
-          size: 8,
-          font: regular,
-          color: DARK,
-        });
-      },
-    );
-
-    page.drawText(
-      String(item.quantity),
-      {
-        x: colQty,
-        y:
-          y -
-          2,
-        size: 8,
+    descriptionLines.forEach((line, index) => {
+      page.drawText(line, {
+        x: margin + 12,
+        y: y - 13 - index * 11,
+        size: 8.5,
         font: regular,
         color: DARK,
-      },
-    );
+      });
+    });
 
-    page.drawText(
-      money(item.unit_price),
-      {
-        x: colPrice,
-        y:
-          y -
-          2,
-        size: 8,
-        font: regular,
-        color: DARK,
-      },
-    );
-
-    page.drawText(
-      money(item.line_total),
-      {
-        x: colTotal,
-        y:
-          y -
-          2,
-        size: 8,
-        font: bold,
-        color: DARK,
-      },
-    );
+    drawRight(page, item.quantity, margin + 354, y - 14, 8, regular, DARK);
+    drawRight(page, money(item.unit_price), margin + 438, y - 14, 8, regular, MUTED);
+    drawRight(page, money(item.line_total), pageWidth - margin - 12, y - 14, 8, bold, DARK);
 
     page.drawLine({
-      start: {
-        x: margin,
-        y:
-          y -
-          rowHeight +
-          2,
-      },
-      end: {
-        x:
-          pageWidth -
-          margin,
-        y:
-          y -
-          rowHeight +
-          2,
-      },
+      start: { x: margin, y: y - rowHeight + 3 },
+      end: { x: pageWidth - margin, y: y - rowHeight + 3 },
       thickness: 0.5,
       color: BORDER,
     });
 
     y -= rowHeight;
+    rowIndex += 1;
   }
 
-  y -= 22;
+  const summaryRows =
+    1 +
+    (Number(invoice.discount || 0) > 0 ? 1 : 0) +
+    (Number(invoice.vat_amount || 0) > 0 ? 1 : 0);
+  const summaryHeight = summaryRows * 18 + 66;
 
-  const summaryX = 380;
-  const valueX = 515;
-  const totalRightX = pageWidth - margin - 12;
+  if (y - summaryHeight < 108) {
+    startContinuation("INVOICE SUMMARY");
+  }
 
-  page.drawText(
-    "Subtotal",
-    {
+  y -= 19;
+  const summaryX = pageWidth - margin - 215;
+  const summaryValueRight = pageWidth - margin - 12;
+
+  function drawSummaryRow(label: string, value: string) {
+    page.drawText(label, {
       x: summaryX,
-      y,
-      size: 8,
-      font: regular,
-      color: MUTED,
-    },
-  );
-
-  page.drawText(
-    money(invoice.subtotal),
-    {
-      x: valueX,
-      y,
-      size: 8,
-      font: bold,
-      color: DARK,
-    },
-  );
-
-  if (Number(invoice.discount || 0) > 0) {
-    y -= 17;
-
-    page.drawText(
-      "Discount",
-      {
-        x: summaryX,
-        y,
-        size: 8,
-        font: regular,
-        color: MUTED,
-      },
-    );
-
-    page.drawText(
-      "-" +
-        money(invoice.discount),
-      {
-        x: valueX,
-        y,
-        size: 8,
-        font: bold,
-        color: DARK,
-      },
-    );
-  }
-
-  if (Number(invoice.vat_amount || 0) > 0) {
-    y -= 17;
-
-    page.drawText(
-      "VAT (" +
-        Number(invoice.vat_rate || 0) +
-        "%)",
-      {
-        x: summaryX,
-        y,
-        size: 8,
-        font: regular,
-        color: MUTED,
-      },
-    );
-
-    page.drawText(
-      money(invoice.vat_amount),
-      {
-        x: valueX,
-        y,
-        size: 8,
-        font: bold,
-        color: DARK,
-      },
-    );
-  }
-
-  y -= 40;
-
-  const totalBoxX = summaryX - 12;
-  const totalBoxWidth =
-    pageWidth -
-    margin -
-    totalBoxX;
-  const totalBoxY = y - 10;
-  const totalBoxHeight = 34;
-
-  page.drawRectangle({
-    x: totalBoxX,
-    y: totalBoxY,
-    width: totalBoxWidth,
-    height: totalBoxHeight,
-    color: BRAND,
-  });
-
-  page.drawText(
-    "TOTAL",
-    {
-      x: summaryX,
-      y: y + 1,
-      size: 9,
-      font: bold,
-      color: rgb(1, 1, 1),
-    },
-  );
-
-  const totalAmount =
-    money(invoice.total);
-
-  page.drawText(
-    totalAmount,
-    {
-      x:
-        totalRightX -
-        bold.widthOfTextAtSize(
-          totalAmount,
-          10,
-        ),
-      y: y + 1,
-      size: 10,
-      font: bold,
-      color: rgb(1, 1, 1),
-    },
-  );
-
-  y -= 62;
-
-  const notes =
-    invoice.notes ||
-    "Thank you for choosing Swayphics.";
-
-  page.drawText(
-    "NOTES",
-    {
-      x: margin,
-      y,
-      size: 7,
-      font: bold,
-      color: BRAND,
-      characterSpacing: 1,
-    },
-  );
-
-  y -= 15;
-
-  for (const line of wrapText(
-    notes,
-    regular,
-    8,
-    480,
-  )) {
-    page.drawText(line, {
-      x: margin,
       y,
       size: 8,
       font: regular,
       color: MUTED,
     });
-
-    y -= 11;
+    drawRight(page, value, summaryValueRight, y, 8, bold, DARK);
+    y -= 18;
   }
 
-  if (
+  drawSummaryRow("Subtotal", money(invoice.subtotal));
+
+  if (Number(invoice.discount || 0) > 0) {
+    drawSummaryRow("Discount", "-" + money(invoice.discount));
+  }
+
+  if (Number(invoice.vat_amount || 0) > 0) {
+    drawSummaryRow("VAT (" + Number(invoice.vat_rate || 0) + "%)", money(invoice.vat_amount));
+  }
+
+  y -= 2;
+  const totalBoxX = summaryX - 12;
+  const totalBoxWidth = pageWidth - margin - totalBoxX;
+  const totalBoxY = y - 40;
+  page.drawRectangle({
+    x: totalBoxX,
+    y: totalBoxY,
+    width: totalBoxWidth,
+    height: 48,
+    color: charcoal,
+  });
+  page.drawRectangle({
+    x: totalBoxX,
+    y: totalBoxY,
+    width: 4,
+    height: 48,
+    color: accent,
+  });
+
+  page.drawText(invoice.status === "paid" ? "TOTAL PAID" : "TOTAL DUE", {
+    x: totalBoxX + 14,
+    y: totalBoxY + 27,
+    size: 7,
+    font: bold,
+    color: rgb(210 / 255, 220 / 255, 235 / 255),
+    characterSpacing: 0.8,
+  });
+  drawRight(
+    page,
+    money(invoice.total),
+    totalBoxX + totalBoxWidth - 14,
+    totalBoxY + 15,
+    15,
+    bold,
+    white,
+  );
+
+  y = totalBoxY - 29;
+
+  const notes = String(invoice.notes || "Thank you for choosing Swayphics.");
+  const noteLines = wrapText(notes, regular, 8, contentWidth - 26);
+  const noteHeight = Math.max(54, noteLines.length * 11 + 31);
+  if (y - noteHeight < 92) {
+    startContinuation("ADDITIONAL INFORMATION");
+  }
+
+  page.drawText("PROJECT NOTES", {
+    x: margin,
+    y,
+    size: 7,
+    font: bold,
+    color: BRAND,
+    characterSpacing: 0.85,
+  });
+  y -= 15;
+
+  const notesBoxHeight = Math.max(34, noteLines.length * 11 + 17);
+  page.drawRectangle({
+    x: margin,
+    y: y - notesBoxHeight + 4,
+    width: contentWidth,
+    height: notesBoxHeight,
+    color: soft,
+    borderColor: BORDER,
+    borderWidth: 0.6,
+  });
+  noteLines.forEach((line, index) => {
+    page.drawText(line, {
+      x: margin + 12,
+      y: y - 11 - index * 11,
+      size: 8,
+      font: regular,
+      color: MUTED,
+    });
+  });
+  y -= notesBoxHeight + 19;
+
+  const hasPaymentDetails = Boolean(
     settings.payment_instructions ||
     settings.bank_name ||
-    settings.account_number
-  ) {
-    y -= 12;
+    settings.account_name ||
+    settings.account_number ||
+    settings.account_type ||
+    settings.branch_code ||
+    settings.swift_bic
+  );
 
-    page.drawText(
-      "PAYMENT DETAILS",
-      {
-        x: margin,
-        y,
-        size: 7,
-        font: bold,
-        color: BRAND,
-        characterSpacing: 1,
-      },
+  if (hasPaymentDetails) {
+    const paymentLines = [
+      settings.bank_name ? "Bank: " + settings.bank_name : "",
+      settings.account_name ? "Account holder: " + settings.account_name : "",
+      settings.account_type ? "Account type: " + settings.account_type : "",
+      settings.branch_code ? "Branch code: " + settings.branch_code : "",
+      settings.swift_bic ? "SWIFT / BIC: " + settings.swift_bic : "",
+      settings.payment_instructions ? String(settings.payment_instructions) : "",
+    ].filter(Boolean).flatMap((line) => wrapText(String(line), regular, 7.5, contentWidth - 28));
+
+    const paymentHeight = Math.max(
+      72,
+      paymentLines.length * 10 + (settings.account_number ? 70 : 42),
     );
 
-    y -= 15;
+    if (y - paymentHeight < 88) {
+      startContinuation("PAYMENT INFORMATION");
+    }
 
-    const paymentLines = [
-      settings.bank_name
-        ? "Bank: " +
-          settings.bank_name
-        : "",
-      settings.account_name
-        ? "Account holder: " +
-          settings.account_name
-        : "",
-      settings.account_type
-        ? "Account type: " +
-          settings.account_type
-        : "",
-      settings.branch_code
-        ? "Branch code: " +
-          settings.branch_code
-        : "",
-      settings.swift_bic
-        ? "SWIFT / BIC: " +
-          settings.swift_bic
-        : "",
-      settings.payment_instructions ||
-        "",
-    ].filter(Boolean);
+    page.drawRectangle({
+      x: margin,
+      y: y - paymentHeight + 5,
+      width: contentWidth,
+      height: paymentHeight,
+      color: paleBlue,
+      borderColor: BORDER,
+      borderWidth: 0.65,
+    });
+    page.drawRectangle({
+      x: margin,
+      y: y - paymentHeight + 5,
+      width: 3,
+      height: paymentHeight,
+      color: accent,
+    });
+    page.drawText("PAYMENT INFORMATION", {
+      x: margin + 13,
+      y: y - 16,
+      size: 7,
+      font: bold,
+      color: BRAND,
+      characterSpacing: 0.8,
+    });
 
+    let paymentY = y - 32;
     for (const line of paymentLines) {
-      for (const wrapped of wrapText(
-        line,
-        regular,
-        8,
-        480,
-      )) {
-        page.drawText(wrapped, {
-          x: margin,
-          y,
-          size: 8,
-          font: regular,
-          color: MUTED,
-        });
-
-        y -= 11;
-      }
+      page.drawText(line, {
+        x: margin + 13,
+        y: paymentY,
+        size: 7.5,
+        font: regular,
+        color: DARK,
+      });
+      paymentY -= 10;
     }
 
     if (settings.account_number) {
-      y -= 6;
-
       page.drawText("ACCOUNT NUMBER", {
-        x: margin,
-        y,
-        size: 7,
+        x: margin + 13,
+        y: paymentY - 1,
+        size: 6.2,
         font: bold,
-        color: BRAND,
-        characterSpacing: 1,
+        color: MUTED,
+        characterSpacing: 0.7,
       });
-
-      y -= 16;
-
-      page.drawRectangle({
-        x: margin,
-        y: y - 8,
-        width: 220,
-        height: 24,
-        color: rgb(0.97, 0.98, 1),
-        borderColor: BORDER,
-        borderWidth: 0.7,
-      });
-
       page.drawText(String(settings.account_number), {
-        x: margin + 10,
-        y: y - 1,
+        x: margin + 13,
+        y: paymentY - 17,
         size: 10,
         font: bold,
         color: DARK,
         characterSpacing: 0.8,
       });
-
-      y -= 30;
     }
+
+    y -= paymentHeight + 18;
   }
 
-  const footerY = 28;
+  const pages = pdfDoc.getPages();
+  pages.forEach((targetPage, index) => {
+    targetPage.drawLine({
+      start: { x: margin, y: 47 },
+      end: { x: pageWidth - margin, y: 47 },
+      thickness: 0.6,
+      color: BORDER,
+    });
 
-  page.drawLine({
-    start: {
+    targetPage.drawText("SWAYPHICS  /  EMPOWERING THROUGH DESIGN", {
       x: margin,
-      y: footerY + 18,
-    },
-    end: {
-      x: pageWidth - margin,
-      y: footerY + 18,
-    },
-    thickness: 0.6,
-    color: BORDER,
-  });
-
-  page.drawText(
-    settings.business_name ||
-      "Swayphics",
-    {
-      x: margin,
-      y: footerY,
-      size: 7,
+      y: 29,
+      size: 6.2,
       font: bold,
-      color: BRAND,
-    },
-  );
-
-  const footerRight =
-    settings.email ||
-    "info@swayphics.co.za";
-
-  page.drawText(
-    footerRight,
-    {
-      x:
-        pageWidth -
-        margin -
-        regular.widthOfTextAtSize(
-          footerRight,
-          7,
-        ),
-      y: footerY,
-      size: 7,
-      font: regular,
       color: MUTED,
-    },
-  );
+      characterSpacing: 0.35,
+    });
+
+    drawRight(
+      targetPage,
+      "SWAYPHICS.CO.ZA     " + (index + 1) + " / " + pages.length,
+      pageWidth - margin,
+      29,
+      6.2,
+      regular,
+      MUTED,
+    );
+  });
 
   return await pdfDoc.save();
 }
