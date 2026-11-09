@@ -20,7 +20,7 @@ test("dashboard email previews embed the Swayphics logo and proposal media", () 
   assert.ok(sendEmailSource.includes('source: \'src="https://swayphics.co.za/swayphics-logo.png"\''));
   assert.ok(sendEmailSource.includes('src="cid:swayphics-improvement-website"'));
   assert.ok(sendEmailSource.includes('src="cid:swayphics-no-website"'));
-  assert.ok(sendEmailSource.includes('return "data:" + contentType + ";base64,";'));
+  assert.ok(sendEmailSource.includes('return "data:" + contentType + ";base64," + btoa(binary);'));
 });
 
 test("preview-only image failures do not block sending the actual email", () => {
