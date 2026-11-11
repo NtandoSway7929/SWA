@@ -7,7 +7,7 @@
   var KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
   var ACCESS = "swayphics_admin_access_token";
   var REFRESH = "swayphics_admin_refresh_token";
-  var root, data = null, selectedId = "", filter = "all", busy = false, historyBusy = {evidence:false,actions:false,both:false}, historyPage = {evidence_has_more:false,actions_have_more:false};
+  var root, data = null, selectedId = "", filter = "all", busy = false, historyBusy = {evidence:false,actions:false,both:false}, historyRequestId = 0, historyPage = {evidence_has_more:false,actions_have_more:false};
 
   function esc(v) {
     return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
@@ -87,7 +87,7 @@
         '</span><small>' + esc(new Date(c.created_at).toLocaleString()) + '</small></button>';
     }).join("") : '<p class="yr-empty">No matching open reconciliation cases.</p>';
     root.querySelectorAll("[data-case]").forEach(function (b) {
-      b.addEventListener("click", function () { selectedId = b.getAttribute("data-case"); data.evidence = []; data.case_actions = []; historyPage = {evidence_has_more:false,actions_have_more:false}; render(); loadHistory(selectedId, "both"); });
+      b.addEventListener("click", function () { selectedId = b.getAttribute("data-case"); historyRequestId++; historyBusy = {evidence:false,actions:false,both:false}; data.evidence = []; data.case_actions = []; historyPage = {evidence_has_more:false,actions_have_more:false}; render(); loadHistory(selectedId, "both"); });
     });
   }
   function renderDetail() {
@@ -174,6 +174,7 @@
       var payload = await request("/functions/v1/reconcile-payment", {method:"POST",body:{limit:100}});
       var requiredCollections = ["attempts","open_cases","evidence","case_actions","refunds",
         "attempts_needing_attention","webhook_events_needing_attention","operational_alerts"];
+      if (requestId !== historyRequestId || caseId !== selectedId) return;
       if (!payload || payload.ok !== true || payload.environment !== "test" ||
           !requiredCollections.every(function (key) { return Array.isArray(payload[key]); })) {
         throw new Error("The test-environment reconciliation response is incomplete or invalid.");
@@ -195,6 +196,7 @@
   async function loadHistory(caseId, kind) {
     if (!data || caseId !== selectedId) return;
     if (kind === "both" ? historyBusy.both : historyBusy[kind]) return;
+    var requestId = ++historyRequestId;
     if (kind === "both") historyBusy.both = true;
     else historyBusy[kind] = true;
     var evidenceOffset = kind === "actions" ? 0 : evidenceFor(caseId).length;
@@ -227,9 +229,11 @@
       status("Case history loaded.", false);
     } catch (e) { status(e.message || "Unable to load case history.", true); }
     finally {
-      if (kind === "both") historyBusy.both = false;
-      else historyBusy[kind] = false;
-      if (caseId === selectedId) renderDetail();
+      if (requestId === historyRequestId) {
+        if (kind === "both") historyBusy.both = false;
+        else historyBusy[kind] = false;
+        if (caseId === selectedId) renderDetail();
+      }
     }
   }
   async function submitEvidence(event) {
