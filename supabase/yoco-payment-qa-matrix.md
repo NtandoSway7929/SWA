@@ -326,3 +326,18 @@ The Yoco webhook handler now:
 Static test coverage authored: claim-before-processing, active lease rejection, claim outage, lease-token propagation, atomic payment-failure handling, fenced review transition, stale-token rejection, and terminal duplicate handling.
 
 **Validation status:** test source and SQL are authored only. Deno, PostgreSQL, migration-chain and concurrency execution remain NOT RUN. No Yoco sandbox call or deployment has occurred.
+
+
+## 16. Lease database validation (Stage 1.45)
+
+Added `supabase/tests/202611110009_yoco_webhook_lease.test.sql`, a rollback-based SQL test for:
+- exclusive claim while a lease is active;
+- stale token rejection;
+- expired lease takeover and new fencing token;
+- stale worker rejection after takeover;
+- terminal transition and lease release;
+- atomic `payment.failed` attempt/event transition.
+
+Updated `supabase/yoco-concurrency-test-runbook.md` with the 001–007 migration prerequisite, the transactional test command, and a two-session claim race protocol. The older 001–005 settlement/refund fixture remains useful for its original functions but does not prove the new lease-aware Edge Function behaviour.
+
+**Execution status:** SQL test authored only. No local PostgreSQL/Supabase, Deno or Docker runtime is available in the current environment. No SQL test, two-session race, migration application or sandbox request has been run. Acceptance still requires at least 20 successful repetitions of each relevant race on a disposable database.
