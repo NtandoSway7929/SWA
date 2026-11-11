@@ -21275,7 +21275,7 @@ function simpleBars(items, color) {
 
         modal.innerHTML =
             '<div class="sway-modal-backdrop"></div>' +
-            '<div class="sway-modal-card" role="dialog" aria-modal="true">' +
+            '<div class="sway-modal-card" role="dialog" aria-modal="true" aria-labelledby="sway-modal-title" tabindex="-1">' +
                 '<div class="sway-modal-header">' +
                     '<div><span class="admin-label">Documents</span><h3>Upload document</h3></div>' +
                     '<button type="button" class="sway-modal-close" data-document-close aria-label="Close">×</button>' +
@@ -23213,6 +23213,72 @@ function simpleBars(items, color) {
 
     };
 
+    function getModalFocusableElements(modal) {
+        if (!modal) return [];
+
+        const selector =
+            'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+        return Array.from(
+            modal.querySelectorAll(selector)
+        ).filter(function (element) {
+            return (
+                !element.disabled &&
+                element.getAttribute("type") !== "hidden" &&
+                !element.hidden &&
+                element.getAttribute("aria-hidden") !== "true" &&
+                typeof element.getClientRects === "function" &&
+                element.getClientRects().length > 0
+            );
+        });
+    }
+
+    function handleModalAccessibilityKeydown(event, modal, closeModal) {
+        if (!event || !modal) return;
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof closeModal === "function") {
+                closeModal();
+            }
+            return;
+        }
+
+        if (event.key !== "Tab") return;
+
+        const focusableElements =
+            getModalFocusableElements(modal);
+
+        if (!focusableElements.length) {
+            event.preventDefault();
+            const dialog = modal.querySelector('[role="dialog"]');
+            if (dialog && typeof dialog.focus === "function") {
+                dialog.focus();
+            }
+            return;
+        }
+
+        const first = focusableElements[0];
+        const last = focusableElements[focusableElements.length - 1];
+        const focusIsOutside =
+            !modal.contains(document.activeElement);
+
+        if (event.shiftKey && (
+            document.activeElement === first ||
+            focusIsOutside
+        )) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && (
+            document.activeElement === last ||
+            focusIsOutside
+        )) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
     function showModal(title, fields, onSubmit) {
         const modal =
             document.createElement("div");
@@ -23221,11 +23287,11 @@ function simpleBars(items, color) {
 
         modal.innerHTML =
             '<div class="sway-modal-backdrop"></div>' +
-            '<div class="sway-modal-card" role="dialog" aria-modal="true">' +
+            '<div class="sway-modal-card" role="dialog" aria-modal="true" aria-labelledby="sway-modal-title" tabindex="-1">' +
                 '<div class="sway-modal-header">' +
                     '<div>' +
                         '<span class="admin-label">Swayphics workspace</span>' +
-                        '<h3>' +
+                        '<h3 id="sway-modal-title">' +
                             esc(title) +
                         "</h3>" +
                     "</div>" +
@@ -23281,6 +23347,7 @@ function simpleBars(items, color) {
                         esc(field.key) +
                         '" rows="4"' +
                         disabledAttribute +
+                        requiredAttribute +
                         ">" +
                         esc(value) +
                         "</textarea>";
@@ -23290,6 +23357,7 @@ function simpleBars(items, color) {
                         esc(field.key) +
                         '"' +
                         disabledAttribute +
+                        requiredAttribute +
                         ">" +
                         field.options +
                         "</select>";
@@ -23342,8 +23410,55 @@ function simpleBars(items, color) {
                 "</div>" +
             "</div>";
 
-        function close() {
+        const opener = document.activeElement;
+        let modalClosed = false;
+
+        function close(restoreFocus) {
+            if (modalClosed) return;
+
+            modalClosed = true;
+            document.removeEventListener(
+                "keydown",
+                onModalKeydown,
+                true
+            );
             modal.remove();
+
+            if (
+                restoreFocus !== false &&
+                opener &&
+                opener.isConnected &&
+                typeof opener.focus === "function"
+            ) {
+                opener.focus();
+            }
+        }
+
+        function onModalKeydown(event) {
+            handleModalAccessibilityKeydown(
+                event,
+                modal,
+                close
+            );
+        }
+
+        document.addEventListener(
+            "keydown",
+            onModalKeydown,
+            true
+        );
+
+        const firstFormControl =
+            form.querySelector(
+                'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
+            );
+        const initialFocus =
+            firstFormControl ||
+            modal.querySelector(".sway-modal-close") ||
+            modal.querySelector('[role="dialog"]');
+
+        if (initialFocus && typeof initialFocus.focus === "function") {
+            initialFocus.focus();
         }
 
         modal
@@ -23440,10 +23555,26 @@ function simpleBars(items, color) {
 
                 try {
                     await onSubmit(payload);
-                    close();
+                    close(false);
                     await refreshData();
                     renderShell();
                     renderView();
+
+                    const returnFocusTarget =
+                        workspace.querySelector(
+                            "#sway-workspace-main .sway-workspace-heading-copy h2"
+                        ) ||
+                        workspace.querySelector(
+                            "#sway-workspace-main h2"
+                        ) ||
+                        document.getElementById("sway-workspace-main");
+
+                    if (returnFocusTarget) {
+                        if (!returnFocusTarget.hasAttribute("tabindex")) {
+                            returnFocusTarget.setAttribute("tabindex", "-1");
+                        }
+                        returnFocusTarget.focus();
+                    }
                 } catch (error) {
                     swayAlert(
                         error.message ||
@@ -23452,6 +23583,7 @@ function simpleBars(items, color) {
 
                     submitButton.disabled = false;
                     submitButton.textContent = "Save";
+                    submitButton.focus();
                 }
             }
         );

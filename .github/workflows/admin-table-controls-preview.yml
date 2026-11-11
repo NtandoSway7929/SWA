@@ -104,6 +104,9 @@ jobs:
           mkdir -p artifacts
           node scripts/admin-table-controls-browser.test.cjs
 
+      - name: Test dynamic form modal keyboard accessibility
+        run: node --test scripts/admin-modal-accessibility.test.cjs
+
       - name: Exercise the actual dashboard with in-memory mocked API data
         shell: bash
         run: |
