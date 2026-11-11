@@ -1,6 +1,9 @@
 -- Yoco payment/refund functional integration test.
 -- DESTRUCTIVE-SAFETY: run ONLY on a disposable local Supabase database.
--- Prerequisites: full base schema plus Yoco migrations 001-005 and pgcrypto.
+-- Prerequisites: full base schema, supabase/swayphics-business-flow.sql,
+-- supabase/swayphics-invoicing.sql, Yoco migrations 001-005 and pgcrypto.
+-- The record_verified_yoco_webhook RPC is called directly to simulate the
+-- post-HMAC-verification server boundary; this test does not verify HMAC.
 -- The test creates isolated fixtures and rolls the transaction back.
 -- It does NOT call Yoco or send external network requests.
 
@@ -34,6 +37,7 @@ $$;
 do $$
 declare
     v_client_id uuid;
+    v_other_client_id uuid;
     v_invoice_id uuid;
     v_attempt jsonb;
     v_attempt_id uuid;
@@ -54,6 +58,10 @@ begin
     values ('Yoco Disposable Test Client', 'Test Contact', 'yoco-test@example.invalid')
     returning id into v_client_id;
 
+    insert into public.clients (business_name, contact_name, email)
+    values ('Yoco Isolation Test Client', 'Other Contact', 'yoco-isolation@example.invalid')
+    returning id into v_other_client_id;
+
     insert into public.invoices (
         client_id, status, currency, subtotal, total,
         online_payment_enabled, partial_payment_enabled
@@ -66,6 +74,14 @@ begin
     select amount_outstanding into v_outstanding
     from public.invoices where id = v_invoice_id;
     perform pg_temp.assert_true(v_outstanding = 100, 'new invoice starts with full outstanding balance');
+
+    perform pg_temp.expect_error(
+        format(
+            'select innerme_private.create_yoco_payment_attempt(%L::uuid, %L::uuid, 6000, %L)',
+            v_invoice_id, v_other_client_id, 'test-flow-wrong-client-0001'
+        ),
+        'a different client cannot create an attempt for this invoice'
+    );
 
     v_attempt := innerme_private.create_yoco_payment_attempt(
         v_invoice_id, v_client_id, 6000, 'test-flow-key-0001'
