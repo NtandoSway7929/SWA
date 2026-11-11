@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 import {
   getAdminClient,
   json,
+  optionsResponse,
 } from "../_shared/yoco.ts";
 
 function getPublishableKey() {
@@ -37,14 +38,7 @@ async function authorizeAdmin(req: Request) {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "https://swayphics.co.za",
-        "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Vary": "Origin",
-      },
-    });
+    return optionsResponse();
   }
   if (req.method !== "POST") return json({ ok: false, error: "Method not allowed." }, 405);
   const origin = req.headers.get("origin");
