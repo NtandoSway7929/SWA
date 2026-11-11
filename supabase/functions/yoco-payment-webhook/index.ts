@@ -114,12 +114,40 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
       return respond({ ok: false, error: "Webhook could not be recorded." }, 503);
     }
 
-    if (recorded.processing_status === "requires_review") {
-      return respond({ ok: true, received: true, requires_review: true });
+    const terminalStatuses = ["processed", "requires_review", "rejected"];
+    const retryableStatuses = ["received", "processing", "failed_retryable"];
+    const processingStatus = recorded.processing_status;
+
+    if (processingStatus === "processed") {
+      return respond({ ok: true, received: true, duplicate: !!recorded.duplicate });
+    }
+    if (processingStatus === "requires_review" || processingStatus === "rejected") {
+      return respond({
+        ok: true,
+        received: true,
+        duplicate: !!recorded.duplicate,
+        requires_review: processingStatus === "requires_review",
+        rejected: processingStatus === "rejected",
+      });
+    }
+    if (!retryableStatuses.includes(processingStatus)) {
+      deps.logError("Yoco webhook has an unknown processing state:", processingStatus);
+      return respond({ ok: false, error: "Webhook processing state is not recognised." }, 503);
     }
 
-    if (recorded.duplicate && recorded.processing_status === "processed") {
-      return respond({ ok: true, received: true, duplicate: true });
+    // A prior delivery may have stopped after the event was recorded. Resume
+    // received/failed_retryable events; an already-processing event is also
+    // replayed because the database settlement/refund operations are idempotent.
+    if (processingStatus !== "processing") {
+      const processingWriteError = await updateWebhookEvent(admin, recorded.event_id, {
+        processing_status: "processing",
+        failure_code: null,
+        failure_message: null,
+      });
+      if (processingWriteError) {
+        deps.logError("Could not mark Yoco webhook as processing:", processingWriteError);
+        return respond({ ok: false, error: "Webhook could not enter processing state yet." }, 503);
+      }
     }
 
     const payload = event.payload;
