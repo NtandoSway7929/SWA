@@ -1,4 +1,4 @@
-import { verifyYocoWebhookSignature } from "../_shared/yoco.ts";
+import { verifyYocoWebhookSignature } from "../_shared/yoco-signature.ts";
 
 Deno.test("Yoco webhook signature verification accepts valid v1 and rejects tampering or stale deliveries", async () => {
   const previousSecret = Deno.env.get("YOCO_WEBHOOK_SECRET");
