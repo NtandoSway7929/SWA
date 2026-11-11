@@ -158,3 +158,16 @@ test("optimistic concurrency migration has database-level privilege and version 
   assert.match(concurrencyMigration, /for update/);
   assert.match(concurrencyMigration, /p_expected_updated_at/);
 });
+
+test("two-administrator concurrency harness requires isolated database and distinct administrator fixtures", () => {
+  const harness = read("supabase/tests/yoco-reconciliation-concurrency-ci.sh");
+  assert.match(harness, /LOCAL_DB_URL/);
+  assert.match(harness, /YOCO_TEST_CASE_ID/);
+  assert.match(harness, /YOCO_ADMIN_A_ID/);
+  assert.match(harness, /YOCO_ADMIN_B_ID/);
+  assert.match(harness, /Two distinct administrator identities are required/);
+  assert.match(harness, /admin_set_payment_reconciliation_status_v2/);
+  assert.match(harness, /40001/);
+  assert.match(harness, /expected_action_count/);
+  assert.match(harness, /pg_sleep\(2\)/);
+});
