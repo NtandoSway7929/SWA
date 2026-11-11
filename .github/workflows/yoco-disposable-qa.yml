@@ -17,6 +17,9 @@ on:
       - feature/yoco-client-payments
     paths:
       - "supabase/**"
+      - "admin-dashboard/yoco-reconciliation.js"
+      - "admin-dashboard/index.html"
+      - "scripts/yoco-reconciliation-ui.test.cjs"
       - ".github/workflows/yoco-disposable-qa.yml"
   workflow_dispatch:
 
