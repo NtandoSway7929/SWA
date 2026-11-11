@@ -7,8 +7,10 @@ on:
     paths:
       - "supabase/**"
       - "admin-dashboard/yoco-invoice-settings.js"
+      - "admin-dashboard/yoco-reconciliation.js"
       - "admin-dashboard/index.html"
       - "scripts/yoco-invoice-settings.test.cjs"
+      - "scripts/yoco-reconciliation-ui.test.cjs"
       - ".github/workflows/yoco-disposable-qa.yml"
   pull_request:
     branches:
@@ -41,10 +43,11 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Validate administrator invoice settings UI
+      - name: Validate administrator payment settings and reconciliation UI
         run: |
           node --check admin-dashboard/yoco-invoice-settings.js
-          node --test scripts/yoco-invoice-settings.test.cjs
+          node --check admin-dashboard/yoco-reconciliation.js
+          node --test scripts/yoco-invoice-settings.test.cjs scripts/yoco-reconciliation-ui.test.cjs
 
       - name: Check Yoco TypeScript formatting (non-blocking during baseline repair)
         continue-on-error: true
