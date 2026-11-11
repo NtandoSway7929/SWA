@@ -42,7 +42,16 @@ async function authorizeAdmin(req: Request) {
   return !adminError && isAdmin === true;
 }
 
-Deno.serve(async (req: Request) => {
+export function createReconciliationHandler(dependencies: {
+  authorize?: (req: Request) => Promise<boolean>;
+  getAdmin?: () => ReturnType<typeof getAdminClient>;
+  now?: () => number;
+} = {}) {
+  const authorize = dependencies.authorize || authorizeAdmin;
+  const createAdmin = dependencies.getAdmin || getAdminClient;
+  const getNow = dependencies.now || Date.now;
+
+  return async (req: Request) => {
   if (req.method === "OPTIONS") {
     return optionsResponse();
   }
@@ -51,7 +60,7 @@ Deno.serve(async (req: Request) => {
   if (origin && origin !== "https://swayphics.co.za") return json({ ok: false, error: "Origin not allowed." }, 403);
 
   try {
-    if (!await authorizeAdmin(req)) return json({ ok: false, error: "Administrator access required." }, 403);
+    if (!await authorize(req)) return json({ ok: false, error: "Administrator access required." }, 403);
 
     const limitedBody = await readLimitedTextBody(req, 8_192);
     if (!limitedBody.ok) {
@@ -63,7 +72,7 @@ Deno.serve(async (req: Request) => {
     const body = limitedBody.body ? parseJsonObject(limitedBody.body) : {};
     if (!body) return json({ ok: false, error: "A JSON object is required." }, 400);
     const limit = normalizeReconciliationLimit(body.limit);
-    const admin = getAdminClient();
+    const admin = createAdmin();
 
     const [attemptsResult, casesResult, refundsResult, eventsResult, attentionAttemptsResult] = await Promise.all([
       admin.from("payment_attempts")
@@ -141,7 +150,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "Reconciliation history could not be loaded." }, 503);
     }
 
-    const now = Date.now();
+    const now = getNow();
     const operationalAlerts = buildYocoOperationalAlerts(
       attentionAttemptsResult.data || [],
       eventsResult.data || [],
@@ -185,4 +194,7 @@ Deno.serve(async (req: Request) => {
     console.error("Payment reconciliation request failed:", error instanceof Error ? error.message : "Unknown error.");
     return json({ ok: false, error: "Reconciliation is temporarily unavailable." }, 500);
   }
-});
+  };
+}
+
+Deno.serve(createReconciliationHandler());
