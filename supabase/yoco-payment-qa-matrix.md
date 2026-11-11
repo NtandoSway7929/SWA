@@ -194,12 +194,16 @@ Deno unit tests:
   - Maps documented checkout metadata and supported checkout/mode aliases.
   - Rejects missing checkout IDs, non-integer/string-encoded amounts and incomplete payment fields.
   - Parses refund identifiers and explicitly leaves refund events without payment-attempt metadata unmapped for manual review.
+- `supabase/functions/tests/yoco-http-validation.test.ts`
+  - Rejects malformed JSON and JSON primitives where an object is required.
+  - Applies safe defaults and bounds the reconciliation query limit to 1–100.
+  - Reconciliation endpoint now enforces an 8 KiB streamed request-body limit and strict UTF-8 before parsing.
 
 Run on a machine with Deno installed:
 
     deno test --allow-env supabase/functions/tests
 
-The tests import shared pure helpers; they do not start the HTTP Edge Function servers or make provider requests. The webhook handler now uses the same tested normalizers. These tests validate our accepted payload shapes, not Yoco's live webhook compatibility; signed sandbox deliveries are still required.
+The tests import shared pure helpers; they do not start the HTTP Edge Function servers or make provider requests. The reconciliation request parser and limit normalizer are exercised directly; endpoint authentication and Supabase query behaviour still require a local integration harness. The webhook handler now uses the same tested normalizers. These tests validate our accepted payload shapes, not Yoco's live webhook compatibility; signed sandbox deliveries are still required.
 
 ### HTTP/application integration cases still requiring a local Supabase + Deno harness
 
