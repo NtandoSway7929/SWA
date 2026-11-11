@@ -245,7 +245,12 @@ Deno.serve(async (req: Request) => {
       // event does not contain a known attempt ID, keep it for admin review.
       const attemptId = String(payload.metadata?.paymentAttemptId ?? "");
       const { data: attempt } = attemptId
-        ? await admin.from("payment_attempts").select("payment_id").eq("id", attemptId).maybeSingle()
+        ? await admin.from("payment_attempts")
+          .select("id,payment_id")
+          .eq("id", attemptId)
+          .eq("provider", "yoco")
+          .eq("environment", "test")
+          .maybeSingle()
         : { data: null };
 
       if (!attempt?.payment_id || !providerRefundId || !Number.isSafeInteger(amount) || amount < 1 || !currency) {
@@ -258,6 +263,16 @@ Deno.serve(async (req: Request) => {
           })
           .eq("id", recorded.event_id);
         return json({ ok: true, received: true, requires_review: true });
+      }
+
+      const { error: associateError } = await admin
+        .from("payment_webhook_events")
+        .update({ payment_attempt_id: attempt.id })
+        .eq("id", recorded.event_id)
+        .is("payment_attempt_id", null);
+      if (associateError) {
+        console.error("Could not bind Yoco refund event to its payment attempt:", associateError.message);
+        return json({ ok: false, error: "Verified refund requires manual review." }, 503);
       }
 
       const { data: refund, error: refundError } = await admin.rpc("yoco_record_refund_success", {
