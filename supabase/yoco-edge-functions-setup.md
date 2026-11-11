@@ -22,9 +22,9 @@ Configure these only in a disposable/test Supabase project after the code and SQ
 - `YOCO_SECRET_KEY`: Yoco test secret key. The checkout function fails closed unless it begins with `sk_test_`.
 - `YOCO_ENVIRONMENT`: exactly `test`.
 - `YOCO_WEBHOOK_SECRET`: signing secret issued by Yoco for the registered webhook; expected `whsec_` prefix.
-- `YOCO_SUCCESS_URL`: HTTPS return URL on `swayphics.co.za` or a subdomain.
-- `YOCO_CANCEL_URL`: HTTPS return URL on `swayphics.co.za` or a subdomain.
-- `YOCO_FAILURE_URL`: HTTPS return URL on `swayphics.co.za` or a subdomain.
+- `YOCO_SUCCESS_URL`: HTTPS URL for the deployed client portal route on `swayphics.co.za` or a subdomain (not the general homepage).
+- `YOCO_CANCEL_URL`: HTTPS URL for the deployed client portal route on `swayphics.co.za` or a subdomain.
+- `YOCO_FAILURE_URL`: HTTPS URL for the deployed client portal route on `swayphics.co.za` or a subdomain.
 
 Supabase injects the project URL and server-side service credentials into Edge Function environments. Never commit any actual secret value or local `.env` file.
 
@@ -43,7 +43,7 @@ Request body:
 
 The amount is an integer number of cents. The database validates client ownership, invoice eligibility, outstanding balance, online-payment enablement, partial-payment rules and the deposit floor. The browser cannot set provider status or mark an invoice paid.
 
-The function sends an idempotency key to Yoco and requires the returned checkout to identify test processing mode, the requested amount, ZAR currency and an HTTPS Yoco-hosted redirect URL before returning it to the client.
+The function sends an idempotency key to Yoco and requires the returned checkout to identify test processing mode, the requested amount, ZAR currency and an HTTPS Yoco-hosted redirect URL before returning it to the client. Success, cancel and failure return URLs include only the payment-attempt identifier; the private portal token is retained in same-tab session storage and is never sent to Yoco.
 
 ## Webhook verification
 
@@ -62,7 +62,7 @@ The function sends an idempotency key to Yoco and requires the returned checkout
 2. The Yoco checkout response and webhook event field names must be confirmed in a sandbox run before accepting real customer traffic.
 3. The payment status endpoint returns database state only; it does not treat a browser return or provider redirect as confirmation.
 4. The reconciliation endpoint is read-only. It does not initiate refunds, edit ledger entries, or reconcile bank payouts.
-5. Receipt snapshot immutability, rate limiting, operational alerting, retry/dead-letter handling and client-portal UI wiring remain separate work.
+5. Receipt snapshot immutability, rate limiting, operational alerting and retry/dead-letter handling remain separate work. The feature branch now includes the client portal checkout, return-status and downloadable HTML receipt experience.
 6. The SQL migrations are drafts and have not been executed. These Edge Functions must not be deployed until the migration sequence has passed PostgreSQL validation and the Yoco payload contract has been tested.
 
 ## Supabase function gateway configuration
