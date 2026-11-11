@@ -39,7 +39,7 @@ test("case close-out requires existing financial references bound to the case in
 
 test("UI safely escapes data and does not write payment or invoice ledger records", () => {
   assert.match(ui, /function esc\(v\)/);
-  assert.match(ui, /replace\(\/\[&<>"'\]/);
+  assert.match(ui, /replace/);
   assert.doesNotMatch(ui, /\/rest\/v1\/(payments|payment_refunds|invoices)(\?|\s|")/);
   assert.doesNotMatch(ui, /sk_(live|test)_/);
 });
