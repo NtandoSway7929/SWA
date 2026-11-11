@@ -207,6 +207,7 @@
       var payload = await request("/functions/v1/reconcile-payment", {method:"POST",body:{
         limit:100,history_case_id:caseId,evidence_offset:evidenceOffset,action_offset:actionOffset
       }});
+      if (requestId !== historyRequestId || caseId !== selectedId) return;
       if (!payload || payload.ok !== true || payload.environment !== "test" ||
           !Array.isArray(payload.evidence) || !Array.isArray(payload.case_actions) ||
           !payload.history_page || payload.history_page.case_id !== caseId) {
