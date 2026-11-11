@@ -2,71 +2,8 @@ import {
   getAdminClient,
   json,
   sha256Hex,
+  verifyYocoWebhookSignature,
 } from "../_shared/yoco.ts";
-
-const SIGNATURE_TOLERANCE_SECONDS = 180;
-
-function decodeBase64(value: string) {
-  try {
-    const binary = atob(value);
-    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-  } catch {
-    return null;
-  }
-}
-
-function constantTimeEqual(left: Uint8Array, right: Uint8Array) {
-  if (left.length !== right.length) return false;
-  let difference = 0;
-  for (let index = 0; index < left.length; index++) {
-    difference |= left[index] ^ right[index];
-  }
-  return difference === 0;
-}
-
-async function verifyYocoSignature(req: Request, rawBody: string) {
-  const webhookId = req.headers.get("webhook-id") || "";
-  const timestamp = req.headers.get("webhook-timestamp") || "";
-  const signatureHeader = req.headers.get("webhook-signature") || "";
-  const secret = Deno.env.get("YOCO_WEBHOOK_SECRET") || "";
-
-  if (!webhookId || !/^\d+$/.test(timestamp) || !signatureHeader ||
-      !secret.startsWith("whsec_")) return false;
-
-  const timestampSeconds = Number(timestamp);
-  if (!Number.isSafeInteger(timestampSeconds) ||
-      Math.abs(Date.now() / 1000 - timestampSeconds) > SIGNATURE_TOLERANCE_SECONDS) {
-    return false;
-  }
-
-  const keyBytes = decodeBase64(secret.slice("whsec_".length));
-  if (!keyBytes) return false;
-
-  const signedContent = webhookId + "." + timestamp + "." + rawBody;
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyBytes,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const expected = new Uint8Array(await crypto.subtle.sign(
-    "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(signedContent),
-  ));
-
-  // Yoco signatures are versioned; compare every supplied v1 signature.
-  const candidates = Array.from(
-    signatureHeader.matchAll(/(?:^|\s)v1,([A-Za-z0-9+/=]+)/g),
-    (match) => match[1],
-  );
-
-  return candidates.some((candidate) => {
-    const decoded = decodeBase64(candidate);
-    return !!decoded && constantTimeEqual(expected, decoded);
-  });
-}
 
 function asObject(value: unknown): Record<string, any> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -81,7 +18,7 @@ Deno.serve(async (req: Request) => {
     const rawBody = await req.text();
     if (rawBody.length > 256_000) return json({ ok: false, error: "Webhook payload too large." }, 413);
 
-    const verified = await verifyYocoSignature(req, rawBody);
+    const verified = await verifyYocoWebhookSignature(req, rawBody);
     if (!verified) {
       console.warn("Rejected Yoco webhook with invalid signature or stale timestamp.");
       return json({ ok: false, error: "Invalid webhook signature." }, 401);
