@@ -49,7 +49,7 @@ const defaultDependencies: WebhookDependencies = {
   createAdmin: getAdminClient,
   hashBody: sha256Hex,
   respond: json,
-  logError: (...values) => deps.logError(...values),
+  logError: (...values) => console.error(...values),
   logWarn: (...values) => console.warn(...values),
 };
 
