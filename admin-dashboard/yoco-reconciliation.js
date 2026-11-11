@@ -7,7 +7,7 @@
   var KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
   var ACCESS = "swayphics_admin_access_token";
   var REFRESH = "swayphics_admin_refresh_token";
-  var root, data = null, selectedId = "", filter = "all", busy = false;
+  var root, data = null, selectedId = "", filter = "all", busy = false, historyPage = {evidence_has_more:false,actions_have_more:false};
 
   function esc(v) {
     return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
@@ -113,7 +113,7 @@
         return '<article class="yr-evidence"><div><b>' + esc(e.evidence_type.replace(/_/g, " ")) +
           '</b><time>' + esc(new Date(e.created_at).toLocaleString()) + '</time></div><p>' + esc(e.note) +
           '</p>' + (e.reference ? '<small>Reference: ' + esc(e.reference) + '</small>' : '') + '</article>';
-      }).join("") : '<p class="yr-muted">No evidence has been recorded.</p>') +
+      }).join("") : '<p class="yr-muted">No evidence has been recorded.</p>') + (historyPage.evidence_has_more ? '<button type="button" class="yr-refresh" data-load-evidence>Load older evidence</button>' : '') +
       (c.status === "open" || c.status === "investigating" ?
       '<form data-evidence-form class="yr-form"><label>Evidence category<select name="type" required>' +
       '<option value="provider_dashboard">Provider dashboard</option><option value="bank_statement">Bank statement</option>' +
@@ -124,7 +124,7 @@
       '<button class="yr-primary" type="submit">Add evidence</button></form>' : '') +
       '</section>' +
       '<section class="yr-section"><h4>Investigation history</h4>' +
-      (history || '<p class="yr-muted">No workflow actions recorded yet.</p>') + '</section>' +
+      (history || '<p class="yr-muted">No workflow actions recorded yet.</p>') + (historyPage.actions_have_more ? '<button type="button" class="yr-refresh" data-load-actions>Load older actions</button>' : '') + '</section>' +
       (c.status === "open" || c.status === "investigating" ?
       '<section class="yr-section"><h4>Case action</h4><form data-action-form class="yr-form">' +
       '<label>Action<select name="status" data-next-status>' +
@@ -139,6 +139,10 @@
       '<label>Related refund ID (required for financial correction)<input name="refund" placeholder="Existing Yoco refund UUID"></label>' +
       '<p class="yr-muted">References must already exist and belong to this case’s invoice. This action does not create or change financial records.</p></div>' +
       '<button class="yr-primary" type="submit">Save case action</button></form></section>' : '');
+    var olderEvidence = node.querySelector("[data-load-evidence]");
+    if (olderEvidence) olderEvidence.addEventListener("click", function () { loadHistory(c.id, "evidence"); });
+    var olderActions = node.querySelector("[data-load-actions]");
+    if (olderActions) olderActions.addEventListener("click", function () { loadHistory(c.id, "actions"); });
     var form = node.querySelector("[data-evidence-form]");
     if (form) form.addEventListener("submit", submitEvidence);
     var actionForm = node.querySelector("[data-action-form]");
@@ -170,9 +174,42 @@
         throw new Error("The reconciliation case list contains an invalid record.");
       }
       data = payload;
+      data.evidence = []; data.case_actions = [];
+      historyPage = {evidence_has_more:false,actions_have_more:false};
       if (!selectedId || !cases().some(function (c) { return c.id === selectedId; })) selectedId = cases()[0] ? cases()[0].id : "";
-      render(); status("Read-only Yoco test data refreshed.", false);
+      render();
+      if (selectedId) await loadHistory(selectedId, "both");
+      status("Read-only Yoco test data refreshed.", false);
     } catch (e) { status(e.message || "Unable to load reconciliation data.", true); }
+  }
+  async function loadHistory(caseId, kind) {
+    if (!data || caseId !== selectedId) return;
+    var evidenceOffset = kind === "actions" ? 0 : evidenceFor(caseId).length;
+    var actionOffset = kind === "evidence" ? 0 : actionsFor(caseId).length;
+    if (kind === "both") { evidenceOffset = 0; actionOffset = 0; }
+    status("Loading case history…", false);
+    try {
+      var payload = await request("/functions/v1/reconcile-payment", {method:"POST",body:{
+        limit:100,history_case_id:caseId,evidence_offset:evidenceOffset,action_offset:actionOffset
+      }});
+      if (!payload || payload.ok !== true || payload.environment !== "test" ||
+          !Array.isArray(payload.evidence) || !Array.isArray(payload.case_actions) ||
+          !payload.history_page || payload.history_page.case_id !== caseId) {
+        throw new Error("The paginated case history response is incomplete or invalid.");
+      }
+      if (kind === "both") {
+        data.evidence = payload.evidence;
+        data.case_actions = payload.case_actions;
+      } else {
+        if (kind !== "actions") data.evidence = evidenceFor(caseId).concat(payload.evidence);
+        if (kind !== "evidence") data.case_actions = actionsFor(caseId).concat(payload.case_actions);
+      }
+      historyPage = {
+        evidence_has_more: payload.history_page.evidence_has_more === true,
+        actions_have_more: payload.history_page.actions_have_more === true
+      };
+      render(); status("Case history loaded.", false);
+    } catch (e) { status(e.message || "Unable to load case history.", true); }
   }
   async function submitEvidence(event) {
     event.preventDefault(); if (busy) return;
