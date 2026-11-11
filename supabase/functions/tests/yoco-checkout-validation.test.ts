@@ -102,7 +102,7 @@ Deno.test("portal token resolver hashes the raw token and enforces active and ex
   let selectedHash = "";
   let updated = false;
 
-  const row = {
+  let row = {
     id: "token-row-1",
     client_id: "client-row-1",
     active: true,
@@ -115,6 +115,7 @@ Deno.test("portal token resolver hashes the raw token and enforces active and ex
         select() { return this; },
         eq(column: string, value: unknown) {
           if (column === "token_hash") selectedHash = String(value);
+          if (column === "active" && value === true && row.active !== true) return { maybeSingle: async () => ({ data: null, error: null }) };
           return this;
         },
         maybeSingle: async () => ({ data: row, error: null }),
@@ -134,6 +135,15 @@ Deno.test("portal token resolver hashes the raw token and enforces active and ex
   }
   if (await resolvePortalToken(admin, "short")) {
     throw new Error("A short portal token was accepted.");
+  }
+
+  row = { ...row, expires_at: new Date(Date.now() - 60_000).toISOString() };
+  if (await resolvePortalToken(admin, token)) {
+    throw new Error("An expired portal token was accepted.");
+  }
+  row = { ...row, active: false, expires_at: null };
+  if (await resolvePortalToken(admin, token)) {
+    throw new Error("An inactive portal token was accepted.");
   }
 });
 
