@@ -73,7 +73,7 @@ The four functions have `verify_jwt = false` in `supabase/config.toml` because t
 
 Before any test deployment:
 
-- Execute all four migrations in a disposable Supabase project.
+- Execute all seven migrations in a disposable Supabase project.
 - Run PostgreSQL advisor/security checks.
 - Type-check and lint all four Edge Functions.
 - Verify test-key refusal when a live key is supplied.
@@ -96,7 +96,9 @@ Apply only in a disposable test Supabase project, after review, in this exact or
 3. `supabase/migrations/202611110003_yoco_atomic_payment_operations.sql`
 4. `supabase/migrations/202611110004_yoco_edge_rpc_boundary.sql`
 5. `supabase/migrations/202611110005_yoco_ledger_immutability.sql`
+6. `supabase/migrations/202611110006_yoco_webhook_worker_leases.sql`
+7. `supabase/migrations/202611110007_yoco_payment_failure_lease.sql`
 
-Migration 005 adds database-level immutability for Yoco payment rows, successful Yoco refund rows and issued receipts. It also requires successful refund ledger inserts to reference a verified refund event associated with the matching test payment attempt.
+Migration 005 adds database-level immutability for Yoco payment rows, successful Yoco refund rows and issued receipts. It also requires successful refund ledger inserts to reference a verified refund event associated with the matching test payment attempt. Migration 006 adds exclusive webhook worker leases and fencing; migration 007 makes payment-failure processing atomic under that lease.
 
 Before any test deployment, inspect effective schema/table/function privileges and run the concurrency, replay, refund and client-isolation tests in the QA matrix. No migration has been executed as part of this preparation.
