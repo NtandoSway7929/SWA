@@ -78,6 +78,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const checkoutSuccessUrl = new URL(successUrl);
+    checkoutSuccessUrl.searchParams.set("token", token);
+    checkoutSuccessUrl.searchParams.set("payment_attempt", attempt.attempt_id);
+
     const response = await fetch("https://payments.yoco.com/api/checkouts", {
       method: "POST",
       headers: {
@@ -88,7 +92,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         amount: amountCents,
         currency: "ZAR",
-        successUrl,
+        successUrl: checkoutSuccessUrl.toString(),
         cancelUrl,
         failureUrl,
         metadata: {
