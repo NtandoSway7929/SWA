@@ -9,6 +9,7 @@ const edge = read("supabase/functions/reconcile-payment/index.ts");
 const html = read("admin-dashboard/index.html");
 const evidenceMigration = read("supabase/migrations/202611110011_yoco_reconciliation_evidence_scope.sql");
 const statusMigration = read("supabase/migrations/202611110010_yoco_reconciliation_reference_integrity.sql");
+const concurrencyMigration = read("supabase/migrations/202611110012_yoco_reconciliation_optimistic_concurrency.sql");
 
 test("admin dashboard loads the reconciliation interface", () => {
   assert.match(html, /yoco-reconciliation\.js\?v=20261111-stage-1-54/);
@@ -26,7 +27,7 @@ test("reconciliation reads use the guarded administrator Edge Function", () => {
 
 test("evidence and status changes use authenticated administrator RPCs", () => {
   assert.match(ui, /admin_add_payment_reconciliation_evidence/);
-  assert.match(ui, /admin_set_payment_reconciliation_status/);
+  assert.match(ui, /admin_set_payment_reconciliation_status_v2/);
   assert.match(evidenceMigration, /v_case\.provider <> 'yoco' or v_case\.environment <> 'test'/);
   assert.match(evidenceMigration, /public\.is_swayphics_admin\(\)/);
 });
@@ -88,7 +89,7 @@ test("reconciliation Edge Function enforces method, origin and administrator che
 
 test("case workflow submits only the guarded evidence and status RPCs", () => {
   assert.match(ui, /admin_add_payment_reconciliation_evidence/);
-  assert.match(ui, /admin_set_payment_reconciliation_status/);
+  assert.match(ui, /admin_set_payment_reconciliation_status_v2/);
   assert.match(ui, /p_reconciliation_id:c\.id/);
   assert.match(ui, /p_new_status:next/);
   assert.doesNotMatch(ui, /from\(["']payment_reconciliation_(evidence|actions)["']\)\s*\.insert/);
@@ -120,4 +121,29 @@ test("history requests prevent duplicate loads and discard stale case responses"
   assert.match(ui, /var requestId = \+\+historyRequestId/);
   assert.match(ui, /requestId !== historyRequestId \|\| caseId !== selectedId/);
   assert.match(ui, /if \(busy\) return/);
+});
+
+test("dashboard load validates its own response without undefined history-request variables", () => {
+  const load = ui.slice(ui.indexOf("async function load()"), ui.indexOf("async function loadHistory"));
+  assert.doesNotMatch(load, /requestId|caseId/);
+  assert.match(load, /payload\.ok !== true/);
+});
+
+test("case decisions require the exact case version loaded by the administrator", () => {
+  assert.match(ui, /admin_set_payment_reconciliation_status_v2/);
+  assert.match(ui, /p_expected_updated_at:c\.updated_at/);
+  assert.match(concurrencyMigration, /v_case\.updated_at is distinct from p_expected_updated_at/);
+  assert.match(concurrencyMigration, /using errcode = '40001'/);
+  assert.match(concurrencyMigration, /revoke execute on function public\.admin_set_payment_reconciliation_status\(uuid, text, text, text, uuid, uuid\)/);
+});
+
+test("new evidence invalidates previously loaded reconciliation case versions", () => {
+  assert.match(concurrencyMigration, /set updated_at = now\(\) where id = p_reconciliation_id/);
+  assert.match(concurrencyMigration, /for update/);
+  assert.match(concurrencyMigration, /Evidence cannot be added to a closed reconciliation case/);
+});
+
+test("stale decision errors instruct the administrator to refresh and review", () => {
+  assert.match(ui, /changed after it was loaded/);
+  assert.match(ui, /Refresh and review|refresh and review/);
 });
