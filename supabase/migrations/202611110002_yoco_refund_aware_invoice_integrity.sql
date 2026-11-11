@@ -440,6 +440,9 @@ begin
                         ),
                         0
                     ),
+                    'online_payment_enabled', coalesce(i.online_payment_enabled, false),
+                    'partial_payment_enabled', coalesce(i.partial_payment_enabled, false),
+                    'deposit_amount', coalesce(i.deposit_amount, 0),
                     'notes', i.notes
                 )
                 order by i.created_at desc
