@@ -27,7 +27,7 @@ export async function verifyYocoWebhookSignature(
   const signatureHeader = req.headers.get("webhook-signature") || "";
   const secret = Deno.env.get("YOCO_WEBHOOK_SECRET") || "";
 
-  if (!webhookId || !/^\\d+$/.test(timestamp) || !signatureHeader ||
+  if (!webhookId || !/^\d+$/.test(timestamp) || !signatureHeader ||
       !secret.startsWith("whsec_")) return false;
 
   const timestampSeconds = Number(timestamp);
@@ -54,7 +54,7 @@ export async function verifyYocoWebhookSignature(
   ));
 
   const candidates = Array.from(
-    signatureHeader.matchAll(/(?:^|\\s)v1,([A-Za-z0-9+/=]+)/g),
+    signatureHeader.matchAll(/(?:^|\s)v1,([A-Za-z0-9+/=]+)/g),
     (match) => match[1],
   );
   return candidates.some((candidate) => {
