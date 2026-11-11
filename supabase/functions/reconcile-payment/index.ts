@@ -112,11 +112,13 @@ Deno.serve(async (req: Request) => {
         admin.from("payment_reconciliation_evidence")
           .select("id,reconciliation_id,evidence_type,reference,note,created_by,created_at")
           .in("reconciliation_id", caseIds)
-          .order("created_at", { ascending: true }),
+          .order("created_at", { ascending: true })
+          .limit(500),
         admin.from("payment_reconciliation_actions")
           .select("id,reconciliation_id,action,previous_status,new_status,outcome,reason,related_payment_id,related_refund_id,actor_user_id,created_at")
           .in("reconciliation_id", caseIds)
-          .order("created_at", { ascending: true }),
+          .order("created_at", { ascending: true })
+          .limit(500),
       ])
       : [{ data: [], error: null }, { data: [], error: null }];
 
