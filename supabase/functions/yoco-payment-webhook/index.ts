@@ -133,7 +133,12 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
         .eq("provider_checkout_id", details.checkoutId)
         .maybeSingle();
 
-      if (attemptError || !attempt) {
+      if (attemptError) {
+        deps.logError("Could not resolve Yoco checkout to a payment attempt:", attemptError.message);
+        return respond({ ok: false, error: "Verified payment event could not be matched yet." }, 503);
+      }
+
+      if (!attempt) {
         await admin.from("payment_webhook_events")
           .update({
             processing_status: "requires_review",
@@ -184,7 +189,12 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
         .eq("provider_checkout_id", checkoutId)
         .maybeSingle();
 
-      if (attemptError || !attempt) {
+      if (attemptError) {
+        deps.logError("Could not resolve failed Yoco checkout to a payment attempt:", attemptError.message);
+        return respond({ ok: false, error: "Verified payment failure could not be matched yet." }, 503);
+      }
+
+      if (!attempt) {
         await admin.from("payment_webhook_events")
           .update({
             processing_status: "requires_review",
@@ -209,7 +219,7 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
         return respond({ ok: true, received: true, requires_review: true });
       }
 
-      const { error: updateError } = await admin
+      const { data: failedAttempt, error: updateError } = await admin
         .from("payment_attempts")
         .update({
           status: "failed",
@@ -218,20 +228,56 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
           updated_at: new Date().toISOString(),
         })
         .eq("id", attempt.id)
-        .in("status", ["created", "pending", "requires_review"]);
+        .in("status", ["created", "pending", "requires_review"])
+        .select("id")
+        .maybeSingle();
 
       if (updateError) {
         deps.logError("Could not update failed Yoco payment attempt:", updateError.message);
         return respond({ ok: false, error: "Payment failure could not be recorded yet." }, 503);
       }
 
-      await admin.from("payment_webhook_events")
+      if (!failedAttempt && attempt.status !== "failed") {
+        // A concurrent success may have won the attempt-state race. Do not
+        // silently mark this contradictory provider event as processed.
+        const { data: latestAttempt, error: latestError } = await admin
+          .from("payment_attempts")
+          .select("id,status")
+          .eq("id", attempt.id)
+          .maybeSingle();
+        if (latestError || !latestAttempt) {
+          return respond({ ok: false, error: "Payment event state could not be verified yet." }, 503);
+        }
+        if (latestAttempt.status === "succeeded") {
+          const { error: reviewError } = await admin.from("payment_webhook_events")
+            .update({
+              payment_attempt_id: attempt.id,
+              processing_status: "requires_review",
+              failure_code: "conflicting_payment_events",
+              failure_message: "A failure event raced with a successful settlement.",
+              processed_at: new Date().toISOString(),
+            })
+            .eq("id", recorded.event_id);
+          if (reviewError) {
+            deps.logError("Could not retain conflicting Yoco payment event:", reviewError.message);
+            return respond({ ok: false, error: "Conflicting payment event requires retry." }, 503);
+          }
+          return respond({ ok: true, received: true, requires_review: true });
+        }
+      }
+
+      const { error: eventUpdateError } = await admin.from("payment_webhook_events")
         .update({
           payment_attempt_id: attempt.id,
           processing_status: "processed",
           processed_at: new Date().toISOString(),
         })
         .eq("id", recorded.event_id);
+
+      if (eventUpdateError) {
+        deps.logError("Could not mark Yoco payment failure event processed:", eventUpdateError.message);
+        return respond({ ok: false, error: "Payment failure event could not be finalized yet." }, 503);
+      }
 
       return respond({ ok: true, received: true, payment_failed: true });
     }
@@ -241,14 +287,19 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
       // Do not guess which local payment a provider refund belongs to. If the
       // event does not contain a known attempt ID, keep it for admin review.
       const attemptId = details?.paymentAttemptId ?? "";
-      const { data: attempt } = attemptId
+      const { data: attempt, error: attemptError } = attemptId
         ? await admin.from("payment_attempts")
           .select("id,payment_id")
           .eq("id", attemptId)
           .eq("provider", "yoco")
           .eq("environment", "test")
           .maybeSingle()
-        : { data: null };
+        : { data: null, error: null };
+
+      if (attemptError) {
+        deps.logError("Could not resolve Yoco refund payment attempt:", attemptError.message);
+        return respond({ ok: false, error: "Verified refund could not be matched yet." }, 503);
+      }
 
       if (!attempt?.payment_id || !details) {
         await admin.from("payment_webhook_events")
