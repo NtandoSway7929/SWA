@@ -1051,6 +1051,11 @@ async function main() {
     assert.equal(metrics.mockedTableActionWrites.filter(item =>
       item.method === "PATCH" && item.path === "/rest/v1/tasks" && item.id === "task-urgent"
     ).length, 1, "the confirmed task patch should be intercepted once");
+    assert.equal(
+      await page.evaluate(() => document.activeElement.getAttribute("data-admin-table-search-input")),
+      "tasks",
+      "bulk task completion should restore keyboard focus to the current list's search field"
+    );
 
     // Confirm a lead-linked follow-up and verify its linked lead update in memory.
     await navigate("followups", "crm");
@@ -1144,6 +1149,11 @@ async function main() {
     ).length, 2, "each deleted lead should receive its own activity-log entry");
     assert.equal(await page.locator('[data-admin-table-bulk-toolbar="leads"]').isVisible(), false,
       "successfully deleted leads should be removed from selection and hide the bulk toolbar");
+    assert.equal(
+      await page.evaluate(() => document.activeElement.getAttribute("data-admin-table-search-input")),
+      "leads",
+      "successful bulk deletion should restore keyboard focus to the current list's search field"
+    );
 
     // Tasks and follow-ups must expose the same confirmed bulk-delete behaviour.
     await navigate("tasks", "delivery");

@@ -543,6 +543,20 @@
             feedback.hidden = !state.tableFeedback[view];
         }
 
+        function restoreBulkActionFocus(view) {
+            const selectedCheckbox = workspace.querySelector(
+                '[data-admin-table-row="' + view + '"]:not([hidden]) ' +
+                '[data-admin-table-select="' + view + '"]:checked'
+            );
+            const searchInput = workspace.querySelector(
+                '[data-admin-table-search-input="' + view + '"]'
+            );
+            const target = selectedCheckbox || searchInput;
+            if (target && typeof target.focus === "function") {
+                target.focus();
+            }
+        }
+
         async function bulkAction(view, action) {
             if (state.tableBulkActionRunning) return;
             if (action === "export") {
@@ -651,6 +665,7 @@
                 } finally {
                     state.tableBulkActionRunning = false;
                     renderView();
+                    restoreBulkActionFocus(view);
                 }
                 return;
             }
@@ -701,6 +716,7 @@
             } finally {
                 state.tableBulkActionRunning = false;
                 renderView();
+                restoreBulkActionFocus(view);
             }
         }
 
