@@ -29,10 +29,13 @@ select extensions.ok(
   'anonymous role cannot invoke the RPC'
 );
 select extensions.ok(
-  not has_function_privilege(
-    'public',
-    'public.admin_set_invoice_yoco_settings(uuid,boolean,boolean,numeric)',
-    'execute'
+  not not exists (
+    select 1
+    from pg_proc p,
+         lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+    where p.oid = 'public.admin_set_invoice_yoco_settings(uuid,boolean,boolean,numeric)'::regprocedure
+      and acl.grantee = 0
+      and acl.privilege_type = 'EXECUTE'
   ),
   'PUBLIC cannot invoke the RPC'
 );
@@ -66,7 +69,7 @@ select extensions.ok(
 -- No JWT subject means no authenticated administrator. The RPC must reject
 -- before it can inspect or mutate any invoice.
 set local role authenticated;
-select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
 select extensions.throws_ok(
   $$ select public.admin_set_invoice_yoco_settings(null, false, false, null) $$,
   '42501',
