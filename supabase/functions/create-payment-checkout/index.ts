@@ -1,24 +1,13 @@
+import { isSwayphicsReturnUrl, validateCheckoutRequest, validateYocoCheckoutResponse } from "../_shared/yoco-validation.ts";
 import {
   checkOrigin,
   getAdminClient,
-  isUuid,
   json,
   optionsResponse,
   resolvePortalToken,
 } from "../_shared/yoco.ts";
 
 const MAX_BODY_BYTES = 16_384;
-
-function isSwayphicsReturnUrl(value: string | undefined) {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" &&
-      (url.hostname === "swayphics.co.za" || url.hostname.endsWith(".swayphics.co.za"));
-  } catch {
-    return false;
-  }
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return optionsResponse();
@@ -37,17 +26,11 @@ Deno.serve(async (req: Request) => {
     try { body = JSON.parse(rawBody); } catch {
       return json({ ok: false, error: "Invalid JSON request." }, 400);
     }
-    const token = typeof body?.token === "string" ? body.token.trim() : "";
-    const invoiceId = body?.invoice_id;
-    const amountCents = body?.amount_cents;
-    const suppliedKey = req.headers.get("idempotency-key") || body?.idempotency_key;
-    const idempotencyKey = typeof suppliedKey === "string" ? suppliedKey.trim() : "";
-
-    if (!token || !isUuid(invoiceId) || !Number.isSafeInteger(amountCents) ||
-        amountCents < 200 || amountCents > 100_000_000 ||
-        !idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 128) {
+    const validated = validateCheckoutRequest(body, req.headers.get("idempotency-key"));
+    if (!validated.ok) {
       return json({ ok: false, error: "A valid portal token, invoice, amount and idempotency key are required." }, 400);
     }
+    const { token, invoiceId, amountCents, idempotencyKey } = validated;
 
     const yocoKey = Deno.env.get("YOCO_SECRET_KEY");
     const mode = Deno.env.get("YOCO_ENVIRONMENT");
@@ -122,16 +105,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const checkout = await response.json();
-    const checkoutId = typeof checkout?.id === "string" ? checkout.id : "";
-    const redirectUrl = typeof checkout?.redirectUrl === "string" ? checkout.redirectUrl : "";
-    let redirect: URL | null = null;
-    try { redirect = new URL(redirectUrl); } catch { redirect = null; }
-
-    if (!checkoutId || checkout.amount !== amountCents || checkout.currency !== "ZAR" || checkout.processingMode !== "test" || !redirect || redirect.protocol !== "https:" ||
-        !(redirect.hostname === "yoco.com" || redirect.hostname.endsWith(".yoco.com"))) {
+    const validatedCheckout = validateYocoCheckoutResponse(checkout, amountCents);
+    if (!validatedCheckout.ok) {
       console.error("Yoco returned an invalid hosted checkout response.");
       return json({ ok: false, error: "The payment provider returned an invalid checkout response." }, 502);
     }
+    const { checkoutId, redirectUrl } = validatedCheckout;
+    const redirect = new URL(redirectUrl);
 
     const { data: attached, error: attachError } = await admin.rpc("yoco_attach_checkout", {
       p_attempt_id: attempt.attempt_id,
