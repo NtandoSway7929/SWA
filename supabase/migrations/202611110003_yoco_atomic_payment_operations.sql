@@ -334,12 +334,14 @@ begin
     if p_amount_cents is distinct from v_attempt.amount_cents
        or upper(coalesce(p_currency, '')) <> v_attempt.currency
        or lower(coalesce(p_processing_mode, '')) <> 'test' then
-        update public.payment_attempts
-        set status = 'requires_review',
-            failure_code = 'provider_payment_mismatch',
-            failure_message = 'Provider amount, currency, or processing mode did not match the attempt.',
-            updated_at = now()
-        where id = v_attempt.id;
+        if v_attempt.status <> 'succeeded' then
+            update public.payment_attempts
+            set status = 'requires_review',
+                failure_code = 'provider_payment_mismatch',
+                failure_message = 'Provider amount, currency, or processing mode did not match the attempt.',
+                updated_at = now()
+            where id = v_attempt.id;
+        end if;
 
         update public.payment_webhook_events
         set payment_attempt_id = v_attempt.id,
