@@ -3,6 +3,7 @@ import {
   getAdminClient,
   isUuid,
   json,
+  optionsResponse,
   resolvePortalToken,
 } from "../_shared/yoco.ts";
 
@@ -20,7 +21,7 @@ function isSwayphicsReturnUrl(value: string | undefined) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: { ...((await import("../_shared/yoco.ts")).corsHeaders) } });
+  if (req.method === "OPTIONS") return optionsResponse();
   if (req.method !== "POST") return json({ ok: false, error: "Method not allowed." }, 405);
   if (!checkOrigin(req)) return json({ ok: false, error: "Origin not allowed." }, 403);
 
