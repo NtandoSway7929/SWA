@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
     const successUrl = Deno.env.get("YOCO_SUCCESS_URL");
     const cancelUrl = Deno.env.get("YOCO_CANCEL_URL");
     const failureUrl = Deno.env.get("YOCO_FAILURE_URL");
-    if (!yocoKey || mode !== "test" || /live/i.test(yocoKey) ||
+    if (!yocoKey || !yocoKey.startsWith("sk_test_") || mode !== "test" ||
         !isSwayphicsReturnUrl(successUrl) || !isSwayphicsReturnUrl(cancelUrl) ||
         !isSwayphicsReturnUrl(failureUrl)) {
       return json({ ok: false, error: "Test checkout is not configured. No payment has been initiated." }, 503);
@@ -112,7 +112,7 @@ Deno.serve(async (req: Request) => {
     let redirect: URL | null = null;
     try { redirect = new URL(redirectUrl); } catch { redirect = null; }
 
-    if (!checkoutId || !redirect || redirect.protocol !== "https:" ||
+    if (!checkoutId || checkout.processingMode !== "test" || !redirect || redirect.protocol !== "https:" ||
         !(redirect.hostname === "yoco.com" || redirect.hostname.endsWith(".yoco.com"))) {
       console.error("Yoco returned an invalid hosted checkout response.");
       return json({ ok: false, error: "The payment provider returned an invalid checkout response." }, 502);
