@@ -1315,16 +1315,6 @@ const payment=payments.find(function(row){return String(row.id)===String(receipt
 try{if(payment)downloadPaymentReceipt(payment)}catch(error){window.alert(error&&error.message||"Receipt could not be downloaded.")}
 return;
 }
-const yocoButton=event.target.closest("#finance-yoco-pay");
-if(yocoButton){
-const modal=yocoButton.closest("#portal-financial-modal");
-const amountInput=modal?.querySelector("#finance-yoco-amount");
-const statusBox=modal?.querySelector("#finance-yoco-status");
-if(modal&&amountInput&&statusBox){
-startYocoCheckout(modal,amountInput,yocoButton,statusBox);
-}
-return;
-}
 const filterButton=event.target.closest("[data-invoice-filter]");
 if(filterButton){
 invoiceFilter=filterButton.dataset.invoiceFilter||"all";
