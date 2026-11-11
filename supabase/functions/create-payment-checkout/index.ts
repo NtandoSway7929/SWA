@@ -80,7 +80,8 @@ Deno.serve(async (req: Request) => {
 
     const portalReturnUrl = (value: string) => {
       const url = new URL(value);
-      url.searchParams.set("token", token);
+      // Never disclose the private portal token to Yoco or place it in a
+      // third-party redirect URL. The browser retains it in session storage.
       url.searchParams.set("payment_attempt", attempt.attempt_id);
       return url.toString();
     };
