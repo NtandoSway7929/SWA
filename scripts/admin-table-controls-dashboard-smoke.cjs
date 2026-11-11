@@ -1177,6 +1177,11 @@ async function main() {
 
     // Communication log rows have their own selection column and safe bulk delete.
     await navigate("communications", "crm");
+    const communicationFilter = page.locator('[data-admin-table-filter="communications"]');
+    assert.equal(await communicationFilter.getAttribute("aria-label"), "Filter communications by direction",
+      "the Communication Log filter should be announced as a direction filter");
+    assert.equal((await communicationFilter.locator('option[value="all"]').innerText()).trim(), "All directions",
+      "the Communication Log should use direction-specific filter wording");
     const communicationRows = page.locator('#sway-workspace-main [data-admin-table-row="communications"]');
     assert.equal(await communicationRows.count(), 1, "the Communication Log should render synthetic entries");
     await communicationRows.first().locator('[data-admin-table-select="communications"]').check();
