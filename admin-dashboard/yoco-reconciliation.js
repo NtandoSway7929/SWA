@@ -77,7 +77,7 @@
         '</span><small>' + esc(new Date(c.created_at).toLocaleString()) + '</small></button>';
     }).join("") : '<p class="yr-empty">No matching open reconciliation cases.</p>';
     root.querySelectorAll("[data-case]").forEach(function (b) {
-      b.addEventListener("click", function () { selectedId = b.getAttribute("data-case"); render(); });
+      b.addEventListener("click", function () { selectedId = b.getAttribute("data-case"); data.evidence = []; data.case_actions = []; historyPage = {evidence_has_more:false,actions_have_more:false}; render(); loadHistory(selectedId, "both"); });
     });
   }
   function renderDetail() {
