@@ -3,7 +3,12 @@ import {
   getAdminClient,
   json,
   optionsResponse,
+  readLimitedTextBody,
 } from "../_shared/yoco.ts";
+import {
+  normalizeReconciliationLimit,
+  parseJsonObject,
+} from "../_shared/yoco-http-validation.ts";
 
 function getPublishableKey() {
   const legacy = Deno.env.get("SUPABASE_ANON_KEY");
@@ -47,8 +52,16 @@ Deno.serve(async (req: Request) => {
   try {
     if (!await authorizeAdmin(req)) return json({ ok: false, error: "Administrator access required." }, 403);
 
-    const body = await req.json().catch(() => ({}));
-    const limit = Math.min(Math.max(Number(body?.limit) || 30, 1), 100);
+    const limitedBody = await readLimitedTextBody(req, 8_192);
+    if (!limitedBody.ok) {
+      return json({
+        ok: false,
+        error: limitedBody.reason === "too_large" ? "Request is too large." : "Request must be valid UTF-8.",
+      }, limitedBody.reason === "too_large" ? 413 : 400);
+    }
+    const body = limitedBody.body ? parseJsonObject(limitedBody.body) : {};
+    if (!body) return json({ ok: false, error: "A JSON object is required." }, 400);
+    const limit = normalizeReconciliationLimit(body.limit);
     const admin = getAdminClient();
 
     const [attemptsResult, casesResult, refundsResult] = await Promise.all([
