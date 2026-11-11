@@ -40,9 +40,11 @@ export async function verifyYocoWebhookSignature(
   if (!keyBytes) return false;
 
   const signedContent = webhookId + "." + timestamp + "." + rawBody;
+  const keyBuffer = new ArrayBuffer(keyBytes.byteLength);
+  new Uint8Array(keyBuffer).set(keyBytes);
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    keyBytes,
+    keyBuffer,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
