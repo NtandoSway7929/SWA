@@ -58,7 +58,7 @@ async function verifyYocoSignature(req: Request, rawBody: string) {
 
   // Yoco signatures are versioned; compare every supplied v1 signature.
   const candidates = Array.from(
-    signatureHeader.matchAll(/(?:^|\\s)v1,([A-Za-z0-9+/=]+)/g),
+    signatureHeader.matchAll(/(?:^|\s)v1,([A-Za-z0-9+/=]+)/g),
     (match) => match[1],
   );
 
