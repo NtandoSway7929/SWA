@@ -119,3 +119,12 @@ Five additional HTTP-handler tests cover:
 The handler's financial safety still depends on the database settlement/refund operations' idempotency. This stage does not implement an exclusive processing lease, a scheduled retry worker, or an automated dead-letter processor. Concurrent deliveries may enter processing concurrently and must be made harmless by the atomic database operations.
 
 **Verification boundary:** source changes and test cases are committed on the feature branch. Deno tests, PostgreSQL integration, true concurrent webhook delivery, Yoco sandbox delivery and browser tests have not been executed. No migrations or production resources were changed.
+
+
+## Stage 1.44 update: webhook lease integration
+
+The Edge Function now claims an exclusive database lease after durable verified-event recording and before any attempt lookup or financial work. Settlement/refund calls pass the lease token to their fenced RPCs. Non-financial event-state changes use the token-fenced update RPC. Payment-failure handling is moved into a transactional database function that locks the attempt and event, rejects stale/expired tokens, detects success/failure conflicts, and clears the lease in the same transaction.
+
+Concurrent deliveries that cannot claim because a lease is active receive HTTP 503 for provider retry. Terminal duplicates are acknowledged without reacquiring a lease. A new Deno HTTP test file covers the claim and fencing boundary; the old pre-lease test harness is retired because it asserted the superseded direct-update architecture.
+
+**Remaining validation:** Deno tests, PostgreSQL migration/function execution, two-session lease takeover and stale-worker fencing, actual Yoco event payload compatibility, and end-to-end sandbox test. The migration is not applied and the Edge Function is not deployed.
