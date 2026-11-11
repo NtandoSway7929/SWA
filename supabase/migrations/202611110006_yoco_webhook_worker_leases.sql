@@ -157,7 +157,6 @@ begin
      or v_event.processing_status <> 'processing'
      or v_event.processing_lease_token is distinct from p_lease_token
      or v_event.processing_lease_expires_at is null
-     or v_event.processing_lease_expires_at is null
      or v_event.processing_lease_expires_at <= now() then
     raise exception 'Webhook processing lease is missing, expired, or stale.';
   end if;
