@@ -114,8 +114,7 @@ begin
     where id = v_event.payment_attempt_id
       and provider = 'yoco'
       and environment = 'test'
-      and payment_id = new.payment_id
-    for update;
+      and payment_id = new.payment_id;
 
     if not found then
         raise exception 'Refund event payment attempt does not match the payment ledger entry.';
