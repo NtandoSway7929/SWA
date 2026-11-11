@@ -35,6 +35,18 @@ async function readLimitedRawBody(req: Request, maxBytes: number): Promise<strin
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
 
+async function updateWebhookEvent(
+  admin: any,
+  eventId: string,
+  values: Record<string, unknown>,
+): Promise<string | null> {
+  const { error } = await admin
+    .from("payment_webhook_events")
+    .update(values)
+    .eq("id", eventId);
+  return error?.message ?? null;
+}
+
 type WebhookDependencies = {
   verifySignature: (req: Request, rawBody: string) => Promise<boolean>;
   createAdmin: () => any;
@@ -114,14 +126,16 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
     if (eventType === "payment.succeeded") {
       const details = getYocoPaymentSuccessDetails(payload);
       if (!details) {
-        await admin.from("payment_webhook_events")
-          .update({
+        const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
             processing_status: "requires_review",
             failure_code: "incomplete_provider_payload",
             failure_message: "Verified success event did not contain the required checkout, amount, currency and mode fields.",
             processed_at: new Date().toISOString(),
-          })
-          .eq("id", recorded.event_id);
+          });
+        if (eventWriteError) {
+          deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
+          return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
+        }
         return respond({ ok: true, received: true, requires_review: true });
       }
 
@@ -139,14 +153,16 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
       }
 
       if (!attempt) {
-        await admin.from("payment_webhook_events")
-          .update({
+        const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
             processing_status: "requires_review",
             failure_code: "unmatched_checkout",
             failure_message: "Verified provider checkout did not match a local payment attempt.",
             processed_at: new Date().toISOString(),
-          })
-          .eq("id", recorded.event_id);
+          });
+        if (eventWriteError) {
+          deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
+          return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
+        }
         return respond({ ok: true, received: true, requires_review: true });
       }
 
@@ -170,14 +186,16 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
     if (eventType === "payment.failed") {
       const checkoutId = getYocoCheckoutId(payload);
       if (!checkoutId) {
-        await admin.from("payment_webhook_events")
-          .update({
+        const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
             processing_status: "requires_review",
             failure_code: "failed_event_unmatched",
             failure_message: "Payment failure event did not include a checkout reference.",
             processed_at: new Date().toISOString(),
-          })
-          .eq("id", recorded.event_id);
+          });
+        if (eventWriteError) {
+          deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
+          return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
+        }
         return respond({ ok: true, received: true, requires_review: true });
       }
 
@@ -195,27 +213,31 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
       }
 
       if (!attempt) {
-        await admin.from("payment_webhook_events")
-          .update({
+        const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
             processing_status: "requires_review",
             failure_code: "unmatched_failed_checkout",
             failure_message: "Payment failure event did not match a local attempt.",
             processed_at: new Date().toISOString(),
-          })
-          .eq("id", recorded.event_id);
+          });
+        if (eventWriteError) {
+          deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
+          return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
+        }
         return respond({ ok: true, received: true, requires_review: true });
       }
 
       if (attempt.status === "succeeded") {
-        await admin.from("payment_webhook_events")
-          .update({
+        const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
             payment_attempt_id: attempt.id,
             processing_status: "requires_review",
             failure_code: "conflicting_payment_events",
             failure_message: "A failure event arrived after the attempt had already settled.",
             processed_at: new Date().toISOString(),
-          })
-          .eq("id", recorded.event_id);
+          });
+        if (eventWriteError) {
+          deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
+          return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
+        }
         return respond({ ok: true, received: true, requires_review: true });
       }
 
@@ -249,15 +271,17 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
           return respond({ ok: false, error: "Payment event state could not be verified yet." }, 503);
         }
         if (latestAttempt.status === "succeeded") {
-          const { error: reviewError } = await admin.from("payment_webhook_events")
-            .update({
+          const { error: reviewError } = const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
               payment_attempt_id: attempt.id,
               processing_status: "requires_review",
               failure_code: "conflicting_payment_events",
               failure_message: "A failure event raced with a successful settlement.",
               processed_at: new Date().toISOString(),
-            })
-            .eq("id", recorded.event_id);
+            });
+        if (eventWriteError) {
+          deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
+          return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
+        }
           if (reviewError) {
             deps.logError("Could not retain conflicting Yoco payment event:", reviewError.message);
             return respond({ ok: false, error: "Conflicting payment event requires retry." }, 503);
@@ -266,13 +290,15 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
         }
       }
 
-      const { error: eventUpdateError } = await admin.from("payment_webhook_events")
-        .update({
+      const { error: eventUpdateError } = const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
           payment_attempt_id: attempt.id,
           processing_status: "processed",
           processed_at: new Date().toISOString(),
-        })
-        .eq("id", recorded.event_id);
+        });
+        if (eventWriteError) {
+          deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
+          return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
+        }
 
       if (eventUpdateError) {
         deps.logError("Could not mark Yoco payment failure event processed:", eventUpdateError.message);
@@ -302,14 +328,16 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
       }
 
       if (!attempt?.payment_id || !details) {
-        await admin.from("payment_webhook_events")
-          .update({
+        const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
             processing_status: "requires_review",
             failure_code: "refund_mapping_required",
             failure_message: "Verified refund event requires an unambiguous local payment mapping.",
             processed_at: new Date().toISOString(),
-          })
-          .eq("id", recorded.event_id);
+          });
+        if (eventWriteError) {
+          deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
+          return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
+        }
         return respond({ ok: true, received: true, requires_review: true });
       }
 
@@ -339,14 +367,16 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
 
     // Failure notifications are retained for investigation. They never create
     // a payment or change invoice balances.
-    await admin.from("payment_webhook_events")
-      .update({
+    const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
         processing_status: "requires_review",
         failure_code: "non_success_event",
         failure_message: "Provider event retained; no financial ledger mutation was performed.",
         processed_at: new Date().toISOString(),
-      })
-      .eq("id", recorded.event_id);
+      });
+        if (eventWriteError) {
+          deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
+          return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
+        }
 
     return respond({ ok: true, received: true, recorded_only: true });
   } catch (error) {
