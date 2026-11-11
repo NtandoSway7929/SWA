@@ -125,9 +125,6 @@ Deno.test("status endpoint confirms only a succeeded attempt with an actual paym
     throw new Error("Settled attempt with payment and receipt was not represented correctly.");
   }
 
-  const missingPayment = harness({ status: "succeeded", paymentId: true, paymentError: false });
-  const original = missingPayment.handler;
-  void original;
 });
 
 Deno.test("status endpoint fails closed when payment or receipt reads fail", async () => {
