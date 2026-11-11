@@ -106,7 +106,7 @@ as $$
 declare
   v_rows integer;
 begin
-  if p_processing_status not in ('processing','processed','failed_retryable','requires_review','rejected') then
+  if p_processing_status is null or p_processing_status not in ('processing','processed','failed_retryable','requires_review','rejected') then
     raise exception 'Invalid webhook event state.';
   end if;
   update public.payment_webhook_events
@@ -156,6 +156,7 @@ begin
   if not found
      or v_event.processing_status <> 'processing'
      or v_event.processing_lease_token is distinct from p_lease_token
+     or v_event.processing_lease_expires_at is null
      or v_event.processing_lease_expires_at <= now() then
     raise exception 'Webhook processing lease is missing, expired, or stale.';
   end if;
