@@ -187,6 +187,85 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, received: true, settlement });
     }
 
+    if (eventType === "payment.failed") {
+      const checkoutId = String(
+        payload.checkoutId ??
+        payload.checkout_id ??
+        payload.metadata?.checkoutId ??
+        "",
+      );
+      if (!checkoutId) {
+        await admin.from("payment_webhook_events")
+          .update({
+            processing_status: "requires_review",
+            failure_code: "failed_event_unmatched",
+            failure_message: "Payment failure event did not include a checkout reference.",
+            processed_at: new Date().toISOString(),
+          })
+          .eq("id", recorded.event_id);
+        return json({ ok: true, received: true, requires_review: true });
+      }
+
+      const { data: attempt, error: attemptError } = await admin
+        .from("payment_attempts")
+        .select("id,status")
+        .eq("provider", "yoco")
+        .eq("environment", "test")
+        .eq("provider_checkout_id", checkoutId)
+        .maybeSingle();
+
+      if (attemptError || !attempt) {
+        await admin.from("payment_webhook_events")
+          .update({
+            processing_status: "requires_review",
+            failure_code: "unmatched_failed_checkout",
+            failure_message: "Payment failure event did not match a local attempt.",
+            processed_at: new Date().toISOString(),
+          })
+          .eq("id", recorded.event_id);
+        return json({ ok: true, received: true, requires_review: true });
+      }
+
+      if (attempt.status === "succeeded") {
+        await admin.from("payment_webhook_events")
+          .update({
+            payment_attempt_id: attempt.id,
+            processing_status: "requires_review",
+            failure_code: "conflicting_payment_events",
+            failure_message: "A failure event arrived after the attempt had already settled.",
+            processed_at: new Date().toISOString(),
+          })
+          .eq("id", recorded.event_id);
+        return json({ ok: true, received: true, requires_review: true });
+      }
+
+      const { error: updateError } = await admin
+        .from("payment_attempts")
+        .update({
+          status: "failed",
+          failure_code: "provider_payment_failed",
+          failure_message: "Yoco reported that the payment failed.",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", attempt.id)
+        .in("status", ["created", "pending", "requires_review"]);
+
+      if (updateError) {
+        console.error("Could not update failed Yoco payment attempt:", updateError.message);
+        return json({ ok: false, error: "Payment failure could not be recorded yet." }, 503);
+      }
+
+      await admin.from("payment_webhook_events")
+        .update({
+          payment_attempt_id: attempt.id,
+          processing_status: "processed",
+          processed_at: new Date().toISOString(),
+        })
+        .eq("id", recorded.event_id);
+
+      return json({ ok: true, received: true, payment_failed: true });
+    }
+
     if (eventType === "refund.succeeded") {
       const providerRefundId = String(payload.refundId ?? payload.refund_id ?? "");
       const amount = Number(payload.amount);
