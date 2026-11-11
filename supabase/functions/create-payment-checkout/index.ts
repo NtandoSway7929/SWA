@@ -78,9 +78,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const checkoutSuccessUrl = new URL(successUrl);
-    checkoutSuccessUrl.searchParams.set("token", token);
-    checkoutSuccessUrl.searchParams.set("payment_attempt", attempt.attempt_id);
+    const portalReturnUrl = (value: string) => {
+      const url = new URL(value);
+      url.searchParams.set("token", token);
+      url.searchParams.set("payment_attempt", attempt.attempt_id);
+      return url.toString();
+    };
 
     const response = await fetch("https://payments.yoco.com/api/checkouts", {
       method: "POST",
@@ -92,9 +95,9 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         amount: amountCents,
         currency: "ZAR",
-        successUrl: checkoutSuccessUrl.toString(),
-        cancelUrl,
-        failureUrl,
+        successUrl: portalReturnUrl(successUrl),
+        cancelUrl: portalReturnUrl(cancelUrl),
+        failureUrl: portalReturnUrl(failureUrl),
         metadata: {
           paymentAttemptId: attempt.attempt_id,
           invoiceId,
