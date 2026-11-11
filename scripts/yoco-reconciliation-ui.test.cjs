@@ -100,3 +100,24 @@ test("status migration enforces allowed transitions and terminal closed states",
   assert.match(statusMigration, /p_new_status in \('resolved','dismissed'\)/);
   assert.match(statusMigration, /v_case\.status in \('resolved','dismissed'\)/);
 });
+
+test("audit timeline identifies the recorded administrator without inventing profile names", () => {
+  assert.match(ui, /function actorLabel\(id\)/);
+  assert.match(ui, /actorLabel\(a\.actor_user_id\)/);
+  assert.match(ui, /actorLabel\(e\.created_by\)/);
+  assert.match(ui, /Administrator identity unavailable/);
+});
+
+test("investigation history is displayed chronologically with deterministic tie-breaking", () => {
+  assert.match(ui, /function chronological\(items\)/);
+  assert.match(ui, /new Date\(a\.created_at\)\.getTime\(\) - new Date\(b\.created_at\)\.getTime\(\)/);
+  assert.match(ui, /data\.case_actions = chronological\(data\.case_actions\)/);
+  assert.match(ui, /data\.evidence = chronological\(data\.evidence\)/);
+});
+
+test("history requests prevent duplicate loads and discard stale case responses", () => {
+  assert.match(ui, /historyBusy/);
+  assert.match(ui, /var requestId = \+\+historyRequestId/);
+  assert.match(ui, /requestId !== historyRequestId \|\| caseId !== selectedId/);
+  assert.match(ui, /if \(busy\) return/);
+});
