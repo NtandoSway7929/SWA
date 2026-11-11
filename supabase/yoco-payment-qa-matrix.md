@@ -203,11 +203,21 @@ Run on a machine with Deno installed:
 
     deno test --allow-env supabase/functions/tests
 
-The tests import shared pure helpers; they do not start the HTTP Edge Function servers or make provider requests. The reconciliation request parser and limit normalizer are exercised directly; endpoint authentication and Supabase query behaviour still require a local integration harness. The webhook handler now uses the same tested normalizers. These tests validate our accepted payload shapes, not Yoco's live webhook compatibility; signed sandbox deliveries are still required.
+The unit tests import shared pure helpers; the checkout HTTP test invokes the actual exported handler with injected dependencies and mocked provider responses. It does not start a network server or contact Yoco. The reconciliation request parser and limit normalizer are exercised directly; endpoint authentication and Supabase query behaviour still require a local integration harness. The webhook handler now uses the same tested normalizers. These tests validate our accepted payload shapes, not Yoco's live webhook compatibility; signed sandbox deliveries are still required.
+
+### HTTP/application integration tests
+
+- `supabase/functions/tests/yoco-checkout-http.test.ts`
+  - Exercises the actual checkout HTTP handler with injected in-memory dependencies and mocked Yoco HTTP responses.
+  - Valid checkout, private-token non-disclosure, stable idempotency header and attempt/attachment RPC ordering.
+  - Invalid portal token, existing-checkout reuse, provider failure/timeout and provider-created-but-unattached checkout.
+  - Disallowed origin, malformed JSON and live-key rejection.
+  - No Supabase or Yoco network request is made by this test.
+- The checkout endpoint now exports a handler factory for isolated tests; the Edge Function still serves that same handler when deployed.
 
 ### HTTP/application integration cases still requiring a local Supabase + Deno harness
 
-- Checkout endpoint: missing/expired portal token, wrong invoice owner, disabled invoice, invalid amount, provider timeout, provider success followed by failed checkout attachment.
+- Checkout endpoint: wrong invoice owner, disabled invoice, invalid amount, actual Supabase RPC behaviour and provider idempotency semantics.
 - Status endpoint: client A cannot query client B's attempt, missing receipt, pending and confirmed response shapes.
 - Webhook endpoint: unsigned/oversized/malformed requests, provider event collision, verified success/failure/refund event mapping, retry after database/RPC outage.
 - Portal browser: sessionStorage token survives same-tab return, token never appears in Yoco redirect URL, polling does not imply success before verified settlement, receipt is shown only after settlement.
