@@ -8,6 +8,38 @@ export const corsHeaders = {
   "Vary": "Origin",
 };
 
+export async function readLimitedTextBody(req: Request, maxBytes: number) {
+  const declaredLength = Number(req.headers.get("content-length") || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    return { ok: false as const, reason: "too_large" as const };
+  }
+  const reader = req.body?.getReader();
+  if (!reader) return { ok: true as const, body: "" };
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const result = await reader.read();
+    if (result.done) break;
+    total += result.value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return { ok: false as const, reason: "too_large" as const };
+    }
+    chunks.push(result.value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return { ok: true as const, body: new TextDecoder("utf-8", { fatal: true }).decode(bytes) };
+  } catch {
+    return { ok: false as const, reason: "invalid_utf8" as const };
+  }
+}
+
 export function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
