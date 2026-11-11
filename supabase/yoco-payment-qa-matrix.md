@@ -203,21 +203,32 @@ Run on a machine with Deno installed:
 
     deno test --allow-env supabase/functions/tests
 
-The unit tests import shared pure helpers; the checkout HTTP test invokes the actual exported handler with injected dependencies and mocked provider responses. It does not start a network server or contact Yoco. The reconciliation request parser and limit normalizer are exercised directly; endpoint authentication and Supabase query behaviour still require a local integration harness. The webhook handler now uses the same tested normalizers. These tests validate our accepted payload shapes, not Yoco's live webhook compatibility; signed sandbox deliveries are still required.
+The unit tests import shared pure helpers. The checkout and payment-status HTTP tests invoke their actual exported handlers with injected dependencies and in-memory query stubs; the webhook HTTP test invokes the actual handler with an injected signature verifier and in-memory database stub. These tests do not start a network server, contact Yoco, or validate a live Supabase instance. The reconciliation request parser and limit normalizer are exercised directly; endpoint authentication and Supabase query behaviour still require a local integration harness. The webhook handler now uses the same tested normalizers. These tests validate our accepted payload shapes, not Yoco's live webhook compatibility; signed sandbox deliveries are still required.
 
 ### HTTP/application integration tests
 
 - `supabase/functions/tests/yoco-checkout-http.test.ts`
   - Exercises the actual checkout HTTP handler with injected in-memory dependencies and mocked Yoco HTTP responses.
+- `supabase/functions/tests/yoco-payment-status-http.test.ts`
+  - Exercises the actual payment-status HTTP handler with an in-memory query stub.
+  - Confirms attempt lookups are scoped to the portal client's client_id; a foreign client's attempt is not disclosed.
+  - Checks invalid portal tokens/IDs, pending response shape, settled payment plus receipt response, and fail-closed database errors.
+- `supabase/functions/tests/yoco-webhook-http.test.ts`
+  - Exercises the actual webhook HTTP handler with an injected signature verifier and in-memory database stub.
+  - Invalid signature is rejected before database access; processed duplicates do not settle again.
+  - Valid test-mode success maps to one settlement RPC; unmatched checkout is retained for review.
+  - Settlement RPC outage returns a retryable 503; malformed signed JSON is rejected.
   - Valid checkout, private-token non-disclosure, stable idempotency header and attempt/attachment RPC ordering.
   - Invalid portal token, existing-checkout reuse, provider failure/timeout and provider-created-but-unattached checkout.
   - Disallowed origin, malformed JSON and live-key rejection.
   - No Supabase or Yoco network request is made by this test.
-- The checkout endpoint now exports a handler factory for isolated tests; the Edge Function still serves that same handler when deployed.
+- The checkout, payment-status and webhook endpoints export handler factories for isolated tests; each Edge Function still serves that same handler when deployed.
 
 ### HTTP/application integration cases still requiring a local Supabase + Deno harness
 
 - Checkout endpoint: wrong invoice owner, disabled invoice, invalid amount, actual Supabase RPC behaviour and provider idempotency semantics.
+- Payment-status endpoint: actual portal-token hashing/expiry, Supabase RLS/service-role query behaviour and deployed response headers.
+- Webhook endpoint: real Yoco HMAC verification in the handler test (the existing signature unit test covers the verifier separately), actual Supabase event-recording/transaction semantics, event-ID collision behaviour and refund processing end-to-end.
 - Status endpoint: client A cannot query client B's attempt, missing receipt, pending and confirmed response shapes.
 - Webhook endpoint: unsigned/oversized/malformed requests, provider event collision, verified success/failure/refund event mapping, retry after database/RPC outage.
 - Portal browser: sessionStorage token survives same-tab return, token never appears in Yoco redirect URL, polling does not imply success before verified settlement, receipt is shown only after settlement.
