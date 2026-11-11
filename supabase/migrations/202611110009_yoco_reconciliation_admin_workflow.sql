@@ -124,7 +124,7 @@ begin
     if p_reconciliation_id is null then
         raise exception 'A reconciliation case is required.';
     end if;
-    if p_evidence_type not in (
+    if p_evidence_type is null or p_evidence_type not in (
         'provider_dashboard','bank_statement','client_confirmation',
         'provider_support','internal_review','other'
     ) then
@@ -190,7 +190,7 @@ begin
     if p_reconciliation_id is null then
         raise exception 'A reconciliation case is required.';
     end if;
-    if p_new_status not in ('open','investigating','resolved','dismissed') then
+    if p_new_status is null or p_new_status not in ('open','investigating','resolved','dismissed') then
         raise exception 'Unsupported reconciliation status.';
     end if;
     if p_reason is null or length(btrim(p_reason)) not between 1 and 2000 then
@@ -219,7 +219,7 @@ begin
     end if;
 
     if p_new_status in ('resolved','dismissed') then
-        if p_outcome not in (
+        if p_outcome is null or p_outcome not in (
             'provider_state_confirmed','duplicate_or_replay',
             'financial_correction_recorded','no_financial_effect','false_positive'
         ) then
