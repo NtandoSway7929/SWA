@@ -188,3 +188,33 @@ test("reconciliation financial-integrity tests forbid direct ledger and invoice 
   assert.match(migration, /as \$\$\s+declare/);
   assert.match(migration, /return v_evidence_id;\s+end;\s+\$\$;/);
 });
+
+test("reconciliation browser workflow uses the guarded HTTP read model and paginated case history", () => {
+  const endpoint = read("supabase/functions/reconcile-payment/index.ts");
+  assert.match(endpoint, /export function createReconciliationHandler/);
+  assert.match(endpoint, /if \(import\.meta\.main\) Deno\.serve/);
+  assert.match(endpoint, /environment: "test"/);
+  assert.match(endpoint, /mode: "read_only_manual_reconciliation"/);
+  assert.match(ui, /functions\/v1\/reconcile-payment/);
+  assert.match(ui, /history_case_id:caseId/);
+  assert.match(ui, /evidence_offset:evidenceOffset/);
+  assert.match(ui, /action_offset:actionOffset/);
+});
+
+test("reconciliation browser workflow refreshes after evidence and status mutations", () => {
+  assert.match(ui, /admin_add_payment_reconciliation_evidence/);
+  assert.match(ui, /await load\(\); status\("Evidence recorded/);
+  assert.match(ui, /admin_set_payment_reconciliation_status_v2/);
+  assert.match(ui, /p_expected_updated_at:c\.updated_at/);
+  assert.match(ui, /await load\(\); status\("Case action recorded/);
+});
+
+test("reconciliation HTTP integration suite covers authorization, test scope, history and fail-closed reads", () => {
+  const endpointTests = read("supabase/functions/tests/yoco-reconciliation-http.test.ts");
+  assert.match(endpointTests, /unsupported methods/);
+  assert.match(endpointTests, /disallowed origins and non-admin sessions/);
+  assert.match(endpointTests, /test-scoped, read-only/);
+  assert.match(endpointTests, /history pagination/);
+  assert.match(endpointTests, /fails closed/);
+  assert.match(endpointTests, /malformed JSON/);
+});
