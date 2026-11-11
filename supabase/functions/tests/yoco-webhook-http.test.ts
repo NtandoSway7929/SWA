@@ -28,7 +28,7 @@ function harness(options: Record<string, unknown> = {}) {
         return {
           data: {
             event_id: "local-event-001",
-            processing_status: options.duplicate ? "processed" : "received",
+            processing_status: options.processingStatus ?? (options.duplicate ? "processed" : "received"),
             duplicate: !!options.duplicate,
           },
           error: null,
@@ -60,7 +60,9 @@ function harness(options: Record<string, unknown> = {}) {
         },
         in(_column: string, _values: unknown[]) { return query; },
         then(resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) {
-          const error = table === "payment_webhook_events" && options.eventUpdateError
+          const error = table === "payment_webhook_events" &&
+            (options.eventUpdateError || (options.processingWriteError &&
+              updates.some((entry) => entry.values.processing_status === "processing")))
             ? { message: "event state write failed" }
             : null;
           return Promise.resolve({ data: null, error }).then(resolve, reject);
@@ -113,6 +115,56 @@ Deno.test("webhook HTTP handler acknowledges a previously processed duplicate wi
       h.calls.filter((call) => call.name === "yoco_settle_payment").length !== 0 ||
       h.attemptLookups !== 0) {
     throw new Error("Processed duplicate webhook was not safely acknowledged.");
+  }
+});
+
+Deno.test("webhook handler resumes a duplicate event left in received state", async () => {
+  const h = harness({ duplicate: true, processingStatus: "received" });
+  const response = await h.handler(eventRequest(paymentSucceededEvent()));
+  if (response.status !== 200 ||
+      !h.updates.some((entry) => entry.values.processing_status === "processing") ||
+      h.calls.filter((call) => call.name === "yoco_settle_payment").length !== 1) {
+    throw new Error("A recorded but incomplete duplicate was not resumed.");
+  }
+});
+
+Deno.test("webhook handler retries duplicate processing and failed_retryable events", async () => {
+  for (const processingStatus of ["processing", "failed_retryable"]) {
+    const h = harness({ duplicate: true, processingStatus });
+    const response = await h.handler(eventRequest(paymentSucceededEvent()));
+    if (response.status !== 200 ||
+        h.calls.filter((call) => call.name === "yoco_settle_payment").length !== 1) {
+      throw new Error("Retryable webhook state was not replayed: " + processingStatus);
+    }
+  }
+});
+
+Deno.test("webhook handler acknowledges terminal review and rejected duplicates without financial work", async () => {
+  for (const processingStatus of ["requires_review", "rejected"]) {
+    const h = harness({ duplicate: true, processingStatus });
+    const response = await h.handler(eventRequest(paymentSucceededEvent()));
+    if (response.status !== 200 ||
+        h.calls.some((call) => call.name === "yoco_settle_payment") ||
+        h.attemptLookups !== 0) {
+      throw new Error("Terminal webhook state was processed again: " + processingStatus);
+    }
+  }
+});
+
+Deno.test("webhook handler fails closed for unknown event processing states", async () => {
+  const h = harness({ duplicate: true, processingStatus: "unexpected_state" });
+  const response = await h.handler(eventRequest(paymentSucceededEvent()));
+  if (response.status !== 503 || h.attemptLookups !== 0 ||
+      h.calls.some((call) => call.name === "yoco_settle_payment")) {
+    throw new Error("Unknown webhook processing state was not rejected safely.");
+  }
+});
+
+Deno.test("webhook handler returns retryable failure if the processing-state write fails", async () => {
+  const h = harness({ processingWriteError: true });
+  const response = await h.handler(eventRequest(paymentSucceededEvent()));
+  if (response.status !== 503 || h.attemptLookups !== 0) {
+    throw new Error("Webhook continued without persisting its processing state.");
   }
 });
 
