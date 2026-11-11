@@ -76,7 +76,26 @@ These are source-level observations, not proof of database enforcement until mig
 6. **Add operational alerting and rate limiting.** These are not implemented by this stage. Alert on repeated 5xx deliveries, `requires_review`, event collisions, unmatched checkouts and unlinked provider sessions.
 7. **Review portal receipt rendering in real browsers.** Verify receipt snapshot integrity and display in Safari/Chrome on mobile and desktop.
 
-## 5. Explicit non-claims
+
+## 6. Operational monitoring added in Stage 1.39
+
+The admin-only, read-only `reconcile-payment` endpoint now returns an on-demand operational queue in addition to attempts, refunds and open reconciliation cases.
+
+It inspects the oldest unresolved test-mode attempts and webhook events and classifies:
+- Attempts in `requires_review` as high severity.
+- Webhook events in `requires_review` as high severity.
+- Created attempts without an attached checkout after 15 minutes as medium severity, explicitly labelled unconfirmed rather than assumed provider orphans.
+- Pending attempts whose recorded checkout expiry has passed as medium severity.
+- Webhook events still `received` or `processing` after five minutes as medium severity.
+- Events marked `failed_retryable` as medium severity.
+
+The response includes generation time, severity counts, monitoring thresholds and the fact that the view covers only the latest queried records. It does not mutate the ledger, mark attempts failed, retry a checkout, replay a webhook, or issue refunds.
+
+Pure classification tests are authored in `supabase/functions/tests/yoco-operations.test.ts`. They have not been executed.
+
+**Still not implemented:** scheduled polling, push/email notifications, request rate limiting, automated retry/dead-letter processing, or a dedicated persistent alert history. The operational queue is only visible when an authorised administrator calls the reconciliation endpoint.
+
+## 7. Explicit non-claims
 
 - No tests in this stage have been executed.
 - No SQL migration has been run or parsed by PostgreSQL.
