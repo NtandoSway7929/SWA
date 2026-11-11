@@ -19,7 +19,11 @@ export function json(body: unknown, status = 200) {
   });
 }
 
-export function optionsResponse() {\n  return new Response(\"ok\", { headers: corsHeaders });\n}\n\nexport function checkOrigin(req: Request) {
+export function optionsResponse() {
+  return new Response("ok", { headers: corsHeaders });
+}
+
+export function checkOrigin(req: Request) {
   const origin = req.headers.get("origin");
   return !origin || origin === ALLOWED_ORIGIN;
 }
