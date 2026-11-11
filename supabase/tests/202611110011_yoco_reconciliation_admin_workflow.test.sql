@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(21);
+select extensions.plan(23);
 
 select extensions.has_table('public','payment_reconciliation_evidence',
     'append-only reconciliation evidence table exists');
@@ -59,6 +59,18 @@ select extensions.ok(
     (select proconfig @> array['search_path=""'] from pg_proc
      where oid='public.admin_add_payment_reconciliation_evidence(uuid,text,text,text)'::regprocedure),
     'evidence RPC pins an empty search_path');
+
+select extensions.ok(
+    not has_function_privilege('anon',
+      'public.admin_set_payment_reconciliation_status(uuid,text,text,text,uuid,uuid)','execute'),
+    'anonymous role cannot call the status RPC');
+select extensions.ok(
+    not exists (
+      select 1 from pg_proc p, lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl
+      where p.oid='public.admin_set_payment_reconciliation_status(uuid,text,text,text,uuid,uuid)'::regprocedure
+        and acl.grantee=0 and acl.privilege_type='EXECUTE'
+    ),
+    'PUBLIC cannot call the status RPC');
 
 select extensions.ok(
     (select prosecdef from pg_proc
