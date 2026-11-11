@@ -112,7 +112,7 @@ Deno.serve(async (req: Request) => {
     let redirect: URL | null = null;
     try { redirect = new URL(redirectUrl); } catch { redirect = null; }
 
-    if (!checkoutId || checkout.processingMode !== "test" || !redirect || redirect.protocol !== "https:" ||
+    if (!checkoutId || checkout.amount !== amountCents || checkout.currency !== "ZAR" || checkout.processingMode !== "test" || !redirect || redirect.protocol !== "https:" ||
         !(redirect.hostname === "yoco.com" || redirect.hostname.endsWith(".yoco.com"))) {
       console.error("Yoco returned an invalid hosted checkout response.");
       return json({ ok: false, error: "The payment provider returned an invalid checkout response." }, 502);
