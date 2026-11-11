@@ -174,7 +174,6 @@
       var payload = await request("/functions/v1/reconcile-payment", {method:"POST",body:{limit:100}});
       var requiredCollections = ["attempts","open_cases","evidence","case_actions","refunds",
         "attempts_needing_attention","webhook_events_needing_attention","operational_alerts"];
-      if (requestId !== historyRequestId || caseId !== selectedId) return;
       if (!payload || payload.ok !== true || payload.environment !== "test" ||
           !requiredCollections.every(function (key) { return Array.isArray(payload[key]); })) {
         throw new Error("The test-environment reconciliation response is incomplete or invalid.");
@@ -264,12 +263,17 @@
     if (outcome !== "financial_correction_recorded" && (payment || refund)) return status("Financial references can only accompany the financial-correction outcome.", true);
     busy = true; status("Saving case action…", false);
     try {
-      await request("/rest/v1/rpc/admin_set_payment_reconciliation_status", {method:"POST",body:{
+      await request("/rest/v1/rpc/admin_set_payment_reconciliation_status_v2", {method:"POST",body:{
         p_reconciliation_id:c.id,p_new_status:next,p_reason:reason,p_outcome:outcome,
-        p_related_payment_id:payment || null,p_related_refund_id:refund || null
+        p_related_payment_id:payment || null,p_related_refund_id:refund || null,
+        p_expected_updated_at:c.updated_at
       }});
       selectedId = ""; await load(); status("Case action recorded.", false);
-    } catch (e) { status(e.message || "Case action could not be saved.", true); }
+    } catch (e) {
+      var message = e.message || "Case action could not be saved.";
+      if (message.indexOf("changed after it was loaded") >= 0) message += " The case was not changed by your request; refresh and review the latest history before retrying.";
+      status(message, true);
+    }
     finally { busy = false; }
   }
   function mount() {
