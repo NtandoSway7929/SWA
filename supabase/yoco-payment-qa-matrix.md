@@ -209,6 +209,9 @@ The unit tests import shared pure helpers. The checkout and payment-status HTTP 
 
 - `supabase/functions/tests/yoco-checkout-http.test.ts`
   - Exercises the actual checkout HTTP handler with injected in-memory dependencies and mocked Yoco HTTP responses.
+  - Valid checkout, private-token non-disclosure, stable idempotency header and attempt/attachment RPC ordering.
+  - Invalid portal token, existing-checkout reuse, provider failure/timeout and provider-created-but-unattached checkout.
+  - Disallowed origin, malformed JSON and live-key rejection.
 - `supabase/functions/tests/yoco-payment-status-http.test.ts`
   - Exercises the actual payment-status HTTP handler with an in-memory query stub.
   - Confirms attempt lookups are scoped to the portal client's client_id; a foreign client's attempt is not disclosed.
