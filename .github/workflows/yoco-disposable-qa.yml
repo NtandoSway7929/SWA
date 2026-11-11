@@ -1,0 +1,98 @@
+name: Yoco client payments - disposable QA
+
+on:
+  push:
+    branches:
+      - feature/yoco-client-payments
+    paths:
+      - "supabase/**"
+      - ".github/workflows/yoco-disposable-qa.yml"
+  pull_request:
+    branches:
+      - feature/yoco-client-payments
+    paths:
+      - "supabase/**"
+      - ".github/workflows/yoco-disposable-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yoco-disposable-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  edge-function-tests:
+    name: Deno formatting, type checks and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Format Yoco TypeScript
+        shell: bash
+        run: |
+          mapfile -t files < <(find supabase/functions -type f -name '*.ts' \
+            | grep -E '/(yoco|create-payment-checkout|get-payment-status|reconcile-payment)' \
+            | sort)
+          test "${#files[@]}" -gt 0
+          deno fmt --check "${files[@]}"
+
+      - name: Type-check Yoco Edge Functions
+        run: |
+          deno check \
+            supabase/functions/create-payment-checkout/index.ts \
+            supabase/functions/yoco-payment-webhook/index.ts \
+            supabase/functions/get-payment-status/index.ts \
+            supabase/functions/reconcile-payment/index.ts
+
+      - name: Run Yoco Deno tests
+        env:
+          YOCO_WEBHOOK_SECRET: whsec_disposable_ci_test_secret
+        run: deno test --allow-env=YOCO_WEBHOOK_SECRET supabase/functions/tests/yoco-*.test.ts
+
+  disposable-database:
+    name: Disposable Supabase migrations and SQL tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start isolated local Supabase
+        run: supabase start
+
+      - name: Apply complete repository migration history
+        run: supabase db reset --local
+
+      - name: Run read-only Yoco migration preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          test -n "$DB_URL"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 \
+            -f supabase/tests/202611110008_yoco_migration_preflight.sql
+
+      - name: Run database pgTAP suite
+        run: supabase test db --local
+
+      - name: Stop disposable Supabase
+        if: always()
+        run: supabase stop --no-backup
