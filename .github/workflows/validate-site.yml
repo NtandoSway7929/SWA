@@ -44,6 +44,9 @@ jobs:
 
       - name: Test admin table controls
         run: node scripts/admin-table-controls.test.cjs
+      - name: Test Overview invoice KPI consistency
+        run: node scripts/admin-overview-invoice-kpi.test.cjs
+
 
       - name: Test admin dashboard redesign contracts
         run: node scripts/admin-dashboard-redesign.test.cjs
