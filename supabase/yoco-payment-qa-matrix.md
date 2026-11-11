@@ -351,4 +351,13 @@ It provisions a fresh local Supabase stack on a GitHub-hosted runner, resets it 
 
 The concurrency runner is `supabase/tests/yoco-lease-concurrency-ci.sh`. It tests exactly-one-winner lease claiming across two independent PostgreSQL client processes. It does not prove settlement/refund race safety; those additional scenarios remain in `supabase/yoco-concurrency-test-runbook.md`.
 
-**Execution status:** workflow and runner are committed; the GitHub-hosted workflow result must be inspected before any tests can be marked passed. A committed workflow is not evidence of successful execution.
+**Execution status (GitHub Actions run 13, commit `335c6f1eec8baa51e1c6880d1005ffcb2cc374c1`):** Supabase container startup passed, but `supabase db reset --local` stopped at the first historical migration because `public.leads` is absent from the clean migration history. The preflight, pgTAP suite and concurrency runner were therefore not reached. Deno type-checks and all 40 Deno tests passed. Formatting remains non-blocking and reports 17 of 19 selected files unformatted. No Yoco SQL migration has been applied.
+
+
+## 14. PostgreSQL grammar validation (Stage 1.47)
+
+Added `supabase/tests/yoco_sql_syntax_check.py` and a separate CI job using `pglast`, independent of the clean-install database job.
+
+**Execution status (GitHub Actions run 13, commit `335c6f1eec8baa51e1c6880d1005ffcb2cc374c1`):** PostgreSQL grammar parser passed for all 12 selected SQL files: seven Yoco migrations and five Yoco SQL test/preflight/fixture files. This confirms top-level PostgreSQL statement grammar only. It does not parse PL/pgSQL function bodies as executable code, resolve schema dependencies, check runtime privileges/RLS, or execute transactional/concurrency behaviour. It is not a substitute for PostgreSQL migration replay and pgTAP.
+
+The disposable database job still fails before Yoco migrations at the existing missing `public.leads` baseline dependency. SQL/pgTAP and concurrency execution remain NOT RUN.
