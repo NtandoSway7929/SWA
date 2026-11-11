@@ -60,9 +60,11 @@ function harness(options: Record<string, unknown> = {}) {
         },
         in(_column: string, _values: unknown[]) { return query; },
         then(resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) {
+          const latestUpdate = updates[updates.length - 1];
+          const isProcessingWrite = latestUpdate?.values.processing_status === "processing";
           const error = table === "payment_webhook_events" &&
-            (options.eventUpdateError || (options.processingWriteError &&
-              updates.some((entry) => entry.values.processing_status === "processing")))
+            ((options.processingWriteError && isProcessingWrite) ||
+              (options.eventUpdateError && !isProcessingWrite))
             ? { message: "event state write failed" }
             : null;
           return Promise.resolve({ data: null, error }).then(resolve, reject);
