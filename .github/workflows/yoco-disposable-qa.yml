@@ -61,6 +61,29 @@ jobs:
           YOCO_WEBHOOK_SECRET: whsec_disposable_ci_test_secret
         run: deno test --allow-env=YOCO_WEBHOOK_SECRET supabase/functions/tests/yoco-*.test.ts
 
+      - name: Prepare reviewed formatting patch
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find supabase/functions -type f -name '*.ts' \
+            | grep -E '/(yoco|create-payment-checkout|get-payment-status|reconcile-payment)' \
+            | sort)
+          deno fmt "${files[@]}"
+          git diff --binary -- "${files[@]}" > yoco-deno-format.patch
+          if ! test -s yoco-deno-format.patch; then
+            echo "No formatting changes required." > yoco-deno-format.patch
+          fi
+
+      - name: Upload formatting review patch
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yoco-deno-format-review
+          path: yoco-deno-format.patch
+          if-no-files-found: error
+          retention-days: 7
+
   sql-syntax-check:
     name: PostgreSQL grammar check for Yoco SQL
     runs-on: ubuntu-latest
