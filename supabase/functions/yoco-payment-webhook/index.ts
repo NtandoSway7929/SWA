@@ -96,7 +96,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const eventType = typeof event.type === "string" ? event.type : "";
-    if (!eventType || typeof event.id !== "string" || event.id !== webhookId) {
+    if (!eventType || typeof event.id !== "string" || !event.id) {
       return json({ ok: false, error: "Webhook event identity is invalid." }, 400);
     }
 
