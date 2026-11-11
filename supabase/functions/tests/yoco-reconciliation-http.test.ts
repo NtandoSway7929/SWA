@@ -27,14 +27,17 @@ function harness(options: Record<string, unknown> = {}) {
         order(_column: string, _options: unknown) { return query; },
         limit(_limit: number) { return query; },
         range(from: number, to: number) { range = [from, to]; return query; },
-        then(resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) {
+        then<TResult1 = { data: unknown[]; error: { message: string } | null }, TResult2 = never>(
+          onfulfilled?: ((value: { data: unknown[]; error: { message: string } | null }) => TResult1 | PromiseLike<TResult1>) | null,
+          onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+        ): Promise<TResult1 | TResult2> {
           calls.push({ table, filters: { ...filters }, range });
           let data: unknown[] = [];
           if (table === "payment_reconciliation") data = options.noCase ? [] : [caseRow];
           if (table === "payment_reconciliation_evidence") data = (options.evidenceRows as unknown[] | undefined) || [];
           if (table === "payment_reconciliation_actions") data = (options.actionRows as unknown[] | undefined) || [];
           const error = options.failTable === table ? { message: "disposable database failure" } : null;
-          return Promise.resolve({ data, error }).then(resolve, reject);
+          return Promise.resolve({ data, error }).then(onfulfilled, onrejected);
         },
       };
       return query;
