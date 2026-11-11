@@ -322,29 +322,6 @@ begin
         raise exception 'Webhook event is not an eligible verified test payment success.';
     end if;
 
-    if v_attempt.status = 'succeeded' and v_attempt.payment_id is not null then
-        select * into v_payment
-        from public.payments
-        where id = v_attempt.payment_id;
-
-        select * into v_receipt
-        from public.payment_receipts
-        where payment_id = v_payment.id;
-
-        update public.payment_webhook_events
-        set payment_attempt_id = v_attempt.id,
-            processing_status = 'processed',
-            processed_at = coalesce(processed_at, now())
-        where id = v_event.id;
-
-        return jsonb_build_object(
-            'settled', true,
-            'duplicate', true,
-            'payment_id', v_payment.id,
-            'receipt_number', v_receipt.receipt_number
-        );
-    end if;
-
     if v_attempt.status not in ('created', 'pending', 'requires_review') then
         raise exception 'Payment attempt is not in a settleable state.';
     end if;
@@ -375,6 +352,29 @@ begin
             'settled', false,
             'requires_review', true,
             'reason', 'provider_payment_mismatch'
+        );
+    end if;
+
+    if v_attempt.status = 'succeeded' and v_attempt.payment_id is not null then
+        select * into v_payment
+        from public.payments
+        where id = v_attempt.payment_id;
+
+        select * into v_receipt
+        from public.payment_receipts
+        where payment_id = v_payment.id;
+
+        update public.payment_webhook_events
+        set payment_attempt_id = v_attempt.id,
+            processing_status = 'processed',
+            processed_at = coalesce(processed_at, now())
+        where id = v_event.id;
+
+        return jsonb_build_object(
+            'settled', true,
+            'duplicate', true,
+            'payment_id', v_payment.id,
+            'receipt_number', v_receipt.receipt_number
         );
     end if;
 
