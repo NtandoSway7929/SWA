@@ -341,3 +341,14 @@ Added `supabase/tests/202611110009_yoco_webhook_lease.test.sql`, a rollback-base
 Updated `supabase/yoco-concurrency-test-runbook.md` with the 001–007 migration prerequisite, the transactional test command, and a two-session claim race protocol. The older 001–005 settlement/refund fixture remains useful for its original functions but does not prove the new lease-aware Edge Function behaviour.
 
 **Execution status:** SQL test authored only. No local PostgreSQL/Supabase, Deno or Docker runtime is available in the current environment. No SQL test, two-session race, migration application or sandbox request has been run. Acceptance still requires at least 20 successful repetitions of each relevant race on a disposable database.
+
+
+## 13. GitHub-hosted disposable QA execution
+
+The mobile-compatible CI workflow is documented in `supabase/yoco-disposable-qa-workflow.md` and implemented in `.github/workflows/yoco-disposable-qa.yml`.
+
+It provisions a fresh local Supabase stack on a GitHub-hosted runner, resets it using the repository migration history, runs the read-only preflight and pgTAP suite, checks and tests the Deno functions, and executes 20 concurrent two-worker webhook lease-claim races. It uses no hosted Supabase project, repository secrets, Yoco credentials, live webhook or deployment.
+
+The concurrency runner is `supabase/tests/yoco-lease-concurrency-ci.sh`. It tests exactly-one-winner lease claiming across two independent PostgreSQL client processes. It does not prove settlement/refund race safety; those additional scenarios remain in `supabase/yoco-concurrency-test-runbook.md`.
+
+**Execution status:** workflow and runner are committed; the GitHub-hosted workflow result must be inspected before any tests can be marked passed. A committed workflow is not evidence of successful execution.
