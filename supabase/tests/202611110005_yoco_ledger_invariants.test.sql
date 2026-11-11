@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(32);
+select extensions.plan(29);
 
 -- Operational tables must exist and have RLS enabled.
 select extensions.has_table('public', 'payment_attempts', 'payment_attempts exists');
@@ -53,5 +53,5 @@ select extensions.has_trigger('public', 'payment_refunds', 'trg_validate_yoco_re
 -- A provider event can only be used for one successful refund ledger entry.
 select extensions.has_index('public', 'payment_refunds', 'payment_refunds_provider_event_uidx', 'unique refund provider-event index exists');
 
-select * from finish();
+select * from extensions.finish();
 rollback;
