@@ -150,7 +150,7 @@ test("stale decision errors instruct the administrator to refresh and review", (
 
 test("optimistic concurrency migration has database-level privilege and version regression coverage", () => {
   const sqlTests = read("supabase/tests/202611110011_yoco_reconciliation_admin_workflow.test.sql");
-  assert.match(sqlTests, /plan\(36\)/);
+  assert.match(sqlTests, /plan\(42\)/);
   assert.match(sqlTests, /admin_set_payment_reconciliation_status_v2/);
   assert.match(sqlTests, /stale or missing case versions/);
   assert.match(sqlTests, /serialization failure SQLSTATE/);
