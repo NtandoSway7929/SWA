@@ -17,6 +17,7 @@ trap 'rm -rf "$tmp_dir"' EXIT
 expected_version="$(psql "$LOCAL_DB_URL" -X -A -t -v ON_ERROR_STOP=1 \
   -v case_id="$YOCO_TEST_CASE_ID" -c \
   "select updated_at from public.payment_reconciliation where id = :'case_id'::uuid and provider = 'yoco' and environment = 'test' and status = 'open'")"
+initial_action_count="$(psql "$LOCAL_DB_URL" -X -A -t -v ON_ERROR_STOP=1 -v case_id="$YOCO_TEST_CASE_ID" -c "select count(*) from public.payment_reconciliation_actions where reconciliation_id = :'case_id'::uuid")"
 if [[ -z "$expected_version" ]]; then
   echo "The supplied case must exist, be Yoco test-environment scoped, and be open." >&2
   exit 2
@@ -31,6 +32,7 @@ run_decision() {
     -v admin_id="$admin_id" \
     -v expected_version="$expected_version" \
     -v reason="$reason" >"$output" 2>&1 <<'SQL'
+\\set VERBOSITY verbose
 begin;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', :'admin_id', true);
@@ -71,8 +73,9 @@ fi
 final_state="$(psql "$LOCAL_DB_URL" -X -A -t -v ON_ERROR_STOP=1 \
   -v case_id="$YOCO_TEST_CASE_ID" -c \
   "select status || '|' || count(*)::text from public.payment_reconciliation c join public.payment_reconciliation_actions a on a.reconciliation_id = c.id where c.id = :'case_id'::uuid group by c.status")"
-if [[ "$final_state" != "investigating|1" ]]; then
-  echo "FAIL: expected exactly one committed investigating action; got: $final_state" >&2
+expected_action_count=$((initial_action_count + 1))
+if [[ "$final_state" != "investigating|$expected_action_count" ]]; then
+  echo "FAIL: expected exactly one new committed investigating action (total $expected_action_count); got: $final_state" >&2
   exit 1
 fi
 
