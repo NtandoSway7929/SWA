@@ -189,12 +189,17 @@ Deno unit tests:
   - Origin and no-store response helpers.
 - Bounded streamed request-body reader: byte-limit enforcement without buffering an unbounded body, plus strict UTF-8 rejection.
   - UUID and generic error handling.
+- `supabase/functions/tests/yoco-webhook-payload.test.ts`
+  - Normalises event identity and payload/data envelope.
+  - Maps documented checkout metadata and supported checkout/mode aliases.
+  - Rejects missing checkout IDs, non-integer/string-encoded amounts and incomplete payment fields.
+  - Parses refund identifiers and explicitly leaves refund events without payment-attempt metadata unmapped for manual review.
 
 Run on a machine with Deno installed:
 
     deno test --allow-env supabase/functions/tests
 
-The tests import shared pure helpers; they do not start the HTTP Edge Function servers or make provider requests.
+The tests import shared pure helpers; they do not start the HTTP Edge Function servers or make provider requests. The webhook handler now uses the same tested normalizers. These tests validate our accepted payload shapes, not Yoco's live webhook compatibility; signed sandbox deliveries are still required.
 
 ### HTTP/application integration cases still requiring a local Supabase + Deno harness
 
