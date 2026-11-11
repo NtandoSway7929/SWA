@@ -46,6 +46,7 @@ declare
     v_refund_event jsonb;
     v_refund_event_id uuid;
     v_refund jsonb;
+    v_over_refund jsonb;
     v_net_paid numeric(12,2);
     v_outstanding numeric(12,2);
 begin
@@ -156,12 +157,18 @@ begin
     set payment_attempt_id = v_attempt_id
     where id = v_refund_event_id;
 
-    perform pg_temp.expect_error(
-        format(
-            'select innerme_private.record_yoco_refund_success(%L::uuid, %L::uuid, %L, 4001, %L)',
-            v_refund_event_id, v_payment_id, 'yoco_test_refund_0002', 'ZAR'
-        ),
-        'cumulative refunds above original payment rejected'
+    v_over_refund := innerme_private.record_yoco_refund_success(
+        v_refund_event_id, v_payment_id,
+        'yoco_test_refund_0002', 4001, 'ZAR'
+    );
+    perform pg_temp.assert_true(
+        coalesce((v_over_refund->>'requires_review')::boolean, false)
+        and coalesce((v_over_refund->>'recorded')::boolean, false) = false,
+        'cumulative refunds above original payment are rejected for manual review'
+    );
+    perform pg_temp.assert_true(
+        (select count(*) = 1 from public.payment_refunds where payment_id = v_payment_id and status = 'succeeded'),
+        'over-limit refund does not create a second financial ledger entry'
     );
 
     -- Financial records are append-only after confirmation/issuance.
