@@ -18,7 +18,7 @@ test("admin dashboard loads the reconciliation interface", () => {
 
 test("reconciliation reads use the guarded administrator Edge Function", () => {
   assert.match(ui, /\/functions\/v1\/reconcile-payment/);
-  assert.match(edge, /authorizeAdmin\(req\)/);
+  assert.match(edge, /async function authorizeAdmin\(req: Request\)/);
   assert.match(edge, /payment_reconciliation_evidence/);
   assert.match(edge, /payment_reconciliation_actions/);
   assert.match(edge, /evidence: evidenceResult\.data/);
