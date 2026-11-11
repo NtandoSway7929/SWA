@@ -43,3 +43,17 @@ test("UI safely escapes data and does not write payment or invoice ledger record
   assert.doesNotMatch(ui, /\/rest\/v1\/(payments|payment_refunds|invoices)(\?|\s|")/);
   assert.doesNotMatch(ui, /sk_(live|test)_/);
 });
+
+test("reconciliation read model bounds evidence and action history", () => {
+  const evidenceQuery = edge.match(/payment_reconciliation_evidence[\s\S]*?\.limit\(500\)/);
+  const actionQuery = edge.match(/payment_reconciliation_actions[\s\S]*?\.limit\(500\)/);
+  assert.ok(evidenceQuery, "evidence history query has a hard result cap");
+  assert.ok(actionQuery, "action history query has a hard result cap");
+});
+
+test("browser rejects incomplete read-model payloads and malformed financial UUIDs", () => {
+  assert.match(ui, /requiredCollections\.every/);
+  assert.match(ui, /Array\.isArray\(payload\[key\]\)/);
+  assert.match(ui, /uuidPattern/);
+  assert.match(ui, /valid UUID/);
+});
