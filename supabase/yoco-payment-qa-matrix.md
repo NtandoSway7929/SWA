@@ -109,7 +109,7 @@ Before a sandbox test deployment:
 - Confirm the exact provider refund event metadata needed to map a refund to the original payment. Unmapped refunds deliberately require manual review.
 - Verify whether all deployed client-portal entry paths share the same origin and whether any www or alternate origin needs a narrowly scoped allowlist.
 - Validate the receipt download implementation in Safari and Chrome; current client download is a printable HTML receipt, not a server-generated PDF.
-- Add rate limiting and alerting before opening the endpoint to general client use.
+- Add request rate limiting and push/email alert delivery before opening the endpoint to general client use. The current operational queue is admin-only and on-demand.
 - Review payment-attempt expiration and recovery when Yoco creates a checkout but the database attachment fails.
 - Confirm the deployed portal's existing token storage/rotation behaviour and clear the session token on explicit portal logout.
 - Validate all SQL migrations in PostgreSQL. Static source inspection is not a substitute for execution.
@@ -194,6 +194,12 @@ Deno unit tests:
   - Maps documented checkout metadata and supported checkout/mode aliases.
   - Rejects missing checkout IDs, non-integer/string-encoded amounts and incomplete payment fields.
   - Parses refund identifiers and explicitly leaves refund events without payment-attempt metadata unmapped for manual review.
+- `supabase/functions/tests/yoco-operations.test.ts`
+  - Classifies old checkout attempts without falsely claiming a provider-side checkout exists.
+  - Flags expired pending attempts, requires-review attempts and webhook events.
+  - Detects stale received/processing events and retryable webhook failures.
+  - Sorts high-severity review items before medium-severity warnings.
+  - Confirms processed events and successful attempts are not flagged.
 - `supabase/functions/tests/yoco-http-validation.test.ts`
   - Rejects malformed JSON and JSON primitives where an object is required.
   - Applies safe defaults and bounds the reconciliation query limit to 1–100.
@@ -216,6 +222,8 @@ The unit tests import shared pure helpers. The checkout and payment-status HTTP 
   - Exercises the actual payment-status HTTP handler with an in-memory query stub.
   - Confirms attempt lookups are scoped to the portal client's client_id; a foreign client's attempt is not disclosed.
   - Checks invalid portal tokens/IDs, pending response shape, settled payment plus receipt response, and fail-closed database errors.
+- `supabase/functions/tests/yoco-operations.test.ts`
+  - Exercises pure alert classification only; does not call Supabase or deliver notifications.
 - `supabase/functions/tests/yoco-webhook-http.test.ts`
   - Exercises the actual webhook HTTP handler with an injected signature verifier and in-memory database stub.
   - Verified event-recording failure and event-state persistence failure return retryable HTTP 503 responses.
@@ -227,6 +235,20 @@ The unit tests import shared pure helpers. The checkout and payment-status HTTP 
   - Disallowed origin, malformed JSON and live-key rejection.
   - No Supabase or Yoco network request is made by this test.
 - The checkout, payment-status and webhook endpoints export handler factories for isolated tests; each Edge Function still serves that same handler when deployed.
+
+### Operational monitoring and recovery queue
+
+The admin-only, read-only `reconcile-payment` endpoint now includes:
+- Latest Yoco test-mode payment attempts, refunds and open reconciliation cases.
+- Oldest unresolved attempts and webhook events requiring attention.
+- High-severity review items for unresolved attempts and webhook events.
+- Medium-severity warnings for stale checkout attachment, expired pending checkout and stale/retryable webhook processing.
+- Monitoring thresholds of 15 minutes for unattached created attempts and 5 minutes for webhook events left received/processing.
+- A generated timestamp, severity counts and an explicit "latest queried records only" scope indicator.
+
+This is an on-demand administrator monitoring response, not push notifications, scheduled polling, automatic retries or an automated dead-letter processor. It does not mutate payment state or retry provider operations. A checkout-attachment warning does not prove that Yoco created an orphan checkout; verify provider state before recovery.
+
+Pure alert classification tests are in `supabase/functions/tests/yoco-operations.test.ts`. They are authored but not executed.
 
 ### Security and failure-recovery audit
 
