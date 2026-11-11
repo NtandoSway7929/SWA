@@ -131,3 +131,25 @@ Run it only after migrations 001–005 have been applied to a disposable local S
 The test runs inside a transaction and rolls back. It contains 29 assertions covering operational table presence, RLS flags, browser-role table access, private-schema usage, representative RPC execution privileges, ledger triggers and refund-event uniqueness.
 
 **Scope limitation:** these are catalog and privilege assertions. They do not simulate real invoice fixtures, settlement/refund transactions, concurrent locking, or client-token ownership. Those require a disposable database populated with valid project-specific fixtures and the functional scenarios in sections 2–5. Do not interpret a passing catalog test as end-to-end payment validation.
+
+## 9. Disposable payment/refund transaction test
+
+An isolated transaction-level integration script is provided at:
+
+`supabase/tests/202611110006_yoco_payment_flow.test.sql`
+
+Prerequisites in the disposable database:
+- The complete existing Swayphics base schema, including `clients`, `client_projects`, `payments`, and `client_portal_tokens`.
+- Existing invoice and business-flow SQL applied in the repository's documented order, including `supabase/swayphics-invoicing.sql` and `supabase/swayphics-business-flow.sql`.
+- Yoco migrations 001–005 applied in order.
+- PostgreSQL with the project's required extensions.
+
+Run:
+
+    psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/202611110006_yoco_payment_flow.test.sql
+
+The test creates two temporary client fixtures, one invoice, a checkout attempt, a simulated verified payment event, a settlement, a receipt and a refund. It checks duplicate settlement, invoice/client binding, overpayment prevention, refund replay, refund cap/manual-review behaviour, refund-aware invoice balances and immutability. The entire transaction is rolled back.
+
+**Signature boundary:** the script calls the private `record_verified_yoco_webhook` RPC directly. This simulates an event that has already passed the Edge Function's raw-body HMAC verification. It does not test Yoco signature verification, HTTP request handling, or provider payload compatibility.
+
+**Concurrency boundary:** this is a sequential transaction test. It does not prove concurrent settlement/refund safety. A two-session race test and actual disposable PostgreSQL execution remain required. No result should be described as passed until the script has been run against a disposable database.
