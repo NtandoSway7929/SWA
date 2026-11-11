@@ -52,6 +52,14 @@ The transactional pgTAP lease test separately covers lease expiry, takeover, sta
 
 The workflow does not call Yoco, register a webhook, deploy Edge Functions, apply migrations to a hosted Supabase project, or access production. Provider payload compatibility, hosted-checkout idempotency after a lost response, browser return flow and real signed sandbox deliveries remain separate validation gates.
 
+## Current clean-install blocker
+
+The first hosted run confirmed that the timestamped migration chain is not a complete clean-install schema. The earliest Swayphics migration alters `public.leads`, but the original core tables are established by standalone SQL scripts such as `swayphics-admin-workspace.sql`, `swayphics-admin-workspace-security-fix.sql`, `swayphics-invoicing.sql` and `swayphics-business-flow.sql`. Those scripts are not represented as an ordered baseline migration. A clean `supabase db reset --local` therefore cannot replay the repository from zero.
+
+Do not create placeholder tables or blindly concatenate the standalone scripts into an early migration: several scripts assume other pre-existing objects, and later timestamped migrations may repeat or supersede their changes. The correct next input is a schema-only export of the actual Swayphics Supabase database (no table data, auth user data, secrets or credentials), reviewed against the standalone scripts and migration history. That export must be obtained and supplied by the project owner; this workflow has no production database access. Until a reviewed, reproducible baseline exists, the disposable database job is expected to fail before Yoco SQL tests execute.
+
+The Deno formatting check is temporarily non-blocking so formatting debt does not prevent type-checking and running the Deno tests. It remains visible as a failed step and is not considered passed. This does not alter the checked-out source files.
+
 ## Failure handling
 
 A failed migration, test, type-check or concurrency assertion fails its job. Fix the cause on this feature branch and rerun the workflow. Do not bypass a failing database test by weakening its assertion or changing production schema. The workflow is a disposable validation environment; it is not a release or deployment workflow.
