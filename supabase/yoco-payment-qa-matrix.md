@@ -171,3 +171,36 @@ Run only against a disposable local database. The protocol covers:
 - The provider-timeout/retry boundary for hosted checkout creation, which requires a separate Yoco sandbox exercise.
 
 The runbook specifies expected return values, database row counts and invoice balances. It is a manual protocol, not an automated race test. No concurrency test has been executed. Repeat each database race at least 20 times and retain both session outputs before marking the gate passed.
+
+## 11. Edge Function unit tests and client-portal validation
+
+Deno unit tests:
+
+- `supabase/functions/tests/yoco-webhook.test.ts`
+  - Valid HMAC among multiple v1 candidates.
+  - Raw-body tampering, stale timestamps, wrong webhook ID.
+  - Missing signature, malformed timestamp and malformed Base64 signature.
+- `supabase/functions/tests/yoco-checkout-validation.test.ts`
+  - Checkout request validation: token, UUID, integer cents, amount bounds and idempotency key.
+  - Idempotency header precedence.
+  - Return URL allow-list, HTTPS, credential and lookalike-host rejection.
+  - Yoco checkout response amount/currency/test-mode/redirect-host validation.
+  - Portal token hashing and expiry handling.
+  - Origin and no-store response helpers.
+  - UUID and generic error handling.
+
+Run on a machine with Deno installed:
+
+    deno test --allow-env supabase/functions/tests
+
+The tests import shared pure helpers; they do not start the HTTP Edge Function servers or make provider requests.
+
+### HTTP/application integration cases still requiring a local Supabase + Deno harness
+
+- Checkout endpoint: missing/expired portal token, wrong invoice owner, disabled invoice, invalid amount, provider timeout, provider success followed by failed checkout attachment.
+- Status endpoint: client A cannot query client B's attempt, missing receipt, pending and confirmed response shapes.
+- Webhook endpoint: unsigned/oversized/malformed requests, provider event collision, verified success/failure/refund event mapping, retry after database/RPC outage.
+- Portal browser: sessionStorage token survives same-tab return, token never appears in Yoco redirect URL, polling does not imply success before verified settlement, receipt is shown only after settlement.
+- Browser tests must use a disposable local Supabase instance and mocked Yoco HTTP responses. Do not configure production secrets or use live credentials.
+
+**Execution status:** Deno is not available in the current implementation environment. These tests have been authored but not executed. No browser automation or local Supabase integration test has been performed. Static inspection is not a substitute for those gates.
