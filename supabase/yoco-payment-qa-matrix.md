@@ -310,3 +310,19 @@ Migration `supabase/migrations/202611110006_yoco_webhook_worker_leases.sql` adds
 **Important integration gap:** the Edge Function has not yet been switched to claim leases or pass lease tokens. Its existing direct event/attempt updates are not yet fully fenced. In particular, payment-failure attempt mutation needs a dedicated lease-aware database operation before the Edge Function can safely use the new mechanism. Do not treat the lease migration alone as closing the concurrent-delivery issue.
 
 **Execution status:** migration is authored only. No PostgreSQL parser, migration application, SQL transaction, two-session race, Deno test or Yoco sandbox test has been run. Validate the complete migration chain and function ownership/privileges in a disposable local database before any sandbox deployment.
+
+
+## 15. Edge Function lease integration (Stage 1.44)
+
+The Yoco webhook handler now:
+- Records the verified event, then obtains a database lease before any attempt lookup or financial processing.
+- Returns a retryable HTTP 503 when another worker holds an active lease or the claim RPC is unavailable.
+- Passes the lease token to payment settlement and refund recording RPCs.
+- Uses the token-fenced event-state RPC for review transitions and refund-attempt association.
+- Delegates `payment.failed` to a transactional lease-aware RPC that locks the attempt and event, detects a conflicting successful settlement, and clears the lease atomically.
+- Acknowledges terminal duplicates without claiming a new lease.
+- Retires the pre-lease HTTP test harness; new focused coverage is in `supabase/functions/tests/yoco-webhook-lease-http.test.ts`.
+
+Static test coverage authored: claim-before-processing, active lease rejection, claim outage, lease-token propagation, atomic payment-failure handling, fenced review transition, stale-token rejection, and terminal duplicate handling.
+
+**Validation status:** test source and SQL are authored only. Deno, PostgreSQL, migration-chain and concurrency execution remain NOT RUN. No Yoco sandbox call or deployment has occurred.
