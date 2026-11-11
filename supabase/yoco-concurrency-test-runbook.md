@@ -128,3 +128,27 @@ Record for each race: database version, migration revision, both session outputs
 - The fixture's verified events bypass the Edge Function's signature-verification step.
 - It does not test Yoco's sandbox idempotency semantics, webhook delivery retries over HTTP, or network/process crashes.
 - Do not mark concurrency QA as passed until both-session tests have been executed and their outputs reviewed.
+
+
+## 6. Webhook lease claim, expiry and stale-worker fencing (Stage 1.45)
+
+Apply migrations 006 and 007 only after migrations 001–005 have been validated on the disposable database. Run the transactional lease test:
+
+```bash
+psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/202611110009_yoco_webhook_lease.test.sql
+```
+
+This test rolls back its fixture data and asserts:
+- first worker obtains a lease;
+- second worker is denied while the lease is active;
+- an incorrect token cannot update the event;
+- an expired lease can be reclaimed with a new token;
+- the previous worker's token is rejected after takeover;
+- the current token can make a terminal review transition and release the lease;
+- `payment.failed` updates the attempt and event atomically and clears the lease.
+
+The test is authored but has **not** been executed. It does not replace true two-session concurrency. For an actual race, use two independent sessions and issue `public.yoco_claim_webhook_event('<EVENT_ID>'::uuid, 120)` simultaneously. Exactly one session should return `claimed=true`; the other should return `reason=lease_active`. Repeat at least 20 times, including takeover after expiry and a stale-token write after takeover.
+
+Also test settlement and refund through the `*_with_lease` wrappers. A direct call to the legacy service-role wrappers should fail after migration 006 revokes their grants. Do not grant these legacy functions back.
+
+**Prerequisites updated:** the lease tests require Yoco migrations 001–007. The older settlement/refund concurrency fixture still exercises the pre-lease database functions and must not be used as evidence that the new Edge Function lease boundary is validated.
