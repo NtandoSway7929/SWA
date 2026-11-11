@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
     const admin = getAdminClient();
     const digest = await sha256Hex(rawBody);
     const { data: recorded, error: recordError } = await admin.rpc("yoco_record_verified_webhook", {
-      p_provider_event_id: webhookId,
+      p_provider_event_id: String(event.id),
       p_event_type: eventType,
       p_body_sha256: digest,
     });
@@ -189,7 +189,6 @@ Deno.serve(async (req: Request) => {
 
     if (eventType === "refund.succeeded") {
       const providerRefundId = String(payload.refundId ?? payload.refund_id ?? "");
-      const providerPaymentId = String(payload.paymentId ?? payload.payment_id ?? "");
       const amount = Number(payload.amount);
       const currency = String(payload.currency || "");
 
