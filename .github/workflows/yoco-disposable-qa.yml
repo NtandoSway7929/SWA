@@ -6,6 +6,9 @@ on:
       - feature/yoco-client-payments
     paths:
       - "supabase/**"
+      - "admin-dashboard/yoco-invoice-settings.js"
+      - "admin-dashboard/index.html"
+      - "scripts/yoco-invoice-settings.test.cjs"
       - ".github/workflows/yoco-disposable-qa.yml"
   pull_request:
     branches:
@@ -37,6 +40,11 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+
+      - name: Validate administrator invoice settings UI
+        run: |
+          node --check admin-dashboard/yoco-invoice-settings.js
+          node --test scripts/yoco-invoice-settings.test.cjs
 
       - name: Check Yoco TypeScript formatting (non-blocking during baseline repair)
         continue-on-error: true
