@@ -468,7 +468,21 @@ begin
                         from public.payment_receipts pr
                         where pr.payment_id = pp.id
                         limit 1
-                    )
+                    ),
+                    'refunds', coalesce((
+                        select jsonb_agg(
+                            jsonb_build_object(
+                                'amount', rr.amount,
+                                'currency', rr.currency,
+                                'status', rr.status,
+                                'processed_at', rr.processed_at
+                            )
+                            order by rr.processed_at desc nulls last, rr.created_at desc
+                        )
+                        from public.payment_refunds rr
+                        where rr.payment_id = pp.id
+                          and rr.status = 'succeeded'
+                    ), '[]'::jsonb)
                 )
                 order by pp.paid_at desc nulls last, pp.created_at desc
             )
