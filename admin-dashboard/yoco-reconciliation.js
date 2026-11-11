@@ -7,7 +7,7 @@
   var KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
   var ACCESS = "swayphics_admin_access_token";
   var REFRESH = "swayphics_admin_refresh_token";
-  var root, data = null, selectedId = "", filter = "all", busy = false, historyPage = {evidence_has_more:false,actions_have_more:false};
+  var root, data = null, selectedId = "", filter = "all", busy = false, historyBusy = {evidence:false,actions:false,both:false}, historyPage = {evidence_has_more:false,actions_have_more:false};
 
   function esc(v) {
     return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
@@ -63,6 +63,16 @@
   function selected() { return cases().find(function (c) { return c.id === selectedId; }) || null; }
   function evidenceFor(id) { return (data.evidence || []).filter(function (x) { return x.reconciliation_id === id; }); }
   function actionsFor(id) { return (data.case_actions || []).filter(function (x) { return x.reconciliation_id === id; }); }
+  function actorLabel(id) {
+    if (!id || typeof id !== "string") return "Administrator identity unavailable";
+    return "Administrator · " + id.slice(0, 8) + "…" + id.slice(-4);
+  }
+  function chronological(items) {
+    return items.slice().sort(function (a, b) {
+      var time = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return time || String(a.id || "").localeCompare(String(b.id || ""));
+    });
+  }
 
   function renderQueue() {
     var q = root.querySelector("[data-yr-search]").value.trim().toLowerCase();
@@ -89,9 +99,9 @@
     var evidence = evidenceFor(c.id), actions = actionsFor(c.id);
     var attempt = (data.attempts || []).find(function (x) { return x.id === c.payment_attempt_id; });
     var payment = (data.attempts || []).find(function (x) { return x.payment_id === c.payment_id; });
-    var history = actions.map(function (a) {
+    var history = chronological(actions).map(function (a) {
       return '<article class="yr-history"><div><b>' + esc(a.action.replace(/_/g, " ")) +
-        '</b><time>' + esc(new Date(a.created_at).toLocaleString()) + '</time></div><p>' +
+        '</b><time>' + esc(new Date(a.created_at).toLocaleString()) + '</time></div><small>' + esc(actorLabel(a.actor_user_id)) + '</small><p>' +
         esc(a.reason || (a.previous_status + " → " + a.new_status)) + '</p>' +
         (a.outcome ? '<small>Outcome: ' + esc(a.outcome.replace(/_/g, " ")) + '</small>' : '') +
         (a.related_payment_id ? '<small>Payment ref: ' + esc(a.related_payment_id) + '</small>' : '') +
@@ -109,9 +119,9 @@
       (attempt ? '<div><small>Attempt amount</small><b>' + esc(money(attempt.amount_cents, attempt.currency)) + '</b></div>' : '') +
       '</div>' +
       '<section class="yr-section"><h4>Evidence log</h4>' +
-      (evidence.length ? evidence.map(function (e) {
+      (evidence.length ? chronological(evidence).map(function (e) {
         return '<article class="yr-evidence"><div><b>' + esc(e.evidence_type.replace(/_/g, " ")) +
-          '</b><time>' + esc(new Date(e.created_at).toLocaleString()) + '</time></div><p>' + esc(e.note) +
+          '</b><time>' + esc(new Date(e.created_at).toLocaleString()) + '</time></div><small>' + esc(actorLabel(e.created_by)) + '</small><p>' + esc(e.note) +
           '</p>' + (e.reference ? '<small>Reference: ' + esc(e.reference) + '</small>' : '') + '</article>';
       }).join("") : '<p class="yr-muted">No evidence has been recorded.</p>') + (historyPage.evidence_has_more ? '<button type="button" class="yr-refresh" data-load-evidence>Load older evidence</button>' : '') +
       (c.status === "open" || c.status === "investigating" ?
@@ -184,9 +194,13 @@
   }
   async function loadHistory(caseId, kind) {
     if (!data || caseId !== selectedId) return;
+    if (kind === "both" ? historyBusy.both : historyBusy[kind]) return;
+    if (kind === "both") historyBusy.both = true;
+    else historyBusy[kind] = true;
     var evidenceOffset = kind === "actions" ? 0 : evidenceFor(caseId).length;
     var actionOffset = kind === "evidence" ? 0 : actionsFor(caseId).length;
     if (kind === "both") { evidenceOffset = 0; actionOffset = 0; }
+    renderDetail();
     status("Loading case history…", false);
     try {
       var payload = await request("/functions/v1/reconcile-payment", {method:"POST",body:{
@@ -208,8 +222,15 @@
         evidence_has_more: payload.history_page.evidence_has_more === true,
         actions_have_more: payload.history_page.actions_have_more === true
       };
-      render(); status("Case history loaded.", false);
+      data.evidence = chronological(data.evidence);
+      data.case_actions = chronological(data.case_actions);
+      status("Case history loaded.", false);
     } catch (e) { status(e.message || "Unable to load case history.", true); }
+    finally {
+      if (kind === "both") historyBusy.both = false;
+      else historyBusy[kind] = false;
+      if (caseId === selectedId) renderDetail();
+    }
   }
   async function submitEvidence(event) {
     event.preventDefault(); if (busy) return;
