@@ -86,3 +86,17 @@ Before any test deployment:
 - Verify no secret is returned in a response or written to logs.
 
 Only after this gate should a separate test deployment be considered. Production deployment and live payments require a new, explicit authorisation.
+
+## Database migration order and safeguards
+
+Apply only in a disposable test Supabase project, after review, in this exact order:
+
+1. `supabase/migrations/202611110001_yoco_payment_foundation.sql`
+2. `supabase/migrations/202611110002_yoco_refund_aware_invoice_integrity.sql`
+3. `supabase/migrations/202611110003_yoco_atomic_payment_operations.sql`
+4. `supabase/migrations/202611110004_yoco_edge_rpc_boundary.sql`
+5. `supabase/migrations/202611110005_yoco_ledger_immutability.sql`
+
+Migration 005 adds database-level immutability for Yoco payment rows, successful Yoco refund rows and issued receipts. It also requires successful refund ledger inserts to reference a verified refund event associated with the matching test payment attempt.
+
+Before any test deployment, inspect effective schema/table/function privileges and run the concurrency, replay, refund and client-isolation tests in the QA matrix. No migration has been executed as part of this preparation.
