@@ -17,7 +17,7 @@ export function validateCheckoutRequest(body: Record<string, unknown>, idempoten
   const suppliedKey = idempotencyHeader || body.idempotency_key;
   const idempotencyKey = typeof suppliedKey === "string" ? suppliedKey.trim() : "";
 
-  if (!token || token.length > 512 ||
+  if (token.length < 32 || token.length > 512 ||
       typeof invoiceId !== "string" ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(invoiceId) ||
       !Number.isSafeInteger(amountCents) || Number(amountCents) < 200 || Number(amountCents) > 100_000_000 ||
