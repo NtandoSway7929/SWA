@@ -51,6 +51,8 @@ test("reconciliation history is scoped to one queued case and paginated", () => 
   assert.match(edge, /\.range\(actionOffset, actionOffset \+ historyPageSize\)/);
   assert.match(edge, /evidence_has_more:/);
   assert.match(edge, /actions_have_more:/);
+  assert.match(edge, /\.length > historyPageSize/);
+  assert.match(edge, /\.slice\(0, historyPageSize\)/);
   assert.match(edge, /\.order\("id", \{ ascending: false \}\)/);
 });
 
