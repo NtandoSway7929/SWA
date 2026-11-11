@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(23);
+select extensions.plan(26);
 
 select extensions.has_table('public','payment_reconciliation_evidence',
     'append-only reconciliation evidence table exists');
@@ -91,6 +91,26 @@ select extensions.ok(
       where tgrelid='public.payment_reconciliation_actions'::regclass
         and tgname='payment_reconciliation_actions_immutable' and not tgisinternal),
     'action history UPDATE/DELETE immutability trigger exists');
+
+
+select extensions.ok(
+    position('v_case_invoice_id' in pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status(uuid,text,text,text,uuid,uuid)'::regprocedure
+    )) > 0,
+    'status RPC derives the invoice anchor from the reconciliation case'
+);
+select extensions.ok(
+    position('p.invoice_id = v_case_invoice_id' in pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status(uuid,text,text,text,uuid,uuid)'::regprocedure
+    )) > 0,
+    'financial correction payment and refund references are bound to the case invoice'
+);
+select extensions.ok(
+    position('v_case.provider <> ''yoco''' in pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status(uuid,text,text,text,uuid,uuid)'::regprocedure
+    )) > 0,
+    'status RPC rejects reconciliation cases outside the Yoco test environment'
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
