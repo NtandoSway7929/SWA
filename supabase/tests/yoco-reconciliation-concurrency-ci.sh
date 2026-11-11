@@ -32,7 +32,7 @@ run_decision() {
     -v admin_id="$admin_id" \
     -v expected_version="$expected_version" \
     -v reason="$reason" >"$output" 2>&1 <<'SQL'
-\\set VERBOSITY verbose
+\set VERBOSITY verbose
 begin;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', :'admin_id', true);
