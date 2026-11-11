@@ -12,7 +12,7 @@ const statusMigration = read("supabase/migrations/202611110010_yoco_reconciliati
 const concurrencyMigration = read("supabase/migrations/202611110012_yoco_reconciliation_optimistic_concurrency.sql");
 
 test("admin dashboard loads the reconciliation interface", () => {
-  assert.match(html, /yoco-reconciliation\.js\?v=20261111-stage-1-54/);
+  assert.match(html, /yoco-reconciliation\.js\?v=20261111-stage-1-62/);
   assert.match(ui, /__swayYocoReconciliationLoaded/);
 });
 
