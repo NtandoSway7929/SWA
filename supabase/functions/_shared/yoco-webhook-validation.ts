@@ -40,7 +40,7 @@ export function getYocoCheckoutId(payload: JsonObject): string | null {
 
 export function getYocoPaymentSuccessDetails(payload: JsonObject) {
   const checkoutId = getYocoCheckoutId(payload);
-  const amount = Number(payload.amount);
+  const amount = payload.amount as number;
   const currency = nonEmptyString(payload.currency);
   const mode = nonEmptyString(
     payload.mode ?? payload.processingMode ?? payload.processing_mode,
