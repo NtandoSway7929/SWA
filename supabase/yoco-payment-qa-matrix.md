@@ -187,6 +187,7 @@ Deno unit tests:
   - Yoco checkout response amount/currency/test-mode/redirect-host validation.
   - Portal token hashing and expiry handling.
   - Origin and no-store response helpers.
+- Bounded streamed request-body reader: byte-limit enforcement without buffering an unbounded body, plus strict UTF-8 rejection.
   - UUID and generic error handling.
 
 Run on a machine with Deno installed:
@@ -204,3 +205,5 @@ The tests import shared pure helpers; they do not start the HTTP Edge Function s
 - Browser tests must use a disposable local Supabase instance and mocked Yoco HTTP responses. Do not configure production secrets or use live credentials.
 
 **Execution status:** Deno is not available in the current implementation environment. These tests have been authored but not executed. No browser automation or local Supabase integration test has been performed. Static inspection is not a substitute for those gates.
+
+A source review also found that checkout and status handlers previously read the entire request body before applying their byte-count check. Both now use a shared bounded stream reader and reject non-object JSON bodies. The unit suite includes oversized streamed-body and invalid UTF-8 cases. This is a source change only until Deno tests are executed.
