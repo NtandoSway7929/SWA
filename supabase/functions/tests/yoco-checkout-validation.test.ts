@@ -3,7 +3,7 @@ import {
   validateCheckoutRequest,
   validateYocoCheckoutResponse,
 } from "../_shared/yoco-validation.ts";
-import { checkOrigin, isUuid, json, resolvePortalToken, safeError } from "../_shared/yoco.ts";
+import { checkOrigin, isUuid, json, readLimitedTextBody, resolvePortalToken, safeError } from "../_shared/yoco.ts";
 
 Deno.test("checkout request validation rejects malformed, unsafe and out-of-range inputs", () => {
   const valid = {
@@ -181,4 +181,42 @@ Deno.test("shared HTTP helpers enforce the configured browser origin and no-stor
   }
   const payload = await response.json();
   if (payload.ok !== true) throw new Error("JSON response helper did not preserve its payload.");
+});
+
+
+Deno.test("bounded request reader enforces streamed byte limits and strict UTF-8", async () => {
+  const accepted = await readLimitedTextBody(
+    new Request("https://example.test/function", {
+      method: "POST",
+      body: JSON.stringify({ token: "safe" }),
+    }),
+    128,
+  );
+  if (!accepted.ok || accepted.body !== '{"token":"safe"}') {
+    throw new Error("A small valid request body was not read correctly.");
+  }
+
+  const oversized = new Request("https://example.test/function", {
+    method: "POST",
+    body: new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array(32));
+        controller.enqueue(new Uint8Array(32));
+        controller.close();
+      },
+    }),
+  });
+  const tooLarge = await readLimitedTextBody(oversized, 48);
+  if (tooLarge.ok || tooLarge.reason !== "too_large") {
+    throw new Error("An oversized streamed request body was accepted.");
+  }
+
+  const invalidUtf8 = new Request("https://example.test/function", {
+    method: "POST",
+    body: new Uint8Array([0xc3, 0x28]),
+  });
+  const invalid = await readLimitedTextBody(invalidUtf8, 16);
+  if (invalid.ok || invalid.reason !== "invalid_utf8") {
+    throw new Error("Invalid UTF-8 request content was accepted.");
+  }
 });
