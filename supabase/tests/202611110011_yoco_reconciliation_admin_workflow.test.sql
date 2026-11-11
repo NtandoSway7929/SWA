@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(36);
+select extensions.plan(42);
 
 select extensions.has_table('public','payment_reconciliation_evidence',
     'append-only reconciliation evidence table exists');
@@ -179,6 +179,59 @@ select extensions.ok(
       'public.admin_add_payment_reconciliation_evidence(uuid,text,text,text)'::regprocedure
     )) > 0,
     'adding evidence advances the parent case version');
+
+
+-- Reconciliation is an investigation workflow, never a financial mutation path.
+select extensions.ok(
+    position('update public.payments' in lower(pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    ))) = 0,
+    'reconciliation status RPC does not update payment ledger rows');
+
+select extensions.ok(
+    position('insert into public.payments' in lower(pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    ))) = 0
+    and position('delete from public.payments' in lower(pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    ))) = 0,
+    'reconciliation status RPC cannot insert or delete payment ledger rows');
+
+select extensions.ok(
+    position('update public.payment_refunds' in lower(pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    ))) = 0
+    and position('insert into public.payment_refunds' in lower(pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    ))) = 0,
+    'reconciliation status RPC cannot mutate refund ledger rows');
+
+select extensions.ok(
+    position('update public.invoices' in lower(pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    ))) = 0
+    and position('update public.invoices' in lower(pg_get_functiondef(
+      'public.admin_add_payment_reconciliation_evidence(uuid,text,text,text)'::regprocedure
+    ))) = 0,
+    'reconciliation decisions and evidence cannot change invoice balances');
+
+select extensions.ok(
+    position('update public.payments' in lower(pg_get_functiondef(
+      'public.admin_add_payment_reconciliation_evidence(uuid,text,text,text)'::regprocedure
+    ))) = 0
+    and position('update public.payment_refunds' in lower(pg_get_functiondef(
+      'public.admin_add_payment_reconciliation_evidence(uuid,text,text,text)'::regprocedure
+    ))) = 0,
+    'evidence submission cannot modify payment or refund ledger rows');
+
+select extensions.ok(
+    position('update public.payment_reconciliation' in lower(pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    ))) > 0
+    and position('insert into public.payment_reconciliation_actions' in lower(pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    ))) > 0,
+    'status changes are recorded in reconciliation state and append-only action history');
 
 select * from extensions.finish();
 rollback;
