@@ -198,9 +198,10 @@ create index if not exists payment_refunds_payment_status_idx
     on public.payment_refunds(payment_id, status);
 
 -- ---------------------------------------------------------------------------
--- 6. Receipt numbering and immutable receipt snapshots.
+-- 6. Receipt numbering and receipt snapshot records.
 --    Sequence gaps after transaction rollback are acceptable; uniqueness is
---    the requirement. Receipt allocation is implemented with settlement later.
+--    the requirement. Receipt immutability enforcement and allocation are
+--    implemented with the later settlement migration.
 -- ---------------------------------------------------------------------------
 
 create sequence if not exists public.swayphics_payment_receipt_seq
