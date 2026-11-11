@@ -12,7 +12,7 @@ returns uuid
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
     v_actor uuid := auth.uid();
     v_case public.payment_reconciliation%rowtype;
@@ -70,7 +70,7 @@ begin
 
     return v_evidence_id;
 end;
-$;
+$$;
 
 
 revoke all on function public.admin_add_payment_reconciliation_evidence(uuid, text, text, text) from public, anon;
