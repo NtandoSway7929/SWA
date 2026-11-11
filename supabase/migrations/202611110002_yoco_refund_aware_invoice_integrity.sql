@@ -17,7 +17,7 @@
 begin;
 
 create schema if not exists innerme_private;
-revoke all on schema innerme_private from public, anon;
+revoke all on schema innerme_private from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 1. One authoritative invoice net-paid calculation.
