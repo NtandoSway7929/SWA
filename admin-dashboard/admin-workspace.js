@@ -9674,7 +9674,7 @@ function simpleBars(items, color) {
                                     : 0;
 
                             return (
-                                '<button type="button" class="sway-revenue-stage" data-view-target="leads">' +
+                                '<button type="button" class="sway-revenue-stage" data-view-target="leads" data-lead-stage-filter="' + esc(stage.status) + '">' +
                                     '<div class="sway-revenue-stage-top">' +
                                         "<span>" +
                                             esc(stage.label) +
@@ -9738,6 +9738,33 @@ function simpleBars(items, color) {
                 "</div>" +
             "</section>"
         );
+    }
+
+    function applyRevenuePipelineStageFilter(stageStatus) {
+        const allowedStages = [
+            "new",
+            "contacted",
+            "follow-up",
+            "interested",
+            "proposal sent",
+            "negotiating",
+            "won"
+        ];
+        const normalized = String(stageStatus || "").trim().toLowerCase();
+
+        if (!allowedStages.includes(normalized)) return false;
+
+        if (!state.tableControls.leads) {
+            state.tableControls.leads = {
+                search: "",
+                filter: "all",
+                sort: "followup_asc"
+            };
+        }
+
+        state.tableControls.leads.filter = normalized;
+        state.tableControls.leads.search = "";
+        return true;
     }
 
     function cashFlowMonths() {
@@ -28866,6 +28893,13 @@ function simpleBars(items, color) {
                 button.addEventListener(
                     "click",
                     function () {
+                        const leadStageFilter =
+                            button.getAttribute("data-lead-stage-filter");
+
+                        if (leadStageFilter) {
+                            applyRevenuePipelineStageFilter(leadStageFilter);
+                        }
+
                         state.currentView =
                             button.dataset.viewTarget;
 
