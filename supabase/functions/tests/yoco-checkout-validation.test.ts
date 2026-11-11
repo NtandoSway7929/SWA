@@ -3,7 +3,7 @@ import {
   validateCheckoutRequest,
   validateYocoCheckoutResponse,
 } from "../_shared/yoco-validation.ts";
-import { isUuid, resolvePortalToken, safeError } from "../_shared/yoco.ts";
+import { checkOrigin, isUuid, json, resolvePortalToken, safeError } from "../_shared/yoco.ts";
 
 Deno.test("checkout request validation rejects malformed, unsafe and out-of-range inputs", () => {
   const valid = {
@@ -144,4 +144,31 @@ Deno.test("UUID helper rejects malformed IDs and safeError does not invent non-e
   if (safeError("opaque") !== "The payment service is temporarily unavailable.") {
     throw new Error("Non-Error values should receive the generic safe error.");
   }
+});
+
+
+Deno.test("shared HTTP helpers enforce the configured browser origin and no-store responses", async () => {
+  const allowed = new Request("https://example.test/function", {
+    method: "POST",
+    headers: { origin: "https://swayphics.co.za" },
+  });
+  const denied = new Request("https://example.test/function", {
+    method: "POST",
+    headers: { origin: "https://swayphics.co.za.attacker.example" },
+  });
+  const serverToServer = new Request("https://example.test/function", { method: "POST" });
+
+  if (!checkOrigin(allowed)) throw new Error("The configured Swayphics origin was rejected.");
+  if (checkOrigin(denied)) throw new Error("A lookalike origin was accepted.");
+  if (!checkOrigin(serverToServer)) throw new Error("A server-to-server request without Origin was rejected.");
+
+  const response = json({ ok: true });
+  if (response.headers.get("cache-control") !== "no-store") {
+    throw new Error("Payment API response is missing no-store cache protection.");
+  }
+  if (response.headers.get("access-control-allow-origin") !== "https://swayphics.co.za") {
+    throw new Error("Payment API response has an unexpected CORS allow-origin value.");
+  }
+  const payload = await response.json();
+  if (payload.ok !== true) throw new Error("JSON response helper did not preserve its payload.");
 });
