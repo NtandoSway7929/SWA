@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(29);
+select extensions.plan(32);
 
 -- Operational tables must exist and have RLS enabled.
 select extensions.has_table('public', 'payment_attempts', 'payment_attempts exists');
