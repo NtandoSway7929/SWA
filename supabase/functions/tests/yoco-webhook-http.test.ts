@@ -60,7 +60,10 @@ function harness(options: Record<string, unknown> = {}) {
         },
         in(_column: string, _values: unknown[]) { return query; },
         then(resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) {
-          return Promise.resolve({ data: null, error: null }).then(resolve, reject);
+          const error = table === "payment_webhook_events" && options.eventUpdateError
+            ? { message: "event state write failed" }
+            : null;
+          return Promise.resolve({ data: null, error }).then(resolve, reject);
         },
       };
       return query;
@@ -163,5 +166,22 @@ Deno.test("webhook HTTP handler rejects malformed JSON after signature verificat
   const response = await h.handler(request);
   if (response.status !== 400 || h.calls.length !== 0) {
     throw new Error("Malformed signed JSON was recorded as a provider event.");
+  }
+});
+
+Deno.test("webhook handler returns retryable failure when a review-state write fails", async () => {
+  const h = harness({ unmatchedCheckout: true, eventUpdateError: true });
+  const response = await h.handler(eventRequest(paymentSucceededEvent()));
+  const result = await json(response);
+  if (response.status !== 503 || result.ok !== false) {
+    throw new Error("Webhook acknowledged an event whose review state was not persisted.");
+  }
+});
+
+Deno.test("webhook handler returns retryable failure when verified event recording fails", async () => {
+  const h = harness({ recordError: true });
+  const response = await h.handler(eventRequest(paymentSucceededEvent()));
+  if (response.status !== 503 || h.attemptLookups !== 0) {
+    throw new Error("Webhook continued processing without a durable event record.");
   }
 });
