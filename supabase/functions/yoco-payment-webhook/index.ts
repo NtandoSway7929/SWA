@@ -1,8 +1,8 @@
+import { verifyYocoWebhookSignature } from "../_shared/yoco-signature.ts";
 import {
   getAdminClient,
   json,
   sha256Hex,
-  verifyYocoWebhookSignature,
 } from "../_shared/yoco.ts";
 
 function asObject(value: unknown): Record<string, any> {
