@@ -203,6 +203,7 @@ set search_path = ''
 as $$
 declare
     v_event public.payment_webhook_events%rowtype;
+    v_inserted_count integer := 0;
 begin
     if p_provider_event_id is null or length(btrim(p_provider_event_id)) = 0
        or p_event_type is null or length(btrim(p_event_type)) = 0
@@ -222,6 +223,8 @@ begin
     on conflict (provider, environment, provider_event_id)
     do nothing;
 
+    get diagnostics v_inserted_count = row_count;
+
     select *
     into v_event
     from public.payment_webhook_events
@@ -238,14 +241,20 @@ begin
             failure_message = 'The same provider event ID was received with different event content.'
         where id = v_event.id;
 
-        raise exception 'Webhook event identity conflict requires investigation.';
+        return jsonb_build_object(
+            'event_id', v_event.id,
+            'event_type', v_event.event_type,
+            'processing_status', 'requires_review',
+            'duplicate', true,
+            'reason', 'event_identity_payload_conflict'
+        );
     end if;
 
     return jsonb_build_object(
         'event_id', v_event.id,
         'event_type', v_event.event_type,
         'processing_status', v_event.processing_status,
-        'duplicate', v_event.received_at < now() - interval '1 second'
+        'duplicate', v_inserted_count = 0
     );
 end;
 $$;
@@ -301,6 +310,11 @@ begin
         raise exception 'Verified webhook event not found.';
     end if;
 
+    if v_event.payment_attempt_id is not null
+       and v_event.payment_attempt_id <> v_attempt.id then
+        raise exception 'Webhook event is already associated with a different payment attempt.';
+    end if;
+
     if v_event.provider <> 'yoco'
        or v_event.environment <> 'test'
        or not v_event.signature_verified
@@ -316,6 +330,12 @@ begin
         select * into v_receipt
         from public.payment_receipts
         where payment_id = v_payment.id;
+
+        update public.payment_webhook_events
+        set payment_attempt_id = v_attempt.id,
+            processing_status = 'processed',
+            processed_at = coalesce(processed_at, now())
+        where id = v_event.id;
 
         return jsonb_build_object(
             'settled', true,
