@@ -22,11 +22,12 @@ export function normalizeYocoWebhookEvent(value: unknown): NormalizedYocoWebhook
   const event = asObject(value);
   const id = nonEmptyString(event.id);
   const type = nonEmptyString(event.type);
-  if (!id || !type) return null;
+  const rawPayload = event.payload ?? event.data;
+  if (!id || !type || !rawPayload || typeof rawPayload !== "object" || Array.isArray(rawPayload)) return null;
   return {
     id,
     type,
-    payload: asObject(event.payload ?? event.data),
+    payload: asObject(rawPayload),
   };
 }
 
@@ -49,7 +50,7 @@ export function getYocoPaymentSuccessDetails(payload: JsonObject) {
     payload.transactionId ?? payload.paymentId,
   );
 
-  if (!checkoutId || !Number.isSafeInteger(amount) || amount < 1 || !currency || !mode) {
+  if (!checkoutId || !Number.isSafeInteger(amount) || amount < 1 || currency !== "ZAR" || mode !== "test") {
     return null;
   }
 
