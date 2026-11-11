@@ -157,8 +157,19 @@
   async function load() {
     status("Loading Yoco reconciliation cases…", false);
     try {
-      data = await request("/functions/v1/reconcile-payment", {method:"POST",body:{limit:100}});
-      if (!data || data.ok !== true || data.environment !== "test") throw new Error("The test-environment reconciliation read model returned an unexpected response.");
+      var payload = await request("/functions/v1/reconcile-payment", {method:"POST",body:{limit:100}});
+      var requiredCollections = ["attempts","open_cases","evidence","case_actions","refunds",
+        "attempts_needing_attention","webhook_events_needing_attention","operational_alerts"];
+      if (!payload || payload.ok !== true || payload.environment !== "test" ||
+          !requiredCollections.every(function (key) { return Array.isArray(payload[key]); })) {
+        throw new Error("The test-environment reconciliation response is incomplete or invalid.");
+      }
+      if (!payload.open_cases.every(function (item) {
+        return item && typeof item.id === "string" && typeof item.status === "string";
+      })) {
+        throw new Error("The reconciliation case list contains an invalid record.");
+      }
+      data = payload;
       if (!selectedId || !cases().some(function (c) { return c.id === selectedId; })) selectedId = cases()[0] ? cases()[0].id : "";
       render(); status("Read-only Yoco test data refreshed.", false);
     } catch (e) { status(e.message || "Unable to load reconciliation data.", true); }
@@ -184,6 +195,9 @@
     var outcome = (next === "resolved" || next === "dismissed") ? String(fd.get("outcome") || "") : null;
     var payment = String(fd.get("payment") || "").trim(), refund = String(fd.get("refund") || "").trim();
     if (!reason || reason.length > 2000) return status("A reason between 1 and 2000 characters is required.", true);
+    var uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (payment && !uuidPattern.test(payment)) return status("The related payment reference must be a valid UUID.", true);
+    if (refund && !uuidPattern.test(refund)) return status("The related refund reference must be a valid UUID.", true);
     if (outcome === "financial_correction_recorded" && !payment && !refund) return status("Provide an existing payment or refund reference for this outcome.", true);
     if (outcome !== "financial_correction_recorded" && (payment || refund)) return status("Financial references can only accompany the financial-correction outcome.", true);
     busy = true; status("Saving case action…", false);
