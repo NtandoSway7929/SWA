@@ -103,3 +103,19 @@ Pure classification tests are authored in `supabase/functions/tests/yoco-operati
 - No live or sandbox payment has been initiated.
 - No production credentials, webhook secrets, webhook registration or deployment have been configured.
 - This audit does not authorise merge to `main` or any production change.
+
+
+## 8. Webhook replay-state recovery (Stage 1.41)
+
+The handler now explicitly distinguishes terminal event states from retryable/incomplete states. Processed events are acknowledged without financial work. Review/rejected events are terminal. Events in received or failed_retryable are moved to processing before business logic; an event already in processing is replayed to recover from a previous interrupted request. Unknown states fail closed with HTTP 503.
+
+Five additional HTTP-handler tests cover:
+- Replaying a duplicate event left in received.
+- Replaying duplicate processing and failed_retryable events.
+- Acknowledging requires_review/rejected terminal duplicates without financial work.
+- Rejecting an unknown processing status before checkout lookup or settlement.
+- Returning HTTP 503 when the processing-state transition cannot be persisted.
+
+The handler's financial safety still depends on the database settlement/refund operations' idempotency. This stage does not implement an exclusive processing lease, a scheduled retry worker, or an automated dead-letter processor. Concurrent deliveries may enter processing concurrently and must be made harmless by the atomic database operations.
+
+**Verification boundary:** source changes and test cases are committed on the feature branch. Deno tests, PostgreSQL integration, true concurrent webhook delivery, Yoco sandbox delivery and browser tests have not been executed. No migrations or production resources were changed.
