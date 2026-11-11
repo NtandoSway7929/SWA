@@ -271,7 +271,7 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
           return respond({ ok: false, error: "Payment event state could not be verified yet." }, 503);
         }
         if (latestAttempt.status === "succeeded") {
-          const { error: reviewError } = const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
+          const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
               payment_attempt_id: attempt.id,
               processing_status: "requires_review",
               failure_code: "conflicting_payment_events",
@@ -282,15 +282,11 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
           deps.logError("Could not persist Yoco webhook event state:", eventWriteError);
           return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
         }
-          if (reviewError) {
-            deps.logError("Could not retain conflicting Yoco payment event:", reviewError.message);
-            return respond({ ok: false, error: "Conflicting payment event requires retry." }, 503);
-          }
           return respond({ ok: true, received: true, requires_review: true });
         }
       }
 
-      const { error: eventUpdateError } = const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
+      const eventWriteError = await updateWebhookEvent(admin, recorded.event_id, {
           payment_attempt_id: attempt.id,
           processing_status: "processed",
           processed_at: new Date().toISOString(),
@@ -300,10 +296,6 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
           return respond({ ok: false, error: "Webhook event state could not be saved yet." }, 503);
         }
 
-      if (eventUpdateError) {
-        deps.logError("Could not mark Yoco payment failure event processed:", eventUpdateError.message);
-        return respond({ ok: false, error: "Payment failure event could not be finalized yet." }, 503);
-      }
 
       return respond({ ok: true, received: true, payment_failed: true });
     }
