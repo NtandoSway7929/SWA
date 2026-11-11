@@ -61,7 +61,7 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
     let leaseToken: string | null = null;
 
     const updateEvent = async (
-      status: "processed" | "failed_retryable" | "requires_review" | "rejected",
+      status: "processing" | "processed" | "failed_retryable" | "requires_review" | "rejected",
       values: { attemptId?: string; failureCode?: string; failureMessage?: string } = {},
     ): Promise<boolean> => {
       if (!admin || !eventId || !leaseToken) return false;
