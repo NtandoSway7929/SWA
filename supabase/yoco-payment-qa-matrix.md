@@ -75,7 +75,15 @@ The verifier signs the exact raw body and the delivery ID/timestamp tuple. The t
 - Client portal JSON and stored invoice balance use the same refund-aware calculation.
 - Successful refunds are visible in the private client payment-history payload.
 
-## 4. Migration test order
+## 4. Read-only migration preflight
+
+Before attempting migrations in a disposable local PostgreSQL/Supabase database, run:
+
+    psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/202611110008_yoco_migration_preflight.sql
+
+The script checks base tables/columns, existing trigger/function dependencies, Supabase roles, pgcrypto digest availability, invoice row count and extension schema. It performs catalog and count SELECTs only. Resolve every `BLOCK` result before applying migrations. This preflight does not parse or execute the Yoco migrations and is not a substitute for applying them to a disposable database.
+
+## 5. Migration test order
 
 Only in a disposable Supabase project, after independent review:
 
@@ -90,13 +98,14 @@ Only in a disposable Supabase project, after independent review:
 
 Do not use production to validate these migrations. Do not use a production service-role key.
 
-## 5. Required static and runtime checks
+## 6. Required static and runtime checks
 
 Before a sandbox test deployment:
 - deno fmt --check on the four Edge Functions, shared modules and test file.
 - deno lint on those same files.
 - deno check on all four function entrypoints and the test.
 - Run the signature test above.
+- Run the read-only migration prerequisite check in section 4.
 - Run the complete migration chain on a disposable PostgreSQL/Supabase database.
 - Inspect all public SECURITY DEFINER functions for explicit execute grants, fixed search paths and ownership/authorization checks.
 - Confirm innerme_private remains unexposed through the Data API.
@@ -104,7 +113,7 @@ Before a sandbox test deployment:
 - Exercise actual signed Yoco test webhooks for success, failure and refund event payloads before trusting their field mappings.
 - Verify rate limits, request-size limits, retry behaviour and operational alerting.
 
-## 6. Known gaps to resolve before sandbox deployment
+## 7. Known gaps to resolve before sandbox deployment
 
 - Confirm the exact provider refund event metadata needed to map a refund to the original payment. Unmapped refunds deliberately require manual review.
 - Verify whether all deployed client-portal entry paths share the same origin and whether any www or alternate origin needs a narrowly scoped allowlist.
@@ -114,11 +123,11 @@ Before a sandbox test deployment:
 - Confirm the deployed portal's existing token storage/rotation behaviour and clear the session token on explicit portal logout.
 - Validate all SQL migrations in PostgreSQL. Static source inspection is not a substitute for execution.
 
-## 7. Release boundary
+## 8. Release boundary
 
 This QA work does not authorise production migrations, test or production deployments, live Yoco credentials, live webhook registration, charging a client or merging into main. Those actions require separate approval.
 
-## 8. Disposable database catalog/privilege regression test
+## 9. Disposable database catalog/privilege regression test
 
 A pgTAP test is provided at:
 
