@@ -9,6 +9,7 @@ import {
   normalizeReconciliationLimit,
   parseJsonObject,
 } from "../_shared/yoco-http-validation.ts";
+import { buildYocoOperationalAlerts } from "../_shared/yoco-operations.ts";
 
 function getPublishableKey() {
   const legacy = Deno.env.get("SUPABASE_ANON_KEY");
@@ -99,75 +100,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const now = Date.now();
-    const staleAttemptMs = 15 * 60 * 1000;
-    const staleWebhookMs = 5 * 60 * 1000;
-    const operationalAlerts: Array<Record<string, unknown>> = [];
-
-    for (const attempt of attemptsResult.data || []) {
-      const ageMs = now - Date.parse(attempt.created_at);
-      if (attempt.status === "requires_review") {
-        operationalAlerts.push({
-          source: "payment_attempt",
-          id: attempt.id,
-          severity: "high",
-          code: "payment_attempt_requires_review",
-          created_at: attempt.created_at,
-          message: "Payment attempt requires administrator investigation.",
-        });
-      } else if (
-        attempt.status === "created" &&
-        !attempt.provider_checkout_id &&
-        Number.isFinite(ageMs) &&
-        ageMs >= staleAttemptMs
-      ) {
-        operationalAlerts.push({
-          source: "payment_attempt",
-          id: attempt.id,
-          severity: "medium",
-          code: "checkout_attachment_unconfirmed",
-          created_at: attempt.created_at,
-          message: "Attempt has no attached checkout after 15 minutes. Verify provider state before retrying; an orphaned checkout is not confirmed by this signal.",
-        });
-      } else if (
-        attempt.status === "pending" &&
-        attempt.expires_at &&
-        Date.parse(attempt.expires_at) < now
-      ) {
-        operationalAlerts.push({
-          source: "payment_attempt",
-          id: attempt.id,
-          severity: "medium",
-          code: "checkout_expired_unresolved",
-          created_at: attempt.created_at,
-          message: "Checkout expiry has passed but the attempt remains pending. Verify provider state before changing its status.",
-        });
-      }
-    }
-
-    for (const event of eventsResult.data || []) {
-      const ageMs = now - Date.parse(event.received_at);
-      const stale = ["received", "processing"].includes(event.processing_status) &&
-        Number.isFinite(ageMs) && ageMs >= staleWebhookMs;
-      if (event.processing_status === "requires_review" || event.processing_status === "failed_retryable" || stale) {
-        operationalAlerts.push({
-          source: "webhook_event",
-          id: event.id,
-          provider_event_id: event.provider_event_id,
-          severity: event.processing_status === "requires_review" ? "high" : "medium",
-          code: event.failure_code || (stale ? "webhook_processing_stale" : "webhook_retry_required"),
-          processing_status: event.processing_status,
-          received_at: event.received_at,
-          message: event.processing_status === "requires_review"
-            ? "Verified provider event requires administrator investigation."
-            : stale
-            ? "Webhook event has remained unprocessed for at least five minutes."
-            : "Webhook event is marked for retry; inspect the failure before replaying.",
-        });
-      }
-    }
-
-    operationalAlerts.sort((a, b) =>
-      (a.severity === "high" ? 0 : 1) - (b.severity === "high" ? 0 : 1)
+    const operationalAlerts = buildYocoOperationalAlerts(
+      attemptsResult.data || [],
+      eventsResult.data || [],
+      now,
     );
 
     return json({
