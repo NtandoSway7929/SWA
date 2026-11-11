@@ -29,7 +29,14 @@ Deno.serve(async (req: Request) => {
   if (declaredLength > MAX_BODY_BYTES) return json({ ok: false, error: "Request is too large." }, 413);
 
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
+      return json({ ok: false, error: "Request is too large." }, 413);
+    }
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(rawBody); } catch {
+      return json({ ok: false, error: "Invalid JSON request." }, 400);
+    }
     const token = typeof body?.token === "string" ? body.token.trim() : "";
     const invoiceId = body?.invoice_id;
     const amountCents = body?.amount_cents;
