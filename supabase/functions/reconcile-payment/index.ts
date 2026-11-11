@@ -65,7 +65,7 @@ Deno.serve(async (req: Request) => {
     const limit = normalizeReconciliationLimit(body.limit);
     const admin = getAdminClient();
 
-    const [attemptsResult, casesResult, refundsResult, eventsResult] = await Promise.all([
+    const [attemptsResult, casesResult, refundsResult, eventsResult, attentionAttemptsResult] = await Promise.all([
       admin.from("payment_attempts")
         .select("id,invoice_id,client_id,amount_cents,currency,status,provider_checkout_id,payment_id,created_at,updated_at,expires_at")
         .eq("provider", "yoco")
@@ -90,18 +90,25 @@ Deno.serve(async (req: Request) => {
         .eq("provider", "yoco")
         .eq("environment", "test")
         .in("processing_status", ["received", "processing", "failed_retryable", "requires_review"])
-        .order("received_at", { ascending: false })
+        .order("received_at", { ascending: true })
+        .limit(limit),
+      admin.from("payment_attempts")
+        .select("id,invoice_id,client_id,amount_cents,currency,status,provider_checkout_id,payment_id,created_at,updated_at,expires_at")
+        .eq("provider", "yoco")
+        .eq("environment", "test")
+        .in("status", ["created", "pending", "requires_review"])
+        .order("created_at", { ascending: true })
         .limit(limit),
     ]);
 
-    if (attemptsResult.error || casesResult.error || refundsResult.error || eventsResult.error) {
-      console.error("Payment reconciliation read failed:", attemptsResult.error?.message || casesResult.error?.message || refundsResult.error?.message || eventsResult.error?.message);
+    if (attemptsResult.error || casesResult.error || refundsResult.error || eventsResult.error || attentionAttemptsResult.error) {
+      console.error("Payment reconciliation read failed:", attemptsResult.error?.message || casesResult.error?.message || refundsResult.error?.message || eventsResult.error?.message || attentionAttemptsResult.error?.message);
       return json({ ok: false, error: "Reconciliation data could not be loaded." }, 503);
     }
 
     const now = Date.now();
     const operationalAlerts = buildYocoOperationalAlerts(
-      attemptsResult.data || [],
+      attentionAttemptsResult.data || [],
       eventsResult.data || [],
       now,
     );
@@ -125,6 +132,7 @@ Deno.serve(async (req: Request) => {
       attempts: attemptsResult.data || [],
       open_cases: casesResult.data || [],
       refunds: refundsResult.data || [],
+      attempts_needing_attention: attentionAttemptsResult.data || [],
       webhook_events_needing_attention: eventsResult.data || [],
       actions_taken: [],
     });
