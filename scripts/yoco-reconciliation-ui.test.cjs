@@ -57,3 +57,32 @@ test("browser rejects incomplete read-model payloads and malformed financial UUI
   assert.match(ui, /uuidPattern/);
   assert.match(ui, /valid UUID/);
 });
+
+test("reconciliation Edge Function enforces method, origin and administrator checks before service-role reads", () => {
+  const methodGuard = edge.indexOf('if (req.method !== "POST")');
+  const originGuard = edge.indexOf('origin !== "https://swayphics.co.za"');
+  const adminGuard = edge.indexOf('if (!await authorizeAdmin(req))');
+  const serviceClient = edge.indexOf("const admin = getAdminClient()");
+  const firstRead = edge.indexOf('admin.from("payment_attempts")');
+  assert.ok(methodGuard >= 0 && methodGuard < adminGuard);
+  assert.ok(originGuard >= 0 && originGuard < adminGuard);
+  assert.ok(adminGuard >= 0 && adminGuard < serviceClient);
+  assert.ok(serviceClient >= 0 && serviceClient < firstRead);
+  assert.match(edge, /auth\.getUser\(token\)/);
+  assert.match(edge, /userClient\.rpc\("is_swayphics_admin"\)/);
+});
+
+test("case workflow submits only the guarded evidence and status RPCs", () => {
+  assert.match(ui, /admin_add_payment_reconciliation_evidence/);
+  assert.match(ui, /admin_set_payment_reconciliation_status/);
+  assert.match(ui, /p_reconciliation_id:c\.id/);
+  assert.match(ui, /p_new_status:next/);
+  assert.doesNotMatch(ui, /from\(["']payment_reconciliation_(evidence|actions)["']\)\s*\.insert/);
+});
+
+test("status migration enforces allowed transitions and terminal closed states", () => {
+  assert.match(statusMigration, /v_case\.status = 'open' and p_new_status = 'investigating'/);
+  assert.match(statusMigration, /v_case\.status = 'investigating'/);
+  assert.match(statusMigration, /p_new_status in \('resolved','dismissed'\)/);
+  assert.match(statusMigration, /v_case\.status in \('resolved','dismissed'\)/);
+});
