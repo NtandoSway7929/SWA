@@ -102,7 +102,12 @@ Deno.test("portal token resolver hashes the raw token and enforces active and ex
   let selectedHash = "";
   let updated = false;
 
-  let row = {
+  let row: {
+    id: string;
+    client_id: string;
+    active: boolean;
+    expires_at: string | null;
+  } = {
     id: "token-row-1",
     client_id: "client-row-1",
     active: true,
