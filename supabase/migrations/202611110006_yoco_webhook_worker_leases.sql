@@ -157,7 +157,7 @@ begin
      or v_event.processing_status <> 'processing'
      or v_event.processing_lease_token is distinct from p_lease_token
      or v_event.processing_lease_expires_at is null
-     or v_event.processing_lease_expires_at <= now() then
+     or v_event.processing_lease_expires_at is null\n     or v_event.processing_lease_expires_at <= now() then
     raise exception 'Webhook processing lease is missing, expired, or stale.';
   end if;
 
@@ -197,7 +197,7 @@ begin
   if not found
      or v_event.processing_status <> 'processing'
      or v_event.processing_lease_token is distinct from p_lease_token
-     or v_event.processing_lease_expires_at <= now() then
+     or v_event.processing_lease_expires_at is null\n     or v_event.processing_lease_expires_at <= now() then
     raise exception 'Webhook processing lease is missing, expired, or stale.';
   end if;
 
@@ -274,7 +274,7 @@ as $$
   );
 $$;
 
-revoke all on function innerme_private.claim_yoco_webhook_event(uuid, integer) from public, anon, authenticated;
+revoke all on function innerme_private.claim_yoco_webhook_event(uuid, integer) from public, anon, authenticated;\n-- Prevent service-role callers from bypassing the fenced financial entry points.\nrevoke all on function public.yoco_settle_payment(uuid, uuid, text, bigint, text, text, text) from service_role;\nrevoke all on function public.yoco_record_refund_success(uuid, uuid, text, bigint, text) from service_role;\nrevoke all on function innerme_private.settle_yoco_payment(uuid, uuid, text, bigint, text, text, text) from service_role;\nrevoke all on function innerme_private.record_yoco_refund_success(uuid, uuid, text, bigint, text) from service_role;
 revoke all on function innerme_private.update_yoco_webhook_event(uuid, uuid, text, uuid, text, text) from public, anon, authenticated, service_role;
 revoke all on function innerme_private.settle_yoco_payment_with_lease(uuid, uuid, uuid, text, bigint, text, text, text) from public, anon, authenticated, service_role;
 revoke all on function innerme_private.record_yoco_refund_success_with_lease(uuid, uuid, uuid, text, bigint, text) from public, anon, authenticated, service_role;
