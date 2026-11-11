@@ -67,7 +67,9 @@ Deno.test("rejects malformed event envelopes and incomplete or unsafe payment de
     { checkoutId: "ch_1", amount: 1.5, currency: "ZAR", mode: "test" },
     { checkoutId: "ch_1", amount: "1000", currency: "ZAR", mode: "test" },
     { checkoutId: "ch_1", amount: 1000, currency: "", mode: "test" },
+    { checkoutId: "ch_1", amount: 1000, currency: "USD", mode: "test" },
     { checkoutId: "ch_1", amount: 1000, currency: "ZAR", mode: "" },
+    { checkoutId: "ch_1", amount: 1000, currency: "ZAR", mode: "live" },
     { amount: 1000, currency: "ZAR", mode: "test" },
   ];
   for (const payload of invalidPayloads) {
