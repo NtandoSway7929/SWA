@@ -114,7 +114,6 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
       return respond({ ok: false, error: "Webhook could not be recorded." }, 503);
     }
 
-    const terminalStatuses = ["processed", "requires_review", "rejected"];
     const retryableStatuses = ["received", "processing", "failed_retryable"];
     const processingStatus = recorded.processing_status;
 
