@@ -14,39 +14,33 @@ returns trigger
 language plpgsql
 set search_path = ''
 as $$
-declare
-    v_provider text;
-    v_status text;
 begin
     if tg_table_name = 'payments' then
         if tg_op = 'DELETE' then
-            v_provider := old.provider;
-        else
-            v_provider := coalesce(new.provider, old.provider);
+            if old.provider = 'yoco' then
+                raise exception 'Yoco payment ledger entries are immutable.';
+            end if;
+            return old;
         end if;
 
-        if v_provider = 'yoco' then
+        if old.provider = 'yoco' or new.provider = 'yoco' then
             raise exception 'Yoco payment ledger entries are immutable.';
         end if;
-
-        if tg_op = 'DELETE' then return old; end if;
         return new;
     end if;
 
     if tg_table_name = 'payment_refunds' then
         if tg_op = 'DELETE' then
-            v_provider := old.provider;
-            v_status := old.status;
-        else
-            v_provider := coalesce(new.provider, old.provider);
-            v_status := coalesce(old.status, new.status);
+            if old.provider = 'yoco' and old.status = 'succeeded' then
+                raise exception 'Successful Yoco refund ledger entries are immutable.';
+            end if;
+            return old;
         end if;
 
-        if v_provider = 'yoco' and v_status = 'succeeded' then
+        if (old.provider = 'yoco' and old.status = 'succeeded')
+           or (new.provider = 'yoco' and new.status = 'succeeded') then
             raise exception 'Successful Yoco refund ledger entries are immutable.';
         end if;
-
-        if tg_op = 'DELETE' then return old; end if;
         return new;
     end if;
 
