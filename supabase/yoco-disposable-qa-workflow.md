@@ -63,3 +63,17 @@ The Deno formatting check is temporarily non-blocking so formatting debt does no
 ## Failure handling
 
 A failed migration, test, type-check or concurrency assertion fails its job. Fix the cause on this feature branch and rerun the workflow. Do not bypass a failing database test by weakening its assertion or changing production schema. The workflow is a disposable validation environment; it is not a release or deployment workflow.
+
+
+## Latest hosted run — 11 November 2026
+
+Run: [42955221896](https://github.com/NtandoSway7929/SWA/actions/runs/42955221896)
+
+- Deno type-check and test job: passed.
+- PostgreSQL grammar job: passed.
+- Disposable database job: failed during `supabase start` because the local startup process proceeded into migration application and encountered the existing `public.leads` dependency failure. The runner log also showed a transient container-registry rate-limit response before the database became available; this is not the root schema issue.
+- Migration preflight, pgTAP and lease concurrency steps: skipped because migration replay did not complete.
+
+The standalone scripts have now been inspected for baseline dependencies. `swayphics-admin-workspace.sql` creates the initial core tables, including `public.leads`; `swayphics-invoicing.sql` assumes `public.payments` and `public.clients`; `swayphics-admin-workspace-security-fix.sql` assumes additional portal, portfolio, testimonial and invoicing objects; and `swayphics-business-flow.sql` adds a large number of functions, triggers, workflow dependencies and optional extensions. This confirms that simply inserting one `CREATE TABLE public.leads` statement would create a misleading and incomplete baseline.
+
+**Decision:** do not generate a synthetic baseline from partial scripts. Obtain a schema-only export from the project owner and reconcile the complete object inventory and dependencies before creating a reproducible baseline migration.
