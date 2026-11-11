@@ -141,7 +141,7 @@ The test runs inside a transaction and rolls back. It contains 32 assertions cov
 
 **Scope limitation:** these are catalog and privilege assertions. They do not simulate real invoice fixtures, settlement/refund transactions, concurrent locking, or client-token ownership. Those require a disposable database populated with valid project-specific fixtures and the functional scenarios in sections 2–5. Do not interpret a passing catalog test as end-to-end payment validation.
 
-## 9. Disposable payment/refund transaction test
+## 10. Disposable payment/refund transaction test
 
 An isolated transaction-level integration script is provided at:
 
@@ -163,7 +163,7 @@ The test creates two temporary client fixtures, one invoice, a checkout attempt,
 
 **Concurrency boundary:** this is a sequential transaction test. It does not prove concurrent settlement/refund safety. A two-session race test and actual disposable PostgreSQL execution remain required. No result should be described as passed until the script has been run against a disposable database.
 
-## 10. Two-session concurrency and recovery protocol
+## 11. Two-session concurrency and recovery protocol
 
 The manual two-session runbook is:
 
@@ -181,7 +181,7 @@ Run only against a disposable local database. The protocol covers:
 
 The runbook specifies expected return values, database row counts and invoice balances. It is a manual protocol, not an automated race test. No concurrency test has been executed. Repeat each database race at least 20 times and retain both session outputs before marking the gate passed.
 
-## 11. Edge Function unit tests and client-portal validation
+## 12. Edge Function unit tests and client-portal validation
 
 Deno unit tests:
 
