@@ -169,5 +169,9 @@ test("two-administrator concurrency harness requires isolated database and disti
   assert.match(harness, /admin_set_payment_reconciliation_status_v2/);
   assert.match(harness, /40001/);
   assert.match(harness, /expected_action_count/);
+  assert.match(harness, /run_evidence/);
+  assert.match(harness, /run_close/);
+  assert.match(harness, /evidence append won the row lock/);
+  assert.match(harness, /stale closure was rejected/);
   assert.match(harness, /pg_sleep\(2\)/);
 });
