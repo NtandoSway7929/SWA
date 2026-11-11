@@ -84,9 +84,9 @@ Only in a disposable Supabase project, after independent review:
 3. Apply 202611110003_yoco_atomic_payment_operations.sql.
 4. Apply 202611110004_yoco_edge_rpc_boundary.sql.
 5. Apply 202611110005_yoco_ledger_immutability.sql.
-5. Run schema and function privilege inspection.
-6. Run Supabase database advisors.
-7. Run the database invariant cases above, including concurrent settlement and refund attempts.
+6. Run schema and function privilege inspection.
+7. Run Supabase database advisors.
+8. Run the database invariant cases above, including concurrent settlement and refund attempts.
 
 Do not use production to validate these migrations. Do not use a production service-role key.
 
@@ -128,7 +128,7 @@ Run it only after migrations 001–005 have been applied to a disposable local S
 
     psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/202611110005_yoco_ledger_invariants.test.sql
 
-The test runs inside a transaction and rolls back. It contains 29 assertions covering operational table presence, RLS flags, browser-role table access, private-schema usage, representative RPC execution privileges, ledger triggers and refund-event uniqueness.
+The test runs inside a transaction and rolls back. It contains 32 assertions covering operational table presence, RLS flags, browser-role table access, private-schema usage, representative RPC execution privileges, ledger triggers and refund-event uniqueness.
 
 **Scope limitation:** these are catalog and privilege assertions. They do not simulate real invoice fixtures, settlement/refund transactions, concurrent locking, or client-token ownership. Those require a disposable database populated with valid project-specific fixtures and the functional scenarios in sections 2–5. Do not interpret a passing catalog test as end-to-end payment validation.
 
