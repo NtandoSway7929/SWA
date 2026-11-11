@@ -35,26 +35,48 @@ async function readLimitedRawBody(req: Request, maxBytes: number): Promise<strin
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method !== "POST") return json({ ok: false, error: "Method not allowed." }, 405);
+type WebhookDependencies = {
+  verifySignature: (req: Request, rawBody: string) => Promise<boolean>;
+  createAdmin: () => any;
+  hashBody: (value: string) => Promise<string>;
+  respond: typeof json;
+  logError: (...values: unknown[]) => void;
+  logWarn: (...values: unknown[]) => void;
+};
+
+const defaultDependencies: WebhookDependencies = {
+  verifySignature: verifyYocoWebhookSignature,
+  createAdmin: getAdminClient,
+  hashBody: sha256Hex,
+  respond: json,
+  logError: (...values) => deps.logError(...values),
+  logWarn: (...values) => console.warn(...values),
+};
+
+export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies> = {}) {
+  const deps = { ...defaultDependencies, ...overrides };
+  const respond = deps.respond;
+
+  return async (req: Request): Promise<Response> => {
+  if (req.method !== "POST") return respond({ ok: false, error: "Method not allowed." }, 405);
 
   try {
     const declaredLength = Number(req.headers.get("content-length") || 0);
     if (declaredLength > 256_000) {
-      return json({ ok: false, error: "Webhook payload too large." }, 413);
+      return respond({ ok: false, error: "Webhook payload too large." }, 413);
     }
     let rawBody: string | null;
     try {
       rawBody = await readLimitedRawBody(req, 256_000);
     } catch {
-      return json({ ok: false, error: "Webhook payload must be valid UTF-8." }, 400);
+      return respond({ ok: false, error: "Webhook payload must be valid UTF-8." }, 400);
     }
-    if (rawBody === null) return json({ ok: false, error: "Webhook payload too large." }, 413);
+    if (rawBody === null) return respond({ ok: false, error: "Webhook payload too large." }, 413);
 
-    const verified = await verifyYocoWebhookSignature(req, rawBody);
+    const verified = await deps.verifySignature(req, rawBody);
     if (!verified) {
-      console.warn("Rejected Yoco webhook with invalid signature or stale timestamp.");
-      return json({ ok: false, error: "Invalid webhook signature." }, 401);
+      deps.logWarn("Rejected Yoco webhook with invalid signature or stale timestamp.");
+      return respond({ ok: false, error: "Invalid webhook signature." }, 401);
     }
 
     const webhookId = req.headers.get("webhook-id")!;
@@ -62,30 +84,30 @@ Deno.serve(async (req: Request) => {
     try {
       parsedEvent = JSON.parse(rawBody);
     } catch {
-      return json({ ok: false, error: "Invalid webhook JSON." }, 400);
+      return respond({ ok: false, error: "Invalid webhook JSON." }, 400);
     }
     const event = normalizeYocoWebhookEvent(parsedEvent);
-    if (!event) return json({ ok: false, error: "Webhook event identity is invalid." }, 400);
+    if (!event) return respond({ ok: false, error: "Webhook event identity is invalid." }, 400);
     const eventType = event.type;
 
-    const admin = getAdminClient();
-    const digest = await sha256Hex(rawBody);
+    const admin = deps.createAdmin();
+    const digest = await deps.hashBody(rawBody);
     const { data: recorded, error: recordError } = await admin.rpc("yoco_record_verified_webhook", {
       p_provider_event_id: event.id,
       p_event_type: eventType,
       p_body_sha256: digest,
     });
     if (recordError || !recorded?.event_id) {
-      console.error("Could not record verified Yoco webhook:", recordError?.message || "No event record.");
-      return json({ ok: false, error: "Webhook could not be recorded." }, 503);
+      deps.logError("Could not record verified Yoco webhook:", recordError?.message || "No event record.");
+      return respond({ ok: false, error: "Webhook could not be recorded." }, 503);
     }
 
     if (recorded.processing_status === "requires_review") {
-      return json({ ok: true, received: true, requires_review: true });
+      return respond({ ok: true, received: true, requires_review: true });
     }
 
     if (recorded.duplicate && recorded.processing_status === "processed") {
-      return json({ ok: true, received: true, duplicate: true });
+      return respond({ ok: true, received: true, duplicate: true });
     }
 
     const payload = event.payload;
@@ -100,7 +122,7 @@ Deno.serve(async (req: Request) => {
             processed_at: new Date().toISOString(),
           })
           .eq("id", recorded.event_id);
-        return json({ ok: true, received: true, requires_review: true });
+        return respond({ ok: true, received: true, requires_review: true });
       }
 
       const { data: attempt, error: attemptError } = await admin
@@ -120,7 +142,7 @@ Deno.serve(async (req: Request) => {
             processed_at: new Date().toISOString(),
           })
           .eq("id", recorded.event_id);
-        return json({ ok: true, received: true, requires_review: true });
+        return respond({ ok: true, received: true, requires_review: true });
       }
 
       const { data: settlement, error: settlementError } = await admin.rpc("yoco_settle_payment", {
@@ -134,10 +156,10 @@ Deno.serve(async (req: Request) => {
       });
 
       if (settlementError) {
-        console.error("Yoco settlement requires retry or review:", settlementError.message);
-        return json({ ok: false, error: "Verified event could not be settled yet." }, 503);
+        deps.logError("Yoco settlement requires retry or review:", settlementError.message);
+        return respond({ ok: false, error: "Verified event could not be settled yet." }, 503);
       }
-      return json({ ok: true, received: true, settlement });
+      return respond({ ok: true, received: true, settlement });
     }
 
     if (eventType === "payment.failed") {
@@ -151,7 +173,7 @@ Deno.serve(async (req: Request) => {
             processed_at: new Date().toISOString(),
           })
           .eq("id", recorded.event_id);
-        return json({ ok: true, received: true, requires_review: true });
+        return respond({ ok: true, received: true, requires_review: true });
       }
 
       const { data: attempt, error: attemptError } = await admin
@@ -171,7 +193,7 @@ Deno.serve(async (req: Request) => {
             processed_at: new Date().toISOString(),
           })
           .eq("id", recorded.event_id);
-        return json({ ok: true, received: true, requires_review: true });
+        return respond({ ok: true, received: true, requires_review: true });
       }
 
       if (attempt.status === "succeeded") {
@@ -184,7 +206,7 @@ Deno.serve(async (req: Request) => {
             processed_at: new Date().toISOString(),
           })
           .eq("id", recorded.event_id);
-        return json({ ok: true, received: true, requires_review: true });
+        return respond({ ok: true, received: true, requires_review: true });
       }
 
       const { error: updateError } = await admin
@@ -199,8 +221,8 @@ Deno.serve(async (req: Request) => {
         .in("status", ["created", "pending", "requires_review"]);
 
       if (updateError) {
-        console.error("Could not update failed Yoco payment attempt:", updateError.message);
-        return json({ ok: false, error: "Payment failure could not be recorded yet." }, 503);
+        deps.logError("Could not update failed Yoco payment attempt:", updateError.message);
+        return respond({ ok: false, error: "Payment failure could not be recorded yet." }, 503);
       }
 
       await admin.from("payment_webhook_events")
@@ -211,7 +233,7 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", recorded.event_id);
 
-      return json({ ok: true, received: true, payment_failed: true });
+      return respond({ ok: true, received: true, payment_failed: true });
     }
 
     if (eventType === "refund.succeeded") {
@@ -237,7 +259,7 @@ Deno.serve(async (req: Request) => {
             processed_at: new Date().toISOString(),
           })
           .eq("id", recorded.event_id);
-        return json({ ok: true, received: true, requires_review: true });
+        return respond({ ok: true, received: true, requires_review: true });
       }
 
       const { error: associateError } = await admin
@@ -246,8 +268,8 @@ Deno.serve(async (req: Request) => {
         .eq("id", recorded.event_id)
         .is("payment_attempt_id", null);
       if (associateError) {
-        console.error("Could not bind Yoco refund event to its payment attempt:", associateError.message);
-        return json({ ok: false, error: "Verified refund requires manual review." }, 503);
+        deps.logError("Could not bind Yoco refund event to its payment attempt:", associateError.message);
+        return respond({ ok: false, error: "Verified refund requires manual review." }, 503);
       }
 
       const { data: refund, error: refundError } = await admin.rpc("yoco_record_refund_success", {
@@ -258,10 +280,10 @@ Deno.serve(async (req: Request) => {
         p_currency: details.currency,
       });
       if (refundError) {
-        console.error("Yoco refund recording requires review:", refundError.message);
-        return json({ ok: false, error: "Verified refund could not be recorded yet." }, 503);
+        deps.logError("Yoco refund recording requires review:", refundError.message);
+        return respond({ ok: false, error: "Verified refund could not be recorded yet." }, 503);
       }
-      return json({ ok: true, received: true, refund });
+      return respond({ ok: true, received: true, refund });
     }
 
     // Failure notifications are retained for investigation. They never create
@@ -275,9 +297,12 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", recorded.event_id);
 
-    return json({ ok: true, received: true, recorded_only: true });
+    return respond({ ok: true, received: true, recorded_only: true });
   } catch (error) {
-    console.error("Yoco webhook handler failed:", error instanceof Error ? error.message : "Unknown error.");
-    return json({ ok: false, error: "Webhook processing is temporarily unavailable." }, 500);
+    deps.logError("Yoco webhook handler failed:", error instanceof Error ? error.message : "Unknown error.");
+    return respond({ ok: false, error: "Webhook processing is temporarily unavailable." }, 500);
   }
-});
+  };
+}
+
+if (import.meta.main) Deno.serve(createYocoWebhookHandler());
