@@ -72,7 +72,7 @@
     });
     root.querySelector("[data-yr-queue]").innerHTML = list.length ? list.map(function (c) {
       return '<button type="button" class="yr-case' + (c.id === selectedId ? ' is-selected' : '') +
-        '" data-case="' + esc(c.id) + '"><span class="yr-case-top"><b>' + esc(c.discrepancy_type.replace(/_/g, " ")) +
+        '" data-case="' + esc(c.id) + '"><span class="yr-case-top"><b>' + esc(String(c.discrepancy_type || "reconciliation case").replace(/_/g, " ")) +
         '</b><i>' + esc(c.status) + '</i></span><span>' + esc(c.summary || "No summary provided") +
         '</span><small>' + esc(new Date(c.created_at).toLocaleString()) + '</small></button>';
     }).join("") : '<p class="yr-empty">No matching open reconciliation cases.</p>';
@@ -100,7 +100,7 @@
     }).join("");
     node.innerHTML =
       '<div class="yr-detail-head"><div><span class="yr-eyebrow">Yoco · Test environment</span><h3>' +
-      esc(c.discrepancy_type.replace(/_/g, " ")) + '</h3><p>' + esc(c.summary || "No case summary") +
+      esc(String(c.discrepancy_type || "reconciliation case").replace(/_/g, " ")) + '</h3><p>' + esc(c.summary || "No case summary") +
       '</p></div><span class="yr-status">' + esc(c.status) + '</span></div>' +
       '<div class="yr-facts"><div><small>Case ID</small><code>' + esc(c.id) + '</code></div>' +
       '<div><small>Payment attempt</small><code>' + esc(c.payment_attempt_id || "Not linked") + '</code></div>' +
