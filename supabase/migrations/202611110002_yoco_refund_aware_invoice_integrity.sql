@@ -458,7 +458,17 @@ begin
                     'amount', pp.amount,
                     'method', pp.method,
                     'reference', pp.reference,
-                    'paid_at', pp.paid_at
+                    'paid_at', pp.paid_at,
+                    'receipt', (
+                        select jsonb_build_object(
+                            'receipt_number', pr.receipt_number,
+                            'issued_at', pr.issued_at,
+                            'snapshot', pr.snapshot
+                        )
+                        from public.payment_receipts pr
+                        where pr.payment_id = pp.id
+                        limit 1
+                    )
                 )
                 order by pp.paid_at desc nulls last, pp.created_at desc
             )
