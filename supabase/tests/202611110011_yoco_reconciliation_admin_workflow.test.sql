@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(26);
+select extensions.plan(27);
 
 select extensions.has_table('public','payment_reconciliation_evidence',
     'append-only reconciliation evidence table exists');
@@ -110,6 +110,14 @@ select extensions.ok(
       'public.admin_set_payment_reconciliation_status(uuid,text,text,text,uuid,uuid)'::regprocedure
     )) > 0,
     'status RPC rejects reconciliation cases outside the Yoco test environment'
+);
+
+
+select extensions.ok(
+    position('v_case.provider <> ''yoco''' in pg_get_functiondef(
+      'public.admin_add_payment_reconciliation_evidence(uuid,text,text,text)'::regprocedure
+    )) > 0,
+    'evidence RPC is restricted to Yoco test reconciliation cases'
 );
 
 set local role authenticated;
