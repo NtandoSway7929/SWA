@@ -117,3 +117,17 @@ Before a sandbox test deployment:
 ## 7. Release boundary
 
 This QA work does not authorise production migrations, test or production deployments, live Yoco credentials, live webhook registration, charging a client or merging into main. Those actions require separate approval.
+
+## 8. Disposable database catalog/privilege regression test
+
+A pgTAP test is provided at:
+
+`supabase/tests/202611110005_yoco_ledger_invariants.test.sql`
+
+Run it only after migrations 001–005 have been applied to a disposable local Supabase database with pgTAP available:
+
+    psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/202611110005_yoco_ledger_invariants.test.sql
+
+The test runs inside a transaction and rolls back. It contains 29 assertions covering operational table presence, RLS flags, browser-role table access, private-schema usage, representative RPC execution privileges, ledger triggers and refund-event uniqueness.
+
+**Scope limitation:** these are catalog and privilege assertions. They do not simulate real invoice fixtures, settlement/refund transactions, concurrent locking, or client-token ownership. Those require a disposable database populated with valid project-specific fixtures and the functional scenarios in sections 2–5. Do not interpret a passing catalog test as end-to-end payment validation.
