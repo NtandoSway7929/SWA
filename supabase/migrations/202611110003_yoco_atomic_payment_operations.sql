@@ -322,7 +322,7 @@ begin
         raise exception 'Webhook event is not an eligible verified test payment success.';
     end if;
 
-    if v_attempt.status not in ('created', 'pending', 'requires_review') then
+    if v_attempt.status not in ('created', 'pending', 'requires_review', 'succeeded') then
         raise exception 'Payment attempt is not in a settleable state.';
     end if;
 
@@ -376,6 +376,10 @@ begin
             'payment_id', v_payment.id,
             'receipt_number', v_receipt.receipt_number
         );
+    end if;
+
+    if v_attempt.status = 'succeeded' then
+        raise exception 'Settled payment attempt is missing its payment ledger reference.';
     end if;
 
     select * into v_invoice
