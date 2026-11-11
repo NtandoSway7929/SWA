@@ -361,3 +361,10 @@ Added `supabase/tests/yoco_sql_syntax_check.py` and a separate CI job using `pgl
 **Execution status (GitHub Actions run 13, commit `335c6f1eec8baa51e1c6880d1005ffcb2cc374c1`):** PostgreSQL grammar parser passed for all 12 selected SQL files: seven Yoco migrations and five Yoco SQL test/preflight/fixture files. This confirms top-level PostgreSQL statement grammar only. It does not parse PL/pgSQL function bodies as executable code, resolve schema dependencies, check runtime privileges/RLS, or execute transactional/concurrency behaviour. It is not a substitute for PostgreSQL migration replay and pgTAP.
 
 The disposable database job still fails before Yoco migrations at the existing missing `public.leads` baseline dependency. SQL/pgTAP and concurrency execution remain NOT RUN.
+
+
+## 15. Latest hosted execution and baseline investigation
+
+GitHub Actions run [42955221896](https://github.com/NtandoSway7929/SWA/actions/runs/42955221896) completed with Deno and PostgreSQL grammar jobs passed. The disposable Supabase job failed during startup/migration initialization; the log reports `public.leads` missing. A transient registry rate-limit response also appeared during container download, but PostgreSQL subsequently became available and the schema dependency error remained.
+
+The standalone core SQL scripts were inspected. They establish interdependent core objects, so adding a placeholder `public.leads` table or blindly concatenating scripts is not an acceptable baseline repair. The schema-only export from the actual project remains required. Migration preflight, pgTAP and concurrency execution were skipped and remain NOT RUN.
