@@ -1,5 +1,11 @@
 import { verifyYocoWebhookSignature } from "../_shared/yoco-signature.ts";
 import {
+  getYocoCheckoutId,
+  getYocoPaymentSuccessDetails,
+  getYocoRefundSuccessDetails,
+  normalizeYocoWebhookEvent,
+} from "../_shared/yoco-webhook-validation.ts";
+import {
   getAdminClient,
   json,
   sha256Hex,
@@ -58,22 +64,20 @@ Deno.serve(async (req: Request) => {
     }
 
     const webhookId = req.headers.get("webhook-id")!;
-    let event: Record<string, any>;
+    let parsedEvent: unknown;
     try {
-      event = asObject(JSON.parse(rawBody));
+      parsedEvent = JSON.parse(rawBody);
     } catch {
       return json({ ok: false, error: "Invalid webhook JSON." }, 400);
     }
-
-    const eventType = typeof event.type === "string" ? event.type : "";
-    if (!eventType || typeof event.id !== "string" || !event.id) {
-      return json({ ok: false, error: "Webhook event identity is invalid." }, 400);
-    }
+    const event = normalizeYocoWebhookEvent(parsedEvent);
+    if (!event) return json({ ok: false, error: "Webhook event identity is invalid." }, 400);
+    const eventType = event.type;
 
     const admin = getAdminClient();
     const digest = await sha256Hex(rawBody);
     const { data: recorded, error: recordError } = await admin.rpc("yoco_record_verified_webhook", {
-      p_provider_event_id: String(event.id),
+      p_provider_event_id: event.id,
       p_event_type: eventType,
       p_body_sha256: digest,
     });
@@ -90,19 +94,10 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, received: true, duplicate: true });
     }
 
-    const payload = asObject(event.payload ?? event.data);
+    const payload = event.payload;
     if (eventType === "payment.succeeded") {
-      const checkoutId = String(
-        payload.checkoutId ??
-        payload.checkout_id ??
-        payload.metadata?.checkoutId ??
-        "",
-      );
-      const amount = Number(payload.amount);
-      const currency = String(payload.currency || "");
-      const mode = String(payload.mode || payload.processingMode || payload.processing_mode || "");
-
-      if (!checkoutId || !Number.isSafeInteger(amount) || amount < 1 || !currency || !mode) {
+      const details = getYocoPaymentSuccessDetails(payload);
+      if (!details) {
         await admin.from("payment_webhook_events")
           .update({
             processing_status: "requires_review",
@@ -119,7 +114,7 @@ Deno.serve(async (req: Request) => {
         .select("id")
         .eq("provider", "yoco")
         .eq("environment", "test")
-        .eq("provider_checkout_id", checkoutId)
+        .eq("provider_checkout_id", details.checkoutId)
         .maybeSingle();
 
       if (attemptError || !attempt) {
@@ -134,20 +129,14 @@ Deno.serve(async (req: Request) => {
         return json({ ok: true, received: true, requires_review: true });
       }
 
-      const transactionId = typeof payload.transactionId === "string"
-        ? payload.transactionId
-        : typeof payload.paymentId === "string"
-        ? payload.paymentId
-        : null;
-
       const { data: settlement, error: settlementError } = await admin.rpc("yoco_settle_payment", {
         p_attempt_id: attempt.id,
         p_event_id: recorded.event_id,
-        p_provider_checkout_id: checkoutId,
-        p_amount_cents: amount,
-        p_currency: currency,
-        p_processing_mode: mode,
-        p_provider_transaction_id: transactionId,
+        p_provider_checkout_id: details.checkoutId,
+        p_amount_cents: details.amount,
+        p_currency: details.currency,
+        p_processing_mode: details.mode,
+        p_provider_transaction_id: details.transactionId,
       });
 
       if (settlementError) {
@@ -158,12 +147,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (eventType === "payment.failed") {
-      const checkoutId = String(
-        payload.checkoutId ??
-        payload.checkout_id ??
-        payload.metadata?.checkoutId ??
-        "",
-      );
+      const checkoutId = getYocoCheckoutId(payload);
       if (!checkoutId) {
         await admin.from("payment_webhook_events")
           .update({
@@ -237,13 +221,10 @@ Deno.serve(async (req: Request) => {
     }
 
     if (eventType === "refund.succeeded") {
-      const providerRefundId = String(payload.refundId ?? payload.refund_id ?? "");
-      const amount = Number(payload.amount);
-      const currency = String(payload.currency || "");
-
+      const details = getYocoRefundSuccessDetails(payload);
       // Do not guess which local payment a provider refund belongs to. If the
       // event does not contain a known attempt ID, keep it for admin review.
-      const attemptId = String(payload.metadata?.paymentAttemptId ?? "");
+      const attemptId = details?.paymentAttemptId ?? "";
       const { data: attempt } = attemptId
         ? await admin.from("payment_attempts")
           .select("id,payment_id")
@@ -253,7 +234,7 @@ Deno.serve(async (req: Request) => {
           .maybeSingle()
         : { data: null };
 
-      if (!attempt?.payment_id || !providerRefundId || !Number.isSafeInteger(amount) || amount < 1 || !currency) {
+      if (!attempt?.payment_id || !details) {
         await admin.from("payment_webhook_events")
           .update({
             processing_status: "requires_review",
@@ -278,9 +259,9 @@ Deno.serve(async (req: Request) => {
       const { data: refund, error: refundError } = await admin.rpc("yoco_record_refund_success", {
         p_event_id: recorded.event_id,
         p_payment_id: attempt.payment_id,
-        p_provider_refund_id: providerRefundId,
-        p_amount_cents: amount,
-        p_currency: currency,
+        p_provider_refund_id: details.providerRefundId,
+        p_amount_cents: details.amount,
+        p_currency: details.currency,
       });
       if (refundError) {
         console.error("Yoco refund recording requires review:", refundError.message);
