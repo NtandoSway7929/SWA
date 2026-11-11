@@ -47,8 +47,8 @@ test("UI safely escapes data and does not write payment or invoice ledger record
 test("reconciliation history is scoped to one queued case and paginated", () => {
   assert.match(edge, /history_case_id/);
   assert.match(edge, /caseIds\.includes\(historyCaseId\)/);
-  assert.match(edge, /\.range\(evidenceOffset, evidenceOffset \+ historyPageSize - 1\)/);
-  assert.match(edge, /\.range\(actionOffset, actionOffset \+ historyPageSize - 1\)/);
+  assert.match(edge, /\.range\(evidenceOffset, evidenceOffset \+ historyPageSize\)/);
+  assert.match(edge, /\.range\(actionOffset, actionOffset \+ historyPageSize\)/);
   assert.match(edge, /evidence_has_more:/);
   assert.match(edge, /actions_have_more:/);
   assert.match(edge, /\.order\("id", \{ ascending: false \}\)/);
