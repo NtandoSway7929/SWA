@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(27);
+select extensions.plan(36);
 
 select extensions.has_table('public','payment_reconciliation_evidence',
     'append-only reconciliation evidence table exists');
@@ -131,6 +131,54 @@ select extensions.throws_ok(
     '42501','Administrator access is required.',
     'non-admin authenticated caller cannot change case status');
 reset role;
+
+
+select extensions.has_function('public','admin_set_payment_reconciliation_status_v2',
+    array['uuid','text','text','text','uuid','uuid','timestamp with time zone'],
+    'version-checked status RPC exists');
+
+select extensions.ok(
+    (select prosecdef from pg_proc
+     where oid='public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure),
+    'version-checked status RPC executes as SECURITY DEFINER');
+
+select extensions.ok(
+    (select proconfig @> array['search_path=""'] from pg_proc
+     where oid='public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure),
+    'version-checked status RPC pins an empty search_path');
+
+select extensions.ok(
+    has_function_privilege('authenticated',
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)','execute'),
+    'authenticated role can call the guarded version-checked RPC');
+
+select extensions.ok(
+    not has_function_privilege('anon',
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)','execute'),
+    'anonymous role cannot call the version-checked RPC');
+
+select extensions.ok(
+    not has_function_privilege('authenticated',
+      'public.admin_set_payment_reconciliation_status(uuid,text,text,text,uuid,uuid)','execute'),
+    'authenticated role cannot bypass version checks through the legacy status RPC');
+
+select extensions.ok(
+    position('v_case.updated_at is distinct from p_expected_updated_at' in pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    )) > 0,
+    'status RPC rejects stale or missing case versions');
+
+select extensions.ok(
+    position('using errcode = ''40001''' in pg_get_functiondef(
+      'public.admin_set_payment_reconciliation_status_v2(uuid,text,text,text,uuid,uuid,timestamptz)'::regprocedure
+    )) > 0,
+    'stale status decisions return the serialization failure SQLSTATE');
+
+select extensions.ok(
+    position('set updated_at = now()' in pg_get_functiondef(
+      'public.admin_add_payment_reconciliation_evidence(uuid,text,text,text)'::regprocedure
+    )) > 0,
+    'adding evidence advances the parent case version');
 
 select * from extensions.finish();
 rollback;
