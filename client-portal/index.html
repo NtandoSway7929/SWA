@@ -1369,6 +1369,10 @@ const min=Number(amountInput.min)*100,max=Number(amountInput.max)*100;
 if(!invoiceId||!Number.isFinite(amount)||!Number.isSafeInteger(amountCents)||amountCents<min||amountCents>max){
 statusBox.hidden=false;statusBox.className="finance-online-status error";statusBox.textContent="Enter a valid amount within the permitted invoice balance and minimum deposit.";return;
 }
+if(modal.dataset.paymentAmountCents&&modal.dataset.paymentAmountCents!==String(amountCents)){
+delete modal.dataset.paymentIdempotencyKey;
+}
+modal.dataset.paymentAmountCents=String(amountCents);
 if(!modal.dataset.paymentIdempotencyKey){
 if(!window.crypto||typeof window.crypto.randomUUID!=="function"){
 statusBox.hidden=false;statusBox.className="finance-online-status error";statusBox.textContent="This browser cannot securely prepare a payment request. Please use an updated browser.";return;
