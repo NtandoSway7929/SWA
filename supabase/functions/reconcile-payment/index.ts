@@ -197,4 +197,4 @@ export function createReconciliationHandler(dependencies: {
   };
 }
 
-Deno.serve(createReconciliationHandler());
+if (import.meta.main) Deno.serve(createReconciliationHandler());
