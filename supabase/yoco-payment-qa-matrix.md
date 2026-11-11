@@ -277,3 +277,20 @@ Source review and findings are recorded in `supabase/yoco-security-failure-recov
 **Execution status:** Deno is not available in the current implementation environment. These tests have been authored but not executed. No browser automation or local Supabase integration test has been performed. Static inspection is not a substitute for those gates.
 
 A source review also found that checkout and status handlers previously read the entire request body before applying their byte-count check. Both now use a shared bounded stream reader and reject non-object JSON bodies. The unit suite includes oversized streamed-body and invalid UTF-8 cases. This is a source change only until Deno tests are executed.
+
+
+## 13. Webhook replay-state recovery (Stage 1.41)
+
+The webhook handler now applies an explicit processing-state policy after signature verification and durable event recording:
+
+- `processed`: acknowledge as a duplicate without repeating financial work.
+- `requires_review` and `rejected`: acknowledge as terminal states without repeating financial work.
+- `received` and `failed_retryable`: persist `processing` before attempting business processing; if that write fails, return HTTP 503.
+- `processing`: allow replay after an interrupted delivery. Settlement and refund database operations remain responsible for financial idempotency.
+- Any unrecognised or missing state: fail closed with HTTP 503; do not perform financial work.
+
+New handler tests cover replay from `received`, `processing` and `failed_retryable`; terminal-state acknowledgement; unknown-state rejection; and failure to persist the processing transition.
+
+**Concurrency limitation:** this is replay recovery, not an exclusive worker lease. Concurrent deliveries may both enter business processing. The payment settlement and refund database operations must continue to enforce idempotency. A durable claim/lease with expiry and a dedicated retry worker remain future work.
+
+**Execution status:** tests are authored but not executed because Deno is unavailable in the current environment. PostgreSQL and provider sandbox validation remain outstanding.
