@@ -294,3 +294,19 @@ New handler tests cover replay from `received`, `processing` and `failed_retryab
 **Concurrency limitation:** this is replay recovery, not an exclusive worker lease. Concurrent deliveries may both enter business processing. The payment settlement and refund database operations must continue to enforce idempotency. A durable claim/lease with expiry and a dedicated retry worker remain future work.
 
 **Execution status:** tests are authored but not executed because Deno is unavailable in the current environment. PostgreSQL and provider sandbox validation remain outstanding.
+
+
+## 14. Webhook worker lease foundation (Stage 1.43)
+
+Migration `supabase/migrations/202611110006_yoco_webhook_worker_leases.sql` adds a database-backed lease and fencing boundary:
+
+- Each webhook event has a paired nullable lease token and expiry timestamp.
+- The atomic claim RPC locks the event row and grants a fresh UUID token only for eligible non-terminal events without an active lease.
+- Lease duration is bounded to 30–300 seconds; default is 120 seconds.
+- Event-state updates require the current token and an unexpired lease.
+- Payment settlement and refund recording have lease-aware transactional wrappers. They lock in the established attempt/payment-then-event order, validate the lease, invoke the existing financial routine in the same transaction, and clear the lease atomically.
+- The previous service-role settlement/refund entry points are revoked to prevent bypassing the new lease-aware wrappers.
+
+**Important integration gap:** the Edge Function has not yet been switched to claim leases or pass lease tokens. Its existing direct event/attempt updates are not yet fully fenced. In particular, payment-failure attempt mutation needs a dedicated lease-aware database operation before the Edge Function can safely use the new mechanism. Do not treat the lease migration alone as closing the concurrent-delivery issue.
+
+**Execution status:** migration is authored only. No PostgreSQL parser, migration application, SQL transaction, two-session race, Deno test or Yoco sandbox test has been run. Validate the complete migration chain and function ownership/privileges in a disposable local database before any sandbox deployment.
