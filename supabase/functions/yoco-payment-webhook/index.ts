@@ -11,12 +11,45 @@ function asObject(value: unknown): Record<string, any> {
     : {};
 }
 
+async function readLimitedRawBody(req: Request, maxBytes: number): Promise<string | null> {
+  const reader = req.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const result = await reader.read();
+    if (result.done) break;
+    total += result.value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(result.value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ ok: false, error: "Method not allowed." }, 405);
 
   try {
-    const rawBody = await req.text();
-    if (rawBody.length > 256_000) return json({ ok: false, error: "Webhook payload too large." }, 413);
+    const declaredLength = Number(req.headers.get("content-length") || 0);
+    if (declaredLength > 256_000) {
+      return json({ ok: false, error: "Webhook payload too large." }, 413);
+    }
+    let rawBody: string | null;
+    try {
+      rawBody = await readLimitedRawBody(req, 256_000);
+    } catch {
+      return json({ ok: false, error: "Webhook payload must be valid UTF-8." }, 400);
+    }
+    if (rawBody === null) return json({ ok: false, error: "Webhook payload too large." }, 413);
 
     const verified = await verifyYocoWebhookSignature(req, rawBody);
     if (!verified) {
