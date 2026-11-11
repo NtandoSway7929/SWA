@@ -4,6 +4,7 @@ import {
   isUuid,
   json,
   optionsResponse,
+  readLimitedTextBody,
   resolvePortalToken,
 } from "../_shared/yoco.ts";
 
@@ -13,12 +14,21 @@ Deno.serve(async (req: Request) => {
   if (!checkOrigin(req)) return json({ ok: false, error: "Origin not allowed." }, 403);
 
   try {
-    const rawBody = await req.text();
-    if (new TextEncoder().encode(rawBody).byteLength > 8_192) {
-      return json({ ok: false, error: "Request is too large." }, 413);
+    const limitedBody = await readLimitedTextBody(req, 8_192);
+    if (!limitedBody.ok) {
+      return json({
+        ok: false,
+        error: limitedBody.reason === "too_large" ? "Request is too large." : "Request must be valid UTF-8.",
+      }, limitedBody.reason === "too_large" ? 413 : 400);
     }
     let body: Record<string, unknown>;
-    try { body = JSON.parse(rawBody); } catch {
+    try {
+      const parsed: unknown = JSON.parse(limitedBody.body);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return json({ ok: false, error: "A JSON object is required." }, 400);
+      }
+      body = parsed as Record<string, unknown>;
+    } catch {
       return json({ ok: false, error: "Invalid JSON request." }, 400);
     }
     const token = typeof body?.token === "string" ? body.token.trim() : "";
