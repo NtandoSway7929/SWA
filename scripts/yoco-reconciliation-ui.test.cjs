@@ -44,11 +44,23 @@ test("UI safely escapes data and does not write payment or invoice ledger record
   assert.doesNotMatch(ui, /sk_(live|test)_/);
 });
 
-test("reconciliation read model bounds evidence and action history", () => {
-  const evidenceQuery = edge.match(/payment_reconciliation_evidence[\s\S]*?\.limit\(500\)/);
-  const actionQuery = edge.match(/payment_reconciliation_actions[\s\S]*?\.limit\(500\)/);
-  assert.ok(evidenceQuery, "evidence history query has a hard result cap");
-  assert.ok(actionQuery, "action history query has a hard result cap");
+test("reconciliation history is scoped to one queued case and paginated", () => {
+  assert.match(edge, /history_case_id/);
+  assert.match(edge, /caseIds\.includes\(historyCaseId\)/);
+  assert.match(edge, /\.range\(evidenceOffset, evidenceOffset \+ historyPageSize - 1\)/);
+  assert.match(edge, /\.range\(actionOffset, actionOffset \+ historyPageSize - 1\)/);
+  assert.match(edge, /evidence_has_more:/);
+  assert.match(edge, /actions_have_more:/);
+  assert.match(edge, /\.order\("id", \{ ascending: false \}\)/);
+});
+
+test("administrator UI can load older evidence and action pages", () => {
+  assert.match(ui, /async function loadHistory\(caseId, kind\)/);
+  assert.match(ui, /data-load-evidence/);
+  assert.match(ui, /data-load-actions/);
+  assert.match(ui, /evidence_offset:evidenceOffset/);
+  assert.match(ui, /action_offset:actionOffset/);
+  assert.match(ui, /history_page\.case_id !== caseId/);
 });
 
 test("browser rejects incomplete read-model payloads and malformed financial UUIDs", () => {
