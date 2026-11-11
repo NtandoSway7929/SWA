@@ -57,10 +57,10 @@ async function verifyYocoSignature(req: Request, rawBody: string) {
   ));
 
   // Yoco signatures are versioned; compare every supplied v1 signature.
-  const candidates = signatureHeader.split(/\s+/).flatMap((entry) => {
-    const parts = entry.split(",");
-    return parts.length === 2 && parts[0] === "v1" ? [parts[1]] : [];
-  });
+  const candidates = Array.from(
+    signatureHeader.matchAll(/(?:^|\\s)v1,([A-Za-z0-9+/=]+)/g),
+    (match) => match[1],
+  );
 
   return candidates.some((candidate) => {
     const decoded = decodeBase64(candidate);
