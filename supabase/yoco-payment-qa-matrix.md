@@ -153,3 +153,21 @@ The test creates two temporary client fixtures, one invoice, a checkout attempt,
 **Signature boundary:** the script calls the private `record_verified_yoco_webhook` RPC directly. This simulates an event that has already passed the Edge Function's raw-body HMAC verification. It does not test Yoco signature verification, HTTP request handling, or provider payload compatibility.
 
 **Concurrency boundary:** this is a sequential transaction test. It does not prove concurrent settlement/refund safety. A two-session race test and actual disposable PostgreSQL execution remain required. No result should be described as passed until the script has been run against a disposable database.
+
+## 10. Two-session concurrency and recovery protocol
+
+The manual two-session runbook is:
+
+`supabase/yoco-concurrency-test-runbook.md`
+
+Fixture SQL:
+
+`supabase/tests/202611110007_yoco_concurrency_fixture.sql`
+
+Run only against a disposable local database. The protocol covers:
+- Two concurrent settlement deliveries for the same attempt/event.
+- Two distinct partial refunds racing against the same payment, where their combined amount exceeds the original payment.
+- Concurrent checkout-attempt creation using the same idempotency key.
+- The provider-timeout/retry boundary for hosted checkout creation, which requires a separate Yoco sandbox exercise.
+
+The runbook specifies expected return values, database row counts and invoice balances. It is a manual protocol, not an automated race test. No concurrency test has been executed. Repeat each database race at least 20 times and retain both session outputs before marking the gate passed.
