@@ -11,12 +11,6 @@ import {
   sha256Hex,
 } from "../_shared/yoco.ts";
 
-function asObject(value: unknown): Record<string, any> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, any>
-    : {};
-}
-
 async function readLimitedRawBody(req: Request, maxBytes: number): Promise<string | null> {
   const reader = req.body?.getReader();
   if (!reader) return "";
