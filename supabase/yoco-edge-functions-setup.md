@@ -61,8 +61,8 @@ The function sends an idempotency key to Yoco and requires the returned checkout
 1. The exact current Yoco webhook payload variants for refund events must be confirmed with a real signed test delivery. Refund events without a definitive local attempt mapping are routed to manual review.
 2. The Yoco checkout response and webhook event field names must be confirmed in a sandbox run before accepting real customer traffic.
 3. The payment status endpoint returns database state only; it does not treat a browser return or provider redirect as confirmation.
-4. The reconciliation endpoint is read-only. It does not initiate refunds, edit ledger entries, or reconcile bank payouts.
-5. Receipt snapshot immutability, rate limiting, operational alerting and retry/dead-letter handling remain separate work. The feature branch now includes the client portal checkout, return-status and downloadable HTML receipt experience.
+4. The reconciliation endpoint is read-only. It does not initiate refunds, edit ledger entries, or reconcile bank payouts. Its admin response includes an on-demand operational queue for stale webhook events, review cases, expired checkouts and attempts without an attached checkout. It is not a push-notification or scheduled monitoring service.
+5. Receipt snapshot immutability is enforced in the database. Request rate limiting, push/email alert delivery, scheduled polling and automated retry/dead-letter handling remain separate work. The current admin operational queue is on-demand and read-only. The feature branch now includes the client portal checkout, return-status and downloadable HTML receipt experience.
 6. The SQL migrations are drafts and have not been executed. These Edge Functions must not be deployed until the migration sequence has passed PostgreSQL validation and the Yoco payload contract has been tested.
 
 ## Supabase function gateway configuration
