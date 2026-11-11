@@ -29,3 +29,18 @@ verify_jwt = false
 # All private workspace actions enforce user JWT and Swayphics-admin checks in the function.
 [functions.swayphics-ai]
 verify_jwt = false
+
+# Yoco payment endpoints authenticate private portal tokens, provider signatures,
+# or administrator JWTs inside the handlers. The gateway JWT check is disabled
+# so those distinct credentials can be validated by the application code.
+[functions.create-payment-checkout]
+verify_jwt = false
+
+[functions.yoco-payment-webhook]
+verify_jwt = false
+
+[functions.get-payment-status]
+verify_jwt = false
+
+[functions.reconcile-payment]
+verify_jwt = false
