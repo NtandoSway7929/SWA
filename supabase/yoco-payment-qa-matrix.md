@@ -215,6 +215,7 @@ The unit tests import shared pure helpers. The checkout and payment-status HTTP 
   - Checks invalid portal tokens/IDs, pending response shape, settled payment plus receipt response, and fail-closed database errors.
 - `supabase/functions/tests/yoco-webhook-http.test.ts`
   - Exercises the actual webhook HTTP handler with an injected signature verifier and in-memory database stub.
+  - Verified event-recording failure and event-state persistence failure return retryable HTTP 503 responses.
   - Invalid signature is rejected before database access; processed duplicates do not settle again.
   - Valid test-mode success maps to one settlement RPC; unmatched checkout is retained for review.
   - Settlement RPC outage returns a retryable 503; malformed signed JSON is rejected.
@@ -224,11 +225,16 @@ The unit tests import shared pure helpers. The checkout and payment-status HTTP 
   - No Supabase or Yoco network request is made by this test.
 - The checkout, payment-status and webhook endpoints export handler factories for isolated tests; each Edge Function still serves that same handler when deployed.
 
+### Security and failure-recovery audit
+
+Source review and findings are recorded in `supabase/yoco-security-failure-recovery-audit.md`. This stage corrected webhook handling so database lookup failures and event-state write failures are not acknowledged as successful deliveries. The payment-failure branch also routes a failure/success race to manual review. The added tests are authored but remain unexecuted.
+
 ### HTTP/application integration cases still requiring a local Supabase + Deno harness
 
 - Checkout endpoint: wrong invoice owner, disabled invoice, invalid amount, actual Supabase RPC behaviour and provider idempotency semantics.
 - Payment-status endpoint: actual portal-token hashing/expiry, Supabase RLS/service-role query behaviour and deployed response headers.
 - Webhook endpoint: real Yoco HMAC verification in the handler test (the existing signature unit test covers the verifier separately), actual Supabase event-recording/transaction semantics, event-ID collision behaviour and refund processing end-to-end.
+- Provider-created checkout with response loss/attachment failure: verify same idempotency key recovers the same Yoco checkout in a sandbox.
 - Status endpoint: client A cannot query client B's attempt, missing receipt, pending and confirmed response shapes.
 - Webhook endpoint: unsigned/oversized/malformed requests, provider event collision, verified success/failure/refund event mapping, retry after database/RPC outage.
 - Portal browser: sessionStorage token survives same-tab return, token never appears in Yoco redirect URL, polling does not imply success before verified settlement, receipt is shown only after settlement.
