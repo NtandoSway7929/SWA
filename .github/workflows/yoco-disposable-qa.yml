@@ -93,6 +93,14 @@ jobs:
       - name: Run database pgTAP suite
         run: supabase test db --local
 
+      - name: Run repeated two-worker webhook lease races
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LOCAL_DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\\(.*\\)"$/\\1/p')"
+          test -n "$LOCAL_DB_URL"
+          YOCO_CONCURRENCY_REPETITIONS=20 bash supabase/tests/yoco-lease-concurrency-ci.sh
+
       - name: Stop disposable Supabase
         if: always()
         run: supabase stop --no-backup
