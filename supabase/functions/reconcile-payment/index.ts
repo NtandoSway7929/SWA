@@ -106,6 +106,25 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "Reconciliation data could not be loaded." }, 503);
     }
 
+    const caseIds = (casesResult.data || []).map((item) => item.id);
+    const [evidenceResult, actionsResult] = caseIds.length
+      ? await Promise.all([
+        admin.from("payment_reconciliation_evidence")
+          .select("id,reconciliation_id,evidence_type,reference,note,created_by,created_at")
+          .in("reconciliation_id", caseIds)
+          .order("created_at", { ascending: true }),
+        admin.from("payment_reconciliation_actions")
+          .select("id,reconciliation_id,action,previous_status,new_status,outcome,reason,related_payment_id,related_refund_id,actor_user_id,created_at")
+          .in("reconciliation_id", caseIds)
+          .order("created_at", { ascending: true }),
+      ])
+      : [{ data: [], error: null }, { data: [], error: null }];
+
+    if (evidenceResult.error || actionsResult.error) {
+      console.error("Payment reconciliation history read failed:", evidenceResult.error?.message || actionsResult.error?.message);
+      return json({ ok: false, error: "Reconciliation history could not be loaded." }, 503);
+    }
+
     const now = Date.now();
     const operationalAlerts = buildYocoOperationalAlerts(
       attentionAttemptsResult.data || [],
@@ -131,6 +150,8 @@ Deno.serve(async (req: Request) => {
       operational_alerts: operationalAlerts,
       attempts: attemptsResult.data || [],
       open_cases: casesResult.data || [],
+      evidence: evidenceResult.data || [],
+      case_actions: actionsResult.data || [],
       refunds: refundsResult.data || [],
       attempts_needing_attention: attentionAttemptsResult.data || [],
       webhook_events_needing_attention: eventsResult.data || [],
