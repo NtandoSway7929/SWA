@@ -484,6 +484,14 @@ body{
   .onboarding-progress-track>span{transition:none}
 }
 
+
+/* Yoco client payment experience */
+.finance-online-panel{display:grid;gap:10px;padding:14px;border:1px solid rgba(1,82,244,.13);border-radius:15px;background:linear-gradient(135deg,rgba(1,82,244,.045),rgba(255,255,255,.78))}
+.finance-online-panel>div:first-child{display:grid;gap:4px}.finance-online-panel strong{font-size:.66rem}.finance-online-panel p{color:var(--muted);font-size:.53rem;line-height:1.55}
+.finance-online-controls{display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap}.finance-online-controls .field{flex:1;min-width:160px}.finance-online-controls input{width:100%;border:1px solid rgba(0,32,150,.12);border-radius:11px;padding:10px 11px;background:#fff;color:var(--dark);font-size:.65rem}
+.finance-online-note{color:var(--soft);font-size:.49rem;line-height:1.5}.finance-online-status{padding:10px 12px;border-radius:11px;background:rgba(1,82,244,.06);color:var(--muted);font-size:.55rem;line-height:1.55}
+.finance-online-status.success{background:rgba(34,160,107,.08);color:#18784F}.finance-online-status.warning{background:rgba(231,155,26,.10);color:#906000}.finance-online-status.error{background:rgba(190,44,44,.08);color:#9A2525}
+@media(max-width:560px){.finance-online-controls{align-items:stretch;flex-direction:column}.finance-online-controls .portal-button{width:100%}}
 </style>
 </head>
 <body>
@@ -630,8 +638,8 @@ const schedule=projectDeadline(item);
 return '<article class="project-item"><div class="project-top"><div><div class="project-name">'+esc(item.name||"Untitled project")+'</div><div class="project-meta">'+esc(item.service||"Swayphics project")+(item.due_date?" · Target date "+esc(date(item.due_date)):"")+"</div></div>"+chip(item.status)+"</div>"+projectProgress(item.status)+'<div class="project-stage-summary"><span>Current delivery stage</span><strong>'+esc(milestone.statusLabel)+'</strong><small>'+esc(milestone.message)+'</small></div><div class="project-item-footer"><small>'+esc(schedule.label)+'</small><button type="button" class="text-button" data-project-id="'+esc(item.id)+'">View milestones</button></div></article>';
 }
 function renderInvoice(item){
-const amounts=invoiceFinancialBreakdown(item),due=invoiceDueState(item);
-return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.invoice_number||"Invoice")+'<div class="financial-meta">Issued '+esc(date(item.issue_date))+(item.due_date?" · Due "+esc(date(item.due_date)):"")+'</div><div class="finance-invoice-breakdown"><span>Paid '+esc(financialMoney(amounts.paid,amounts.currency))+'</span><span>Balance '+esc(financialMoney(amounts.outstanding,amounts.currency))+'</span></div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(amounts.total,amounts.currency))+'</b><div>'+chip(item.status)+'</div></div></div>'+(amounts.outstanding>0?'<div class="finance-due-note '+esc(due.state)+'">'+esc(due.label)+'</div>':'')+'<div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="invoice" data-financial-id="'+esc(item.id)+'">View invoice details</button></div></article>';
+const amounts=invoiceFinancialBreakdown(item),due=invoiceDueState(item),online=!!item.online_payment_enabled&&isClientInvoicePayable(item);
+return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.invoice_number||"Invoice")+'<div class="financial-meta">Issued '+esc(date(item.issue_date))+(item.due_date?" · Due "+esc(date(item.due_date)):"")+'</div><div class="finance-invoice-breakdown"><span>Paid '+esc(financialMoney(amounts.paid,amounts.currency))+'</span><span>Balance '+esc(financialMoney(amounts.outstanding,amounts.currency))+'</span></div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(amounts.total,amounts.currency))+'</b><div>'+chip(item.status)+'</div></div></div>'+(amounts.outstanding>0?'<div class="finance-due-note '+esc(due.state)+'">'+esc(due.label)+'</div>':'')+'<div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="invoice" data-financial-id="'+esc(item.id)+'">View invoice details</button>'+(online?'<span class="chip success">Online payment available</span>':"")+'</div></article>';
 }
 function renderQuote(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.quote_number||item.title||"Quote")+'<div class="financial-meta">'+esc(item.title||"Swayphics quotation")+(item.valid_until?" · Valid until "+esc(date(item.valid_until)):"")+'</div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(item.amount,"ZAR"))+'</b><div>'+chip(item.status)+'</div></div></div><div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="quote" data-financial-id="'+esc(item.id)+'">View quotation details</button></div></article>'}
 function renderPayment(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.reference||"Payment")+'<div class="financial-meta">'+esc(date(item.paid_at))+(item.method?" · "+esc(item.method):"")+'</div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(item.amount,"ZAR"))+'</b><div>'+chip("paid")+'</div></div></div><div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="payment" data-financial-id="'+esc(item.id)+'">View payment record</button></div></article>'}
@@ -1301,6 +1309,16 @@ loadPortalDocuments();
 document.querySelectorAll("[data-project-id]").forEach(function(button){button.addEventListener("click",function(){const project=projects.find(function(item){return item.id===button.dataset.projectId});if(project)openProjectModal(project)})});
 const financeSection=document.getElementById("finances-section");
 financeSection?.addEventListener("click",function(event){
+const yocoButton=event.target.closest("#finance-yoco-pay");
+if(yocoButton){
+const modal=yocoButton.closest("#portal-financial-modal");
+const amountInput=modal?.querySelector("#finance-yoco-amount");
+const statusBox=modal?.querySelector("#finance-yoco-status");
+if(modal&&amountInput&&statusBox){
+startYocoCheckout(modal,amountInput,yocoButton,statusBox);
+}
+return;
+}
 const filterButton=event.target.closest("[data-invoice-filter]");
 if(filterButton){
 invoiceFilter=filterButton.dataset.invoiceFilter||"all";
@@ -1328,6 +1346,84 @@ messageInput.value=String(message||"").slice(0,5000);
 if(statusBox){statusBox.hidden=true;statusBox.textContent=""}
 section.scrollIntoView({behavior:"smooth",block:"start"});
 subjectInput.focus({preventScroll:true});
+}
+async function yocoPortalApi(functionName,payload){
+const response=await fetch(SUPABASE_URL+"/functions/v1/"+encodeURIComponent(functionName),{
+method:"POST",
+headers:{"apikey":SUPABASE_PUBLISHABLE_KEY,"Authorization":"Bearer "+SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json","Accept":"application/json"},
+body:JSON.stringify(Object.assign({token:token},payload||{})),
+cache:"no-store"
+});
+const raw=await response.text();let result=null;try{result=raw?JSON.parse(raw):null}catch(_){result=null}
+if(!response.ok||!result||result.ok!==true)throw new Error(result&&result.error||"The online payment service could not complete the request.");
+return result;
+}
+async function startYocoCheckout(modal,amountInput,button,statusBox){
+const invoiceId=String(modal.dataset.invoiceId||"");
+const amount=Number(amountInput.value);
+const amountCents=Math.round(amount*100);
+const min=Number(amountInput.min)*100,max=Number(amountInput.max)*100;
+if(!invoiceId||!Number.isFinite(amount)||!Number.isSafeInteger(amountCents)||amountCents<min||amountCents>max){
+statusBox.hidden=false;statusBox.className="finance-online-status error";statusBox.textContent="Enter a valid amount within the permitted invoice balance and minimum deposit.";return;
+}
+if(!modal.dataset.paymentIdempotencyKey){
+if(!window.crypto||typeof window.crypto.randomUUID!=="function"){
+statusBox.hidden=false;statusBox.className="finance-online-status error";statusBox.textContent="This browser cannot securely prepare a payment request. Please use an updated browser.";return;
+}
+modal.dataset.paymentIdempotencyKey=window.crypto.randomUUID();
+}
+button.disabled=true;button.textContent="Preparing secure checkout...";
+statusBox.hidden=false;statusBox.className="finance-online-status";statusBox.textContent="Creating your secure Yoco checkout. Do not close this window.";
+try{
+const result=await yocoPortalApi("create-payment-checkout",{
+invoice_id:invoiceId,amount_cents:amountCents,idempotency_key:modal.dataset.paymentIdempotencyKey
+});
+if(!result.checkout_url||!/^https:\/\//i.test(result.checkout_url))throw new Error("The provider did not return a valid secure checkout link.");
+statusBox.textContent="Checkout ready. Redirecting you to Yoco...";
+window.location.assign(result.checkout_url);
+}catch(error){
+button.disabled=false;button.textContent="Try checkout again";
+statusBox.className="finance-online-status error";
+statusBox.textContent=error&&error.message||"Checkout could not be created. You can safely try again.";
+}
+}
+async function checkYocoPaymentReturn(){
+const params=new URLSearchParams(window.location.search),attemptId=params.get("payment_attempt");
+if(!attemptId)return;
+const hero=document.querySelector(".portal-hero");
+if(!hero)return;
+const status=document.createElement("div");
+status.className="finance-online-status";
+status.setAttribute("role","status");status.setAttribute("aria-live","polite");
+status.textContent="Checking your payment confirmation with Swayphics...";
+hero.appendChild(status);
+let latest=null;
+for(let i=0;i<5;i++){
+try{
+latest=await yocoPortalApi("get-payment-status",{attempt_id:attemptId});
+if(latest.confirmed)break;
+if(["failed","expired","cancelled","requires_review"].includes(String(latest.attempt?.status||"").toLowerCase()))break;
+}catch(error){latest={error:error&&error.message||"Payment status is temporarily unavailable."};}
+if(i<4)await new Promise(function(resolve){window.setTimeout(resolve,2500)});
+}
+if(latest&&latest.confirmed){
+status.className="finance-online-status success";
+status.textContent="Payment confirmed. Your invoice balance and payment receipt are being refreshed.";
+const cleanUrl=new URL(window.location.href);cleanUrl.searchParams.delete("payment_attempt");window.history.replaceState({},document.title,cleanUrl.toString());
+window.setTimeout(function(){window.location.reload()},1000);
+return;
+}
+const attemptStatus=String(latest&&latest.attempt&&latest.attempt.status||"").toLowerCase();
+if(attemptStatus==="failed"||attemptStatus==="expired"||attemptStatus==="cancelled"){
+status.className="finance-online-status error";
+status.textContent="Yoco did not confirm this payment. Your invoice remains outstanding. You can try again or use EFT.";
+}else if(attemptStatus==="requires_review"){
+status.className="finance-online-status warning";
+status.textContent="Your payment needs a manual confirmation check. Please contact Swayphics before attempting another payment.";
+}else{
+status.className="finance-online-status warning";
+status.textContent="Payment confirmation is still pending. Your invoice will update only after verified confirmation. Refresh this page in a moment to check again.";
+}
 }
 function openFinancialModal(type,item,trigger){
 document.getElementById("portal-financial-modal")?.remove();
@@ -1370,8 +1466,8 @@ actionLabel="Request a payment receipt";
 requestSubject="Receipt request · "+String(item.reference||"Recorded payment");
 requestMessage="Please send me a receipt or payment confirmation for the payment of "+financialMoney(item.amount,"ZAR")+", recorded on "+date(item.paid_at)+"."+(item.reference?" The payment reference shown in my portal is "+String(item.reference)+".":"");
 }
-modal.className="portal-modal";modal.id="portal-financial-modal";
-modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&invoiceFinancialBreakdown(item).outstanding>0?'<p class="finance-payment-guidance">Online payment is not available through this portal. Use the request below to ask Swayphics for the correct payment instructions.</p>':"")+'<div class="finance-modal-actions">'+(type==="invoice"?'<button type="button" class="portal-button secondary" id="finance-invoice-pdf">Download invoice PDF</button>':"")+'<button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div><div id="finance-pdf-status" class="message" hidden role="status"></div></div></section>';
+modal.className="portal-modal";modal.id="portal-financial-modal";if(type==="invoice")modal.dataset.invoiceId=String(item.id||"");
+modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&invoiceFinancialBreakdown(item).outstanding>0?(item.online_payment_enabled?'<section class="finance-online-panel"><div><strong>Pay this invoice online</strong><p>Secure card checkout hosted by Yoco. Your invoice is updated only after Swayphics receives verified payment confirmation.</p></div><div class="finance-online-controls"><div class="field"><label for="finance-yoco-amount">Payment amount (ZAR)</label><input id="finance-yoco-amount" type="number" inputmode="decimal" min="'+(Number(item.deposit_amount)>0?Number(item.deposit_amount).toFixed(2):"2.00")+'" max="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" step="0.01" value="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" '+(item.partial_payment_enabled?"":"readonly")+'></div><button type="button" class="portal-button" id="finance-yoco-pay">Continue to secure checkout</button></div><small class="finance-online-note">'+(item.partial_payment_enabled?"You may pay any amount from the required minimum deposit to the remaining balance.":"Online payment is set to full balance only for this invoice.")+(Number(item.deposit_amount)>0?" Minimum required deposit: "+esc(financialMoney(item.deposit_amount,invoiceFinancialBreakdown(item).currency))+".":"")+'</small><div id="finance-yoco-status" class="finance-online-status" hidden role="status" aria-live="polite"></div></section>':'<p class="finance-payment-guidance">Online payment has not been enabled for this invoice. Use the request below to ask Swayphics for payment instructions.</p>'):"")+'<div class="finance-modal-actions">'+(type==="invoice"?'<button type="button" class="portal-button secondary" id="finance-invoice-pdf">Download invoice PDF</button>':"")+'<button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div><div id="finance-pdf-status" class="message" hidden role="status"></div></div></section>';
 document.body.appendChild(modal);
 const close=function(){modal.remove();if(trigger&&typeof trigger.focus==="function")trigger.focus()};
 modal.querySelectorAll("[data-finance-close]").forEach(function(element){element.addEventListener("click",close)});
@@ -1423,6 +1519,7 @@ try{
     if(!data||!data.ok)throw new Error(data&&data.error||"This portal link is invalid or expired.");
     if(!onboardingResult||!onboardingResult.ok)throw new Error(onboardingResult&&onboardingResult.error||"The onboarding form could not be loaded.");
     render(data,onboardingResult.onboarding||{});
+checkYocoPaymentReturn();
 }catch(error){
     renderPortalError("Unable to open portal",error&&error.message||"This portal link is invalid or has expired.");
 }
