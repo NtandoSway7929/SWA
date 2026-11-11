@@ -98,3 +98,30 @@ A successful refund must not delete or rewrite the original payment. The refund 
 ## Next implementation gate
 
 Before writing the executable migration, prepare and review the exact replacement function definitions and the new table definitions against this dependency map. Then validate the migration in a disposable PostgreSQL/Supabase environment. Do not execute it against the production project.
+
+
+## Stage 1.25: Refund-aware calculation migration drafted
+
+Migration prepared on the feature branch:
+
+- `supabase/migrations/202611110002_yoco_refund_aware_invoice_integrity.sql`
+
+It introduces one private net-paid calculation and replaces the existing invoice balance recalculation, invoice BEFORE-trigger function, payment integrity function, and client portal RPC to use successful payments less successful refunds. It also adds a refund-change trigger so successful refunds recalculate invoice and project payment state.
+
+The migration retains the private portal-token hash validation and does not expose provider credentials or activate online payments. Existing triggers are reused where possible; the refund trigger is new.
+
+## Current migration sequence
+
+1. `202611110001_yoco_payment_foundation.sql`
+2. `202611110002_yoco_refund_aware_invoice_integrity.sql`
+
+Both files are under `supabase/migrations/` to follow the repository migration convention.
+
+## Stage 1.25 validation boundary
+
+- Both committed files were fetched back from the feature branch.
+- Basic source checks confirmed transaction boundaries, balanced dollar-quote delimiters, and presence of the expected schema objects.
+- No PostgreSQL parser, local database, or disposable Supabase project was available for execution testing.
+- Trigger execution order, row-lock concurrency, grants, RLS behaviour, and refund edge cases remain unverified.
+- Refund amount validation and immutable refund-recording operations are still required before any refund can be safely recorded as succeeded.
+- The migration is review-only and must not be run against production.
