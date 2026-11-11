@@ -101,3 +101,33 @@ Do not point these tests at production.
 ## Release decision
 
 **Not ready for sandbox deployment.** Source-level remediations have been added, but the database migration chain, ledger triggers, refund-event binding and concurrency behaviour still require PostgreSQL execution and signed sandbox webhook verification. This review does not authorise test deployment, production migration, merge to main, webhook registration, live credentials or live charges.
+
+## Stage 1.40: migration preflight and validation status
+
+A read-only prerequisite script has been added:
+
+`supabase/tests/202611110008_yoco_migration_preflight.sql`
+
+It checks:
+- Required Swayphics base tables and columns.
+- Existing invoice/payment recalculation and integrity functions.
+- Existing invoice/project/payment triggers that migration 002 replaces or relies on.
+- Required Supabase roles.
+- The pgcrypto digest function used by the private portal-token flow.
+- The current invoice row count, because migration 002 recalculates every invoice in one transaction.
+- The installed pgcrypto extension and its schema.
+
+The script contains catalog and count SELECTs only. It does not create, alter, or modify data. It must still be run against a disposable local database; a PASS would establish prerequisites only, not prove that migrations 001–005 apply successfully.
+
+### Static checks completed
+
+- All five migration files contain one explicit BEGIN and one COMMIT.
+- The four pre-existing trigger names referenced by the Yoco replacement logic were found in the branch's Swayphics base SQL.
+- The required preflight references to the portal RPC and pgcrypto digest function are present.
+- 16 deterministic source assertions passed.
+
+### Execution environment limitation
+
+The current execution environment does not have `psql`, `pg_prove`, the Supabase CLI, Docker or Deno installed. No disposable PostgreSQL instance is available here. The connected Supabase tooling can execute SQL and apply migrations on a remote project, but no remote project or paid development branch has been authorised for this work. I did not list projects, connect to a database, execute SQL, or apply migrations.
+
+**Database validation remains NOT RUN.** Do not interpret the static checks or the preflight script's existence as a successful migration test. The five migrations remain unapproved for execution and sandbox deployment.
