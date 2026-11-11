@@ -67,10 +67,13 @@ The verifier signs the exact raw body and the delivery ID/timestamp tuple. The t
 - A provider event ID cannot settle more than one attempt.
 - A provider refund ID cannot be recorded more than once.
 - Successful cumulative refunds cannot exceed the original payment amount.
+- A successful Yoco refund must be linked to the verified event and matching local payment attempt.
+- Settled Yoco payment rows, successful refund rows and issued receipt snapshots cannot be updated or deleted.
 - A payment's invoice/client association cannot be changed by a caller.
 - A refund never overwrites or deletes the original payment.
 - Invoice and project statuses remain consistent after payment/refund changes.
 - Client portal JSON and stored invoice balance use the same refund-aware calculation.
+- Successful refunds are visible in the private client payment-history payload.
 
 ## 4. Migration test order
 
@@ -80,6 +83,7 @@ Only in a disposable Supabase project, after independent review:
 2. Apply 202611110002_yoco_refund_aware_invoice_integrity.sql.
 3. Apply 202611110003_yoco_atomic_payment_operations.sql.
 4. Apply 202611110004_yoco_edge_rpc_boundary.sql.
+5. Apply 202611110005_yoco_ledger_immutability.sql.
 5. Run schema and function privilege inspection.
 6. Run Supabase database advisors.
 7. Run the database invariant cases above, including concurrent settlement and refund attempts.
