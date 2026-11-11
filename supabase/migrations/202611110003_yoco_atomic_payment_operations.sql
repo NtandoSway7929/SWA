@@ -547,6 +547,18 @@ begin
         raise exception 'Webhook event is not an eligible verified refund success.';
     end if;
 
+    if v_event.payment_attempt_id is null
+       or not exists (
+           select 1
+           from public.payment_attempts a
+           where a.id = v_event.payment_attempt_id
+             and a.provider = 'yoco'
+             and a.environment = 'test'
+             and a.payment_id = v_payment.id
+       ) then
+        raise exception 'Refund event is not bound to the matching Yoco payment attempt.';
+    end if;
+
     if p_provider_refund_id is null
        or length(btrim(p_provider_refund_id)) = 0
        or p_amount_cents is null
