@@ -642,7 +642,7 @@ const amounts=invoiceFinancialBreakdown(item),due=invoiceDueState(item),online=!
 return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.invoice_number||"Invoice")+'<div class="financial-meta">Issued '+esc(date(item.issue_date))+(item.due_date?" · Due "+esc(date(item.due_date)):"")+'</div><div class="finance-invoice-breakdown"><span>Paid '+esc(financialMoney(amounts.paid,amounts.currency))+'</span><span>Balance '+esc(financialMoney(amounts.outstanding,amounts.currency))+'</span></div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(amounts.total,amounts.currency))+'</b><div>'+chip(item.status)+'</div></div></div>'+(amounts.outstanding>0?'<div class="finance-due-note '+esc(due.state)+'">'+esc(due.label)+'</div>':'')+'<div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="invoice" data-financial-id="'+esc(item.id)+'">View invoice details</button>'+(online?'<span class="chip success">Online payment available</span>':"")+'</div></article>';
 }
 function renderQuote(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.quote_number||item.title||"Quote")+'<div class="financial-meta">'+esc(item.title||"Swayphics quotation")+(item.valid_until?" · Valid until "+esc(date(item.valid_until)):"")+'</div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(item.amount,"ZAR"))+'</b><div>'+chip(item.status)+'</div></div></div><div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="quote" data-financial-id="'+esc(item.id)+'">View quotation details</button></div></article>'}
-function renderPayment(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.reference||"Payment")+'<div class="financial-meta">'+esc(date(item.paid_at))+(item.method?" · "+esc(item.method):"")+'</div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(item.amount,"ZAR"))+'</b><div>'+chip("paid")+'</div></div></div><div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="payment" data-financial-id="'+esc(item.id)+'">View payment record</button></div></article>'}
+function renderPayment(item){return '<article class="financial-item"><div class="financial-top"><div class="financial-name">'+esc(item.reference||"Payment")+'<div class="financial-meta">'+esc(date(item.paid_at))+(item.method?" · "+esc(item.method):"")+'</div></div><div class="finance-amount-stack"><b>'+esc(financialMoney(item.amount,"ZAR"))+'</b><div>'+chip("paid")+'</div></div></div><div class="financial-item-actions"><button type="button" class="text-button" data-financial-type="payment" data-financial-id="'+esc(item.id)+'">View payment record</button>'+(item.receipt&&item.receipt.receipt_number?'<button type="button" class="text-button" data-receipt-payment-id="'+esc(item.id)+'">Download receipt</button>':"")+'</div></article>'}
 function renderFinanceInvoiceList(invoices,filter){
 const rows=filterPortalInvoices(invoices,filter);
 if(!rows.length){
@@ -1309,6 +1309,12 @@ loadPortalDocuments();
 document.querySelectorAll("[data-project-id]").forEach(function(button){button.addEventListener("click",function(){const project=projects.find(function(item){return item.id===button.dataset.projectId});if(project)openProjectModal(project)})});
 const financeSection=document.getElementById("finances-section");
 financeSection?.addEventListener("click",function(event){
+const receiptButton=event.target.closest("[data-receipt-payment-id]");
+if(receiptButton){
+const payment=payments.find(function(row){return String(row.id)===String(receiptButton.dataset.receiptPaymentId)});
+try{if(payment)downloadPaymentReceipt(payment)}catch(error){window.alert(error&&error.message||"Receipt could not be downloaded.")}
+return;
+}
 const yocoButton=event.target.closest("#finance-yoco-pay");
 if(yocoButton){
 const modal=yocoButton.closest("#portal-financial-modal");
@@ -1424,6 +1430,23 @@ status.textContent="Your payment needs a manual confirmation check. Please conta
 status.className="finance-online-status warning";
 status.textContent="Payment confirmation is still pending. Your invoice will update only after verified confirmation. Refresh this page in a moment to check again.";
 }
+}
+function downloadPaymentReceipt(item){
+const receipt=item&&item.receipt,snapshot=receipt&&receipt.snapshot;
+if(!receipt||!receipt.receipt_number||!snapshot)throw new Error("A downloadable receipt is not available for this payment.");
+const rows=[
+["Receipt number",receipt.receipt_number],
+["Issued",date(receipt.issued_at)],
+["Invoice",snapshot.invoice_number||"Not recorded"],
+["Payment date",date(snapshot.payment_date||item.paid_at)],
+["Amount",financialMoney(snapshot.amount??item.amount,snapshot.currency||"ZAR")],
+["Payment method",snapshot.method||item.method||"Not recorded"],
+["Provider",snapshot.provider||"Not recorded"],
+["Payment reference",snapshot.provider_checkout_id||item.reference||"Not recorded"]
+];
+const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(receipt.receipt_number)+'</title><style>body{font-family:Arial,sans-serif;color:#081533;margin:0;padding:36px;background:#f5f7fb}.receipt{max-width:720px;margin:0 auto;padding:38px;background:#fff;border:1px solid #e4e9f2;border-radius:18px}.brand{color:#002096;font-size:13px;font-weight:800;letter-spacing:.14em}.label{color:#65718a;font-size:11px;letter-spacing:.12em;margin-top:28px}.number{font-size:30px;letter-spacing:-.04em;margin:8px 0 24px}.row{display:flex;justify-content:space-between;gap:20px;padding:14px 0;border-bottom:1px solid #edf0f5;font-size:13px}.row span{color:#65718a}.row strong{text-align:right}.total{margin-top:22px;padding:20px;border-radius:12px;background:#f1f5ff}.total span{display:block;color:#65718a;font-size:11px}.total strong{display:block;margin-top:6px;color:#002096;font-size:25px}.foot{margin-top:30px;color:#65718a;font-size:11px;line-height:1.6}@media print{body{background:#fff;padding:0}.receipt{border:0;border-radius:0}}</style></head><body><main class="receipt"><div class="brand">SWAYPHICS</div><div class="label">PAYMENT RECEIPT</div><h1 class="number">'+esc(receipt.receipt_number)+'</h1>'+rows.map(function(row){return '<div class="row"><span>'+esc(row[0])+'</span><strong>'+esc(row[1])+'</strong></div>'}).join("")+'<div class="total"><span>AMOUNT RECEIVED</span><strong>'+esc(financialMoney(snapshot.amount??item.amount,snapshot.currency||"ZAR"))+'</strong></div><p class="foot">This receipt records a payment confirmed by Swayphics. Keep it for your records. For assistance, contact Swayphics through your client portal.</p></main></body></html>';
+const blob=new Blob([html],{type:"text/html;charset=utf-8"});
+downloadPortalBlob(blob,receipt.receipt_number+".html");
 }
 function openFinancialModal(type,item,trigger){
 document.getElementById("portal-financial-modal")?.remove();
