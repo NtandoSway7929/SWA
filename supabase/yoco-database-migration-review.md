@@ -8,6 +8,14 @@ Scope: static source review of migrations 001–004 and their existing Swayphics
 
 ## Review result
 
+Follow-up changes committed after the initial review:
+- Settlement duplicate handling now validates checkout, amount, currency and test mode before returning an idempotent result.
+- A new migration adds Yoco payment/refund/receipt immutability and a unique provider-event-to-refund index.
+- Refund insertion is bound to a signature-verified refund event and the matching test payment attempt. The webhook now associates the event before invoking the refund RPC.
+- Successful refunds are included in the private client portal payment-history payload.
+
+These are source changes only; none have been executed or runtime-validated.
+
 The migration chain is ordered coherently at a high level:
 
 1. Additive provider/payment operational tables and invoice flags.
@@ -31,13 +39,17 @@ This correction is committed to the feature branch. It has not been executed in 
 
 ## Blocking items before disposable-database execution
 
-### 1. Refund event-to-payment binding needs a stronger database invariant
+### 1. Refund event-to-payment binding
+
+**Source-level remediation added in migration 005.** Runtime verification is still required.
 
 The webhook handler currently uses payload metadata.paymentAttemptId to locate an attempt, then passes its payment_id to the refund RPC. If the event has no unambiguous mapping, it is held for review, which is the correct fail-closed behaviour.
 
 However, the refund RPC itself does not prove that the supplied payment belongs to the attempt referenced by the webhook event, nor does the refund ledger enforce one provider event ID per refund record. Before test execution, add database-level linkage/uniqueness so a signed event cannot be associated with a different local payment by a future handler regression. Confirm the exact Yoco refund event payload in sandbox before choosing the provider mapping field.
 
-### 2. Financial ledger immutability is incomplete
+### 2. Financial ledger immutability
+
+**Source-level remediation added in migration 005.** Runtime verification is still required.
 
 The design treats payments, successful refunds and receipt snapshots as immutable financial records, but the migrations do not yet add database triggers preventing later mutation of:
 - settled Yoco payment amount, invoice, client, provider identity or provider transaction identifiers;
@@ -46,7 +58,9 @@ The design treats payments, successful refunds and receipt snapshots as immutabl
 
 RLS and service-role-only access reduce exposure but do not make records immutable against a privileged server-side code defect. Add explicit database-level immutability rules, with a narrow and audited exception only if a legitimate correction workflow is designed.
 
-### 3. Refund-aware portal history needs a client-facing representation
+### 3. Refund-aware portal history
+
+**Source-level remediation added to migration 002.** Verify portal rendering and client isolation in browser tests.
 
 The portal invoice balance is calculated net of successful refunds, but the payment history currently exposes the original payment and receipt without a corresponding refund entry. This can make the displayed invoice balance differ from the visible payment history. Add a client-scoped refund history representation before calling the experience financially transparent.
 
@@ -81,7 +95,7 @@ PostgreSQL must verify trigger ordering, recursion behaviour, lock ordering and 
 
 Do not point these tests at production.
 
-1. Apply migrations 001–004 in order to a disposable Supabase/PostgreSQL database.
+1. Apply migrations 001–005 in order to a disposable Supabase/PostgreSQL database.
 2. Inspect roles, schemas, RLS, table privileges, sequence privileges, function owners and EXECUTE ACLs.
 3. Seed disposable clients, invoices, payment attempts and test-mode events.
 4. Verify payment settlement, duplicate settlement, conflicting duplicate event, overpayment rejection and invoice balance.
