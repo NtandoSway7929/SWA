@@ -13,7 +13,14 @@ Deno.serve(async (req: Request) => {
   if (!checkOrigin(req)) return json({ ok: false, error: "Origin not allowed." }, 403);
 
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    if (new TextEncoder().encode(rawBody).byteLength > 8_192) {
+      return json({ ok: false, error: "Request is too large." }, 413);
+    }
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(rawBody); } catch {
+      return json({ ok: false, error: "Invalid JSON request." }, 400);
+    }
     const token = typeof body?.token === "string" ? body.token.trim() : "";
     const attemptId = body?.attempt_id;
     if (!token || !isUuid(attemptId)) {
