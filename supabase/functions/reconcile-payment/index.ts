@@ -126,13 +126,13 @@ Deno.serve(async (req: Request) => {
           .eq("reconciliation_id", historyCaseId)
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
-          .range(evidenceOffset, evidenceOffset + historyPageSize - 1),
+          .range(evidenceOffset, evidenceOffset + historyPageSize),
         admin.from("payment_reconciliation_actions")
           .select("id,reconciliation_id,action,previous_status,new_status,outcome,reason,related_payment_id,related_refund_id,actor_user_id,created_at")
           .eq("reconciliation_id", historyCaseId)
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
-          .range(actionOffset, actionOffset + historyPageSize - 1),
+          .range(actionOffset, actionOffset + historyPageSize),
       ])
       : [{ data: [], error: null }, { data: [], error: null }];
 
@@ -166,15 +166,15 @@ Deno.serve(async (req: Request) => {
       operational_alerts: operationalAlerts,
       attempts: attemptsResult.data || [],
       open_cases: casesResult.data || [],
-      evidence: evidenceResult.data || [],
-      case_actions: actionsResult.data || [],
+      evidence: (evidenceResult.data || []).slice(0, historyPageSize),
+      case_actions: (actionsResult.data || []).slice(0, historyPageSize),
       history_page: {
         case_id: historyCaseId || null,
         page_size: historyPageSize,
         evidence_offset: evidenceOffset,
         action_offset: actionOffset,
-        evidence_has_more: (evidenceResult.data || []).length === historyPageSize,
-        actions_have_more: (actionsResult.data || []).length === historyPageSize,
+        evidence_has_more: (evidenceResult.data || []).length > historyPageSize,
+        actions_have_more: (actionsResult.data || []).length > historyPageSize,
       },
       refunds: refundsResult.data || [],
       attempts_needing_attention: attentionAttemptsResult.data || [],
