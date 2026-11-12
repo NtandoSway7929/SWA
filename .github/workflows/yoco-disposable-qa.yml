@@ -202,9 +202,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\\(.*\\)"$/\\1/p')"
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
-          psql "$DB_URL" -X -v ON_ERROR_STOP=1 \\
+          psql "$DB_URL" -X -v ON_ERROR_STOP=1 \
             -f supabase/tests/202611110009_yoco_webhook_lease.test.sql
 
       - name: Run Yoco payment and refund transaction scenarios
