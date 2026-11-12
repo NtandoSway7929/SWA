@@ -2,7 +2,7 @@
 
 Target: feature/yoco-client-payments
 Review date: 2026-11-11
-Scope: static source review of migrations 001–005 and their existing Swayphics dependencies.
+Scope: static source review of migrations 001–005 and 013 and their existing Swayphics dependencies.
 
 **Status: NOT approved for execution yet.** This is a source-level review only. No PostgreSQL parser, disposable Supabase database, migration execution or production database was available/performed.
 
@@ -42,9 +42,11 @@ This correction is committed to the feature branch. It has not been executed in 
 
 ### 1. Refund event-to-payment binding
 
-**Source-level remediation added in migration 005.** Runtime verification is still required.
+**Source-level remediation is now split across migrations 005 and 013.** Runtime verification is still required.
 
-The webhook handler now resolves payload metadata.paymentAttemptId against a Yoco test attempt, associates the verified event with that attempt, and migration 005 requires the refund ledger insert to match the same payment. A unique index prevents one provider event ID from creating multiple refund rows. If the event has no unambiguous mapping, it is held for review. The remaining gate is to confirm the exact refund metadata field in a signed Yoco sandbox delivery.
+The webhook handler resolves the Yoco refund notification through documented `payload.metadata.checkoutId`, then finds the local Yoco test payment attempt by its stored provider checkout ID. Migration 005 requires a successful refund ledger insert to reference a signature-verified refund event and the matching payment attempt. Migration 013 replaces the refund-recording function so the webhook event ID is the idempotency key when the provider does not supply a distinct refund-resource ID.
+
+The official Yoco refund notification example repeats the top-level event ID in `payload.id`; this value is therefore not treated as a refund-resource identifier. The optional `refundId` / `refund_id` field is used only when separately supplied. Same-event retries are protected by the unique event index. Cross-event deduplication of the same refund remains dependent on Yoco supplying a stable separate refund ID. A real signed provider delivery is still required to verify the deployed payload variant.
 
 ### 2. Financial ledger immutability
 
@@ -89,7 +91,7 @@ PostgreSQL must verify trigger ordering, recursion behaviour, lock ordering and 
 
 Do not point these tests at production.
 
-1. Apply migrations 001–005 in order to a disposable Supabase/PostgreSQL database.
+1. Apply migrations 001–005, then 013, in order to a disposable Supabase/PostgreSQL database.
 2. Inspect roles, schemas, RLS, table privileges, sequence privileges, function owners and EXECUTE ACLs.
 3. Seed disposable clients, invoices, payment attempts and test-mode events.
 4. Verify payment settlement, duplicate settlement, conflicting duplicate event, overpayment rejection and invoice balance.
