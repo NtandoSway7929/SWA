@@ -29,7 +29,8 @@ The verifier signs the exact raw body and the delivery ID/timestamp tuple. The t
 | Checkout eligibility | Online payments disabled | 409; no provider call |
 | Checkout eligibility | Invoice cancelled/fully paid/overdue according to policy | Rejected by authoritative database rules |
 | Checkout amount | Non-integer, below floor, above outstanding, unsafe integer | 400 or database rejection |
-| Checkout partial | Below deposit floor or partial disabled | Database rejection |
+| Checkout partial | Below the initial deposit floor before any payment, or partial payments disabled | Database rejection |
+| Checkout deposit | Subsequent instalment below the configured initial deposit | Allowed while within the remaining balance |
 | Checkout config | Missing test key, live key, wrong environment | 503; no Yoco request |
 | Checkout response | Amount/currency/mode mismatch | 502; never return redirect |
 | Checkout URL | Non-HTTPS or non-Yoco host | 502; never return redirect |
@@ -47,7 +48,7 @@ The verifier signs the exact raw body and the delivery ID/timestamp tuple. The t
 | Webhook ordering | Failure arrives after successful settlement | Conflict routed to review; settled payment not reversed |
 | Webhook failure | Valid payment.failed event | Attempt failed; invoice balance unchanged |
 | Refund | Synthetic test-mode `refund.succeeded` with checkout metadata | Exercise the test-only mapping and ledger RPC in isolated fixtures; not evidence that Yoco supports sandbox refunds |
-| Refund | Yoco live-mode `refund.succeeded` | Requires review; never write a live event into the test-only ledger |
+| Webhook environment | Explicit non-test/live processing mode | Acknowledge and ignore before creating a test webhook event or touching the test ledger |
 | Refund | Missing/ambiguous payment mapping | Review; no refund ledger mutation |
 | Refund cap | Cumulative refunds exceed original payment | Reject; invoice balance unchanged |
 | Refund replay | Duplicate refund event | One refund ledger effect |
@@ -65,6 +66,8 @@ The verifier signs the exact raw body and the delivery ID/timestamp tuple. The t
 - Failed, pending and requires-review attempts do not affect invoice balances.
 - A single verified successful payment produces one payment row.
 - A single verified successful payment produces one receipt.
+- A deposit threshold applies only to the first recorded invoice payment; later instalments are validated against the remaining balance.
+- Competing successful checkouts are rechecked against the locked current invoice balance; a captured payment that no longer fits is made terminal `requires_review` without an overpayment ledger row or endless webhook retry.
 - A provider event ID cannot settle more than one attempt.
 - A provider refund ID cannot be recorded more than once.
 - Successful cumulative refunds cannot exceed the original payment amount.
@@ -116,11 +119,12 @@ Before a sandbox test deployment:
 
 ## 7. Known gaps to resolve before sandbox deployment
 
-- The handler now maps refund events through the documented `payload.metadata.checkoutId` field and resolves the local attempt using its stored provider checkout ID. It accepts the refund payload `id` as a provider refund reference fallback, but the official sample repeats the top-level event ID in that field; a real signed event is still required to confirm the stable refund identifier. Yoco's current refund guide requires live keys, while this feature's schema and ledger functions are test-only. Live-mode refund events are therefore retained for manual review and are never written to the test ledger. Live refund ledger support requires a separate environment-aware migration and review.
+- The handler now maps refund events through the documented `payload.metadata.checkoutId` field and resolves the local attempt using its stored provider checkout ID. It accepts the refund payload `id` as a provider refund reference fallback, but the official sample repeats the top-level event ID in that field; a real signed event is still required to confirm the stable refund identifier. Yoco's current refund guide requires live keys, while this feature's schema and ledger functions are test-only. Explicit non-test/live-mode events are acknowledged and ignored before entering the test webhook inbox. Live refund ledger support requires a separate environment-aware migration and review.
 - Verify whether all deployed client-portal entry paths share the same origin and whether any www or alternate origin needs a narrowly scoped allowlist.
 - Validate the receipt download implementation in Safari and Chrome; current client download is a printable HTML receipt, not a server-generated PDF.
 - Add request rate limiting and push/email alert delivery before opening the endpoint to general client use. The current operational queue is admin-only and on-demand.
 - Review payment-attempt expiration and recovery when Yoco creates a checkout but the database attachment fails.
+- Verify a real provider refund payload to confirm the stable refund identifier and ensure the provider sends the expected checkout metadata.
 - Confirm the deployed portal's existing token storage/rotation behaviour and clear the session token on explicit portal logout.
 - Validate all SQL migrations in PostgreSQL. Static source inspection is not a substitute for execution.
 
