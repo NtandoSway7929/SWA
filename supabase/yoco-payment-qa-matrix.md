@@ -46,7 +46,8 @@ The verifier signs the exact raw body and the delivery ID/timestamp tuple. The t
 | Webhook settlement | Valid test success | Exactly one Card/Yoco payment and one receipt |
 | Webhook ordering | Failure arrives after successful settlement | Conflict routed to review; settled payment not reversed |
 | Webhook failure | Valid payment.failed event | Attempt failed; invoice balance unchanged |
-| Refund | Valid mapped refund.succeeded | Immutable refund row; invoice net paid reduced |
+| Refund | Synthetic test-mode `refund.succeeded` with checkout metadata | Exercise the test-only mapping and ledger RPC in isolated fixtures; not evidence that Yoco supports sandbox refunds |
+| Refund | Yoco live-mode `refund.succeeded` | Requires review; never write a live event into the test-only ledger |
 | Refund | Missing/ambiguous payment mapping | Review; no refund ledger mutation |
 | Refund cap | Cumulative refunds exceed original payment | Reject; invoice balance unchanged |
 | Refund replay | Duplicate refund event | One refund ledger effect |
@@ -115,7 +116,7 @@ Before a sandbox test deployment:
 
 ## 7. Known gaps to resolve before sandbox deployment
 
-- Confirm the exact provider refund event metadata needed to map a refund to the original payment. Unmapped refunds deliberately require manual review.
+- The handler now maps refund events through the documented `payload.metadata.checkoutId` field and resolves the local attempt using its stored provider checkout ID. It accepts the refund payload `id` as a provider refund reference fallback, but the official sample repeats the top-level event ID in that field; a real signed event is still required to confirm the stable refund identifier. Yoco's current refund guide requires live keys, while this feature's schema and ledger functions are test-only. Live-mode refund events are therefore retained for manual review and are never written to the test ledger. Live refund ledger support requires a separate environment-aware migration and review.
 - Verify whether all deployed client-portal entry paths share the same origin and whether any www or alternate origin needs a narrowly scoped allowlist.
 - Validate the receipt download implementation in Safari and Chrome; current client download is a printable HTML receipt, not a server-generated PDF.
 - Add request rate limiting and push/email alert delivery before opening the endpoint to general client use. The current operational queue is admin-only and on-demand.
@@ -201,6 +202,7 @@ Deno unit tests:
 - `supabase/functions/tests/yoco-webhook-payload.test.ts`
   - Normalises event identity and payload/data envelope.
   - Maps documented checkout metadata and supported checkout/mode aliases.
+  - Maps documented refund checkout metadata and isolates missing/invalid refund identity.
   - Rejects missing checkout IDs, non-integer/string-encoded amounts and incomplete payment fields.
   - Parses refund identifiers and explicitly leaves refund events without payment-attempt metadata unmapped for manual review.
 - `supabase/functions/tests/yoco-operations.test.ts`
