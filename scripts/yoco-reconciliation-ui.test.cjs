@@ -150,7 +150,7 @@ test("stale decision errors instruct the administrator to refresh and review", (
 
 test("optimistic concurrency migration has database-level privilege and version regression coverage", () => {
   const sqlTests = read("supabase/tests/202611110011_yoco_reconciliation_admin_workflow.test.sql");
-  assert.match(sqlTests, /plan\(42\)/);
+  assert.match(sqlTests, /plan\(43\)/);
   assert.match(sqlTests, /admin_set_payment_reconciliation_status_v2/);
   assert.match(sqlTests, /stale or missing case versions/);
   assert.match(sqlTests, /serialization failure SQLSTATE/);
@@ -179,7 +179,7 @@ test("two-administrator concurrency harness requires isolated database and disti
 test("reconciliation financial-integrity tests forbid direct ledger and invoice mutations", () => {
   const sqlTests = read("supabase/tests/202611110011_yoco_reconciliation_admin_workflow.test.sql");
   const migration = read("supabase/migrations/202611110012_yoco_reconciliation_optimistic_concurrency.sql");
-  assert.match(sqlTests, /plan\(42\)/);
+  assert.match(sqlTests, /plan\(43\)/);
   assert.match(sqlTests, /does not update payment ledger rows/);
   assert.match(sqlTests, /cannot insert or delete payment ledger rows/);
   assert.match(sqlTests, /cannot mutate refund ledger rows/);
