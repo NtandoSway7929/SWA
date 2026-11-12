@@ -48,7 +48,7 @@ The verifier signs the exact raw body and the delivery ID/timestamp tuple. The t
 | Webhook ordering | Failure arrives after successful settlement | Conflict routed to review; settled payment not reversed |
 | Webhook failure | Valid payment.failed event | Attempt failed; invoice balance unchanged |
 | Refund | Synthetic test-mode `refund.succeeded` with checkout metadata | Exercise the test-only mapping and ledger RPC in isolated fixtures; not evidence that Yoco supports sandbox refunds |
-| Webhook environment | Explicit non-test/live processing mode | Acknowledge and ignore before creating a test webhook event or touching the test ledger |
+| Webhook environment | Financial event explicitly live, or processing mode missing/unrecognised | Acknowledge and ignore before creating a test webhook event or touching the test ledger |
 | Refund | Missing/ambiguous payment mapping | Review; no refund ledger mutation |
 | Refund cap | Cumulative refunds exceed original payment | Reject; invoice balance unchanged |
 | Refund replay | Duplicate refund event | One refund ledger effect |
