@@ -165,10 +165,14 @@ Deno.test("financial event without an explicit processing mode is ignored before
     payload: { metadata: { checkoutId } },
   }));
   const result = await body(response);
-  if (response.status !== 200 || result.ignored !== true ||
-      result.reason !== "processing_mode_unverified" ||
-      h.calls.length !== 0 || h.updates.length !== 0 || h.lookups.length !== 0) {
-    throw new Error("A financial webhook without a verified processing mode entered the test inbox.");
+  if (
+    response.status !== 200 || result.ignored !== true ||
+    result.reason !== "processing_mode_unverified" ||
+    h.calls.length !== 0 || h.updates.length !== 0 || h.lookups.length !== 0
+  ) {
+    throw new Error(
+      "A financial webhook without a verified processing mode entered the test inbox.",
+    );
   }
 });
 
