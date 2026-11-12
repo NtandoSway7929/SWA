@@ -83,7 +83,7 @@ export function getYocoRefundSuccessDetails(payload: JsonObject) {
   );
 
   if (
-    !providerRefundId || !checkoutId || !Number.isSafeInteger(amount) ||
+    !checkoutId || !Number.isSafeInteger(amount) ||
     amount < 1 || currency !== "ZAR" || (mode !== "test" && mode !== "live")
   ) {
     return null;
