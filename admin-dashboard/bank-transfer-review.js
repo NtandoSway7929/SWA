@@ -198,7 +198,6 @@
     });
     root.querySelector("[data-btr-close]").addEventListener("click",function(){root.setAttribute("data-open","false")});
     root.querySelector("[data-btr-list]").addEventListener("click",handleClick);
-    load();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});
   else mount();
