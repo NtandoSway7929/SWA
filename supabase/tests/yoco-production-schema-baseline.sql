@@ -223,7 +223,7 @@ AS $function$
         where user_id = auth.uid()
           and active = true
     );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.next_swayphics_invoice_number()
@@ -235,7 +235,7 @@ AS $function$
         to_char(current_date, 'YYYY') ||
         '-' ||
         lpad(nextval('public.swayphics_invoice_number_seq')::text, 4, '0');
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.sync_swayphics_payment_after_change()
@@ -272,7 +272,7 @@ begin
 
     return coalesce(new, old);
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.sync_swayphics_project_payment_status(p_project_id uuid)
@@ -330,7 +330,7 @@ begin
     updated_at = now()
     where cp.id = p_project_id;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.sync_swayphics_project_after_invoice_change()
