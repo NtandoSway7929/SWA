@@ -108,11 +108,15 @@
     busy = true;
     try {
       if (proof) {
+        var win = window.open("about:blank","_blank");
         status("Preparing a private proof link…", false);
         var result = await request("proof",{submission_id:id});
-        var win = window.open(result.signed_url,"_blank","noopener,noreferrer");
         if (!win) status("Your browser blocked the proof window. Allow pop-ups for this site and try again.",true);
-        else status("Proof link is valid for five minutes.",false);
+        else {
+          win.opener = null;
+          win.location.replace(result.signed_url);
+          status("Proof link is valid for five minutes.",false);
+        }
       } else if (approve) {
         var invoice = item.invoice || {};
         var client = item.client || {};
