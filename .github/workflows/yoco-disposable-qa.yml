@@ -55,8 +55,7 @@ jobs:
           node --check admin-dashboard/yoco-reconciliation.js
           node --test scripts/yoco-invoice-settings.test.cjs scripts/yoco-reconciliation-ui.test.cjs
 
-      - name: Check Yoco TypeScript formatting (non-blocking during baseline repair)
-        continue-on-error: true
+      - name: Check Yoco TypeScript formatting
         shell: bash
         run: |
           mapfile -t files < <(find supabase/functions -type f -name '*.ts' \
