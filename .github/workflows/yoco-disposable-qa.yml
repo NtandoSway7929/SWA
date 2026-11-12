@@ -126,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      SUPABASE_WORKDIR: ${{ runner.temp }}/yoco-supabase-project
+      SUPABASE_WORKDIR: /tmp/yoco-supabase-project
     steps:
       - name: Check out feature branch
         uses: actions/checkout@v4
