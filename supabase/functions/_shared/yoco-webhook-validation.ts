@@ -58,14 +58,18 @@ export function getYocoPaymentSuccessDetails(payload: JsonObject) {
 }
 
 export function getYocoRefundSuccessDetails(payload: JsonObject) {
-  const providerRefundId = nonEmptyString(payload.refundId ?? payload.refund_id);
+  const providerRefundId = nonEmptyString(
+    payload.refundId ?? payload.refund_id ?? payload.id,
+  );
+  const checkoutId = getYocoCheckoutId(payload);
   const amount = payload.amount as number;
   const currency = nonEmptyString(payload.currency);
-  const paymentAttemptId = nonEmptyString(asObject(payload.metadata).paymentAttemptId);
+  const mode = nonEmptyString(payload.mode ?? payload.processingMode ?? payload.processing_mode);
 
-  if (!providerRefundId || !Number.isSafeInteger(amount) || amount < 1 || !currency) {
+  if (!providerRefundId || !checkoutId || !Number.isSafeInteger(amount) ||
+      amount < 1 || currency !== "ZAR" || (mode !== "test" && mode !== "live")) {
     return null;
   }
 
-  return { providerRefundId, amount, currency, paymentAttemptId };
+  return { providerRefundId, checkoutId, amount, currency, mode };
 }
