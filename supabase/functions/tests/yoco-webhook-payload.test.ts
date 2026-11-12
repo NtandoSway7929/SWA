@@ -113,11 +113,15 @@ Deno.test("maps documented Yoco refund checkout metadata without treating event 
     status: "succeeded",
     metadata: { checkoutId: "ch_test_refund_001" },
   });
-  if (!documented || documented.providerRefundId !== null ||
-      documented.checkoutId !== "ch_test_refund_001" ||
-      documented.amount !== 500 || documented.currency !== "ZAR" ||
-      documented.mode !== "test") {
-    throw new Error("The documented Yoco refund payload was not mapped to its checkout.");
+  if (
+    !documented || documented.providerRefundId !== null ||
+    documented.checkoutId !== "ch_test_refund_001" ||
+    documented.amount !== 500 || documented.currency !== "ZAR" ||
+    documented.mode !== "test"
+  ) {
+    throw new Error(
+      "The documented Yoco refund payload was not mapped to its checkout.",
+    );
   }
 
   const withRefundResourceId = getYocoRefundSuccessDetails({
@@ -128,8 +132,13 @@ Deno.test("maps documented Yoco refund checkout metadata without treating event 
     mode: "test",
     metadata: { checkoutId: "ch_test_refund_002" },
   });
-  if (!withRefundResourceId || withRefundResourceId.providerRefundId !== "rf_test_002") {
-    throw new Error("An explicitly supplied refund resource ID was not preserved.");
+  if (
+    !withRefundResourceId ||
+    withRefundResourceId.providerRefundId !== "rf_test_002"
+  ) {
+    throw new Error(
+      "An explicitly supplied refund resource ID was not preserved.",
+    );
   }
 
   const live = getYocoRefundSuccessDetails({
@@ -140,7 +149,9 @@ Deno.test("maps documented Yoco refund checkout metadata without treating event 
     metadata: { checkoutId: "ch_live_001" },
   });
   if (!live || live.mode !== "live") {
-    throw new Error("A live-mode refund event was not identified for safe environment handling.");
+    throw new Error(
+      "A live-mode refund event was not identified for safe environment handling.",
+    );
   }
 
   const unmapped = getYocoRefundSuccessDetails({
@@ -154,10 +165,34 @@ Deno.test("maps documented Yoco refund checkout metadata without treating event 
   }
 
   const invalid = [
-    { id: "evt_1", amount: "500", currency: "ZAR", mode: "test", metadata: { checkoutId: "ch_1" } },
-    { id: "evt_1", amount: 0, currency: "ZAR", mode: "test", metadata: { checkoutId: "ch_1" } },
-    { id: "evt_1", amount: 500, currency: "", mode: "test", metadata: { checkoutId: "ch_1" } },
-    { id: "evt_1", amount: 500, currency: "ZAR", mode: "unknown", metadata: { checkoutId: "ch_1" } },
+    {
+      id: "evt_1",
+      amount: "500",
+      currency: "ZAR",
+      mode: "test",
+      metadata: { checkoutId: "ch_1" },
+    },
+    {
+      id: "evt_1",
+      amount: 0,
+      currency: "ZAR",
+      mode: "test",
+      metadata: { checkoutId: "ch_1" },
+    },
+    {
+      id: "evt_1",
+      amount: 500,
+      currency: "",
+      mode: "test",
+      metadata: { checkoutId: "ch_1" },
+    },
+    {
+      id: "evt_1",
+      amount: 500,
+      currency: "ZAR",
+      mode: "unknown",
+      metadata: { checkoutId: "ch_1" },
+    },
   ];
   for (const payload of invalid) {
     if (getYocoRefundSuccessDetails(payload)) {
