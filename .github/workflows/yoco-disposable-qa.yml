@@ -139,8 +139,29 @@ jobs:
       - name: Start isolated local Supabase
         run: supabase start
 
-      - name: Apply complete repository migration history
-        run: supabase db reset --local
+      - name: Create isolated Yoco test baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          test -n "$DB_URL"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 \
+            -f supabase/tests/yoco-production-schema-baseline.sql
+
+      - name: Apply Yoco migrations in timestamp order
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          test -n "$DB_URL"
+          mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
+            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' \) \
+            | sort)
+          test "\${#migrations[@]}" -eq 13
+          for migration in "\${migrations[@]}"; do
+            echo "Applying $migration"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
 
       - name: Run read-only Yoco migration preflight
         shell: bash
@@ -148,17 +169,36 @@ jobs:
           set -euo pipefail
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
-          psql "$DB_URL" -v ON_ERROR_STOP=1 \
-            -f supabase/tests/202611110008_yoco_migration_preflight.sql
+          preflight="$(psql "$DB_URL" -X -v ON_ERROR_STOP=1 -P pager=off \
+            -f supabase/tests/202611110008_yoco_migration_preflight.sql)"
+          printf '%s\n' "$preflight"
+          if grep -q 'BLOCK' <<<"$preflight"; then
+            echo "Yoco migration preflight reported blocked dependencies." >&2
+            exit 1
+          fi
 
-      - name: Run database pgTAP suite
-        run: supabase test db --local
+      - name: Run Yoco database invariant tests
+        run: |
+          supabase test db --local \
+            supabase/tests/202611110005_yoco_ledger_invariants.test.sql \
+            supabase/tests/202611110009_yoco_webhook_lease.test.sql \
+            supabase/tests/202611110010_yoco_admin_invoice_settings.test.sql \
+            supabase/tests/202611110011_yoco_reconciliation_admin_workflow.test.sql
+
+      - name: Run Yoco payment and refund transaction scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          test -n "$DB_URL"
+          psql "$DB_URL" -X -v ON_ERROR_STOP=1 \
+            -f supabase/tests/202611110006_yoco_payment_flow.test.sql
 
       - name: Run repeated two-worker webhook lease races
         shell: bash
         run: |
           set -euo pipefail
-          export LOCAL_DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\\(.*\\)"$/\\1/p')"
+          export LOCAL_DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$LOCAL_DB_URL"
           YOCO_CONCURRENCY_REPETITIONS=20 bash supabase/tests/yoco-lease-concurrency-ci.sh
 
