@@ -157,8 +157,8 @@ jobs:
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
             \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' \) \
             | sort)
-          test "\${#migrations[@]}" -eq 13
-          for migration in "\${migrations[@]}"; do
+          test "${#migrations[@]}" -eq 13
+          for migration in "${migrations[@]}"; do
             echo "Applying $migration"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
