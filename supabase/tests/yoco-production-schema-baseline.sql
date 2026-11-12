@@ -333,6 +333,29 @@ end;
 $function$
 
 
+CREATE OR REPLACE FUNCTION public.sync_swayphics_project_after_invoice_change()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+    if tg_op = 'DELETE' then
+        perform public.sync_swayphics_project_payment_status(old.project_id);
+        return old;
+    end if;
+
+    perform public.sync_swayphics_project_payment_status(new.project_id);
+
+    if tg_op = 'UPDATE'
+       and old.project_id is distinct from new.project_id then
+        perform public.sync_swayphics_project_payment_status(old.project_id);
+    end if;
+
+    return new;
+end;
+$function$;
+
 -- These three functions are replaced by migration 202611110002; keep their
 -- signatures present so the existing production trigger attachments are represented.
 create or replace function public.recalculate_swayphics_invoice_balance(p_invoice_id uuid)
@@ -360,6 +383,10 @@ for each row execute function public.sync_swayphics_invoice_after_change();
 create trigger trg_enforce_swayphics_payment_invoice_integrity
 before insert or update on public.payments
 for each row execute function public.enforce_swayphics_payment_invoice_integrity();
+
+create trigger trg_sync_swayphics_project_after_invoice_change
+after insert or delete or update on public.invoices
+for each row execute function public.sync_swayphics_project_after_invoice_change();
 
 create trigger trg_sync_swayphics_payment_after_change
 after insert or delete or update on public.payments
