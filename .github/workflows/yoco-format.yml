@@ -1,0 +1,66 @@
+name: Format Yoco TypeScript
+
+on:
+  push:
+    branches:
+      - feature/yoco-client-payments
+    paths:
+      - "supabase/functions/**/*.ts"
+      - ".github/workflows/yoco-format.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: yoco-format-feature-branch
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Apply Deno formatting on the feature branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/yoco-client-payments'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/yoco-client-payments
+          fetch-depth: 0
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Format Yoco Edge Functions and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find supabase/functions -type f -name '*.ts' \
+            | grep -E '/(yoco|create-payment-checkout|get-payment-status|reconcile-payment)' \
+            | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No Yoco TypeScript files were found."
+            exit 1
+          fi
+          deno fmt "${files[@]}"
+          deno fmt --check "${files[@]}"
+
+      - name: Commit formatter changes and rerun Yoco QA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/functions
+          if git diff --cached --quiet; then
+            echo "Yoco TypeScript is already formatted."
+            exit 0
+          fi
+          git commit -m "Format Yoco TypeScript with Deno"
+          git push origin HEAD:feature/yoco-client-payments
+          gh workflow run yoco-disposable-qa.yml --ref feature/yoco-client-payments
