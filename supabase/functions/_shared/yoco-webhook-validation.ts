@@ -31,6 +31,12 @@ export function normalizeYocoWebhookEvent(value: unknown): NormalizedYocoWebhook
   };
 }
 
+export function getYocoProcessingMode(payload: JsonObject): string | null {
+  return nonEmptyString(
+    payload.mode ?? payload.processingMode ?? payload.processing_mode,
+  );
+}
+
 export function getYocoCheckoutId(payload: JsonObject): string | null {
   return nonEmptyString(
     payload.checkoutId ??
