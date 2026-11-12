@@ -36,7 +36,7 @@ function validUuid(value: unknown): value is string {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function parseAmount(value: unknown): number | null {
+export function parseBankTransferAmount(value: unknown): number | null {
   const raw = String(value ?? "").trim();
   if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(raw)) return null;
   const number = Number(raw);
@@ -56,7 +56,7 @@ function proofExtension(type: string) {
   } as Record<string, string>)[type.toLowerCase()] || "";
 }
 
-function hasValidSignature(type: string, bytes: Uint8Array) {
+export function bankTransferProofMatchesMime(type: string, bytes: Uint8Array) {
   if (type === "application/pdf") {
     return new TextDecoder().decode(bytes.slice(0, 5)) === "%PDF-";
   }
@@ -210,7 +210,7 @@ async function submitProof(req: Request, admin: any, clientId: string, now: Date
     return json({ ok: false, error: "A valid multipart upload is required." }, 400);
   }
   const invoiceId = String(form.get("invoice_id") || "");
-  const amount = parseAmount(form.get("amount"));
+  const amount = parseBankTransferAmount(form.get("amount"));
   const reference = String(form.get("bank_reference") || "").trim();
   const proof = form.get("proof");
   if (!validUuid(invoiceId) || amount === null || reference.length < 1 || reference.length > 120 || !(proof instanceof File)) {
@@ -226,7 +226,7 @@ async function submitProof(req: Request, admin: any, clientId: string, now: Date
     return json({ ok: false, error: "The amount cannot exceed the current outstanding invoice balance." }, 409);
   }
   const bytes = new Uint8Array(await proof.arrayBuffer());
-  if (bytes.byteLength !== proof.size || !hasValidSignature(proof.type, bytes)) {
+  if (bytes.byteLength !== proof.size || !bankTransferProofMatchesMime(proof.type, bytes)) {
     return json({ ok: false, error: "The uploaded file does not match its declared PDF or image format." }, 400);
   }
 
@@ -312,6 +312,8 @@ export function createBankTransferHandler(overrides: Partial<Deps> = {}) {
     try {
       const contentType = String(req.headers.get("content-type") || "").toLowerCase();
       if (contentType.startsWith("multipart/form-data")) {
+        const declaredLength = Number(req.headers.get("content-length") || 0);
+        if (declaredLength > MAX_PROOF_BYTES + 32_768) return json({ ok: false, error: "The proof file must be 5 MB or smaller." }, 413);
         const form = await req.clone().formData().catch(() => null);
         const token = String(form?.get("token") || "").trim();
         if (!token) return json({ ok: false, error: "Private portal token required." }, 400);
