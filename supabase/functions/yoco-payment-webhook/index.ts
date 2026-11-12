@@ -145,16 +145,25 @@ export function createYocoWebhookHandler(
       // webhook inbox or test ledger. Acknowledge it without processing so
       // the provider does not retry an unsupported live integration.
       const eventMode = getYocoProcessingMode(event.payload);
-      if (eventMode && eventMode !== "test") {
+      const requiresTestMode = [
+        "payment.succeeded",
+        "payment.failed",
+        "refund.succeeded",
+        "refund.failed",
+      ].includes(event.type);
+      if (requiresTestMode && eventMode !== "test") {
+        const reason = eventMode
+          ? "live_mode_not_enabled"
+          : "processing_mode_unverified";
         deps.logWarn(
-          "Ignored Yoco webhook outside the enabled test environment:",
-          eventMode,
+          "Ignored Yoco financial webhook outside the verified test environment:",
+          eventMode || "missing processing mode",
         );
         return respond({
           ok: true,
           received: true,
           ignored: true,
-          reason: "live_mode_not_enabled",
+          reason,
         });
       }
 
