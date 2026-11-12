@@ -29,7 +29,7 @@ select extensions.ok(
   'anonymous role cannot invoke the RPC'
 );
 select extensions.ok(
-  not not exists (
+  not exists (
     select 1
     from pg_proc p,
          lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
