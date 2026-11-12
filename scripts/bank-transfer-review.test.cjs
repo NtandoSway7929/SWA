@@ -15,6 +15,7 @@ const config = read("supabase/config.toml");
 test("client portal offers EFT only for invoices with a remaining balance", () => {
   assert.match(portal, /data-bank-transfer-invoice/);
   assert.match(portal, /amounts\.outstanding>0/);
+  assert.match(portal, /String\(item\.currency\|\|"ZAR"\)\.toUpperCase\(\)==="ZAR"/);
   assert.match(portal, /Use the invoice number as your EFT payment reference/);
   assert.match(portal, /bank-transfer-amount/);
   assert.match(portal, /bank-transfer-reference/);
@@ -28,6 +29,7 @@ test("client uploads use a portal token and do not write to the payments ledger"
   assert.match(edge, /admin\.from\("bank_transfer_submissions"\)\.insert/);
   assert.doesNotMatch(edge, /admin\.from\("payments"\)\.insert/);
   assert.match(edge, /Your invoice will remain outstanding until Swayphics verifies the deposit/);
+  assert.match(edge, /String\(data\.currency \|\| "ZAR"\)\.toUpperCase\(\) !== "ZAR"/);
 });
 
 test("proof uploads are size limited, type checked and stored in a private bucket", () => {
@@ -56,6 +58,7 @@ test("approval is atomic, invoice-locked, balance-aware and issues one receipt",
   assert.match(migration, /select \* into v_invoice[\s\S]*?for update/);
   assert.match(migration, /swayphics_invoice_net_paid\(v_invoice\.id\)/);
   assert.match(migration, /v_submission\.amount > v_outstanding/);
+  assert.match(migration, /upper\(coalesce\(v_invoice\.currency, 'ZAR'\)\) <> 'ZAR'/);
   assert.match(migration, /'EFT'/);
   assert.match(migration, /insert into public\.payment_receipts/);
   assert.match(migration, /status = 'approved'[\s\S]*?payment_id = v_payment\.id/);
@@ -72,8 +75,7 @@ test("rejection requires an audit reason and never creates a payment", () => {
 
 test("admin dashboard does not query the bank transfer queue until the review panel opens", () => {
   assert.match(adminUi, /if\(open\)load\(\)/);
-  const mountBody = adminUi.slice(adminUi.indexOf("function mount()"), adminUi.indexOf('if(document.readyState==='));
-  assert.doesNotMatch(mountBody, /\bload\(\)/);
+  assert.equal((adminUi.match(/\bload\(\)/g) || []).length, 1);
 });
 
 test("review widget sends financial mutations only through the guarded Edge Function", () => {
