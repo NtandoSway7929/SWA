@@ -44,3 +44,7 @@ verify_jwt = false
 
 [functions.reconcile-payment]
 verify_jwt = false
+
+# Manual bank-transfer submissions use private portal tokens or admin JWTs in the handler.
+[functions.bank-transfer]
+verify_jwt = false
