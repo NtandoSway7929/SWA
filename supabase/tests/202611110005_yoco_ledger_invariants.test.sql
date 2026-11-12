@@ -32,7 +32,7 @@ select extensions.ok(not has_table_privilege('authenticated', 'public.payment_re
 
 -- Private schema and internal functions must not be callable by browser roles.
 select extensions.ok(not has_schema_privilege('anon', 'innerme_private', 'usage'), 'anon has no private schema usage');
-select extensions.ok(not has_schema_privilege('authenticated', 'innerme_private', 'usage'), 'authenticated has no private schema usage');
+select extensions.ok(has_schema_privilege('authenticated', 'innerme_private', 'usage'), 'authenticated retains existing private schema usage for established workspace RPCs');
 select extensions.ok(has_schema_privilege('service_role', 'innerme_private', 'usage'), 'service_role has private schema usage');
 
 select extensions.ok(not has_function_privilege('anon', 'innerme_private.create_yoco_payment_attempt(uuid,uuid,bigint,text)', 'execute'), 'anon cannot execute private attempt function');
