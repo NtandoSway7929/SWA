@@ -83,33 +83,49 @@ Deno.test("rejects malformed event envelopes and incomplete or unsafe payment de
   }
 });
 
-Deno.test("refund mapping is explicit and leaves missing payment-attempt metadata unresolved", () => {
-  const valid = getYocoRefundSuccessDetails({
-    refundId: "rf_test_001",
+Deno.test("maps documented Yoco refund IDs and checkout metadata without assuming attempt metadata", () => {
+  const documented = getYocoRefundSuccessDetails({
+    id: "rf_test_001",
     amount: 500,
     currency: "ZAR",
-    metadata: { paymentAttemptId: "123e4567-e89b-42d3-a456-426614174000" },
+    mode: "test",
+    status: "succeeded",
+    metadata: { checkoutId: "ch_test_refund_001" },
   });
-  if (!valid || valid.providerRefundId !== "rf_test_001" ||
-      valid.amount !== 500 || valid.currency !== "ZAR" ||
-      valid.paymentAttemptId !== "123e4567-e89b-42d3-a456-426614174000") {
-    throw new Error("A fully mapped refund payload was not parsed.");
+  if (!documented || documented.providerRefundId !== "rf_test_001" ||
+      documented.checkoutId !== "ch_test_refund_001" ||
+      documented.amount !== 500 || documented.currency !== "ZAR" ||
+      documented.mode !== "test") {
+    throw new Error("The documented Yoco refund payload was not mapped.");
+  }
+
+  const live = getYocoRefundSuccessDetails({
+    id: "rf_live_001",
+    amount: 500,
+    currency: "ZAR",
+    mode: "live",
+    metadata: { checkoutId: "ch_live_001" },
+  });
+  if (!live || live.mode !== "live") {
+    throw new Error("A live-mode refund event was not identified for safe manual review.");
   }
 
   const unmapped = getYocoRefundSuccessDetails({
-    refund_id: "rf_test_002",
+    id: "rf_test_002",
     amount: 100,
     currency: "ZAR",
+    mode: "test",
   });
-  if (!unmapped || unmapped.paymentAttemptId !== null) {
-    throw new Error("A refund without attempt metadata should remain explicitly unmapped.");
+  if (unmapped !== null) {
+    throw new Error("A refund without its checkout metadata must not be mapped.");
   }
 
   const invalid = [
-    { refundId: "rf_1", amount: "500", currency: "ZAR" },
-    { refundId: "rf_1", amount: 0, currency: "ZAR" },
-    { refundId: "rf_1", amount: 500, currency: "" },
-    { refundId: "", amount: 500, currency: "ZAR" },
+    { id: "rf_1", amount: "500", currency: "ZAR", mode: "test", metadata: { checkoutId: "ch_1" } },
+    { id: "rf_1", amount: 0, currency: "ZAR", mode: "test", metadata: { checkoutId: "ch_1" } },
+    { id: "rf_1", amount: 500, currency: "", mode: "test", metadata: { checkoutId: "ch_1" } },
+    { id: "", amount: 500, currency: "ZAR", mode: "test", metadata: { checkoutId: "ch_1" } },
+    { id: "rf_1", amount: 500, currency: "ZAR", mode: "unknown", metadata: { checkoutId: "ch_1" } },
   ];
   for (const payload of invalid) {
     if (getYocoRefundSuccessDetails(payload)) {
