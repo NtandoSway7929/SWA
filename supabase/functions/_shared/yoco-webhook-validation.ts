@@ -72,9 +72,7 @@ export function getYocoPaymentSuccessDetails(payload: JsonObject) {
 }
 
 export function getYocoRefundSuccessDetails(payload: JsonObject) {
-  const providerRefundId = nonEmptyString(
-    payload.refundId ?? payload.refund_id ?? payload.id,
-  );
+  const providerRefundId = nonEmptyString(payload.refundId ?? payload.refund_id);
   const checkoutId = getYocoCheckoutId(payload);
   const amount = payload.amount as number;
   const currency = nonEmptyString(payload.currency);
