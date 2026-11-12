@@ -6,6 +6,8 @@ on:
       - feature/yoco-client-payments
     paths:
       - "supabase/**"
+      - "client-portal/index.html"
+      - "admin-dashboard/bank-transfer-review.js"
       - "admin-dashboard/yoco-invoice-settings.js"
       - "admin-dashboard/yoco-reconciliation.js"
       - "admin-dashboard/index.html"
@@ -18,6 +20,8 @@ on:
       - feature/yoco-client-payments
     paths:
       - "supabase/**"
+      - "client-portal/index.html"
+      - "admin-dashboard/bank-transfer-review.js"
       - "admin-dashboard/yoco-reconciliation.js"
       - "admin-dashboard/yoco-invoice-settings.js"
       - "admin-dashboard/index.html"
@@ -53,13 +57,14 @@ jobs:
         run: |
           node --check admin-dashboard/yoco-invoice-settings.js
           node --check admin-dashboard/yoco-reconciliation.js
-          node --test scripts/yoco-invoice-settings.test.cjs scripts/yoco-reconciliation-ui.test.cjs
+          node --check admin-dashboard/bank-transfer-review.js
+          node --test scripts/yoco-invoice-settings.test.cjs scripts/yoco-reconciliation-ui.test.cjs scripts/bank-transfer-review.test.cjs
 
       - name: Check Yoco TypeScript formatting
         shell: bash
         run: |
           mapfile -t files < <(find supabase/functions -type f -name '*.ts' \
-            | grep -E '/(yoco|create-payment-checkout|get-payment-status|reconcile-payment)' \
+            | grep -E '/(yoco|bank-transfer|create-payment-checkout|get-payment-status|reconcile-payment)' \
             | sort)
           test "${#files[@]}" -gt 0
           deno fmt --check "${files[@]}"
@@ -70,12 +75,13 @@ jobs:
             supabase/functions/create-payment-checkout/index.ts \
             supabase/functions/yoco-payment-webhook/index.ts \
             supabase/functions/get-payment-status/index.ts \
-            supabase/functions/reconcile-payment/index.ts
+            supabase/functions/reconcile-payment/index.ts \
+            supabase/functions/bank-transfer/index.ts
 
       - name: Run Yoco Deno tests
         env:
           YOCO_WEBHOOK_SECRET: whsec_disposable_ci_test_secret
-        run: deno test --allow-env=YOCO_WEBHOOK_SECRET supabase/functions/tests/yoco-*.test.ts
+        run: deno test --allow-env=YOCO_WEBHOOK_SECRET supabase/functions/tests/yoco-*.test.ts supabase/functions/tests/bank-transfer.test.ts
 
       - name: Prepare reviewed formatting patch
         if: always()
@@ -83,7 +89,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t files < <(find supabase/functions -type f -name '*.ts' \
-            | grep -E '/(yoco|create-payment-checkout|get-payment-status|reconcile-payment)' \
+            | grep -E '/(yoco|bank-transfer|create-payment-checkout|get-payment-status|reconcile-payment)' \
             | sort)
           deno fmt "${files[@]}"
           git diff --binary -- "${files[@]}" > yoco-deno-format.patch
@@ -170,7 +176,7 @@ jobs:
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
             \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' \) \
             | sort)
-          test "${#migrations[@]}" -eq 13
+          test "${#migrations[@]}" -eq 14
           for migration in "${migrations[@]}"; do
             echo "Applying $migration"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
@@ -196,7 +202,8 @@ jobs:
           supabase test db \
             supabase/tests/yoco-source/202611110005_yoco_ledger_invariants.test.sql \
             supabase/tests/yoco-source/202611110010_yoco_admin_invoice_settings.test.sql \
-            supabase/tests/yoco-source/202611110011_yoco_reconciliation_admin_workflow.test.sql
+            supabase/tests/yoco-source/202611110011_yoco_reconciliation_admin_workflow.test.sql \
+            supabase/tests/yoco-source/202611120002_bank_transfer_submissions.test.sql
 
       - name: Run Yoco webhook lease transaction scenarios
         shell: bash
