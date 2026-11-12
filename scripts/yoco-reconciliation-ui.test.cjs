@@ -22,7 +22,7 @@ test("reconciliation reads use the guarded administrator Edge Function", () => {
   assert.match(edge, /payment_reconciliation_evidence/);
   assert.match(edge, /payment_reconciliation_actions/);
   assert.match(edge, /evidence: \\(evidenceResult\\.data \\|\\| \\[\\]\\)\\.slice\\(0, historyPageSize\\)/);
-  assert.match(edge, /case_actions: actionsResult\.data/);
+  assert.match(edge, /case_actions: \\(actionsResult\\.data \\|\\| \\[\\]\\)\\.slice\\(0, historyPageSize\\)/);
 });
 
 test("evidence and status changes use authenticated administrator RPCs", () => {
