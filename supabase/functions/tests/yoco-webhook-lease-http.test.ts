@@ -19,12 +19,12 @@ function request(event: Record<string, unknown>) {
   });
 }
 
-function successEvent() {
+function successEvent(mode = "test") {
   return {
     id: "evt_payment_succeeded_lease",
     type: "payment.succeeded",
     payload: {
-      amount: 2500, currency: "ZAR", status: "successful", mode: "test",
+      amount: 2500, currency: "ZAR", status: "successful", mode,
       metadata: { checkoutId },
     },
   };
@@ -101,6 +101,17 @@ Deno.test("lease handler claims an event before any attempt lookup or settlement
   if (response.status !== 200 || claimIndex < 0 || settleIndex <= claimIndex ||
       settle.args.p_lease_token !== leaseToken || settle.args.p_event_id !== eventId) {
     throw new Error("Settlement was not fenced by a claimed lease.");
+  }
+});
+
+Deno.test("live-mode payment success is ignored before test webhook persistence", async () => {
+  const h = harness();
+  const response = await h.handler(request(successEvent("live")));
+  const result = await body(response);
+  if (response.status !== 200 || result.ignored !== true ||
+      result.reason !== "live_mode_not_enabled" ||
+      h.calls.length !== 0 || h.updates.length !== 0 || h.lookups.length !== 0) {
+    throw new Error("A live-mode payment notification entered the test webhook inbox or ledger.");
   }
 });
 
