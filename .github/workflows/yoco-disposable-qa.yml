@@ -195,9 +195,17 @@ jobs:
         run: |
           supabase test db \
             supabase/tests/yoco-source/202611110005_yoco_ledger_invariants.test.sql \
-            supabase/tests/yoco-source/202611110009_yoco_webhook_lease.test.sql \
             supabase/tests/yoco-source/202611110010_yoco_admin_invoice_settings.test.sql \
             supabase/tests/yoco-source/202611110011_yoco_reconciliation_admin_workflow.test.sql
+
+      - name: Run Yoco webhook lease transaction scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\\(.*\\)"$/\\1/p')"
+          test -n "$DB_URL"
+          psql "$DB_URL" -X -v ON_ERROR_STOP=1 \\
+            -f supabase/tests/202611110009_yoco_webhook_lease.test.sql
 
       - name: Run Yoco payment and refund transaction scenarios
         shell: bash
