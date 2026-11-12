@@ -13,7 +13,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: yoco-format-\${{ github.ref }}
+  group: yoco-format-feature-branch
   cancel-in-progress: true
 
 jobs:
@@ -41,14 +41,17 @@ jobs:
           mapfile -t files < <(find supabase/functions -type f -name '*.ts' \
             | grep -E '/(yoco|create-payment-checkout|get-payment-status|reconcile-payment)' \
             | sort)
-          test "\${#files[@]}" -gt 0
-          deno fmt "\${files[@]}"
-          deno fmt --check "\${files[@]}"
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No Yoco TypeScript files were found."
+            exit 1
+          fi
+          deno fmt "${files[@]}"
+          deno fmt --check "${files[@]}"
 
       - name: Commit formatter changes and rerun Yoco QA
         shell: bash
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
