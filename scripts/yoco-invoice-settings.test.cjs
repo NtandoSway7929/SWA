@@ -9,6 +9,8 @@ const root = path.resolve(__dirname, "..");
 const panel = fs.readFileSync(path.join(root, "admin-dashboard", "yoco-invoice-settings.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
 const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "202611110008_yoco_admin_invoice_settings.sql"), "utf8");
+const paymentMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "202611110003_yoco_atomic_payment_operations.sql"), "utf8");
+const paymentFlowTest = fs.readFileSync(path.join(root, "supabase", "tests", "202611110006_yoco_payment_flow.test.sql"), "utf8");
 
 test("invoice payment settings panel is loaded by the admin dashboard", () => {
   assert.match(html, /yoco-invoice-settings\.js\?v=20261111-stage-1-48/);
@@ -73,4 +75,17 @@ test("server RPC enforces partial-payment and deposit constraints", () => {
 test("settings panel does not contain Yoco private credentials or activate live mode", () => {
   assert.doesNotMatch(panel, /sk_live_|sk_test_|webhook_secret/i);
   assert.match(panel, /Live payments are not enabled by this control/);
+});
+
+test("deposit is required only on the first invoice payment", () => {
+  assert.match(paymentMigration, /not exists\s*\(\s*select 1\s*from public\.payments p\s*where p\.invoice_id = v_invoice\.id\s*and p\.status in \('paid', 'partially paid'\)/);
+  assert.match(paymentFlowTest, /subsequent instalment may be below the initial deposit threshold/);
+});
+
+test("competing successful checkouts cannot overpay an invoice or retry indefinitely", () => {
+  assert.match(paymentMigration, /v_attempt\.amount_cents > v_available_cents/);
+  assert.match(paymentMigration, /failure_code = 'invoice_balance_changed'/);
+  assert.match(paymentMigration, /processing_status = 'requires_review'/);
+  assert.match(paymentFlowTest, /a competing successful checkout is routed to manual review/);
+  assert.match(paymentFlowTest, /competing checkout is not inserted as an overpayment/);
 });
