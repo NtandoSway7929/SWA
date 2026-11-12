@@ -135,8 +135,8 @@ select extensions.throws_ok(
     'non-admin authenticated caller cannot add evidence');
 select extensions.throws_ok(
     $$ select public.admin_set_payment_reconciliation_status(null, null, null, null, null, null) $$,
-    '42501','Administrator access is required.',
-    'non-admin authenticated caller cannot change case status');
+    '42501','permission denied for function admin_set_payment_reconciliation_status',
+    'authenticated callers cannot execute the revoked legacy status RPC');
 reset role;
 
 
