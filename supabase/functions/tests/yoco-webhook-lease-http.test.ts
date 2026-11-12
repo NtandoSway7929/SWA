@@ -157,6 +157,21 @@ Deno.test("live-mode payment success is ignored before test webhook persistence"
   }
 });
 
+Deno.test("financial event without an explicit processing mode is ignored before test persistence", async () => {
+  const h = harness();
+  const response = await h.handler(request({
+    id: "evt_payment_failed_missing_mode",
+    type: "payment.failed",
+    payload: { metadata: { checkoutId } },
+  }));
+  const result = await body(response);
+  if (response.status !== 200 || result.ignored !== true ||
+      result.reason !== "processing_mode_unverified" ||
+      h.calls.length !== 0 || h.updates.length !== 0 || h.lookups.length !== 0) {
+    throw new Error("A financial webhook without a verified processing mode entered the test inbox.");
+  }
+});
+
 Deno.test("active lease is not processed by a concurrent duplicate delivery", async () => {
   const h = harness({ claimDenied: "lease_active" });
   const response = await h.handler(request(successEvent()));
@@ -186,7 +201,7 @@ Deno.test("payment.failed is delegated to the atomic lease-aware database operat
   const response = await h.handler(request({
     id: "evt_payment_failed_lease",
     type: "payment.failed",
-    payload: { metadata: { checkoutId } },
+    payload: { mode: "test", metadata: { checkoutId } },
   }));
   const failure = h.calls.find((x) =>
     x.name === "yoco_record_payment_failure_with_lease"
