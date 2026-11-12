@@ -146,6 +146,7 @@ async function invoiceForClient(admin: any, invoiceId: string, clientId: string)
     .eq("id", invoiceId).eq("client_id", clientId).maybeSingle();
   if (error || !data) return null;
   if (!["sent", "partially paid", "overdue"].includes(String(data.status || "").toLowerCase())) return null;
+  if (String(data.currency || "ZAR").toUpperCase() !== "ZAR") return null;
   return data;
 }
 
