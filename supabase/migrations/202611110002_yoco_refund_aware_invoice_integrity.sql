@@ -17,7 +17,12 @@
 begin;
 
 create schema if not exists innerme_private;
-revoke all on schema innerme_private from public, anon, authenticated;
+-- Keep the existing authenticated schema USAGE grant: production InnerMe and
+-- workspace RPCs call explicitly granted innerme_private helpers through public
+-- SECURITY INVOKER wrappers and trigger functions. Yoco's own private routines
+-- still receive function-level revokes/grants below.
+revoke all on schema innerme_private from public, anon;
+grant usage on schema innerme_private to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 1. One authoritative invoice net-paid calculation.
