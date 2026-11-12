@@ -21,7 +21,7 @@ test("reconciliation reads use the guarded administrator Edge Function", () => {
   assert.match(edge, /async function authorizeAdmin\(req: Request\)/);
   assert.match(edge, /payment_reconciliation_evidence/);
   assert.match(edge, /payment_reconciliation_actions/);
-  assert.match(edge, /evidence: evidenceResult\.data/);
+  assert.match(edge, /evidence: \\(evidenceResult\\.data \\|\\| \\[\\]\\)\\.slice\\(0, historyPageSize\\)/);
   assert.match(edge, /case_actions: actionsResult\.data/);
 });
 
@@ -76,8 +76,8 @@ test("browser rejects incomplete read-model payloads and malformed financial UUI
 test("reconciliation Edge Function enforces method, origin and administrator checks before service-role reads", () => {
   const methodGuard = edge.indexOf('if (req.method !== "POST")');
   const originGuard = edge.indexOf('origin !== "https://swayphics.co.za"');
-  const adminGuard = edge.indexOf('if (!await authorizeAdmin(req))');
-  const serviceClient = edge.indexOf("const admin = getAdminClient()");
+  const adminGuard = edge.indexOf('if (!await authorize(req))');
+  const serviceClient = edge.indexOf("const admin = createAdmin()");
   const firstRead = edge.indexOf('admin.from("payment_attempts")');
   assert.ok(methodGuard >= 0 && methodGuard < adminGuard);
   assert.ok(originGuard >= 0 && originGuard < adminGuard);
