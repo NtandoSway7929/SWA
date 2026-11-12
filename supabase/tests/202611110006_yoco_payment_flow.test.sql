@@ -41,8 +41,15 @@ declare
     v_invoice_id uuid;
     v_attempt jsonb;
     v_attempt_id uuid;
+    v_competing_attempt jsonb;
+    v_competing_attempt_id uuid;
+    v_second_installment jsonb;
+    v_second_installment_id uuid;
     v_event jsonb;
     v_event_id uuid;
+    v_competing_event jsonb;
+    v_competing_event_id uuid;
+    v_competing_settlement jsonb;
     v_settlement jsonb;
     v_duplicate jsonb;
     v_payment_id uuid;
@@ -64,10 +71,10 @@ begin
 
     insert into public.invoices (
         client_id, status, currency, subtotal, total,
-        online_payment_enabled, partial_payment_enabled
+        online_payment_enabled, partial_payment_enabled, deposit_amount
     )
     values (
-        v_client_id, 'sent', 'ZAR', 100, 100, true, true
+        v_client_id, 'sent', 'ZAR', 100, 100, true, true, 25
     )
     returning id into v_invoice_id;
 
@@ -88,6 +95,20 @@ begin
     );
     v_attempt_id := (v_attempt->>'attempt_id')::uuid;
     perform pg_temp.assert_true(v_attempt_id is not null, 'payment attempt created for the invoice');
+
+    -- A second checkout can be prepared against the same balance before
+    -- either provider payment is confirmed.
+    v_competing_attempt := innerme_private.create_yoco_payment_attempt(
+        v_invoice_id, v_client_id, 6000, 'test-flow-competing-key-0001'
+    );
+    v_competing_attempt_id := (v_competing_attempt->>'attempt_id')::uuid;
+    perform pg_temp.assert_true(v_competing_attempt_id is not null,
+        'a competing checkout can be prepared before the first payment settles');
+
+    perform innerme_private.attach_yoco_checkout(
+        v_competing_attempt_id, 'yoco_test_checkout_competing_0001',
+        'https://payments.yoco.com/checkout/test-flow-competing-0001', now() + interval '1 hour'
+    );
 
     perform innerme_private.attach_yoco_checkout(
         v_attempt_id, 'yoco_test_checkout_0001',
@@ -124,6 +145,47 @@ begin
     into v_net_paid, v_outstanding
     from public.invoices where id = v_invoice_id;
     perform pg_temp.assert_true(v_net_paid = 60 and v_outstanding = 40, 'invoice balance reflects the settled partial payment');
+
+    -- A second checkout that succeeds after the first payment reduced the
+    -- balance is retained for manual review, not retried indefinitely and not
+    -- inserted into the financial ledger.
+    v_competing_event := innerme_private.record_verified_yoco_webhook(
+        'evt_test_payment_competing_0001', 'payment.succeeded',
+        repeat('d', 64)
+    );
+    v_competing_event_id := (v_competing_event->>'event_id')::uuid;
+    v_competing_settlement := innerme_private.settle_yoco_payment(
+        v_competing_attempt_id, v_competing_event_id,
+        'yoco_test_checkout_competing_0001',
+        6000, 'ZAR', 'test', 'yoco_test_txn_competing_0001'
+    );
+    perform pg_temp.assert_true(
+        not coalesce((v_competing_settlement->>'settled')::boolean, false)
+        and coalesce((v_competing_settlement->>'requires_review')::boolean, false)
+        and v_competing_settlement->>'reason' = 'invoice_balance_changed',
+        'a competing successful checkout is routed to manual review after the invoice balance changes'
+    );
+    perform pg_temp.assert_true(
+        (select status = 'requires_review' from public.payment_attempts where id = v_competing_attempt_id)
+        and (select processing_status = 'requires_review' from public.payment_webhook_events where id = v_competing_event_id),
+        'competing checkout attempt and webhook event reach terminal review state'
+    );
+    perform pg_temp.assert_true(
+        (select count(*) = 1 from public.payments where invoice_id = v_invoice_id),
+        'competing checkout is not inserted as an overpayment'
+    );
+
+    -- The deposit is a minimum first payment, not a minimum for every
+    -- subsequent instalment. R20 is below the configured R25 deposit but is
+    -- permitted after the first R60 payment has been recorded.
+    v_second_installment := innerme_private.create_yoco_payment_attempt(
+        v_invoice_id, v_client_id, 2000, 'test-flow-second-installment-0001'
+    );
+    v_second_installment_id := (v_second_installment->>'attempt_id')::uuid;
+    perform pg_temp.assert_true(
+        v_second_installment_id is not null,
+        'subsequent instalment may be below the initial deposit threshold'
+    );
 
     -- An attempt cannot exceed the remaining invoice balance.
     perform pg_temp.expect_error(
