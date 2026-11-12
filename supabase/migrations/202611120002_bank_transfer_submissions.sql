@@ -114,7 +114,8 @@ begin
 
     if not found
        or v_invoice.client_id <> v_submission.client_id
-       or v_invoice.status not in ('sent','partially paid','overdue') then
+       or v_invoice.status not in ('sent','partially paid','overdue')
+       or upper(coalesce(v_invoice.currency, 'ZAR')) <> 'ZAR' then
         raise exception 'The invoice is no longer eligible for payment.';
     end if;
 
