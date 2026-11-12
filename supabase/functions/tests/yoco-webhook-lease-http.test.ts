@@ -278,13 +278,19 @@ Deno.test("refund success maps documented checkout metadata to the settled test 
 
 Deno.test("preserves a separate provider refund ID only when Yoco actually supplies one", async () => {
   const h = harness();
-  const response = await h.handler(request(refundEvent("test", "rf_test_resource_001")));
+  const response = await h.handler(
+    request(refundEvent("test", "rf_test_resource_001")),
+  );
   const refund = h.calls.find((x) =>
     x.name === "yoco_record_refund_success_with_lease"
   );
-  if (response.status !== 200 || !refund ||
-      refund.args.p_provider_refund_id !== "rf_test_resource_001") {
-    throw new Error("A separately supplied refund resource ID was not preserved.");
+  if (
+    response.status !== 200 || !refund ||
+    refund.args.p_provider_refund_id !== "rf_test_resource_001"
+  ) {
+    throw new Error(
+      "A separately supplied refund resource ID was not preserved.",
+    );
   }
 });
 
