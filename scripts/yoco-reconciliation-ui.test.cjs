@@ -83,8 +83,8 @@ test("reconciliation Edge Function enforces method, origin and administrator che
   assert.ok(originGuard >= 0 && originGuard < adminGuard);
   assert.ok(adminGuard >= 0 && adminGuard < serviceClient);
   assert.ok(serviceClient >= 0 && serviceClient < firstRead);
-  assert.match(edge, /auth\.getUser\(\s*token\s*\)/);
-  assert.match(edge, /userClient\.rpc\(\s*"is_swayphics_admin"\s*\)/);
+  assert.match(edge, /auth\.getUser\(\s*token\s*,?\s*\)/);
+  assert.match(edge, /userClient\.rpc\(\s*"is_swayphics_admin"\s*,?\s*\)/);
 });
 
 test("case workflow submits only the guarded evidence and status RPCs", () => {
