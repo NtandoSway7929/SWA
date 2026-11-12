@@ -253,8 +253,6 @@ grant execute on function innerme_private.approve_bank_transfer_submission(uuid,
 grant execute on function innerme_private.reject_bank_transfer_submission(uuid, uuid, text)
     to service_role;
 
-commit;
-
 -- PostgREST entry points are kept in public but executable only by service_role.
 -- The actual financial routines and their implementation stay in innerme_private.
 create or replace function public.admin_approve_bank_transfer_submission(
@@ -297,3 +295,5 @@ grant execute on function public.admin_approve_bank_transfer_submission(uuid, uu
     to service_role;
 grant execute on function public.admin_reject_bank_transfer_submission(uuid, uuid, text)
     to service_role;
+
+commit;
