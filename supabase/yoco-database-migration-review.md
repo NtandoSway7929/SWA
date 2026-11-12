@@ -48,6 +48,8 @@ The webhook handler resolves the Yoco refund notification through documented `pa
 
 The official Yoco refund notification example repeats the top-level event ID in `payload.id`; this value is therefore not treated as a refund-resource identifier. The optional `refundId` / `refund_id` field is used only when separately supplied. Same-event retries are protected by the unique event index. Cross-event deduplication of the same refund remains dependent on Yoco supplying a stable separate refund ID. A real signed provider delivery is still required to verify the deployed payload variant.
 
+**Current mode boundary, checked against Yoco's developer documentation on 2026-11-12:** the documented refund notification sample has `mode: "live"`, and Yoco's refund guide says Checkout API refunds must be initiated using live keys. The current webhook checks the payload mode before recording an event; a live or mode-less financial event receives HTTP 200 with `ignored: true` and is not saved to the test webhook inbox. Therefore live refunds are **not** retained for manual review by this test-only implementation. Live refund support requires a separately reviewed environment-aware ledger and durable live-event handling before production activation.
+
 ### 2. Financial ledger immutability
 
 **Source-level remediation added in migration 005.** Runtime verification is still required.
