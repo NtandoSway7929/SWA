@@ -11,17 +11,17 @@ from pglast import parse_sql
 
 
 ROOT = Path(__file__).resolve().parents[2]
-MIGRATIONS = sorted((ROOT / "supabase" / "migrations").glob("*_yoco_*.sql"))
-TESTS = sorted((ROOT / "supabase" / "tests").glob("*yoco*.sql"))
+MIGRATIONS = sorted((ROOT / "supabase" / "migrations").glob("*_yoco_*.sql")) + sorted((ROOT / "supabase" / "migrations").glob("*_bank_transfer_*.sql"))
+TESTS = sorted((ROOT / "supabase" / "tests").glob("*yoco*.sql")) + sorted((ROOT / "supabase" / "tests").glob("*bank_transfer*.sql"))
 
 
 def main() -> int:
     files = MIGRATIONS + TESTS
     if not MIGRATIONS:
-        print("No Yoco migration files found.", file=sys.stderr)
+        print("No payment migration files found.", file=sys.stderr)
         return 1
     if not TESTS:
-        print("No Yoco SQL test files found.", file=sys.stderr)
+        print("No payment SQL test files found.", file=sys.stderr)
         return 1
 
     failures = []
