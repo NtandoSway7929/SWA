@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(42);
+select extensions.plan(43);
 
 select extensions.has_table('public','payment_reconciliation_evidence',
     'append-only reconciliation evidence table exists');
@@ -21,6 +21,13 @@ select extensions.ok(
 select extensions.ok(
     (select relrowsecurity from pg_class where oid='public.payment_reconciliation_actions'::regclass),
     'action history table has RLS enabled');
+
+-- The existing Swayphics production schema grants authenticated USAGE on
+-- innerme_private because established public SECURITY INVOKER RPC wrappers call
+-- explicitly granted private helpers. Yoco must not revoke that existing access.
+select extensions.ok(
+    has_schema_privilege('authenticated','innerme_private','usage'),
+    'existing authenticated access to private helper schema is preserved');
 
 select extensions.ok(
     not has_table_privilege('authenticated','public.payment_reconciliation_evidence','select'),
