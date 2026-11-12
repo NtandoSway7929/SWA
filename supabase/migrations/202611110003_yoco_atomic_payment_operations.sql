@@ -73,9 +73,18 @@ begin
         raise exception 'Partial payments are not enabled for this invoice.';
     end if;
 
+    -- A configured deposit is the minimum first payment only. Once any
+    -- payment has been recorded against the invoice, later instalments may be
+    -- smaller than the initial deposit.
     if coalesce(v_invoice.deposit_amount, 0) > 0
+       and not exists (
+           select 1
+           from public.payments p
+           where p.invoice_id = v_invoice.id
+             and p.status in ('paid', 'partially paid')
+       )
        and p_amount_cents < round(v_invoice.deposit_amount * 100)::bigint then
-        raise exception 'The requested amount is below the required deposit.';
+        raise exception 'The requested first payment is below the required deposit.';
     end if;
 
     insert into public.payment_attempts (
@@ -286,6 +295,7 @@ declare
     v_payment public.payments%rowtype;
     v_receipt public.payment_receipts%rowtype;
     v_payment_amount numeric(12,2);
+    v_available_cents bigint;
     v_receipt_number text;
     v_snapshot jsonb;
     v_sequence bigint;
@@ -391,7 +401,7 @@ begin
 
     if not found
        or v_invoice.client_id <> v_attempt.client_id
-       or v_invoice.status = 'cancelled' then
+       or v_invoice.status in ('draft', 'cancelled') then
         update public.payment_attempts
         set status = 'requires_review',
             failure_code = 'invoice_unavailable',
@@ -409,6 +419,39 @@ begin
             'settled', false,
             'requires_review', true,
             'reason', 'invoice_unavailable'
+        );
+    end if;
+
+    -- Distinct checkouts can be created while an invoice has sufficient
+    -- balance. Recheck the locked invoice at settlement so only one of
+    -- competing successful checkouts can consume the same outstanding funds.
+    -- A provider-captured payment that no longer fits the balance is kept out
+    -- of the ledger and marked for manual reconciliation rather than retried
+    -- indefinitely or allowed to overpay the invoice.
+    v_available_cents := round(
+        greatest(coalesce(v_invoice.amount_outstanding, 0), 0) * 100
+    )::bigint;
+
+    if v_attempt.amount_cents > v_available_cents then
+        update public.payment_attempts
+        set status = 'requires_review',
+            failure_code = 'invoice_balance_changed',
+            failure_message = 'A different payment reduced the invoice balance before this checkout was confirmed.',
+            updated_at = now()
+        where id = v_attempt.id;
+
+        update public.payment_webhook_events
+        set payment_attempt_id = v_attempt.id,
+            processing_status = 'requires_review',
+            failure_code = 'invoice_balance_changed',
+            failure_message = 'Verified provider payment exceeds the invoice balance remaining at settlement.',
+            processed_at = now()
+        where id = v_event.id;
+
+        return jsonb_build_object(
+            'settled', false,
+            'requires_review', true,
+            'reason', 'invoice_balance_changed'
         );
     end if;
 
