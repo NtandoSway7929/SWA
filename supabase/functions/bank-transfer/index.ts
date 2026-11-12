@@ -198,17 +198,39 @@ async function clientDetails(admin: any, clientId: string, invoiceId: string) {
   });
 }
 
-async function submitProof(req: Request, admin: any, clientId: string, now: Date) {
-  const declared = Number(req.headers.get("content-length") || 0);
-  if (declared > MAX_PROOF_BYTES + 32_768) {
-    return json({ ok: false, error: "The proof file must be 5 MB or smaller." }, 413);
-  }
-  let form: FormData;
+async function readLimitedMultipart(req: Request) {
+  const chunks: Uint8Array[] = [];
+  const reader = req.body?.getReader();
+  if (!reader) return { ok: false as const, reason: "empty" as const };
+  let total = 0;
   try {
-    form = await req.formData();
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      total += part.value.byteLength;
+      if (total > MAX_PROOF_BYTES + 32_768) {
+        await reader.cancel();
+        return { ok: false as const, reason: "too_large" as const };
+      }
+      chunks.push(part.value);
+    }
   } catch {
-    return json({ ok: false, error: "A valid multipart upload is required." }, 400);
+    return { ok: false as const, reason: "invalid" as const };
   }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  const headers = new Headers(req.headers);
+  headers.delete("content-length");
+  try {
+    const bounded = new Request(req.url, { method: "POST", headers, body: bytes });
+    return { ok: true as const, form: await bounded.formData() };
+  } catch {
+    return { ok: false as const, reason: "invalid" as const };
+  }
+}
+
+async function submitProof(form: FormData, admin: any, clientId: string, now: Date) {
   const invoiceId = String(form.get("invoice_id") || "");
   const amount = parseBankTransferAmount(form.get("amount"));
   const reference = String(form.get("bank_reference") || "").trim();
@@ -312,15 +334,18 @@ export function createBankTransferHandler(overrides: Partial<Deps> = {}) {
     try {
       const contentType = String(req.headers.get("content-type") || "").toLowerCase();
       if (contentType.startsWith("multipart/form-data")) {
-        const declaredLength = Number(req.headers.get("content-length") || 0);
-        if (declaredLength > MAX_PROOF_BYTES + 32_768) return json({ ok: false, error: "The proof file must be 5 MB or smaller." }, 413);
-        const form = await req.clone().formData().catch(() => null);
-        const token = String(form?.get("token") || "").trim();
+        const multipart = await readLimitedMultipart(req);
+        if (!multipart.ok) return json({
+          ok: false,
+          error: multipart.reason === "too_large" ? "The proof file must be 5 MB or smaller." : "A valid multipart upload is required.",
+        }, multipart.reason === "too_large" ? 413 : 400);
+        const form = multipart.form;
+        const token = String(form.get("token") || "").trim();
         if (!token) return json({ ok: false, error: "Private portal token required." }, 400);
         const admin = deps.createAdmin();
         const portal = await deps.resolvePortal(admin, token);
         if (!portal) return json({ ok: false, error: "This portal link is invalid or has expired." }, 403);
-        return await submitProof(req, admin, String(portal.client_id), deps.now());
+        return await submitProof(form, admin, String(portal.client_id), deps.now());
       }
 
       const body = await req.json().catch(() => null);
