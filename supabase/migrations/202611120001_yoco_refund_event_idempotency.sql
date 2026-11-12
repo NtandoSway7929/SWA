@@ -103,8 +103,6 @@ begin
         v_refund := v_refund_by_event;
     elsif v_found_provider_refund then
         v_refund := v_refund_by_provider_id;
-    else
-        v_refund := null;
     end if;
 
     if v_found_event_refund or v_found_provider_refund then
