@@ -2,6 +2,7 @@ import { verifyYocoWebhookSignature } from "../_shared/yoco-signature.ts";
 import {
   getYocoCheckoutId,
   getYocoPaymentSuccessDetails,
+  getYocoProcessingMode,
   getYocoRefundSuccessDetails,
   normalizeYocoWebhookEvent,
 } from "../_shared/yoco-webhook-validation.ts";
@@ -105,6 +106,21 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
       }
       const event = normalizeYocoWebhookEvent(parsed);
       if (!event) return respond({ ok: false, error: "Webhook event identity is invalid." }, 400);
+
+      // This endpoint and its database schema are test-environment only.
+      // Never persist an explicitly live-mode financial event in the test
+      // webhook inbox or test ledger. Acknowledge it without processing so
+      // the provider does not retry an unsupported live integration.
+      const eventMode = getYocoProcessingMode(event.payload);
+      if (eventMode && eventMode !== "test") {
+        deps.logWarn("Ignored Yoco webhook outside the enabled test environment:", eventMode);
+        return respond({
+          ok: true,
+          received: true,
+          ignored: true,
+          reason: "live_mode_not_enabled",
+        });
+      }
 
       admin = deps.createAdmin();
       const { data: recorded, error: recordError } = await admin.rpc("yoco_record_verified_webhook", {
@@ -240,14 +256,6 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
         if (!details) {
           return await review("incomplete_refund_payload",
             "Verified refund event lacked a provider refund ID, checkout reference, amount, currency or mode.");
-        }
-
-        // This release only mutates the test ledger. Yoco documents refund
-        // processing as requiring live keys, so live notifications are retained
-        // for manual review rather than being written into test payment records.
-        if (details.mode !== "test") {
-          return await review("refund_mode_not_enabled",
-            "Refund event is not in test mode; automatic refund ledger updates are disabled for this release.");
         }
 
         const { data: attempt, error } = await admin.from("payment_attempts")
