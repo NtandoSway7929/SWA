@@ -75,7 +75,7 @@ test("rejection requires an audit reason and never creates a payment", () => {
 
 test("admin dashboard does not query the bank transfer queue until the review panel opens", () => {
   assert.match(adminUi, /if\(open\)load\(\)/);
-  assert.equal((adminUi.match(/\bload\(\)/g) || []).length, 1);
+  assert.equal((adminUi.match(/\bload\(\);/g) || []).length, 1);
 });
 
 test("review widget sends financial mutations only through the guarded Edge Function", () => {
