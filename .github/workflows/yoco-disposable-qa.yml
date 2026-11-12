@@ -145,7 +145,8 @@ jobs:
           mkdir -p "$SUPABASE_WORKDIR"
           supabase init --workdir "$SUPABASE_WORKDIR"
           mkdir -p "$SUPABASE_WORKDIR/supabase/migrations" "$SUPABASE_WORKDIR/supabase/tests"
-          ln -s "$GITHUB_WORKSPACE/supabase/tests" "$SUPABASE_WORKDIR/supabase/tests/yoco-source"
+          mkdir -p "$SUPABASE_WORKDIR/supabase/tests/yoco-source"
+          cp -a "$GITHUB_WORKSPACE/supabase/tests/." "$SUPABASE_WORKDIR/supabase/tests/yoco-source/"
           rm -f "$SUPABASE_WORKDIR/supabase/seed.sql"
 
       - name: Start isolated local Supabase
