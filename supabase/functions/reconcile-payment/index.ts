@@ -32,13 +32,21 @@ async function authorizeAdmin(req: Request) {
 
   const userClient = createClient(url, publishableKey, {
     global: { headers: { Authorization: "Bearer " + token } },
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
   });
 
-  const { data: userData, error: userError } = await userClient.auth.getUser(token);
+  const { data: userData, error: userError } = await userClient.auth.getUser(
+    token,
+  );
   if (userError || !userData?.user) return false;
 
-  const { data: isAdmin, error: adminError } = await userClient.rpc("is_swayphics_admin");
+  const { data: isAdmin, error: adminError } = await userClient.rpc(
+    "is_swayphics_admin",
+  );
   return !adminError && isAdmin === true;
 }
 
@@ -52,148 +60,227 @@ export function createReconciliationHandler(dependencies: {
   const getNow = dependencies.now || Date.now;
 
   return async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return optionsResponse();
-  }
-  if (req.method !== "POST") return json({ ok: false, error: "Method not allowed." }, 405);
-  const origin = req.headers.get("origin");
-  if (origin && origin !== "https://swayphics.co.za") return json({ ok: false, error: "Origin not allowed." }, 403);
+    if (req.method === "OPTIONS") {
+      return optionsResponse();
+    }
+    if (req.method !== "POST") {
+      return json({ ok: false, error: "Method not allowed." }, 405);
+    }
+    const origin = req.headers.get("origin");
+    if (origin && origin !== "https://swayphics.co.za") {
+      return json({ ok: false, error: "Origin not allowed." }, 403);
+    }
 
-  try {
-    if (!await authorize(req)) return json({ ok: false, error: "Administrator access required." }, 403);
+    try {
+      if (!await authorize(req)) {
+        return json(
+          { ok: false, error: "Administrator access required." },
+          403,
+        );
+      }
 
-    const limitedBody = await readLimitedTextBody(req, 8_192);
-    if (!limitedBody.ok) {
+      const limitedBody = await readLimitedTextBody(req, 8_192);
+      if (!limitedBody.ok) {
+        return json({
+          ok: false,
+          error: limitedBody.reason === "too_large"
+            ? "Request is too large."
+            : "Request must be valid UTF-8.",
+        }, limitedBody.reason === "too_large" ? 413 : 400);
+      }
+      const body = limitedBody.body ? parseJsonObject(limitedBody.body) : {};
+      if (!body) {
+        return json({ ok: false, error: "A JSON object is required." }, 400);
+      }
+      const limit = normalizeReconciliationLimit(body.limit);
+      const admin = createAdmin();
+
+      const [
+        attemptsResult,
+        casesResult,
+        refundsResult,
+        eventsResult,
+        attentionAttemptsResult,
+      ] = await Promise.all([
+        admin.from("payment_attempts")
+          .select(
+            "id,invoice_id,client_id,amount_cents,currency,status,provider_checkout_id,payment_id,created_at,updated_at,expires_at",
+          )
+          .eq("provider", "yoco")
+          .eq("environment", "test")
+          .order("created_at", { ascending: false })
+          .limit(limit),
+        admin.from("payment_reconciliation")
+          .select(
+            "id,payment_attempt_id,payment_id,refund_id,discrepancy_type,status,summary,resolution,created_at,updated_at",
+          )
+          .eq("provider", "yoco")
+          .eq("environment", "test")
+          .in("status", ["open", "investigating"])
+          .order("created_at", { ascending: false })
+          .limit(limit),
+        admin.from("payment_refunds")
+          .select(
+            "id,payment_id,provider_refund_id,amount,currency,status,created_at,processed_at",
+          )
+          .eq("provider", "yoco")
+          .eq("environment", "test")
+          .order("created_at", { ascending: false })
+          .limit(limit),
+        admin.from("payment_webhook_events")
+          .select(
+            "id,provider_event_id,event_type,payment_attempt_id,processing_status,failure_code,received_at,processed_at",
+          )
+          .eq("provider", "yoco")
+          .eq("environment", "test")
+          .in("processing_status", [
+            "received",
+            "processing",
+            "failed_retryable",
+            "requires_review",
+          ])
+          .order("received_at", { ascending: true })
+          .limit(limit),
+        admin.from("payment_attempts")
+          .select(
+            "id,invoice_id,client_id,amount_cents,currency,status,provider_checkout_id,payment_id,created_at,updated_at,expires_at",
+          )
+          .eq("provider", "yoco")
+          .eq("environment", "test")
+          .in("status", ["created", "pending", "requires_review"])
+          .order("created_at", { ascending: true })
+          .limit(limit),
+      ]);
+
+      if (
+        attemptsResult.error || casesResult.error || refundsResult.error ||
+        eventsResult.error || attentionAttemptsResult.error
+      ) {
+        console.error(
+          "Payment reconciliation read failed:",
+          attemptsResult.error?.message || casesResult.error?.message ||
+            refundsResult.error?.message || eventsResult.error?.message ||
+            attentionAttemptsResult.error?.message,
+        );
+        return json({
+          ok: false,
+          error: "Reconciliation data could not be loaded.",
+        }, 503);
+      }
+
+      const caseIds = (casesResult.data || []).map((item) => item.id);
+      const historyCaseId = typeof body.history_case_id === "string"
+        ? body.history_case_id
+        : "";
+      const uuidPattern =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (
+        historyCaseId &&
+        (!uuidPattern.test(historyCaseId) || !caseIds.includes(historyCaseId))
+      ) {
+        return json({
+          ok: false,
+          error:
+            "History case is not in the current Yoco test reconciliation queue.",
+        }, 400);
+      }
+      const normalizeOffset = (value: unknown) => {
+        const parsed = typeof value === "number" ? value : Number.NaN;
+        return Number.isSafeInteger(parsed) && parsed >= 0
+          ? Math.min(parsed, 100_000)
+          : 0;
+      };
+      const evidenceOffset = normalizeOffset(body.evidence_offset);
+      const actionOffset = normalizeOffset(body.action_offset);
+      const historyPageSize = 100;
+      const [evidenceResult, actionsResult] = historyCaseId
+        ? await Promise.all([
+          admin.from("payment_reconciliation_evidence")
+            .select(
+              "id,reconciliation_id,evidence_type,reference,note,created_by,created_at",
+            )
+            .eq("reconciliation_id", historyCaseId)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(evidenceOffset, evidenceOffset + historyPageSize),
+          admin.from("payment_reconciliation_actions")
+            .select(
+              "id,reconciliation_id,action,previous_status,new_status,outcome,reason,related_payment_id,related_refund_id,actor_user_id,created_at",
+            )
+            .eq("reconciliation_id", historyCaseId)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(actionOffset, actionOffset + historyPageSize),
+        ])
+        : [{ data: [], error: null }, { data: [], error: null }];
+
+      if (evidenceResult.error || actionsResult.error) {
+        console.error(
+          "Payment reconciliation history read failed:",
+          evidenceResult.error?.message || actionsResult.error?.message,
+        );
+        return json({
+          ok: false,
+          error: "Reconciliation history could not be loaded.",
+        }, 503);
+      }
+
+      const now = getNow();
+      const operationalAlerts = buildYocoOperationalAlerts(
+        attentionAttemptsResult.data || [],
+        eventsResult.data || [],
+        now,
+      );
+
+      return json({
+        ok: true,
+        mode: "read_only_manual_reconciliation",
+        environment: "test",
+        generated_at: new Date(now).toISOString(),
+        monitoring_thresholds: {
+          checkout_attachment_warning_minutes: 15,
+          webhook_processing_warning_minutes: 5,
+        },
+        operational_summary: {
+          alert_count: operationalAlerts.length,
+          high_severity_count: operationalAlerts.filter((alert) =>
+            alert.severity === "high"
+          ).length,
+          medium_severity_count: operationalAlerts.filter((alert) =>
+            alert.severity === "medium"
+          ).length,
+          monitoring_scope: "latest queried records only",
+        },
+        operational_alerts: operationalAlerts,
+        attempts: attemptsResult.data || [],
+        open_cases: casesResult.data || [],
+        evidence: (evidenceResult.data || []).slice(0, historyPageSize),
+        case_actions: (actionsResult.data || []).slice(0, historyPageSize),
+        history_page: {
+          case_id: historyCaseId || null,
+          page_size: historyPageSize,
+          evidence_offset: evidenceOffset,
+          action_offset: actionOffset,
+          evidence_has_more:
+            (evidenceResult.data || []).length > historyPageSize,
+          actions_have_more:
+            (actionsResult.data || []).length > historyPageSize,
+        },
+        refunds: refundsResult.data || [],
+        attempts_needing_attention: attentionAttemptsResult.data || [],
+        webhook_events_needing_attention: eventsResult.data || [],
+        actions_taken: [],
+      });
+    } catch (error) {
+      console.error(
+        "Payment reconciliation request failed:",
+        error instanceof Error ? error.message : "Unknown error.",
+      );
       return json({
         ok: false,
-        error: limitedBody.reason === "too_large" ? "Request is too large." : "Request must be valid UTF-8.",
-      }, limitedBody.reason === "too_large" ? 413 : 400);
+        error: "Reconciliation is temporarily unavailable.",
+      }, 500);
     }
-    const body = limitedBody.body ? parseJsonObject(limitedBody.body) : {};
-    if (!body) return json({ ok: false, error: "A JSON object is required." }, 400);
-    const limit = normalizeReconciliationLimit(body.limit);
-    const admin = createAdmin();
-
-    const [attemptsResult, casesResult, refundsResult, eventsResult, attentionAttemptsResult] = await Promise.all([
-      admin.from("payment_attempts")
-        .select("id,invoice_id,client_id,amount_cents,currency,status,provider_checkout_id,payment_id,created_at,updated_at,expires_at")
-        .eq("provider", "yoco")
-        .eq("environment", "test")
-        .order("created_at", { ascending: false })
-        .limit(limit),
-      admin.from("payment_reconciliation")
-        .select("id,payment_attempt_id,payment_id,refund_id,discrepancy_type,status,summary,resolution,created_at,updated_at")
-        .eq("provider", "yoco")
-        .eq("environment", "test")
-        .in("status", ["open", "investigating"])
-        .order("created_at", { ascending: false })
-        .limit(limit),
-      admin.from("payment_refunds")
-        .select("id,payment_id,provider_refund_id,amount,currency,status,created_at,processed_at")
-        .eq("provider", "yoco")
-        .eq("environment", "test")
-        .order("created_at", { ascending: false })
-        .limit(limit),
-      admin.from("payment_webhook_events")
-        .select("id,provider_event_id,event_type,payment_attempt_id,processing_status,failure_code,received_at,processed_at")
-        .eq("provider", "yoco")
-        .eq("environment", "test")
-        .in("processing_status", ["received", "processing", "failed_retryable", "requires_review"])
-        .order("received_at", { ascending: true })
-        .limit(limit),
-      admin.from("payment_attempts")
-        .select("id,invoice_id,client_id,amount_cents,currency,status,provider_checkout_id,payment_id,created_at,updated_at,expires_at")
-        .eq("provider", "yoco")
-        .eq("environment", "test")
-        .in("status", ["created", "pending", "requires_review"])
-        .order("created_at", { ascending: true })
-        .limit(limit),
-    ]);
-
-    if (attemptsResult.error || casesResult.error || refundsResult.error || eventsResult.error || attentionAttemptsResult.error) {
-      console.error("Payment reconciliation read failed:", attemptsResult.error?.message || casesResult.error?.message || refundsResult.error?.message || eventsResult.error?.message || attentionAttemptsResult.error?.message);
-      return json({ ok: false, error: "Reconciliation data could not be loaded." }, 503);
-    }
-
-    const caseIds = (casesResult.data || []).map((item) => item.id);
-    const historyCaseId = typeof body.history_case_id === "string" ? body.history_case_id : "";
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (historyCaseId && (!uuidPattern.test(historyCaseId) || !caseIds.includes(historyCaseId))) {
-      return json({ ok: false, error: "History case is not in the current Yoco test reconciliation queue." }, 400);
-    }
-    const normalizeOffset = (value: unknown) => {
-      const parsed = typeof value === "number" ? value : Number.NaN;
-      return Number.isSafeInteger(parsed) && parsed >= 0 ? Math.min(parsed, 100_000) : 0;
-    };
-    const evidenceOffset = normalizeOffset(body.evidence_offset);
-    const actionOffset = normalizeOffset(body.action_offset);
-    const historyPageSize = 100;
-    const [evidenceResult, actionsResult] = historyCaseId
-      ? await Promise.all([
-        admin.from("payment_reconciliation_evidence")
-          .select("id,reconciliation_id,evidence_type,reference,note,created_by,created_at")
-          .eq("reconciliation_id", historyCaseId)
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-          .range(evidenceOffset, evidenceOffset + historyPageSize),
-        admin.from("payment_reconciliation_actions")
-          .select("id,reconciliation_id,action,previous_status,new_status,outcome,reason,related_payment_id,related_refund_id,actor_user_id,created_at")
-          .eq("reconciliation_id", historyCaseId)
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-          .range(actionOffset, actionOffset + historyPageSize),
-      ])
-      : [{ data: [], error: null }, { data: [], error: null }];
-
-    if (evidenceResult.error || actionsResult.error) {
-      console.error("Payment reconciliation history read failed:", evidenceResult.error?.message || actionsResult.error?.message);
-      return json({ ok: false, error: "Reconciliation history could not be loaded." }, 503);
-    }
-
-    const now = getNow();
-    const operationalAlerts = buildYocoOperationalAlerts(
-      attentionAttemptsResult.data || [],
-      eventsResult.data || [],
-      now,
-    );
-
-    return json({
-      ok: true,
-      mode: "read_only_manual_reconciliation",
-      environment: "test",
-      generated_at: new Date(now).toISOString(),
-      monitoring_thresholds: {
-        checkout_attachment_warning_minutes: 15,
-        webhook_processing_warning_minutes: 5,
-      },
-      operational_summary: {
-        alert_count: operationalAlerts.length,
-        high_severity_count: operationalAlerts.filter((alert) => alert.severity === "high").length,
-        medium_severity_count: operationalAlerts.filter((alert) => alert.severity === "medium").length,
-        monitoring_scope: "latest queried records only",
-      },
-      operational_alerts: operationalAlerts,
-      attempts: attemptsResult.data || [],
-      open_cases: casesResult.data || [],
-      evidence: (evidenceResult.data || []).slice(0, historyPageSize),
-      case_actions: (actionsResult.data || []).slice(0, historyPageSize),
-      history_page: {
-        case_id: historyCaseId || null,
-        page_size: historyPageSize,
-        evidence_offset: evidenceOffset,
-        action_offset: actionOffset,
-        evidence_has_more: (evidenceResult.data || []).length > historyPageSize,
-        actions_have_more: (actionsResult.data || []).length > historyPageSize,
-      },
-      refunds: refundsResult.data || [],
-      attempts_needing_attention: attentionAttemptsResult.data || [],
-      webhook_events_needing_attention: eventsResult.data || [],
-      actions_taken: [],
-    });
-  } catch (error) {
-    console.error("Payment reconciliation request failed:", error instanceof Error ? error.message : "Unknown error.");
-    return json({ ok: false, error: "Reconciliation is temporarily unavailable." }, 500);
-  }
   };
 }
 

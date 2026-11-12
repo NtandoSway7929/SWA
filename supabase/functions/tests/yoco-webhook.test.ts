@@ -2,7 +2,9 @@ import { verifyYocoWebhookSignature } from "../_shared/yoco-signature.ts";
 
 Deno.test("Yoco webhook signature verification accepts valid v1 and rejects tampering or stale deliveries", async () => {
   const previousSecret = Deno.env.get("YOCO_WEBHOOK_SECRET");
-  const secretBytes = new TextEncoder().encode("swayphics-yoco-webhook-test-secret");
+  const secretBytes = new TextEncoder().encode(
+    "swayphics-yoco-webhook-test-secret",
+  );
   const secret = "whsec_" + btoa(String.fromCharCode(...secretBytes));
   Deno.env.set("YOCO_WEBHOOK_SECRET", secret);
 
@@ -10,7 +12,8 @@ Deno.test("Yoco webhook signature verification accepts valid v1 and rejects tamp
     const nowMs = 1_800_000_000_000;
     const timestamp = String(Math.floor(nowMs / 1000));
     const webhookId = "wh_test_123";
-    const rawBody = '{"id":"evt_test_123","type":"payment.succeeded","payload":{"amount":1000,"currency":"ZAR","mode":"test"}}';
+    const rawBody =
+      '{"id":"evt_test_123","type":"payment.succeeded","payload":{"amount":1000,"currency":"ZAR","mode":"test"}}';
     const key = await crypto.subtle.importKey(
       "raw",
       secretBytes,
@@ -19,11 +22,13 @@ Deno.test("Yoco webhook signature verification accepts valid v1 and rejects tamp
       ["sign"],
     );
     const signed = webhookId + "." + timestamp + "." + rawBody;
-    const digest = new Uint8Array(await crypto.subtle.sign(
-      "HMAC",
-      key,
-      new TextEncoder().encode(signed),
-    ));
+    const digest = new Uint8Array(
+      await crypto.subtle.sign(
+        "HMAC",
+        key,
+        new TextEncoder().encode(signed),
+      ),
+    );
     const validSignature = btoa(String.fromCharCode(...digest));
 
     const makeRequest = (bodySignature: string, time = timestamp) =>
@@ -41,7 +46,11 @@ Deno.test("Yoco webhook signature verification accepts valid v1 and rejects tamp
       rawBody,
       nowMs,
     );
-    if (!valid) throw new Error("A valid v1 signature among multiple candidates was rejected.");
+    if (!valid) {
+      throw new Error(
+        "A valid v1 signature among multiple candidates was rejected.",
+      );
+    }
 
     const alteredBody = await verifyYocoWebhookSignature(
       makeRequest("v1," + validSignature),
@@ -55,7 +64,11 @@ Deno.test("Yoco webhook signature verification accepts valid v1 and rejects tamp
       rawBody,
       nowMs,
     );
-    if (stale) throw new Error("A webhook outside the 180-second tolerance was accepted.");
+    if (stale) {
+      throw new Error(
+        "A webhook outside the 180-second tolerance was accepted.",
+      );
+    }
 
     const wrongId = await verifyYocoWebhookSignature(
       new Request("https://example.test/webhook", {
@@ -69,7 +82,9 @@ Deno.test("Yoco webhook signature verification accepts valid v1 and rejects tamp
       rawBody,
       nowMs,
     );
-    if (wrongId) throw new Error("A signature for a different webhook ID was accepted.");
+    if (wrongId) {
+      throw new Error("A signature for a different webhook ID was accepted.");
+    }
 
     const missingSignature = await verifyYocoWebhookSignature(
       new Request("https://example.test/webhook", {
@@ -79,7 +94,9 @@ Deno.test("Yoco webhook signature verification accepts valid v1 and rejects tamp
       rawBody,
       nowMs,
     );
-    if (missingSignature) throw new Error("A webhook without a signature header was accepted.");
+    if (missingSignature) {
+      throw new Error("A webhook without a signature header was accepted.");
+    }
 
     const malformedTimestamp = await verifyYocoWebhookSignature(
       new Request("https://example.test/webhook", {
@@ -93,14 +110,18 @@ Deno.test("Yoco webhook signature verification accepts valid v1 and rejects tamp
       rawBody,
       nowMs,
     );
-    if (malformedTimestamp) throw new Error("A malformed timestamp was accepted.");
+    if (malformedTimestamp) {
+      throw new Error("A malformed timestamp was accepted.");
+    }
 
     const malformedSignature = await verifyYocoWebhookSignature(
       makeRequest("v1,%%%not-base64%%%"),
       rawBody,
       nowMs,
     );
-    if (malformedSignature) throw new Error("A malformed Base64 signature was accepted.");
+    if (malformedSignature) {
+      throw new Error("A malformed Base64 signature was accepted.");
+    }
   } finally {
     if (previousSecret === undefined) Deno.env.delete("YOCO_WEBHOOK_SECRET");
     else Deno.env.set("YOCO_WEBHOOK_SECRET", previousSecret);

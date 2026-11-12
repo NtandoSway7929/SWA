@@ -27,12 +27,16 @@ export async function verifyYocoWebhookSignature(
   const signatureHeader = req.headers.get("webhook-signature") || "";
   const secret = Deno.env.get("YOCO_WEBHOOK_SECRET") || "";
 
-  if (!webhookId || !/^\d+$/.test(timestamp) || !signatureHeader ||
-      !secret.startsWith("whsec_")) return false;
+  if (
+    !webhookId || !/^\d+$/.test(timestamp) || !signatureHeader ||
+    !secret.startsWith("whsec_")
+  ) return false;
 
   const timestampSeconds = Number(timestamp);
-  if (!Number.isSafeInteger(timestampSeconds) ||
-      Math.abs(nowMs / 1000 - timestampSeconds) > SIGNATURE_TOLERANCE_SECONDS) {
+  if (
+    !Number.isSafeInteger(timestampSeconds) ||
+    Math.abs(nowMs / 1000 - timestampSeconds) > SIGNATURE_TOLERANCE_SECONDS
+  ) {
     return false;
   }
 
@@ -49,11 +53,13 @@ export async function verifyYocoWebhookSignature(
     false,
     ["sign"],
   );
-  const expected = new Uint8Array(await crypto.subtle.sign(
-    "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(signedContent),
-  ));
+  const expected = new Uint8Array(
+    await crypto.subtle.sign(
+      "HMAC",
+      cryptoKey,
+      new TextEncoder().encode(signedContent),
+    ),
+  );
 
   const candidates = Array.from(
     signatureHeader.matchAll(/(?:^|\s)v1,([A-Za-z0-9+/=]+)/g),

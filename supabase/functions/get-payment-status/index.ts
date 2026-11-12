@@ -28,28 +28,39 @@ const defaultDependencies: StatusDependencies = {
   logError: (...values) => console.error(...values),
 };
 
-export function createPaymentStatusHandler(overrides: Partial<StatusDependencies> = {}) {
+export function createPaymentStatusHandler(
+  overrides: Partial<StatusDependencies> = {},
+) {
   const deps = { ...defaultDependencies, ...overrides };
 
   return async (req: Request): Promise<Response> => {
     const respond = deps.respond;
     if (req.method === "OPTIONS") return deps.options();
-    if (req.method !== "POST") return respond({ ok: false, error: "Method not allowed." }, 405);
-    if (!deps.originAllowed(req)) return respond({ ok: false, error: "Origin not allowed." }, 403);
+    if (req.method !== "POST") {
+      return respond({ ok: false, error: "Method not allowed." }, 405);
+    }
+    if (!deps.originAllowed(req)) {
+      return respond({ ok: false, error: "Origin not allowed." }, 403);
+    }
 
     try {
       const limitedBody = await deps.readBody(req, 8_192);
       if (!limitedBody.ok) {
         return respond({
           ok: false,
-          error: limitedBody.reason === "too_large" ? "Request is too large." : "Request must be valid UTF-8.",
+          error: limitedBody.reason === "too_large"
+            ? "Request is too large."
+            : "Request must be valid UTF-8.",
         }, limitedBody.reason === "too_large" ? 413 : 400);
       }
       let body: Record<string, unknown>;
       try {
         const parsed: unknown = JSON.parse(limitedBody.body);
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          return respond({ ok: false, error: "A JSON object is required." }, 400);
+          return respond(
+            { ok: false, error: "A JSON object is required." },
+            400,
+          );
         }
         body = parsed as Record<string, unknown>;
       } catch {
@@ -58,23 +69,35 @@ export function createPaymentStatusHandler(overrides: Partial<StatusDependencies
       const token = typeof body.token === "string" ? body.token.trim() : "";
       const attemptId = body.attempt_id;
       if (!token || !isUuid(attemptId)) {
-        return respond({ ok: false, error: "A valid portal token and payment attempt are required." }, 400);
+        return respond({
+          ok: false,
+          error: "A valid portal token and payment attempt are required.",
+        }, 400);
       }
 
       const admin = deps.createAdmin();
       const portal = await deps.resolveToken(admin, token);
-      if (!portal) return respond({ ok: false, error: "This portal link is invalid or has expired." }, 403);
+      if (!portal) {
+        return respond({
+          ok: false,
+          error: "This portal link is invalid or has expired.",
+        }, 403);
+      }
 
       const { data: attempt, error } = await admin
         .from("payment_attempts")
-        .select("id,invoice_id,client_id,amount_cents,currency,status,created_at,updated_at,expires_at,payment_id")
+        .select(
+          "id,invoice_id,client_id,amount_cents,currency,status,created_at,updated_at,expires_at,payment_id",
+        )
         .eq("id", attemptId)
         .eq("client_id", portal.client_id)
         .eq("provider", "yoco")
         .eq("environment", "test")
         .maybeSingle();
 
-      if (error || !attempt) return respond({ ok: false, error: "Payment attempt not found." }, 404);
+      if (error || !attempt) {
+        return respond({ ok: false, error: "Payment attempt not found." }, 404);
+      }
 
       let payment = null;
       let receipt = null;
@@ -91,7 +114,10 @@ export function createPaymentStatusHandler(overrides: Partial<StatusDependencies
             .maybeSingle(),
         ]);
         if (paymentResult.error || receiptResult.error) {
-          return respond({ ok: false, error: "Payment confirmation is temporarily unavailable." }, 503);
+          return respond({
+            ok: false,
+            error: "Payment confirmation is temporarily unavailable.",
+          }, 503);
         }
         payment = paymentResult.data;
         receipt = receiptResult.data;
@@ -114,8 +140,14 @@ export function createPaymentStatusHandler(overrides: Partial<StatusDependencies
         confirmed: attempt.status === "succeeded" && !!payment,
       });
     } catch (error) {
-      deps.logError("Payment status lookup failed:", error instanceof Error ? error.message : "Unknown error.");
-      return respond({ ok: false, error: "Payment status is temporarily unavailable." }, 500);
+      deps.logError(
+        "Payment status lookup failed:",
+        error instanceof Error ? error.message : "Unknown error.",
+      );
+      return respond({
+        ok: false,
+        error: "Payment status is temporarily unavailable.",
+      }, 500);
     }
   };
 }

@@ -18,23 +18,44 @@ Deno.test("normalizes documented Yoco event envelope and checkout metadata", () 
     },
   });
 
-  if (!event || event.id !== "evt_test_001" || event.type !== "payment.succeeded") {
+  if (
+    !event || event.id !== "evt_test_001" || event.type !== "payment.succeeded"
+  ) {
     throw new Error("A valid Yoco event envelope was not normalized.");
   }
 
   const details = getYocoPaymentSuccessDetails(event.payload);
-  if (!details || details.checkoutId !== "ch_test_001" ||
-      details.amount !== 2_500 || details.currency !== "ZAR" ||
-      details.mode !== "test" || details.transactionId !== null) {
-    throw new Error("The documented checkout metadata and payment fields were not mapped correctly.");
+  if (
+    !details || details.checkoutId !== "ch_test_001" ||
+    details.amount !== 2_500 || details.currency !== "ZAR" ||
+    details.mode !== "test" || details.transactionId !== null
+  ) {
+    throw new Error(
+      "The documented checkout metadata and payment fields were not mapped correctly.",
+    );
   }
 });
 
 Deno.test("accepts supported checkout and processing-mode field aliases", () => {
   const cases = [
-    { checkoutId: "ch_1", amount: 1000, currency: "ZAR", processingMode: "test" },
-    { checkout_id: "ch_2", amount: 1000, currency: "ZAR", processing_mode: "test" },
-    { metadata: { checkoutId: "ch_3" }, amount: 1000, currency: "ZAR", mode: "test" },
+    {
+      checkoutId: "ch_1",
+      amount: 1000,
+      currency: "ZAR",
+      processingMode: "test",
+    },
+    {
+      checkout_id: "ch_2",
+      amount: 1000,
+      currency: "ZAR",
+      processing_mode: "test",
+    },
+    {
+      metadata: { checkoutId: "ch_3" },
+      amount: 1000,
+      currency: "ZAR",
+      mode: "test",
+    },
   ];
 
   const expected = ["ch_1", "ch_2", "ch_3"];
@@ -92,10 +113,12 @@ Deno.test("maps documented Yoco refund IDs and checkout metadata without assumin
     status: "succeeded",
     metadata: { checkoutId: "ch_test_refund_001" },
   });
-  if (!documented || documented.providerRefundId !== "rf_test_001" ||
-      documented.checkoutId !== "ch_test_refund_001" ||
-      documented.amount !== 500 || documented.currency !== "ZAR" ||
-      documented.mode !== "test") {
+  if (
+    !documented || documented.providerRefundId !== "rf_test_001" ||
+    documented.checkoutId !== "ch_test_refund_001" ||
+    documented.amount !== 500 || documented.currency !== "ZAR" ||
+    documented.mode !== "test"
+  ) {
     throw new Error("The documented Yoco refund payload was not mapped.");
   }
 
@@ -107,7 +130,9 @@ Deno.test("maps documented Yoco refund IDs and checkout metadata without assumin
     metadata: { checkoutId: "ch_live_001" },
   });
   if (!live || live.mode !== "live") {
-    throw new Error("A live-mode refund event was not identified for safe manual review.");
+    throw new Error(
+      "A live-mode refund event was not identified for safe manual review.",
+    );
   }
 
   const unmapped = getYocoRefundSuccessDetails({
@@ -117,15 +142,47 @@ Deno.test("maps documented Yoco refund IDs and checkout metadata without assumin
     mode: "test",
   });
   if (unmapped !== null) {
-    throw new Error("A refund without its checkout metadata must not be mapped.");
+    throw new Error(
+      "A refund without its checkout metadata must not be mapped.",
+    );
   }
 
   const invalid = [
-    { id: "rf_1", amount: "500", currency: "ZAR", mode: "test", metadata: { checkoutId: "ch_1" } },
-    { id: "rf_1", amount: 0, currency: "ZAR", mode: "test", metadata: { checkoutId: "ch_1" } },
-    { id: "rf_1", amount: 500, currency: "", mode: "test", metadata: { checkoutId: "ch_1" } },
-    { id: "", amount: 500, currency: "ZAR", mode: "test", metadata: { checkoutId: "ch_1" } },
-    { id: "rf_1", amount: 500, currency: "ZAR", mode: "unknown", metadata: { checkoutId: "ch_1" } },
+    {
+      id: "rf_1",
+      amount: "500",
+      currency: "ZAR",
+      mode: "test",
+      metadata: { checkoutId: "ch_1" },
+    },
+    {
+      id: "rf_1",
+      amount: 0,
+      currency: "ZAR",
+      mode: "test",
+      metadata: { checkoutId: "ch_1" },
+    },
+    {
+      id: "rf_1",
+      amount: 500,
+      currency: "",
+      mode: "test",
+      metadata: { checkoutId: "ch_1" },
+    },
+    {
+      id: "",
+      amount: 500,
+      currency: "ZAR",
+      mode: "test",
+      metadata: { checkoutId: "ch_1" },
+    },
+    {
+      id: "rf_1",
+      amount: 500,
+      currency: "ZAR",
+      mode: "unknown",
+      metadata: { checkoutId: "ch_1" },
+    },
   ];
   for (const payload of invalid) {
     if (getYocoRefundSuccessDetails(payload)) {

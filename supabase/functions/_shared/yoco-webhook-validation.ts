@@ -18,12 +18,17 @@ export type NormalizedYocoWebhookEvent = {
   payload: JsonObject;
 };
 
-export function normalizeYocoWebhookEvent(value: unknown): NormalizedYocoWebhookEvent | null {
+export function normalizeYocoWebhookEvent(
+  value: unknown,
+): NormalizedYocoWebhookEvent | null {
   const event = asObject(value);
   const id = nonEmptyString(event.id);
   const type = nonEmptyString(event.type);
   const rawPayload = event.payload ?? event.data;
-  if (!id || !type || !rawPayload || typeof rawPayload !== "object" || Array.isArray(rawPayload)) return null;
+  if (
+    !id || !type || !rawPayload || typeof rawPayload !== "object" ||
+    Array.isArray(rawPayload)
+  ) return null;
   return {
     id,
     type,
@@ -56,7 +61,10 @@ export function getYocoPaymentSuccessDetails(payload: JsonObject) {
     payload.transactionId ?? payload.paymentId,
   );
 
-  if (!checkoutId || !Number.isSafeInteger(amount) || amount < 1 || currency !== "ZAR" || mode !== "test") {
+  if (
+    !checkoutId || !Number.isSafeInteger(amount) || amount < 1 ||
+    currency !== "ZAR" || mode !== "test"
+  ) {
     return null;
   }
 
@@ -70,10 +78,14 @@ export function getYocoRefundSuccessDetails(payload: JsonObject) {
   const checkoutId = getYocoCheckoutId(payload);
   const amount = payload.amount as number;
   const currency = nonEmptyString(payload.currency);
-  const mode = nonEmptyString(payload.mode ?? payload.processingMode ?? payload.processing_mode);
+  const mode = nonEmptyString(
+    payload.mode ?? payload.processingMode ?? payload.processing_mode,
+  );
 
-  if (!providerRefundId || !checkoutId || !Number.isSafeInteger(amount) ||
-      amount < 1 || currency !== "ZAR" || (mode !== "test" && mode !== "live")) {
+  if (
+    !providerRefundId || !checkoutId || !Number.isSafeInteger(amount) ||
+    amount < 1 || currency !== "ZAR" || (mode !== "test" && mode !== "live")
+  ) {
     return null;
   }
 

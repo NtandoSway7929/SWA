@@ -42,7 +42,8 @@ export function buildYocoOperationalAlerts(
         severity: "medium",
         code: "checkout_attachment_unconfirmed",
         created_at: attempt.created_at,
-        message: "Attempt has no attached checkout after 15 minutes. Verify provider state before retrying; an orphaned checkout is not confirmed by this signal.",
+        message:
+          "Attempt has no attached checkout after 15 minutes. Verify provider state before retrying; an orphaned checkout is not confirmed by this signal.",
       });
     } else if (
       attempt.status === "pending" &&
@@ -55,22 +56,30 @@ export function buildYocoOperationalAlerts(
         severity: "medium",
         code: "checkout_expired_unresolved",
         created_at: attempt.created_at,
-        message: "Checkout expiry has passed but the attempt remains pending. Verify provider state before changing its status.",
+        message:
+          "Checkout expiry has passed but the attempt remains pending. Verify provider state before changing its status.",
       });
     }
   }
 
   for (const event of events) {
     const ageMs = now - Date.parse(event.received_at || "");
-    const stale = ["received", "processing"].includes(event.processing_status) &&
+    const stale =
+      ["received", "processing"].includes(event.processing_status) &&
       Number.isFinite(ageMs) && ageMs >= staleWebhookMs;
-    if (event.processing_status === "requires_review" || event.processing_status === "failed_retryable" || stale) {
+    if (
+      event.processing_status === "requires_review" ||
+      event.processing_status === "failed_retryable" || stale
+    ) {
       alerts.push({
         source: "webhook_event",
         id: event.id,
         provider_event_id: event.provider_event_id,
-        severity: event.processing_status === "requires_review" ? "high" : "medium",
-        code: event.failure_code || (stale ? "webhook_processing_stale" : "webhook_retry_required"),
+        severity: event.processing_status === "requires_review"
+          ? "high"
+          : "medium",
+        code: event.failure_code ||
+          (stale ? "webhook_processing_stale" : "webhook_retry_required"),
         processing_status: event.processing_status,
         received_at: event.received_at,
         message: event.processing_status === "requires_review"

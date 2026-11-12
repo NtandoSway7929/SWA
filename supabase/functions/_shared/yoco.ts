@@ -3,7 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 export const ALLOWED_ORIGIN = "https://swayphics.co.za";
 export const corsHeaders = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type, idempotency-key, webhook-id, webhook-timestamp, webhook-signature",
+  "Access-Control-Allow-Headers":
+    "authorization, apikey, x-client-info, content-type, idempotency-key, webhook-id, webhook-timestamp, webhook-signature",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Vary": "Origin",
 };
@@ -34,7 +35,10 @@ export async function readLimitedTextBody(req: Request, maxBytes: number) {
     offset += chunk.byteLength;
   }
   try {
-    return { ok: true as const, body: new TextDecoder("utf-8", { fatal: true }).decode(bytes) };
+    return {
+      ok: true as const,
+      body: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+    };
   } catch {
     return { ok: false as const, reason: "invalid_utf8" as const };
   }
@@ -106,10 +110,13 @@ export async function resolvePortalToken(admin: any, rawToken: string) {
 
 export function safeError(error: unknown) {
   // Never return provider response bodies, secrets, SQL errors, or stack traces.
-  return error instanceof Error ? error.message : "The payment service is temporarily unavailable.";
+  return error instanceof Error
+    ? error.message
+    : "The payment service is temporarily unavailable.";
 }
 
 export function isUuid(value: unknown): value is string {
   return typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(value);
 }

@@ -3,7 +3,14 @@ import {
   validateCheckoutRequest,
   validateYocoCheckoutResponse,
 } from "../_shared/yoco-validation.ts";
-import { checkOrigin, isUuid, json, readLimitedTextBody, resolvePortalToken, safeError } from "../_shared/yoco.ts";
+import {
+  checkOrigin,
+  isUuid,
+  json,
+  readLimitedTextBody,
+  resolvePortalToken,
+  safeError,
+} from "../_shared/yoco.ts";
 
 Deno.test("checkout request validation rejects malformed, unsafe and out-of-range inputs", () => {
   const valid = {
@@ -38,7 +45,9 @@ Deno.test("checkout request validation rejects malformed, unsafe and out-of-rang
     "header-key-0001",
   );
   if (!headerWins.ok || headerWins.idempotencyKey !== "header-key-0001") {
-    throw new Error("The explicit Idempotency-Key header did not take precedence.");
+    throw new Error(
+      "The explicit Idempotency-Key header did not take precedence.",
+    );
   }
 });
 
@@ -49,7 +58,9 @@ Deno.test("return URL allow-list rejects lookalike hosts, credentials and non-HT
     "https://portal.swayphics.co.za/return",
   ];
   for (const value of accepted) {
-    if (!isSwayphicsReturnUrl(value)) throw new Error("Expected return URL to be accepted: " + value);
+    if (!isSwayphicsReturnUrl(value)) {
+      throw new Error("Expected return URL to be accepted: " + value);
+    }
   }
 
   const rejected = [
@@ -61,7 +72,9 @@ Deno.test("return URL allow-list rejects lookalike hosts, credentials and non-HT
     "https://swayphics.co.za.evil/return",
   ];
   for (const value of rejected) {
-    if (isSwayphicsReturnUrl(value)) throw new Error("Unsafe return URL was accepted: " + value);
+    if (isSwayphicsReturnUrl(value)) {
+      throw new Error("Unsafe return URL was accepted: " + value);
+    }
   }
 });
 
@@ -82,7 +95,10 @@ Deno.test("Yoco checkout response must match the expected test amount and hosted
     { ...valid, amount: 2_499 },
     { ...valid, currency: "USD" },
     { ...valid, processingMode: "live" },
-    { ...valid, redirectUrl: "https://payments.yoco.com.attacker.example/checkout" },
+    {
+      ...valid,
+      redirectUrl: "https://payments.yoco.com.attacker.example/checkout",
+    },
     { ...valid, redirectUrl: "http://payments.yoco.com/checkout" },
     { ...valid, redirectUrl: "https://user:pass@payments.yoco.com/checkout" },
     { ...valid, id: "" },
@@ -96,7 +112,10 @@ Deno.test("Yoco checkout response must match the expected test amount and hosted
 
 Deno.test("portal token resolver hashes the raw token and enforces active and expiry state", async () => {
   const token = "portal-token-test-value-that-is-long-enough-123456";
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(token),
+  );
   const expectedHash = Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0")).join("");
   let selectedHash = "";
@@ -115,12 +134,18 @@ Deno.test("portal token resolver hashes the raw token and enforces active and ex
   };
   const admin = {
     from(table: string) {
-      if (table !== "client_portal_tokens") throw new Error("Unexpected table: " + table);
+      if (table !== "client_portal_tokens") {
+        throw new Error("Unexpected table: " + table);
+      }
       return {
-        select() { return this; },
+        select() {
+          return this;
+        },
         eq(column: string, value: unknown) {
           if (column === "token_hash") selectedHash = String(value);
-          if (column === "active" && value === true && row.active !== true) return { maybeSingle: async () => ({ data: null, error: null }) };
+          if (column === "active" && value === true && row.active !== true) {
+            return { maybeSingle: async () => ({ data: null, error: null }) };
+          }
           return this;
         },
         maybeSingle: async () => ({ data: row, error: null }),
@@ -136,7 +161,9 @@ Deno.test("portal token resolver hashes the raw token and enforces active and ex
 
   const resolved = await resolvePortalToken(admin, token);
   if (!resolved || selectedHash !== expectedHash || !updated) {
-    throw new Error("A valid token was not securely hashed, resolved and touched.");
+    throw new Error(
+      "A valid token was not securely hashed, resolved and touched.",
+    );
   }
   if (await resolvePortalToken(admin, "short")) {
     throw new Error("A short portal token was accepted.");
@@ -153,14 +180,21 @@ Deno.test("portal token resolver hashes the raw token and enforces active and ex
 });
 
 Deno.test("UUID helper rejects malformed IDs and safeError does not invent non-error details", () => {
-  if (!isUuid("123e4567-e89b-42d3-a456-426614174000")) throw new Error("Valid UUID rejected.");
-  if (isUuid("123e4567-e89b-42d3-a456")) throw new Error("Malformed UUID accepted.");
-  if (safeError(new Error("test failure")) !== "test failure") throw new Error("Unexpected safeError output.");
-  if (safeError("opaque") !== "The payment service is temporarily unavailable.") {
+  if (!isUuid("123e4567-e89b-42d3-a456-426614174000")) {
+    throw new Error("Valid UUID rejected.");
+  }
+  if (isUuid("123e4567-e89b-42d3-a456")) {
+    throw new Error("Malformed UUID accepted.");
+  }
+  if (safeError(new Error("test failure")) !== "test failure") {
+    throw new Error("Unexpected safeError output.");
+  }
+  if (
+    safeError("opaque") !== "The payment service is temporarily unavailable."
+  ) {
     throw new Error("Non-Error values should receive the generic safe error.");
   }
 });
-
 
 Deno.test("shared HTTP helpers enforce the configured browser origin and no-store responses", async () => {
   const allowed = new Request("https://example.test/function", {
@@ -171,23 +205,37 @@ Deno.test("shared HTTP helpers enforce the configured browser origin and no-stor
     method: "POST",
     headers: { origin: "https://swayphics.co.za.attacker.example" },
   });
-  const serverToServer = new Request("https://example.test/function", { method: "POST" });
+  const serverToServer = new Request("https://example.test/function", {
+    method: "POST",
+  });
 
-  if (!checkOrigin(allowed)) throw new Error("The configured Swayphics origin was rejected.");
+  if (!checkOrigin(allowed)) {
+    throw new Error("The configured Swayphics origin was rejected.");
+  }
   if (checkOrigin(denied)) throw new Error("A lookalike origin was accepted.");
-  if (!checkOrigin(serverToServer)) throw new Error("A server-to-server request without Origin was rejected.");
+  if (!checkOrigin(serverToServer)) {
+    throw new Error("A server-to-server request without Origin was rejected.");
+  }
 
   const response = json({ ok: true });
   if (response.headers.get("cache-control") !== "no-store") {
-    throw new Error("Payment API response is missing no-store cache protection.");
+    throw new Error(
+      "Payment API response is missing no-store cache protection.",
+    );
   }
-  if (response.headers.get("access-control-allow-origin") !== "https://swayphics.co.za") {
-    throw new Error("Payment API response has an unexpected CORS allow-origin value.");
+  if (
+    response.headers.get("access-control-allow-origin") !==
+      "https://swayphics.co.za"
+  ) {
+    throw new Error(
+      "Payment API response has an unexpected CORS allow-origin value.",
+    );
   }
   const payload = await response.json();
-  if (payload.ok !== true) throw new Error("JSON response helper did not preserve its payload.");
+  if (payload.ok !== true) {
+    throw new Error("JSON response helper did not preserve its payload.");
+  }
 });
-
 
 Deno.test("bounded request reader enforces streamed byte limits and strict UTF-8", async () => {
   const accepted = await readLimitedTextBody(
