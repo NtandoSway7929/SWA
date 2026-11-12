@@ -395,7 +395,7 @@ export function createYocoWebhookHandler(
         if (!details) {
           return await review(
             "incomplete_refund_payload",
-            "Verified refund event lacked a provider refund ID, checkout reference, amount, currency or mode.",
+            "Verified refund event lacked a checkout reference, valid amount, currency or processing mode.",
           );
         }
 
