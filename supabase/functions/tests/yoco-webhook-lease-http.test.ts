@@ -236,12 +236,13 @@ Deno.test("terminal duplicate event is acknowledged without claiming a lease", a
   }
 });
 
-function refundEvent(mode = "test") {
+function refundEvent(mode = "test", refundId: string | null = null) {
   return {
     id: "evt_refund_succeeded_lease",
     type: "refund.succeeded",
     payload: {
-      id: "rf_test_refund_001",
+      id: "evt_refund_succeeded_lease",
+      ...(refundId ? { refundId } : {}),
       amount: 500,
       currency: "ZAR",
       mode,
@@ -264,7 +265,7 @@ Deno.test("refund success maps documented checkout metadata to the settled test 
     lookup.filters.environment !== "test" ||
     lookup.filters.provider_checkout_id !== checkoutId ||
     refund.args.p_payment_id !== paymentId ||
-    refund.args.p_provider_refund_id !== "rf_test_refund_001" ||
+    refund.args.p_provider_refund_id !== null ||
     refund.args.p_amount_cents !== 500 ||
     refund.args.p_currency !== "ZAR" ||
     refund.args.p_lease_token !== leaseToken
@@ -272,6 +273,18 @@ Deno.test("refund success maps documented checkout metadata to the settled test 
     throw new Error(
       "Documented refund metadata was not mapped to the associated payment under the active lease.",
     );
+  }
+});
+
+Deno.test("preserves a separate provider refund ID only when Yoco actually supplies one", async () => {
+  const h = harness();
+  const response = await h.handler(request(refundEvent("test", "rf_test_resource_001")));
+  const refund = h.calls.find((x) =>
+    x.name === "yoco_record_refund_success_with_lease"
+  );
+  if (response.status !== 200 || !refund ||
+      refund.args.p_provider_refund_id !== "rf_test_resource_001") {
+    throw new Error("A separately supplied refund resource ID was not preserved.");
   }
 });
 
