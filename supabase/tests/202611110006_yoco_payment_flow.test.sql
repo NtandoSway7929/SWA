@@ -209,7 +209,7 @@ begin
 
     v_refund := innerme_private.record_yoco_refund_success(
         v_refund_event_id, v_payment_id,
-        'yoco_test_refund_0001', 2000, 'ZAR'
+        null, 2000, 'ZAR'
     );
     perform pg_temp.assert_true((v_refund->>'recorded')::boolean, 'verified partial refund is recorded');
 
@@ -264,8 +264,8 @@ begin
         'issued receipt update rejected'
     );
     perform pg_temp.expect_error(
-        format('update public.payment_refunds set reason = %L where provider_refund_id = %L',
-               'tamper', 'yoco_test_refund_0001'),
+        format('update public.payment_refunds set reason = %L where provider_event_id = %L',
+               'tamper', 'evt_test_refund_0001'),
         'successful refund update rejected'
     );
 
