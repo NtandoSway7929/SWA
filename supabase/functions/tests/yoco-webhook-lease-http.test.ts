@@ -198,13 +198,14 @@ Deno.test("refund success maps documented checkout metadata to the settled test 
   }
 });
 
-Deno.test("live-mode refund notifications are retained for review and never written to the test ledger", async () => {
+Deno.test("live-mode refund notifications are acknowledged and ignored before entering the test database", async () => {
   const h = harness();
   const response = await h.handler(request(refundEvent("live")));
-  const review = h.updates.find((x) => x.p_failure_code === "refund_mode_not_enabled");
-  if (response.status !== 200 || !review ||
-      h.calls.some((x) => x.name === "yoco_record_refund_success_with_lease")) {
-    throw new Error("A live refund notification was not isolated from the test ledger.");
+  const result = await body(response);
+  if (response.status !== 200 || result.ignored !== true ||
+      result.reason !== "live_mode_not_enabled" ||
+      h.calls.length !== 0 || h.updates.length !== 0 || h.lookups.length !== 0) {
+    throw new Error("A live-mode refund notification entered the test webhook inbox or ledger.");
   }
 });
 
