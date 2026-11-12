@@ -237,18 +237,32 @@ export function createYocoWebhookHandler(overrides: Partial<WebhookDependencies>
 
       if (event.type === "refund.succeeded") {
         const details = getYocoRefundSuccessDetails(event.payload);
-        const attemptId = details?.paymentAttemptId ?? "";
-        const { data: attempt, error } = attemptId
-          ? await admin.from("payment_attempts").select("id,payment_id")
-            .eq("id", attemptId).eq("provider", "yoco").eq("environment", "test").maybeSingle()
-          : { data: null, error: null };
+        if (!details) {
+          return await review("incomplete_refund_payload",
+            "Verified refund event lacked a provider refund ID, checkout reference, amount, currency or mode.");
+        }
+
+        // This release only mutates the test ledger. Yoco documents refund
+        // processing as requiring live keys, so live notifications are retained
+        // for manual review rather than being written into test payment records.
+        if (details.mode !== "test") {
+          return await review("refund_mode_not_enabled",
+            "Refund event is not in test mode; automatic refund ledger updates are disabled for this release.");
+        }
+
+        const { data: attempt, error } = await admin.from("payment_attempts")
+          .select("id,payment_id")
+          .eq("provider", "yoco")
+          .eq("environment", "test")
+          .eq("provider_checkout_id", details.checkoutId)
+          .maybeSingle();
         if (error) {
-          deps.logError("Could not resolve Yoco refund attempt:", error.message);
+          deps.logError("Could not resolve Yoco refund checkout:", error.message);
           return respond({ ok: false, error: "Verified refund could not be matched yet." }, 503);
         }
-        if (!details || !attempt?.payment_id) {
+        if (!attempt?.payment_id) {
           return await review("refund_mapping_required",
-            "Verified refund event requires an unambiguous local payment mapping.");
+            "Verified refund checkout did not match a settled local test payment.");
         }
 
         const associated = await updateEvent("processing", { attemptId: attempt.id });
