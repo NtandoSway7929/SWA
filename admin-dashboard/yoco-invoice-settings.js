@@ -181,7 +181,7 @@
         var style = document.createElement("style");
         style.textContent = `
             #sway-yoco-invoice-settings{position:fixed;right:22px;bottom:22px;z-index:9998;font-family:Montserrat,Arial,sans-serif;color:#081533}
-            #sway-yoco-invoice-settings .syi-launch{border:0;border-radius:14px;padding:13px 17px;background:linear-gradient(120deg,#002096,#0152F4);color:#fff;font-weight:700;box-shadow:0 12px 32px #00209635;cursor:pointer}
+            #sway-yoco-invoice-settings .syi-launch{display:none;border:0;border-radius:14px;padding:13px 17px;background:linear-gradient(120deg,#002096,#0152F4);color:#fff;font-weight:700;box-shadow:0 12px 32px #00209635;cursor:pointer}
             #sway-yoco-invoice-settings .syi-panel{display:none;position:fixed;right:22px;bottom:78px;width:min(440px,calc(100vw - 28px));max-height:min(78vh,720px);overflow:auto;background:#fff;border:1px solid #dce5f5;border-radius:20px;padding:22px;box-shadow:0 24px 70px #07163835}
             #sway-yoco-invoice-settings[data-open=true] .syi-panel{display:block}
             #sway-yoco-invoice-settings .syi-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:15px}
@@ -216,15 +216,28 @@
             '<label class="syi-picker">Select invoice<select data-yoco-invoice></select></label>' +
             '<div data-yoco-settings-form><p>Loading invoices…</p></div><p data-yoco-settings-status role="status" aria-live="polite"></p></section>';
         document.body.appendChild(root);
-        root.querySelector("[data-open]").addEventListener("click", async function () {
-            root.setAttribute("data-open", root.getAttribute("data-open") === "true" ? "false" : "true");
-            if (root.getAttribute("data-open") !== "true") return;
+        async function openSettings() {
+            root.setAttribute("data-open", "true");
             status("Loading eligible invoices…", false);
             try { await loadInvoices(); status("", false); }
             catch (error) { status(error.message || "Unable to load invoices.", true); }
+        }
+        root.querySelector("[data-open]").addEventListener("click", function () {
+            if (root.getAttribute("data-open") === "true") {
+                root.setAttribute("data-open", "false");
+                return;
+            }
+            openSettings();
         });
         root.querySelector("[data-close]").addEventListener("click", function () { root.setAttribute("data-open", "false"); });
         root.querySelector("[data-yoco-invoice]").addEventListener("change", renderForm);
+        document.addEventListener("click", function (event) {
+            var button = event.target.closest('[data-view="invoice-settings"]');
+            if (!button) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            openSettings();
+        }, true);
     }
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount, {once: true});
