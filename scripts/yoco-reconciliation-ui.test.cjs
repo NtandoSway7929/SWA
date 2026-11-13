@@ -218,3 +218,9 @@ test("reconciliation HTTP integration suite covers authorization, test scope, hi
   assert.match(endpointTests, /fails closed/);
   assert.match(endpointTests, /malformed JSON/);
 });
+
+
+test("reconciliation interface no longer renders a floating dashboard launcher", () => {
+  assert.doesNotMatch(ui, /yr-launch|data-open-panel|Payment reconciliation<\\/button>/);
+  assert.match(ui, /<section class="yr-panel"/);
+});
