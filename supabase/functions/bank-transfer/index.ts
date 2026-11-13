@@ -1,3 +1,4 @@
+// Manual bank transfer submission and review endpoint.
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 
 const BUCKET = "swayphics-payment-proofs";
