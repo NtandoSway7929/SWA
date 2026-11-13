@@ -51,6 +51,14 @@ Deno.test("bank transfer proof validation checks real file signatures, not just 
       throw new Error("Proof signature result mismatch for " + mime);
     }
   }
+  if (
+    !bankTransferProofMatchesMime(
+      "IMAGE/PNG",
+      new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+    )
+  ) {
+    throw new Error("Uppercase MIME labels should be normalized before validation.");
+  }
 });
 
 Deno.test("bank transfer handler rejects methods and cross-origin requests before database access", async () => {
