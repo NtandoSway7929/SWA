@@ -200,19 +200,35 @@ jobs:
               has_column_privilege('service_role','public.client_portal_tokens','last_used_at','UPDATE') as last_used_update
             from pg_roles r where r.rolname='service_role';
             select
+              'table' as acl_scope,
               grantor.rolname as grantor,
               grantee.rolname as grantee,
               privilege_type,
               is_grantable,
-              coalesce(att.attname,'<table-level>') as column_name
+              '<table-level>' as column_name
             from pg_class c
             cross join lateral aclexplode(coalesce(c.relacl, acldefault('r',c.relowner))) a
             join pg_roles grantor on grantor.oid=a.grantor
             join pg_roles grantee on grantee.oid=a.grantee
-            left join pg_attribute att on att.attrelid=c.oid and att.attnum=a.grantor and false
             where c.oid='public.client_portal_tokens'::regclass
               and a.privilege_type='UPDATE'
-            order by grantee.rolname, column_name;
+            union all
+            select
+              'column' as acl_scope,
+              grantor.rolname as grantor,
+              grantee.rolname as grantee,
+              privilege_type,
+              is_grantable,
+              att.attname as column_name
+            from pg_attribute att
+            cross join lateral aclexplode(att.attacl) a
+            join pg_roles grantor on grantor.oid=a.grantor
+            join pg_roles grantee on grantee.oid=a.grantee
+            where att.attrelid='public.client_portal_tokens'::regclass
+              and att.attnum > 0
+              and not att.attisdropped
+              and a.privilege_type='UPDATE'
+            order by grantee, column_name;
             select member.rolname as member, role.rolname as granted_role
             from pg_auth_members m
             join pg_roles role on role.oid=m.roleid
