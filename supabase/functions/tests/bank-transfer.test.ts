@@ -145,18 +145,25 @@ Deno.test("bank-transfer admin actions return 401 for missing or expired session
     createAdmin: () => ({
       from: () => {
         databaseReads++;
-        throw new Error("Unauthenticated requests must not read protected data");
+        throw new Error(
+          "Unauthenticated requests must not read protected data",
+        );
       },
     }),
     createUserClient: () => ({
       auth: {
         getUser: async () => {
           authLookups++;
-          return { data: { user: null }, error: { message: "Invalid JWT" } };
+          return {
+            data: { user: null },
+            error: { message: "Invalid JWT" },
+          };
         },
       },
       rpc: async () => {
-        throw new Error("Admin authorization must not run without an authenticated user");
+        throw new Error(
+          "Admin authorization must not run without an authenticated user",
+        );
       },
     }),
   });
@@ -185,21 +192,32 @@ Deno.test("bank-transfer admin actions return 401 for missing or expired session
     authLookups !== 1 ||
     databaseReads !== 0
   ) {
-    throw new Error("Missing or expired admin sessions must return 401 before protected data is read.");
+    throw new Error(
+      "Missing or expired admin sessions must return 401 before protected data is read.",
+    );
   }
 });
 
 Deno.test("bank-transfer admin authorization service failures return 503", async () => {
   const handler = createBankTransferHandler({
-    createAdmin: () => ({ from: () => { throw new Error("No protected read expected"); } }),
+    createAdmin: () => ({
+      from: () => {
+        throw new Error("No protected read expected");
+      },
+    }),
     createUserClient: () => ({
       auth: {
         getUser: async () => ({
-          data: { user: { id: "123e4567-e89b-42d3-a456-426614174000" } },
+          data: {
+            user: { id: "123e4567-e89b-42d3-a456-426614174000" },
+          },
           error: null,
         }),
       },
-      rpc: async () => ({ data: null, error: { message: "RPC unavailable" } }),
+      rpc: async () => ({
+        data: null,
+        error: { message: "RPC unavailable" },
+      }),
     }),
   });
 
@@ -214,7 +232,9 @@ Deno.test("bank-transfer admin authorization service failures return 503", async
     }),
   );
   if (response.status !== 503) {
-    throw new Error("An administrator authorization service failure must not be reported as an ordinary 403.");
+    throw new Error(
+      "An administrator authorization service failure must not be reported as an ordinary 403.",
+    );
   }
 });
 
