@@ -106,10 +106,20 @@ async function resolvePortalToken(admin: any, rawToken: string) {
   const { data, error } = await admin.from("client_portal_tokens")
     .select("id,client_id,active,expires_at")
     .eq("token_hash", tokenHash).eq("active", true).maybeSingle();
-  if (
-    error || !data ||
-    (data.expires_at && new Date(data.expires_at).getTime() <= Date.now())
-  ) return null;
+  if (error) {
+    console.error("bank-transfer portal token lookup failed", {
+      code: error.code || "unknown",
+    });
+    return null;
+  }
+  if (!data) {
+    console.warn("bank-transfer portal token was not found or inactive");
+    return null;
+  }
+  if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) {
+    console.warn("bank-transfer portal token was expired");
+    return null;
+  }
   await admin.from("client_portal_tokens").update({
     last_used_at: new Date().toISOString(),
   }).eq("id", data.id);
@@ -536,6 +546,7 @@ export function createBankTransferHandler(overrides: Partial<Deps> = {}) {
     }
     const origin = req.headers.get("origin");
     if (origin && origin !== ALLOWED_ORIGIN) {
+      console.warn("bank-transfer request rejected: origin mismatch");
       return json({ ok: false, error: "Origin not allowed." }, 403);
     }
 
