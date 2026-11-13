@@ -36,7 +36,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: yoco-disposable-qa-${{ github.ref }}
+  group: yoco-disposable-qa-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
