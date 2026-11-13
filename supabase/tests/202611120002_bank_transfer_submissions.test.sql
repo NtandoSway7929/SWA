@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(9);
+select extensions.plan(12);
 
 select extensions.has_table('public','bank_transfer_submissions','bank transfer submissions table exists');
 select extensions.ok(
@@ -18,6 +18,18 @@ select extensions.ok(
   not has_table_privilege('anon','public.bank_transfer_submissions','select')
   and not has_table_privilege('authenticated','public.bank_transfer_submissions','select'),
   'portal and authenticated roles cannot query bank transfer submissions directly'
+);
+select extensions.ok(
+  has_table_privilege('service_role','public.client_portal_tokens','select'),
+  'service role can read portal tokens for server-side validation'
+);
+select extensions.ok(
+  has_column_privilege('service_role','public.client_portal_tokens','last_used_at','update'),
+  'service role can update the portal token last-used timestamp'
+);
+select extensions.ok(
+  not has_column_privilege('service_role','public.client_portal_tokens','active','update'),
+  'service role cannot change portal token activation state'
 );
 select extensions.ok(
   not has_function_privilege('anon','public.admin_approve_bank_transfer_submission(uuid,uuid)','execute')
