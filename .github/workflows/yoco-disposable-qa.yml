@@ -13,6 +13,7 @@ on:
       - "admin-dashboard/index.html"
       - "scripts/yoco-invoice-settings.test.cjs"
       - "scripts/yoco-reconciliation-ui.test.cjs"
+      - "scripts/bank-transfer-review.test.cjs"
       - ".github/workflows/yoco-disposable-qa.yml"
   pull_request:
     branches:
@@ -27,6 +28,7 @@ on:
       - "admin-dashboard/index.html"
       - "scripts/yoco-invoice-settings.test.cjs"
       - "scripts/yoco-reconciliation-ui.test.cjs"
+      - "scripts/bank-transfer-review.test.cjs"
       - ".github/workflows/yoco-disposable-qa.yml"
   workflow_dispatch:
 
