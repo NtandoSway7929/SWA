@@ -138,6 +138,86 @@ Deno.test("bank transfer detail and upload actions reject invalid private portal
   }
 });
 
+Deno.test("bank-transfer admin actions return 401 for missing or expired sessions", async () => {
+  let authLookups = 0;
+  let databaseReads = 0;
+  const handler = createBankTransferHandler({
+    createAdmin: () => ({
+      from: () => {
+        databaseReads++;
+        throw new Error("Unauthenticated requests must not read protected data");
+      },
+    }),
+    createUserClient: () => ({
+      auth: {
+        getUser: async () => {
+          authLookups++;
+          return { data: { user: null }, error: { message: "Invalid JWT" } };
+        },
+      },
+      rpc: async () => {
+        throw new Error("Admin authorization must not run without an authenticated user");
+      },
+    }),
+  });
+
+  const missing = await handler(
+    new Request("https://functions.test/bank-transfer", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "list" }),
+    }),
+  );
+  const expired = await handler(
+    new Request("https://functions.test/bank-transfer", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer expired-session-token",
+      },
+      body: JSON.stringify({ action: "list" }),
+    }),
+  );
+
+  if (
+    missing.status !== 401 ||
+    expired.status !== 401 ||
+    authLookups !== 1 ||
+    databaseReads !== 0
+  ) {
+    throw new Error("Missing or expired admin sessions must return 401 before protected data is read.");
+  }
+});
+
+Deno.test("bank-transfer admin authorization service failures return 503", async () => {
+  const handler = createBankTransferHandler({
+    createAdmin: () => ({ from: () => { throw new Error("No protected read expected"); } }),
+    createUserClient: () => ({
+      auth: {
+        getUser: async () => ({
+          data: { user: { id: "123e4567-e89b-42d3-a456-426614174000" } },
+          error: null,
+        }),
+      },
+      rpc: async () => ({ data: null, error: { message: "RPC unavailable" } }),
+    }),
+  });
+
+  const response = await handler(
+    new Request("https://functions.test/bank-transfer", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer authenticated-session-token",
+      },
+      body: JSON.stringify({ action: "list" }),
+    }),
+  );
+  if (response.status !== 503) {
+    throw new Error("An administrator authorization service failure must not be reported as an ordinary 403.");
+  }
+});
+
 Deno.test("admin bank-transfer queue rejects users without Swayphics administrator authorization", async () => {
   let reads = 0;
   const handler = createBankTransferHandler({
