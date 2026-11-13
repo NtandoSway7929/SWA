@@ -187,7 +187,7 @@
     document.head.appendChild(style);
     root = document.createElement("div");
     root.id = "sway-bank-transfer-review";
-    root.innerHTML = '<button type="button" class="btr-launch" data-btr-open>Bank transfer review <span data-btr-count>—</span></button>' +
+    root.innerHTML = '<button type="button" class="btr-launch" data-btr-open>Bank transfer review <span data-btr-count>Open</span></button>' +
       '<section class="btr-panel" aria-label="Bank transfer review queue"><div class="btr-head"><div><h2>Bank transfer submissions</h2>' +
       '<p>Verify cleared deposits against the bank account before recording any payment.</p></div><button type="button" class="btr-close" data-btr-close aria-label="Close">×</button></div>' +
       '<div class="btr-list" data-btr-list><div class="btr-empty">Open the queue to load submissions.</div></div><p data-btr-status role="status" aria-live="polite"></p></section>';
@@ -199,7 +199,6 @@
     });
     root.querySelector("[data-btr-close]").addEventListener("click",function(){root.setAttribute("data-open","false")});
     root.querySelector("[data-btr-list]").addEventListener("click",handleClick);
-    load();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});
   else mount();
