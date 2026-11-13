@@ -150,6 +150,7 @@
   }
   function mount() {
     if (document.getElementById("sway-bank-transfer-review")) return;
+    if (!accessToken()) return;
     var style = document.createElement("style");
     style.textContent = `
       #sway-bank-transfer-review{position:fixed;right:22px;bottom:84px;z-index:9997;font-family:Montserrat,Arial,sans-serif;color:#252B31}
@@ -198,6 +199,7 @@
     });
     root.querySelector("[data-btr-close]").addEventListener("click",function(){root.setAttribute("data-open","false")});
     root.querySelector("[data-btr-list]").addEventListener("click",handleClick);
+    load();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});
   else mount();
