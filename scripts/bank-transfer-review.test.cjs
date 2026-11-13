@@ -26,7 +26,7 @@ test("client uploads use a portal token and do not write to the payments ledger"
   assert.match(portal, /functions\/v1\/bank-transfer/);
   assert.match(portal, /formData\.append\("token",token\)/);
   assert.match(edge, /resolvePortalToken/);
-  assert.match(edge, /admin\.from\("bank_transfer_submissions"\)\.insert/);
+  assert.match(edge, /admin\.from\("bank_transfer_submissions"\)[\s\S]*?\.insert\(/);
   assert.doesNotMatch(edge, /admin\.from\("payments"\)\.insert/);
   assert.match(edge, /Your invoice will remain outstanding until Swayphics verifies the deposit/);
   assert.match(edge, /String\(data\.currency \|\| "ZAR"\)\.toUpperCase\(\) !== "ZAR"/);
@@ -45,7 +45,7 @@ test("proof uploads are size limited, type checked and stored in a private bucke
 
 test("only active administrators can access review actions and proof links", () => {
   assert.match(edge, /authorizeAdmin/);
-  assert.match(edge, /userClient\.rpc\("is_swayphics_admin"\)/);
+  assert.match(edge, /userClient\.rpc\(\s*"is_swayphics_admin",?\s*\)/);
   assert.match(edge, /if \(!reviewerId\) return json/);
   assert.match(adminUi, /Confirm deposit &amp; record/);
   assert.match(adminUi, /Only approve after confirming the deposit has cleared/);
