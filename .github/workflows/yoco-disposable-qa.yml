@@ -176,7 +176,7 @@ jobs:
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
-            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261112190855_bank_transfer_submissions.sql' \) \
+            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' \) \
             | sort)
           test "${#migrations[@]}" -eq 14
           for migration in "${migrations[@]}"; do
