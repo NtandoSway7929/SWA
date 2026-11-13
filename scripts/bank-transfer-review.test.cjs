@@ -8,7 +8,7 @@ const portal = read("client-portal/index.html");
 const adminHtml = read("admin-dashboard/index.html");
 const adminUi = read("admin-dashboard/bank-transfer-review.js");
 const edge = read("supabase/functions/bank-transfer/index.ts");
-const migration = read("supabase/migrations/202611120002_bank_transfer_submissions.sql");
+const migration = read("supabase/migrations/20261112190855_bank_transfer_submissions.sql");
 const dbTest = read("supabase/tests/202611120002_bank_transfer_submissions.test.sql");
 const config = read("supabase/config.toml");
 
