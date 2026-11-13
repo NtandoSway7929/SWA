@@ -176,13 +176,51 @@ jobs:
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
-            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' \) \
+            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \) \
             | sort)
-          test "${#migrations[@]}" -eq 14
+          test "${#migrations[@]}" -eq 15
           for migration in "${migrations[@]}"; do
             echo "Applying $migration"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
+
+      - name: Diagnose effective portal token privileges
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          psql "$DB_URL" -X -v ON_ERROR_STOP=1 -P pager=off -c "
+            select
+              r.rolname,
+              r.rolinherit,
+              pg_has_role('service_role','authenticated','member') as service_member_of_authenticated,
+              pg_has_role('service_role','authenticated','usage') as inherits_authenticated,
+              has_table_privilege('service_role','public.client_portal_tokens','UPDATE') as table_update,
+              has_column_privilege('service_role','public.client_portal_tokens','active','UPDATE') as active_update,
+              has_column_privilege('service_role','public.client_portal_tokens','last_used_at','UPDATE') as last_used_update
+            from pg_roles r where r.rolname='service_role';
+            select
+              grantor.rolname as grantor,
+              grantee.rolname as grantee,
+              privilege_type,
+              is_grantable,
+              coalesce(att.attname,'<table-level>') as column_name
+            from pg_class c
+            cross join lateral aclexplode(coalesce(c.relacl, acldefault('r',c.relowner))) a
+            join pg_roles grantor on grantor.oid=a.grantor
+            join pg_roles grantee on grantee.oid=a.grantee
+            left join pg_attribute att on att.attrelid=c.oid and att.attnum=a.grantor and false
+            where c.oid='public.client_portal_tokens'::regclass
+              and a.privilege_type='UPDATE'
+            order by grantee.rolname, column_name;
+            select member.rolname as member, role.rolname as granted_role
+            from pg_auth_members m
+            join pg_roles role on role.oid=m.roleid
+            join pg_roles member on member.oid=m.member
+            where member.rolname in ('service_role','authenticated','authenticator')
+               or role.rolname in ('service_role','authenticated','authenticator')
+            order by member.rolname, role.rolname;
+          "
 
       - name: Run read-only Yoco migration preflight
         shell: bash
