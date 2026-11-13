@@ -80,7 +80,7 @@ test("rejection requires an audit reason and never creates a payment", () => {
 test("admin dashboard loads the bank transfer queue only after the review panel opens", () => {
   const mount = adminUi.slice(adminUi.indexOf("function mount()"));
   assert.match(mount, /if \(!accessToken\(\)\) return/);
-  assert.match(mount, /if\(open\)load\(\)/);
+  assert.match(mount, /root\.querySelector\("\[data-btr-open\]"\)\.addEventListener\("click",function\(\)\{[\s\S]*?root\.setAttribute\("data-open","true"\);[\s\S]*?load\(\);/);
   assert.doesNotMatch(mount, /appendChild\(root\);\s*load\(\);/);
 });;;
 
