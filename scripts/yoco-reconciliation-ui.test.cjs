@@ -221,6 +221,8 @@ test("reconciliation HTTP integration suite covers authorization, test scope, hi
 
 
 test("reconciliation interface no longer renders a floating dashboard launcher", () => {
-  assert.doesNotMatch(ui, /yr-launch|data-open-panel|Payment reconciliation<\\/button>/);
+  assert.equal(ui.includes("yr-launch"), false);
+  assert.equal(ui.includes("data-open-panel"), false);
+  assert.equal(ui.includes("Payment reconciliation</button>"), false);
   assert.match(ui, /<section class="yr-panel"/);
 });
