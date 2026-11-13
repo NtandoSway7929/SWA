@@ -13,7 +13,7 @@ const paymentMigration = fs.readFileSync(path.join(root, "supabase", "migrations
 const paymentFlowTest = fs.readFileSync(path.join(root, "supabase", "tests", "202611110006_yoco_payment_flow.test.sql"), "utf8");
 
 test("invoice payment settings panel is loaded by the admin dashboard", () => {
-  assert.match(html, /yoco-invoice-settings\.js\?v=20261111-stage-1-48/);
+  assert.match(html, /yoco-invoice-settings\.js\?v=20261113-sales-billing-nav-1/);
   assert.ok(html.indexOf("yoco-invoice-settings.js") < html.indexOf("</body>"));
 });
 
