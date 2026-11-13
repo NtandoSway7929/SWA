@@ -73,11 +73,12 @@ test("rejection requires an audit reason and never creates a payment", () => {
   assert.match(dbTest, /rejection does not create a payment ledger transaction/);
 });
 
-test("admin dashboard loads the bank transfer queue only when review is opened", () => {
+test("admin dashboard loads the pending queue for signed-in administrators", () => {
   const mount = adminUi.slice(adminUi.indexOf("function mount()"));
+  assert.match(mount, /if \(!accessToken\(\)\) return/);
   assert.match(mount, /if\(open\)load\(\)/);
-  assert.doesNotMatch(mount, /appendChild\(root\);\s*load\(\);/);
-});
+  assert.match(mount, /addEventListener\("click",handleClick\);\s*load\(\);/);
+});;
 
 test("review widget sends financial mutations only through the guarded Edge Function", () => {
   assert.match(adminUi, /functions\/v1\/bank-transfer/);
