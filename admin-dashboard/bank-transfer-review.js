@@ -154,7 +154,7 @@
     var style = document.createElement("style");
     style.textContent = `
       #sway-bank-transfer-review{position:fixed;right:22px;bottom:84px;z-index:9997;font-family:Montserrat,Arial,sans-serif;color:#252B31}
-      #sway-bank-transfer-review .btr-launch{display:flex;align-items:center;gap:9px;border:0;border-radius:14px;padding:13px 16px;background:#343A40;color:#fff;font-weight:800;box-shadow:0 12px 32px #07163835;cursor:pointer}
+      #sway-bank-transfer-review .btr-launch{display:none;align-items:center;gap:9px;border:0;border-radius:14px;padding:13px 16px;background:#343A40;color:#fff;font-weight:800;box-shadow:0 12px 32px #07163835;cursor:pointer}
       #sway-bank-transfer-review .btr-launch span{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:#fff;color:#343A40;font-size:11px}
       #sway-bank-transfer-review .btr-panel{display:none;position:fixed;right:22px;bottom:140px;width:min(620px,calc(100vw - 28px));max-height:min(78vh,760px);overflow:auto;background:#fff;border:1px solid #dfe5ea;border-radius:20px;padding:20px;box-shadow:0 24px 70px #07163835}
       #sway-bank-transfer-review[data-open=true] .btr-panel{display:block}
@@ -193,12 +193,35 @@
       '<div class="btr-list" data-btr-list><div class="btr-empty">Open the queue to load submissions.</div></div><p data-btr-status role="status" aria-live="polite"></p></section>';
     document.body.appendChild(root);
     root.querySelector("[data-btr-open]").addEventListener("click",function(){
-      var open=root.getAttribute("data-open")!=="true";
-      root.setAttribute("data-open",open?"true":"false");
-      if(open)load();
+      root.setAttribute("data-open","true");
+      load();
     });
     root.querySelector("[data-btr-close]").addEventListener("click",function(){root.setAttribute("data-open","false")});
     root.querySelector("[data-btr-list]").addEventListener("click",handleClick);
+
+    function addBillingNavigationItem() {
+      var menu = document.querySelector('[data-nav-menu="billing"]');
+      if (!menu || menu.querySelector('[data-view="bank-transfer-review"]')) return;
+      var invoiceSettings = menu.querySelector('[data-view="invoice-settings"]');
+      if (!invoiceSettings) return;
+      var button = invoiceSettings.cloneNode(true);
+      button.dataset.view = "bank-transfer-review";
+      button.removeAttribute("aria-current");
+      button.textContent = "Bank transfer review";
+      button.setAttribute("aria-label", "Bank transfer review");
+      invoiceSettings.insertAdjacentElement("afterend", button);
+    }
+    addBillingNavigationItem();
+    var navObserver = new MutationObserver(addBillingNavigationItem);
+    navObserver.observe(document.body, {childList:true,subtree:true});
+    document.addEventListener("click",function(event){
+      var button = event.target.closest('[data-view="bank-transfer-review"]');
+      if (!button) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      root.setAttribute("data-open","true");
+      load();
+    },true);
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});
   else mount();

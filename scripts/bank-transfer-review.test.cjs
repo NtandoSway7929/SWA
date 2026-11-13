@@ -98,3 +98,11 @@ test("approval and rejection RPCs are service-role only", () => {
   assert.match(migration, /revoke all on function public\.admin_reject_bank_transfer_submission\(uuid, uuid, text\)[\s\S]*?from public, anon, authenticated/);
   assert.match(migration, /grant execute on function public\.admin_reject_bank_transfer_submission\(uuid, uuid, text\)[\s\S]*?to service_role/);
 });
+
+test("bank transfer review is launched from the Sales & Billing navigation", () => {
+  assert.match(adminUi, /data-nav-menu="billing"/);
+  assert.match(adminUi, /data-view="bank-transfer-review"/);
+  assert.match(adminUi, /addBillingNavigationItem/);
+  assert.match(adminUi, /stopImmediatePropagation\(\)/);
+  assert.match(adminUi, /\.btr-launch\{display:none;/);
+});
