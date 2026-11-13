@@ -80,7 +80,7 @@ test("rejection requires an audit reason and never creates a payment", () => {
 test("admin dashboard loads the bank transfer queue only after the review panel opens", () => {
   const mount = adminUi.slice(adminUi.indexOf("function mount()"));
   assert.match(mount, /if \(!accessToken\(\)\) return/);
-  assert.match(mount, /if\(open\)load\(\)/);
+  assert.match(mount, /root\.querySelector\("\[data-btr-open\]"\)\.addEventListener\("click",function\(\)\{[\s\S]*?root\.setAttribute\("data-open","true"\);[\s\S]*?load\(\);/);
   assert.doesNotMatch(mount, /appendChild\(root\);\s*load\(\);/);
 });;;
 
@@ -101,7 +101,7 @@ test("approval and rejection RPCs are service-role only", () => {
 
 test("bank transfer review is launched from the Sales & Billing navigation", () => {
   assert.match(adminUi, /data-nav-menu="billing"/);
-  assert.match(adminUi, /data-view="bank-transfer-review"/);
+  assert.match(adminUi, /button\.dataset\.view\s*=\s*"bank-transfer-review"/);
   assert.match(adminUi, /addBillingNavigationItem/);
   assert.match(adminUi, /stopImmediatePropagation\(\)/);
   assert.match(adminUi, /\.btr-launch\{display:none;/);
