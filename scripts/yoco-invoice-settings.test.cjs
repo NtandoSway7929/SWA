@@ -89,3 +89,10 @@ test("competing successful checkouts cannot overpay an invoice or retry indefini
   assert.match(paymentFlowTest, /a competing successful checkout is routed to manual review/);
   assert.match(paymentFlowTest, /competing checkout is not inserted as an overpayment/);
 });
+
+test("invoice payment settings opens from its Sales & Billing navigation destination", () => {
+  assert.match(panel, /data-view="invoice-settings"/);
+  assert.match(panel, /async function openSettings\(\)/);
+  assert.match(panel, /stopImmediatePropagation\(\)/);
+  assert.match(panel, /\.syi-launch\{display:none;/);
+});
