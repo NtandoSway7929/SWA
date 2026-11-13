@@ -156,21 +156,58 @@ function createUserClient(token: string) {
   });
 }
 
-async function authorizeAdmin(req: Request, deps: Deps) {
+type AdminAuthorization =
+  | { ok: true; reviewerId: string }
+  | { ok: false; status: 401 | 403 | 503; message: string };
+
+async function authorizeAdmin(
+  req: Request,
+  deps: Deps,
+): Promise<AdminAuthorization> {
   const match = (req.headers.get("authorization") || "").match(
     /^Bearer\s+(.+)$/i,
   );
   const token = match?.[1] || "";
-  if (!token) return null;
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Administrator session required. Sign in again.",
+    };
+  }
+
   const userClient = deps.createUserClient(token);
   const { data: authData, error: authError } = await userClient.auth.getUser(
     token,
   );
-  if (authError || !authData?.user?.id) return null;
+  const userId = String(authData?.user?.id || "");
+  if (authError || !userId) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Administrator session expired or invalid. Sign in again.",
+    };
+  }
+
   const { data: allowed, error: adminError } = await userClient.rpc(
     "is_swayphics_admin",
   );
-  return !adminError && allowed === true ? String(authData.user.id) : null;
+  if (adminError) {
+    return {
+      ok: false,
+      status: 503,
+      message: "Administrator access could not be verified. Please try again.",
+    };
+  }
+  if (allowed !== true) {
+    return {
+      ok: false,
+      status: 403,
+      message: "Administrator access required.",
+    };
+  }
+
+  return { ok: true, reviewerId: userId };
 }
 
 const defaults: Deps = {
@@ -568,13 +605,14 @@ export function createBankTransferHandler(overrides: Partial<Deps> = {}) {
         );
       }
 
-      const reviewerId = await authorizeAdmin(req, deps);
-      if (!reviewerId) {
+      const authorization = await authorizeAdmin(req, deps);
+      if (!authorization.ok) {
         return json(
-          { ok: false, error: "Administrator access required." },
-          403,
+          { ok: false, error: authorization.message },
+          authorization.status,
         );
       }
+      const reviewerId = authorization.reviewerId;
 
       if (action === "list") return await adminQueue(admin);
       if (action === "proof") {
