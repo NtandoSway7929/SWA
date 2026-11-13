@@ -14,7 +14,7 @@ const concurrencyMigration = read("supabase/migrations/202611110012_yoco_reconci
 test("admin dashboard loads the reconciliation interface", () => {
   assert.match(html, /yoco-reconciliation\.js\?v=20261113-remove-launcher-1/);
   assert.match(ui, /__swayYocoReconciliationLoaded/);
-  assert.doesNotMatch(ui, /class="yr-launch"|Payment reconciliation<\\/button>/);
+  assert.doesNotMatch(ui, /yr-launch|data-open-panel/);
 });
 
 test("reconciliation reads use the guarded administrator Edge Function", () => {
