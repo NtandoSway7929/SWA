@@ -101,7 +101,7 @@ test("approval and rejection RPCs are service-role only", () => {
 
 test("bank transfer review is launched from the Sales & Billing navigation", () => {
   assert.match(adminUi, /data-nav-menu="billing"/);
-  assert.match(adminUi, /data-view="bank-transfer-review"/);
+  assert.match(adminUi, /button\.dataset\.view\s*=\s*"bank-transfer-review"/);
   assert.match(adminUi, /addBillingNavigationItem/);
   assert.match(adminUi, /stopImmediatePropagation\(\)/);
   assert.match(adminUi, /\.btr-launch\{display:none;/);
