@@ -68,20 +68,21 @@ function proofExtension(type: string) {
 }
 
 export function bankTransferProofMatchesMime(type: string, bytes: Uint8Array) {
-  if (type === "application/pdf") {
+  const mimeType = type.toLowerCase();
+  if (mimeType === "application/pdf") {
     return new TextDecoder().decode(bytes.slice(0, 5)) === "%PDF-";
   }
-  if (type === "image/jpeg") {
+  if (mimeType === "image/jpeg") {
     return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 &&
       bytes[2] === 0xff;
   }
-  if (type === "image/png") {
+  if (mimeType === "image/png") {
     return bytes.length >= 8 &&
       [137, 80, 78, 71, 13, 10, 26, 10].every((value, index) =>
         bytes[index] === value
       );
   }
-  if (type === "image/webp") {
+  if (mimeType === "image/webp") {
     return bytes.length >= 12 &&
       new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
       new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP";
