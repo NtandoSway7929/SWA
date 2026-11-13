@@ -282,7 +282,6 @@
     var style = document.createElement("style");
     style.textContent = `
       #sway-yoco-reconciliation{position:fixed;right:22px;bottom:78px;z-index:9997;font-family:Montserrat,Arial,sans-serif;color:#101d38}
-      #sway-yoco-reconciliation .yr-launch{border:0;border-radius:13px;padding:12px 16px;background:#101d38;color:#fff;font-weight:750;box-shadow:0 10px 30px #07163830;cursor:pointer}
       #sway-yoco-reconciliation .yr-panel{display:none;position:fixed;inset:5vh 2vw 5vh auto;width:min(1120px,96vw);max-height:90vh;overflow:hidden;background:#fff;border:1px solid #dce5f2;border-radius:20px;box-shadow:0 24px 80px #07163845}
       #sway-yoco-reconciliation[data-open=true] .yr-panel{display:flex;flex-direction:column}
       #sway-yoco-reconciliation .yr-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid #e7edf6}
@@ -344,8 +343,7 @@
     document.head.appendChild(style);
     root = document.createElement("div");
     root.id = "sway-yoco-reconciliation";
-    root.innerHTML = '<button type="button" class="yr-launch" data-open-panel>Payment reconciliation</button>' +
-      '<section class="yr-panel" role="dialog" aria-modal="true" aria-label="Yoco payment reconciliation">' +
+    root.innerHTML = '<section class="yr-panel" role="dialog" aria-modal="true" aria-label="Yoco payment reconciliation">' +
       '<header class="yr-head"><div><h2>Payment reconciliation <span data-yr-count>0</span></h2><p>Administrator workflow · Yoco test environment only</p></div>' +
       '<div class="yr-head-actions"><button type="button" class="yr-refresh" data-refresh>Refresh</button><button type="button" class="yr-close" data-close aria-label="Close">×</button></div></header>' +
       '<div data-yr-status role="status" aria-live="polite"></div><div class="yr-body">' +
@@ -353,9 +351,6 @@
       '<div class="yr-filters"><button class="yr-filter is-active" data-filter="all">All</button><button class="yr-filter" data-filter="open">Open</button><button class="yr-filter" data-filter="investigating">Investigating</button></div></div><div data-yr-queue></div></aside>' +
       '<main class="yr-detail" data-yr-detail></main></div></section>';
     document.body.appendChild(root);
-    root.querySelector("[data-open-panel]").addEventListener("click", function () {
-      root.setAttribute("data-open", "true"); if (!data) load();
-    });
     root.querySelector("[data-close]").addEventListener("click", function () { root.setAttribute("data-open", "false"); });
     root.querySelector("[data-refresh]").addEventListener("click", load);
     root.querySelector("[data-yr-search]").addEventListener("input", renderQueue);
