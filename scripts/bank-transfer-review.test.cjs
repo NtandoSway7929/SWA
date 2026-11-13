@@ -46,7 +46,11 @@ test("proof uploads are size limited, type checked and stored in a private bucke
 test("only active administrators can access review actions and proof links", () => {
   assert.match(edge, /authorizeAdmin/);
   assert.match(edge, /userClient\.rpc\(\s*"is_swayphics_admin",?\s*\)/);
-  assert.match(edge, /if \(!reviewerId\)[\s\S]*?Administrator access required/);
+  assert.match(edge, /if \(!authorization\.ok\)[\s\S]*?authorization\.message[\s\S]*?authorization\.status/);
+  assert.match(edge, /status: 401,/);
+  assert.match(edge, /status: 403,/);
+  assert.match(edge, /status: 503,/);
+  assert.match(edge, /Administrator session expired or invalid\. Sign in again\./);
   assert.match(adminUi, /Confirm deposit &amp; record/);
   assert.match(adminUi, /Only approve after confirming the deposit has cleared/);
   assert.match(adminHtml, /bank-transfer-review\.js/);
