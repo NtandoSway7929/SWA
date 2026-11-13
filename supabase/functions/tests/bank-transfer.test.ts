@@ -57,7 +57,9 @@ Deno.test("bank transfer proof validation checks real file signatures, not just 
       new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
     )
   ) {
-    throw new Error("Uppercase MIME labels should be normalized before validation.");
+    throw new Error(
+      "Uppercase MIME labels should be normalized before validation.",
+    );
   }
 });
 
