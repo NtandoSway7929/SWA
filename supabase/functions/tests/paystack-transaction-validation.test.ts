@@ -83,7 +83,6 @@ Deno.test("verified Paystack transaction must match reference, amount, ZAR and t
   }
 });
 
-
 Deno.test("Paystack status observation validates failed and abandoned transactions without treating them as successful", () => {
   const expected = {
     reference: "SWP-12345678-1234-4234-8234-123456789012",
@@ -122,17 +121,21 @@ Deno.test("Paystack status observation validates failed and abandoned transactio
   }
 
   if (validatePaystackVerifiedTransaction(base, expected)) {
-    throw new Error("A failed transaction was accepted by the success-only validator.");
+    throw new Error(
+      "A failed transaction was accepted by the success-only validator.",
+    );
   }
 
-  for (const altered of [
-    { ...base, data: { ...base.data, domain: "live" } },
-    { ...base, data: { ...base.data, reference: "different" } },
-    { ...base, data: { ...base.data, amount: 9999 } },
-    { ...base, data: { ...base.data, currency: "USD" } },
-    { ...base, data: { ...base.data, id: "not-a-transaction-id" } },
-    { ...base, data: { ...base.data, status: "unknown" } },
-  ]) {
+  for (
+    const altered of [
+      { ...base, data: { ...base.data, domain: "live" } },
+      { ...base, data: { ...base.data, reference: "different" } },
+      { ...base, data: { ...base.data, amount: 9999 } },
+      { ...base, data: { ...base.data, currency: "USD" } },
+      { ...base, data: { ...base.data, id: "not-a-transaction-id" } },
+      { ...base, data: { ...base.data, status: "unknown" } },
+    ]
+  ) {
     if (validatePaystackTransactionObservation(altered, expected)) {
       throw new Error("Mismatched Paystack status observation was accepted.");
     }
