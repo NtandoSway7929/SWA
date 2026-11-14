@@ -1,6 +1,7 @@
 import {
   isPaystackCheckoutUrl,
   validatePaystackInitializeResponse,
+  validatePaystackTransactionObservation,
   validatePaystackVerifiedTransaction,
 } from "../_shared/paystack.ts";
 
@@ -78,6 +79,62 @@ Deno.test("verified Paystack transaction must match reference, amount, ZAR and t
       })
     ) {
       throw new Error("Invalid verified transaction was accepted.");
+    }
+  }
+});
+
+
+Deno.test("Paystack status observation validates failed and abandoned transactions without treating them as successful", () => {
+  const expected = {
+    reference: "SWP-12345678-1234-4234-8234-123456789012",
+    amountCents: 10000,
+  };
+  const base = {
+    status: true,
+    data: {
+      id: 900002,
+      domain: "test",
+      status: "failed",
+      reference: expected.reference,
+      amount: expected.amountCents,
+      currency: "ZAR",
+      channel: "card",
+      gateway_response: "Declined",
+    },
+  };
+
+  const failed = validatePaystackTransactionObservation(base, expected);
+  if (
+    !failed ||
+    failed.status !== "failed" ||
+    failed.transactionId !== "900002" ||
+    failed.gatewayResponse !== "Declined"
+  ) {
+    throw new Error("Valid failed Paystack transaction was rejected.");
+  }
+
+  const abandoned = validatePaystackTransactionObservation({
+    ...base,
+    data: { ...base.data, status: "abandoned" },
+  }, expected);
+  if (!abandoned || abandoned.status !== "abandoned") {
+    throw new Error("Valid abandoned Paystack transaction was rejected.");
+  }
+
+  if (validatePaystackVerifiedTransaction(base, expected)) {
+    throw new Error("A failed transaction was accepted by the success-only validator.");
+  }
+
+  for (const altered of [
+    { ...base, data: { ...base.data, domain: "live" } },
+    { ...base, data: { ...base.data, reference: "different" } },
+    { ...base, data: { ...base.data, amount: 9999 } },
+    { ...base, data: { ...base.data, currency: "USD" } },
+    { ...base, data: { ...base.data, id: "not-a-transaction-id" } },
+    { ...base, data: { ...base.data, status: "unknown" } },
+  ]) {
+    if (validatePaystackTransactionObservation(altered, expected)) {
+      throw new Error("Mismatched Paystack status observation was accepted.");
     }
   }
 });
