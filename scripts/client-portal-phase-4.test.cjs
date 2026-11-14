@@ -98,13 +98,13 @@ test("financial summary groups invoice balances by currency and excludes unissue
   assert.match(summary.invoiced, /USD/);
 });
 
-test("financial centre exposes guarded Yoco checkout only when enabled and verifies payment before updating", () => {
+test("financial centre exposes guarded Paystack checkout only when enabled and verifies payment before updating", () => {
   assert.match(portal, /data-invoice-filter="outstanding"/);
   assert.match(portal, /data-financial-type="invoice"/);
   assert.match(portal, /Request payment instructions/);
   assert.match(portal, /item\.online_payment_enabled\?/);
-  assert.match(portal, /create-payment-checkout/);
-  assert.match(portal, /get-payment-status/);
+  assert.match(portal, /create-paystack-payment-checkout/);
+  assert.match(portal, /get-paystack-payment-status/);
   assert.match(portal, /latest\.confirmed/);
   assert.match(portal, /Your invoice is updated only after Swayphics receives verified payment confirmation/);
   assert.doesNotMatch(portal, /Pay now/i);
