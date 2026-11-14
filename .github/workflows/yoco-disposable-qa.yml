@@ -182,9 +182,9 @@ jobs:
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
-            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '202611140001_paystack_client_payments.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \) \
+            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '202611140001_paystack_client_payments.sql' -o -name '202611140002_paystack_failed_attempt_status.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \) \
             | sort)
-          test "${#migrations[@]}" -eq 16
+          test "${#migrations[@]}" -eq 17
           for migration in "${migrations[@]}"; do
             echo "Applying $migration"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
