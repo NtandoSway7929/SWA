@@ -1,9 +1,10 @@
-name: Yoco client payments - disposable QA
+name: Client payments - disposable QA
 
 on:
   push:
     branches:
       - feature/yoco-client-payments
+      - feature/paystack-client-payments
     paths:
       - "supabase/**"
       - "client-portal/index.html"
@@ -60,7 +61,7 @@ jobs:
           node --check admin-dashboard/yoco-invoice-settings.js
           node --check admin-dashboard/yoco-reconciliation.js
           node --check admin-dashboard/bank-transfer-review.js
-          node --test scripts/yoco-invoice-settings.test.cjs scripts/yoco-reconciliation-ui.test.cjs scripts/bank-transfer-review.test.cjs
+          node --test scripts/yoco-invoice-settings.test.cjs scripts/yoco-reconciliation-ui.test.cjs scripts/bank-transfer-review.test.cjs scripts/client-portal-phase-4.test.cjs
 
       - name: Check Yoco TypeScript formatting
         shell: bash
@@ -78,12 +79,12 @@ jobs:
             supabase/functions/yoco-payment-webhook/index.ts \
             supabase/functions/get-payment-status/index.ts \
             supabase/functions/reconcile-payment/index.ts \
-            supabase/functions/bank-transfer/index.ts
+            supabase/functions/bank-transfer/index.ts \\\n            supabase/functions/create-paystack-payment-checkout/index.ts \\\n            supabase/functions/paystack-payment-webhook/index.ts \\\n            supabase/functions/get-paystack-payment-status/index.ts
 
       - name: Run Yoco Deno tests
         env:
           YOCO_WEBHOOK_SECRET: whsec_disposable_ci_test_secret
-        run: deno test --allow-env=YOCO_WEBHOOK_SECRET supabase/functions/tests/yoco-*.test.ts supabase/functions/tests/bank-transfer.test.ts
+        run: deno test --allow-env=YOCO_WEBHOOK_SECRET supabase/functions/tests/yoco-*.test.ts supabase/functions/tests/paystack-*.test.ts supabase/functions/tests/bank-transfer.test.ts
 
       - name: Prepare reviewed formatting patch
         if: always()
@@ -176,9 +177,9 @@ jobs:
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
-            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \) \
+            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '202611140001_paystack_client_payments.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \) \
             | sort)
-          test "${#migrations[@]}" -eq 15
+          test "${#migrations[@]}" -eq 16
           for migration in "${migrations[@]}"; do
             echo "Applying $migration"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
