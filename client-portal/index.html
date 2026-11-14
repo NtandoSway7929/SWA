@@ -1430,7 +1430,7 @@ window.setTimeout(function(){window.location.reload()},1000);
 return;
 }
 const attemptStatus=String(latest&&latest.attempt&&latest.attempt.status||"").toLowerCase();
-if(attemptStatus==="failed"||attemptStatus==="expired"||attemptStatus==="cancelled"){
+if(attemptStatus==="failed"||attemptStatus==="abandoned"||attemptStatus==="expired"||attemptStatus==="cancelled"){
 status.className="finance-online-status error";
 status.textContent="Paystack did not confirm this payment. Your invoice remains outstanding. You can try again or use EFT.";
 }else if(attemptStatus==="requires_review"){
