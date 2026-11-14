@@ -1,6 +1,6 @@
 # Paystack client payments: test integration setup
 
-**Status: development branch only.** This is a test-mode implementation under review. No Paystack secret has been configured in Supabase, no Paystack webhook has been registered, no Paystack payment has been initiated, and no production payment setting or schema has been changed.
+**Status: isolated test deployment.** The Paystack migration and three Edge Functions are deployed to the dedicated `Swayphics Payments Test` Supabase project only. Test credentials are configured there. The first hosted test checkout was created and completed in Paystack Test Mode; its webhook has not yet been received. No production payment setting, schema, invoice, payment or receipt has been changed.
 
 ## Provider design
 
@@ -34,11 +34,13 @@ Never place secrets in source control, the client portal, browser storage, or is
 
 ## Test webhook endpoint
 
-Only after the Paystack webhook Edge Function has been deployed to the isolated Supabase test project, register this URL in Paystack's Test Mode webhook settings:
+The Paystack webhook Edge Function is deployed to the dedicated `Swayphics Payments Test` project. Register this exact URL in **Paystack Test Mode only**:
 
-`https://sqifhribgsqfaxgtobsa.supabase.co/functions/v1/paystack-payment-webhook`
+`https://lcwjtextqhdtqlwogavk.supabase.co/functions/v1/paystack-payment-webhook`
 
-The webhook function verifies the applicable signature, independently verifies the transaction with Paystack, checks the test domain and then settles through the leased database routine. Webhook retries are idempotent. Do not register the endpoint before the function is deployed and reachable.
+Do not use the production Swayphics Web project URL for this test integration, and do not enter this test URL in Paystack Live Mode.
+
+The webhook function verifies the applicable signature, independently verifies the transaction with Paystack, checks the test domain and then settles through the leased database routine. Webhook retries are idempotent. If a test transaction was completed before the URL was configured, open **Developers → Webhooks** while Test Mode is selected, locate its `charge.success` event, inspect the event details, and use **Retry** after confirming the endpoint URL is now the test URL. Paystack documents that a retry is sent to the URL currently configured for that environment. If no event is listed, do not alter payment or invoice rows manually; investigate via Paystack's transaction verification first.
 
 ## Payment channels and merchant enablement
 
