@@ -25,18 +25,20 @@ Configure only in a non-production Supabase test project after reviewing and app
 
 - `PAYSTACK_SECRET_KEY`: a Paystack test secret key beginning with `sk_test_`.
 - `PAYSTACK_ENVIRONMENT`: exactly `test`.
-- `PAYSTACK_WEBHOOK_SECRET`: the Paystack webhook signing secret beginning with `whsec_`. The handler also supports the legacy `x-paystack-signature` HMAC using the test secret key while the merchant migrates webhook signing mode.
+- `PAYSTACK_WEBHOOK_SECRET`: optional during initial test-mode setup. If Paystack sends the legacy `x-paystack-signature` header, the handler verifies its HMAC-SHA512 signature over the raw request body with `PAYSTACK_SECRET_KEY`; no separate `whsec_` value is needed for that mode.
 - `PAYSTACK_CALLBACK_URL`: `https://swayphics.co.za/client-portal/` (optional; this is the default).
 
-Never place these values in source control, the client portal, browser storage, or issue/PR descriptions. The secret key and webhook signing secret are server-side only.
+Paystack's current documentation distinguishes the newer timestamped `Paystack-Signature` header from the legacy `x-paystack-signature` header. If a webhook arrives with `Paystack-Signature`, the handler requires `PAYSTACK_WEBHOOK_SECRET` beginning with `whsec_` and rejects the event when that secret is unavailable. Do not attempt to bypass a dashboard access restriction to obtain this optional test credential. Continue with the legacy header only while Paystack is still sending it; before live activation, confirm the signing mode available to the merchant and configure the matching secret securely.
+
+Never place secrets in source control, the client portal, browser storage, or issue/PR descriptions. All Paystack secrets are server-side only.
 
 ## Test webhook endpoint
 
-After the Paystack test webhook signing secret is configured, register this URL in the Paystack Test Mode dashboard:
+Only after the Paystack webhook Edge Function has been deployed to the isolated Supabase test project, register this URL in Paystack's Test Mode webhook settings:
 
 `https://sqifhribgsqfaxgtobsa.supabase.co/functions/v1/paystack-payment-webhook`
 
-The webhook function verifies the signature, verifies the transaction directly with Paystack, checks the test domain and then settles through the leased database routine. Webhook retries are idempotent.
+The webhook function verifies the applicable signature, independently verifies the transaction with Paystack, checks the test domain and then settles through the leased database routine. Webhook retries are idempotent. Do not register the endpoint before the function is deployed and reachable.
 
 ## Payment channels and merchant enablement
 
@@ -48,7 +50,7 @@ The checkout requests `card`, `eft` and `capitec_pay`. Paystack may show only me
 2. The payment attempts and webhook event routines are test-only. Live-mode transactions are ignored.
 3. The legacy Yoco tables, rows, receipts, functions and reconciliation history are retained. The migration only adds Paystack as an allowed provider in the relevant existing provider constraints and creates Paystack-specific routines.
 4. The existing bank-transfer submission and review flow is unchanged.
-5. Before enabling live mode, complete Paystack merchant verification, confirm enabled channels, implement and test the live secret and signing-secret configuration, review refund handling and reconciliation, execute separate production migration/deployment steps, and obtain explicit approval for production activation.
+5. Before enabling live mode, complete Paystack merchant verification, confirm enabled channels and webhook-signing mode, implement and test the live secret and matching signing-secret configuration, review refund handling and reconciliation, execute separate production migration/deployment steps, and obtain explicit approval for production activation.
 
 ## Validation gate
 
