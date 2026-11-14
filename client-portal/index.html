@@ -492,7 +492,7 @@ body{
 }
 
 
-/* Yoco client payment experience */
+/* Paystack client payment experience */
 .finance-online-panel{display:grid;gap:10px;padding:14px;border:1px solid rgba(1,82,244,.13);border-radius:15px;background:linear-gradient(135deg,rgba(1,82,244,.045),rgba(255,255,255,.78))}
 .finance-online-panel>div:first-child{display:grid;gap:4px}.finance-online-panel strong{font-size:.66rem}.finance-online-panel p{color:var(--muted);font-size:.53rem;line-height:1.55}
 .finance-online-controls{display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap}.finance-online-controls .field{flex:1;min-width:160px}.finance-online-controls input{width:100%;border:1px solid rgba(0,32,150,.12);border-radius:11px;padding:10px 11px;background:#fff;color:var(--dark);font-size:.65rem}
@@ -1359,7 +1359,7 @@ if(statusBox){statusBox.hidden=true;statusBox.textContent=""}
 section.scrollIntoView({behavior:"smooth",block:"start"});
 subjectInput.focus({preventScroll:true});
 }
-async function yocoPortalApi(functionName,payload){
+async function paystackPortalApi(functionName,payload){
 const response=await fetch(SUPABASE_URL+"/functions/v1/"+encodeURIComponent(functionName),{
 method:"POST",
 headers:{"apikey":SUPABASE_PUBLISHABLE_KEY,"Authorization":"Bearer "+SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json","Accept":"application/json"},
@@ -1370,7 +1370,7 @@ const raw=await response.text();let result=null;try{result=raw?JSON.parse(raw):n
 if(!response.ok||!result||result.ok!==true)throw new Error(result&&result.error||"The online payment service could not complete the request.");
 return result;
 }
-async function startYocoCheckout(modal,amountInput,button,statusBox){
+async function startPaystackCheckout(modal,amountInput,button,statusBox){
 const invoiceId=String(modal.dataset.invoiceId||"");
 const amount=Number(amountInput.value);
 const amountCents=Math.round(amount*100);
@@ -1389,13 +1389,13 @@ statusBox.hidden=false;statusBox.className="finance-online-status error";statusB
 modal.dataset.paymentIdempotencyKey=window.crypto.randomUUID();
 }
 button.disabled=true;button.textContent="Preparing secure checkout...";
-statusBox.hidden=false;statusBox.className="finance-online-status";statusBox.textContent="Creating your secure Yoco checkout. Do not close this window.";
+statusBox.hidden=false;statusBox.className="finance-online-status";statusBox.textContent="Creating your secure Paystack checkout. Do not close this window.";
 try{
-const result=await yocoPortalApi("create-payment-checkout",{
+const result=await paystackPortalApi("create-payment-checkout",{
 invoice_id:invoiceId,amount_cents:amountCents,idempotency_key:modal.dataset.paymentIdempotencyKey
 });
 if(!result.checkout_url||!/^https:\/\//i.test(result.checkout_url))throw new Error("The provider did not return a valid secure checkout link.");
-statusBox.textContent="Checkout ready. Redirecting you to Yoco...";
+statusBox.textContent="Checkout ready. Redirecting you to Paystack...";
 window.location.assign(result.checkout_url);
 }catch(error){
 button.disabled=false;button.textContent="Try checkout again";
@@ -1403,7 +1403,7 @@ statusBox.className="finance-online-status error";
 statusBox.textContent=error&&error.message||"Checkout could not be created. You can safely try again.";
 }
 }
-async function checkYocoPaymentReturn(){
+async function checkPaystackPaymentReturn(){
 const params=new URLSearchParams(window.location.search),attemptId=params.get("payment_attempt");
 if(!attemptId)return;
 const hero=document.querySelector(".portal-hero");
@@ -1416,7 +1416,7 @@ hero.appendChild(status);
 let latest=null;
 for(let i=0;i<5;i++){
 try{
-latest=await yocoPortalApi("get-payment-status",{attempt_id:attemptId});
+latest=await paystackPortalApi("get-payment-status",{attempt_id:attemptId});
 if(latest.confirmed)break;
 if(["failed","expired","cancelled","requires_review"].includes(String(latest.attempt?.status||"").toLowerCase()))break;
 }catch(error){latest={error:error&&error.message||"Payment status is temporarily unavailable."};}
@@ -1432,7 +1432,7 @@ return;
 const attemptStatus=String(latest&&latest.attempt&&latest.attempt.status||"").toLowerCase();
 if(attemptStatus==="failed"||attemptStatus==="expired"||attemptStatus==="cancelled"){
 status.className="finance-online-status error";
-status.textContent="Yoco did not confirm this payment. Your invoice remains outstanding. You can try again or use EFT.";
+status.textContent="Paystack did not confirm this payment. Your invoice remains outstanding. You can try again or use EFT.";
 }else if(attemptStatus==="requires_review"){
 status.className="finance-online-status warning";
 status.textContent="Your payment needs a manual confirmation check. Please contact Swayphics before attempting another payment.";
@@ -1542,14 +1542,14 @@ requestSubject="Receipt request · "+String(item.reference||"Recorded payment");
 requestMessage="Please send me a receipt or payment confirmation for the payment of "+financialMoney(item.amount,"ZAR")+", recorded on "+date(item.paid_at)+"."+(item.reference?" The payment reference shown in my portal is "+String(item.reference)+".":"");
 }
 modal.className="portal-modal";modal.id="portal-financial-modal";if(type==="invoice")modal.dataset.invoiceId=String(item.id||"");
-modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&invoiceFinancialBreakdown(item).outstanding>0?(item.online_payment_enabled?'<section class="finance-online-panel"><div><strong>Pay this invoice online</strong><p>Secure card checkout hosted by Yoco. Your invoice is updated only after Swayphics receives verified payment confirmation.</p></div><div class="finance-online-controls"><div class="field"><label for="finance-yoco-amount">Payment amount (ZAR)</label><input id="finance-yoco-amount" type="number" inputmode="decimal" min="'+(Number(item.deposit_amount)>0?Number(item.deposit_amount).toFixed(2):"2.00")+'" max="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" step="0.01" value="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" '+(item.partial_payment_enabled?"":"readonly")+'></div><button type="button" class="portal-button" id="finance-yoco-pay">Continue to secure checkout</button></div><small class="finance-online-note">'+(item.partial_payment_enabled?"You may pay any amount from the required minimum deposit to the remaining balance.":"Online payment is set to full balance only for this invoice.")+(Number(item.deposit_amount)>0?" Minimum required deposit: "+esc(financialMoney(item.deposit_amount,invoiceFinancialBreakdown(item).currency))+".":"")+'</small><div id="finance-yoco-status" class="finance-online-status" hidden role="status" aria-live="polite"></div></section>':'<p class="finance-payment-guidance">Online payment has not been enabled for this invoice. Use the request below to ask Swayphics for payment instructions.</p>'):"")+'<div class="finance-modal-actions">'+(type==="invoice"?'<button type="button" class="portal-button secondary" id="finance-invoice-pdf">Download invoice PDF</button>':"")+(type==="payment"&&item.receipt&&item.receipt.receipt_number?'<button type="button" class="portal-button secondary" id="finance-payment-receipt">Download payment receipt</button>':"")+'<button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div><div id="finance-pdf-status" class="message" hidden role="status"></div></div></section>';
+modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&invoiceFinancialBreakdown(item).outstanding>0?(item.online_payment_enabled?'<section class="finance-online-panel"><div><strong>Pay this invoice online</strong><p>Secure checkout hosted by Paystack. Choose an available payment method at checkout. Your invoice is updated only after Swayphics receives verified payment confirmation.</p></div><div class="finance-online-controls"><div class="field"><label for="finance-paystack-amount">Payment amount (ZAR)</label><input id="finance-paystack-amount" type="number" inputmode="decimal" min="'+(Number(item.deposit_amount)>0?Number(item.deposit_amount).toFixed(2):"2.00")+'" max="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" step="0.01" value="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" '+(item.partial_payment_enabled?"":"readonly")+'></div><button type="button" class="portal-button" id="finance-paystack-pay">Continue to secure checkout</button></div><small class="finance-online-note">'+(item.partial_payment_enabled?"You may pay any amount from the required minimum deposit to the remaining balance.":"Online payment is set to full balance only for this invoice.")+(Number(item.deposit_amount)>0?" Minimum required deposit: "+esc(financialMoney(item.deposit_amount,invoiceFinancialBreakdown(item).currency))+".":"")+'</small><div id="finance-paystack-status" class="finance-online-status" hidden role="status" aria-live="polite"></div></section>':'<p class="finance-payment-guidance">Online payment has not been enabled for this invoice. Use the request below to ask Swayphics for payment instructions.</p>'):"")+'<div class="finance-modal-actions">'+(type==="invoice"?'<button type="button" class="portal-button secondary" id="finance-invoice-pdf">Download invoice PDF</button>':"")+(type==="payment"&&item.receipt&&item.receipt.receipt_number?'<button type="button" class="portal-button secondary" id="finance-payment-receipt">Download payment receipt</button>':"")+'<button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div><div id="finance-pdf-status" class="message" hidden role="status"></div></div></section>';
 document.body.appendChild(modal);
 modal.querySelector("#finance-payment-receipt")?.addEventListener("click",function(event){
 try{downloadPaymentReceipt(item);event.currentTarget.textContent="Receipt downloaded"}catch(error){const note=modal.querySelector(".finance-notes");if(note)note.textContent=error&&error.message||"Receipt could not be downloaded."}
 });
-modal.querySelector("#finance-yoco-pay")?.addEventListener("click",function(event){
-const button=event.currentTarget,amountInput=modal.querySelector("#finance-yoco-amount"),statusBox=modal.querySelector("#finance-yoco-status");
-if(amountInput&&statusBox)startYocoCheckout(modal,amountInput,button,statusBox);
+modal.querySelector("#finance-paystack-pay")?.addEventListener("click",function(event){
+const button=event.currentTarget,amountInput=modal.querySelector("#finance-paystack-amount"),statusBox=modal.querySelector("#finance-paystack-status");
+if(amountInput&&statusBox)startPaystackCheckout(modal,amountInput,button,statusBox);
 });
 const close=function(){modal.remove();if(trigger&&typeof trigger.focus==="function")trigger.focus()};
 modal.querySelectorAll("[data-finance-close]").forEach(function(element){element.addEventListener("click",close)});
@@ -1601,7 +1601,7 @@ try{
     if(!data||!data.ok)throw new Error(data&&data.error||"This portal link is invalid or expired.");
     if(!onboardingResult||!onboardingResult.ok)throw new Error(onboardingResult&&onboardingResult.error||"The onboarding form could not be loaded.");
     render(data,onboardingResult.onboarding||{});
-checkYocoPaymentReturn();
+checkPaystackPaymentReturn();
 }catch(error){
     renderPortalError("Unable to open portal",error&&error.message||"This portal link is invalid or has expired.");
 }
