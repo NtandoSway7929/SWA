@@ -187,7 +187,7 @@ export function createPaystackCheckoutHandler(
         );
         return deps.respond({
           ok: false,
-          error: "Paystack could not create the checkout. You can safely retry this request.",
+          error: "Paystack could not confirm whether checkout was created. Do not start another payment; contact Swayphics to verify this attempt.",
         }, 502);
       }
 
