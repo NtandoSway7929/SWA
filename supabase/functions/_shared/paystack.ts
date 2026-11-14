@@ -1,3 +1,4 @@
+// Paystack-specific validation and signing helpers for the client payment integration.
 export function isPaystackCheckoutUrl(value: unknown): value is string {
   if (typeof value !== "string" || value.length > 2_048) return false;
   try {
