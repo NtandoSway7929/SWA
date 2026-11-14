@@ -102,7 +102,9 @@ Deno.test("uses the valid legacy signature when both headers are sent before web
       now,
     )
   ) {
-    throw new Error("A valid legacy signature was rejected when both headers were present.");
+    throw new Error(
+      "A valid legacy signature was rejected when both headers were present.",
+    );
   }
 });
 
@@ -114,7 +116,8 @@ Deno.test("does not downgrade to the legacy signature when webhook signing secre
   const legacyDigest = await signature(secretKey, raw);
   const req = new Request("https://example.test", {
     headers: {
-      "Paystack-Signature": "t=" + (now - 301) + ",v1=whk_test:" + "0".repeat(128),
+      "Paystack-Signature": "t=" + (now - 301) + ",v1=whk_test:" +
+        "0".repeat(128),
       "x-paystack-signature": legacyDigest,
     },
   });
@@ -127,7 +130,9 @@ Deno.test("does not downgrade to the legacy signature when webhook signing secre
       now,
     )
   ) {
-    throw new Error("The verifier downgraded to the legacy signature after modern signing was configured.");
+    throw new Error(
+      "The verifier downgraded to the legacy signature after modern signing was configured.",
+    );
   }
 });
 
