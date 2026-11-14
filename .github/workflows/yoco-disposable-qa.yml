@@ -15,6 +15,7 @@ on:
       - "scripts/yoco-invoice-settings.test.cjs"
       - "scripts/yoco-reconciliation-ui.test.cjs"
       - "scripts/bank-transfer-review.test.cjs"
+      - "scripts/client-portal-phase-4.test.cjs"
       - ".github/workflows/yoco-disposable-qa.yml"
   pull_request:
     branches:
