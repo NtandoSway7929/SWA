@@ -5,7 +5,6 @@ on:
     branches:
       - feature/yoco-client-payments
       - feature/paystack-client-payments
-      - feature/paystack-client-payments
     paths:
       - "supabase/**"
       - "client-portal/index.html"
