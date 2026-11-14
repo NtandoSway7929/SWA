@@ -11,6 +11,7 @@ const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "
 const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "202611110008_yoco_admin_invoice_settings.sql"), "utf8");
 const paymentMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "202611110003_yoco_atomic_payment_operations.sql"), "utf8");
 const paymentFlowTest = fs.readFileSync(path.join(root, "supabase", "tests", "202611110006_yoco_payment_flow.test.sql"), "utf8");
+const paystackMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "202611140001_paystack_client_payments.sql"), "utf8");
 
 test("invoice payment settings panel is loaded by the admin dashboard", () => {
   assert.match(html, /yoco-invoice-settings\.js\?v=20261113-sales-billing-nav-1/);
@@ -42,7 +43,7 @@ test("deposit input is enabled only for online partial payments", () => {
 });
 
 test("save uses the guarded server RPC rather than direct invoice table updates", () => {
-  assert.match(panel, /\/rest\/v1\/rpc\/admin_set_invoice_yoco_settings/);
+  assert.match(panel, /\/rest\/v1\/rpc\/admin_set_invoice_online_payment_settings/);
   assert.doesNotMatch(panel, /method:\s*"PATCH"/);
   assert.doesNotMatch(panel, /\/rest\/v1\/invoices\?[^\n]*method/);
 });
@@ -56,7 +57,7 @@ test("invoice identifiers and displayed fields are HTML escaped", () => {
 test("server RPC requires an authenticated Swayphics administrator", () => {
   assert.match(migration, /auth\.uid\(\) is null or not coalesce\(public\.is_swayphics_admin\(\), false\)/);
   assert.match(migration, /using errcode = '42501'/);
-  assert.match(migration, /grant execute on function public\.admin_set_invoice_yoco_settings[\s\S]*to authenticated/);
+  assert.match(migration, /grant execute on function public\.admin_set_invoice_online_payment_settings[\s\S]*to authenticated/);
 });
 
 test("server RPC locks the invoice and rejects ineligible invoice states", () => {
@@ -72,7 +73,7 @@ test("server RPC enforces partial-payment and deposit constraints", () => {
   assert.match(migration, /deposit_amount = case when v_online and v_partial then v_deposit else null end/);
 });
 
-test("settings panel does not contain Yoco private credentials or activate live mode", () => {
+test("settings panel does not contain Paystack private credentials or activate live mode", () => {
   assert.doesNotMatch(panel, /sk_live_|sk_test_|webhook_secret/i);
   assert.match(panel, /Live payments are not enabled by this control/);
 });
@@ -95,4 +96,17 @@ test("invoice payment settings opens from its Sales & Billing navigation destina
   assert.match(panel, /async function openSettings\(\)/);
   assert.match(panel, /stopImmediatePropagation\(\)/);
   assert.match(panel, /\.syi-launch\{display:none;/);
+});
+
+test("Paystack is the only active online provider in the client invoice settings UI", () => {
+  assert.doesNotMatch(panel, /yoco/i);
+  assert.match(panel, /admin_set_invoice_online_payment_settings/);
+  assert.match(panel, /Paystack test-checkout availability/);
+});
+
+test("Paystack database support is additive and retains Yoco history", () => {
+  assert.match(paystackMigration, /provider in \\('yoco','paystack'\\)/);
+  assert.match(paystackMigration, /provider = 'paystack'/);
+  assert.match(paystackMigration, /environment = 'test'/);
+  assert.doesNotMatch(paystackMigration, /drop table public\\.(payments|payment_attempts|payment_receipts)/i);
 });
