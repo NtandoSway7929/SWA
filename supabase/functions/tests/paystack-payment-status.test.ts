@@ -6,14 +6,17 @@ const invoiceId = "32345678-1234-4234-8234-123456789012";
 const reference = "SWP-" + attemptId;
 
 function makeRequest() {
-  return new Request("https://test.supabase.co/functions/v1/get-paystack-payment-status", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      token: "synthetic-portal-token-for-status-test",
-      attempt_id: attemptId,
-    }),
-  });
+  return new Request(
+    "https://test.supabase.co/functions/v1/get-paystack-payment-status",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token: "synthetic-portal-token-for-status-test",
+        attempt_id: attemptId,
+      }),
+    },
+  );
 }
 
 function makeDependencies(
@@ -62,7 +65,8 @@ function makeDependencies(
     },
   };
   const handler = createPaystackStatusHandler({
-    env: (name) => name === "PAYSTACK_SECRET_KEY" ? "sk_test_unit_test" : "test",
+    env: (name) =>
+      name === "PAYSTACK_SECRET_KEY" ? "sk_test_unit_test" : "test",
     createAdmin: () => admin,
     resolveToken: async () => ({ client_id: clientId }),
     originAllowed: () => true,
@@ -70,19 +74,24 @@ function makeDependencies(
       if (url !== "https://api.paystack.co/transaction/verify/" + reference) {
         throw new Error("Unexpected Paystack verification URL.");
       }
-      return new Response(JSON.stringify({
-        status: true,
-        data: {
-          id: 900002,
-          domain: options.domain || "test",
-          status: providerStatus,
-          reference: options.reference || reference,
-          amount: options.amount ?? 10_000,
-          currency: "ZAR",
-          channel: "card",
-          gateway_response: providerStatus === "failed" ? "Declined" : "Approved",
-        },
-      }), { status: 200 });
+      return new Response(
+        JSON.stringify({
+          status: true,
+          data: {
+            id: 900002,
+            domain: options.domain || "test",
+            status: providerStatus,
+            reference: options.reference || reference,
+            amount: options.amount ?? 10_000,
+            currency: "ZAR",
+            channel: "card",
+            gateway_response: providerStatus === "failed"
+              ? "Declined"
+              : "Approved",
+          },
+        }),
+        { status: 200 },
+      );
     },
     logError: () => {},
   });
@@ -95,19 +104,27 @@ Deno.test("Paystack status endpoint records a provider-verified failure without 
   const body = await response.json();
 
   if (response.status !== 200 || body.attempt?.status !== "failed") {
-    throw new Error("A verified failed transaction did not update the attempt status.");
+    throw new Error(
+      "A verified failed transaction did not update the attempt status.",
+    );
   }
-  if (body.confirmed !== false || body.payment !== null || body.receipt !== null) {
+  if (
+    body.confirmed !== false || body.payment !== null || body.receipt !== null
+  ) {
     throw new Error("A failed transaction was incorrectly reported as paid.");
   }
   if (attempt.status !== "failed" || rpcCalls.length !== 1) {
-    throw new Error("The failed attempt transition was not persisted exactly once.");
+    throw new Error(
+      "The failed attempt transition was not persisted exactly once.",
+    );
   }
   if (
     rpcCalls[0].name !== "paystack_record_failed_attempt_status" ||
     rpcCalls[0].args.p_provider_transaction_id !== "900002"
   ) {
-    throw new Error("The verified transaction identity was not passed to the database.");
+    throw new Error(
+      "The verified transaction identity was not passed to the database.",
+    );
   }
 });
 
@@ -117,10 +134,17 @@ Deno.test("Paystack status endpoint does not settle or change an attempt for a s
   const body = await response.json();
 
   if (response.status !== 200 || body.attempt?.status !== "pending") {
-    throw new Error("The status endpoint should wait for the success webhook to settle.");
+    throw new Error(
+      "The status endpoint should wait for the success webhook to settle.",
+    );
   }
-  if (body.confirmed !== false || rpcCalls.length !== 0 || attempt.status !== "pending") {
-    throw new Error("The status endpoint settled a payment outside the webhook path.");
+  if (
+    body.confirmed !== false || rpcCalls.length !== 0 ||
+    attempt.status !== "pending"
+  ) {
+    throw new Error(
+      "The status endpoint settled a payment outside the webhook path.",
+    );
   }
 });
 
