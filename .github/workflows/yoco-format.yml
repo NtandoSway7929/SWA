@@ -40,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t files < <(find supabase/functions -type f -name '*.ts' \
-            | grep -E '/(yoco|create-payment-checkout|get-payment-status|reconcile-payment)' \
+            | grep -E '/(yoco|paystack|create-payment-checkout|get-payment-status|reconcile-payment)' \
             | sort)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "No payment TypeScript files were found."
