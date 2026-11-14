@@ -35,6 +35,17 @@ declare
   v_method text;
   v_provider text;
   v_snapshot jsonb;
+  v_failed_invoice uuid;
+  v_failed_attempt jsonb;
+  v_failed_attempt_id uuid;
+  v_failed_reference text;
+  v_failed_result jsonb;
+  v_failed_duplicate jsonb;
+  v_failed_payment_count integer;
+  v_failed_receipt_count integer;
+  v_failed_invoice_status text;
+  v_failed_paid numeric(12,2);
+  v_failed_outstanding numeric(12,2);
 begin
   insert into public.clients (business_name, contact_name, email)
   values ('Paystack Disposable Test Client', 'Test Contact', 'paystack-test@example.invalid')
@@ -129,6 +140,66 @@ begin
     (select processing_status = 'processed' and processing_lease_token is null
        from public.payment_webhook_events where id = v_event_id),
     'processed webhook releases its worker lease'
+  );
+
+  -- A failed/abandoned provider verification must close the attempt without
+  -- recording money or issuing an immutable receipt. Paystack does not send
+  -- transaction webhooks for failed payments, so the status endpoint invokes
+  -- this narrowly scoped routine after independently verifying the transaction.
+  insert into public.invoices (
+    client_id, status, currency, subtotal, total,
+    online_payment_enabled, partial_payment_enabled
+  )
+  values (v_client, 'sent', 'ZAR', 100, 100, true, false)
+  returning id into v_failed_invoice;
+
+  v_failed_attempt := innerme_private.create_paystack_payment_attempt(
+    v_failed_invoice, v_client, 10000, 'paystack-test-failed-key-0002'
+  );
+  v_failed_attempt_id := (v_failed_attempt->>'attempt_id')::uuid;
+  v_failed_reference := 'SWP-' || v_failed_attempt_id::text;
+
+  perform innerme_private.attach_paystack_checkout(
+    v_failed_attempt_id, v_failed_reference,
+    'https://checkout.paystack.com/disposable-failed-session',
+    now() + interval '1 hour'
+  );
+
+  v_failed_result := innerme_private.record_paystack_failed_attempt_status(
+    v_failed_attempt_id, v_failed_reference, 10000,
+    'ZAR', 'test', '900002', 'failed'
+  );
+  perform pg_temp.assert_true(
+    v_failed_result->>'status' = 'failed' and
+      coalesce((v_failed_result->>'updated')::boolean, false),
+    'verified failed Paystack transaction closes the local attempt as failed'
+  );
+
+  v_failed_duplicate := innerme_private.record_paystack_failed_attempt_status(
+    v_failed_attempt_id, v_failed_reference, 10000,
+    'ZAR', 'test', '900002', 'failed'
+  );
+  perform pg_temp.assert_true(
+    v_failed_duplicate->>'status' = 'failed' and
+      coalesce((v_failed_duplicate->>'duplicate')::boolean, false),
+    'repeated failed-status verification is idempotent'
+  );
+
+  select count(*) into v_failed_payment_count
+  from public.payments where invoice_id = v_failed_invoice and provider = 'paystack';
+  select count(*) into v_failed_receipt_count
+  from public.payment_receipts r
+  join public.payments p on p.id = r.payment_id
+  where p.invoice_id = v_failed_invoice and p.provider = 'paystack';
+  select status, amount_paid, amount_outstanding
+  into v_failed_invoice_status, v_failed_paid, v_failed_outstanding
+  from public.invoices where id = v_failed_invoice;
+
+  perform pg_temp.assert_true(v_failed_payment_count = 0, 'failed Paystack transaction creates no payment ledger row');
+  perform pg_temp.assert_true(v_failed_receipt_count = 0, 'failed Paystack transaction creates no receipt');
+  perform pg_temp.assert_true(
+    v_failed_invoice_status = 'sent' and v_failed_paid = 0 and v_failed_outstanding = 100,
+    'failed Paystack transaction leaves the invoice balance unchanged'
   );
 end;
 $$;
