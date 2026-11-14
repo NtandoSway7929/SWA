@@ -7,10 +7,13 @@ import {
   readLimitedTextBody,
   resolvePortalToken,
 } from "../_shared/yoco.ts";
+import { validatePaystackTransactionObservation } from "../_shared/paystack.ts";
 
 type Dependencies = {
+  env: (name: string) => string | undefined;
   createAdmin: () => any;
   resolveToken: (admin: any, token: string) => Promise<any>;
+  request: typeof fetch;
   originAllowed: (req: Request) => boolean;
   readBody: typeof readLimitedTextBody;
   respond: typeof json;
@@ -19,8 +22,10 @@ type Dependencies = {
 };
 
 const defaults: Dependencies = {
+  env: (name) => Deno.env.get(name),
   createAdmin: getAdminClient,
   resolveToken: resolvePortalToken,
+  request: fetch,
   originAllowed: checkOrigin,
   readBody: readLimitedTextBody,
   respond: json,
@@ -80,7 +85,7 @@ export function createPaystackStatusHandler(overrides: Partial<Dependencies> = {
 
       const { data: attempt, error } = await admin
         .from("payment_attempts")
-        .select("id,invoice_id,client_id,amount_cents,currency,status,created_at,updated_at,expires_at,payment_id")
+        .select("id,invoice_id,client_id,amount_cents,currency,status,created_at,updated_at,expires_at,payment_id,provider_checkout_id")
         .eq("id", attemptId)
         .eq("client_id", portal.client_id)
         .eq("provider", "paystack")
@@ -89,6 +94,93 @@ export function createPaystackStatusHandler(overrides: Partial<Dependencies> = {
 
       if (error || !attempt) {
         return deps.respond({ ok: false, error: "Payment attempt not found." }, 404);
+      }
+
+      // Paystack currently sends transaction webhooks for successful
+      // transactions only. Verify pending attempts when the customer returns
+      // so failed or abandoned payments do not remain pending indefinitely.
+      if (
+        attempt.status === "pending" &&
+        typeof attempt.provider_checkout_id === "string" &&
+        attempt.provider_checkout_id
+      ) {
+        const secretKey = deps.env("PAYSTACK_SECRET_KEY");
+        const environment = deps.env("PAYSTACK_ENVIRONMENT");
+        if (!secretKey || !secretKey.startsWith("sk_test_") || environment !== "test") {
+          return deps.respond({
+            ok: false,
+            error: "Paystack test verification is not configured.",
+          }, 503);
+        }
+
+        const verification = await deps.request(
+          "https://api.paystack.co/transaction/verify/" +
+            encodeURIComponent(attempt.provider_checkout_id),
+          {
+            method: "GET",
+            headers: {
+              "Authorization": "Bearer " + secretKey,
+              "Accept": "application/json",
+            },
+            cache: "no-store",
+            signal: AbortSignal.timeout(12_000),
+          },
+        );
+        if (!verification.ok) {
+          deps.logError(
+            "Paystack status verification returned HTTP",
+            verification.status,
+          );
+          return deps.respond({
+            ok: false,
+            error: "Paystack transaction status is temporarily unavailable.",
+          }, 503);
+        }
+
+        const providerPayload = await verification.json();
+        const observed = validatePaystackTransactionObservation(
+          providerPayload,
+          {
+            reference: attempt.provider_checkout_id,
+            amountCents: Number(attempt.amount_cents),
+          },
+        );
+        if (!observed) {
+          deps.logError(
+            "Paystack status verification did not match the pending payment attempt.",
+          );
+          return deps.respond({
+            ok: false,
+            error: "Paystack transaction details could not be safely matched.",
+          }, 503);
+        }
+
+        if (observed.status === "failed" || observed.status === "abandoned") {
+          const { data: transition, error: transitionError } = await admin.rpc(
+            "paystack_record_failed_attempt_status",
+            {
+              p_attempt_id: attempt.id,
+              p_provider_checkout_id: observed.reference,
+              p_amount_cents: observed.amountCents,
+              p_currency: observed.currency,
+              p_processing_mode: observed.domain,
+              p_provider_transaction_id: observed.transactionId,
+              p_provider_status: observed.status,
+            },
+          );
+          if (transitionError || !transition?.status) {
+            deps.logError(
+              "Could not persist verified Paystack non-success status:",
+              transitionError?.message || "No status returned.",
+            );
+            return deps.respond({
+              ok: false,
+              error: "Verified Paystack status could not be saved.",
+            }, 503);
+          }
+          attempt.status = transition.status;
+          if (transition.payment_id) attempt.payment_id = transition.payment_id;
+        }
       }
 
       let payment = null;
