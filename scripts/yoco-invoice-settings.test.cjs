@@ -14,7 +14,7 @@ const paymentFlowTest = fs.readFileSync(path.join(root, "supabase", "tests", "20
 const paystackMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "202611140001_paystack_client_payments.sql"), "utf8");
 
 test("invoice payment settings panel is loaded by the admin dashboard", () => {
-  assert.match(html, /yoco-invoice-settings\.js\?v=20261113-sales-billing-nav-1/);
+  assert.match(html, /yoco-invoice-settings\.js\?v=20261114-paystack-checkout-1/);
   assert.ok(html.indexOf("yoco-invoice-settings.js") < html.indexOf("</body>"));
 });
 
@@ -57,7 +57,7 @@ test("invoice identifiers and displayed fields are HTML escaped", () => {
 test("server RPC requires an authenticated Swayphics administrator", () => {
   assert.match(migration, /auth\.uid\(\) is null or not coalesce\(public\.is_swayphics_admin\(\), false\)/);
   assert.match(migration, /using errcode = '42501'/);
-  assert.match(migration, /grant execute on function public\.admin_set_invoice_online_payment_settings[\s\S]*to authenticated/);
+  assert.match(paystackMigration, /grant execute on function public\\.admin_set_invoice_online_payment_settings[\s\S]*to authenticated/);
 });
 
 test("server RPC locks the invoice and rejects ineligible invoice states", () => {
