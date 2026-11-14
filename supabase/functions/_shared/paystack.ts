@@ -41,9 +41,11 @@ async function hmacSha512Hex(secret: string, value: string): Promise<string> {
 }
 
 /**
- * Supports Paystack's current timestamped Paystack-Signature header and the
- * documented legacy x-paystack-signature header while old integrations migrate.
- * Always pass the exact raw request body; never re-serialize parsed JSON.
+ * Prefer Paystack's timestamped Paystack-Signature when its webhook signing
+ * secret is configured. Before that secret is configured, fall back to the
+ * documented x-paystack-signature when the test secret key is still active.
+ * Paystack may send both headers during migration. Always use the exact raw
+ * request body; never re-serialize parsed JSON.
  */
 export async function verifyPaystackWebhookSignature(
   req: Request,
@@ -53,8 +55,7 @@ export async function verifyPaystackWebhookSignature(
   nowSeconds = Math.floor(Date.now() / 1000),
 ): Promise<boolean> {
   const modern = req.headers.get("paystack-signature");
-  if (modern) {
-    if (!webhookSecret || !webhookSecret.startsWith("whsec_")) return false;
+  if (modern && webhookSecret?.startsWith("whsec_")) {
     const parts = modern.split(",").map((part) => part.trim());
     const timestampPart = parts.find((part) => part.startsWith("t="));
     const timestamp = timestampPart ? Number(timestampPart.slice(2)) : NaN;
@@ -77,6 +78,8 @@ export async function verifyPaystackWebhookSignature(
     );
   }
 
+  // The legacy header remains available while the Paystack secret key is
+  // active, including during migration to the timestamped signing secret.
   const legacy = req.headers.get("x-paystack-signature") || "";
   if (!secretKey || !secretKey.startsWith("sk_test_")) return false;
   if (!/^[0-9a-f]{128}$/i.test(legacy)) return false;
