@@ -34,6 +34,7 @@ begin
        or lower(coalesce(p_processing_mode, '')) <> 'test'
        or p_provider_transaction_id is null
        or p_provider_transaction_id !~ '^[0-9]+$'
+       or p_provider_status is null
        or p_provider_status not in ('failed', 'abandoned') then
         raise exception 'Verified Paystack transaction status is invalid.';
     end if;
