@@ -125,6 +125,53 @@ export function validatePaystackInitializeResponse(
   return { ok: true as const, authorizationUrl: url, reference };
 }
 
+export function validatePaystackTransactionObservation(
+  value: unknown,
+  expected: { reference: string; amountCents: number },
+) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const root = value as Record<string, unknown>;
+  const data = root.data && typeof root.data === "object" &&
+      !Array.isArray(root.data)
+    ? root.data as Record<string, unknown>
+    : null;
+  const allowedStatuses = [
+    "success",
+    "failed",
+    "abandoned",
+    "ongoing",
+    "pending",
+    "processing",
+    "queued",
+    "reversed",
+  ];
+  if (
+    root.status !== true || !data ||
+    typeof data.status !== "string" ||
+    !allowedStatuses.includes(data.status) ||
+    data.domain !== "test" ||
+    data.reference !== expected.reference ||
+    !Number.isSafeInteger(data.amount) ||
+    data.amount !== expected.amountCents ||
+    data.currency !== "ZAR" ||
+    (typeof data.id !== "number" && typeof data.id !== "string") ||
+    !/^\\d+$/.test(String(data.id))
+  ) return null;
+
+  return {
+    reference: String(data.reference),
+    amountCents: Number(data.amount),
+    currency: String(data.currency),
+    domain: String(data.domain),
+    transactionId: String(data.id),
+    status: data.status,
+    channel: typeof data.channel === "string" ? data.channel : null,
+    gatewayResponse: typeof data.gateway_response === "string"
+      ? data.gateway_response.slice(0, 200)
+      : null,
+  };
+}
+
 export function validatePaystackVerifiedTransaction(
   value: unknown,
   expected: { reference: string; amountCents: number },
