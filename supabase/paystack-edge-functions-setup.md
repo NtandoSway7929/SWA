@@ -17,7 +17,7 @@ The implementation uses:
 - Database idempotency, webhook worker leases and invoice-balance protections.
 - The existing payment and immutable receipt ledger, with Paystack identified as provider.
 
-The browser return URL is only a status-check trigger. It is never proof of payment.
+The browser return URL is only a status-check trigger. It is never proof of payment. When the client returns, the status function independently verifies any still-pending Paystack attempt. A verified `failed` or `abandoned` transaction closes the attempt without changing the invoice, creating a payment, or issuing a receipt. A verified `success` is still settled only through the signed `charge.success` webhook; the browser status check never creates a payment ledger entry.
 
 ## Test secrets
 
