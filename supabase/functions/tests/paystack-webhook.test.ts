@@ -23,7 +23,8 @@ function signedEvent(overrides: Record<string, unknown> = {}) {
 
 function makeHarness(options: Record<string, unknown> = {}) {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const lookups: Array<{ table: string; filters: Record<string, unknown> }> = [];
+  const lookups: Array<{ table: string; filters: Record<string, unknown> }> =
+    [];
   let providerCalls = 0;
   let providerAuthorization = "";
 
@@ -31,7 +32,9 @@ function makeHarness(options: Record<string, unknown> = {}) {
     async rpc(name: string, args: Record<string, unknown>) {
       calls.push({ name, args });
       if (name === "paystack_record_verified_webhook") {
-        if (options.recordError) return { data: null, error: { message: "write failed" } };
+        if (options.recordError) {
+          return { data: null, error: { message: "write failed" } };
+        }
         return {
           data: {
             event_id: eventId,
@@ -42,7 +45,9 @@ function makeHarness(options: Record<string, unknown> = {}) {
         };
       }
       if (name === "paystack_claim_webhook_event") {
-        if (options.claimError) return { data: null, error: { message: "claim failed" } };
+        if (options.claimError) {
+          return { data: null, error: { message: "claim failed" } };
+        }
         return {
           data: options.claimDenied
             ? { claimed: false, reason: "lease_active" }
@@ -54,19 +59,29 @@ function makeHarness(options: Record<string, unknown> = {}) {
         return { data: !options.reviewWriteFails, error: null };
       }
       if (name === "paystack_settle_payment_with_lease") {
-        return { data: { settled: true, duplicate: false, payment_id: "payment-test" }, error: null };
+        return {
+          data: { settled: true, duplicate: false, payment_id: "payment-test" },
+          error: null,
+        };
       }
       throw new Error("Unexpected RPC: " + name);
     },
     from(table: string) {
       const filters: Record<string, unknown> = {};
       const query = {
-        select(_columns: string) { return query; },
-        eq(key: string, value: unknown) { filters[key] = value; return query; },
+        select(_columns: string) {
+          return query;
+        },
+        eq(key: string, value: unknown) {
+          filters[key] = value;
+          return query;
+        },
         async maybeSingle() {
           lookups.push({ table, filters: { ...filters } });
           if (options.unmatched) return { data: null, error: null };
-          if (options.lookupError) return { data: null, error: { message: "lookup failed" } };
+          if (options.lookupError) {
+            return { data: null, error: { message: "lookup failed" } };
+          }
           return {
             data: {
               id: attemptId,
@@ -93,8 +108,11 @@ function makeHarness(options: Record<string, unknown> = {}) {
     hashBody: async () => "a".repeat(64),
     request: async (_input: RequestInfo | URL, init?: RequestInit) => {
       providerCalls++;
-      providerAuthorization = new Headers(init?.headers).get("Authorization") || "";
-      if (options.verifyHttpError) return new Response("temporary", { status: 503 });
+      providerAuthorization = new Headers(init?.headers).get("Authorization") ||
+        "";
+      if (options.verifyHttpError) {
+        return new Response("temporary", { status: 503 });
+      }
       return Response.json({
         status: true,
         data: {
@@ -116,29 +134,40 @@ function makeHarness(options: Record<string, unknown> = {}) {
     handler,
     calls,
     lookups,
-    get providerCalls() { return providerCalls; },
-    get providerAuthorization() { return providerAuthorization; },
+    get providerCalls() {
+      return providerCalls;
+    },
+    get providerAuthorization() {
+      return providerAuthorization;
+    },
   };
 }
 
 function request(payload: unknown = signedEvent()) {
-  return new Request("https://functions.example.test/paystack-payment-webhook", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "Paystack-Signature": "test-signature",
+  return new Request(
+    "https://functions.example.test/paystack-payment-webhook",
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Paystack-Signature": "test-signature",
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+  );
 }
 
 Deno.test("signed charge.success is verified against Paystack before settlement", async () => {
   const h = makeHarness();
   const response = await h.handler(request());
   const body = await response.json();
-  const record = h.calls.find((x) => x.name === "paystack_record_verified_webhook");
+  const record = h.calls.find((x) =>
+    x.name === "paystack_record_verified_webhook"
+  );
   const claim = h.calls.find((x) => x.name === "paystack_claim_webhook_event");
-  const settle = h.calls.find((x) => x.name === "paystack_settle_payment_with_lease");
+  const settle = h.calls.find((x) =>
+    x.name === "paystack_settle_payment_with_lease"
+  );
   if (
     response.status !== 200 || !body.ok || !record || !claim || !settle ||
     h.providerCalls !== 1 ||
@@ -153,7 +182,9 @@ Deno.test("signed charge.success is verified against Paystack before settlement"
     settle.args.p_provider_transaction_id !== "900001" ||
     settle.args.p_payment_channel !== "eft"
   ) {
-    throw new Error("Paystack webhook was not independently verified and settled through the leased RPC.");
+    throw new Error(
+      "Paystack webhook was not independently verified and settled through the leased RPC.",
+    );
   }
 });
 
@@ -169,7 +200,10 @@ Deno.test("live-domain event is acknowledged but never enters the test ledger", 
   const h = makeHarness();
   const response = await h.handler(request(signedEvent({ domain: "live" })));
   const body = await response.json();
-  if (response.status !== 200 || !body.ignored || h.calls.length || h.providerCalls) {
+  if (
+    response.status !== 200 || !body.ignored || h.calls.length ||
+    h.providerCalls
+  ) {
     throw new Error("Live webhook event entered Paystack test processing.");
   }
 });
@@ -190,14 +224,18 @@ Deno.test("already-processed duplicate webhook is acknowledged without a second 
 Deno.test("unmatched verified transaction is routed to manual review under the current lease", async () => {
   const h = makeHarness({ unmatched: true });
   const response = await h.handler(request());
-  const review = h.calls.find((x) => x.name === "paystack_update_webhook_event");
+  const review = h.calls.find((x) =>
+    x.name === "paystack_update_webhook_event"
+  );
   if (
     response.status !== 200 || !review ||
     review.args.p_processing_status !== "requires_review" ||
     review.args.p_failure_code !== "unmatched_provider_reference" ||
     review.args.p_lease_token !== leaseToken
   ) {
-    throw new Error("Unmatched Paystack reference was not fenced into manual review.");
+    throw new Error(
+      "Unmatched Paystack reference was not fenced into manual review.",
+    );
   }
 });
 
@@ -205,6 +243,8 @@ Deno.test("temporary Paystack verification failure does not create ledger events
   const h = makeHarness({ verifyHttpError: true });
   const response = await h.handler(request());
   if (response.status !== 503 || h.calls.length) {
-    throw new Error("A temporary verify failure was acknowledged as a settled event.");
+    throw new Error(
+      "A temporary verify failure was acknowledged as a settled event.",
+    );
   }
 });

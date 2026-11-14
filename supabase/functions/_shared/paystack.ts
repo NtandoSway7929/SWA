@@ -57,7 +57,9 @@ export async function verifyPaystackWebhookSignature(
     const parts = modern.split(",").map((part) => part.trim());
     const timestampPart = parts.find((part) => part.startsWith("t="));
     const timestamp = timestampPart ? Number(timestampPart.slice(2)) : NaN;
-    if (!Number.isSafeInteger(timestamp) || Math.abs(nowSeconds - timestamp) > 300) {
+    if (
+      !Number.isSafeInteger(timestamp) || Math.abs(nowSeconds - timestamp) > 300
+    ) {
       return false;
     }
     const signatures = parts

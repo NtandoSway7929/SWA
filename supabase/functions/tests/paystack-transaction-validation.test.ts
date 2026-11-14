@@ -12,11 +12,16 @@ Deno.test("Paystack hosted checkout response must use the exact checkout host an
       reference: "SWP-12345678-1234-4234-8234-123456789012",
     },
   }, "SWP-12345678-1234-4234-8234-123456789012");
-  if (!valid.ok || valid.authorizationUrl !== "https://checkout.paystack.com/session-123") {
+  if (
+    !valid.ok ||
+    valid.authorizationUrl !== "https://checkout.paystack.com/session-123"
+  ) {
     throw new Error("Valid Paystack hosted checkout was rejected.");
   }
 
-  if (isPaystackCheckoutUrl("https://checkout.paystack.com.attacker.example/pay")) {
+  if (
+    isPaystackCheckoutUrl("https://checkout.paystack.com.attacker.example/pay")
+  ) {
     throw new Error("Lookalike checkout hostname was accepted.");
   }
   if (isPaystackCheckoutUrl("http://checkout.paystack.com/pay")) {
@@ -29,7 +34,9 @@ Deno.test("Paystack hosted checkout response must use the exact checkout host an
       reference: "some-other-reference",
     },
   }, "expected-reference");
-  if (wrongRef.ok) throw new Error("Mismatched transaction reference was accepted.");
+  if (wrongRef.ok) {
+    throw new Error("Mismatched transaction reference was accepted.");
+  }
 });
 
 Deno.test("verified Paystack transaction must match reference, amount, ZAR and test domain", () => {
@@ -49,21 +56,27 @@ Deno.test("verified Paystack transaction must match reference, amount, ZAR and t
     reference: "SWP-12345678-1234-4234-8234-123456789012",
     amountCents: 2500,
   });
-  if (!result || result.channel !== "eft" || result.transactionId !== "900001") {
+  if (
+    !result || result.channel !== "eft" || result.transactionId !== "900001"
+  ) {
     throw new Error("Valid verified Paystack EFT transaction was rejected.");
   }
 
-  for (const altered of [
-    { ...response, data: { ...response.data, domain: "live" } },
-    { ...response, data: { ...response.data, status: "pending" } },
-    { ...response, data: { ...response.data, amount: 2501 } },
-    { ...response, data: { ...response.data, currency: "USD" } },
-    { ...response, data: { ...response.data, reference: "different" } },
-  ]) {
-    if (validatePaystackVerifiedTransaction(altered, {
-      reference: "SWP-12345678-1234-4234-8234-123456789012",
-      amountCents: 2500,
-    })) {
+  for (
+    const altered of [
+      { ...response, data: { ...response.data, domain: "live" } },
+      { ...response, data: { ...response.data, status: "pending" } },
+      { ...response, data: { ...response.data, amount: 2501 } },
+      { ...response, data: { ...response.data, currency: "USD" } },
+      { ...response, data: { ...response.data, reference: "different" } },
+    ]
+  ) {
+    if (
+      validatePaystackVerifiedTransaction(altered, {
+        reference: "SWP-12345678-1234-4234-8234-123456789012",
+        amountCents: 2500,
+      })
+    ) {
       throw new Error("Invalid verified transaction was accepted.");
     }
   }

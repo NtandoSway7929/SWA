@@ -1,11 +1,13 @@
+import { getAdminClient, json, sha256Hex } from "../_shared/yoco.ts";
 import {
-  getAdminClient,
-  json,
-  sha256Hex,
-} from "../_shared/yoco.ts";
-import { verifyPaystackWebhookSignature, validatePaystackVerifiedTransaction } from "../_shared/paystack.ts";
+  validatePaystackVerifiedTransaction,
+  verifyPaystackWebhookSignature,
+} from "../_shared/paystack.ts";
 
-async function readRawBody(req: Request, maxBytes: number): Promise<string | null> {
+async function readRawBody(
+  req: Request,
+  maxBytes: number,
+): Promise<string | null> {
   const length = Number(req.headers.get("content-length") || 0);
   if (Number.isFinite(length) && length > maxBytes) return null;
   const reader = req.body?.getReader();
@@ -66,13 +68,16 @@ function record(value: unknown): Record<string, unknown> | null {
 }
 
 function safeReference(value: unknown): string | null {
-  return typeof value === "string" && value.length >= 8 && value.length <= 128 &&
+  return typeof value === "string" && value.length >= 8 &&
+      value.length <= 128 &&
       /^[A-Za-z0-9._-]+$/.test(value)
     ? value
     : null;
 }
 
-export function createPaystackWebhookHandler(overrides: Partial<Dependencies> = {}) {
+export function createPaystackWebhookHandler(
+  overrides: Partial<Dependencies> = {},
+) {
   const deps = { ...defaults, ...overrides };
   return async (req: Request): Promise<Response> => {
     if (req.method !== "POST") {
@@ -82,24 +87,40 @@ export function createPaystackWebhookHandler(overrides: Partial<Dependencies> = 
     const secretKey = deps.env("PAYSTACK_SECRET_KEY");
     const webhookSecret = deps.env("PAYSTACK_WEBHOOK_SECRET");
     const environment = deps.env("PAYSTACK_ENVIRONMENT");
-    if (!secretKey || !secretKey.startsWith("sk_test_") || environment !== "test") {
-      return deps.respond({ ok: false, error: "Paystack test webhook is not configured." }, 503);
+    if (
+      !secretKey || !secretKey.startsWith("sk_test_") || environment !== "test"
+    ) {
+      return deps.respond({
+        ok: false,
+        error: "Paystack test webhook is not configured.",
+      }, 503);
     }
 
     let raw: string | null;
     try {
       raw = await deps.readBody(req, 256_000);
     } catch {
-      return deps.respond({ ok: false, error: "Webhook body must be valid UTF-8." }, 400);
+      return deps.respond({
+        ok: false,
+        error: "Webhook body must be valid UTF-8.",
+      }, 400);
     }
     if (raw === null) {
-      return deps.respond({ ok: false, error: "Webhook body is invalid or too large." }, 413);
+      return deps.respond({
+        ok: false,
+        error: "Webhook body is invalid or too large.",
+      }, 413);
     }
 
     try {
       if (!await deps.verifySignature(req, raw, webhookSecret, secretKey)) {
-        deps.logWarn("Rejected Paystack webhook with invalid signature or stale timestamp.");
-        return deps.respond({ ok: false, error: "Invalid webhook signature." }, 401);
+        deps.logWarn(
+          "Rejected Paystack webhook with invalid signature or stale timestamp.",
+        );
+        return deps.respond(
+          { ok: false, error: "Invalid webhook signature." },
+          401,
+        );
       }
 
       let parsed: unknown;
@@ -111,35 +132,60 @@ export function createPaystackWebhookHandler(overrides: Partial<Dependencies> = 
       const event = record(parsed);
       const data = record(event?.data);
       if (!event || !data || typeof event.event !== "string") {
-        return deps.respond({ ok: false, error: "Webhook event structure is invalid." }, 400);
+        return deps.respond({
+          ok: false,
+          error: "Webhook event structure is invalid.",
+        }, 400);
       }
 
       // The database and payment ledger are deliberately test-only. Signed live
       // notifications are acknowledged but never inserted into the test ledger.
       if (data.domain !== "test") {
-        deps.logWarn("Ignored signed Paystack event outside the test environment.");
-        return deps.respond({ ok: true, received: true, ignored: true, reason: "live_mode_not_enabled" });
+        deps.logWarn(
+          "Ignored signed Paystack event outside the test environment.",
+        );
+        return deps.respond({
+          ok: true,
+          received: true,
+          ignored: true,
+          reason: "live_mode_not_enabled",
+        });
       }
 
       // Other signed events (including refund events) are not part of the first
       // test integration. They are acknowledged without financial side effects.
       if (event.event !== "charge.success") {
-        return deps.respond({ ok: true, received: true, ignored: true, reason: "event_not_supported" });
+        return deps.respond({
+          ok: true,
+          received: true,
+          ignored: true,
+          reason: "event_not_supported",
+        });
       }
 
       const reference = safeReference(data.reference);
       if (!reference) {
-        return deps.respond({ ok: false, error: "Paystack transaction reference is invalid." }, 400);
+        return deps.respond({
+          ok: false,
+          error: "Paystack transaction reference is invalid.",
+        }, 400);
       }
 
       const transactionId = data.id;
-      if ((typeof transactionId !== "number" && typeof transactionId !== "string") ||
-          !/^\d+$/.test(String(transactionId))) {
-        return deps.respond({ ok: false, error: "Paystack transaction identity is invalid." }, 400);
+      if (
+        (typeof transactionId !== "number" &&
+          typeof transactionId !== "string") ||
+        !/^\d+$/.test(String(transactionId))
+      ) {
+        return deps.respond({
+          ok: false,
+          error: "Paystack transaction identity is invalid.",
+        }, 400);
       }
 
       const verification = await deps.request(
-        "https://api.paystack.co/transaction/verify/" + encodeURIComponent(reference),
+        "https://api.paystack.co/transaction/verify/" +
+          encodeURIComponent(reference),
         {
           method: "GET",
           headers: {
@@ -151,27 +197,46 @@ export function createPaystackWebhookHandler(overrides: Partial<Dependencies> = 
         },
       );
       if (!verification.ok) {
-        deps.logError("Paystack transaction verification returned HTTP", verification.status);
-        return deps.respond({ ok: false, error: "Paystack transaction verification is temporarily unavailable." }, 503);
+        deps.logError(
+          "Paystack transaction verification returned HTTP",
+          verification.status,
+        );
+        return deps.respond({
+          ok: false,
+          error:
+            "Paystack transaction verification is temporarily unavailable.",
+        }, 503);
       }
 
       const verificationPayload = await verification.json();
       const verifiedData = record(record(verificationPayload)?.data);
       if (!verifiedData || !Number.isSafeInteger(verifiedData.amount)) {
-        deps.logWarn("Paystack verification returned incomplete transaction details.");
-        return deps.respond({ ok: false, error: "Paystack transaction details are incomplete." }, 503);
+        deps.logWarn(
+          "Paystack verification returned incomplete transaction details.",
+        );
+        return deps.respond({
+          ok: false,
+          error: "Paystack transaction details are incomplete.",
+        }, 503);
       }
       const verified = validatePaystackVerifiedTransaction(
         verificationPayload,
         { reference, amountCents: Number(verifiedData.amount) },
       );
       if (!verified || verified.transactionId !== String(transactionId)) {
-        deps.logWarn("Paystack webhook did not match the verified transaction resource.");
-        return deps.respond({ ok: false, error: "Paystack transaction verification did not match the notification." }, 503);
+        deps.logWarn(
+          "Paystack webhook did not match the verified transaction resource.",
+        );
+        return deps.respond({
+          ok: false,
+          error:
+            "Paystack transaction verification did not match the notification.",
+        }, 503);
       }
 
       const admin = deps.createAdmin();
-      const stableEventId = "charge.success:" + verified.transactionId + ":" + verified.reference;
+      const stableEventId = "charge.success:" + verified.transactionId + ":" +
+        verified.reference;
       const { data: recorded, error: recordError } = await admin.rpc(
         "paystack_record_verified_webhook",
         {
@@ -181,11 +246,21 @@ export function createPaystackWebhookHandler(overrides: Partial<Dependencies> = 
         },
       );
       if (recordError || !recorded?.event_id) {
-        deps.logError("Could not persist verified Paystack webhook:", recordError?.message || "No event record.");
-        return deps.respond({ ok: false, error: "Verified Paystack event could not be recorded." }, 503);
+        deps.logError(
+          "Could not persist verified Paystack webhook:",
+          recordError?.message || "No event record.",
+        );
+        return deps.respond({
+          ok: false,
+          error: "Verified Paystack event could not be recorded.",
+        }, 503);
       }
 
-      if (["processed", "requires_review", "rejected"].includes(recorded.processing_status)) {
+      if (
+        ["processed", "requires_review", "rejected"].includes(
+          recorded.processing_status,
+        )
+      ) {
         return deps.respond({
           ok: true,
           received: true,
@@ -199,33 +274,55 @@ export function createPaystackWebhookHandler(overrides: Partial<Dependencies> = 
         { p_event_id: recorded.event_id, p_lease_seconds: 120 },
       );
       if (claimError) {
-        deps.logError("Could not claim Paystack webhook event:", claimError.message);
-        return deps.respond({ ok: false, error: "Paystack event processing is temporarily unavailable." }, 503);
+        deps.logError(
+          "Could not claim Paystack webhook event:",
+          claimError.message,
+        );
+        return deps.respond({
+          ok: false,
+          error: "Paystack event processing is temporarily unavailable.",
+        }, 503);
       }
       if (!claim?.claimed) {
         if (claim?.reason === "terminal") {
           return deps.respond({ ok: true, received: true, duplicate: true });
         }
-        return deps.respond({ ok: false, error: "Paystack event is already being processed." }, 503);
+        return deps.respond({
+          ok: false,
+          error: "Paystack event is already being processed.",
+        }, 503);
       }
       const leaseToken = claim.lease_token;
       if (typeof leaseToken !== "string" || !leaseToken) {
         deps.logError("Paystack webhook claim returned no lease token.");
-        return deps.respond({ ok: false, error: "Paystack event lease could not be established." }, 503);
+        return deps.respond({
+          ok: false,
+          error: "Paystack event lease could not be established.",
+        }, 503);
       }
 
-      const review = async (code: string, message: string, attemptId?: string) => {
-        const { data: saved, error } = await admin.rpc("paystack_update_webhook_event", {
-          p_event_id: recorded.event_id,
-          p_lease_token: leaseToken,
-          p_processing_status: "requires_review",
-          p_payment_attempt_id: attemptId ?? null,
-          p_failure_code: code,
-          p_failure_message: message,
-        });
+      const review = async (
+        code: string,
+        message: string,
+        attemptId?: string,
+      ) => {
+        const { data: saved, error } = await admin.rpc(
+          "paystack_update_webhook_event",
+          {
+            p_event_id: recorded.event_id,
+            p_lease_token: leaseToken,
+            p_processing_status: "requires_review",
+            p_payment_attempt_id: attemptId ?? null,
+            p_failure_code: code,
+            p_failure_message: message,
+          },
+        );
         return !error && saved === true
           ? deps.respond({ ok: true, received: true, requires_review: true })
-          : deps.respond({ ok: false, error: "Paystack review state could not be saved." }, 503);
+          : deps.respond({
+            ok: false,
+            error: "Paystack review state could not be saved.",
+          }, 503);
       };
 
       const { data: attempt, error: attemptError } = await admin
@@ -236,8 +333,14 @@ export function createPaystackWebhookHandler(overrides: Partial<Dependencies> = 
         .eq("provider_checkout_id", verified.reference)
         .maybeSingle();
       if (attemptError) {
-        deps.logError("Could not match Paystack reference to payment attempt:", attemptError.message);
-        return deps.respond({ ok: false, error: "Paystack payment attempt lookup failed." }, 503);
+        deps.logError(
+          "Could not match Paystack reference to payment attempt:",
+          attemptError.message,
+        );
+        return deps.respond({
+          ok: false,
+          error: "Paystack payment attempt lookup failed.",
+        }, 503);
       }
       if (!attempt) {
         return await review(
@@ -261,8 +364,14 @@ export function createPaystackWebhookHandler(overrides: Partial<Dependencies> = 
         },
       );
       if (settlementError) {
-        deps.logError("Paystack settlement requires retry or review:", settlementError.message);
-        return deps.respond({ ok: false, error: "Verified Paystack event could not be settled yet." }, 503);
+        deps.logError(
+          "Paystack settlement requires retry or review:",
+          settlementError.message,
+        );
+        return deps.respond({
+          ok: false,
+          error: "Verified Paystack event could not be settled yet.",
+        }, 503);
       }
       return deps.respond({
         ok: true,
@@ -274,7 +383,10 @@ export function createPaystackWebhookHandler(overrides: Partial<Dependencies> = 
         "Paystack webhook processing failed:",
         error instanceof Error ? error.message : "Unknown error.",
       );
-      return deps.respond({ ok: false, error: "Paystack webhook processing is temporarily unavailable." }, 500);
+      return deps.respond({
+        ok: false,
+        error: "Paystack webhook processing is temporarily unavailable.",
+      }, 500);
     }
   };
 }
