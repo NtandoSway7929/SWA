@@ -48,3 +48,14 @@ verify_jwt = false
 # Manual bank-transfer submissions use private portal tokens or admin JWTs in the handler.
 [functions.bank-transfer]
 verify_jwt = false
+
+# Paystack endpoints validate private portal tokens or webhook signatures in-handler.
+# This development migration remains test-only; never configure live credentials here.
+[functions.create-paystack-payment-checkout]
+verify_jwt = false
+
+[functions.paystack-payment-webhook]
+verify_jwt = false
+
+[functions.get-paystack-payment-status]
+verify_jwt = false
