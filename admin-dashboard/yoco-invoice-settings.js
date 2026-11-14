@@ -153,7 +153,7 @@
         button.textContent = "Saving…";
         status("Saving settings…", false);
         try {
-            await api("/rest/v1/rpc/admin_set_invoice_paystack_settings", {
+            await api("/rest/v1/rpc/admin_set_invoice_online_payment_settings", {
                 method: "POST",
                 body: {
                     p_invoice_id: invoice.id,
