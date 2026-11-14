@@ -25,10 +25,10 @@ Configure only in a non-production Supabase test project after reviewing and app
 
 - `PAYSTACK_SECRET_KEY`: a Paystack test secret key beginning with `sk_test_`.
 - `PAYSTACK_ENVIRONMENT`: exactly `test`.
-- `PAYSTACK_WEBHOOK_SECRET`: optional during initial test-mode setup. If Paystack sends the legacy `x-paystack-signature` header, the handler verifies its HMAC-SHA512 signature over the raw request body with `PAYSTACK_SECRET_KEY`; no separate `whsec_` value is needed for that mode.
+- `PAYSTACK_WEBHOOK_SECRET`: optional for the isolated test while the Paystack test secret key remains active and Paystack sends the legacy `x-paystack-signature` header. When this `whsec_` value is configured, the handler prefers the timestamped `Paystack-Signature` and enforces its five-minute timestamp window.
 - `PAYSTACK_CALLBACK_URL`: `https://swayphics.co.za/client-portal/` (optional; this is the default).
 
-Paystack's current documentation distinguishes the newer timestamped `Paystack-Signature` header from the legacy `x-paystack-signature` header. If a webhook arrives with `Paystack-Signature`, the handler requires `PAYSTACK_WEBHOOK_SECRET` beginning with `whsec_` and rejects the event when that secret is unavailable. Do not attempt to bypass a dashboard access restriction to obtain this optional test credential. Continue with the legacy header only while Paystack is still sending it; before live activation, confirm the signing mode available to the merchant and configure the matching secret securely.
+Paystack's current documentation states that events may carry both `Paystack-Signature` and the legacy `x-paystack-signature` while the secret key remains active. Before the webhook signing secret is configured, this handler verifies the legacy HMAC-SHA512 signature using `PAYSTACK_SECRET_KEY`; it does not trust an unsigned event. Once `PAYSTACK_WEBHOOK_SECRET` is configured, the handler requires a valid timestamped signature and will not fall back to the legacy header if that modern signature is invalid. Do not attempt to bypass a dashboard access restriction to obtain the signing secret. Before live activation, configure and test the matching `whsec_` value securely and confirm the current signing mode.
 
 Never place secrets in source control, the client portal, browser storage, or issue/PR descriptions. All Paystack secrets are server-side only.
 
