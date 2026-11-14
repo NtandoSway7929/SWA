@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__swayYocoInvoiceSettingsLoaded) return;
-    window.__swayYocoInvoiceSettingsLoaded = true;
+    if (window.__swayPaystackInvoiceSettingsLoaded) return;
+    window.__swayPaystackInvoiceSettingsLoaded = true;
 
     var SUPABASE_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
     var SUPABASE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
@@ -70,21 +70,21 @@
     }
 
     function status(message, bad) {
-        var node = root && root.querySelector("[data-yoco-settings-status]");
+        var node = root && root.querySelector("[data-paystack-settings-status]");
         if (!node) return;
         node.textContent = message || "";
         node.setAttribute("data-error", bad ? "true" : "false");
     }
 
     function selected() {
-        var id = root.querySelector("[data-yoco-invoice]").value;
+        var id = root.querySelector("[data-paystack-invoice]").value;
         return invoices.find(function (item) { return item.id === id; }) || null;
     }
 
     function renderForm() {
         var invoice = selected();
         selectedInvoice = invoice;
-        var area = root.querySelector("[data-yoco-settings-form]");
+        var area = root.querySelector("[data-paystack-settings-form]");
         if (!invoice) {
             area.innerHTML = '<p class="syi-empty">No eligible invoices are available. Only issued invoices with an outstanding balance can be configured.</p>';
             return;
@@ -95,7 +95,7 @@
             '</span><strong>R' + outstanding.toFixed(2) + ' outstanding</strong><small>Status: ' +
             escapeHtml(invoice.status || "unknown") + '</small></div>' +
             '<label class="syi-toggle"><input type="checkbox" data-online ' +
-            (invoice.online_payment_enabled ? "checked" : "") + '><span><strong>Enable online payments</strong><small>Allow this client to pay this invoice through the hosted Yoco checkout.</small></span></label>' +
+            (invoice.online_payment_enabled ? "checked" : "") + '><span><strong>Enable online payments</strong><small>Allow this client to pay this invoice through the hosted Paystack checkout.</small></span></label>' +
             '<label class="syi-toggle"><input type="checkbox" data-partial ' +
             (invoice.partial_payment_enabled ? "checked" : "") + '><span><strong>Allow partial payments</strong><small>Allow the client to pay less than the full outstanding balance.</small></span></label>' +
             '<label class="syi-field"><span>Minimum deposit (R)</span><input type="number" min="0.01" max="' +
@@ -125,7 +125,7 @@
             return !["draft", "cancelled", "paid"].includes(String(item.status || "").toLowerCase()) &&
                 Number(item.amount_outstanding != null ? item.amount_outstanding : item.total) > 0;
         });
-        var select = root.querySelector("[data-yoco-invoice]");
+        var select = root.querySelector("[data-paystack-invoice]");
         select.innerHTML = invoices.map(function (item) {
             var balance = Number(item.amount_outstanding != null ? item.amount_outstanding : item.total) || 0;
             return '<option value="' + escapeHtml(item.id) + '">' +
@@ -153,7 +153,7 @@
         button.textContent = "Saving…";
         status("Saving settings…", false);
         try {
-            await api("/rest/v1/rpc/admin_set_invoice_yoco_settings", {
+            await api("/rest/v1/rpc/admin_set_invoice_paystack_settings", {
                 method: "POST",
                 body: {
                     p_invoice_id: invoice.id,
@@ -177,44 +177,44 @@
     }
 
     function mount() {
-        if (document.getElementById("sway-yoco-invoice-settings")) return;
+        if (document.getElementById("sway-paystack-invoice-settings")) return;
         var style = document.createElement("style");
         style.textContent = `
-            #sway-yoco-invoice-settings{position:fixed;right:22px;bottom:22px;z-index:9998;font-family:Montserrat,Arial,sans-serif;color:#081533}
-            #sway-yoco-invoice-settings .syi-launch{display:none;border:0;border-radius:14px;padding:13px 17px;background:linear-gradient(120deg,#002096,#0152F4);color:#fff;font-weight:700;box-shadow:0 12px 32px #00209635;cursor:pointer}
-            #sway-yoco-invoice-settings .syi-panel{display:none;position:fixed;right:22px;bottom:78px;width:min(440px,calc(100vw - 28px));max-height:min(78vh,720px);overflow:auto;background:#fff;border:1px solid #dce5f5;border-radius:20px;padding:22px;box-shadow:0 24px 70px #07163835}
-            #sway-yoco-invoice-settings[data-open=true] .syi-panel{display:block}
-            #sway-yoco-invoice-settings .syi-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:15px}
-            #sway-yoco-invoice-settings h2{font-size:18px;margin:0 0 6px}
-            #sway-yoco-invoice-settings p{font-size:12px;line-height:1.55;color:#58657c}
-            #sway-yoco-invoice-settings select,#sway-yoco-invoice-settings input[type=number]{width:100%;border:1px solid #d7dfed;border-radius:10px;padding:11px;font:inherit;font-size:13px;background:#fff}
-            #sway-yoco-invoice-settings .syi-picker,#sway-yoco-invoice-settings .syi-field{display:grid;gap:7px;margin:14px 0;font-size:12px;font-weight:700}
-            #sway-yoco-invoice-settings .syi-invoice-summary{display:grid;gap:5px;background:#f3f7ff;border-radius:12px;padding:13px;margin:14px 0}
-            #sway-yoco-invoice-settings .syi-invoice-summary span{font-size:12px;color:#58657c}
-            #sway-yoco-invoice-settings .syi-invoice-summary strong{font-size:18px}
-            #sway-yoco-invoice-settings .syi-invoice-summary small{font-size:11px;color:#58657c}
-            #sway-yoco-invoice-settings .syi-toggle{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #edf1f7}
-            #sway-yoco-invoice-settings .syi-toggle input{margin-top:3px}
-            #sway-yoco-invoice-settings .syi-toggle span{display:grid;gap:4px}
-            #sway-yoco-invoice-settings .syi-toggle strong{font-size:12px}
-            #sway-yoco-invoice-settings .syi-toggle small,#sway-yoco-invoice-settings .syi-hint{font-size:11px;line-height:1.5;color:#65718a}
-            #sway-yoco-invoice-settings .syi-save{width:100%;margin-top:14px;border:0;border-radius:11px;padding:13px;background:#0152F4;color:white;font-weight:700;cursor:pointer}
-            #sway-yoco-invoice-settings .syi-save:disabled{opacity:.6;cursor:wait}
-            #sway-yoco-invoice-settings [data-yoco-settings-status]{margin-top:10px;color:#12633a;font-size:12px}
-            #sway-yoco-invoice-settings [data-yoco-settings-status][data-error=true]{color:#a12626}
-            #sway-yoco-invoice-settings .syi-close{border:0;background:transparent;font-size:22px;cursor:pointer;color:#56627a}
-            #sway-yoco-invoice-settings .syi-empty{padding:18px 0}
-            @media(max-width:600px){#sway-yoco-invoice-settings{right:12px;bottom:12px}#sway-yoco-invoice-settings .syi-panel{right:12px;bottom:68px}}
+            #sway-paystack-invoice-settings{position:fixed;right:22px;bottom:22px;z-index:9998;font-family:Montserrat,Arial,sans-serif;color:#081533}
+            #sway-paystack-invoice-settings .syi-launch{display:none;border:0;border-radius:14px;padding:13px 17px;background:linear-gradient(120deg,#002096,#0152F4);color:#fff;font-weight:700;box-shadow:0 12px 32px #00209635;cursor:pointer}
+            #sway-paystack-invoice-settings .syi-panel{display:none;position:fixed;right:22px;bottom:78px;width:min(440px,calc(100vw - 28px));max-height:min(78vh,720px);overflow:auto;background:#fff;border:1px solid #dce5f5;border-radius:20px;padding:22px;box-shadow:0 24px 70px #07163835}
+            #sway-paystack-invoice-settings[data-open=true] .syi-panel{display:block}
+            #sway-paystack-invoice-settings .syi-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:15px}
+            #sway-paystack-invoice-settings h2{font-size:18px;margin:0 0 6px}
+            #sway-paystack-invoice-settings p{font-size:12px;line-height:1.55;color:#58657c}
+            #sway-paystack-invoice-settings select,#sway-paystack-invoice-settings input[type=number]{width:100%;border:1px solid #d7dfed;border-radius:10px;padding:11px;font:inherit;font-size:13px;background:#fff}
+            #sway-paystack-invoice-settings .syi-picker,#sway-paystack-invoice-settings .syi-field{display:grid;gap:7px;margin:14px 0;font-size:12px;font-weight:700}
+            #sway-paystack-invoice-settings .syi-invoice-summary{display:grid;gap:5px;background:#f3f7ff;border-radius:12px;padding:13px;margin:14px 0}
+            #sway-paystack-invoice-settings .syi-invoice-summary span{font-size:12px;color:#58657c}
+            #sway-paystack-invoice-settings .syi-invoice-summary strong{font-size:18px}
+            #sway-paystack-invoice-settings .syi-invoice-summary small{font-size:11px;color:#58657c}
+            #sway-paystack-invoice-settings .syi-toggle{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #edf1f7}
+            #sway-paystack-invoice-settings .syi-toggle input{margin-top:3px}
+            #sway-paystack-invoice-settings .syi-toggle span{display:grid;gap:4px}
+            #sway-paystack-invoice-settings .syi-toggle strong{font-size:12px}
+            #sway-paystack-invoice-settings .syi-toggle small,#sway-paystack-invoice-settings .syi-hint{font-size:11px;line-height:1.5;color:#65718a}
+            #sway-paystack-invoice-settings .syi-save{width:100%;margin-top:14px;border:0;border-radius:11px;padding:13px;background:#0152F4;color:white;font-weight:700;cursor:pointer}
+            #sway-paystack-invoice-settings .syi-save:disabled{opacity:.6;cursor:wait}
+            #sway-paystack-invoice-settings [data-paystack-settings-status]{margin-top:10px;color:#12633a;font-size:12px}
+            #sway-paystack-invoice-settings [data-paystack-settings-status][data-error=true]{color:#a12626}
+            #sway-paystack-invoice-settings .syi-close{border:0;background:transparent;font-size:22px;cursor:pointer;color:#56627a}
+            #sway-paystack-invoice-settings .syi-empty{padding:18px 0}
+            @media(max-width:600px){#sway-paystack-invoice-settings{right:12px;bottom:12px}#sway-paystack-invoice-settings .syi-panel{right:12px;bottom:68px}}
         `;
         document.head.appendChild(style);
         root = document.createElement("div");
-        root.id = "sway-yoco-invoice-settings";
+        root.id = "sway-paystack-invoice-settings";
         root.innerHTML = '<button class="syi-launch" type="button" data-open>Invoice payment settings</button>' +
             '<section class="syi-panel" aria-label="Invoice payment settings"><div class="syi-head"><div><h2>Invoice payment settings</h2>' +
-            '<p>Control Yoco test-checkout availability for each issued invoice. Live payments are not enabled by this control.</p></div>' +
+            '<p>Control Paystack test-checkout availability for each issued invoice. Live payments are not enabled by this control.</p></div>' +
             '<button type="button" class="syi-close" data-close aria-label="Close">×</button></div>' +
-            '<label class="syi-picker">Select invoice<select data-yoco-invoice></select></label>' +
-            '<div data-yoco-settings-form><p>Loading invoices…</p></div><p data-yoco-settings-status role="status" aria-live="polite"></p></section>';
+            '<label class="syi-picker">Select invoice<select data-paystack-invoice></select></label>' +
+            '<div data-paystack-settings-form><p>Loading invoices…</p></div><p data-paystack-settings-status role="status" aria-live="polite"></p></section>';
         document.body.appendChild(root);
         async function openSettings() {
             root.setAttribute("data-open", "true");
@@ -230,7 +230,7 @@
             openSettings();
         });
         root.querySelector("[data-close]").addEventListener("click", function () { root.setAttribute("data-open", "false"); });
-        root.querySelector("[data-yoco-invoice]").addEventListener("change", renderForm);
+        root.querySelector("[data-paystack-invoice]").addEventListener("change", renderForm);
         document.addEventListener("click", function (event) {
             var button = event.target.closest('[data-view="invoice-settings"]');
             if (!button) return;
