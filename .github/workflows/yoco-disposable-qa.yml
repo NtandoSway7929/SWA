@@ -286,6 +286,15 @@ jobs:
           psql "$DB_URL" -X -v ON_ERROR_STOP=1 \
             -f supabase/tests/202611110006_yoco_payment_flow.test.sql
 
+      - name: Run Paystack payment transaction scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          test -n "$DB_URL"
+          psql "$DB_URL" -X -v ON_ERROR_STOP=1 \
+            -f supabase/tests/202611140001_paystack_payment_flow.test.sql
+
       - name: Run repeated two-worker webhook lease races
         shell: bash
         run: |
