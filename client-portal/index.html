@@ -1391,14 +1391,14 @@ modal.dataset.paymentIdempotencyKey=window.crypto.randomUUID();
 button.disabled=true;button.textContent="Preparing secure checkout...";
 statusBox.hidden=false;statusBox.className="finance-online-status";statusBox.textContent="Creating your secure Paystack checkout. Do not close this window.";
 try{
-const result=await paystackPortalApi("create-payment-checkout",{
+const result=await paystackPortalApi("create-paystack-payment-checkout",{
 invoice_id:invoiceId,amount_cents:amountCents,idempotency_key:modal.dataset.paymentIdempotencyKey
 });
 if(!result.checkout_url||!/^https:\/\//i.test(result.checkout_url))throw new Error("The provider did not return a valid secure checkout link.");
 statusBox.textContent="Checkout ready. Redirecting you to Paystack...";
 window.location.assign(result.checkout_url);
 }catch(error){
-button.disabled=false;button.textContent="Try checkout again";
+button.disabled=false;button.textContent="Retry checkout";
 statusBox.className="finance-online-status error";
 statusBox.textContent=error&&error.message||"Checkout could not be created. You can safely try again.";
 }
@@ -1416,7 +1416,7 @@ hero.appendChild(status);
 let latest=null;
 for(let i=0;i<5;i++){
 try{
-latest=await paystackPortalApi("get-payment-status",{attempt_id:attemptId});
+latest=await paystackPortalApi("get-paystack-payment-status",{attempt_id:attemptId});
 if(latest.confirmed)break;
 if(["failed","expired","cancelled","requires_review"].includes(String(latest.attempt?.status||"").toLowerCase()))break;
 }catch(error){latest={error:error&&error.message||"Payment status is temporarily unavailable."};}
