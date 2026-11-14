@@ -57,7 +57,8 @@ test("invoice identifiers and displayed fields are HTML escaped", () => {
 test("server RPC requires an authenticated Swayphics administrator", () => {
   assert.match(migration, /auth\.uid\(\) is null or not coalesce\(public\.is_swayphics_admin\(\), false\)/);
   assert.match(migration, /using errcode = '42501'/);
-  assert.match(paystackMigration, /grant execute on function public\\.admin_set_invoice_online_payment_settings[\s\S]*to authenticated/);
+  assert.match(paystackMigration, /select public\.admin_set_invoice_yoco_settings/);
+  assert.match(paystackMigration, /grant execute on function public\.admin_set_invoice_online_payment_settings[\s\S]*to authenticated/);
 });
 
 test("server RPC locks the invoice and rejects ineligible invoice states", () => {
@@ -105,8 +106,8 @@ test("Paystack is the only active online provider in the client invoice settings
 });
 
 test("Paystack database support is additive and retains Yoco history", () => {
-  assert.match(paystackMigration, /provider in \\('yoco','paystack'\\)/);
+  assert.match(paystackMigration, /provider in \('yoco','paystack'\)/);
   assert.match(paystackMigration, /provider = 'paystack'/);
   assert.match(paystackMigration, /environment = 'test'/);
-  assert.doesNotMatch(paystackMigration, /drop table public\\.(payments|payment_attempts|payment_receipts)/i);
+  assert.doesNotMatch(paystackMigration, /drop table public\.(payments|payment_attempts|payment_receipts)/i);
 });
