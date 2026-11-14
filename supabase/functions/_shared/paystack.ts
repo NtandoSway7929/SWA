@@ -155,7 +155,7 @@ export function validatePaystackTransactionObservation(
     data.amount !== expected.amountCents ||
     data.currency !== "ZAR" ||
     (typeof data.id !== "number" && typeof data.id !== "string") ||
-    !/^\\d+$/.test(String(data.id))
+    !/^\d+$/.test(String(data.id))
   ) return null;
 
   return {
