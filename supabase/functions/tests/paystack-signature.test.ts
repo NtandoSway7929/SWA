@@ -82,6 +82,55 @@ Deno.test("supports the documented legacy x-paystack-signature during key migrat
   }
 });
 
+Deno.test("uses the valid legacy signature when both headers are sent before webhook secret setup", async () => {
+  const secretKey = "sk_test_disposable_old_key";
+  const raw = '{"event":"charge.success"}';
+  const now = 1_800_000_000;
+  const legacyDigest = await signature(secretKey, raw);
+  const req = new Request("https://example.test", {
+    headers: {
+      "Paystack-Signature": "t=" + now + ",v1=whk_test:" + "0".repeat(128),
+      "x-paystack-signature": legacyDigest,
+    },
+  });
+  if (
+    !await verifyPaystackWebhookSignature(
+      req,
+      raw,
+      undefined,
+      secretKey,
+      now,
+    )
+  ) {
+    throw new Error("A valid legacy signature was rejected when both headers were present.");
+  }
+});
+
+Deno.test("does not downgrade to the legacy signature when webhook signing secret is configured", async () => {
+  const secretKey = "sk_test_disposable_old_key";
+  const webhookSecret = "whsec_disposable_test_secret";
+  const raw = '{"event":"charge.success"}';
+  const now = 1_800_000_000;
+  const legacyDigest = await signature(secretKey, raw);
+  const req = new Request("https://example.test", {
+    headers: {
+      "Paystack-Signature": "t=" + (now - 301) + ",v1=whk_test:" + "0".repeat(128),
+      "x-paystack-signature": legacyDigest,
+    },
+  });
+  if (
+    await verifyPaystackWebhookSignature(
+      req,
+      raw,
+      webhookSecret,
+      secretKey,
+      now,
+    )
+  ) {
+    throw new Error("The verifier downgraded to the legacy signature after modern signing was configured.");
+  }
+});
+
 Deno.test("rejects altered raw bodies even when the original payload was signed", async () => {
   const secret = "whsec_disposable_test_secret";
   const raw = '{"event":"charge.success"}';
