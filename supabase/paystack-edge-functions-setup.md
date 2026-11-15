@@ -1,6 +1,6 @@
 # Paystack client payments: test integration setup
 
-**Status: isolated test deployment.** The Paystack migration and three Edge Functions are deployed to the dedicated `Swayphics Payments Test` Supabase project only. Test credentials are configured there. The first hosted test checkout was created and completed in Paystack Test Mode; its webhook has not yet been received. No production payment setting, schema, invoice, payment or receipt has been changed.
+**Status: isolated test deployment.** The payment and refund database migrations are applied only to the dedicated `Swayphics Payments Test` Supabase project. The three payment Edge Functions are deployed there; the refund webhook update and admin refund endpoint remain on the feature branch pending fresh CI and isolated deployment. A successful hosted test checkout and automatic `charge.success` delivery have been verified. No refund API request has been initiated. No production payment setting, schema, invoice, payment, refund or receipt has been changed.
 
 ## Provider design
 
@@ -18,6 +18,21 @@ The implementation uses:
 - The existing payment and immutable receipt ledger, with Paystack identified as provider.
 
 The browser return URL is only a status-check trigger. It is never proof of payment. When the client returns, the status function independently verifies any still-pending Paystack attempt. A verified `failed` or `abandoned` transaction closes the attempt without changing the invoice, creating a payment, or issuing a receipt. A verified `success` is still settled only through the signed `charge.success` webhook; the browser status check never creates a payment ledger entry.
+
+## Test refund lifecycle
+
+The feature branch adds a test-only refund workflow:
+
+- An administrator-only `create-paystack-refund` Edge Function reserves the requested amount against a settled Paystack test payment before calling `POST /refund`.
+- Each request uses a stable merchant refund reference and idempotency key. A repeated request does not issue a second provider request.
+- Unknown network outcomes and unverified provider responses are fenced into manual review. Administrators must not retry an uncertain refund until its reference has been checked with Paystack.
+- Signed `refund.pending`, `refund.processing`, `refund.needs-attention`, `refund.failed` and `refund.processed` events are mapped into the refund ledger.
+- Pending and processing amounts remain reserved against the original payment but do not reduce invoice net paid. Needs-attention enters manual review. A failed refund releases its reservation. Only `refund.processed` creates a completed/succeeded refund and recalculates the invoice balance.
+- Paystack refund webhooks may omit `refund_reference`. A missing reference is matched only when exactly one open refund for the same payment and amount exists; ambiguous matches are routed to manual review.
+- Refund rows and completed payment rows are protected by database guards. Yoco refund history and behaviour remain supported.
+
+These changes are test-only. No real refund has been submitted to Paystack during development. The SQL lifecycle suite uses synthetic payment and webhook fixtures inside a rolled-back transaction.
+
 
 ## Test secrets
 
@@ -48,11 +63,12 @@ The checkout requests `card`, `eft` and `capitec_pay`. Paystack may show only me
 
 ## Scope limitations before live rollout
 
-1. The current implementation processes `charge.success` only. Signed events for refunds and other event types are acknowledged but do not change the ledger. Refund initiation, automatic refund webhook handling and Paystack refund reconciliation are not implemented.
-2. The payment attempts and webhook event routines are test-only. Live-mode transactions are ignored.
-3. The legacy Yoco tables, rows, receipts, functions and reconciliation history are retained. The migration only adds Paystack as an allowed provider in the relevant existing provider constraints and creates Paystack-specific routines.
-4. The existing bank-transfer submission and review flow is unchanged.
-5. Before enabling live mode, complete Paystack merchant verification, confirm enabled channels and webhook-signing mode, implement and test the live secret and matching signing-secret configuration, review refund handling and reconciliation, execute separate production migration/deployment steps, and obtain explicit approval for production activation.
+1. The payment and refund flows remain test-mode only. Live-mode transactions and refund events are ignored by the test ledger.
+2. The webhook function currently handles `charge.success` plus the five documented refund lifecycle events. Other signed event types are acknowledged without financial side effects.
+3. The refund endpoint is restricted to an authenticated Swayphics administrator and test credentials. No automatic retry is made after an uncertain Create Refund API outcome; the request is held for manual reconciliation.
+4. The legacy Yoco tables, rows, receipts, functions and reconciliation history are retained. The shared refund ledger supports both providers while provider-specific event binding remains enforced.
+5. The existing bank-transfer submission and review flow is unchanged.
+6. Before enabling live mode, complete Paystack merchant verification, confirm enabled channels and modern webhook-signing configuration, build and test a separate live-mode implementation, implement live refund reconciliation and manual review procedures, execute separate production migration/deployment steps, and obtain explicit approval for production activation.
 
 ## Validation gate
 
