@@ -1,6 +1,6 @@
 # Paystack client payments: test integration setup
 
-**Status: isolated test deployment.** The payment and refund database migrations are applied only to the dedicated `Swayphics Payments Test` Supabase project. Four Paystack Edge Functions are active there: `create-paystack-payment-checkout` v1, `get-paystack-payment-status` v2, `paystack-payment-webhook` v3 and `create-paystack-refund` v1. A successful hosted test checkout and automatic `charge.success` delivery have been verified. The refund lifecycle SQL tests and function unit tests pass. No refund API request has been initiated. No production payment setting, schema, invoice, payment, refund or receipt has been changed.
+**Status: isolated test deployment.** The payment and refund database migrations are applied only to the dedicated `Swayphics Payments Test` Supabase project. Four Paystack Edge Functions are active there: `create-paystack-payment-checkout` v1, `get-paystack-payment-status` v2, `paystack-payment-webhook` v3 and `create-paystack-refund` v2. A successful hosted test checkout and automatic `charge.success` delivery have been verified. The refund lifecycle SQL tests and function unit tests pass. No refund API request has been initiated. No production payment setting, schema, invoice, payment, refund or receipt has been changed.
 
 For a fresh isolated database, apply the Paystack migrations in order:
 - `202611140001_paystack_client_payments.sql`
