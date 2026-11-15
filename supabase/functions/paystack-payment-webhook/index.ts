@@ -173,11 +173,9 @@ export function createPaystackWebhookHandler(
         const observedStatus = typeof data.status === "string"
           ? data.status.toLowerCase().replaceAll("_", "-")
           : refundStatus;
-        const providerRefundId = (typeof data.id === "number" ||
-            typeof data.id === "string") &&
-            /^\\d+$/.test(String(data.id))
-          ? String(data.id)
-          : null;
+        // The documented refund webhook payload does not include a refund resource ID.
+        // The numeric Paystack refund ID is saved from the Create Refund API response.
+        const providerRefundId = null;
         const refundReference = typeof data.refund_reference === "string" &&
             /^[A-Za-z0-9_-]{8,64}$/.test(data.refund_reference)
           ? data.refund_reference
