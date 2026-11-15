@@ -335,12 +335,7 @@ export function createPaystackRefundHandler(
         }, 503);
       }
 
-      const providerRoot = asRecord(providerPayload);
-      const providerData = asRecord(providerRoot?.data);
-      const providerError = typeof providerRoot?.message === "string"
-        ? providerRoot.message.slice(0, 300)
-        : "Paystack could not confirm the refund request.";
-
+      let duplicateRefundLookupSucceeded = false;
       if (providerHttpStatus === 409) {
         try {
           const lookup = await deps.request(
@@ -356,15 +351,18 @@ export function createPaystackRefundHandler(
               signal: AbortSignal.timeout(12_000),
             },
           );
-          const lookupPayload = await lookup.json();
-          const lookupRoot = asRecord(lookupPayload);
-          const list = Array.isArray(lookupRoot?.data) ? lookupRoot.data : [];
-          providerPayload = {
-            status: lookupRoot?.status === true,
-            data: list.find((item) =>
+          if (lookup.ok) {
+            const lookupPayload = await lookup.json();
+            const lookupRoot = asRecord(lookupPayload);
+            const list = Array.isArray(lookupRoot?.data) ? lookupRoot.data : [];
+            const match = list.find((item) =>
               asRecord(item)?.reference === reservation.refund_reference
-            ),
-          };
+            );
+            if (lookupRoot?.status === true && match) {
+              providerPayload = { status: true, data: match };
+              duplicateRefundLookupSucceeded = true;
+            }
+          }
         } catch (error) {
           deps.logError(
             "Paystack duplicate refund lookup failed:",
@@ -373,11 +371,15 @@ export function createPaystackRefundHandler(
         }
       }
 
-      const validated = parseRefundProviderResponse(providerPayload, {
+      const successfulHttpResponse =
+        providerHttpStatus >= 200 && providerHttpStatus < 300;
+      const validated = (successfulHttpResponse || duplicateRefundLookupSucceeded)
+        ? parseRefundProviderResponse(providerPayload, {
         transactionReference: reservation.transaction_reference,
         refundReference: reservation.refund_reference,
         amountCents: input.amountCents,
-      });
+      })
+        : null;
       if (!validated) {
         await reserveOrReviewUnknown(
           admin,
