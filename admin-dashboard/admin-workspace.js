@@ -12926,7 +12926,7 @@ function simpleBars(items, color) {
             dormant: state.leads.filter(function (lead) { return String(lead.status || "").toLowerCase() === "dormant"; }).length,
             lost: state.leads.filter(function (lead) { return String(lead.status || "").toLowerCase() === "lost"; }).length
         };
-        const binTabs = '<div class="sway-lead-bin-tabs" role="group" aria-label="Lead bins">' +
+        const binTabs = '<div class="sway-lead-bin-tabs" role="group" aria-label="Lead bins" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
             [["active", "Active"], ["dormant", "Dormant"], ["lost", "Lost"]].map(function (bin) {
                 return '<button type="button" class="sway-workspace-button ' + (state.leadsBin === bin[0] ? "primary" : "") +
                     '" data-leads-bin="' + bin[0] + '" aria-pressed="' + (state.leadsBin === bin[0] ? "true" : "false") + '">' +
