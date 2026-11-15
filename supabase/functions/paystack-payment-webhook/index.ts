@@ -148,7 +148,9 @@ export function createPaystackWebhookHandler(
       const refundStatus = refundEventStatuses[event.event];
       if (refundStatus) {
         if (data.domain !== "test") {
-          deps.logWarn("Ignored Paystack refund event outside the test environment.");
+          deps.logWarn(
+            "Ignored Paystack refund event outside the test environment.",
+          );
           return deps.respond({
             ok: true,
             received: true,
@@ -242,7 +244,8 @@ export function createPaystackWebhookHandler(
           );
           return deps.respond({
             ok: false,
-            error: "Paystack refund event processing is temporarily unavailable.",
+            error:
+              "Paystack refund event processing is temporarily unavailable.",
           }, 503);
         }
         if (!claim?.claimed) {
@@ -262,14 +265,20 @@ export function createPaystackWebhookHandler(
 
         const refundLeaseToken = claim.lease_token;
         if (typeof refundLeaseToken !== "string" || !refundLeaseToken) {
-          deps.logError("Paystack refund webhook claim returned no lease token.");
+          deps.logError(
+            "Paystack refund webhook claim returned no lease token.",
+          );
           return deps.respond({
             ok: false,
             error: "Paystack refund event lease could not be established.",
           }, 503);
         }
 
-        const refundReview = async (code: string, message: string, attemptId?: string) => {
+        const refundReview = async (
+          code: string,
+          message: string,
+          attemptId?: string,
+        ) => {
           const { data: saved, error } = await admin.rpc(
             "paystack_update_webhook_event",
             {
