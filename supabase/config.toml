@@ -59,3 +59,8 @@ verify_jwt = false
 
 [functions.get-paystack-payment-status]
 verify_jwt = false
+
+
+# Refund initiation requires an authenticated Swayphics administrator inside the handler.
+[functions.create-paystack-refund]
+verify_jwt = false
