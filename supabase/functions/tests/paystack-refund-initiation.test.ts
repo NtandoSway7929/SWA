@@ -128,7 +128,14 @@ function makeHarness(options: Record<string, unknown> = {}) {
     logError: () => {},
   });
 
-  return { handler, calls, requests, get requestCount() { return requestCount; } };
+  return {
+    handler,
+    calls,
+    requests,
+    get requestCount() {
+      return requestCount;
+    },
+  };
 }
 
 Deno.test("administrator refund request reserves the amount before calling Paystack", async () => {
@@ -159,7 +166,9 @@ Deno.test("administrator refund request reserves the amount before calling Payst
     saved.args.p_provider_refund_id !== providerRefundId ||
     saved.args.p_provider_status !== "pending"
   ) {
-    throw new Error("Paystack refund initiation was not reserved, validated and persisted.");
+    throw new Error(
+      "Paystack refund initiation was not reserved, validated and persisted.",
+    );
   }
 });
 
@@ -172,7 +181,9 @@ Deno.test("idempotent retries never issue another Paystack refund request", asyn
     response.status !== 200 || !body.ok || !body.reused ||
     !body.manual_check_required || h.requestCount !== 0
   ) {
-    throw new Error("A reused refund idempotency key initiated a second provider request.");
+    throw new Error(
+      "A reused refund idempotency key initiated a second provider request.",
+    );
   }
 });
 
@@ -181,7 +192,9 @@ Deno.test("administrator authorization is required before refund reservation or 
   const response = await h.handler(validRequest());
 
   if (response.status !== 403 || h.calls.length || h.requestCount) {
-    throw new Error("An unauthorised caller reached Paystack refund processing.");
+    throw new Error(
+      "An unauthorised caller reached Paystack refund processing.",
+    );
   }
 });
 
@@ -211,7 +224,9 @@ Deno.test("unknown network outcome is reserved for manual review and never retri
     !review || review.args.p_provider_status !== "unknown" ||
     h.requestCount !== 1
   ) {
-    throw new Error("An uncertain refund request was not fenced for manual review.");
+    throw new Error(
+      "An uncertain refund request was not fenced for manual review.",
+    );
   }
 });
 

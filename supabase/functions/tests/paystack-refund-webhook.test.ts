@@ -152,7 +152,9 @@ Deno.test("refund.pending is recorded under a lease without treating it as a com
     apply.args.p_provider_status !== "pending" ||
     apply.args.p_lease_token !== leaseToken
   ) {
-    throw new Error("Paystack pending refund was not mapped under the active lease.");
+    throw new Error(
+      "Paystack pending refund was not mapped under the active lease.",
+    );
   }
 });
 
@@ -170,7 +172,9 @@ Deno.test("refund.processed is passed to the database as the only completed refu
     response.status !== 200 || !body.ok || !apply ||
     apply.args.p_provider_status !== "processed"
   ) {
-    throw new Error("Paystack processed refund was not sent to the success-only ledger transition.");
+    throw new Error(
+      "Paystack processed refund was not sent to the success-only ledger transition.",
+    );
   }
 });
 
@@ -187,7 +191,9 @@ Deno.test("refund.needs-attention is retained as a review state", async () => {
     response.status !== 200 || !apply ||
     apply.args.p_provider_status !== "needs-attention"
   ) {
-    throw new Error("Paystack needs-attention refund was not routed to review handling.");
+    throw new Error(
+      "Paystack needs-attention refund was not routed to review handling.",
+    );
   }
 });
 
@@ -204,7 +210,9 @@ Deno.test("refund.failed is recorded as failed and does not masquerade as a comp
     response.status !== 200 || !apply ||
     apply.args.p_provider_status !== "failed"
   ) {
-    throw new Error("Paystack failed refund was not recorded as a failed state.");
+    throw new Error(
+      "Paystack failed refund was not recorded as a failed state.",
+    );
   }
 });
 
@@ -219,7 +227,9 @@ Deno.test("live refund notifications are ignored before entering the test databa
     response.status !== 200 || !body.ignored ||
     h.calls.length !== 0 || h.lookups.length !== 0
   ) {
-    throw new Error("Live refund notification entered the Paystack test ledger.");
+    throw new Error(
+      "Live refund notification entered the Paystack test ledger.",
+    );
   }
 });
 
@@ -249,7 +259,9 @@ Deno.test("unmatched refund transaction is routed to manual review", async () =>
     review.args.p_processing_status !== "requires_review" ||
     review.args.p_failure_code !== "refund_mapping_required"
   ) {
-    throw new Error("Unmatched Paystack refund was not fenced into manual review.");
+    throw new Error(
+      "Unmatched Paystack refund was not fenced into manual review.",
+    );
   }
 });
 
@@ -267,6 +279,8 @@ Deno.test("refund notification rejects an unexpected status or currency", async 
     statusResponse.status !== 400 ||
     currencyResponse.status !== 400
   ) {
-    throw new Error("An inconsistent Paystack refund notification was accepted.");
+    throw new Error(
+      "An inconsistent Paystack refund notification was accepted.",
+    );
   }
 });
