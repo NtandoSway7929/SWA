@@ -204,7 +204,7 @@ Deno.test("refund endpoint refuses non-test provider configuration", async () =>
   const body = await response.json();
 
   if (
-    response.status !== 503 || !body.ok === true ||
+    response.status !== 503 || body.ok !== false ||
     h.calls.length || h.requestCount
   ) {
     throw new Error("A non-test Paystack refund configuration was accepted.");
