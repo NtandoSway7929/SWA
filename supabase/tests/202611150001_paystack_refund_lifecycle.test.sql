@@ -311,7 +311,7 @@ begin
   -- merchant refund reference retained from the Create Refund API response.
   v_duplicate_result := pg_temp.apply_paystack_refund_event(
     'refund-processed-duplicate-001', v_attempt_id, v_payment_id,
-    v_transaction_reference, null, v_second_refund_reference, 10000, 'processed'
+    v_transaction_reference, null, null, 10000, 'processed'
   );
   perform pg_temp.assert_true(
     coalesce((v_duplicate_result->>'duplicate')::boolean, false),
