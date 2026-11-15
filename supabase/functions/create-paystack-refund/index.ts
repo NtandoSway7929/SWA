@@ -135,13 +135,13 @@ function parseRefundProviderResponse(
       typeof transaction?.id === "string")
     ? String(transaction.id)
     : typeof data?.transaction === "number" ||
-        (typeof data?.transaction === "string" && /^\\d+$/.test(data.transaction))
+        (typeof data?.transaction === "string" && /^\d+$/.test(data.transaction))
     ? String(data.transaction)
     : "";
   const transactionMatches = transactionReference === expected.transactionReference ||
     (!!expected.providerTransactionId && transactionId === expected.providerTransactionId);
   const providerRefundId = (typeof data?.id === "number" ||
-      typeof data?.id === "string") && /^\\d+$/.test(String(data.id))
+      typeof data?.id === "string") && /^\d+$/.test(String(data.id))
     ? String(data.id)
     : null;
   const returnedReference = typeof data?.reference === "string"
