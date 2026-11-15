@@ -2,6 +2,14 @@
 
 **Status: isolated test deployment.** The payment and refund database migrations are applied only to the dedicated `Swayphics Payments Test` Supabase project. Four Paystack Edge Functions are active there: `create-paystack-payment-checkout` v1, `get-paystack-payment-status` v2, `paystack-payment-webhook` v3 and `create-paystack-refund` v1. A successful hosted test checkout and automatic `charge.success` delivery have been verified. The refund lifecycle SQL tests and function unit tests pass. No refund API request has been initiated. No production payment setting, schema, invoice, payment, refund or receipt has been changed.
 
+For a fresh isolated database, apply the Paystack migrations in order:
+- `202611140001_paystack_client_payments.sql`
+- `202611140002_paystack_failed_attempt_status.sql`
+- `202611150001_paystack_refund_lifecycle.sql`
+- `202611150002_paystack_refund_identity_indexes.sql`
+
+The final migration adds unique provider refund-ID and provider event-ID indexes, preventing the same Paystack refund or verified refund event from being attached to multiple ledger rows.
+
 ## Provider design
 
 Paystack is the single online payment gateway. The client portal uses Paystack-hosted checkout for cards and enabled South African payment methods, including Instant EFT via Ozow and Capitec Pay when Paystack has approved those methods for the merchant.
