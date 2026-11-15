@@ -47,11 +47,13 @@ function publishableKey(env: (name: string) => string | undefined) {
   }
 }
 
+export function extractBearerToken(authorization: string | null): string | null {
+  const match = (authorization || "").trim().match(/^Bearer\s+(\S+)$/i);
+  return match?.[1] || null;
+}
+
 async function authorizeAdmin(req: Request): Promise<boolean> {
-  const match = (req.headers.get("authorization") || "").match(
-    /^Bearer\\s+(.+)$/i,
-  );
-  const token = match?.[1] || "";
+  const token = extractBearerToken(req.headers.get("authorization")) || "";
   const url = Deno.env.get("SUPABASE_URL");
   const key = publishableKey((name) => Deno.env.get(name));
   if (!token || !url || !key) return false;
