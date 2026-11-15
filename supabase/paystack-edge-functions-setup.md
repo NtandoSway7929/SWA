@@ -1,6 +1,6 @@
 # Paystack client payments: test integration setup
 
-**Status: isolated test deployment.** The payment and refund database migrations are applied only to the dedicated `Swayphics Payments Test` Supabase project. The three payment Edge Functions are deployed there; the refund webhook update and admin refund endpoint remain on the feature branch pending fresh CI and isolated deployment. A successful hosted test checkout and automatic `charge.success` delivery have been verified. No refund API request has been initiated. No production payment setting, schema, invoice, payment, refund or receipt has been changed.
+**Status: isolated test deployment.** The payment and refund database migrations are applied only to the dedicated `Swayphics Payments Test` Supabase project. Four Paystack Edge Functions are active there: `create-paystack-payment-checkout` v1, `get-paystack-payment-status` v2, `paystack-payment-webhook` v3 and `create-paystack-refund` v1. A successful hosted test checkout and automatic `charge.success` delivery have been verified. The refund lifecycle SQL tests and function unit tests pass. No refund API request has been initiated. No production payment setting, schema, invoice, payment, refund or receipt has been changed.
 
 ## Provider design
 
@@ -56,6 +56,17 @@ The Paystack webhook Edge Function is deployed to the dedicated `Swayphics Payme
 Do not use the production Swayphics Web project URL for this test integration, and do not enter this test URL in Paystack Live Mode.
 
 The webhook function verifies the applicable signature, independently verifies the transaction with Paystack, checks the test domain and then settles through the leased database routine. Webhook retries are idempotent. If a test transaction was completed before the URL was configured, open **Developers → Webhooks** while Test Mode is selected, locate its `charge.success` event, inspect the event details, and use **Retry** after confirming the endpoint URL is now the test URL. Paystack documents that a retry is sent to the URL currently configured for that environment. If no event is listed, do not alter payment or invoice rows manually; investigate via Paystack's transaction verification first.
+
+For test refund delivery, edit the same webhook registration while **Test Mode** is selected and subscribe to all of these events in addition to `charge.success`:
+
+- `refund.pending`
+- `refund.processing`
+- `refund.needs-attention`
+- `refund.failed`
+- `refund.processed`
+
+The existing test webhook registration was previously subscribed to `charge.success` only. Until these refund events are selected, Paystack will not deliver refund lifecycle notifications to this endpoint. Do not change the Live Mode webhook registration as part of test setup.
+
 
 ## Payment channels and merchant enablement
 
