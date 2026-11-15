@@ -405,6 +405,34 @@ begin
     raise exception 'Paystack refund payment is not eligible.';
   end if;
 
+select * into v_attempt
+  from public.payment_attempts
+  where id = p_attempt_id
+  for update;
+
+  if not found or v_attempt.provider <> 'paystack'
+     or v_attempt.environment <> 'test'
+     or v_attempt.payment_id is distinct from p_payment_id
+     or v_attempt.provider_checkout_id is distinct from p_transaction_reference then
+    raise exception 'Paystack refund does not match its successful payment attempt.';
+  end if;
+
+  select * into v_event
+  from public.payment_webhook_events
+  where id = p_event_id
+  for update;
+
+  if not found or v_event.provider <> 'paystack'
+     or v_event.environment <> 'test'
+     or not v_event.signature_verified
+     or v_event.event_type <> v_expected_event
+     or v_event.processing_status <> 'processing'
+     or v_event.processing_lease_token is distinct from p_lease_token
+     or v_event.processing_lease_expires_at is null
+     or v_event.processing_lease_expires_at <= now() then
+    raise exception 'Paystack refund webhook lease or event is invalid.';
+  end if;
+
   v_refund_amount := (p_amount_cents::numeric / 100)::numeric(12,2);
 
   if p_provider_refund_reference is not null then
@@ -617,38 +645,7 @@ begin
     'currency', v_refund.currency
   );
 end;
-$$;
-
-
-  select * into v_attempt
-  from public.payment_attempts
-  where id = p_attempt_id
-  for update;
-
-  if not found or v_attempt.provider <> 'paystack'
-     or v_attempt.environment <> 'test'
-     or v_attempt.payment_id is distinct from p_payment_id
-     or v_attempt.provider_checkout_id is distinct from p_transaction_reference then
-    raise exception 'Paystack refund does not match its successful payment attempt.';
-  end if;
-
-  select * into v_event
-  from public.payment_webhook_events
-  where id = p_event_id
-  for update;
-
-  if not found or v_event.provider <> 'paystack'
-     or v_event.environment <> 'test'
-     or not v_event.signature_verified
-     or v_event.event_type <> v_expected_event
-     or v_event.processing_status <> 'processing'
-     or v_event.processing_lease_token is distinct from p_lease_token
-     or v_event.processing_lease_expires_at is null
-     or v_event.processing_lease_expires_at <= now() then
-    raise exception 'Paystack refund webhook lease or event is invalid.';
-  end if;
-
-create or replace function public.paystack_create_refund_request(
+$$;create or replace function public.paystack_create_refund_request(
   p_payment_id uuid,
   p_amount_cents bigint,
   p_idempotency_key uuid,
