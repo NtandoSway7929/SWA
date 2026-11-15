@@ -330,6 +330,24 @@ begin
     ),
     'successful Paystack refund ledger rows are immutable'
   );
+
+  perform pg_temp.expect_error(
+    format(
+      'update public.payment_refunds set provider_refund_id = (select provider_refund_id from public.payment_refunds where id = %L::uuid) where id = %L::uuid',
+      v_second_refund_id,
+      v_refund_id
+    ),
+    'a Paystack provider refund ID cannot be assigned to multiple ledger rows'
+  );
+
+  perform pg_temp.expect_error(
+    format(
+      'update public.payment_refunds set provider_event_id = (select provider_event_id from public.payment_refunds where id = %L::uuid) where id = %L::uuid',
+      v_second_refund_id,
+      v_refund_id
+    ),
+    'a Paystack provider event cannot be assigned to multiple refund ledger rows'
+  );
 end;
 $$;
 
