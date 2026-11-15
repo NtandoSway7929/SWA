@@ -106,6 +106,7 @@ test("financial centre exposes guarded Paystack checkout only when enabled and v
   assert.match(portal, /create-paystack-payment-checkout/);
   assert.match(portal, /get-paystack-payment-status/);
   assert.match(portal, /latest\.confirmed/);
+  assert.match(portal, /\["failed","abandoned","expired","cancelled","requires_review"\]/);
   assert.match(portal, /Your invoice is updated only after Swayphics receives verified payment confirmation/);
   assert.doesNotMatch(portal, /Pay now/i);
   assert.match(portal, /data-financial-type="payment"/);
