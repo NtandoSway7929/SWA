@@ -21,6 +21,7 @@
 
     const state = {
         currentView: "overview",
+        leadsBin: "active",
         tableControls: {
             leads: { search: "", filter: "all", sort: "followup_asc" },
             tasks: { search: "", filter: "all", sort: "due_asc" },
@@ -12913,7 +12914,24 @@ function simpleBars(items, color) {
          * reuses the existing complete lead editor; operational actions remain
          * separate so opening a card cannot trigger a write or external action.
          */
-        const visibleLeads = adminTableControls.items("leads", state.leads);
+        const allVisibleLeads = adminTableControls.items("leads", state.leads);
+        const visibleLeads = allVisibleLeads.filter(function (lead) {
+            const status = String(lead.status || "").toLowerCase();
+            if (state.leadsBin === "dormant") return status === "dormant";
+            if (state.leadsBin === "lost") return status === "lost";
+            return status !== "dormant" && status !== "lost";
+        });
+        const binCounts = {
+            active: state.leads.filter(function (lead) { return !["dormant", "lost"].includes(String(lead.status || "").toLowerCase()); }).length,
+            dormant: state.leads.filter(function (lead) { return String(lead.status || "").toLowerCase() === "dormant"; }).length,
+            lost: state.leads.filter(function (lead) { return String(lead.status || "").toLowerCase() === "lost"; }).length
+        };
+        const binTabs = '<div class="sway-lead-bin-tabs" role="group" aria-label="Lead bins">' +
+            [["active", "Active"], ["dormant", "Dormant"], ["lost", "Lost"]].map(function (bin) {
+                return '<button type="button" class="sway-workspace-button ' + (state.leadsBin === bin[0] ? "primary" : "") +
+                    '" data-leads-bin="' + bin[0] + '" aria-pressed="' + (state.leadsBin === bin[0] ? "true" : "false") + '">' +
+                    bin[1] + ' <span class="sway-workspace-count">' + binCounts[bin[0]] + '</span></button>';
+            }).join("") + '</div>';
 
         const cards =
             visibleLeads.map(function (item) {
@@ -12927,7 +12945,7 @@ function simpleBars(items, color) {
                 });
                 const businessName = item.business_name || "Unnamed business";
                 const leadLabel = item.business_name || item.contact_name || "lead";
-                const terminalStatus = ["won", "lost", "not interested"].includes(
+                const terminalStatus = ["won", "lost", "dormant", "not interested"].includes(
                     String(item.status || "").toLowerCase()
                 );
 
@@ -13031,6 +13049,12 @@ function simpleBars(items, color) {
                                               "</button>"
                                     ) +
                                     (
+                                        ["dormant", "lost"].includes(String(item.status || "").toLowerCase())
+                                            ? '<button type="button" class="sway-row-action" data-restore-lead="' + esc(item.id) + '">Return to active pipeline</button>'
+                                            : '<button type="button" class="sway-row-action" data-move-lead-bin="dormant" data-id="' + esc(item.id) + '">Move to Dormant</button>' +
+                                              '<button type="button" class="sway-row-action" data-move-lead-bin="lost" data-id="' + esc(item.id) + '">Move to Lost</button>'
+                                    ) +
+                                    (
                                         !terminalStatus
                                             ? '<button type="button" class="sway-row-action" data-mark-lead-not-interested="' +
                                                 esc(item.id) +
@@ -13067,6 +13091,7 @@ function simpleBars(items, color) {
             panel(
                 "Lead pipeline",
                 "Each lead has its own record card. Open a card for the complete lead details and assessment; use Actions for outreach and pipeline operations.",
+                binTabs +
                 adminTableControls.renderControls("leads") +
                 (
                     state.leads.length
@@ -21839,7 +21864,8 @@ function simpleBars(items, color) {
                                 "proposal sent",
                                 "negotiating",
                                 "won",
-                                "lost"
+                                "lost",
+                                "dormant"
                             ].map(function (value) {
                                 return (
                                     '<option value="' +
@@ -23986,6 +24012,32 @@ function simpleBars(items, color) {
         await refreshData();
         renderShell();
         renderView();
+    }
+
+    async function moveLeadToBin(id, status) {
+        const lead = state.leads.find(function (item) { return String(item.id) === String(id); });
+        if (!lead || !["dormant", "lost"].includes(status)) return;
+        const label = status === "dormant" ? "Dormant" : "Lost";
+        if (!(await swayConfirm("Move " + (lead.business_name || "this lead") + " to the " + label + " bin?"))) return;
+        await api("/rest/v1/leads?id=eq." + encodeURIComponent(id), {
+            method: "PATCH", headers: headers({ "Prefer": "return=minimal" }),
+            body: JSON.stringify({ status: status, updated_at: new Date().toISOString() })
+        });
+        await logActivity("Moved lead to " + label + " bin", "leads", id);
+        await refreshData(); renderShell(); renderView();
+    }
+
+    async function restoreLeadToActive(id) {
+        const lead = state.leads.find(function (item) { return String(item.id) === String(id); });
+        if (!lead || !["dormant", "lost"].includes(String(lead.status || "").toLowerCase())) return;
+        if (!(await swayConfirm("Return " + (lead.business_name || "this lead") + " to the active pipeline as New?"))) return;
+        const previous = String(lead.status).toLowerCase() === "dormant" ? "Dormant" : "Lost";
+        await api("/rest/v1/leads?id=eq." + encodeURIComponent(id), {
+            method: "PATCH", headers: headers({ "Prefer": "return=minimal" }),
+            body: JSON.stringify({ status: "new", updated_at: new Date().toISOString() })
+        });
+        await logActivity("Returned lead from " + previous + " to active pipeline", "leads", id);
+        await refreshData(); renderShell(); renderView();
     }
 
     async function markLeadNotInterested(id) {
@@ -28730,6 +28782,30 @@ function simpleBars(items, color) {
                     }
                 );
             });
+
+        workspace.querySelectorAll("[data-leads-bin]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                state.leadsBin = button.dataset.leadsBin || "active";
+                state.tableSelection.leads = [];
+                renderView();
+            });
+        });
+        workspace.querySelectorAll("[data-move-lead-bin]").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                if (button.disabled) return; button.disabled = true;
+                try { await moveLeadToBin(button.dataset.id, button.dataset.moveLeadBin); }
+                catch (error) { swayAlert(error.message || "Unable to move this lead."); }
+                finally { button.disabled = false; }
+            });
+        });
+        workspace.querySelectorAll("[data-restore-lead]").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                if (button.disabled) return; button.disabled = true;
+                try { await restoreLeadToActive(button.dataset.restoreLead); }
+                catch (error) { swayAlert(error.message || "Unable to restore this lead."); }
+                finally { button.disabled = false; }
+            });
+        });
 
         workspace
             .querySelectorAll("[data-mark-lead-not-interested]")
