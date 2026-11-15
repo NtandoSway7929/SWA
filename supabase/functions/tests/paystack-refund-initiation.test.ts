@@ -1,4 +1,7 @@
-import { createPaystackRefundHandler } from "../create-paystack-refund/index.ts";
+import {
+  createPaystackRefundHandler,
+  extractBearerToken,
+} from "../create-paystack-refund/index.ts";
 
 const paymentId = "12345678-1234-4234-8234-123456789012";
 const idempotencyKey = "22345678-1234-4234-8234-123456789012";
@@ -6,6 +9,27 @@ const refundId = "32345678-1234-4234-8234-123456789012";
 const refundReference = "SWPR-22345678123442348234123456789012";
 const transactionReference = "SWP-42345678-1234-4234-8234-123456789012";
 const providerRefundId = "7654321";
+
+Deno.test("Bearer authorization parser accepts standard headers and rejects malformed schemes", () => {
+  const valid = extractBearerToken("Bearer admin-session-token");
+  const mixedCase = extractBearerToken("bEaReR   admin-session-token  ");
+  const malformed = [
+    null,
+    "",
+    "Basic admin-session-token",
+    "Bearer",
+    "Bearer    ",
+    "Bearer token with spaces",
+  ].some((value) => extractBearerToken(value) !== null);
+
+  if (
+    valid !== "admin-session-token" ||
+    mixedCase !== "admin-session-token" ||
+    malformed
+  ) {
+    throw new Error("Bearer authorization header parsing is incorrect.");
+  }
+});
 
 function validRequest(overrides: Record<string, unknown> = {}) {
   return new Request(
