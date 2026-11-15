@@ -467,7 +467,7 @@ select * into v_attempt
       and environment = 'test'
       and payment_id = p_payment_id
       and amount = v_refund_amount
-      and status in ('pending', 'requires_review');
+      and status in ('pending', 'requires_review', 'succeeded');
 
     if v_candidate_count = 1 then
       select * into v_refund
@@ -476,7 +476,7 @@ select * into v_attempt
         and environment = 'test'
         and payment_id = p_payment_id
         and amount = v_refund_amount
-        and status in ('pending', 'requires_review')
+        and status in ('pending', 'requires_review', 'succeeded')
       order by created_at, id
       limit 1
       for update;
