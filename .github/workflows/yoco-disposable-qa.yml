@@ -84,7 +84,8 @@ jobs:
             supabase/functions/bank-transfer/index.ts \
             supabase/functions/create-paystack-payment-checkout/index.ts \
             supabase/functions/paystack-payment-webhook/index.ts \
-            supabase/functions/get-paystack-payment-status/index.ts
+            supabase/functions/get-paystack-payment-status/index.ts \
+            supabase/functions/create-paystack-refund/index.ts
 
       - name: Run Payment Deno tests
         env:
@@ -182,9 +183,9 @@ jobs:
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
-            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '202611140001_paystack_client_payments.sql' -o -name '202611140002_paystack_failed_attempt_status.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \) \
+            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '202611140001_paystack_client_payments.sql' -o -name '202611140002_paystack_failed_attempt_status.sql' -o -name '202611150001_paystack_refund_lifecycle.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \) \
             | sort)
-          test "${#migrations[@]}" -eq 17
+          test "${#migrations[@]}" -eq 18
           for migration in "${migrations[@]}"; do
             echo "Applying $migration"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
@@ -293,6 +294,15 @@ jobs:
           test -n "$DB_URL"
           psql "$DB_URL" -X -v ON_ERROR_STOP=1 \
             -f supabase/tests/202611140001_paystack_payment_flow.test.sql
+
+      - name: Run Paystack refund lifecycle scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\\(.*\\)"$/\\1/p')"
+          test -n "$DB_URL"
+          psql "$DB_URL" -X -v ON_ERROR_STOP=1 \
+            -f supabase/tests/202611150001_paystack_refund_lifecycle.test.sql
 
       - name: Run repeated two-worker webhook lease races
         shell: bash
