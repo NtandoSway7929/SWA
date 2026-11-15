@@ -1418,7 +1418,7 @@ for(let i=0;i<5;i++){
 try{
 latest=await paystackPortalApi("get-paystack-payment-status",{attempt_id:attemptId});
 if(latest.confirmed)break;
-if(["failed","expired","cancelled","requires_review"].includes(String(latest.attempt?.status||"").toLowerCase()))break;
+if(["failed","abandoned","expired","cancelled","requires_review"].includes(String(latest.attempt?.status||"").toLowerCase()))break;
 }catch(error){latest={error:error&&error.message||"Payment status is temporarily unavailable."};}
 if(i<4)await new Promise(function(resolve){window.setTimeout(resolve,2500)});
 }
