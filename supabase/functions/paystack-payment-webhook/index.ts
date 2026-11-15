@@ -138,6 +138,215 @@ export function createPaystackWebhookHandler(
         }, 400);
       }
 
+      const refundEventStatuses: Record<string, string> = {
+        "refund.pending": "pending",
+        "refund.processing": "processing",
+        "refund.needs-attention": "needs-attention",
+        "refund.failed": "failed",
+        "refund.processed": "processed",
+      };
+      const refundStatus = refundEventStatuses[event.event];
+      if (refundStatus) {
+        if (data.domain !== "test") {
+          deps.logWarn("Ignored Paystack refund event outside the test environment.");
+          return deps.respond({
+            ok: true,
+            received: true,
+            ignored: true,
+            reason: "live_mode_not_enabled",
+          });
+        }
+
+        const nestedTransaction = record(data.transaction);
+        const transactionReference = safeReference(
+          data.transaction_reference ?? nestedTransaction?.reference,
+        );
+        const rawAmount = typeof data.amount === "string" ||
+            typeof data.amount === "number"
+          ? Number(data.amount)
+          : NaN;
+        const currency = typeof data.currency === "string"
+          ? data.currency.toUpperCase()
+          : "";
+        const observedStatus = typeof data.status === "string"
+          ? data.status.toLowerCase().replaceAll("_", "-")
+          : refundStatus;
+        const providerRefundId = (typeof data.id === "number" ||
+            typeof data.id === "string") &&
+            /^\\d+$/.test(String(data.id))
+          ? String(data.id)
+          : null;
+        const refundReference = typeof data.refund_reference === "string" &&
+            /^[A-Za-z0-9_-]{8,64}$/.test(data.refund_reference)
+          ? data.refund_reference
+          : null;
+
+        if (
+          !transactionReference ||
+          !Number.isSafeInteger(rawAmount) ||
+          rawAmount < 1 ||
+          currency !== "ZAR" ||
+          observedStatus !== refundStatus
+        ) {
+          return deps.respond({
+            ok: false,
+            error: "Paystack refund notification details are invalid.",
+          }, 400);
+        }
+
+        const bodyHash = await deps.hashBody(raw);
+        const refundIdentity = refundReference || providerRefundId ||
+          transactionReference + ":" + rawAmount + ":" + bodyHash;
+        const stableRefundEventId = event.event + ":" + refundIdentity;
+        const admin = deps.createAdmin();
+        const { data: recorded, error: recordError } = await admin.rpc(
+          "paystack_record_verified_webhook",
+          {
+            p_provider_event_id: stableRefundEventId,
+            p_event_type: event.event,
+            p_body_sha256: bodyHash,
+          },
+        );
+        if (recordError || !recorded?.event_id) {
+          deps.logError(
+            "Could not persist verified Paystack refund webhook:",
+            recordError?.message || "No event record.",
+          );
+          return deps.respond({
+            ok: false,
+            error: "Verified Paystack refund event could not be recorded.",
+          }, 503);
+        }
+
+        if (
+          ["processed", "requires_review", "rejected"].includes(
+            recorded.processing_status,
+          )
+        ) {
+          return deps.respond({
+            ok: true,
+            received: true,
+            duplicate: !!recorded.duplicate,
+            requires_review: recorded.processing_status === "requires_review",
+          });
+        }
+
+        const { data: claim, error: claimError } = await admin.rpc(
+          "paystack_claim_webhook_event",
+          { p_event_id: recorded.event_id, p_lease_seconds: 120 },
+        );
+        if (claimError) {
+          deps.logError(
+            "Could not claim Paystack refund webhook event:",
+            claimError.message,
+          );
+          return deps.respond({
+            ok: false,
+            error: "Paystack refund event processing is temporarily unavailable.",
+          }, 503);
+        }
+        if (!claim?.claimed) {
+          if (claim?.reason === "terminal") {
+            return deps.respond({
+              ok: true,
+              received: true,
+              duplicate: true,
+              requires_review: claim.processing_status === "requires_review",
+            });
+          }
+          return deps.respond({
+            ok: false,
+            error: "Paystack refund event is already being processed.",
+          }, 503);
+        }
+
+        const refundLeaseToken = claim.lease_token;
+        if (typeof refundLeaseToken !== "string" || !refundLeaseToken) {
+          deps.logError("Paystack refund webhook claim returned no lease token.");
+          return deps.respond({
+            ok: false,
+            error: "Paystack refund event lease could not be established.",
+          }, 503);
+        }
+
+        const refundReview = async (code: string, message: string, attemptId?: string) => {
+          const { data: saved, error } = await admin.rpc(
+            "paystack_update_webhook_event",
+            {
+              p_event_id: recorded.event_id,
+              p_lease_token: refundLeaseToken,
+              p_processing_status: "requires_review",
+              p_payment_attempt_id: attemptId ?? null,
+              p_failure_code: code,
+              p_failure_message: message,
+            },
+          );
+          return !error && saved === true
+            ? deps.respond({
+              ok: true,
+              received: true,
+              requires_review: true,
+            })
+            : deps.respond({
+              ok: false,
+              error: "Paystack refund review state could not be saved.",
+            }, 503);
+        };
+
+        const { data: attempt, error: attemptError } = await admin
+          .from("payment_attempts")
+          .select("id,payment_id")
+          .eq("provider", "paystack")
+          .eq("environment", "test")
+          .eq("provider_checkout_id", transactionReference)
+          .maybeSingle();
+
+        if (attemptError) {
+          deps.logError(
+            "Could not match Paystack refund transaction:",
+            attemptError.message,
+          );
+          return deps.respond({
+            ok: false,
+            error: "Paystack refund payment lookup failed.",
+          }, 503);
+        }
+        if (!attempt?.payment_id) {
+          return await refundReview(
+            "refund_mapping_required",
+            "Verified Paystack refund transaction did not match a settled local test payment.",
+            attempt?.id,
+          );
+        }
+
+        const { data: refund, error: refundError } = await admin.rpc(
+          "paystack_apply_refund_webhook_with_lease",
+          {
+            p_event_id: recorded.event_id,
+            p_lease_token: refundLeaseToken,
+            p_attempt_id: attempt.id,
+            p_payment_id: attempt.payment_id,
+            p_transaction_reference: transactionReference,
+            p_provider_refund_id: providerRefundId,
+            p_provider_refund_reference: refundReference,
+            p_amount_cents: rawAmount,
+            p_currency: currency,
+            p_provider_status: refundStatus,
+          },
+        );
+        if (refundError) {
+          deps.logError(
+            "Paystack refund update requires retry or review:",
+            refundError.message,
+          );
+          return deps.respond({
+            ok: false,
+            error: "Verified Paystack refund status could not be recorded yet.",
+          }, 503);
+        }
+        return deps.respond({ ok: true, received: true, refund });
+      }
+
       // The database and payment ledger are deliberately test-only. Signed live
       // notifications are acknowledged but never inserted into the test ledger.
       if (data.domain !== "test") {
