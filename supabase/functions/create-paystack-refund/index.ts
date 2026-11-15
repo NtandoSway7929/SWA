@@ -115,6 +115,7 @@ function parseRefundProviderResponse(
   value: unknown,
   expected: {
     transactionReference: string;
+    providerTransactionId: string;
     refundReference: string;
     amountCents: number;
   },
@@ -127,7 +128,18 @@ function parseRefundProviderResponse(
     : "";
   const transactionReference = typeof transaction?.reference === "string"
     ? transaction.reference
+    : typeof data?.transaction === "string"
+    ? data.transaction
     : "";
+  const transactionId = (typeof transaction?.id === "number" ||
+      typeof transaction?.id === "string")
+    ? String(transaction.id)
+    : typeof data?.transaction === "number" ||
+        (typeof data?.transaction === "string" && /^\\d+$/.test(data.transaction))
+    ? String(data.transaction)
+    : "";
+  const transactionMatches = transactionReference === expected.transactionReference ||
+    (!!expected.providerTransactionId && transactionId === expected.providerTransactionId);
   const providerRefundId = (typeof data?.id === "number" ||
       typeof data?.id === "string") && /^\\d+$/.test(String(data.id))
     ? String(data.id)
@@ -141,7 +153,7 @@ function parseRefundProviderResponse(
     !data ||
     !providerRefundId ||
     data.domain !== "test" ||
-    transactionReference !== expected.transactionReference ||
+    !transactionMatches ||
     !Number.isSafeInteger(data.amount) ||
     data.amount !== expected.amountCents ||
     data.currency !== "ZAR" ||
@@ -376,6 +388,7 @@ export function createPaystackRefundHandler(
       const validated = (successfulHttpResponse || duplicateRefundLookupSucceeded)
         ? parseRefundProviderResponse(providerPayload, {
         transactionReference: reservation.transaction_reference,
+        providerTransactionId: String(reservation.provider_transaction_id || ""),
         refundReference: reservation.refund_reference,
         amountCents: input.amountCents,
       })
