@@ -18967,6 +18967,47 @@ function simpleBars(items, color) {
         ];
     }
 
+    function budgetReceivableSummary(invoices) {
+        const summary = {
+            zarAmount: 0,
+            nonZarCount: 0
+        };
+
+        (invoices || []).forEach(function (invoice) {
+            const status = String(invoice.status || "").toLowerCase();
+
+            // Only issued, unpaid invoices are receivables. Draft invoices
+            // are not yet billed; paid and cancelled invoices are closed.
+            if (!["sent", "partially paid", "overdue"].includes(status)) {
+                return;
+            }
+
+            const outstanding = invoice.amount_outstanding != null
+                ? Number(invoice.amount_outstanding)
+                : Math.max(
+                    0,
+                    Number(invoice.total || 0) - Number(invoice.amount_paid || 0)
+                );
+            const amount = Number.isFinite(outstanding)
+                ? Math.max(0, outstanding)
+                : 0;
+
+            if (amount <= 0) {
+                return;
+            }
+
+            const currency = String(invoice.currency || "ZAR").toUpperCase();
+            if (currency !== "ZAR") {
+                summary.nonZarCount += 1;
+                return;
+            }
+
+            summary.zarAmount += amount;
+        });
+
+        return summary;
+    }
+
     function renderBudget() {
         if (!isBudgetOwner()) {
             return heading() + panel(
@@ -19012,18 +19053,13 @@ function simpleBars(items, color) {
         const totalOperatingExpenses = budgetTotal(operatingExpenseRows);
         const totalOutflows = totalRefunds + totalOperatingExpenses;
         const netMovement = totalIncome - totalOutflows;
-        const receivables = (state.invoices || []).reduce(function (total, invoice) {
-            if (String(invoice.status || "").toLowerCase() === "cancelled") {
-                return total;
-            }
-            const outstanding = invoice.amount_outstanding != null
-                ? Number(invoice.amount_outstanding || 0)
-                : Math.max(
-                    0,
-                    Number(invoice.total || 0) - Number(invoice.amount_paid || 0)
-                );
-            return total + Math.max(0, outstanding);
-        }, 0);
+        const receivableSummary = budgetReceivableSummary(state.invoices);
+        const receivables = receivableSummary.zarAmount;
+        const nonZarReceivableCount = receivableSummary.nonZarCount;
+        const receivableNote = nonZarReceivableCount
+            ? "ZAR only · " + nonZarReceivableCount + " non-ZAR invoice" +
+                (nonZarReceivableCount === 1 ? "" : "s") + " excluded"
+            : "Receivables, not cash received";
 
         const months = budgetMonthKeys(12);
         const monthOptions =
@@ -19173,7 +19209,8 @@ function simpleBars(items, color) {
                     esc((netMovement < 0 ? "−" : "") + budgetCurrency(Math.abs(netMovement))) +
                     '</strong><small>Income less outflows</small></article>' +
                 '<article class="sway-budget-metric"><span>Outstanding invoices</span><strong>' +
-                    esc(budgetCurrency(receivables)) + '</strong><small>Receivables, not cash received</small></article>' +
+                    esc(budgetCurrency(receivables)) + '</strong><small>' +
+                    esc(receivableNote) + '</small></article>' +
             '</section>' +
             '<p class="sway-budget-cash-note">This is a cash-movement view, not a bank balance. It does not include an opening balance, bank account reconciliation or non-cash assets and liabilities. Yoco test-mode payments and refunds are excluded; Yoco receipts count only when linked to a live payment attempt.</p>' +
             (nonZarCount
