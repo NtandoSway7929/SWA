@@ -18800,7 +18800,8 @@ function simpleBars(items, color) {
 
                 if (
                     !linkedAttempt ||
-                    String(linkedAttempt.environment || "").toLowerCase() !== "live"
+                    String(linkedAttempt.environment || "").toLowerCase() !== "live" ||
+                    String(linkedAttempt.status || "").toLowerCase() !== "succeeded"
                 ) {
                     return;
                 }
