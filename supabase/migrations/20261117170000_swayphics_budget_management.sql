@@ -118,8 +118,12 @@ begin
         raise exception 'Posted budget entry details are immutable.';
     end if;
 
-    if new.voided_at is null or new.voided_by is null then
-        raise exception 'Voiding a budget entry requires an audit timestamp and user.';
+    -- The database, not the browser, assigns the immutable audit identity.
+    new.voided_at := now();
+    new.voided_by := auth.uid();
+
+    if new.voided_by is null then
+        raise exception 'Voiding a budget entry requires an authenticated owner.';
     end if;
 
     new.updated_at := now();
