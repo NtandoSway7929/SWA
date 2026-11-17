@@ -316,6 +316,28 @@ assert.ok(
     "status colour variants must be retained after removing the decorative circles"
 );
 
+const budgetReceivables = extractConstant(
+    workspace,
+    "function budgetReceivableSummary(invoices) {",
+    "\n    function renderBudget()",
+    "Budget receivable aggregation"
+);
+const receivableSummary = new Function(
+    budgetReceivables + "\nreturn budgetReceivableSummary(arguments[0]);"
+)([
+    { status: "draft", currency: "ZAR", total: 650, amount_outstanding: 650 },
+    { status: "sent", currency: "ZAR", total: 900, amount_outstanding: 900 },
+    { status: "partially paid", currency: "ZAR", total: 500, amount_paid: 200, amount_outstanding: null },
+    { status: "overdue", currency: "USD", total: 100, amount_outstanding: 100 },
+    { status: "paid", currency: "ZAR", total: 300, amount_outstanding: 0 },
+    { status: "cancelled", currency: "ZAR", total: 400, amount_outstanding: 400 }
+]);
+assert.deepEqual(
+    receivableSummary,
+    { zarAmount: 1200, nonZarCount: 1 },
+    "receivables must include only issued unpaid invoices and exclude non-ZAR amounts from ZAR totals"
+);
+
 const budgetRenderer = extractConstant(
     workspace,
     "function renderBudget() {",
@@ -363,8 +385,9 @@ assert.ok(
 );
 assert.ok(
     budgetRenderer.includes("Receivables, not cash received") &&
-    budgetRenderer.includes("This is a cash-movement view, not a bank balance"),
-    "invoice receivables and cash movement must be clearly distinguished"
+    budgetRenderer.includes("This is a cash-movement view, not a bank balance") &&
+    budgetRenderer.includes("non-ZAR invoice"),
+    "invoice receivables must be distinguished from cash and non-ZAR invoice values must be disclosed"
 );
 assert.ok(
     workspace.includes('"/rest/v1/budget_entries"') &&
