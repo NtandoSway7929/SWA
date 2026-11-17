@@ -44,12 +44,13 @@ const expectedGroups = [
     ["crm", "Clients & Pipeline", ["enquiries", "leads", "clients", "communications", "email", "documents", "followups"]],
     ["delivery", "Work & Portfolio", ["projects", "tasks", "portfolio"]],
     ["billing", "Sales & Billing", ["quotes", "invoices", "payments", "services", "invoice-settings"]],
+    ["finance", "Finance", ["budget"]],
     ["website", "Website", ["content", "testimonials", "cookie-analytics"]],
     ["admin", "Administration", ["activity", "portal-requests", "data-export", "team"]],
     ["settings", "Settings", ["settings"]]
 ];
 
-assert.equal(groupMatches.length, expectedGroups.length, "all eight navigation groups must remain");
+assert.equal(groupMatches.length, expectedGroups.length, "all nine navigation groups must remain");
 const actualViewIds = [];
 
 groupMatches.forEach((match, index) => {
@@ -65,7 +66,7 @@ groupMatches.forEach((match, index) => {
     actualViewIds.push(...items);
 });
 
-assert.equal(actualViewIds.length, 31, "all 31 current destinations must remain available");
+assert.equal(actualViewIds.length, 32, "all 32 current destinations must remain available");
 assert.ok(
     navSource.match(/\{\s*id:\s*"settings",\s*label:\s*"Settings",\s*icon:\s*"settings"/),
     "the final Settings destination must declare its settings icon"
@@ -97,7 +98,7 @@ assert.ok(
     settingsButtonRenderer.includes('class="sway-settings-direct-label"'),
     "the standalone Settings tab must render its gear icon before its label"
 );
-assert.equal(new Set(actualViewIds).size, 31, "navigation destination IDs must be unique");
+assert.equal(new Set(actualViewIds).size, 32, "navigation destination IDs must be unique");
 
 const renderShell = extractConstant(
     workspace,
@@ -316,7 +317,7 @@ assert.ok(
 console.log(JSON.stringify({
     result: "PASS",
     checks: [
-        "eight navigation groups and all 30 destination IDs preserved",
+        "nine navigation groups and all 32 destination IDs preserved",
         "semantic top navigation landmark and horizontal trigger row",
         "dropdown panels separated from horizontal scrolling container",
         "existing view identifiers, counters and selected-view persistence preserved",
