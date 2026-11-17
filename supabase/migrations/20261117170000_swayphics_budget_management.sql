@@ -73,6 +73,21 @@ create policy "Swayphics owners can view payment refunds"
     to authenticated
     using ((select public.is_swayphics_owner()));
 
+-- Payment attempts identify whether a Yoco payment belongs to test or live
+-- processing. Expose only the minimal read access needed for owner reporting.
+alter table public.payment_attempts enable row level security;
+revoke all privileges on table public.payment_attempts
+    from public, anon, authenticated;
+grant select on table public.payment_attempts to authenticated;
+
+drop policy if exists "Swayphics owners can view payment attempts"
+    on public.payment_attempts;
+create policy "Swayphics owners can view payment attempts"
+    on public.payment_attempts
+    for select
+    to authenticated
+    using ((select public.is_swayphics_owner()));
+
 -- Posted entries are corrected by voiding and recording a replacement, not
 -- by editing or deleting the original financial event.
 create or replace function public.guard_budget_entry_ledger()
@@ -132,6 +147,14 @@ begin
               and schemaname = 'public' and tablename = 'payments'
         ) then
             execute 'alter publication supabase_realtime add table public.payments';
+        end if;
+
+        if not exists (
+            select 1 from pg_publication_tables
+            where pubname = 'supabase_realtime'
+              and schemaname = 'public' and tablename = 'payment_attempts'
+        ) then
+            execute 'alter publication supabase_realtime add table public.payment_attempts';
         end if;
 
         if not exists (
