@@ -10,12 +10,14 @@ const workspaceCssPath = path.join(root, "admin-dashboard", "admin-workspace.css
 const redesignCssPath = path.join(root, "admin-dashboard", "admin-dashboard-redesign.css");
 const dashboardHtmlPath = path.join(root, "admin-dashboard", "index.html");
 const settingsPath = path.join(root, "admin-dashboard", "admin-settings-expanded.js");
+const budgetMigrationPath = path.join(root, "supabase", "migrations", "20261117170000_swayphics_budget_management.sql");
 
 const workspace = fs.readFileSync(workspacePath, "utf8");
 const workspaceCss = fs.readFileSync(workspaceCssPath, "utf8");
 const redesignCss = fs.readFileSync(redesignCssPath, "utf8");
 const dashboardHtml = fs.readFileSync(dashboardHtmlPath, "utf8");
 const settings = fs.readFileSync(settingsPath, "utf8");
+const budgetMigration = fs.readFileSync(budgetMigrationPath, "utf8");
 
 function extractConstant(source, startMarker, endMarker, label) {
     const start = source.indexOf(startMarker);
@@ -312,6 +314,81 @@ assert.ok(
     dashboardHtml.includes(".sway-chip.warning") &&
     dashboardHtml.includes(".sway-chip.danger"),
     "status colour variants must be retained after removing the decorative circles"
+);
+
+const budgetRenderer = extractConstant(
+    workspace,
+    "function renderBudget() {",
+    "\\n    function renderPayments()",
+    "Budget renderer"
+);
+const budgetLedger = extractConstant(
+    workspace,
+    "function budgetTransactionRows() {",
+    "\\n    function budgetTotal(",
+    "Budget transaction aggregation"
+);
+const budgetOwnerGuard = extractConstant(
+    workspace,
+    "function isBudgetOwner() {",
+    "\\n    function budgetDateKey(",
+    "Budget owner permission guard"
+);
+assert.ok(
+    navSource.includes('id: "finance"') && navSource.includes('["budget", "Budget"]'),
+    "Finance → Budget must remain a dedicated navigation destination"
+);
+assert.ok(
+    budgetOwnerGuard.includes('state.currentAdmin.role === "owner"') &&
+    budgetOwnerGuard.includes("state.currentAdmin.active === true"),
+    "Budget must be restricted to an active owner account"
+);
+assert.ok(
+    budgetLedger.includes('payment.status || "").toLowerCase() !== "paid"') &&
+    budgetLedger.includes('linkedAttempt.environment || "").toLowerCase() !== "live"') &&
+    budgetLedger.includes('linkedAttempt.status || "").toLowerCase() !== "succeeded"'),
+    "Yoco receipts must be excluded unless their linked payment attempt succeeded in live mode"
+);
+assert.ok(
+    budgetLedger.includes('refund.status || "").toLowerCase() !== "succeeded"') &&
+    budgetLedger.includes('refund.environment || "").toLowerCase() !== "live"'),
+    "only successful live Yoco refunds may enter cash-outflow reporting"
+);
+assert.ok(
+    budgetRenderer.includes("Client payments received") &&
+    budgetRenderer.includes("Client refunds") &&
+    budgetRenderer.includes("Operating expenses") &&
+    budgetRenderer.includes("Net cash movement"),
+    "the cash-basis statement must separate receipts, refunds, expenses and net movement"
+);
+assert.ok(
+    budgetRenderer.includes("Receivables, not cash received") &&
+    budgetRenderer.includes("This is a cash-movement view, not a bank balance"),
+    "invoice receivables and cash movement must be clearly distinguished"
+);
+assert.ok(
+    workspace.includes('"/rest/v1/budget_entries"') &&
+    workspace.includes('status: "void"') &&
+    !workspace.includes('voided_by: state.currentUser.id'),
+    "manual entries must persist and void through the ledger without client-supplied audit identity"
+);
+assert.ok(
+    budgetMigration.includes("alter table public.budget_entries enable row level security") &&
+    budgetMigration.includes("Swayphics owners can manage budget entries") &&
+    budgetMigration.includes("Swayphics owners can view payment refunds") &&
+    budgetMigration.includes("Swayphics owners can view payment attempts"),
+    "budget, refunds and payment-attempt reads must be owner-protected by RLS"
+);
+assert.ok(
+    budgetMigration.includes("new.voided_at := now()") &&
+    budgetMigration.includes("new.voided_by := auth.uid()") &&
+    budgetMigration.includes("Posted budget entry details are immutable"),
+    "the database must preserve immutable posted entries and assign the void audit fields"
+);
+assert.ok(
+    workspaceCss.includes("body.sway-dark-mode #sway-admin-workspace .sway-budget-metric") &&
+    workspaceCss.includes("@media (max-width: 680px)"),
+    "Budget cards and controls must retain dark-theme and mobile layouts"
 );
 
 console.log(JSON.stringify({
