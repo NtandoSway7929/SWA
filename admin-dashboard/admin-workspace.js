@@ -28305,10 +28305,7 @@ function simpleBars(items, color) {
                             method: "PATCH",
                             headers: headers({ "Prefer": "return=minimal" }),
                             body: JSON.stringify({
-                                status: "void",
-                                voided_at: new Date().toISOString(),
-                                voided_by: state.currentUser.id,
-                                updated_at: new Date().toISOString()
+                                status: "void"
                             })
                         }
                     );
