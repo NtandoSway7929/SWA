@@ -62,7 +62,7 @@ create policy "Swayphics owners can manage budget entries"
     using ((select public.is_swayphics_owner()))
     with check ((select public.is_swayphics_owner()));
 
-revoke all privileges on table public.payment_refunds from public, anon;
+revoke all privileges on table public.payment_refunds from public, anon, authenticated;
 grant select on table public.payment_refunds to authenticated;
 
 drop policy if exists "Swayphics owners can view payment refunds"
@@ -117,6 +117,9 @@ drop trigger if exists trg_guard_budget_entry_ledger
 create trigger trg_guard_budget_entry_ledger
 before update or delete on public.budget_entries
 for each row execute function public.guard_budget_entry_ledger();
+
+revoke all on function public.guard_budget_entry_ledger()
+    from public, anon, authenticated, service_role;
 
 -- Ensure relevant changes are streamed to the owner-only dashboard. The
 -- payment table may already be published; only add tables that are missing.
