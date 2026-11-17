@@ -319,19 +319,19 @@ assert.ok(
 const budgetRenderer = extractConstant(
     workspace,
     "function renderBudget() {",
-    "\\n    function renderPayments()",
+    "\n    function renderPayments()",
     "Budget renderer"
 );
 const budgetLedger = extractConstant(
     workspace,
     "function budgetTransactionRows() {",
-    "\\n    function budgetTotal(",
+    "\n    function budgetTotal(",
     "Budget transaction aggregation"
 );
 const budgetOwnerGuard = extractConstant(
     workspace,
     "function isBudgetOwner() {",
-    "\\n    function budgetDateKey(",
+    "\n    function budgetDateKey(",
     "Budget owner permission guard"
 );
 assert.ok(
