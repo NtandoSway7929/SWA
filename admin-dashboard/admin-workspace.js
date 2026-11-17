@@ -18725,28 +18725,25 @@ function simpleBars(items, color) {
         return String(value).slice(0, 10);
     }
 
-    function budgetCurrency(value) {
-        const currency = String(value || "ZAR").toUpperCase();
-        if (currency === "ZAR") {
-            return new Intl.NumberFormat("en-ZA", {
-                style: "currency",
-                currency: "ZAR",
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(Number(value === 0 ? 0 : value || 0));
-        }
-
-        return currency + " " + Number(value || 0).toLocaleString("en-ZA", {
+    function budgetCurrency(amount) {
+        return new Intl.NumberFormat("en-ZA", {
+            style: "currency",
+            currency: "ZAR",
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        });
+        }).format(Number(amount || 0));
     }
 
     function budgetFormatAmount(amount, currency) {
-        if (String(currency || "ZAR").toUpperCase() === "ZAR") {
+        const code = String(currency || "ZAR").toUpperCase();
+        if (code === "ZAR") {
             return budgetCurrency(amount);
         }
-        return budgetCurrency(amount) + " " + String(currency).toUpperCase();
+
+        return code + " " + Number(amount || 0).toLocaleString("en-ZA", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
     }
 
     function budgetMonthLabel(monthKey) {
@@ -19030,7 +19027,7 @@ function simpleBars(items, color) {
             );
         }).join("");
 
-        const categoryRows = budgetCategoryTotals(periodRows);
+        const categoryRows = budgetCategoryTotals(operatingExpenseRows);
         const categoryHtml = categoryRows.length
             ? categoryRows.map(function (item) {
                 const share = totalOperatingExpenses > 0
