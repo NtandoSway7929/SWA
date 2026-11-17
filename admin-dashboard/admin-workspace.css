@@ -10233,3 +10233,316 @@ body.sway-dark-mode .sway-cookie-analytics-chart-track{background:#26344b}
 body.sway-dark-mode .sway-cookie-analytics-empty{background:rgba(12,23,43,.55);border-color:rgba(119,193,252,.18)}
 @media(max-width:1050px){.sway-cookie-analytics-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:680px){.sway-cookie-analytics-toolbar{align-items:flex-start;flex-direction:column;padding:15px}.sway-cookie-analytics-controls{width:100%;flex-wrap:wrap}.sway-cookie-analytics-controls select{flex:1}.sway-cookie-analytics-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.sway-cookie-analytics-chart-panel{padding:15px}.sway-cookie-chart-row{grid-template-columns:48px minmax(0,1fr) 28px;gap:7px}.sway-cookie-analytics-chart-heading{flex-direction:column}}
+
+
+/* =========================================================
+   OWNER-ONLY BUDGET WORKSPACE
+   ========================================================= */
+.sway-budget-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin: 22px 0 10px;
+}
+.sway-budget-metric {
+    min-width: 0;
+    padding: 20px 21px;
+    border: 1px solid rgba(0,32,150,0.09);
+    border-radius: 17px;
+    background: rgba(255,255,255,0.86);
+    box-shadow: 0 12px 32px rgba(0,32,150,0.045);
+}
+.sway-budget-metric > span,
+.sway-budget-metric > small {
+    display: block;
+    color: #68758D;
+    font-size: 0.67rem;
+    font-weight: 700;
+}
+.sway-budget-metric > strong {
+    display: block;
+    margin: 9px 0 6px;
+    color: #081533;
+    font-size: clamp(1.12rem, 1.9vw, 1.65rem);
+    letter-spacing: -0.045em;
+    overflow-wrap: anywhere;
+}
+.sway-budget-metric.is-negative > strong {
+    color: #A12B35;
+}
+.sway-budget-cash-note {
+    margin: 10px 0 22px;
+    color: #64728A;
+    font-size: 0.69rem;
+    line-height: 1.6;
+}
+.sway-budget-form {
+    padding: 2px 0 3px;
+}
+.sway-budget-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 15px;
+}
+.sway-budget-form-grid label,
+.sway-budget-filters label {
+    display: grid;
+    min-width: 0;
+    gap: 7px;
+}
+.sway-budget-form-grid label > span,
+.sway-budget-filters label > span {
+    color: #43516B;
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+.sway-budget-form-grid .is-wide {
+    grid-column: 1 / -1;
+}
+.sway-budget-form-grid input,
+.sway-budget-form-grid select,
+.sway-budget-form-grid textarea,
+.sway-budget-filters input,
+.sway-budget-filters select {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid rgba(0,32,150,0.12);
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: #081533;
+    font: 600 0.75rem 'Montserrat', sans-serif;
+    outline: none;
+}
+.sway-budget-form-grid textarea {
+    resize: vertical;
+}
+.sway-budget-form-grid input:focus,
+.sway-budget-form-grid select:focus,
+.sway-budget-form-grid textarea:focus,
+.sway-budget-filters input:focus,
+.sway-budget-filters select:focus {
+    border-color: #0152F4;
+    box-shadow: 0 0 0 3px rgba(1,82,244,0.08);
+}
+.sway-budget-form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-top: 17px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(0,32,150,0.08);
+}
+.sway-budget-form-footer p {
+    max-width: 650px;
+    color: #6B7890;
+    font-size: 0.66rem;
+    line-height: 1.55;
+}
+.sway-budget-form-footer button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+.sway-budget-report-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.88fr);
+    gap: 18px;
+    align-items: start;
+}
+.sway-budget-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid rgba(0,32,150,0.08);
+    border-radius: 13px;
+    background: rgba(255,255,255,0.70);
+}
+.sway-budget-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.7rem;
+    text-align: left;
+}
+.sway-budget-table th {
+    padding: 12px 13px;
+    background: rgba(1,82,244,0.045);
+    color: #5D6A83;
+    font-size: 0.6rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.sway-budget-table td {
+    padding: 13px;
+    border-top: 1px solid rgba(0,32,150,0.065);
+    color: #43516B;
+    vertical-align: middle;
+}
+.sway-budget-table td strong,
+.sway-budget-table td small {
+    display: block;
+}
+.sway-budget-table td strong {
+    color: #13213D;
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+.sway-budget-table td small {
+    margin-top: 4px;
+    color: #7B879B;
+    font-size: 0.6rem;
+}
+.sway-budget-table .amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.sway-budget-table .is-positive {
+    color: #16734A;
+    font-weight: 800;
+}
+.sway-budget-table .is-negative {
+    color: #A12B35;
+    font-weight: 800;
+}
+.sway-budget-statement tr.is-total td {
+    border-top-color: rgba(0,32,150,0.16);
+    color: #081533;
+    font-weight: 900;
+}
+.sway-budget-statement tr:last-child td {
+    background: rgba(1,82,244,0.045);
+    font-size: 0.76rem;
+}
+.sway-budget-category-list {
+    display: grid;
+    gap: 17px;
+}
+.sway-budget-category-row {
+    display: grid;
+    gap: 8px;
+}
+.sway-budget-category-copy {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: #43516B;
+    font-size: 0.67rem;
+}
+.sway-budget-category-copy strong {
+    color: #13213D;
+    font-weight: 800;
+}
+.sway-budget-category-copy span {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.sway-budget-category-track {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: rgba(1,82,244,0.08);
+}
+.sway-budget-category-track > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #002096, #2C91FC);
+}
+.sway-budget-filters {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.8fr) minmax(160px, 0.8fr) minmax(220px, 1.4fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.sway-budget-table .is-void td {
+    color: #8993A5;
+    background: rgba(86,98,122,0.035);
+}
+.sway-budget-table .is-void td strong {
+    color: #8993A5;
+    text-decoration: line-through;
+}
+.sway-budget-status {
+    display: inline-flex;
+    padding: 5px 8px;
+    border-radius: 7px;
+    font-size: 0.58rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.sway-budget-status.is-posted {
+    background: rgba(22,115,74,0.08);
+    color: #16734A;
+}
+.sway-budget-status.is-void {
+    background: rgba(86,98,122,0.09);
+    color: #66728A;
+}
+.sway-budget-void {
+    padding: 6px 8px;
+    border: 1px solid rgba(161,43,53,0.17);
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #A12B35;
+    font: 800 0.61rem 'Montserrat', sans-serif;
+    cursor: pointer;
+}
+.sway-budget-void:hover {
+    background: rgba(161,43,53,0.055);
+}
+.sway-budget-void:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+@media (max-width: 1000px) {
+    .sway-budget-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sway-budget-report-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 680px) {
+    .sway-budget-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+    .sway-budget-metric {
+        padding: 15px;
+    }
+    .sway-budget-metric > strong {
+        font-size: 1.05rem;
+    }
+    .sway-budget-form-grid {
+        grid-template-columns: 1fr;
+        gap: 13px;
+    }
+    .sway-budget-form-grid .is-wide {
+        grid-column: auto;
+    }
+    .sway-budget-form-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .sway-budget-filters {
+        grid-template-columns: 1fr 1fr;
+    }
+    .sway-budget-filters .sway-budget-search {
+        grid-column: 1 / -1;
+    }
+    .sway-budget-table {
+        min-width: 720px;
+    }
+    .sway-budget-statement {
+        min-width: 0;
+    }
+}
+@media (max-width: 390px) {
+    .sway-budget-filters {
+        grid-template-columns: 1fr;
+    }
+    .sway-budget-filters .sway-budget-search {
+        grid-column: auto;
+    }
+}
