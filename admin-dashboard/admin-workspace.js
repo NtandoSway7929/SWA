@@ -47,6 +47,7 @@
         quotes: [],
         payments: [],
         paymentRefunds: [],
+        paymentAttempts: [],
         budgetEntries: [],
         budgetMonth: "",
         budgetTypeFilter: "all",
@@ -4491,7 +4492,8 @@
             optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
             optionalApi("/rest/v1/budget_entries?select=*&order=transaction_date.desc,created_at.desc", []),
-            optionalApi("/rest/v1/payment_refunds?select=*&order=created_at.desc", [])
+            optionalApi("/rest/v1/payment_refunds?select=*&order=created_at.desc", []),
+            optionalApi("/rest/v1/payment_attempts?select=id,payment_id,provider,environment,status&order=created_at.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -4513,6 +4515,7 @@
         state.communications = results[16] || [];
         state.budgetEntries = results[17] || [];
         state.paymentRefunds = results[18] || [];
+        state.paymentAttempts = results[19] || [];
 
         await loadAdminNotifications();
 
@@ -10641,6 +10644,7 @@ function simpleBars(items, color) {
                 "follow_ups",
                 "quotes",
                 "payments",
+                "payment_attempts",
                 "payment_refunds",
                 "budget_entries",
                 "invoices",
@@ -18785,6 +18789,23 @@ function simpleBars(items, color) {
                 return;
             }
 
+            // The current Yoco settlement flow is test-environment only.
+            // Count a Yoco receipt as real cash only when its linked attempt
+            // explicitly belongs to the live environment.
+            if (String(payment.provider || "").toLowerCase() === "yoco") {
+                const linkedAttempt = (state.paymentAttempts || []).find(function (attempt) {
+                    return attempt.payment_id === payment.id &&
+                        String(attempt.provider || "").toLowerCase() === "yoco";
+                });
+
+                if (
+                    !linkedAttempt ||
+                    String(linkedAttempt.environment || "").toLowerCase() !== "live"
+                ) {
+                    return;
+                }
+            }
+
             const transactionDate =
                 budgetDateKey(payment.paid_at || payment.created_at);
             if (!transactionDate) return;
@@ -18816,6 +18837,14 @@ function simpleBars(items, color) {
             if (
                 String(refund.status || "").toLowerCase() !== "succeeded" ||
                 Number(refund.amount || 0) <= 0
+            ) {
+                return;
+            }
+
+            // Test-mode Yoco refunds are not movements of real cash.
+            if (
+                String(refund.provider || "").toLowerCase() === "yoco" &&
+                String(refund.environment || "").toLowerCase() !== "live"
             ) {
                 return;
             }
@@ -19145,7 +19174,7 @@ function simpleBars(items, color) {
                 '<article class="sway-budget-metric"><span>Outstanding invoices</span><strong>' +
                     esc(budgetCurrency(receivables)) + '</strong><small>Receivables, not cash received</small></article>' +
             '</section>' +
-            '<p class="sway-budget-cash-note">This is a cash-movement view, not a bank balance. It does not include an opening balance, bank account reconciliation or non-cash assets and liabilities.</p>' +
+            '<p class="sway-budget-cash-note">This is a cash-movement view, not a bank balance. It does not include an opening balance, bank account reconciliation or non-cash assets and liabilities. Yoco test-mode payments and refunds are excluded; Yoco receipts count only when linked to a live payment attempt.</p>' +
             (nonZarCount
                 ? '<p class="sway-budget-cash-note">Some non-ZAR transactions are visible in the ledger but excluded from ZAR totals; no currency conversion is applied.</p>'
                 : "") +
