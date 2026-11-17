@@ -46,6 +46,11 @@
         projects: [],
         quotes: [],
         payments: [],
+        paymentRefunds: [],
+        budgetEntries: [],
+        budgetMonth: "",
+        budgetTypeFilter: "all",
+        budgetSearch: "",
         enquiries: [],
         activities: [],
         announcements: [],
@@ -173,6 +178,14 @@
                 ["payments", "Payments"],
                 ["services", "Services"],
                 ["invoice-settings", "Invoice settings"]
+            ]
+        },
+        {
+            id: "finance",
+            label: "Finance",
+            icon: "wallet",
+            items: [
+                ["budget", "Budget"]
             ]
         },
         {
@@ -453,6 +466,8 @@
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.8 19c.5-3.2 2.3-4.8 5.2-4.8s4.7 1.6 5.2 4.8"></path><path d="M15 5.4c2.5-.2 4.1 1.5 4.1 3.5 0 1.5-.8 2.7-2.1 3.2"></path><path d="M16.1 14.2c2.4.4 3.8 2 4.1 4.8"></path></svg>',
             briefcase:
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="7" width="17" height="12.5" rx="2"></rect><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7"></path><path d="M3.8 11h16.4"></path><path d="M10 11v2h4v-2"></path></svg>',
+            wallet:
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="14" rx="2.5"></rect><path d="M3.5 9h17"></path><path d="M16 14h2.5"></path><path d="M6.5 5.5V4.8A1.8 1.8 0 0 1 8.3 3h8.2"></path></svg>',
             receipt:
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.8h12v16.4l-3-1.7-3 1.7-3-1.7-3 1.7z"></path><path d="M9 8h6"></path><path d="M9 11.5h6"></path><path d="M9 15h3.5"></path></svg>',
             globe:
@@ -4474,7 +4489,9 @@
             api("/rest/v1/client_portal_requests?select=*&order=created_at.desc"),
             optionalApi("/rest/v1/lead_proposals?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", [])
+            optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
+            optionalApi("/rest/v1/budget_entries?select=*&order=transaction_date.desc,created_at.desc", []),
+            optionalApi("/rest/v1/payment_refunds?select=*&order=created_at.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -4494,6 +4511,8 @@
         state.leadProposals = results[14] || [];
         state.documents = results[15] || [];
         state.communications = results[16] || [];
+        state.budgetEntries = results[17] || [];
+        state.paymentRefunds = results[18] || [];
 
         await loadAdminNotifications();
 
@@ -6580,6 +6599,10 @@ function renderShell() {
             '</div>' +
             '<div class="sway-workspace-nav-scroll" role="group" aria-label="Workspace sections">' +
                 navGroups.map(function (group) {
+                    if (group.id === "finance" && !isBudgetOwner()) {
+                        return "";
+                    }
+
                     const containsCurrent =
                         group.items.some(function (item) {
                             return item[0] === state.currentView;
@@ -6626,7 +6649,10 @@ function renderShell() {
             '</div>' +
             '<div class="sway-top-nav-menu-layer">' +
                 navGroups.filter(function (group) {
-                    return group.id !== "settings";
+                    return (
+                        group.id !== "settings" &&
+                        (group.id !== "finance" || isBudgetOwner())
+                    );
                 }).map(function (group) {
                     return (
                         '<div class="sway-workspace-nav-items" id="sway-nav-menu-' +
@@ -10615,6 +10641,8 @@ function simpleBars(items, color) {
                 "follow_ups",
                 "quotes",
                 "payments",
+                "payment_refunds",
+                "budget_entries",
                 "invoices",
                 "invoice_items",
                 "services",
@@ -18675,6 +18703,507 @@ function simpleBars(items, color) {
                         esc(s.vat_number || "Not configured") +
                     "</strong></div>" +
                 "</div>"
+            )
+        );
+    }
+
+
+    /* =========================================================
+       OWNER-ONLY BUDGET & CASH-BASIS REPORTING
+       ========================================================= */
+
+    function isBudgetOwner() {
+        return Boolean(
+            state.currentAdmin &&
+            state.currentAdmin.active === true &&
+            state.currentAdmin.role === "owner"
+        );
+    }
+
+    function budgetDateKey(value) {
+        if (!value) return "";
+        return String(value).slice(0, 10);
+    }
+
+    function budgetCurrency(value) {
+        const currency = String(value || "ZAR").toUpperCase();
+        if (currency === "ZAR") {
+            return new Intl.NumberFormat("en-ZA", {
+                style: "currency",
+                currency: "ZAR",
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(Number(value === 0 ? 0 : value || 0));
+        }
+
+        return currency + " " + Number(value || 0).toLocaleString("en-ZA", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function budgetFormatAmount(amount, currency) {
+        if (String(currency || "ZAR").toUpperCase() === "ZAR") {
+            return budgetCurrency(amount);
+        }
+        return budgetCurrency(amount) + " " + String(currency).toUpperCase();
+    }
+
+    function budgetMonthLabel(monthKey) {
+        if (!monthKey || monthKey === "all") return "All recorded periods";
+        const parsed = new Date(String(monthKey) + "-01T12:00:00+02:00");
+        if (Number.isNaN(parsed.getTime())) return monthKey;
+        return new Intl.DateTimeFormat("en-ZA", {
+            month: "long",
+            year: "numeric",
+            timeZone: "Africa/Johannesburg"
+        }).format(parsed);
+    }
+
+    function budgetMonthKeys(count) {
+        const today = dashboardTodayISO();
+        const year = Number(today.slice(0, 4));
+        const month = Number(today.slice(5, 7)) - 1;
+        const keys = [];
+
+        for (let offset = count - 1; offset >= 0; offset -= 1) {
+            const point = new Date(year, month - offset, 1);
+            keys.push(
+                point.getFullYear() + "-" +
+                String(point.getMonth() + 1).padStart(2, "0")
+            );
+        }
+
+        return keys;
+    }
+
+    function budgetTransactionRows() {
+        const rows = [];
+
+        (state.payments || []).forEach(function (payment) {
+            if (
+                String(payment.status || "").toLowerCase() !== "paid" ||
+                Number(payment.amount || 0) <= 0
+            ) {
+                return;
+            }
+
+            const transactionDate =
+                budgetDateKey(payment.paid_at || payment.created_at);
+            if (!transactionDate) return;
+
+            const invoice = (state.invoices || []).find(function (item) {
+                return item.id === payment.invoice_id;
+            });
+            const name = clientName(payment.client_id);
+
+            rows.push({
+                id: "payment:" + payment.id,
+                recordId: payment.id,
+                source: "payment",
+                sourceLabel: "Client payment",
+                type: "income",
+                category: "Client payments",
+                description: name + (invoice ? " · " + invoice.invoice_number : ""),
+                counterparty: name,
+                reference: payment.reference || (invoice && invoice.invoice_number) || "",
+                date: transactionDate,
+                amount: Number(payment.amount || 0),
+                currency: String(payment.currency || "ZAR").toUpperCase(),
+                method: payment.method || "Not recorded",
+                status: "posted"
+            });
+        });
+
+        (state.paymentRefunds || []).forEach(function (refund) {
+            if (
+                String(refund.status || "").toLowerCase() !== "succeeded" ||
+                Number(refund.amount || 0) <= 0
+            ) {
+                return;
+            }
+
+            const payment = (state.payments || []).find(function (item) {
+                return item.id === refund.payment_id;
+            });
+            const invoice = payment
+                ? (state.invoices || []).find(function (item) {
+                    return item.id === payment.invoice_id;
+                })
+                : null;
+            const transactionDate =
+                budgetDateKey(refund.processed_at || refund.created_at);
+            if (!transactionDate) return;
+
+            rows.push({
+                id: "refund:" + refund.id,
+                recordId: refund.id,
+                source: "refund",
+                sourceLabel: "Payment refund",
+                type: "expense",
+                category: "Client refunds",
+                description: "Refund" + (invoice ? " · " + invoice.invoice_number : ""),
+                counterparty: invoice ? clientName(invoice.client_id) : "Client",
+                reference: refund.provider_refund_id || refund.provider_event_id || "",
+                date: transactionDate,
+                amount: Number(refund.amount || 0),
+                currency: String(refund.currency || "ZAR").toUpperCase(),
+                method: refund.provider || "Refund",
+                status: "posted"
+            });
+        });
+
+        (state.budgetEntries || []).forEach(function (entry) {
+            const transactionDate = budgetDateKey(entry.transaction_date);
+            if (!transactionDate) return;
+
+            rows.push({
+                id: "entry:" + entry.id,
+                recordId: entry.id,
+                source: "entry",
+                sourceLabel: "Manual entry",
+                type: entry.entry_type,
+                category: entry.category,
+                description: entry.description,
+                counterparty: entry.counterparty || "",
+                reference: entry.reference || "",
+                date: transactionDate,
+                amount: Number(entry.amount || 0),
+                currency: String(entry.currency || "ZAR").toUpperCase(),
+                method: entry.payment_method || "Other",
+                status: entry.status || "posted"
+            });
+        });
+
+        return rows.sort(function (a, b) {
+            if (a.date !== b.date) return b.date.localeCompare(a.date);
+            return String(b.id).localeCompare(String(a.id));
+        });
+    }
+
+    function budgetTotal(rows, type) {
+        return (rows || []).reduce(function (total, row) {
+            if (
+                row.status !== "posted" ||
+                row.currency !== "ZAR" ||
+                (type && row.type !== type)
+            ) {
+                return total;
+            }
+            return total + Number(row.amount || 0);
+        }, 0);
+    }
+
+    function budgetCategoryTotals(rows) {
+        const totals = {};
+        (rows || []).forEach(function (row) {
+            if (
+                row.status !== "posted" ||
+                row.type !== "expense" ||
+                row.currency !== "ZAR"
+            ) {
+                return;
+            }
+
+            totals[row.category] =
+                Number(totals[row.category] || 0) + Number(row.amount || 0);
+        });
+
+        return Object.keys(totals).map(function (category) {
+            return { category: category, amount: totals[category] };
+        }).sort(function (a, b) {
+            return b.amount - a.amount;
+        });
+    }
+
+    function budgetIncomeCategories() {
+        return [
+            "Other income",
+            "Interest received",
+            "Supplier refund",
+            "Other"
+        ];
+    }
+
+    function budgetExpenseCategories() {
+        return [
+            "Software & subscriptions",
+            "Marketing & advertising",
+            "Hosting & domains",
+            "Equipment & hardware",
+            "Bank & payment fees",
+            "Transport & travel",
+            "Office & supplies",
+            "Professional services",
+            "Education & training",
+            "Other"
+        ];
+    }
+
+    function renderBudget() {
+        if (!isBudgetOwner()) {
+            return heading() + panel(
+                "Restricted section",
+                "Budget records are only available to the Swayphics owner.",
+                empty("You do not have permission to access financial records.")
+            );
+        }
+
+        const today = dashboardTodayISO();
+        if (!state.budgetMonth) {
+            state.budgetMonth = today.slice(0, 7);
+        }
+
+        const allRows = budgetTransactionRows();
+        const selectedMonth = state.budgetMonth;
+        const periodRows = allRows.filter(function (row) {
+            return selectedMonth === "all" || row.date.slice(0, 7) === selectedMonth;
+        });
+        const postedZarRows = periodRows.filter(function (row) {
+            return row.status === "posted" && row.currency === "ZAR";
+        });
+        const incomeRows = postedZarRows.filter(function (row) {
+            return row.type === "income";
+        });
+        const outflowRows = postedZarRows.filter(function (row) {
+            return row.type === "expense";
+        });
+        const clientReceipts = incomeRows.filter(function (row) {
+            return row.source === "payment";
+        });
+        const otherIncomeRows = incomeRows.filter(function (row) {
+            return row.source === "entry";
+        });
+        const refundRows = outflowRows.filter(function (row) {
+            return row.source === "refund";
+        });
+        const operatingExpenseRows = outflowRows.filter(function (row) {
+            return row.source === "entry";
+        });
+        const totalIncome = budgetTotal(incomeRows);
+        const totalRefunds = budgetTotal(refundRows);
+        const totalOperatingExpenses = budgetTotal(operatingExpenseRows);
+        const totalOutflows = totalRefunds + totalOperatingExpenses;
+        const netMovement = totalIncome - totalOutflows;
+        const receivables = (state.invoices || []).reduce(function (total, invoice) {
+            if (String(invoice.status || "").toLowerCase() === "cancelled") {
+                return total;
+            }
+            const outstanding = invoice.amount_outstanding != null
+                ? Number(invoice.amount_outstanding || 0)
+                : Math.max(
+                    0,
+                    Number(invoice.total || 0) - Number(invoice.amount_paid || 0)
+                );
+            return total + Math.max(0, outstanding);
+        }, 0);
+
+        const months = budgetMonthKeys(12);
+        const monthOptions =
+            '<option value="all"' + (selectedMonth === "all" ? " selected" : "") + '>All time</option>' +
+            months.slice().reverse().map(function (key) {
+                return '<option value="' + key + '"' +
+                    (selectedMonth === key ? " selected" : "") + ">" +
+                    esc(budgetMonthLabel(key)) +
+                    "</option>";
+            }).join("");
+
+        const statementRows = [
+            ["Client payments received", budgetTotal(clientReceipts)],
+            ["Other income", budgetTotal(otherIncomeRows)],
+            ["Total cash income", totalIncome],
+            ["Client refunds", -totalRefunds],
+            ["Operating expenses", -totalOperatingExpenses],
+            ["Net cash movement", netMovement]
+        ];
+
+        const statementHtml = statementRows.map(function (row, index) {
+            const isTotal = index === 2 || index === 5;
+            return (
+                '<tr class="' + (isTotal ? "is-total" : "") + '">' +
+                    "<td>" + esc(row[0]) + "</td>" +
+                    '<td class="amount ' + (row[1] < 0 ? "is-negative" : "") + '">' +
+                        (row[1] < 0 ? "−" : "") +
+                        esc(budgetCurrency(Math.abs(row[1]))) +
+                    "</td>" +
+                "</tr>"
+            );
+        }).join("");
+
+        const categoryRows = budgetCategoryTotals(periodRows);
+        const categoryHtml = categoryRows.length
+            ? categoryRows.map(function (item) {
+                const share = totalOperatingExpenses > 0
+                    ? Math.min(100, item.amount / totalOperatingExpenses * 100)
+                    : 0;
+                return (
+                    '<div class="sway-budget-category-row">' +
+                        '<div class="sway-budget-category-copy"><strong>' +
+                            esc(item.category) +
+                        "</strong><span>" + esc(budgetCurrency(item.amount)) + "</span></div>" +
+                        '<div class="sway-budget-category-track"><span style="width:' +
+                            share.toFixed(1) + '%"></span></div>' +
+                    "</div>"
+                );
+            }).join("")
+            : empty("No operating expenses recorded for this period.");
+
+        const monthlyRows = budgetMonthKeys(6).map(function (monthKey) {
+            const rows = allRows.filter(function (row) {
+                return row.status === "posted" &&
+                    row.currency === "ZAR" &&
+                    row.date.slice(0, 7) === monthKey;
+            });
+            const received = budgetTotal(rows, "income");
+            const spent = budgetTotal(rows, "expense");
+            return (
+                "<tr>" +
+                    "<td>" + esc(budgetMonthLabel(monthKey)) + "</td>" +
+                    '<td class="amount">' + esc(budgetCurrency(received)) + "</td>" +
+                    '<td class="amount">' + esc(budgetCurrency(spent)) + "</td>" +
+                    '<td class="amount ' + (received - spent < 0 ? "is-negative" : "is-positive") + '">' +
+                        esc(budgetCurrency(received - spent)) +
+                    "</td>" +
+                "</tr>"
+            );
+        }).join("");
+
+        const typeFilter = state.budgetTypeFilter || "all";
+        const searchValue = state.budgetSearch || "";
+        const search = searchValue.trim().toLowerCase();
+        const visibleRows = periodRows.filter(function (row) {
+            const matchesType = typeFilter === "all" || row.type === typeFilter;
+            const text = [
+                row.description, row.category, row.counterparty,
+                row.reference, row.method, row.sourceLabel
+            ].join(" ").toLowerCase();
+            return matchesType && (!search || text.includes(search));
+        });
+
+        const transactionHtml = visibleRows.length
+            ? '<div class="sway-budget-table-wrap"><table class="sway-budget-table">' +
+                "<thead><tr><th>Date</th><th>Transaction</th><th>Category</th><th>Source / method</th><th class=\"amount\">Amount</th><th>Status</th><th></th></tr></thead>" +
+                "<tbody>" + visibleRows.map(function (row) {
+                    const isIncome = row.type === "income";
+                    const signedAmount = (isIncome ? "+" : "−") +
+                        budgetFormatAmount(row.amount, row.currency);
+                    const canVoid = row.source === "entry" && row.status === "posted";
+                    return (
+                        '<tr class="' + (row.status === "void" ? "is-void" : "") +
+                            '" data-budget-search-row="' +
+                            esc([
+                                row.date, row.description, row.category,
+                                row.counterparty, row.reference, row.method
+                            ].join(" ").toLowerCase()) + '">' +
+                            "<td>" + esc(date(row.date)) + "</td>" +
+                            '<td><strong>' + esc(row.description || "Untitled transaction") +
+                                '</strong>' +
+                                (row.counterparty ? '<small>' + esc(row.counterparty) + "</small>" : "") +
+                            "</td>" +
+                            "<td>" + esc(row.category) + "</td>" +
+                            "<td>" + esc(row.sourceLabel) +
+                                '<small>' + esc(row.method || "Not recorded") + "</small></td>" +
+                            '<td class="amount ' + (isIncome ? "is-positive" : "is-negative") + '">' +
+                                esc(signedAmount) +
+                            "</td>" +
+                            '<td><span class="sway-budget-status ' +
+                                (row.status === "void" ? "is-void" : "is-posted") + '">' +
+                                (row.status === "void" ? "Voided" : "Posted") +
+                            "</span></td>" +
+                            "<td>" +
+                                (canVoid
+                                    ? '<button type="button" class="sway-budget-void" data-budget-void="' +
+                                        esc(row.recordId) + '">Void</button>'
+                                    : "") +
+                            "</td>" +
+                        "</tr>"
+                    );
+                }).join("") + "</tbody></table></div>"
+            : empty("No transactions match this period and filter.");
+
+        const nonZarCount = periodRows.filter(function (row) {
+            return row.status === "posted" && row.currency !== "ZAR";
+        }).length;
+
+        const incomeCategoryOptions = budgetIncomeCategories().map(function (value, index) {
+            return '<option value="' + esc(value) + '"' + (index === 0 ? " selected" : "") + ">" +
+                esc(value) + "</option>";
+        }).join("");
+        const expenseCategoryOptions = budgetExpenseCategories().map(function (value, index) {
+            return '<option value="' + esc(value) + '"' + (index === 0 ? " selected" : "") + ">" +
+                esc(value) + "</option>";
+        }).join("");
+
+        return (
+            heading('<button type="button" class="sway-workspace-button primary" data-budget-scroll-form>+ Record transaction</button>') +
+            '<section class="sway-budget-summary">' +
+                '<article class="sway-budget-metric"><span>Cash income</span><strong>' +
+                    esc(budgetCurrency(totalIncome)) + '</strong><small>' +
+                    esc(budgetMonthLabel(selectedMonth)) + '</small></article>' +
+                '<article class="sway-budget-metric"><span>Cash outflows</span><strong>' +
+                    esc(budgetCurrency(totalOutflows)) + '</strong><small>Refunds and recorded expenses</small></article>' +
+                '<article class="sway-budget-metric ' + (netMovement < 0 ? "is-negative" : "") + '"><span>Net cash movement</span><strong>' +
+                    esc((netMovement < 0 ? "−" : "") + budgetCurrency(Math.abs(netMovement))) +
+                    '</strong><small>Income less outflows</small></article>' +
+                '<article class="sway-budget-metric"><span>Outstanding invoices</span><strong>' +
+                    esc(budgetCurrency(receivables)) + '</strong><small>Receivables, not cash received</small></article>' +
+            '</section>' +
+            '<p class="sway-budget-cash-note">This is a cash-movement view, not a bank balance. It does not include an opening balance, bank account reconciliation or non-cash assets and liabilities.</p>' +
+            (nonZarCount
+                ? '<p class="sway-budget-cash-note">Some non-ZAR transactions are visible in the ledger but excluded from ZAR totals; no currency conversion is applied.</p>'
+                : "") +
+            panel(
+                "Record a transaction",
+                "Use this for operating expenses and income that is not already recorded as a client payment. Client receipts are imported from Payments automatically.",
+                '<form id="sway-budget-entry-form" class="sway-budget-form">' +
+                    '<div class="sway-budget-form-grid">' +
+                        '<label><span>Transaction type</span><select name="entry_type" required><option value="expense">Expense</option><option value="income">Other income</option></select></label>' +
+                        '<label><span>Category</span><select name="category" required>' + expenseCategoryOptions + '</select></label>' +
+                        '<label class="is-wide"><span>Description</span><input name="description" type="text" maxlength="240" required placeholder="e.g. Monthly hosting subscription"></label>' +
+                        '<label><span>Amount (ZAR)</span><input name="amount" type="number" min="0.01" max="9999999999.99" step="0.01" required placeholder="0.00"></label>' +
+                        '<label><span>Transaction date</span><input name="transaction_date" type="date" value="' + today + '" required></label>' +
+                        '<label><span>Payment method</span><select name="payment_method"><option>EFT</option><option>Card</option><option>Cash</option><option>Debit order</option><option selected>Other</option></select></label>' +
+                        '<label><span>Payee / source</span><input name="counterparty" type="text" maxlength="160" placeholder="Business or person"></label>' +
+                        '<label><span>Reference</span><input name="reference" type="text" maxlength="160" placeholder="Receipt or bank reference"></label>' +
+                        '<label class="is-wide"><span>Notes (optional)</span><textarea name="notes" rows="2" maxlength="1200" placeholder="Additional transaction details"></textarea></label>' +
+                    '</div>' +
+                    '<div class="sway-budget-form-footer"><p data-budget-form-status role="status">New entries are posted immediately. Corrections are made by voiding an entry and recording a replacement.</p><button type="submit" class="sway-workspace-button primary">Save transaction</button></div>' +
+                '</form>'
+            ) +
+            '<div class="sway-budget-report-grid">' +
+                panel(
+                    "Income & expenditure statement",
+                    "Cash basis · " + budgetMonthLabel(selectedMonth),
+                    '<div class="sway-budget-table-wrap"><table class="sway-budget-table sway-budget-statement"><thead><tr><th>Line item</th><th class="amount">Amount (ZAR)</th></tr></thead><tbody>' +
+                        statementHtml +
+                    "</tbody></table></div>"
+                ) +
+                panel(
+                    "Expense breakdown",
+                    "Posted expenses grouped by category · " + budgetMonthLabel(selectedMonth),
+                    '<div class="sway-budget-category-list">' + categoryHtml + "</div>"
+                ) +
+            "</div>" +
+            panel(
+                "Monthly cash flow",
+                "Actual recorded income and outflows for the last six calendar months.",
+                '<div class="sway-budget-table-wrap"><table class="sway-budget-table"><thead><tr><th>Period</th><th class="amount">Income</th><th class="amount">Outflows</th><th class="amount">Net movement</th></tr></thead><tbody>' +
+                    monthlyRows +
+                "</tbody></table></div>"
+            ) +
+            panel(
+                "Transaction ledger",
+                "Client receipts, successful refunds and manual entries. Invoice totals are not counted as receipts.",
+                '<div class="sway-budget-filters">' +
+                    '<label><span>Period</span><select data-budget-month>' + monthOptions + "</select></label>" +
+                    '<label><span>Type</span><select data-budget-type><option value="all"' +
+                        (typeFilter === "all" ? " selected" : "") + '>All transactions</option><option value="income"' +
+                        (typeFilter === "income" ? " selected" : "") + '>Income</option><option value="expense"' +
+                        (typeFilter === "expense" ? " selected" : "") + '>Expenses and refunds</option></select></label>' +
+                    '<label class="sway-budget-search"><span>Search</span><input type="search" data-budget-search value="' +
+                        esc(searchValue) + '" placeholder="Description, category or reference"></label>' +
+                "</div>" +
+                transactionHtml
             )
         );
     }
@@ -27052,6 +27581,16 @@ function simpleBars(items, color) {
                     renderQuotes();
             }
 
+            if (state.currentView === "budget") {
+                main.innerHTML = isBudgetOwner()
+                    ? renderBudget()
+                    : heading() + panel(
+                        "Restricted section",
+                        "Budget records are only available to the Swayphics owner.",
+                        empty("You do not have permission to access financial records.")
+                    );
+            }
+
             if (state.currentView === "payments") {
                 main.innerHTML =
                     renderPayments();
@@ -27608,6 +28147,154 @@ function simpleBars(items, color) {
         bindAIFeedbackEvents();
         bindAIMessageActions();
         adminTableControls.bind();
+
+
+        const budgetForm = workspace.querySelector("#sway-budget-entry-form");
+        if (budgetForm) {
+            const entryType = budgetForm.querySelector('[name="entry_type"]');
+            const category = budgetForm.querySelector('[name="category"]');
+
+            if (entryType && category) {
+                entryType.addEventListener("change", function () {
+                    const categories = entryType.value === "income"
+                        ? budgetIncomeCategories()
+                        : budgetExpenseCategories();
+                    category.innerHTML = categories.map(function (value, index) {
+                        return '<option value="' + esc(value) + '"' +
+                            (index === 0 ? " selected" : "") + ">" +
+                            esc(value) + "</option>";
+                    }).join("");
+                });
+            }
+
+            budgetForm.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                if (!isBudgetOwner()) return;
+
+                const formData = new FormData(budgetForm);
+                const amount = Number(formData.get("amount"));
+                const description = String(formData.get("description") || "").trim();
+                const selectedDate = String(formData.get("transaction_date") || "");
+                const status = budgetForm.querySelector("[data-budget-form-status]");
+                const saveButton = budgetForm.querySelector('button[type="submit"]');
+
+                if (!description || !Number.isFinite(amount) || amount <= 0 || !selectedDate) {
+                    if (status) status.textContent = "Enter a description, a positive amount and a transaction date.";
+                    return;
+                }
+
+                const payload = {
+                    entry_type: String(formData.get("entry_type") || "expense"),
+                    category: String(formData.get("category") || "").trim(),
+                    description: description,
+                    amount: amount.toFixed(2),
+                    currency: "ZAR",
+                    transaction_date: selectedDate,
+                    payment_method: String(formData.get("payment_method") || "Other"),
+                    counterparty: String(formData.get("counterparty") || "").trim() || null,
+                    reference: String(formData.get("reference") || "").trim() || null,
+                    notes: String(formData.get("notes") || "").trim() || null
+                };
+
+                if (saveButton) saveButton.disabled = true;
+                if (status) status.textContent = "Saving transaction…";
+
+                try {
+                    await api("/rest/v1/budget_entries", {
+                        method: "POST",
+                        headers: headers({ "Prefer": "return=minimal" }),
+                        body: JSON.stringify(payload)
+                    });
+
+                    state.budgetMonth = selectedDate.slice(0, 7);
+                    state.budgetTypeFilter = "all";
+                    state.budgetSearch = "";
+                    await refreshData();
+                    renderView();
+                } catch (error) {
+                    if (status) {
+                        status.textContent = error && error.message
+                            ? error.message
+                            : "Unable to save this transaction.";
+                    }
+                    if (saveButton) saveButton.disabled = false;
+                }
+            });
+        }
+
+        const budgetMonthSelect = workspace.querySelector("[data-budget-month]");
+        if (budgetMonthSelect) {
+            budgetMonthSelect.addEventListener("change", function () {
+                state.budgetMonth = budgetMonthSelect.value || "all";
+                renderView();
+            });
+        }
+
+        const budgetTypeSelect = workspace.querySelector("[data-budget-type]");
+        if (budgetTypeSelect) {
+            budgetTypeSelect.addEventListener("change", function () {
+                state.budgetTypeFilter = budgetTypeSelect.value || "all";
+                renderView();
+            });
+        }
+
+        const budgetSearchInput = workspace.querySelector("[data-budget-search]");
+        if (budgetSearchInput) {
+            budgetSearchInput.addEventListener("input", function () {
+                const query = budgetSearchInput.value.trim().toLowerCase();
+                workspace.querySelectorAll("[data-budget-search-row]").forEach(function (row) {
+                    row.hidden = query !== "" && !String(row.dataset.budgetSearchRow || "").includes(query);
+                });
+            });
+        }
+
+        workspace.querySelectorAll("[data-budget-scroll-form]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const form = workspace.querySelector("#sway-budget-entry-form");
+                if (form) {
+                    form.scrollIntoView({ behavior: "smooth", block: "center" });
+                    const firstInput = form.querySelector('[name="description"]');
+                    if (firstInput) firstInput.focus({ preventScroll: true });
+                }
+            });
+        });
+
+        workspace.querySelectorAll("[data-budget-void]").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                if (!isBudgetOwner()) return;
+                const entryId = button.dataset.budgetVoid || "";
+                if (!entryId) return;
+
+                const confirmed = await swayConfirm(
+                    "Void this transaction? It will remain in the ledger for audit purposes and be excluded from financial totals. Record a replacement entry for any correction."
+                );
+                if (!confirmed) return;
+
+                button.disabled = true;
+                try {
+                    await api(
+                        "/rest/v1/budget_entries?id=eq." + encodeURIComponent(entryId),
+                        {
+                            method: "PATCH",
+                            headers: headers({ "Prefer": "return=minimal" }),
+                            body: JSON.stringify({
+                                status: "void",
+                                voided_at: new Date().toISOString(),
+                                voided_by: state.currentUser.id,
+                                updated_at: new Date().toISOString()
+                            })
+                        }
+                    );
+                    await refreshData();
+                    renderView();
+                } catch (error) {
+                    button.disabled = false;
+                    swayAlert(error && error.message
+                        ? error.message
+                        : "Unable to void this transaction.");
+                }
+            });
+        });
 
         const greetingSettingsForm = workspace.querySelector("#sway-admin-greeting-form");
         if (greetingSettingsForm) {
