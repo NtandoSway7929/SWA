@@ -65,6 +65,8 @@ assert.ok(reviewSql.includes("pg_advisory_xact_lock"), "a source record must not
 assert.ok(reviewSql.includes("bank_statement_lines_matched_source_idx"), "matched-source lookups must be indexed");
 assert.ok(reviewSql.includes("abs(v_source_date - v_line.transaction_date) > 7"), "server-side matching must enforce the same seven-day date window");
 assert.ok(reviewSql.includes("provider is null"), "test/provider payment records must not be reconciled as bank receipts");
+assert.ok(reviewSql.includes("v_method <> 'EFT'"), "only manual EFT payment records may be matched");
+assert.ok(reviewSql.includes("v_method not in ('EFT', 'Card', 'Debit order')"), "cash and other budget entries must not be matched to bank activity");
 assert.ok(reviewSql.includes("v_status <> 'paid'"), "only paid payment records may be matched");
 assert.ok(reviewSql.includes("v_status <> 'posted'"), "only posted budget entries may be matched");
 assert.ok(reviewSql.includes("v_entry_type <> 'income'") && reviewSql.includes("v_entry_type <> 'expense'"), "income and expense directions must match the bank line sign");
