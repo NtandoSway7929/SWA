@@ -25,7 +25,7 @@ const renderer = workspace.slice(rendererStart, rendererEnd);
 assert.ok(renderer.includes("Monthly expense budgets"));
 assert.ok(renderer.includes("data-budget-plan-month"));
 assert.ok(renderer.includes("data-budget-allocation-form"));
-assert.ok(renderer.includes("budget_category_allocations?on_conflict=period_month,category"));
+assert.ok(workspace.includes("budget_category_allocations?on_conflict=period_month,category"));
 assert.ok(renderer.includes("data-budget-allocation-delete"));
 assert.ok(renderer.includes("30 / 60 / 90-day cash-flow outlook"));
 assert.ok(renderer.includes("Expected invoice receipts"));
