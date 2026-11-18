@@ -30,7 +30,7 @@ main{width:min(1080px,100%);margin:auto}.top{display:flex;justify-content:space-
 <span class="kicker">Phase 2 · Reconciliation</span>
 <h1>Import a bank statement</h1>
 <p class="muted">Upload a CSV statement, map its columns and inspect the normalized transactions before import. This preview does not alter your income, expenses, payments or invoice balances.</p>
-<div class="notice">CSV preview only in this build. Saving to the reconciliation ledger will be enabled after the database migration is approved and deployed. Do not upload statements containing full card numbers, PINs or online banking credentials.</div>
+<div class="notice">Statement data is saved to the private reconciliation ledger only after you select Import statement. This does not post income, expenses, payments or invoice balances. Do not upload statements containing full card numbers, PINs or online banking credentials.</div>
 </section>
 <section class="panel">
 <h2>Statement details</h2><p class="muted">Start with one account and one statement period. ZAR is supported in this first release.</p>
@@ -126,10 +126,11 @@ $("preview").addEventListener("click",function(){
  $("count").textContent=String(parsed.length);$("credits").textContent=zar(credits);$("debits").textContent=zar(debits);
  $("rows").innerHTML=parsed.slice(0,100).map(x=>"<tr><td>"+x.transaction_date+"</td><td>"+x.description.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+"</td><td>"+String(x.bank_reference||"").replace(/[&<>"]/g,"")+"</td><td class=\"num\">"+zar(x.amount)+"</td></tr>").join("");
  $("warnings").textContent=(parsed.length>100?"Showing first 100 of "+parsed.length+" rows. ":"")+(issues.length?issues.length+" rows were skipped: "+issues.slice(0,5).join(" "):"All "+parsed.length+" rows passed the basic validation checks.");
- $("previewPanel").classList.remove("hidden");status("Preview generated locally. No transactions have been saved.",false);
+ $("previewPanel").classList.remove("hidden");window.__bankStatementPreview={rows:parsed.map(x=>({row_number:x.row_number,transaction_date:x.transaction_date,description:x.description,bank_reference:x.bank_reference,amount:x.amount})),file:$("file").files&&$("file").files[0]};window.dispatchEvent(new Event("bank:preview-ready"));status("Preview generated locally. No transactions have been saved.",false);
  }catch(e){$("previewPanel").classList.add("hidden");status(e.message,true);}
 });
 $("reset").addEventListener("click",function(){ $("account").value="";$("file").value="";$("periodStart").value="";$("periodEnd").value="";$("mapping").innerHTML="";$("mapping").classList.add("hidden");$("previewPanel").classList.add("hidden");parsed=[];headers=[];rawRows=[];status("Choose a CSV file to begin. No data is sent to the server during preview.");});
 })();
 </script>
+<script src="bank-reconciliation-import.js"></script>
 </body></html>
