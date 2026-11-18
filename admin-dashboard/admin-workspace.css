@@ -10722,3 +10722,98 @@ body.sway-dark-mode .sway-budget-allocation-form input {
         max-width: 105px;
     }
 }
+
+
+/* Indicative cash-flow outlook */
+.sway-budget-forecast-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.sway-budget-forecast-card {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    padding: 17px;
+    border: 1px solid rgba(0,32,150,0.09);
+    border-radius: 15px;
+    background: rgba(255,255,255,0.82);
+}
+.sway-budget-forecast-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0,32,150,0.08);
+}
+.sway-budget-forecast-heading strong {
+    color: #13213D;
+    font-size: 0.78rem;
+}
+.sway-budget-forecast-heading span {
+    color: #7B879B;
+    font-size: 0.57rem;
+    text-align: right;
+}
+.sway-budget-forecast-card > div:not(.sway-budget-forecast-heading) {
+    display: grid;
+    gap: 4px;
+}
+.sway-budget-forecast-card small {
+    color: #748198;
+    font-size: 0.59rem;
+    font-weight: 700;
+}
+.sway-budget-forecast-card > div > strong {
+    color: #13213D;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.sway-budget-forecast-card > div > span {
+    color: #8993A5;
+    font-size: 0.57rem;
+}
+.sway-budget-forecast-net {
+    padding-top: 11px;
+    border-top: 1px solid rgba(0,32,150,0.08);
+}
+.sway-budget-forecast-net.is-positive > strong {
+    color: #16734A;
+}
+.sway-budget-forecast-net.is-negative > strong {
+    color: #A12B35;
+}
+body.sway-dark-mode .sway-budget-forecast-card {
+    border-color: rgba(119,193,252,0.13);
+    background: rgba(12,23,43,0.88);
+}
+body.sway-dark-mode .sway-budget-forecast-heading strong,
+body.sway-dark-mode .sway-budget-forecast-card > div > strong {
+    color: #eef4ff;
+}
+body.sway-dark-mode .sway-budget-forecast-heading {
+    border-color: rgba(119,193,252,0.12);
+}
+@media (max-width: 900px) {
+    .sway-budget-forecast-grid {
+        grid-template-columns: 1fr;
+    }
+    .sway-budget-forecast-card {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sway-budget-forecast-heading,
+    .sway-budget-forecast-net {
+        grid-column: 1 / -1;
+    }
+}
+@media (max-width: 560px) {
+    .sway-budget-forecast-card {
+        grid-template-columns: 1fr;
+    }
+    .sway-budget-forecast-heading,
+    .sway-budget-forecast-net {
+        grid-column: auto;
+    }
+}
