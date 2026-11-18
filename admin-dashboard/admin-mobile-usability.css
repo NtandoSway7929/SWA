@@ -1,0 +1,442 @@
+/* Swayphics admin dashboard: consolidated mobile usability layer.
+   Desktop remains the primary workspace. These rules adapt presentation only;
+   they do not hide destinations, remove actions, or change feature behaviour. */
+
+#sway-admin-workspace,
+#sway-admin-workspace * {
+    min-width: 0;
+}
+
+#sway-admin-workspace .sway-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+#sway-admin-workspace .sway-table {
+    width: 100%;
+}
+
+#sway-admin-workspace button,
+#sway-admin-workspace input,
+#sway-admin-workspace select,
+#sway-admin-workspace textarea {
+    touch-action: manipulation;
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+    .admin-header-inner {
+        width: min(1180px, calc(100% - 32px));
+        gap: 14px;
+    }
+
+    #sway-admin-workspace .sway-workspace-main {
+        min-width: 0;
+    }
+
+    #sway-admin-workspace .sway-workspace-grid,
+    #sway-admin-workspace .sway-insight-grid {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    html,
+    body {
+        max-width: 100%;
+        overflow-x: clip;
+    }
+
+    body::before {
+        right: -110px;
+        width: min(420px, 78vw);
+        opacity: .035;
+    }
+
+    .admin-header {
+        position: relative;
+        padding: 10px 0 0;
+    }
+
+    .admin-header-inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 12px;
+        width: calc(100% - 24px);
+        min-height: 0;
+        padding: 10px 12px;
+        border-radius: 18px;
+    }
+
+    .admin-brand {
+        flex: 0 0 auto;
+    }
+
+    .admin-brand-logo {
+        width: clamp(104px, 31vw, 132px);
+        max-width: 100%;
+    }
+
+    .admin-header-right {
+        flex: 0 0 auto;
+        margin-left: auto;
+        gap: 8px;
+    }
+
+    .admin-status {
+        max-width: 42vw;
+        padding: 7px 9px;
+        font-size: .62rem;
+    }
+
+    .admin-header .logout-button {
+        min-height: 44px;
+        padding: 0 13px;
+        font-size: .7rem;
+    }
+
+    .admin-global-search {
+        order: 3;
+        flex: 1 0 100%;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .admin-global-search-field {
+        min-height: 46px;
+    }
+
+    #sway-admin-workspace {
+        width: 100%;
+        max-width: 100%;
+        padding-inline: 0;
+    }
+
+    #sway-admin-workspace .sway-workspace-shell.sway-top-nav-shell {
+        width: 100%;
+        max-width: 100%;
+        gap: 13px !important;
+        padding-inline: 12px;
+    }
+
+    #sway-admin-workspace nav.sway-workspace-sidebar.sway-top-nav {
+        padding: 10px !important;
+        border-radius: 15px !important;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-scroll {
+        gap: 6px !important;
+        padding: 2px 1px 5px;
+        scroll-snap-type: x proximity;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(1, 82, 244, .28) transparent;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-group {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+    }
+
+    #sway-admin-workspace .sway-workspace-nav-group-toggle,
+    #sway-admin-workspace .sway-settings-direct-nav {
+        min-height: 46px !important;
+        padding-inline: 13px !important;
+        font-size: .68rem !important;
+        white-space: nowrap;
+    }
+
+    #sway-admin-workspace .sway-top-nav-menu-layer {
+        width: min(100%, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+    }
+
+    #sway-admin-workspace .sway-top-nav-menu-layer .sway-workspace-nav-items {
+        max-height: min(58dvh, 480px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #sway-admin-workspace .sway-top-nav-menu-layer .sway-workspace-nav-button {
+        min-height: 46px;
+        padding: 11px 12px;
+        font-size: .72rem;
+        line-height: 1.35;
+        text-align: left;
+    }
+
+    #sway-admin-workspace .sway-workspace-main {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding: 0 12px 28px;
+    }
+
+    #sway-admin-workspace .sway-workspace-heading {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    #sway-admin-workspace .sway-workspace-heading-copy {
+        width: 100%;
+    }
+
+    #sway-admin-workspace .sway-workspace-heading h2 {
+        font-size: clamp(1.35rem, 6vw, 1.8rem);
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    #sway-admin-workspace .sway-workspace-heading p {
+        font-size: .76rem;
+        line-height: 1.6;
+    }
+
+    #sway-admin-workspace .sway-workspace-heading-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        width: 100%;
+        gap: 8px;
+    }
+
+    #sway-admin-workspace .sway-workspace-heading-actions > * {
+        flex: 1 1 145px;
+        min-width: 0;
+    }
+
+    #sway-admin-workspace .sway-workspace-grid,
+    #sway-admin-workspace .sway-insight-grid,
+    #sway-admin-workspace .sway-client-health-grid,
+    #sway-admin-workspace .sway-settings-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        min-width: 0;
+    }
+
+    #sway-admin-workspace .sway-table-wrap {
+        width: 100%;
+        max-width: 100%;
+        margin-inline: 0;
+        border-radius: 12px;
+        overflow-x: auto !important;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #sway-admin-workspace .sway-table {
+        width: 100%;
+        min-width: 650px;
+        table-layout: auto;
+    }
+
+    #sway-admin-workspace .sway-table th,
+    #sway-admin-workspace .sway-table td {
+        padding: 11px 12px;
+        line-height: 1.45;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    #sway-admin-workspace .sway-workspace-button,
+    #sway-admin-workspace .sway-dialog-button,
+    #sway-admin-workspace .sway-overview-primary-action,
+    #sway-admin-workspace .sway-overview-secondary-action,
+    #sway-admin-workspace .sway-record-card-actions button,
+    #sway-admin-workspace .sway-lead-card-actions button,
+    #sway-admin-workspace .sway-communication-viewer-footer button,
+    #sway-admin-workspace .sway-modal-actions button,
+    #sway-admin-workspace .swe-button,
+    #sway-admin-workspace .sway-top-nav-menu-layer .sway-workspace-nav-button,
+    #sway-admin-workspace .sway-quick-create-item,
+    .admin-header .logout-button {
+        min-height: 44px;
+    }
+
+    #sway-admin-workspace input:not([type="checkbox"]):not([type="radio"]),
+    #sway-admin-workspace select,
+    #sway-admin-workspace textarea,
+    #sway-admin-workspace .sway-form-field input,
+    #sway-admin-workspace .sway-form-field select,
+    #sway-admin-workspace .sway-form-field textarea,
+    #sway-admin-workspace .sway-admin-table-control-grid input:not([type="checkbox"]):not([type="radio"]),
+    #sway-admin-workspace .sway-admin-table-control-grid select,
+    #sway-admin-workspace .sway-admin-table-control-grid textarea {
+        min-height: 44px;
+        font-size: 16px !important;
+    }
+
+    #sway-admin-workspace input[type="checkbox"],
+    #sway-admin-workspace input[type="radio"] {
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+    }
+
+    #sway-admin-workspace .sway-form-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 13px;
+    }
+
+    #sway-admin-workspace .sway-form-field,
+    #sway-admin-workspace .sway-form-field.full {
+        grid-column: 1 / -1;
+        min-width: 0;
+    }
+
+    #sway-admin-workspace .sway-modal,
+    #sway-admin-workspace .sway-client360-modal,
+    #sway-admin-workspace .sway-admin-onboarding-modal {
+        padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+        align-items: center;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #sway-admin-workspace .sway-modal-card,
+    #sway-admin-workspace .sway-client360-modal,
+    #sway-admin-workspace .sway-portal-request-modal-card {
+        width: 100%;
+        max-width: 100%;
+        max-height: calc(100dvh - 24px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border-radius: 16px;
+    }
+
+    #sway-admin-workspace .sway-modal-header {
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    #sway-admin-workspace .sway-modal-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    #sway-admin-workspace .sway-modal-actions > * {
+        flex: 1 1 135px;
+    }
+
+    #sway-admin-workspace .sway-modal-actions button {
+        width: 100%;
+    }
+
+    #sway-admin-workspace .sway-overview-hero {
+        padding: 19px 16px;
+        border-radius: 17px;
+    }
+
+    #sway-admin-workspace .sway-overview-hero-metrics {
+        gap: 14px 0;
+    }
+
+    #sway-admin-workspace .sway-overview-hero-metric {
+        overflow-wrap: anywhere;
+    }
+
+    #sway-admin-workspace .sway-record-card,
+    #sway-admin-workspace .sway-lead-card {
+        padding: 14px;
+        border-radius: 15px;
+    }
+
+    #sway-admin-workspace .sway-record-card-actions,
+    #sway-admin-workspace .sway-lead-card-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    #sway-admin-workspace .sway-record-card-actions > *,
+    #sway-admin-workspace .sway-lead-card-actions > * {
+        min-width: 0;
+        width: 100%;
+    }
+
+    #sway-admin-workspace .sway-budget-plan-toolbar,
+    #sway-admin-workspace .sway-budget-forecast-grid {
+        min-width: 0;
+    }
+
+    #sway-admin-workspace .sway-budget-plan-toolbar input,
+    #sway-admin-workspace .sway-budget-allocation-form input {
+        font-size: 16px !important;
+    }
+
+    #sway-admin-workspace .sway-budget-allocation-form {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    #sway-admin-workspace .sway-budget-allocation-form input {
+        flex: 1 1 110px;
+        max-width: none;
+    }
+
+    #sway-admin-workspace .sway-budget-allocation-form button {
+        flex: 0 0 auto;
+    }
+
+    #sway-admin-workspace .sway-settings-grid > div {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    #sway-admin-workspace .sway-workspace-main img,
+    #sway-admin-workspace .sway-workspace-main video,
+    #sway-admin-workspace .sway-workspace-main iframe {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    .admin-header-inner {
+        width: calc(100% - 20px);
+        padding: 9px 10px;
+    }
+
+    #sway-admin-workspace .sway-workspace-shell.sway-top-nav-shell {
+        padding-inline: 10px;
+    }
+
+    #sway-admin-workspace .sway-workspace-main {
+        padding-inline: 10px;
+    }
+
+    #sway-admin-workspace .sway-workspace-heading-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #sway-admin-workspace .sway-workspace-heading-actions > * {
+        width: 100%;
+    }
+
+    #sway-admin-workspace .sway-record-card-actions,
+    #sway-admin-workspace .sway-lead-card-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #sway-admin-workspace .sway-overview-hero-metric {
+        padding-inline: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #sway-admin-workspace *,
+    #sway-admin-workspace *::before,
+    #sway-admin-workspace *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
