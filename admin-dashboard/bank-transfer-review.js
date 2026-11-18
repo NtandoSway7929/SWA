@@ -96,6 +96,41 @@
       status(error.message || "Unable to load bank transfer submissions.", true);
     }
   }
+  async function openProofPreview(signedUrl) {
+    var parsed = new window.URL(signedUrl);
+    if (parsed.origin !== SUPABASE_URL || parsed.pathname.indexOf("/storage/v1/object/sign/") !== 0) {
+      throw new Error("The secure proof link is not valid.");
+    }
+    var response = await fetch(parsed.href, { cache: "no-store" });
+    if (!response.ok) throw new Error("The bank transfer proof could not be loaded (" + response.status + ").");
+    var blob = await response.blob();
+    var objectUrl = window.URL.createObjectURL(blob);
+    var isImage = /^image\/(jpeg|png|webp)$/i.test(blob.type);
+    var isPdf = blob.type.toLowerCase() === "application/pdf";
+    var content = isImage
+      ? '<img src="' + objectUrl + '" alt="Bank transfer proof" style="display:block;max-width:100%;max-height:calc(100vh - 150px);object-fit:contain;margin:auto">'
+      : isPdf
+        ? '<iframe title="Bank transfer proof PDF" src="' + objectUrl + '" style="display:block;width:100%;height:calc(100vh - 170px);border:0;background:#fff"></iframe>'
+        : '<div style="padding:36px;text-align:center;color:#334155">This proof format cannot be previewed in the dashboard. Download it to open it.</div>';
+    var overlay = document.createElement("div");
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "Bank transfer proof preview");
+    overlay.style.cssText = "position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:clamp(10px,3vw,28px);background:rgba(5,13,30,.78);backdrop-filter:blur(8px)";
+    overlay.innerHTML = '<section style="width:min(1100px,100%);max-height:100%;overflow:hidden;display:flex;flex-direction:column;border-radius:18px;background:#fff;box-shadow:0 24px 80px rgba(0,0,0,.35)"><header style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid #e5eaf2"><strong style="font:700 13px/1.4 system-ui;color:#10224b">Bank transfer proof</strong><div style="display:flex;gap:8px"><a href="' + objectUrl + '" download="bank-transfer-proof" style="padding:8px 11px;border-radius:8px;background:#002096;color:#fff;text-decoration:none;font:700 11px system-ui">Download</a><button type="button" data-proof-close style="padding:8px 11px;border:1px solid #dce3ef;border-radius:8px;background:#fff;color:#25324a;font:700 11px system-ui">Close</button></div></header><div style="min-height:120px;overflow:auto;background:#f3f6fb;padding:12px">' + content + '</div></section>';
+    function close() {
+      overlay.remove();
+      window.URL.revokeObjectURL(objectUrl);
+      document.removeEventListener("keydown", onKey);
+    }
+    function onKey(keyEvent) { if (keyEvent.key === "Escape") close(); }
+    overlay.addEventListener("click", function (clickEvent) {
+      if (clickEvent.target === overlay || clickEvent.target.closest("[data-proof-close]")) close();
+    });
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(overlay);
+    overlay.querySelector("[data-proof-close]").focus();
+  }
   async function handleClick(event) {
     var proof = event.target.closest("[data-btr-proof]");
     var approve = event.target.closest("[data-btr-approve]");
@@ -108,15 +143,10 @@
     busy = true;
     try {
       if (proof) {
-        var win = window.open("about:blank","_blank");
-        status("Preparing a private proof link…", false);
+        status("Loading proof securely…", false);
         var result = await request("proof",{submission_id:id});
-        if (!win) status("Your browser blocked the proof window. Allow pop-ups for this site and try again.",true);
-        else {
-          win.opener = null;
-          win.location.replace(result.signed_url);
-          status("Proof link is valid for five minutes.",false);
-        }
+        await openProofPreview(result.signed_url);
+        status("Proof opened securely inside the dashboard.",false);
       } else if (approve) {
         var invoice = item.invoice || {};
         var client = item.client || {};
