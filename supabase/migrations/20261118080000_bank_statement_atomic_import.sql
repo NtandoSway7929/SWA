@@ -84,7 +84,7 @@ begin
         'row_count', v_row_count
     );
 end;
-$;
+$$;
 
 revoke all on function public.import_bank_statement(text, text, text, date, date, jsonb)
     from public, anon, authenticated, service_role;
