@@ -42,7 +42,7 @@ async function importCurrent(){
  if(!preview||!Array.isArray(preview.rows)||!preview.rows.length)throw new Error("Generate a valid preview before importing.");
  const account=$("account").value.trim(),file=$("file").files&&$("file").files[0],start=$("periodStart").value,end=$("periodEnd").value;
  if(!account)throw new Error("Enter an account label before importing.");
- if(!file)throw new Error("Choose the original CSV file again before importing.");
+ if(!file)throw new Error("Choose the original CSV file again before importing.");\n if(preview.file!==file)throw new Error("The selected file has changed since preview. Generate a new preview before importing.");
  if(!start||!end||end<start)throw new Error("The statement period is invalid.");
  if(preview.rows.length>10000)throw new Error("A statement import is limited to 10,000 valid rows.");
  if(!crypto||!crypto.subtle)throw new Error("This browser does not support secure SHA-256 fingerprinting. Use a current browser over HTTPS.");
@@ -75,6 +75,14 @@ function mount(){
  panel.appendChild(status);
  const history=document.createElement("section");history.className="panel";history.innerHTML='<h2>Previously imported statements</h2><p class="muted">The latest 50 statement imports for this account are shown here.</p><div id="savedImports" style="margin-top:14px"><p class="muted">Loading saved statements…</p></div>';
  panel.insertAdjacentElement("afterend",history);
+ ["file","account","periodStart","periodEnd"].forEach(function(id){
+  $(id).addEventListener("change",function(){
+   window.__bankStatementPreview=null;
+   $("saveImport").classList.add("hidden");
+   $("previewPanel").classList.add("hidden");
+   setStatus("Statement details changed. Generate a fresh preview before importing.",false);
+  });
+ });
  $("saveImport").addEventListener("click",importCurrent);
  window.addEventListener("bank:preview-ready",function(){ $("saveImport").classList.remove("hidden");setStatus("Ready to import. The file hash and transaction fingerprints will be generated locally.",false); });
  loadImports();
