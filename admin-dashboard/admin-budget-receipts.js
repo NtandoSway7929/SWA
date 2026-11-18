@@ -90,7 +90,8 @@
                 display: flex; align-items: center; justify-content: space-between;
                 gap: 14px; margin-bottom: 16px; flex-wrap: wrap;
             }
-            #sway-budget-receipts-panel .sway-budget-receipts-search {
+            #sway-budget-receipts-panel .sway-budget-receipts-search,
+            #sway-budget-receipts-panel .sway-budget-receipts-filter {
                 width: min(340px, 100%); min-height: 42px; padding: 10px 13px;
                 border: 1px solid var(--sway-border, rgba(0,32,150,.12));
                 border-radius: 11px; background: var(--sway-surface, #fff);
@@ -227,6 +228,9 @@
             '<div class="sway-budget-receipts-toolbar">' +
                 '<div><strong data-receipt-summary>Loading expenses...</strong><p class="sway-budget-receipt-meta">PDF, JPG, PNG and WebP · Maximum 10 MB per file</p></div>' +
                 '<input class="sway-budget-receipts-search" type="search" placeholder="Search expenses..." aria-label="Search expenses" data-receipt-search>' +
+                '<select class="sway-budget-receipts-filter" aria-label="Filter expenses by receipt status" data-receipt-filter>' +
+                    '<option value="all">All expenses</option><option value="missing">Missing receipts</option><option value="attached">With receipts</option>' +
+                '</select>' +
             '</div>' +
             '<div class="sway-budget-receipt-list" data-receipt-list><div class="sway-budget-receipt-empty">Loading expense records...</div></div>';
         ledger.insertAdjacentElement("afterend", section);
@@ -275,6 +279,7 @@
         var summary = section.querySelector("[data-receipt-summary]");
         if (!list) return;
         var query = String(section.querySelector("[data-receipt-search]")?.value || "").trim().toLowerCase();
+        var filter = String(section.querySelector("[data-receipt-filter]")?.value || "all");
         var receiptsByEntry = new Map();
         cachedReceipts.forEach(function (receipt) {
             var key = String(receipt.budget_entry_id || "");
@@ -283,7 +288,9 @@
         });
         var entries = cachedEntries.filter(function (entry) {
             var searchable = [entry.description, entry.category, entry.transaction_date, entry.amount].join(" ").toLowerCase();
-            return !query || searchable.includes(query);
+            var hasReceipt = (receiptsByEntry.get(String(entry.id)) || []).length > 0;
+            var matchesFilter = filter === "missing" ? !hasReceipt : filter === "attached" ? hasReceipt : true;
+            return matchesFilter && (!query || searchable.includes(query));
         });
         var attachedCount = cachedEntries.filter(function (entry) {
             return (receiptsByEntry.get(String(entry.id)) || []).length > 0;
@@ -293,9 +300,14 @@
                 Math.max(0, cachedEntries.length - attachedCount) + " missing";
         }
         if (!entries.length) {
-            list.innerHTML = '<div class="sway-budget-receipt-empty">' +
-                (cachedEntries.length ? "No expenses match your search." : "No operating expenses have been recorded yet.") +
-                '</div>';
+            var emptyMessage = !cachedEntries.length
+                ? "No operating expenses have been recorded yet."
+                : filter === "missing"
+                    ? "Every recorded expense has a receipt."
+                    : filter === "attached"
+                        ? "No expenses with receipts match this search."
+                        : "No expenses match your search.";
+            list.innerHTML = '<div class="sway-budget-receipt-empty">' + escapeHtml(emptyMessage) + '</div>';
             return;
         }
         list.innerHTML = entries.map(function (entry) {
@@ -403,9 +415,24 @@
             headers: headers({ "Content-Type": "application/json" }),
             body: JSON.stringify({ expiresIn: 120 })
         });
-        var signed = result && (result.signedURL || result.signedUrl);
+        var signed = String(result && (result.signedURL || result.signedUrl) || "");
         if (!signed) throw new Error("Supabase did not return a secure file link.");
-        return /^https?:\/\//i.test(signed) ? signed : SUPABASE_URL + signed;
+        var base = new URL(SUPABASE_URL);
+        var resolved;
+        if (/^https?:\/\//i.test(signed)) {
+            resolved = new URL(signed);
+        } else {
+            var relativePath = signed.charAt(0) === "/" ? signed : "/" + signed;
+            if (relativePath.indexOf("/storage/v1/") !== 0) relativePath = "/storage/v1" + relativePath;
+            resolved = new URL(relativePath, base.origin);
+        }
+        if (
+            resolved.origin !== base.origin ||
+            resolved.pathname.indexOf("/storage/v1/object/sign/" + BUCKET + "/") !== 0
+        ) {
+            throw new Error("Supabase returned an invalid receipt link.");
+        }
+        return resolved.href;
     }
 
     async function handleClick(event) {
@@ -473,13 +500,29 @@
             status.classList.remove("error");
             status.textContent = "Uploading " + files.length + (files.length === 1 ? " file..." : " files...");
         }
+        var uploadedCount = 0;
+        var failures = [];
         try {
             for (var index = 0; index < files.length; index += 1) {
-                await uploadOne(entryId, files[index]);
+                try {
+                    await uploadOne(entryId, files[index]);
+                    uploadedCount += 1;
+                } catch (error) {
+                    failures.push(error.message || (files[index].name + ": upload failed."));
+                }
             }
             input.value = "";
             await loadData(currentSection);
-            if (status && status.isConnected) status.textContent = "Receipt upload complete.";
+            var refreshedCard = Array.from(currentSection.querySelectorAll("[data-receipt-entry]")).find(function (card) {
+                return String(card.dataset.receiptEntry) === entryId;
+            });
+            var refreshedStatus = refreshedCard && refreshedCard.querySelector("[data-receipt-entry-status]");
+            if (refreshedStatus) {
+                refreshedStatus.classList.toggle("error", failures.length > 0);
+                refreshedStatus.textContent = failures.length
+                    ? uploadedCount + " of " + files.length + " files uploaded. " + failures.join(" ")
+                    : uploadedCount + (uploadedCount === 1 ? " receipt uploaded." : " receipts uploaded.");
+            }
         } catch (error) {
             if (status) {
                 status.classList.add("error");
@@ -492,6 +535,10 @@
 
     document.addEventListener("click", handleClick);
     document.addEventListener("change", handleUpload);
+    document.addEventListener("change", function (event) {
+        if (!event.target.matches("[data-receipt-filter]") || !currentSection || !currentSection.contains(event.target)) return;
+        renderList(currentSection);
+    });
     document.addEventListener("input", function (event) {
         if (!event.target.matches("[data-receipt-search]") || !currentSection || !currentSection.contains(event.target)) return;
         renderList(currentSection);
