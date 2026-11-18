@@ -42,7 +42,7 @@ assert.ok(!/grant\s+[^;]*\bdelete\b[^;]*bank_statement_/is.test(sql),
     "browser roles must not be granted delete access to statement records");
 
 
-const atomicImportPath = path.join(__dirname, "..", "supabase", "migrations", "20261118080000_bank_statement_atomic_import.sql");
+const atomicImportPath = path.join(__dirname, "..", "supabase", "migrations", "20261118061550_bank_statement_atomic_import.sql");
 const atomicSql = fs.readFileSync(atomicImportPath, "utf8");
 assert.ok(atomicSql.includes("create or replace function public.import_bank_statement("));
 assert.ok(atomicSql.includes("security invoker"), "the import RPC must respect caller privileges and RLS");
