@@ -19220,7 +19220,7 @@ function simpleBars(items, color) {
             const allocated = allocation ? Number(allocation.allocated_amount || 0) : 0;
             const remaining = allocated - spent;
             const percent = allocated > 0 ? spent / allocated * 100 : 0;
-            return { category: category, allocated: allocated, spent: spent, remaining: remaining, percent: percent };
+            return { category: category, allocationId: allocation ? allocation.id : "", allocated: allocated, spent: spent, remaining: remaining, percent: percent };
         });
         const allocatedTotal = planCategories.reduce(function (total, item) { return total + item.allocated; }, 0);
         const planSpentTotal = planCategories.reduce(function (total, item) { return total + item.spent; }, 0);
@@ -19240,6 +19240,9 @@ function simpleBars(items, color) {
                         '<input type="number" name="allocated_amount" min="0.01" max="9999999999.99" step="0.01" value="' +
                             (hasAllocation ? item.allocated.toFixed(2) : "") + '" placeholder="Set limit" aria-label="Monthly limit for ' + esc(item.category) + '">' +
                         '<button type="submit" class="sway-budget-void">Save</button>' +
+                        (item.allocationId
+                            ? '<button type="button" class="sway-budget-void" data-budget-allocation-delete="' + esc(item.allocationId) + '">Remove</button>'
+                            : '') +
                     '</form></td>' +
                     '<td class="amount ' + (over ? "is-negative" : "is-positive") + '">' +
                         (hasAllocation ? esc((item.remaining < 0 ? "−" : "") + budgetCurrency(Math.abs(item.remaining))) : "—") +
@@ -28506,6 +28509,28 @@ function simpleBars(items, color) {
                 } catch (error) {
                     if (button) button.disabled = false;
                     swayAlert(error && error.message ? error.message : "Unable to save this monthly budget.");
+                }
+            });
+        });
+
+        workspace.querySelectorAll("[data-budget-allocation-delete]").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                if (!isBudgetOwner()) return;
+                const allocationId = button.dataset.budgetAllocationDelete || "";
+                if (!allocationId) return;
+                const confirmed = await swayConfirm("Remove this category's monthly budget limit? Recorded expenses will remain unchanged.");
+                if (!confirmed) return;
+                button.disabled = true;
+                try {
+                    await api("/rest/v1/budget_category_allocations?id=eq." + encodeURIComponent(allocationId), {
+                        method: "DELETE",
+                        headers: headers({ "Prefer": "return=minimal" })
+                    });
+                    await refreshData();
+                    renderView();
+                } catch (error) {
+                    button.disabled = false;
+                    swayAlert(error && error.message ? error.message : "Unable to remove this monthly budget.");
                 }
             });
         });
