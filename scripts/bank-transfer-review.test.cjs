@@ -52,6 +52,10 @@ test("only active administrators can access review actions and proof links", () 
   assert.match(edge, /status: 503,/);
   assert.match(edge, /Administrator session expired or invalid\. Sign in again\./);
   assert.match(adminUi, /Confirm deposit &amp; record/);
+  assert.match(adminUi, /openProofPreview/);
+  assert.match(adminUi, /URL\.createObjectURL/);
+  assert.doesNotMatch(adminUi, /window\.open\(/);
+  assert.doesNotMatch(adminUi, /location\.replace\(/);
   assert.match(adminUi, /Only approve after confirming the deposit has cleared/);
   assert.match(adminHtml, /bank-transfer-review\.js/);
   assert.match(config, /\[functions\.bank-transfer\][\s\S]*?verify_jwt = false/);
