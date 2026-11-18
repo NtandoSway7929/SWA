@@ -264,7 +264,10 @@
     #sway-admin-workspace textarea,
     #sway-admin-workspace .sway-form-field input,
     #sway-admin-workspace .sway-form-field select,
-    #sway-admin-workspace .sway-form-field textarea {
+    #sway-admin-workspace .sway-form-field textarea,
+    #sway-admin-workspace .sway-admin-table-control-grid input:not([type="checkbox"]):not([type="radio"]),
+    #sway-admin-workspace .sway-admin-table-control-grid select,
+    #sway-admin-workspace .sway-admin-table-control-grid textarea {
         min-height: 44px;
         font-size: 16px !important;
     }
