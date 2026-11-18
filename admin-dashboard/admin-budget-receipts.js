@@ -435,6 +435,39 @@
         return resolved.href;
     }
 
+    async function showReceiptPreview(url, receipt) {
+        var response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) throw new Error("The receipt could not be loaded (" + response.status + ").");
+        var blob = await response.blob();
+        var objectUrl = URL.createObjectURL(blob);
+        var overlay = document.createElement("div");
+        overlay.id = "sway-budget-receipt-preview";
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-modal", "true");
+        overlay.setAttribute("aria-label", "Receipt preview");
+        overlay.style.cssText = "position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:clamp(10px,3vw,28px);background:rgba(5,13,30,.78);backdrop-filter:blur(8px)";
+        var isImage = /^image\/(jpeg|png|webp)$/i.test(String(receipt.mime_type || blob.type));
+        var isPdf = String(receipt.mime_type || blob.type).toLowerCase() === "application/pdf";
+        var content = isImage
+            ? '<img src="' + objectUrl + '" alt="' + escapeHtml(receipt.original_filename) + '" style="display:block;max-width:100%;max-height:calc(100vh - 150px);object-fit:contain;margin:auto">'
+            : isPdf
+                ? '<iframe title="Receipt PDF" src="' + objectUrl + '" style="display:block;width:100%;height:calc(100vh - 170px);border:0;background:#fff"></iframe>'
+                : '<div style="padding:36px;text-align:center;color:#334155">This file type cannot be previewed here. Use Download to open it locally.</div>';
+        overlay.innerHTML = '<section style="width:min(1100px,100%);max-height:100%;overflow:hidden;display:flex;flex-direction:column;border-radius:18px;background:#fff;box-shadow:0 24px 80px rgba(0,0,0,.35)"><header style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid #e5eaf2"><strong style="min-width:0;overflow-wrap:anywhere;font:700 13px/1.4 system-ui;color:#10224b">' + escapeHtml(receipt.original_filename || "Receipt") + '</strong><div style="display:flex;gap:8px;flex-shrink:0"><a href="' + objectUrl + '" download="' + escapeHtml(receipt.original_filename || "receipt") + '" style="padding:8px 11px;border-radius:8px;background:#002096;color:#fff;text-decoration:none;font:700 11px system-ui">Download</a><button type="button" data-preview-close style="padding:8px 11px;border:1px solid #dce3ef;border-radius:8px;background:#fff;color:#25324a;font:700 11px system-ui">Close</button></div></header><div style="min-height:120px;overflow:auto;background:#f3f6fb;padding:12px">' + content + '</div></section>';
+        function close() {
+            overlay.remove();
+            URL.revokeObjectURL(objectUrl);
+            document.removeEventListener("keydown", onKey);
+        }
+        function onKey(event) { if (event.key === "Escape") close(); }
+        overlay.addEventListener("click", function (event) {
+            if (event.target === overlay || event.target.closest("[data-preview-close]")) close();
+        });
+        document.addEventListener("keydown", onKey);
+        document.body.appendChild(overlay);
+        overlay.querySelector("[data-preview-close]").focus();
+    }
+
     async function handleClick(event) {
         var openButton = event.target.closest("[data-receipt-open]");
         if (openButton && currentSection && currentSection.contains(openButton)) {
@@ -442,22 +475,16 @@
                 return String(item.id) === String(openButton.dataset.receiptOpen);
             });
             if (!receipt) return;
-            var popup = window.open("about:blank", "_blank");
-            if (popup) popup.document.title = "Opening receipt";
             openButton.disabled = true;
+            openButton.textContent = "Loading...";
             try {
                 var url = await signedUrl(receipt.storage_path);
-                if (popup) {
-                    popup.opener = null;
-                    popup.location = url;
-                } else {
-                    window.location.href = url;
-                }
+                await showReceiptPreview(url, receipt);
             } catch (error) {
-                if (popup) popup.close();
                 window.swayAlert ? window.swayAlert(error.message) : window.alert(error.message);
             } finally {
                 openButton.disabled = false;
+                openButton.textContent = "View";
             }
             return;
         }
