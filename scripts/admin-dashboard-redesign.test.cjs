@@ -10,12 +10,14 @@ const workspaceCssPath = path.join(root, "admin-dashboard", "admin-workspace.css
 const redesignCssPath = path.join(root, "admin-dashboard", "admin-dashboard-redesign.css");
 const dashboardHtmlPath = path.join(root, "admin-dashboard", "index.html");
 const settingsPath = path.join(root, "admin-dashboard", "admin-settings-expanded.js");
+const budgetMigrationPath = path.join(root, "supabase", "migrations", "20261117170000_swayphics_budget_management.sql");
 
 const workspace = fs.readFileSync(workspacePath, "utf8");
 const workspaceCss = fs.readFileSync(workspaceCssPath, "utf8");
 const redesignCss = fs.readFileSync(redesignCssPath, "utf8");
 const dashboardHtml = fs.readFileSync(dashboardHtmlPath, "utf8");
 const settings = fs.readFileSync(settingsPath, "utf8");
+const budgetMigration = fs.readFileSync(budgetMigrationPath, "utf8");
 
 function extractConstant(source, startMarker, endMarker, label) {
     const start = source.indexOf(startMarker);
@@ -44,12 +46,13 @@ const expectedGroups = [
     ["crm", "Clients & Pipeline", ["enquiries", "leads", "clients", "communications", "email", "documents", "followups"]],
     ["delivery", "Work & Portfolio", ["projects", "tasks", "portfolio"]],
     ["billing", "Sales & Billing", ["quotes", "invoices", "payments", "services", "invoice-settings"]],
+    ["finance", "Finance", ["budget"]],
     ["website", "Website", ["content", "testimonials", "cookie-analytics"]],
     ["admin", "Administration", ["activity", "portal-requests", "data-export", "team"]],
     ["settings", "Settings", ["settings"]]
 ];
 
-assert.equal(groupMatches.length, expectedGroups.length, "all eight navigation groups must remain");
+assert.equal(groupMatches.length, expectedGroups.length, "all nine navigation groups must remain");
 const actualViewIds = [];
 
 groupMatches.forEach((match, index) => {
@@ -65,7 +68,7 @@ groupMatches.forEach((match, index) => {
     actualViewIds.push(...items);
 });
 
-assert.equal(actualViewIds.length, 31, "all 31 current destinations must remain available");
+assert.equal(actualViewIds.length, 32, "all 32 current destinations must remain available");
 assert.ok(
     navSource.match(/\{\s*id:\s*"settings",\s*label:\s*"Settings",\s*icon:\s*"settings"/),
     "the final Settings destination must declare its settings icon"
@@ -97,7 +100,7 @@ assert.ok(
     settingsButtonRenderer.includes('class="sway-settings-direct-label"'),
     "the standalone Settings tab must render its gear icon before its label"
 );
-assert.equal(new Set(actualViewIds).size, 31, "navigation destination IDs must be unique");
+assert.equal(new Set(actualViewIds).size, 32, "navigation destination IDs must be unique");
 
 const renderShell = extractConstant(
     workspace,
@@ -313,10 +316,108 @@ assert.ok(
     "status colour variants must be retained after removing the decorative circles"
 );
 
+const budgetReceivables = extractConstant(
+    workspace,
+    "function budgetReceivableSummary(invoices) {",
+    "\n    function renderBudget()",
+    "Budget receivable aggregation"
+);
+const receivableSummary = new Function(
+    budgetReceivables + "\nreturn budgetReceivableSummary(arguments[0]);"
+)([
+    { status: "draft", currency: "ZAR", total: 650, amount_outstanding: 650 },
+    { status: "sent", currency: "ZAR", total: 900, amount_outstanding: 900 },
+    { status: "partially paid", currency: "ZAR", total: 500, amount_paid: 200, amount_outstanding: null },
+    { status: "overdue", currency: "USD", total: 100, amount_outstanding: 100 },
+    { status: "paid", currency: "ZAR", total: 300, amount_outstanding: 0 },
+    { status: "cancelled", currency: "ZAR", total: 400, amount_outstanding: 400 }
+]);
+assert.deepEqual(
+    receivableSummary,
+    { zarAmount: 1200, nonZarCount: 1 },
+    "receivables must include only issued unpaid invoices and exclude non-ZAR amounts from ZAR totals"
+);
+
+const budgetRenderer = extractConstant(
+    workspace,
+    "function renderBudget() {",
+    "\n    function renderPayments()",
+    "Budget renderer"
+);
+const budgetLedger = extractConstant(
+    workspace,
+    "function budgetTransactionRows() {",
+    "\n    function budgetTotal(",
+    "Budget transaction aggregation"
+);
+const budgetOwnerGuard = extractConstant(
+    workspace,
+    "function isBudgetOwner() {",
+    "\n    function budgetDateKey(",
+    "Budget owner permission guard"
+);
+assert.ok(
+    navSource.includes('id: "finance"') && navSource.includes('["budget", "Budget"]'),
+    "Finance → Budget must remain a dedicated navigation destination"
+);
+assert.ok(
+    budgetOwnerGuard.includes('state.currentAdmin.role === "owner"') &&
+    budgetOwnerGuard.includes("state.currentAdmin.active === true"),
+    "Budget must be restricted to an active owner account"
+);
+assert.ok(
+    budgetLedger.includes('payment.status || "").toLowerCase() !== "paid"') &&
+    budgetLedger.includes('linkedAttempt.environment || "").toLowerCase() !== "live"') &&
+    budgetLedger.includes('linkedAttempt.status || "").toLowerCase() !== "succeeded"'),
+    "Yoco receipts must be excluded unless their linked payment attempt succeeded in live mode"
+);
+assert.ok(
+    budgetLedger.includes('refund.status || "").toLowerCase() !== "succeeded"') &&
+    budgetLedger.includes('refund.environment || "").toLowerCase() !== "live"'),
+    "only successful live Yoco refunds may enter cash-outflow reporting"
+);
+assert.ok(
+    budgetRenderer.includes("Client payments received") &&
+    budgetRenderer.includes("Client refunds") &&
+    budgetRenderer.includes("Operating expenses") &&
+    budgetRenderer.includes("Net cash movement"),
+    "the cash-basis statement must separate receipts, refunds, expenses and net movement"
+);
+assert.ok(
+    budgetRenderer.includes("Receivables, not cash received") &&
+    budgetRenderer.includes("This is a cash-movement view, not a bank balance") &&
+    budgetRenderer.includes("non-ZAR invoice"),
+    "invoice receivables must be distinguished from cash and non-ZAR invoice values must be disclosed"
+);
+assert.ok(
+    workspace.includes('"/rest/v1/budget_entries"') &&
+    workspace.includes('status: "void"') &&
+    !workspace.includes('voided_by: state.currentUser.id'),
+    "manual entries must persist and void through the ledger without client-supplied audit identity"
+);
+assert.ok(
+    budgetMigration.includes("alter table public.budget_entries enable row level security") &&
+    budgetMigration.includes("Swayphics owners can manage budget entries") &&
+    budgetMigration.includes("Swayphics owners can view payment refunds") &&
+    budgetMigration.includes("Swayphics owners can view payment attempts"),
+    "budget, refunds and payment-attempt reads must be owner-protected by RLS"
+);
+assert.ok(
+    budgetMigration.includes("new.voided_at := now()") &&
+    budgetMigration.includes("new.voided_by := auth.uid()") &&
+    budgetMigration.includes("Posted budget entry details are immutable"),
+    "the database must preserve immutable posted entries and assign the void audit fields"
+);
+assert.ok(
+    workspaceCss.includes("body.sway-dark-mode #sway-admin-workspace .sway-budget-metric") &&
+    workspaceCss.includes("@media (max-width: 680px)"),
+    "Budget cards and controls must retain dark-theme and mobile layouts"
+);
+
 console.log(JSON.stringify({
     result: "PASS",
     checks: [
-        "eight navigation groups and all 30 destination IDs preserved",
+        "nine navigation groups and all 32 destination IDs preserved",
         "semantic top navigation landmark and horizontal trigger row",
         "dropdown panels separated from horizontal scrolling container",
         "existing view identifiers, counters and selected-view persistence preserved",
