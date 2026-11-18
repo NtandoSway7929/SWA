@@ -8,6 +8,7 @@ const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)].map(m => m[1
 assert.ok(script.includes("function csv(text)"), "CSV parser must handle quoted fields");
 assert.ok(script.includes("function dateValue(v)"), "date parsing must be explicit");
 assert.ok(script.includes("function money(v)"), "currency parsing must be explicit");
+assert.ok(script.includes("function duplicateRowCount(rows)"), "repeated statement rows must be detected before import");
 const dateStart = script.indexOf("function dateValue(v)");
 const moneyStart = script.indexOf("function money(v)");
 const optionsStart = script.indexOf("function options(");
@@ -15,11 +16,12 @@ assert.ok(dateStart >= 0 && moneyStart > dateStart && optionsStart > moneyStart)
 const parserContext = {};
 vm.runInNewContext(
     script.slice(dateStart, optionsStart) +
-    "\nglobalThis.__dateValue = dateValue; globalThis.__money = money;",
+    "\nglobalThis.__dateValue = dateValue; globalThis.__money = money; globalThis.__duplicateRowCount = duplicateRowCount;",
     parserContext
 );
 const dateValue = parserContext.__dateValue;
 const money = parserContext.__money;
+const duplicateRowCount = parserContext.__duplicateRowCount;
 assert.equal(dateValue("2026-02-28"), "2026-02-28");
 assert.equal(dateValue("31/01/2026"), "2026-01-31");
 assert.equal(dateValue("02/03/2026"), null, "ambiguous day/month dates must be rejected");
@@ -29,6 +31,12 @@ assert.equal(money("1.234,56"), 1234.56);
 assert.equal(money("123,45"), 123.45, "comma decimal values must not be multiplied by 100");
 assert.equal(money("(R250.00)"), -250);
 assert.ok(Number.isNaN(money("12,3")), "ambiguous comma amounts must be rejected");
+assert.equal(duplicateRowCount([
+    { transaction_date: "2026-11-01", description: "Supplier", bank_reference: "A1", amount: -100 },
+    { transaction_date: "2026-11-01", description: "Supplier", bank_reference: "A1", amount: -100 },
+    { transaction_date: "2026-11-01", description: "Supplier", bank_reference: "A2", amount: -100 }
+]), 1, "only identical normalized transaction rows should be flagged");
+
 assert.ok(script.includes("Import blocked: "), "a statement with invalid rows must not be partially imported");
 
 assert.ok(script.includes("Map Date, Description and either Amount or Debit/Credit columns."));
