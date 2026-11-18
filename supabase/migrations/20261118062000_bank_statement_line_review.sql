@@ -4,6 +4,10 @@
 
 begin;
 
+create index if not exists bank_statement_lines_matched_source_idx
+    on public.bank_statement_lines(matched_source_type, matched_source_id)
+    where match_status = 'matched';
+
 create or replace function public.review_bank_statement_line(
     p_line_id uuid,
     p_decision text,
