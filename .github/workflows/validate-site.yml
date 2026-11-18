@@ -48,6 +48,9 @@ jobs:
       - name: Test admin dashboard redesign contracts
         run: node scripts/admin-dashboard-redesign.test.cjs
 
+      - name: Test budget category allocations and cash-flow outlook
+        run: node scripts/admin-budget-category-allocations.test.cjs
+
       - name: Test cookie consent analytics behaviour
         run: node scripts/cookie-consent-analytics.test.cjs
 
