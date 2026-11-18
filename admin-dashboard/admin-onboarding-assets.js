@@ -51,6 +51,70 @@
     if (!response.ok || !result.ok) throw new Error(result.error || "Unable to retrieve uploaded assets.");
     return result.files || [];
   }
+  async function handleStoredFileAction(event) {
+    const button = event.target.closest("[data-file-action]");
+    if (!button) return;
+    event.preventDefault();
+    const url = String(button.getAttribute("data-file-url") || "");
+    const name = String(button.getAttribute("data-file-name") || "file");
+    const mime = String(button.getAttribute("data-file-mime") || "").toLowerCase();
+    let parsed;
+    try { parsed = new URL(url); } catch (_) { throw new Error("The secure file link is invalid."); }
+    if (parsed.origin !== URL || parsed.pathname.indexOf("/storage/v1/object/sign/") === -1) {
+      throw new Error("The secure file link is not from the approved private storage service.");
+    }
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = "Loading...";
+    try {
+      const response = await fetch(parsed.href, { cache: "no-store" });
+      if (!response.ok) throw new Error("The file could not be loaded (" + response.status + ").");
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      if (button.dataset.fileAction === "download") {
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+        return;
+      }
+      const isPdf = mime === "application/pdf" || blob.type === "application/pdf";
+      const isImage = /^image\/(jpeg|png|webp|gif)$/i.test(mime || blob.type);
+      const overlay = document.createElement("div");
+      overlay.setAttribute("role", "dialog");
+      overlay.setAttribute("aria-modal", "true");
+      overlay.setAttribute("aria-label", "File preview");
+      overlay.style.cssText = "position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:clamp(10px,3vw,28px);background:rgba(5,13,30,.78);backdrop-filter:blur(8px)";
+      const content = isImage
+        ? '<img src="' + objectUrl + '" alt="' + esc(name) + '" style="display:block;max-width:100%;max-height:calc(100vh - 150px);object-fit:contain;margin:auto">'
+        : isPdf
+          ? '<iframe title="PDF preview" src="' + objectUrl + '" style="display:block;width:100%;height:calc(100vh - 170px);border:0;background:#fff"></iframe>'
+          : '<div style="padding:36px;text-align:center;color:#334155">This file type cannot be previewed in the dashboard. Download it to open it.</div>';
+      overlay.innerHTML = '<section style="width:min(1100px,100%);max-height:100%;overflow:hidden;display:flex;flex-direction:column;border-radius:18px;background:#fff;box-shadow:0 24px 80px rgba(0,0,0,.35)"><header style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid #e5eaf2"><strong style="min-width:0;overflow-wrap:anywhere;font:700 13px/1.4 system-ui;color:#10224b">' + esc(name) + '</strong><div style="display:flex;gap:8px;flex-shrink:0"><a href="' + objectUrl + '" download="' + esc(name) + '" style="padding:8px 11px;border-radius:8px;background:#002096;color:#fff;text-decoration:none;font:700 11px system-ui">Download</a><button type="button" data-preview-close style="padding:8px 11px;border:1px solid #dce3ef;border-radius:8px;background:#fff;color:#25324a;font:700 11px system-ui">Close</button></div></header><div style="min-height:120px;overflow:auto;background:#f3f6fb;padding:12px">' + content + '</div></section>';
+      const close = () => { overlay.remove(); window.URL.revokeObjectURL(objectUrl); document.removeEventListener("keydown", onKey); };
+      const onKey = keyEvent => { if (keyEvent.key === "Escape") close(); };
+      overlay.addEventListener("click", clickEvent => {
+        if (clickEvent.target === overlay || clickEvent.target.closest("[data-preview-close]")) close();
+      });
+      document.addEventListener("keydown", onKey);
+      document.body.appendChild(overlay);
+      overlay.querySelector("[data-preview-close]").focus();
+    } catch (error) {
+      window.alert(error && error.message || "The file could not be opened.");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest("[data-file-action]")) return;
+    handleStoredFileAction(event).catch(error => window.alert(error.message || "The file action failed."));
+  });
+
   function render(files, filter) {
     const target = document.getElementById("sway-onboarding-assets-list");
     const needle = String(filter || "").trim().toLowerCase();
@@ -64,7 +128,7 @@
         group.files.map(file => {
           const image=String(file.mime_type||"").startsWith("image/") && file.preview_url;
           const thumb=image?'<img class="soa-thumb" src="'+esc(file.preview_url)+'" alt="" loading="lazy">':'<div class="soa-thumb" aria-hidden="true" style="display:grid;place-items:center;font-size:10px;font-weight:800;color:#3155a6">'+(file.mime_type==="application/pdf"?"PDF":"FILE")+'</div>';
-          return '<div class="soa-file">'+thumb+'<div><div class="soa-file-name">'+esc(file.original_name)+'</div><div class="soa-file-meta">'+esc(size(file.size_bytes))+' · '+esc(date(file.created_at))+'</div></div><div class="soa-file-actions">'+(file.preview_url?'<a href="'+esc(file.preview_url)+'" target="_blank" rel="noopener">Preview</a>':'')+(file.download_url?'<a href="'+esc(file.download_url)+'" target="_blank" rel="noopener">Download</a>':'')+'</div></div>';
+          return '<div class="soa-file">'+thumb+'<div><div class="soa-file-name">'+esc(file.original_name)+'</div><div class="soa-file-meta">'+esc(size(file.size_bytes))+' · '+esc(date(file.created_at))+'</div></div><div class="soa-file-actions">'+(file.preview_url?'<button type="button" data-file-action="preview" data-file-url="'+esc(file.preview_url)+'" data-file-name="'+esc(file.original_name)+'" data-file-mime="'+esc(file.mime_type)+'">Preview</button>':'')+(file.download_url?'<button type="button" data-file-action="download" data-file-url="'+esc(file.download_url)+'" data-file-name="'+esc(file.original_name)+'" data-file-mime="'+esc(file.mime_type)+'">Download</button>':'')+'</div></div>';
         }).join("")+'</article>';
     }).join("");
   }
@@ -108,8 +172,8 @@
         '<div class="soa-client360-file"><span><strong>' + esc(file.original_name) +
         '</strong><small>' + esc(size(file.size_bytes)) + ' · ' + esc(date(file.created_at)) +
         '</small></span><span class="soa-file-actions">' +
-        (file.preview_url ? '<a href="' + esc(file.preview_url) + '" target="_blank" rel="noopener">Preview</a>' : '') +
-        (file.download_url ? '<a href="' + esc(file.download_url) + '" target="_blank" rel="noopener">Download</a>' : '') +
+        (file.preview_url ? '<button type="button" data-file-action="preview" data-file-url="' + esc(file.preview_url) + '" data-file-name="' + esc(file.original_name) + '" data-file-mime="' + esc(file.mime_type) + '">Preview</button>' : '') +
+        (file.download_url ? '<button type="button" data-file-action="download" data-file-url="' + esc(file.download_url) + '" data-file-name="' + esc(file.original_name) + '" data-file-mime="' + esc(file.mime_type) + '">Download</button>' : '') +
         '</span></div>'
       ).join("");
     }).catch(error => {
