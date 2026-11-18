@@ -19,7 +19,17 @@ main{width:min(1080px,100%);margin:auto}.top{display:flex;justify-content:space-
 .notice{margin-top:14px;padding:12px 14px;border-radius:11px;background:#f3f6fc;color:#56647a;font-size:11px;line-height:1.6}.notice.error{background:#fff2f2;color:#a52b2b}.notice.success{background:#eefaf2;color:#176b39}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}.stat{padding:13px;border:1px solid #e8edf5;border-radius:12px;background:#fbfcff}.stat span{display:block;color:#758198;font-size:10px}.stat strong{display:block;margin-top:5px;font-size:19px}
 .table-wrap{overflow:auto;border:1px solid #e8edf5;border-radius:12px}table{width:100%;border-collapse:collapse;min-width:680px}th,td{padding:11px 12px;text-align:left;border-bottom:1px solid #edf0f5;font-size:11px}th{background:#f7f9fd;color:#647189;font-size:9px;text-transform:uppercase;letter-spacing:.06em}td.num{text-align:right;font-variant-numeric:tabular-nums}tr:last-child td{border-bottom:0}
-.mapping{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}.hidden{display:none!important}
+.mapping{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.review-row{padding:15px 0;border-bottom:1px solid #e8edf5}.review-row:last-child{border-bottom:0}
+.review-row-main{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.review-row-main strong{font-size:12px}.review-row-main p{margin:5px 0;color:#34425a;font-size:12px}.review-row-main small{color:#758198;font-size:10px}
+.review-state{font-size:10px;font-weight:800;text-transform:capitalize;color:#52627b}
+.review-decision{display:grid;gap:9px;margin-top:12px}
+.review-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.review-actions select,.review-actions input{flex:1;min-width:220px;min-height:40px;border:1px solid #dbe2ee;border-radius:10px;padding:8px 10px;background:#fff;color:#17243a;font:inherit;font-size:11px}
+#reviewPagination{align-items:center;justify-content:space-between}
+#reviewActionStatus:empty{display:none}
+.hidden{display:none!important}
 @media(max-width:650px){body{padding:16px 11px 40px}.grid,.mapping{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.top{align-items:flex-start}}
 </style>
 </head>
