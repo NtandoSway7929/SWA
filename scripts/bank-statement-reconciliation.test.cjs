@@ -53,4 +53,21 @@ assert.ok(atomicSql.includes("grant execute on function public.import_bank_state
 assert.ok(atomicSql.includes("insert into public.bank_statement_lines"), "the import RPC must persist the rows");
 assert.ok(!/security\s+definer/i.test(atomicSql), "the import RPC must not bypass RLS");
 
+
+const reviewPath = path.join(__dirname, "..", "supabase", "migrations", "20261118062000_bank_statement_line_review.sql");
+const reviewSql = fs.readFileSync(reviewPath, "utf8");
+assert.ok(reviewSql.includes("create or replace function public.review_bank_statement_line("));
+assert.ok(reviewSql.includes("security invoker"), "line review must respect caller permissions and RLS");
+assert.ok(reviewSql.includes("public.is_swayphics_owner()"), "only the owner may review statement lines");
+assert.ok(reviewSql.includes("for update"), "review must lock the target statement line");
+assert.ok(reviewSql.includes("pg_advisory_xact_lock"), "a source record must not be matched concurrently to multiple lines");
+assert.ok(reviewSql.includes("provider is null"), "test/provider payment records must not be reconciled as bank receipts");
+assert.ok(reviewSql.includes("v_status <> 'paid'"), "only paid payment records may be matched");
+assert.ok(reviewSql.includes("v_status <> 'posted'"), "only posted budget entries may be matched");
+assert.ok(reviewSql.includes("v_entry_type <> 'income'") && reviewSql.includes("v_entry_type <> 'expense'"), "income and expense directions must match the bank line sign");
+assert.ok(reviewSql.includes("test-environment refunds are excluded"), "test-mode refunds must not be matched to live bank lines");
+assert.ok(reviewSql.includes("grant execute on function public.review_bank_statement_line"), "authenticated owner sessions must be able to review lines");
+assert.ok(!/insert\s+into\s+public\.(payments|payment_refunds|budget_entries|invoices)/i.test(reviewSql), "matching must not create financial ledger records");
+assert.ok(!/update\s+public\.(payments|payment_refunds|budget_entries|invoices)/i.test(reviewSql), "matching must not mutate financial ledger records");
+
 console.log("Bank statement reconciliation migration contracts passed.");
