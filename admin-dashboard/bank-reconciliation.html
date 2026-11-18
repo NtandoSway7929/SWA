@@ -112,6 +112,14 @@ function money(v){
  if(!/^-?\d+(\.\d{1,2})?$/.test(s))return NaN;
  const n=Number(s);return Number.isFinite(n)?Math.round((neg?-Math.abs(n):n)*100)/100:NaN;
 }
+function duplicateRowCount(rows){
+ const seen=new Set();let duplicates=0;
+ rows.forEach(row=>{
+  const key=JSON.stringify([row.transaction_date,row.description,row.bank_reference||"",Number(row.amount).toFixed(2)]);
+  if(seen.has(key))duplicates++;else seen.add(key);
+ });
+ return duplicates;
+}
 function options(label,selected){return '<label class="field"><span>'+label+'</span><select data-map="'+label+'"><option value="-1">Not selected</option>'+headers.map((h,i)=>'<option value="'+i+'" '+(i===selected?'selected':'')+'>'+String(h).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</option>').join("")+'</select></label>';}
 function mappingUI(){
  const d=detect(headers,[/date/,/transaction date/]),desc=detect(headers,[/description/,/details/,/narrative/,/merchant/]),ref=detect(headers,[/reference/,/ref no/,/transaction id/]);
@@ -153,7 +161,8 @@ $("preview").addEventListener("click",function(){
  const credits=parsed.filter(x=>x.amount>0).reduce((s,x)=>s+x.amount,0),debits=parsed.filter(x=>x.amount<0).reduce((s,x)=>s+Math.abs(x.amount),0);
  $("count").textContent=String(parsed.length);$("credits").textContent=zar(credits);$("debits").textContent=zar(debits);
  $("rows").innerHTML=parsed.slice(0,100).map(x=>"<tr><td>"+x.transaction_date+"</td><td>"+x.description.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+"</td><td>"+String(x.bank_reference||"").replace(/[&<>"]/g,"")+"</td><td class=\"num\">"+zar(x.amount)+"</td></tr>").join("");
- $("warnings").textContent=(parsed.length>100?"Showing first 100 of "+parsed.length+" rows. ":"")+(issues.length?issues.length+" invalid rows detected: "+issues.slice(0,5).join(" "):"All "+parsed.length+" rows passed the basic validation checks.");
+ const duplicates=duplicateRowCount(parsed);
+ $("warnings").textContent=(parsed.length>100?"Showing first 100 of "+parsed.length+" rows. ":"")+(issues.length?issues.length+" invalid rows detected: "+issues.slice(0,5).join(" "):"All "+parsed.length+" rows passed the basic validation checks.")+(duplicates?" Potential repeated rows: "+duplicates+". They remain included; confirm they are genuine separate bank transactions before importing.":" No identical transaction rows were detected.");
  $("previewPanel").classList.remove("hidden");
  if(issues.length){window.__bankStatementPreview=null;status("Import blocked: "+issues.length+" row(s) failed validation. Correct the CSV or column mapping and preview again; no partial statement imports are allowed.",true);return;}
  window.__bankStatementPreview={rows:parsed.map(x=>({row_number:x.row_number,transaction_date:x.transaction_date,description:x.description,bank_reference:x.bank_reference,amount:x.amount})),file:$("file").files&&$("file").files[0]};window.dispatchEvent(new Event("bank:preview-ready"));status("Preview generated locally. No transactions have been saved.",false);
