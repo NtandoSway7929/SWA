@@ -29,7 +29,7 @@
       #sway-onboarding-assets-admin .soa-file-name{min-width:0;overflow-wrap:anywhere;font-size:.78rem;font-weight:750}
       #sway-onboarding-assets-admin .soa-file-meta{margin-top:3px;color:#858d9b;font-size:.68rem}
       #sway-onboarding-assets-admin .soa-file-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-      #sway-onboarding-assets-admin .soa-file-actions a,#sway-onboarding-assets-admin .soa-file-actions button{padding:7px 9px;border:1px solid #dce3ef;border-radius:8px;background:#fff;color:#002096;text-decoration:none;font:750 .7rem inherit;cursor:pointer}
+      #sway-onboarding-assets-admin .soa-file-actions a,#sway-onboarding-assets-admin .soa-file-actions button{padding:7px 9px;border:1px solid #dce3ef;border-radius:8px;background:#fff;color:#002096;text-decoration:none;font-family:inherit;font-size:.7rem;font-weight:750;cursor:pointer}
       #sway-onboarding-assets-admin .soa-state{padding:22px 12px;border:1px dashed #d6deeb;border-radius:12px;color:#697386;text-align:center;font-size:.82rem}
       #sway-onboarding-assets-admin .soa-close{background:#eef2f8;color:#25324a}
       #sway-client360-assets .soa-client360-file{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-top:1px solid rgba(0,32,150,.06)}
@@ -37,7 +37,7 @@
       #sway-client360-assets .soa-client360-file strong{overflow-wrap:anywhere;font-size:.64rem}
       #sway-client360-assets .soa-client360-file small{color:#7b8494;font-size:.54rem}
       #sway-client360-assets .soa-file-actions{display:flex;gap:6px;flex-shrink:0}
-      #sway-client360-assets .soa-file-actions a,#sway-client360-assets .soa-file-actions button{padding:6px 8px;border:1px solid rgba(0,32,150,.12);border-radius:8px;background:#fff;color:#002096;text-decoration:none;font:800 .56rem inherit;cursor:pointer}
+      #sway-client360-assets .soa-file-actions a,#sway-client360-assets .soa-file-actions button{padding:6px 8px;border:1px solid rgba(0,32,150,.12);border-radius:8px;background:#fff;color:#002096;text-decoration:none;font-family:inherit;font-size:.56rem;font-weight:800;cursor:pointer}
       @media(max-width:560px){#sway-onboarding-assets-admin .soa-toolbar{align-items:stretch;flex-direction:column}#sway-onboarding-assets-admin .soa-file{grid-template-columns:36px minmax(0,1fr)}#sway-onboarding-assets-admin .soa-thumb{width:36px;height:36px}#sway-onboarding-assets-admin .soa-file-actions{grid-column:2;justify-content:flex-start}}
     `;
     document.head.appendChild(el);
