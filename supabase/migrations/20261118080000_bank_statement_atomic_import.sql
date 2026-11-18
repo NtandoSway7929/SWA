@@ -25,9 +25,11 @@ begin
         raise exception 'Only the Swayphics owner can import bank statements.';
     end if;
 
-    if jsonb_typeof(p_rows) is distinct from 'array'
-       or jsonb_array_length(p_rows) < 1
-       or jsonb_array_length(p_rows) > 10000 then
+    if jsonb_typeof(p_rows) is distinct from 'array' then
+        raise exception 'Statement rows must be supplied as a JSON array.';
+    end if;
+
+    if jsonb_array_length(p_rows) < 1 or jsonb_array_length(p_rows) > 10000 then
         raise exception 'A statement must contain between 1 and 10,000 transaction rows.';
     end if;
 
