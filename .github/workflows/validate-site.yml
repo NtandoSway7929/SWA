@@ -50,6 +50,9 @@ jobs:
       - name: Test admin table controls
         run: node scripts/admin-table-controls.test.cjs
 
+      - name: Test admin table selection announcements
+        run: node scripts/admin-table-selection-announcements.test.cjs
+
       - name: Test admin dashboard redesign contracts
         run: node scripts/admin-dashboard-redesign.test.cjs
 
