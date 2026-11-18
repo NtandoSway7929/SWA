@@ -19292,6 +19292,7 @@ function simpleBars(items, color) {
                             row.status === "posted" &&
                             row.source === "entry" &&
                             row.type === "expense" &&
+                            row.category === allocation.category &&
                             row.currency === "ZAR" &&
                             row.date.slice(0, 7) === monthKey &&
                             row.date <= forecastToday
