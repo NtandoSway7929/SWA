@@ -61,7 +61,7 @@ begin
     end if;
 
     -- Serialize reviews of the same source record so it cannot be linked twice.
-    if p_source_type not in ('payment', 'budget_entry') then
+    if p_source_type is null or p_source_type not in ('payment', 'budget_entry') then
         raise exception 'Only eligible payment and posted budget records can be matched. Test-environment refunds are excluded.';
     end if;
     perform pg_advisory_xact_lock(hashtextextended(p_source_type || ':' || p_source_id::text, 0));
