@@ -64,12 +64,13 @@ assert.ok(reviewSql.includes("for update"), "review must lock the target stateme
 assert.ok(reviewSql.includes("pg_advisory_xact_lock"), "a source record must not be matched concurrently to multiple lines");
 assert.ok(reviewSql.includes("bank_statement_lines_matched_source_idx"), "matched-source lookups must be indexed");
 assert.ok(reviewSql.includes("abs(v_source_date - v_line.transaction_date) > 7"), "server-side matching must enforce the same seven-day date window");
+assert.ok(reviewSql.includes("v_method is null") && reviewSql.includes("v_source_date is null"), "null payment methods and transaction dates must never pass match validation");
 assert.ok(reviewSql.includes("provider is null"), "test/provider payment records must not be reconciled as bank receipts");
-assert.ok(reviewSql.includes("v_method <> 'EFT'"), "only manual EFT payment records may be matched");
+assert.ok(reviewSql.includes("v_method is distinct from 'EFT'"), "only manual EFT payment records may be matched, including when method is null");
 assert.ok(reviewSql.includes("v_method not in ('EFT', 'Card', 'Debit order')"), "cash and other budget entries must not be matched to bank activity");
-assert.ok(reviewSql.includes("v_status <> 'paid'"), "only paid payment records may be matched");
-assert.ok(reviewSql.includes("v_status <> 'posted'"), "only posted budget entries may be matched");
-assert.ok(reviewSql.includes("v_entry_type <> 'income'") && reviewSql.includes("v_entry_type <> 'expense'"), "income and expense directions must match the bank line sign");
+assert.ok(reviewSql.includes("v_status is distinct from 'paid'"), "only paid payment records may be matched, including when status is null");
+assert.ok(reviewSql.includes("v_status is distinct from 'posted'"), "only posted budget entries may be matched, including when status is null");
+assert.ok(reviewSql.includes("v_entry_type is distinct from 'income'") && reviewSql.includes("v_entry_type is distinct from 'expense'"), "income and expense directions must match the bank line sign, including when type is null");
 assert.ok(reviewSql.toLowerCase().includes("test-environment refunds are excluded"), "test-mode refunds must not be matched to live bank lines");
 assert.ok(reviewSql.includes("grant execute on function public.review_bank_statement_line"), "authenticated owner sessions must be able to review lines");
 assert.ok(!/insert\s+into\s+public\.(payments|payment_refunds|budget_entries|invoices)/i.test(reviewSql), "matching must not create financial ledger records");
