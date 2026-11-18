@@ -51,6 +51,9 @@ jobs:
       - name: Test budget category allocations and cash-flow outlook
         run: node scripts/admin-budget-category-allocations.test.cjs
 
+      - name: Test bank statement reconciliation schema contract
+        run: node scripts/bank-statement-reconciliation.test.cjs
+
       - name: Test cookie consent analytics behaviour
         run: node scripts/cookie-consent-analytics.test.cjs
 
