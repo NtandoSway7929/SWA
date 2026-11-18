@@ -9,7 +9,7 @@ const migrationPath = path.join(
     "..",
     "supabase",
     "migrations",
-    "20261118070000_bank_statement_reconciliation.sql"
+    "20261118060043_bank_statement_reconciliation.sql"
 );
 const sql = fs.readFileSync(migrationPath, "utf8");
 
