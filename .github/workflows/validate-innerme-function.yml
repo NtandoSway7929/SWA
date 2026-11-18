@@ -146,9 +146,15 @@ jobs:
           node --check scripts/innerme-trust-definer-search-path.test.mjs
           node --test scripts/innerme-trust-definer-search-path.test.mjs
 
-      - name: Non-mutating isolated test health GET
+      # Optional live smoke checks for the separately hosted InnerMe Test project.
+      # Set the repository variable INNERME_TEST_PROJECT_URL to its base URL
+      # (for example, https://<project-ref>.supabase.co) while that project is active.
+      # Leaving the variable unset skips only these isolated-project requests;
+      # static checks and production endpoint checks below still run.
+      - name: Non-mutating isolated test health GET (when configured)
+        if: ${{ vars.INNERME_TEST_PROJECT_URL != '' }}
         env:
-          INNERME_HEALTH_URL: https://ofqofhnlzbouclvvrmzd.supabase.co/functions/v1/swayphics-ai
+          INNERME_HEALTH_URL: ${{ vars.INNERME_TEST_PROJECT_URL }}/functions/v1/swayphics-ai
         shell: bash
         run: |
           set -euo pipefail
@@ -163,9 +169,10 @@ jobs:
           print("Isolated test health GET passed.")
           '
 
-      - name: Verify isolated test rejects unauthenticated action requests
+      - name: Verify isolated test rejects unauthenticated action requests (when configured)
+        if: ${{ vars.INNERME_TEST_PROJECT_URL != '' }}
         env:
-          INNERME_ACTION_URL: https://ofqofhnlzbouclvvrmzd.supabase.co/functions/v1/swayphics-ai
+          INNERME_ACTION_URL: ${{ vars.INNERME_TEST_PROJECT_URL }}/functions/v1/swayphics-ai
         shell: bash
         run: |
           set -euo pipefail
