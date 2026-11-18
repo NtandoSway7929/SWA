@@ -93,9 +93,9 @@ begin
          where id = p_source_id
            and provider is null;
 
-        if not found or v_status <> 'paid' or v_currency <> 'ZAR'
+        if not found or v_status is distinct from 'paid' or v_currency is distinct from 'ZAR'
            or v_amount <> abs(v_line.amount)
-           or v_method <> 'EFT'
+           or v_method is distinct from 'EFT'
            or v_source_date is null or abs(v_source_date - v_line.transaction_date) > 7 then
             raise exception 'The payment must be a paid, non-provider ZAR record with the exact amount and a date within seven days.';
         end if;
@@ -106,12 +106,12 @@ begin
           from public.budget_entries
          where id = p_source_id;
 
-        if not found or v_status <> 'posted' or v_currency <> 'ZAR'
+        if not found or v_status is distinct from 'posted' or v_currency is distinct from 'ZAR'
            or v_amount <> abs(v_line.amount)
-           or (v_line.amount > 0 and v_entry_type <> 'income')
-           or (v_line.amount < 0 and v_entry_type <> 'expense')
-           or v_method not in ('EFT', 'Card', 'Debit order')
-           or abs(v_source_date - v_line.transaction_date) > 7 then
+           or (v_line.amount > 0 and v_entry_type is distinct from 'income')
+           or (v_line.amount < 0 and v_entry_type is distinct from 'expense')
+           or v_method is null or v_method not in ('EFT', 'Card', 'Debit order')
+           or v_source_date is null or abs(v_source_date - v_line.transaction_date) > 7 then
             raise exception 'The posted budget entry must match the statement amount, direction and be dated within seven days.';
         end if;
     end if;
