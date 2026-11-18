@@ -32,6 +32,9 @@ jobs:
       - name: Test expanded admin settings
         run: node scripts/admin-settings-expanded.test.cjs
 
+      - name: Test Settings tab keyboard navigation
+        run: node --test scripts/admin-settings-tab-keyboard.test.cjs
+
       - name: Test dashboard automation integrity
         run: node scripts/admin-automation-integrity.test.cjs
 
