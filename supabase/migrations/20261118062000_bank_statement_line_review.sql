@@ -22,6 +22,7 @@ declare
     v_currency text;
     v_status text;
     v_entry_type text;
+    v_source_date date;
 begin
     if auth.uid() is null or not public.is_swayphics_owner() then
         raise exception 'Only the Swayphics owner can review bank statement lines.';
@@ -81,28 +82,30 @@ begin
             raise exception 'A payment can only be matched to a bank credit.';
         end if;
 
-        select amount, currency, status
-          into v_amount, v_currency, v_status
+        select amount, currency, status, paid_at
+          into v_amount, v_currency, v_status, v_source_date
           from public.payments
          where id = p_source_id
            and provider is null;
 
         if not found or v_status <> 'paid' or v_currency <> 'ZAR'
-           or v_amount <> abs(v_line.amount) then
-            raise exception 'The payment must be a paid, non-provider ZAR record for the exact statement amount.';
+           or v_amount <> abs(v_line.amount)
+           or v_source_date is null or abs(v_source_date - v_line.transaction_date) > 7 then
+            raise exception 'The payment must be a paid, non-provider ZAR record with the exact amount and a date within seven days.';
         end if;
 
     elsif p_source_type = 'budget_entry' then
-        select amount, currency, status, entry_type
-          into v_amount, v_currency, v_status, v_entry_type
+        select amount, currency, status, entry_type, transaction_date
+          into v_amount, v_currency, v_status, v_entry_type, v_source_date
           from public.budget_entries
          where id = p_source_id;
 
         if not found or v_status <> 'posted' or v_currency <> 'ZAR'
            or v_amount <> abs(v_line.amount)
            or (v_line.amount > 0 and v_entry_type <> 'income')
-           or (v_line.amount < 0 and v_entry_type <> 'expense') then
-            raise exception 'The posted budget entry must match the statement amount and direction exactly.';
+           or (v_line.amount < 0 and v_entry_type <> 'expense')
+           or abs(v_source_date - v_line.transaction_date) > 7 then
+            raise exception 'The posted budget entry must match the statement amount, direction and be dated within seven days.';
         end if;
     end if;
 
