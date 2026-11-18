@@ -19191,7 +19191,7 @@ function simpleBars(items, color) {
         const planMonth = state.budgetPlanMonth || dashboardTodayISO().slice(0, 7);
         const planMonthDate = planMonth + "-01";
         const planMonthRows = allRows.filter(function (row) {
-            return row.status === "posted" && row.type === "expense" &&
+            return row.status === "posted" && row.type === "expense" && row.source === "entry" &&
                 row.currency === "ZAR" && row.date.slice(0, 7) === planMonth;
         });
         const planCategories = budgetExpenseCategories().map(function (category) {
