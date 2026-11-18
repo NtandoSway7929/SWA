@@ -78,7 +78,7 @@ assert.ok(!/update\s+public\.(payments|payment_refunds|budget_entries|invoices)/
 
 console.log("Bank statement reconciliation migration contracts passed.");
 
-const integrityPath = path.join(__dirname, "..", "supabase", "migrations", "20261118072400_bank_statement_review_integrity.sql");
+const integrityPath = path.join(__dirname, "..", "supabase", "migrations", "20261118072726_bank_statement_review_integrity.sql");
 const integritySql = fs.readFileSync(integrityPath, "utf8");
 assert.ok(integritySql.includes("create unique index bank_statement_lines_matched_source_idx"), "a financial record must only be linked to one statement line");
 assert.ok(integritySql.includes("revoke update on table public.bank_statement_lines from authenticated"), "direct unrestricted statement-line updates must be revoked");
