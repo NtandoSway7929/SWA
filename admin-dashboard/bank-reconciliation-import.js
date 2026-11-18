@@ -51,8 +51,8 @@ function dateDistance(a,b){
 async function loadReviewPool(importRecord){
  const start=shiftDate(importRecord.period_start,-7),end=shiftDate(importRecord.period_end,7);
  const [payments,entries,matched]=await Promise.all([
-  request("/rest/v1/payments?select=id,amount,paid_at,reference,method,invoice:invoices(invoice_number)&status=eq.paid&provider=is.null&currency=eq.ZAR&paid_at=gte."+start+"&paid_at=lte."+end+"&limit=1000",{method:"GET",headers:{"apikey":KEY,"Authorization":"Bearer "+token(),"Accept":"application/json"}}),
-  request("/rest/v1/budget_entries?select=id,amount,transaction_date,entry_type,category,description,counterparty,reference&status=eq.posted&currency=eq.ZAR&transaction_date=gte."+start+"&transaction_date=lte."+end+"&limit=1000",{method:"GET",headers:{"apikey":KEY,"Authorization":"Bearer "+token(),"Accept":"application/json"}}),
+  request("/rest/v1/payments?select=id,amount,paid_at,reference,method,invoice:invoices(invoice_number)&status=eq.paid&provider=is.null&method=eq.EFT&currency=eq.ZAR&paid_at=gte."+start+"&paid_at=lte."+end+"&limit=1000",{method:"GET",headers:{"apikey":KEY,"Authorization":"Bearer "+token(),"Accept":"application/json"}}),
+  request("/rest/v1/budget_entries?select=id,amount,transaction_date,entry_type,category,description,counterparty,reference,payment_method&status=eq.posted&currency=eq.ZAR&transaction_date=gte."+start+"&transaction_date=lte."+end+"&limit=1000",{method:"GET",headers:{"apikey":KEY,"Authorization":"Bearer "+token(),"Accept":"application/json"}}),
   request("/rest/v1/bank_statement_lines?select=matched_source_type,matched_source_id&match_status=eq.matched&limit=10000",{method:"GET",headers:{"apikey":KEY,"Authorization":"Bearer "+token(),"Accept":"application/json"}})
  ]);
  const used=new Set((matched||[]).map(x=>x.matched_source_type+":"+x.matched_source_id));
@@ -68,7 +68,7 @@ function candidateList(line,pool){
  }
  pool.entries.forEach(e=>{
   const expected=credit?"income":"expense",date=e.transaction_date;
-  if(e.entry_type===expected&&Number(e.amount)===amount&&date&&dateDistance(date,line.transaction_date)<=7&&!pool.used.has("budget_entry:"+e.id)){
+  if(e.entry_type===expected&&["EFT","Card","Debit order"].includes(e.payment_method)&&Number(e.amount)===amount&&date&&dateDistance(date,line.transaction_date)<=7&&!pool.used.has("budget_entry:"+e.id)){
    choices.push({type:"budget_entry",id:e.id,label:(credit?"Income":"Expense")+" · "+(e.category||"Uncategorised")+" · "+(e.description||e.counterparty||"Budget entry")+" · "+date+" · "+money(e.amount)});
   }
  });
