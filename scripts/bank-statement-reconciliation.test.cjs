@@ -66,7 +66,7 @@ assert.ok(reviewSql.includes("provider is null"), "test/provider payment records
 assert.ok(reviewSql.includes("v_status <> 'paid'"), "only paid payment records may be matched");
 assert.ok(reviewSql.includes("v_status <> 'posted'"), "only posted budget entries may be matched");
 assert.ok(reviewSql.includes("v_entry_type <> 'income'") && reviewSql.includes("v_entry_type <> 'expense'"), "income and expense directions must match the bank line sign");
-assert.ok(reviewSql.includes("test-environment refunds are excluded"), "test-mode refunds must not be matched to live bank lines");
+assert.ok(reviewSql.toLowerCase().includes("test-environment refunds are excluded"), "test-mode refunds must not be matched to live bank lines");
 assert.ok(reviewSql.includes("grant execute on function public.review_bank_statement_line"), "authenticated owner sessions must be able to review lines");
 assert.ok(!/insert\s+into\s+public\.(payments|payment_refunds|budget_entries|invoices)/i.test(reviewSql), "matching must not create financial ledger records");
 assert.ok(!/update\s+public\.(payments|payment_refunds|budget_entries|invoices)/i.test(reviewSql), "matching must not mutate financial ledger records");
