@@ -7,7 +7,7 @@
 <title>Swayphics · Bank statement import</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Raleway:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{font-family:Montserrat, sans-serif;color:#101b32;background:#f5f7fc;font-synthesis:none}
 *{box-sizing:border-box}body{margin:0;padding:28px 16px 56px;background:radial-gradient(circle at 90% 0,rgba(1,82,244,.08),transparent 30%),#f5f7fc}
@@ -31,6 +31,70 @@ main{width:min(1080px,100%);margin:auto}.top{display:flex;justify-content:space-
 #reviewActionStatus:empty{display:none}
 .hidden{display:none!important}
 @media(max-width:650px){body{padding:16px 11px 40px}.grid,.mapping{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.top{align-items:flex-start}}
+
+/* Keep the standalone reconciliation workspace visually aligned with the main admin dashboard. */
+:root{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  color:#081533;
+  background:#f7f9ff;
+  font-synthesis:none;
+}
+*{font-family:inherit}
+body{
+  background:
+    radial-gradient(circle at 88% 8%,rgba(1,82,244,.09) 0%,rgba(1,82,244,0) 30%),
+    radial-gradient(circle at 8% 86%,rgba(119,193,252,.065) 0%,rgba(119,193,252,0) 28%),
+    linear-gradient(135deg,#f7f9ff 0%,#fff 52%,#eef5ff 100%);
+  color:#081533;
+  -webkit-font-smoothing:antialiased;
+}
+main{width:min(1180px,92%)}
+.brand{font-size:.86rem;font-weight:800;letter-spacing:.035em;color:#002096}
+.top a{font-size:.68rem;font-weight:800}
+.hero,.panel{
+  border:1px solid rgba(0,32,150,.08);
+  border-radius:18px;
+  background:rgba(255,255,255,.88);
+  box-shadow:0 12px 35px rgba(0,32,150,.045);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+.kicker{font-size:.62rem;font-weight:800;letter-spacing:.16em}
+h1,h2{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:-.045em;color:#081533}
+h1{font-size:clamp(2rem,4vw,3rem);font-weight:800;line-height:1.08}
+h2{font-size:1rem;font-weight:800;letter-spacing:-.025em}
+.muted{font-size:.76rem;line-height:1.7;color:#56627a}
+.field label{font-size:.67rem;font-weight:800;color:#081533}
+.field input,.field select,.review-actions select,.review-actions input{
+  border-color:rgba(0,32,150,.12);
+  border-radius:10px;
+  color:#081533;
+  font-family:inherit;
+  font-size:.72rem;
+}
+.btn{
+  border-color:rgba(0,32,150,.10);
+  border-radius:10px;
+  color:#081533;
+  font-family:inherit;
+  font-size:.68rem;
+  font-weight:800;
+}
+.btn.primary{background:#0152f4;border-color:#0152f4;color:#fff}
+.notice{font-size:.68rem;line-height:1.65}
+.stat{border-color:rgba(0,32,150,.08);border-radius:14px;background:rgba(255,255,255,.72)}
+.stat span{font-size:.62rem;color:#56627a;font-weight:700}
+.stat strong{font-size:1.45rem;font-weight:800;letter-spacing:-.04em;color:#081533}
+.table-wrap{border-color:rgba(0,32,150,.08);border-radius:14px}
+th,td{font-family:inherit;font-size:.68rem}
+th{background:#f7f9ff;color:#56627a;font-size:.58rem;font-weight:800;letter-spacing:.08em}
+.review-row-main strong{font-size:.76rem}
+.review-row-main p{font-size:.72rem}
+.review-row-main small,.review-state{font-size:.62rem}
+@media(max-width:650px){
+  main{width:100%}
+}
+
 </style>
 </head>
 <body>
