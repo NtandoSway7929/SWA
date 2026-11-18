@@ -75,7 +75,7 @@ function mount(){
  panel.appendChild(status);
  const history=document.createElement("section");history.className="panel";history.innerHTML='<h2>Previously imported statements</h2><p class="muted">The latest 50 statement imports for this account are shown here.</p><div id="savedImports" style="margin-top:14px"><p class="muted">Loading saved statements…</p></div>';
  panel.insertAdjacentElement("afterend",history);
- ["file","account","periodStart","periodEnd"].forEach(function(id){
+ $("mapping").addEventListener("change",function(){\n  window.__bankStatementPreview=null;$("saveImport").classList.add("hidden");$("previewPanel").classList.add("hidden");setStatus("Column mapping changed. Generate a fresh preview before importing.",false);\n });\n ["file","account","periodStart","periodEnd"].forEach(function(id){
   $(id).addEventListener("change",function(){
    window.__bankStatementPreview=null;
    $("saveImport").classList.add("hidden");
