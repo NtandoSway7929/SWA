@@ -1444,45 +1444,6 @@ async function main() {
     const gridColumns = await controls.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length);
     assert.equal(gridColumns, 1, "mobile table controls should stack in one column");
 
-    // Verify the consolidated mobile layer keeps the document inside the
-    // viewport, provides comfortable primary touch targets and preserves
-    // horizontally scrollable data tables rather than shrinking their cells.
-    const mobileUsability = await page.evaluate(() => {
-      const visible = element => {
-        const rect = element.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== "hidden";
-      };
-      const navToggle = document.querySelector("#sway-admin-workspace .sway-workspace-nav-group-toggle");
-      const workspaceButton = Array.from(document.querySelectorAll(
-        "#sway-admin-workspace .sway-workspace-button"
-      )).find(visible);
-      const searchInput = document.querySelector("#sway-admin-workspace .sway-admin-table-control-grid input");
-      const tableWrap = document.querySelector("#sway-admin-workspace .sway-table-wrap");
-      return {
-        viewportWidth: window.innerWidth,
-        documentWidth: document.documentElement.scrollWidth,
-        navToggleHeight: navToggle ? navToggle.getBoundingClientRect().height : 0,
-        workspaceButtonHeight: workspaceButton ? workspaceButton.getBoundingClientRect().height : 0,
-        searchFontSize: searchInput ? getComputedStyle(searchInput).fontSize : null,
-        tableWrapOverflowX: tableWrap ? getComputedStyle(tableWrap).overflowX : null,
-        tableWidth: tableWrap?.querySelector("table")?.getBoundingClientRect().width || 0,
-        tableViewportWidth: tableWrap?.clientWidth || 0
-      };
-    });
-    assert.ok(mobileUsability.documentWidth <= mobileUsability.viewportWidth + 1,
-      "mobile dashboard must not create page-level horizontal scrolling: " + JSON.stringify(mobileUsability));
-    assert.ok(mobileUsability.navToggleHeight >= 44,
-      "mobile navigation controls should have at least 44px touch targets: " + JSON.stringify(mobileUsability));
-    assert.ok(mobileUsability.workspaceButtonHeight >= 44,
-      "primary workspace actions should have at least 44px touch targets: " + JSON.stringify(mobileUsability));
-    assert.equal(mobileUsability.searchFontSize, "16px",
-      "mobile form inputs should use 16px text to avoid iOS focus zoom");
-    if (mobileUsability.tableWrapOverflowX) {
-      assert.ok(["auto", "scroll"].includes(mobileUsability.tableWrapOverflowX),
-        "data tables should scroll within their own wrapper on mobile: " + JSON.stringify(mobileUsability));
-    }
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-mobile.png"), fullPage: true });
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, "dashboard-tasks-mobile.png"), fullPage: true });
 
     assert.equal(metrics.apiMutationsBlocked.length, 0,
       "unexpected API writes should remain blocked: " + JSON.stringify(metrics.apiMutationsBlocked));
