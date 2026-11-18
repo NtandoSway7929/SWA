@@ -41,7 +41,7 @@ assert.ok(script.includes('title.textContent.trim().toLowerCase() === "transacti
 assert.ok(script.includes("new MutationObserver"));
 assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(script), "new receipt-management code must not contain emoji characters");
 
-assert.ok(html.includes('admin-budget-receipts.js?v=20261118-budget-receipts-1'));
+assert.ok(html.includes('admin-budget-receipts.js?v=20261118-file-preview-1'));
 
 assert.ok(migration.includes("create table if not exists public.budget_entry_receipts"));
 assert.ok(migration.includes("alter table public.budget_entry_receipts enable row level security"));
