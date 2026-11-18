@@ -18782,6 +18782,22 @@ function simpleBars(items, color) {
         return keys;
     }
 
+    function budgetAddDaysISO(dateKey, days) {
+        const parts = String(dateKey || "").split("-").map(Number);
+        if (parts.length !== 3 || parts.some(function (part) { return !Number.isFinite(part); })) {
+            return "";
+        }
+        return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + days))
+            .toISOString().slice(0, 10);
+    }
+
+    function budgetDaysBetweenISO(start, end) {
+        if (!start || !end || end < start) return 0;
+        return Math.floor(
+            (Date.parse(end + "T00:00:00Z") - Date.parse(start + "T00:00:00Z")) / 86400000
+        ) + 1;
+    }
+
     function budgetTransactionRows() {
         const rows = [];
 
@@ -19231,6 +19247,101 @@ function simpleBars(items, color) {
                 '</tr>'
             );
         }).join("");
+        const forecastToday = today;
+        const forecastCurrentMonth = forecastToday.slice(0, 7);
+        const forecastEligibleInvoices = (state.invoices || []).filter(function (invoice) {
+            const status = String(invoice.status || "").toLowerCase();
+            const outstanding = invoice.amount_outstanding != null
+                ? Number(invoice.amount_outstanding)
+                : Math.max(0, Number(invoice.total || 0) - Number(invoice.amount_paid || 0));
+            return !invoice.archived &&
+                ["sent", "partially paid", "overdue"].includes(status) &&
+                String(invoice.currency || "ZAR").toUpperCase() === "ZAR" &&
+                Number.isFinite(outstanding) && outstanding > 0;
+        });
+        const forecastBuckets = [30, 60, 90].map(function (horizonDays) {
+            const horizonEnd = budgetAddDaysISO(forecastToday, horizonDays - 1);
+            const dueInvoices = forecastEligibleInvoices.filter(function (invoice) {
+                const dueDate = budgetDateKey(invoice.due_date);
+                return dueDate && dueDate >= forecastToday && dueDate <= horizonEnd;
+            });
+            const expectedInflows = dueInvoices.reduce(function (total, invoice) {
+                const outstanding = invoice.amount_outstanding != null
+                    ? Number(invoice.amount_outstanding)
+                    : Math.max(0, Number(invoice.total || 0) - Number(invoice.amount_paid || 0));
+                return total + outstanding;
+            }, 0);
+            let plannedOutflows = 0;
+            (state.budgetAllocations || []).forEach(function (allocation) {
+                const monthKey = String(allocation.period_month || "").slice(0, 7);
+                if (!/^\d{4}-\d{2}$/.test(monthKey)) return;
+                const monthStart = monthKey + "-01";
+                const monthParts = monthKey.split("-").map(Number);
+                const daysInMonth = new Date(Date.UTC(monthParts[0], monthParts[1], 0)).getUTCDate();
+                const monthEnd = monthKey + "-" + String(daysInMonth).padStart(2, "0");
+                const overlapStart = monthStart > forecastToday ? monthStart : forecastToday;
+                const overlapEnd = monthEnd < horizonEnd ? monthEnd : horizonEnd;
+                const overlapDays = budgetDaysBetweenISO(overlapStart, overlapEnd);
+                if (!overlapDays) return;
+
+                let availableAllocation = Number(allocation.allocated_amount || 0);
+                let allocationDays = daysInMonth;
+                if (monthKey === forecastCurrentMonth) {
+                    const spentToDate = allRows.reduce(function (total, row) {
+                        return total + (
+                            row.status === "posted" &&
+                            row.source === "entry" &&
+                            row.type === "expense" &&
+                            row.currency === "ZAR" &&
+                            row.date.slice(0, 7) === monthKey &&
+                            row.date <= forecastToday
+                                ? Number(row.amount || 0)
+                                : 0
+                        );
+                    }, 0);
+                    availableAllocation = Math.max(0, availableAllocation - spentToDate);
+                    allocationDays = budgetDaysBetweenISO(forecastToday, monthEnd);
+                }
+                if (allocationDays > 0) {
+                    plannedOutflows += availableAllocation * overlapDays / allocationDays;
+                }
+            });
+            return {
+                days: horizonDays,
+                endDate: horizonEnd,
+                inflows: expectedInflows,
+                outflows: plannedOutflows,
+                net: expectedInflows - plannedOutflows,
+                invoiceCount: dueInvoices.length
+            };
+        });
+        const forecastCardsHtml = forecastBuckets.map(function (bucket) {
+            return (
+                '<article class="sway-budget-forecast-card">' +
+                    '<div class="sway-budget-forecast-heading"><strong>Next ' + bucket.days + ' days</strong><span>Through ' + esc(date(bucket.endDate)) + '</span></div>' +
+                    '<div><small>Expected invoice receipts</small><strong>' + esc(budgetCurrency(bucket.inflows)) + '</strong><span>' +
+                        bucket.invoiceCount + ' due invoice' + (bucket.invoiceCount === 1 ? '' : 's') + '</span></div>' +
+                    '<div><small>Budget-based outflow allowance</small><strong>' + esc(budgetCurrency(bucket.outflows)) + '</strong></div>' +
+                    '<div class="sway-budget-forecast-net ' + (bucket.net < 0 ? "is-negative" : "is-positive") + '">' +
+                        '<small>Projected net movement</small><strong>' +
+                        esc((bucket.net < 0 ? "−" : "") + budgetCurrency(Math.abs(bucket.net))) + '</strong></div>' +
+                '</article>'
+            );
+        }).join("");
+        const forecastUndatedCount = forecastEligibleInvoices.filter(function (invoice) {
+            return !budgetDateKey(invoice.due_date);
+        }).length;
+        const forecastOverdueCount = forecastEligibleInvoices.filter(function (invoice) {
+            const dueDate = budgetDateKey(invoice.due_date);
+            return dueDate && dueDate < forecastToday;
+        }).length;
+        const forecastNonZarCount = (state.invoices || []).filter(function (invoice) {
+            const status = String(invoice.status || "").toLowerCase();
+            return ["sent", "partially paid", "overdue"].includes(status) &&
+                String(invoice.currency || "ZAR").toUpperCase() !== "ZAR" &&
+                Number(invoice.amount_outstanding || 0) > 0;
+        }).length;
+
         const nonZarCount = periodRows.filter(function (row) {
             return row.status === "posted" && row.currency !== "ZAR";
         }).length;
@@ -19307,6 +19418,16 @@ function simpleBars(items, color) {
                 '<div class="sway-budget-table-wrap"><table class="sway-budget-table"><thead><tr><th>Category</th><th class="amount">Spent</th><th>Monthly limit</th><th class="amount">Remaining</th></tr></thead><tbody>' +
                     allocationRowsHtml +
                 '</tbody></table></div>'
+            ) +
+            panel(
+                "30 / 60 / 90-day cash-flow outlook",
+                "An indicative view of invoice due dates against remaining monthly expense budgets.",
+                '<div class="sway-budget-forecast-grid">' + forecastCardsHtml + '</div>' +
+                '<p class="sway-budget-cash-note">Expected receipts assume issued unpaid invoices are collected on their due dates; this is not guaranteed. Outflows are remaining budget allowances, with future monthly allocations spread evenly across calendar days. Past-due, undated and non-ZAR invoices are excluded from dated ZAR inflows' +
+                    (forecastOverdueCount || forecastUndatedCount || forecastNonZarCount
+                        ? ' (' + forecastOverdueCount + ' past-due, ' + forecastUndatedCount + ' undated, ' + forecastNonZarCount + ' non-ZAR excluded).'
+                        : '.') +
+                    ' This shows projected movement, not a bank balance: no opening balance, payment-probability model or complete scheduled-expense data is available.</p>'
             ) +
             panel(
                 "Monthly cash flow",
