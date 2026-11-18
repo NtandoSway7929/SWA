@@ -61,6 +61,7 @@ assert.ok(reviewSql.includes("security invoker"), "line review must respect call
 assert.ok(reviewSql.includes("public.is_swayphics_owner()"), "only the owner may review statement lines");
 assert.ok(reviewSql.includes("for update"), "review must lock the target statement line");
 assert.ok(reviewSql.includes("pg_advisory_xact_lock"), "a source record must not be matched concurrently to multiple lines");
+assert.ok(reviewSql.includes("bank_statement_lines_matched_source_idx"), "matched-source lookups must be indexed");
 assert.ok(reviewSql.includes("abs(v_source_date - v_line.transaction_date) > 7"), "server-side matching must enforce the same seven-day date window");
 assert.ok(reviewSql.includes("provider is null"), "test/provider payment records must not be reconciled as bank receipts");
 assert.ok(reviewSql.includes("v_status <> 'paid'"), "only paid payment records may be matched");
