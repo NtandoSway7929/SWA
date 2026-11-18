@@ -8,7 +8,11 @@ const root = path.resolve(__dirname, "..");
 const script = fs.readFileSync(path.join(root, "admin-dashboard", "admin-budget-receipts.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
 const migration = fs.readFileSync(
-    path.join(root, "supabase", "migrations", "20261118090000_budget_entry_receipts.sql"),
+    path.join(root, "supabase", "migrations", "20261118074618_budget_entry_receipts.sql"),
+    "utf8"
+);
+const uploaderIndexMigration = fs.readFileSync(
+    path.join(root, "supabase", "migrations", "20261118074735_budget_receipt_uploader_index.sql"),
     "utf8"
 );
 
@@ -43,6 +47,6 @@ assert.ok(migration.includes("create policy \"Swayphics owners can read budget r
 assert.ok(migration.includes("public = false"));
 assert.ok(migration.includes("10485760"));
 assert.ok(migration.includes("application/pdf"));
-assert.ok(migration.includes("budget_entry_receipts_uploaded_by_idx"));
+assert.ok(uploaderIndexMigration.includes("budget_entry_receipts_uploaded_by_idx"));
 
 console.log("Budget receipt storage, owner access, upload restrictions and dashboard integration contracts passed.");
