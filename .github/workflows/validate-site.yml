@@ -22,6 +22,7 @@ jobs:
           node --check admin-dashboard/lead-whatsapp.js
           node --check admin-dashboard/innerme-workspace-health.js
           node --check admin-dashboard/admin-table-controls.js
+          node --check admin-dashboard/bank-reconciliation-import.js
           node --check admin-dashboard/innerme-provider-usage.js
 
       - name: Test admin welcome authentication handshake
