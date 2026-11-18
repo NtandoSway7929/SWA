@@ -14,4 +14,13 @@ assert.ok(script.includes("Preview generated locally. No transactions have been 
 assert.ok(!/fetch\s*\(/.test(script), "preview-only workflow must not send uploaded statement data to a server");
 assert.ok(html.includes('id="mapping"') && html.includes('id="previewPanel"'));
 assert.ok(html.includes('accept=".csv,text/csv"'));
-console.log("Bank statement CSV preview contract passed.");
+
+const importer = fs.readFileSync(path.join(__dirname, "..", "admin-dashboard", "bank-reconciliation-import.js"), "utf8");
+assert.ok(importer.includes("/rest/v1/rpc/import_bank_statement"), "explicit import must use the atomic RPC");
+assert.ok(importer.includes("swayphics_admin_access_token"), "imports must use the signed-in admin session");
+assert.ok(importer.includes("p_source_file_sha256"), "imports must submit a file fingerprint");
+assert.ok(importer.includes("line_fingerprint"), "imports must submit row fingerprints");
+assert.ok(importer.includes("Previously imported statements") || html.includes("Previously imported statements"), "saved imports must be listed");
+assert.ok(!/delete\\s*\\(/i.test(importer), "the browser must not delete immutable statement records");
+
+console.log("Bank statement CSV preview and import contract passed.");
