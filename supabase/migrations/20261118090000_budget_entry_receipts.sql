@@ -38,6 +38,9 @@ create table if not exists public.budget_entry_receipts (
 create index if not exists budget_entry_receipts_entry_idx
     on public.budget_entry_receipts (budget_entry_id, uploaded_at desc);
 
+create index if not exists budget_entry_receipts_uploaded_by_idx
+    on public.budget_entry_receipts (uploaded_by);
+
 alter table public.budget_entry_receipts enable row level security;
 
 revoke all privileges on table public.budget_entry_receipts
