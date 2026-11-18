@@ -18,6 +18,7 @@ jobs:
         run: |
           set -e
           node --check admin-dashboard/admin-workspace.js
+          node --check admin-dashboard/admin-budget-receipts.js
           node --check admin-dashboard/admin-settings-expanded.js
           node --check admin-dashboard/lead-whatsapp.js
           node --check admin-dashboard/innerme-workspace-health.js
@@ -51,6 +52,9 @@ jobs:
 
       - name: Test budget category allocations and cash-flow outlook
         run: node scripts/admin-budget-category-allocations.test.cjs
+
+      - name: Test budget receipt management safeguards
+        run: node scripts/admin-budget-receipts.test.cjs
 
       - name: Test bank statement reconciliation schema contract
         run: node scripts/bank-statement-reconciliation.test.cjs
