@@ -24022,14 +24022,15 @@ function simpleBars(items, color) {
             document.createElement("div");
 
         modal.className = "sway-modal";
+        const trigger = document.activeElement;
 
         modal.innerHTML =
             '<div class="sway-modal-backdrop"></div>' +
-            '<div class="sway-modal-card" role="dialog" aria-modal="true">' +
+            '<div class="sway-modal-card" role="dialog" aria-modal="true" aria-labelledby="sway-dynamic-form-title" tabindex="-1">' +
                 '<div class="sway-modal-header">' +
                     '<div>' +
                         '<span class="admin-label">Swayphics workspace</span>' +
-                        '<h3>' +
+                        '<h3 id="sway-dynamic-form-title">' +
                             esc(title) +
                         "</h3>" +
                     "</div>" +
@@ -24146,9 +24147,78 @@ function simpleBars(items, color) {
                 "</div>" +
             "</div>";
 
-        function close() {
-            modal.remove();
+        const dialog = modal.querySelector(".sway-modal-card");
+        let modalClosed = false;
+
+        function restoreTriggerFocus() {
+            if (
+                trigger &&
+                trigger.isConnected &&
+                typeof trigger.focus === "function"
+            ) {
+                trigger.focus({ preventScroll: true });
+                return;
+            }
+
+            const fallbackHeading = workspace.querySelector(
+                ".sway-workspace-view h2, .sway-workspace-view h3"
+            );
+
+            if (fallbackHeading) {
+                fallbackHeading.setAttribute("tabindex", "-1");
+                fallbackHeading.focus({ preventScroll: true });
+            }
         }
+
+        function close(options) {
+            if (modalClosed) return;
+            modalClosed = true;
+            modal.remove();
+
+            if (!options || options.restoreFocus !== false) {
+                restoreTriggerFocus();
+            }
+        }
+
+        modal.addEventListener("keydown", function (event) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                close();
+                return;
+            }
+
+            if (event.key !== "Tab") return;
+
+            const focusable = Array.from(
+                dialog.querySelectorAll(
+                    'a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )
+            ).filter(function (element) {
+                return (
+                    !element.hidden &&
+                    element.getAttribute("aria-hidden") !== "true" &&
+                    element.getClientRects().length > 0
+                );
+            });
+
+            if (!focusable.length) {
+                event.preventDefault();
+                dialog.focus({ preventScroll: true });
+                return;
+            }
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const active = document.activeElement;
+
+            if (event.shiftKey && (active === first || !dialog.contains(active))) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+                event.preventDefault();
+                first.focus();
+            }
+        });
 
         modal
             .querySelector("[data-close]")
@@ -24170,6 +24240,14 @@ function simpleBars(items, color) {
                 "click",
                 close
             );
+
+        const initialFocus =
+            form.querySelector(
+                'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+            ) ||
+            modal.querySelector(".sway-modal-close");
+
+        (initialFocus || dialog).focus({ preventScroll: true });
 
         form.addEventListener(
             "submit",
@@ -24244,10 +24322,11 @@ function simpleBars(items, color) {
 
                 try {
                     await onSubmit(payload);
-                    close();
+                    close({ restoreFocus: false });
                     await refreshData();
                     renderShell();
                     renderView();
+                    restoreTriggerFocus();
                 } catch (error) {
                     swayAlert(
                         error.message ||
