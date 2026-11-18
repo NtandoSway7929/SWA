@@ -55,8 +55,9 @@ assert.ok(importer.includes("line_fingerprint"), "imports must submit row finger
 assert.ok(importer.includes("Previously imported statements") || html.includes("Previously imported statements"), "saved imports must be listed");
 assert.ok(!/delete\s*\(/i.test(importer), "the browser must not delete immutable statement records");
 assert.ok(importer.includes("/rest/v1/rpc/review_bank_statement_line"), "manual line decisions must use the guarded review RPC");
-assert.ok(importer.includes('provider=is.null'), "Yoco provider/test payments must not be suggested as live bank receipts");
+assert.ok(importer.includes('provider=is.null&method=eq.EFT'), "only manual EFT payments must be suggested as bank receipts");
 assert.ok(importer.includes('status=eq.posted'), "only posted budget entries may be suggested");
+assert.ok(importer.includes('["EFT","Card","Debit order"].includes(e.payment_method)'), "cash and unclassified budget entries must not be suggested for bank matching");
 assert.ok(importer.includes("dateDistance(date,line.transaction_date)<=7"), "candidate suggestions must use a seven-day date window");
 assert.ok(importer.includes("data-review-import"), "saved statements must expose a manual review action");
 assert.ok(importer.includes("data-match-line") && importer.includes("data-ignore-line"), "unmatched lines must support manual match and ignore decisions");
