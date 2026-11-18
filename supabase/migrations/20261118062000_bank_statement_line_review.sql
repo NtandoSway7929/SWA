@@ -61,7 +61,7 @@ begin
         return jsonb_build_object('ok', true, 'decision', 'ignored', 'line_id', p_line_id);
     end if;
 
-    if p_decision <> 'matched' or p_source_id is null then
+    if p_decision is distinct from 'matched' or p_source_id is null then
         raise exception 'Choose a valid match or ignore decision.';
     end if;
 
