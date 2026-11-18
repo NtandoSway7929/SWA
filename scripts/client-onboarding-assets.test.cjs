@@ -18,6 +18,10 @@ assert.match(admin, /createSignedUrl/);
 assert.match(adminUi, /Review business assets/);
 assert.match(adminUi, /Preview/);
 assert.match(adminUi, /Download/);
+assert.match(adminUi, /data-file-action="preview"/);
+assert.match(adminUi, /URL.createObjectURL/);
+assert.doesNotMatch(adminUi, /target="_blank"/);
+assert.doesNotMatch(adminUi, /window\.location\.href/);
 console.log("Client onboarding asset delivery checks passed.");
 
 assert.match(adminUi, /sway-client360-modal/);
