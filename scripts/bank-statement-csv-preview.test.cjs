@@ -15,7 +15,7 @@ assert.ok(dateStart >= 0 && moneyStart > dateStart && optionsStart > moneyStart)
 const parserContext = {};
 vm.runInNewContext(
     script.slice(dateStart, optionsStart) +
-    "\\nglobalThis.__dateValue = dateValue; globalThis.__money = money;",
+    "\nglobalThis.__dateValue = dateValue; globalThis.__money = money;",
     parserContext
 );
 const dateValue = parserContext.__dateValue;
