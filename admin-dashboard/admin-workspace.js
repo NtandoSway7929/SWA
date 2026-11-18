@@ -49,7 +49,9 @@
         paymentRefunds: [],
         paymentAttempts: [],
         budgetEntries: [],
+        budgetAllocations: [],
         budgetMonth: "",
+        budgetPlanMonth: "",
         budgetTypeFilter: "all",
         budgetSearch: "",
         enquiries: [],
@@ -4492,6 +4494,7 @@
             optionalApi("/rest/v1/client_documents?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/communication_logs?select=*&order=contacted_at.desc", []),
             optionalApi("/rest/v1/budget_entries?select=*&order=transaction_date.desc,created_at.desc", []),
+            optionalApi("/rest/v1/budget_category_allocations?select=*&order=period_month.desc,category.asc", []),
             optionalApi("/rest/v1/payment_refunds?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/payment_attempts?select=id,payment_id,provider,environment,status&order=created_at.desc", [])
         ]);
@@ -4514,8 +4517,9 @@
         state.documents = results[15] || [];
         state.communications = results[16] || [];
         state.budgetEntries = results[17] || [];
-        state.paymentRefunds = results[18] || [];
-        state.paymentAttempts = results[19] || [];
+        state.budgetAllocations = results[18] || [];
+        state.paymentRefunds = results[19] || [];
+        state.paymentAttempts = results[20] || [];
 
         await loadAdminNotifications();
 
@@ -18778,6 +18782,22 @@ function simpleBars(items, color) {
         return keys;
     }
 
+    function budgetAddDaysISO(dateKey, days) {
+        const parts = String(dateKey || "").split("-").map(Number);
+        if (parts.length !== 3 || parts.some(function (part) { return !Number.isFinite(part); })) {
+            return "";
+        }
+        return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + days))
+            .toISOString().slice(0, 10);
+    }
+
+    function budgetDaysBetweenISO(start, end) {
+        if (!start || !end || end < start) return 0;
+        return Math.floor(
+            (Date.parse(end + "T00:00:00Z") - Date.parse(start + "T00:00:00Z")) / 86400000
+        ) + 1;
+    }
+
     function budgetTransactionRows() {
         const rows = [];
 
@@ -19184,6 +19204,148 @@ function simpleBars(items, color) {
                 }).join("") + "</tbody></table></div>"
             : empty("No transactions match this period and filter.");
 
+        const planMonth = state.budgetPlanMonth || dashboardTodayISO().slice(0, 7);
+        const planMonthDate = planMonth + "-01";
+        const planMonthRows = allRows.filter(function (row) {
+            return row.status === "posted" && row.type === "expense" && row.source === "entry" &&
+                row.currency === "ZAR" && row.date.slice(0, 7) === planMonth;
+        });
+        const planCategories = budgetExpenseCategories().map(function (category) {
+            const allocation = (state.budgetAllocations || []).find(function (item) {
+                return item.period_month === planMonthDate && item.category === category;
+            });
+            const spent = planMonthRows.reduce(function (total, row) {
+                return total + (row.category === category ? Number(row.amount || 0) : 0);
+            }, 0);
+            const allocated = allocation ? Number(allocation.allocated_amount || 0) : 0;
+            const remaining = allocated - spent;
+            const percent = allocated > 0 ? spent / allocated * 100 : 0;
+            return { category: category, allocationId: allocation ? allocation.id : "", allocated: allocated, spent: spent, remaining: remaining, percent: percent };
+        });
+        const allocatedTotal = planCategories.reduce(function (total, item) { return total + item.allocated; }, 0);
+        const planSpentTotal = planCategories.reduce(function (total, item) { return total + item.spent; }, 0);
+        const planRemainingTotal = allocatedTotal - planSpentTotal;
+        const allocationRowsHtml = planCategories.map(function (item) {
+            const hasAllocation = item.allocated > 0;
+            const over = hasAllocation && item.spent > item.allocated;
+            const percentLabel = hasAllocation ? Math.round(item.percent) + "% used" : "No limit set";
+            const progress = hasAllocation ? Math.min(100, Math.max(0, item.percent)) : 0;
+            return (
+                '<tr class="' + (over ? "is-over-budget" : "") + '">' +
+                    '<td><strong>' + esc(item.category) + '</strong><small>' + esc(percentLabel) + '</small>' +
+                        '<div class="sway-budget-category-track"><span style="width:' + progress.toFixed(1) + '%"></span></div></td>' +
+                    '<td class="amount">' + esc(budgetCurrency(item.spent)) + '</td>' +
+                    '<td><form class="sway-budget-allocation-form" data-budget-allocation-form>' +
+                        '<input type="hidden" name="category" value="' + esc(item.category) + '">' +
+                        '<input type="number" name="allocated_amount" min="0.01" max="9999999999.99" step="0.01" value="' +
+                            (hasAllocation ? item.allocated.toFixed(2) : "") + '" placeholder="Set limit" aria-label="Monthly limit for ' + esc(item.category) + '">' +
+                        '<button type="submit" class="sway-budget-void">Save</button>' +
+                        (item.allocationId
+                            ? '<button type="button" class="sway-budget-void" data-budget-allocation-delete="' + esc(item.allocationId) + '">Remove</button>'
+                            : '') +
+                    '</form></td>' +
+                    '<td class="amount ' + (over ? "is-negative" : "is-positive") + '">' +
+                        (hasAllocation ? esc((item.remaining < 0 ? "−" : "") + budgetCurrency(Math.abs(item.remaining))) : "—") +
+                    '</td>' +
+                '</tr>'
+            );
+        }).join("");
+        const forecastToday = today;
+        const forecastCurrentMonth = forecastToday.slice(0, 7);
+        const forecastEligibleInvoices = (state.invoices || []).filter(function (invoice) {
+            const status = String(invoice.status || "").toLowerCase();
+            const outstanding = invoice.amount_outstanding != null
+                ? Number(invoice.amount_outstanding)
+                : Math.max(0, Number(invoice.total || 0) - Number(invoice.amount_paid || 0));
+            return !invoice.archived &&
+                ["sent", "partially paid", "overdue"].includes(status) &&
+                String(invoice.currency || "ZAR").toUpperCase() === "ZAR" &&
+                Number.isFinite(outstanding) && outstanding > 0;
+        });
+        const forecastBuckets = [30, 60, 90].map(function (horizonDays) {
+            const horizonEnd = budgetAddDaysISO(forecastToday, horizonDays - 1);
+            const dueInvoices = forecastEligibleInvoices.filter(function (invoice) {
+                const dueDate = budgetDateKey(invoice.due_date);
+                return dueDate && dueDate >= forecastToday && dueDate <= horizonEnd;
+            });
+            const expectedInflows = dueInvoices.reduce(function (total, invoice) {
+                const outstanding = invoice.amount_outstanding != null
+                    ? Number(invoice.amount_outstanding)
+                    : Math.max(0, Number(invoice.total || 0) - Number(invoice.amount_paid || 0));
+                return total + outstanding;
+            }, 0);
+            let plannedOutflows = 0;
+            (state.budgetAllocations || []).forEach(function (allocation) {
+                const monthKey = String(allocation.period_month || "").slice(0, 7);
+                if (!/^\d{4}-\d{2}$/.test(monthKey)) return;
+                const monthStart = monthKey + "-01";
+                const monthParts = monthKey.split("-").map(Number);
+                const daysInMonth = new Date(Date.UTC(monthParts[0], monthParts[1], 0)).getUTCDate();
+                const monthEnd = monthKey + "-" + String(daysInMonth).padStart(2, "0");
+                const overlapStart = monthStart > forecastToday ? monthStart : forecastToday;
+                const overlapEnd = monthEnd < horizonEnd ? monthEnd : horizonEnd;
+                const overlapDays = budgetDaysBetweenISO(overlapStart, overlapEnd);
+                if (!overlapDays) return;
+
+                let availableAllocation = Number(allocation.allocated_amount || 0);
+                let allocationDays = daysInMonth;
+                if (monthKey === forecastCurrentMonth) {
+                    const spentToDate = allRows.reduce(function (total, row) {
+                        return total + (
+                            row.status === "posted" &&
+                            row.source === "entry" &&
+                            row.type === "expense" &&
+                            row.category === allocation.category &&
+                            row.currency === "ZAR" &&
+                            row.date.slice(0, 7) === monthKey &&
+                            row.date <= forecastToday
+                                ? Number(row.amount || 0)
+                                : 0
+                        );
+                    }, 0);
+                    availableAllocation = Math.max(0, availableAllocation - spentToDate);
+                    allocationDays = budgetDaysBetweenISO(forecastToday, monthEnd);
+                }
+                if (allocationDays > 0) {
+                    plannedOutflows += availableAllocation * overlapDays / allocationDays;
+                }
+            });
+            return {
+                days: horizonDays,
+                endDate: horizonEnd,
+                inflows: expectedInflows,
+                outflows: plannedOutflows,
+                net: expectedInflows - plannedOutflows,
+                invoiceCount: dueInvoices.length
+            };
+        });
+        const forecastCardsHtml = forecastBuckets.map(function (bucket) {
+            return (
+                '<article class="sway-budget-forecast-card">' +
+                    '<div class="sway-budget-forecast-heading"><strong>Next ' + bucket.days + ' days</strong><span>Through ' + esc(date(bucket.endDate)) + '</span></div>' +
+                    '<div><small>Expected invoice receipts</small><strong>' + esc(budgetCurrency(bucket.inflows)) + '</strong><span>' +
+                        bucket.invoiceCount + ' due invoice' + (bucket.invoiceCount === 1 ? '' : 's') + '</span></div>' +
+                    '<div><small>Budget-based outflow allowance</small><strong>' + esc(budgetCurrency(bucket.outflows)) + '</strong></div>' +
+                    '<div class="sway-budget-forecast-net ' + (bucket.net < 0 ? "is-negative" : "is-positive") + '">' +
+                        '<small>Projected net movement</small><strong>' +
+                        esc((bucket.net < 0 ? "−" : "") + budgetCurrency(Math.abs(bucket.net))) + '</strong></div>' +
+                '</article>'
+            );
+        }).join("");
+        const forecastUndatedCount = forecastEligibleInvoices.filter(function (invoice) {
+            return !budgetDateKey(invoice.due_date);
+        }).length;
+        const forecastOverdueCount = forecastEligibleInvoices.filter(function (invoice) {
+            const dueDate = budgetDateKey(invoice.due_date);
+            return dueDate && dueDate < forecastToday;
+        }).length;
+        const forecastNonZarCount = (state.invoices || []).filter(function (invoice) {
+            const status = String(invoice.status || "").toLowerCase();
+            return ["sent", "partially paid", "overdue"].includes(status) &&
+                String(invoice.currency || "ZAR").toUpperCase() !== "ZAR" &&
+                Number(invoice.amount_outstanding || 0) > 0;
+        }).length;
+
         const nonZarCount = periodRows.filter(function (row) {
             return row.status === "posted" && row.currency !== "ZAR";
         }).length;
@@ -19248,6 +19410,29 @@ function simpleBars(items, color) {
                     '<div class="sway-budget-category-list">' + categoryHtml + "</div>"
                 ) +
             "</div>" +
+            panel(
+                "Monthly expense budgets",
+                "Set a spending limit for each category. Actuals are posted operating expenses for the selected budget month; payments and refunds are not included.",
+                '<div class="sway-budget-plan-toolbar"><label><span>Budget month</span><input type="month" data-budget-plan-month value="' + esc(planMonth) + '"></label>' +
+                    '<div><small>Total allocated</small><strong>' + esc(budgetCurrency(allocatedTotal)) + '</strong></div>' +
+                    '<div><small>Actual expenses</small><strong>' + esc(budgetCurrency(planSpentTotal)) + '</strong></div>' +
+                    '<div><small>Remaining</small><strong class="' + (planRemainingTotal < 0 ? "is-negative" : "") + '">' +
+                        esc((planRemainingTotal < 0 ? "−" : "") + budgetCurrency(Math.abs(planRemainingTotal))) + '</strong></div></div>' +
+                '<p class="sway-budget-cash-note">A category without a saved limit is shown as “No limit set”. Limits are planning targets, not cash reserves. Over-budget amounts are calculated from recorded expenses only.</p>' +
+                '<div class="sway-budget-table-wrap"><table class="sway-budget-table"><thead><tr><th>Category</th><th class="amount">Spent</th><th>Monthly limit</th><th class="amount">Remaining</th></tr></thead><tbody>' +
+                    allocationRowsHtml +
+                '</tbody></table></div>'
+            ) +
+            panel(
+                "30 / 60 / 90-day cash-flow outlook",
+                "An indicative view of invoice due dates against remaining monthly expense budgets.",
+                '<div class="sway-budget-forecast-grid">' + forecastCardsHtml + '</div>' +
+                '<p class="sway-budget-cash-note">Expected receipts assume issued unpaid invoices are collected on their due dates; this is not guaranteed. Outflows are remaining budget allowances, with future monthly allocations spread evenly across calendar days. Past-due, undated and non-ZAR invoices are excluded from dated ZAR inflows' +
+                    (forecastOverdueCount || forecastUndatedCount || forecastNonZarCount
+                        ? ' (' + forecastOverdueCount + ' past-due, ' + forecastUndatedCount + ' undated, ' + forecastNonZarCount + ' non-ZAR excluded).'
+                        : '.') +
+                    ' This shows projected movement, not a bank balance: no opening balance, payment-probability model or complete scheduled-expense data is available.</p>'
+            ) +
             panel(
                 "Monthly cash flow",
                 "Actual recorded income and outflows for the last six calendar months.",
@@ -28285,6 +28470,70 @@ function simpleBars(items, color) {
                 }
             });
         }
+
+        const planMonthInput = workspace.querySelector("[data-budget-plan-month]");
+        if (planMonthInput) {
+            planMonthInput.addEventListener("change", function () {
+                if (!/^\d{4}-\d{2}$/.test(planMonthInput.value)) return;
+                state.budgetPlanMonth = planMonthInput.value;
+                renderView();
+            });
+        }
+
+        workspace.querySelectorAll("[data-budget-allocation-form]").forEach(function (form) {
+            form.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                if (!isBudgetOwner()) return;
+                const formData = new FormData(form);
+                const category = String(formData.get("category") || "").trim();
+                const amount = Number(formData.get("allocated_amount"));
+                const button = form.querySelector('button[type="submit"]');
+                if (!category || !Number.isFinite(amount) || amount <= 0) {
+                    swayAlert("Enter a monthly limit greater than zero.");
+                    return;
+                }
+                if (button) button.disabled = true;
+                try {
+                    await api("/rest/v1/budget_category_allocations?on_conflict=period_month,category", {
+                        method: "POST",
+                        headers: headers({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
+                        body: JSON.stringify({
+                            period_month: (state.budgetPlanMonth || dashboardTodayISO().slice(0, 7)) + "-01",
+                            category: category,
+                            allocated_amount: amount.toFixed(2),
+                            currency: "ZAR"
+                        })
+                    });
+                    await refreshData();
+                    renderView();
+                } catch (error) {
+                    if (button) button.disabled = false;
+                    swayAlert(error && error.message ? error.message : "Unable to save this monthly budget.");
+                }
+            });
+        });
+
+        workspace.querySelectorAll("[data-budget-allocation-delete]").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                if (!isBudgetOwner()) return;
+                const allocationId = button.dataset.budgetAllocationDelete || "";
+                if (!allocationId) return;
+                const confirmed = await swayConfirm("Remove this category's monthly budget limit? Recorded expenses will remain unchanged.");
+                if (!confirmed) return;
+                button.disabled = true;
+                try {
+                    await api("/rest/v1/budget_category_allocations?id=eq." + encodeURIComponent(allocationId), {
+                        method: "DELETE",
+                        headers: headers({ "Prefer": "return=minimal" })
+                    });
+                    await refreshData();
+                    renderView();
+                } catch (error) {
+                    button.disabled = false;
+                    swayAlert(error && error.message ? error.message : "Unable to remove this monthly budget.");
+                }
+            });
+        });
 
         const budgetMonthSelect = workspace.querySelector("[data-budget-month]");
         if (budgetMonthSelect) {

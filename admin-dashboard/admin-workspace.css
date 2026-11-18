@@ -10628,3 +10628,192 @@ body.sway-dark-mode #sway-admin-workspace .sway-budget-void {
     background: rgba(190,52,52,.12);
     color: #FCA5A5;
 }
+
+
+/* Monthly category allocations */
+.sway-budget-plan-toolbar {
+    display: grid;
+    grid-template-columns: minmax(150px, 1.3fr) repeat(3, minmax(110px, 1fr));
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.sway-budget-plan-toolbar label {
+    display: grid;
+    gap: 7px;
+    color: #43516B;
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+.sway-budget-plan-toolbar input,
+.sway-budget-allocation-form input {
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    padding: 8px 10px;
+    border: 1px solid rgba(0,32,150,0.12);
+    border-radius: 9px;
+    background: #FFFFFF;
+    color: #081533;
+    font: 600 0.7rem 'Montserrat', sans-serif;
+}
+.sway-budget-plan-toolbar > div {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+}
+.sway-budget-plan-toolbar small {
+    color: #748198;
+    font-size: 0.6rem;
+    font-weight: 700;
+}
+.sway-budget-plan-toolbar strong {
+    color: #13213D;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.sway-budget-plan-toolbar strong.is-negative {
+    color: #A12B35;
+}
+.sway-budget-allocation-form {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    min-width: 180px;
+}
+.sway-budget-allocation-form input {
+    max-width: 130px;
+}
+.sway-budget-allocation-form button {
+    flex: 0 0 auto;
+}
+.sway-budget-table tr.is-over-budget td {
+    background: rgba(161,43,53,0.035);
+}
+.sway-budget-table tr.is-over-budget td:first-child strong {
+    color: #A12B35;
+}
+.sway-budget-table tr.is-over-budget .sway-budget-category-track > span {
+    background: #A12B35;
+}
+body.sway-dark-mode .sway-budget-plan-toolbar label,
+body.sway-dark-mode .sway-budget-plan-toolbar strong {
+    color: #eef4ff;
+}
+body.sway-dark-mode .sway-budget-plan-toolbar input,
+body.sway-dark-mode .sway-budget-allocation-form input {
+    border-color: rgba(119,193,252,0.18);
+    background: #101f39;
+    color: #eef4ff;
+}
+@media (max-width: 760px) {
+    .sway-budget-plan-toolbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sway-budget-plan-toolbar label {
+        grid-column: 1 / -1;
+    }
+    .sway-budget-allocation-form {
+        min-width: 155px;
+    }
+    .sway-budget-allocation-form input {
+        max-width: 105px;
+    }
+}
+
+
+/* Indicative cash-flow outlook */
+.sway-budget-forecast-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.sway-budget-forecast-card {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    padding: 17px;
+    border: 1px solid rgba(0,32,150,0.09);
+    border-radius: 15px;
+    background: rgba(255,255,255,0.82);
+}
+.sway-budget-forecast-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0,32,150,0.08);
+}
+.sway-budget-forecast-heading strong {
+    color: #13213D;
+    font-size: 0.78rem;
+}
+.sway-budget-forecast-heading span {
+    color: #7B879B;
+    font-size: 0.57rem;
+    text-align: right;
+}
+.sway-budget-forecast-card > div:not(.sway-budget-forecast-heading) {
+    display: grid;
+    gap: 4px;
+}
+.sway-budget-forecast-card small {
+    color: #748198;
+    font-size: 0.59rem;
+    font-weight: 700;
+}
+.sway-budget-forecast-card > div > strong {
+    color: #13213D;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.sway-budget-forecast-card > div > span {
+    color: #8993A5;
+    font-size: 0.57rem;
+}
+.sway-budget-forecast-net {
+    padding-top: 11px;
+    border-top: 1px solid rgba(0,32,150,0.08);
+}
+.sway-budget-forecast-net.is-positive > strong {
+    color: #16734A;
+}
+.sway-budget-forecast-net.is-negative > strong {
+    color: #A12B35;
+}
+body.sway-dark-mode .sway-budget-forecast-card {
+    border-color: rgba(119,193,252,0.13);
+    background: rgba(12,23,43,0.88);
+}
+body.sway-dark-mode .sway-budget-forecast-heading strong,
+body.sway-dark-mode .sway-budget-forecast-card > div > strong {
+    color: #eef4ff;
+}
+body.sway-dark-mode .sway-budget-forecast-heading {
+    border-color: rgba(119,193,252,0.12);
+}
+@media (max-width: 900px) {
+    .sway-budget-forecast-grid {
+        grid-template-columns: 1fr;
+    }
+    .sway-budget-forecast-card {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sway-budget-forecast-heading,
+    .sway-budget-forecast-net {
+        grid-column: 1 / -1;
+    }
+}
+@media (max-width: 560px) {
+    .sway-budget-forecast-card {
+        grid-template-columns: 1fr;
+    }
+    .sway-budget-forecast-heading,
+    .sway-budget-forecast-net {
+        grid-column: auto;
+    }
+}
