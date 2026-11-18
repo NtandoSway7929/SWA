@@ -22,6 +22,7 @@ jobs:
           node --check admin-dashboard/lead-whatsapp.js
           node --check admin-dashboard/innerme-workspace-health.js
           node --check admin-dashboard/admin-table-controls.js
+          node --check admin-dashboard/bank-reconciliation-import.js
           node --check admin-dashboard/innerme-provider-usage.js
 
       - name: Test admin welcome authentication handshake
@@ -50,6 +51,12 @@ jobs:
 
       - name: Test budget category allocations and cash-flow outlook
         run: node scripts/admin-budget-category-allocations.test.cjs
+
+      - name: Test bank statement reconciliation schema contract
+        run: node scripts/bank-statement-reconciliation.test.cjs
+
+      - name: Test bank statement CSV preview safeguards
+        run: node scripts/bank-statement-csv-preview.test.cjs
 
       - name: Test cookie consent analytics behaviour
         run: node scripts/cookie-consent-analytics.test.cjs
