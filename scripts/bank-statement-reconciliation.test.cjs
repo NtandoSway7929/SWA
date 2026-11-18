@@ -54,7 +54,7 @@ assert.ok(atomicSql.includes("insert into public.bank_statement_lines"), "the im
 assert.ok(!/security\s+definer/i.test(atomicSql), "the import RPC must not bypass RLS");
 
 
-const reviewPath = path.join(__dirname, "..", "supabase", "migrations", "20261118062000_bank_statement_line_review.sql");
+const reviewPath = path.join(__dirname, "..", "supabase", "migrations", "20261118072204_bank_statement_line_review.sql");
 const reviewSql = fs.readFileSync(reviewPath, "utf8");
 assert.ok(reviewSql.includes("create or replace function public.review_bank_statement_line("));
 assert.ok(reviewSql.includes("p_decision is distinct from 'matched'"), "null or unknown decisions must be rejected");
