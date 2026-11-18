@@ -60,6 +60,7 @@ begin
 
     if new.match_status = 'matched' then
         if new.matched_source_id is null
+           or new.matched_source_type is null
            or new.matched_source_type not in ('payment', 'budget_entry') then
             raise exception 'Choose an eligible payment or posted budget entry.';
         end if;
