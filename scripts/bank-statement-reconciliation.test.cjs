@@ -41,4 +41,16 @@ assert.ok(sql.includes("Bank statement import records cannot be changed or delet
 assert.ok(!/grant\s+[^;]*\bdelete\b[^;]*bank_statement_/is.test(sql),
     "browser roles must not be granted delete access to statement records");
 
-console.log("Bank statement reconciliation migration contract passed.");
+
+const atomicImportPath = path.join(__dirname, "..", "supabase", "migrations", "20261118080000_bank_statement_atomic_import.sql");
+const atomicSql = fs.readFileSync(atomicImportPath, "utf8");
+assert.ok(atomicSql.includes("create or replace function public.import_bank_statement("));
+assert.ok(atomicSql.includes("security invoker"), "the import RPC must respect caller privileges and RLS");
+assert.ok(atomicSql.includes("public.is_swayphics_owner()"), "only the Swayphics owner may import statements");
+assert.ok(atomicSql.includes("jsonb_array_length(p_rows) > 10000"), "the RPC must cap import size");
+assert.ok(atomicSql.includes("unique_violation"), "duplicate statement files must return a controlled error");
+assert.ok(atomicSql.includes("grant execute on function public.import_bank_statement"), "authenticated sessions must be able to invoke the RPC");
+assert.ok(atomicSql.includes("insert into public.bank_statement_lines"), "the import RPC must persist the rows");
+assert.ok(!/security\\s+definer/i.test(atomicSql), "the import RPC must not bypass RLS");
+
+console.log("Bank statement reconciliation migration contracts passed.");
