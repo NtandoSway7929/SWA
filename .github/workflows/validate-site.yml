@@ -38,6 +38,9 @@ jobs:
       - name: Test dynamic admin modal accessibility
         run: node --test scripts/admin-dynamic-modal-accessibility.test.cjs
 
+      - name: Test quick-create accessibility contracts
+        run: node scripts/admin-quick-create-accessibility.test.cjs
+
       - name: Test dashboard automation integrity
         run: node scripts/admin-automation-integrity.test.cjs
 
