@@ -73,16 +73,34 @@ function norm(v){return String(v||"").trim().toLowerCase().replace(/[^a-z0-9]+/g
 function detect(names,patterns){return names.findIndex(n=>patterns.some(p=>p.test(norm(n))));}
 function dateValue(v){
  const s=String(v||"").trim();if(!s)return null;
+ function iso(y,m,d){
+  const year=Number(y),month=Number(m),day=Number(d);
+  if(month<1||month>12||day<1||day>31)return null;
+  const check=new Date(Date.UTC(year,month-1,day));
+  if(check.getUTCFullYear()!==year||check.getUTCMonth()!==month-1||check.getUTCDate()!==day)return null;
+  return String(year).padStart(4,"0")+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+ }
  let m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
- if(m)return m[1]+"-"+m[2].padStart(2,"0")+"-"+m[3].padStart(2,"0");
+ if(m)return iso(m[1],m[2],m[3]);
  m=s.match(/^(\d{1,2})[/. -](\d{1,2})[/. -](\d{4})$/);
- if(m){const a=Number(m[1]),b=Number(m[2]),y=m[3];if(a>12)return y+"-"+String(b).padStart(2,"0")+"-"+String(a).padStart(2,"0");if(b>12)return y+"-"+String(a).padStart(2,"0")+"-"+String(b).padStart(2,"0");return null;}
+ if(m){const a=Number(m[1]),b=Number(m[2]),y=m[3];if(a>12)return iso(y,b,a);if(b>12)return iso(y,a,b);return null;}
  return null;
 }
 function money(v){
  let s=String(v||"").trim().replace(/[R\s]/gi,"");if(!s)return NaN;
- const neg=/^\(.*\)$/.test(s);s=s.replace(/[()]/g,"").replace(/,/g,"");
- const n=Number(s);return Number.isFinite(n)?Math.round((neg?-n:n)*100)/100:NaN;
+ const neg=/^\(.*\)$/.test(s);s=s.replace(/[()]/g,"");
+ if(s.includes(",")&&s.includes(".")){
+  if(s.lastIndexOf(",")>s.lastIndexOf("."))s=s.replace(/\./g,"").replace(",",".");
+  else s=s.replace(/,/g,"");
+ }else if(s.includes(",")){
+  const parts=s.split(",");
+  if(parts.length!==2)return NaN;
+  if(/^\d{2}$/.test(parts[1]))s=parts[0]+"."+parts[1];
+  else if(/^\d{3}$/.test(parts[1]))s=parts[0]+parts[1];
+  else return NaN;
+ }
+ if(!/^-?\d+(\.\d{1,2})?$/.test(s))return NaN;
+ const n=Number(s);return Number.isFinite(n)?Math.round((neg?-Math.abs(n):n)*100)/100:NaN;
 }
 function options(label,selected){return '<label class="field"><span>'+label+'</span><select data-map="'+label+'"><option value="-1">Not selected</option>'+headers.map((h,i)=>'<option value="'+i+'" '+(i===selected?'selected':'')+'>'+String(h).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</option>').join("")+'</select></label>';}
 function mappingUI(){
@@ -125,8 +143,10 @@ $("preview").addEventListener("click",function(){
  const credits=parsed.filter(x=>x.amount>0).reduce((s,x)=>s+x.amount,0),debits=parsed.filter(x=>x.amount<0).reduce((s,x)=>s+Math.abs(x.amount),0);
  $("count").textContent=String(parsed.length);$("credits").textContent=zar(credits);$("debits").textContent=zar(debits);
  $("rows").innerHTML=parsed.slice(0,100).map(x=>"<tr><td>"+x.transaction_date+"</td><td>"+x.description.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+"</td><td>"+String(x.bank_reference||"").replace(/[&<>"]/g,"")+"</td><td class=\"num\">"+zar(x.amount)+"</td></tr>").join("");
- $("warnings").textContent=(parsed.length>100?"Showing first 100 of "+parsed.length+" rows. ":"")+(issues.length?issues.length+" rows were skipped: "+issues.slice(0,5).join(" "):"All "+parsed.length+" rows passed the basic validation checks.");
- $("previewPanel").classList.remove("hidden");window.__bankStatementPreview={rows:parsed.map(x=>({row_number:x.row_number,transaction_date:x.transaction_date,description:x.description,bank_reference:x.bank_reference,amount:x.amount})),file:$("file").files&&$("file").files[0]};window.dispatchEvent(new Event("bank:preview-ready"));status("Preview generated locally. No transactions have been saved.",false);
+ $("warnings").textContent=(parsed.length>100?"Showing first 100 of "+parsed.length+" rows. ":"")+(issues.length?issues.length+" invalid rows detected: "+issues.slice(0,5).join(" "):"All "+parsed.length+" rows passed the basic validation checks.");
+ $("previewPanel").classList.remove("hidden");
+ if(issues.length){window.__bankStatementPreview=null;status("Import blocked: "+issues.length+" row(s) failed validation. Correct the CSV or column mapping and preview again; no partial statement imports are allowed.",true);return;}
+ window.__bankStatementPreview={rows:parsed.map(x=>({row_number:x.row_number,transaction_date:x.transaction_date,description:x.description,bank_reference:x.bank_reference,amount:x.amount})),file:$("file").files&&$("file").files[0]};window.dispatchEvent(new Event("bank:preview-ready"));status("Preview generated locally. No transactions have been saved.",false);
  }catch(e){$("previewPanel").classList.add("hidden");status(e.message,true);}
 });
 $("reset").addEventListener("click",function(){ $("account").value="";$("file").value="";$("periodStart").value="";$("periodEnd").value="";$("mapping").innerHTML="";$("mapping").classList.add("hidden");$("previewPanel").classList.add("hidden");parsed=[];headers=[];rawRows=[];status("Choose a CSV file to begin. No data is sent to the server during preview.");});
