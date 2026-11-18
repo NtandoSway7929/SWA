@@ -23,6 +23,12 @@ assert.ok(script.includes('["application/pdf", "image/jpeg", "image/png", "image
 assert.ok(script.includes("data-receipt-upload"));
 assert.ok(script.includes("data-receipt-open"));
 assert.ok(script.includes("data-receipt-delete"));
+assert.ok(script.includes("data-receipt-filter"));
+assert.ok(script.includes('filter === "missing"'));
+assert.ok(script.includes('resolved.origin !== base.origin'));
+assert.ok(script.includes('resolved.pathname.indexOf("/storage/v1/object/sign/" + BUCKET + "/") !== 0'));
+assert.ok(script.includes("var uploadedCount = 0;"));
+assert.ok(script.includes("failures.join(\" \" )") || script.includes('failures.join(" ")'));
 assert.ok(script.includes('title.textContent.trim().toLowerCase() === "transaction ledger"'));
 assert.ok(script.includes("new MutationObserver"));
 assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(script), "new receipt-management code must not contain emoji characters");
@@ -37,5 +43,6 @@ assert.ok(migration.includes("create policy \"Swayphics owners can read budget r
 assert.ok(migration.includes("public = false"));
 assert.ok(migration.includes("10485760"));
 assert.ok(migration.includes("application/pdf"));
+assert.ok(migration.includes("budget_entry_receipts_uploaded_by_idx"));
 
 console.log("Budget receipt storage, owner access, upload restrictions and dashboard integration contracts passed.");
