@@ -4517,9 +4517,9 @@
         state.documents = results[15] || [];
         state.communications = results[16] || [];
         state.budgetEntries = results[17] || [];
-        state.paymentRefunds = results[18] || [];
-        state.paymentAttempts = results[19] || [];
-        state.budgetAllocations = results[20] || [];
+        state.budgetAllocations = results[18] || [];
+        state.paymentRefunds = results[19] || [];
+        state.paymentAttempts = results[20] || [];
 
         await loadAdminNotifications();
 
@@ -28349,7 +28349,7 @@ function simpleBars(items, color) {
         const planMonthInput = workspace.querySelector("[data-budget-plan-month]");
         if (planMonthInput) {
             planMonthInput.addEventListener("change", function () {
-                if (!/^\\d{4}-\\d{2}$/.test(planMonthInput.value)) return;
+                if (!/^\d{4}-\d{2}$/.test(planMonthInput.value)) return;
                 state.budgetPlanMonth = planMonthInput.value;
                 renderView();
             });
