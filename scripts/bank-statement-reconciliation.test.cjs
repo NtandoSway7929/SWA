@@ -77,3 +77,14 @@ assert.ok(!/insert\s+into\s+public\.(payments|payment_refunds|budget_entries|inv
 assert.ok(!/update\s+public\.(payments|payment_refunds|budget_entries|invoices)/i.test(reviewSql), "matching must not mutate financial ledger records");
 
 console.log("Bank statement reconciliation migration contracts passed.");
+
+const integrityPath = path.join(__dirname, "..", "supabase", "migrations", "20261118072400_bank_statement_review_integrity.sql");
+const integritySql = fs.readFileSync(integrityPath, "utf8");
+assert.ok(integritySql.includes("create unique index bank_statement_lines_matched_source_idx"), "a financial record must only be linked to one statement line");
+assert.ok(integritySql.includes("revoke update on table public.bank_statement_lines from authenticated"), "direct unrestricted statement-line updates must be revoked");
+assert.ok(integritySql.includes("grant update (match_status, matched_source_type, matched_source_id, ignore_reason)"), "owners must receive only decision-column update privileges");
+assert.ok(integritySql.includes("create or replace function public.guard_bank_statement_line_ledger()"), "the table trigger must enforce review validation");
+assert.ok(integritySql.includes("public.is_swayphics_owner()"), "the table trigger must independently enforce owner access");
+assert.ok(integritySql.includes("provider is null"), "provider/test payments must not be eligible");
+assert.ok(integritySql.includes("v_method is distinct from 'EFT'"), "only manual EFT payments may be matched");
+assert.ok(integritySql.includes("pg_advisory_xact_lock"), "concurrent attempts to reuse a source record must serialize");
