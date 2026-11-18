@@ -21,6 +21,6 @@ assert.ok(importer.includes("swayphics_admin_access_token"), "imports must use t
 assert.ok(importer.includes("p_source_file_sha256"), "imports must submit a file fingerprint");
 assert.ok(importer.includes("line_fingerprint"), "imports must submit row fingerprints");
 assert.ok(importer.includes("Previously imported statements") || html.includes("Previously imported statements"), "saved imports must be listed");
-assert.ok(!/delete\\s*\\(/i.test(importer), "the browser must not delete immutable statement records");
+assert.ok(!/delete\s*\(/i.test(importer), "the browser must not delete immutable statement records");
 
 console.log("Bank statement CSV preview and import contract passed.");
