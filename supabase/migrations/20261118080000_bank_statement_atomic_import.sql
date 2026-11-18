@@ -37,14 +37,19 @@ begin
         raise exception 'The statement period is invalid.';
     end if;
 
-    insert into public.bank_statement_imports (
-        account_label, source_file_name, source_file_sha256,
-        period_start, period_end, row_count, imported_by
-    ) values (
-        p_account_label, p_source_file_name, p_source_file_sha256,
-        p_period_start, p_period_end, jsonb_array_length(p_rows), auth.uid()
-    )
-    returning id into v_import_id;
+    begin
+        insert into public.bank_statement_imports (
+            account_label, source_file_name, source_file_sha256,
+            period_start, period_end, row_count, imported_by
+        ) values (
+            p_account_label, p_source_file_name, p_source_file_sha256,
+            p_period_start, p_period_end, jsonb_array_length(p_rows), auth.uid()
+        )
+        returning id into v_import_id;
+    exception
+        when unique_violation then
+            raise exception 'This statement file has already been imported for this account.';
+    end;
 
     insert into public.bank_statement_lines (
         import_id, row_number, transaction_date, description,
@@ -78,11 +83,8 @@ begin
         'import_id', v_import_id,
         'row_count', v_row_count
     );
-exception
-    when unique_violation then
-        raise exception 'This statement file has already been imported for this account.';
 end;
-$$;
+$;
 
 revoke all on function public.import_bank_statement(text, text, text, date, date, jsonb)
     from public, anon, authenticated, service_role;
