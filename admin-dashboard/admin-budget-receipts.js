@@ -10,7 +10,6 @@
     var MAX_BYTES = 10 * 1024 * 1024;
     var ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
     var currentSection = null;
-    var isLoading = false;
 
     function escapeHtml(value) {
         return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) {
@@ -247,8 +246,8 @@
     var cachedReceipts = [];
 
     async function loadData(section) {
-        if (isLoading || !section || !section.isConnected) return;
-        isLoading = true;
+        if (!section || !section.isConnected || section.dataset.loading === "true") return;
+        section.dataset.loading = "true";
         var list = section.querySelector("[data-receipt-list]");
         if (list) list.innerHTML = '<div class="sway-budget-receipt-empty">Loading expense records...</div>';
         try {
@@ -266,7 +265,7 @@
         } catch (error) {
             if (list) list.innerHTML = '<div class="sway-budget-receipt-empty">' + escapeHtml(error.message || "Receipt records could not be loaded.") + '</div>';
         } finally {
-            isLoading = false;
+            section.dataset.loading = "false";
         }
     }
 
