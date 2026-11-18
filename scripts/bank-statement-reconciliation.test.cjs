@@ -51,6 +51,6 @@ assert.ok(atomicSql.includes("jsonb_array_length(p_rows) > 10000"), "the RPC mus
 assert.ok(atomicSql.includes("unique_violation"), "duplicate statement files must return a controlled error");
 assert.ok(atomicSql.includes("grant execute on function public.import_bank_statement"), "authenticated sessions must be able to invoke the RPC");
 assert.ok(atomicSql.includes("insert into public.bank_statement_lines"), "the import RPC must persist the rows");
-assert.ok(!/security\\s+definer/i.test(atomicSql), "the import RPC must not bypass RLS");
+assert.ok(!/security\s+definer/i.test(atomicSql), "the import RPC must not bypass RLS");
 
 console.log("Bank statement reconciliation migration contracts passed.");
