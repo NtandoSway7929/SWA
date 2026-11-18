@@ -57,6 +57,7 @@ assert.ok(!/security\s+definer/i.test(atomicSql), "the import RPC must not bypas
 const reviewPath = path.join(__dirname, "..", "supabase", "migrations", "20261118062000_bank_statement_line_review.sql");
 const reviewSql = fs.readFileSync(reviewPath, "utf8");
 assert.ok(reviewSql.includes("create or replace function public.review_bank_statement_line("));
+assert.ok(reviewSql.includes("p_decision is distinct from 'matched'"), "null or unknown decisions must be rejected");
 assert.ok(reviewSql.includes("security invoker"), "line review must respect caller permissions and RLS");
 assert.ok(reviewSql.includes("public.is_swayphics_owner()"), "only the owner may review statement lines");
 assert.ok(reviewSql.includes("for update"), "review must lock the target statement line");
