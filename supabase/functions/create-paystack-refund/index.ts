@@ -258,7 +258,7 @@ export function createPaystackRefundHandler(
       ) {
         return deps.respond({
           ok: false,
-          error: "Paystack test refunds are not configured. No refund was initiated.",
+          error: "Paystack live refunds are not configured. No refund was initiated.",
         }, 503);
       }
 
