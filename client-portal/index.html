@@ -519,6 +519,41 @@ body{
 .finance-online-note{color:var(--soft);font-size:.56rem;line-height:1.55}.finance-online-status{padding:12px 14px;border-radius:12px;background:rgba(1,82,244,.06);color:var(--muted);font-size:.61rem;line-height:1.6}
 .finance-online-status.success{background:rgba(34,160,107,.08);color:#18784F}.finance-online-status.warning{background:rgba(231,155,26,.10);color:#906000}.finance-online-status.error{background:rgba(190,44,44,.08);color:#9A2525}
 
+/* Swayphics-branded Paystack handoff and payment return states */
+.paystack-handoff{display:grid;gap:15px;padding:17px;border:1px solid rgba(1,82,244,.12);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(247,250,255,.88));box-shadow:0 12px 30px rgba(0,32,150,.045)}
+.paystack-handoff-brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid rgba(0,32,150,.075)}
+.paystack-handoff-brand img{display:block;width:156px;max-width:58%;height:auto;object-fit:contain}
+.paystack-handoff-brand span{color:var(--blue);font-size:.49rem;font-weight:900;letter-spacing:.13em;text-align:right}
+.paystack-handoff-copy{display:grid;gap:7px}
+.paystack-handoff-copy h4{color:var(--dark);font-size:.94rem;font-weight:850;letter-spacing:-.035em;line-height:1.2}
+.paystack-handoff-copy p{color:var(--muted);font-size:.61rem;line-height:1.7}
+.paystack-handoff-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.paystack-handoff-summary>div{display:grid;gap:5px;min-width:0;padding:11px;border:1px solid rgba(0,32,150,.07);border-radius:12px;background:rgba(255,255,255,.78)}
+.paystack-handoff-summary span{color:var(--soft);font-size:.48rem;font-weight:800;letter-spacing:.045em;text-transform:uppercase}
+.paystack-handoff-summary strong{overflow-wrap:anywhere;color:var(--dark);font-size:.63rem;font-weight:850}
+.paystack-handoff-actions{display:grid;gap:8px}
+.paystack-handoff-actions .portal-button{width:100%;min-height:48px}
+.paystack-handoff-note{color:var(--soft);font-size:.52rem;line-height:1.6;text-align:center}
+.finance-return-card{display:grid;gap:13px;width:min(690px,100%);margin:20px auto 0;padding:18px;border:1px solid rgba(1,82,244,.12);border-radius:19px;background:linear-gradient(145deg,rgba(255,255,255,.97),rgba(247,250,255,.91));box-shadow:0 18px 44px rgba(0,32,150,.07);animation:portalStatusIn .24s ease both;text-align:left}
+.finance-return-brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid rgba(0,32,150,.075)}
+.finance-return-brand img{display:block;width:145px;max-width:56%;height:auto;object-fit:contain}
+.finance-return-brand span{color:var(--blue);font-size:.49rem;font-weight:900;letter-spacing:.13em;text-align:right}
+.finance-return-content{display:grid;grid-template-columns:38px minmax(0,1fr);gap:12px;align-items:start}
+.finance-return-icon{display:grid;width:36px;height:36px;place-items:center;border-radius:12px;background:rgba(1,82,244,.08);color:var(--blue);font-size:1rem;font-weight:900}
+.finance-return-card.success .finance-return-icon{background:rgba(34,160,107,.10);color:#18784F}
+.finance-return-card.warning .finance-return-icon{background:rgba(231,155,26,.12);color:#906000}
+.finance-return-card.error .finance-return-icon{background:rgba(190,44,44,.09);color:#9A2525}
+.finance-return-copy{display:grid;gap:5px}
+.finance-return-copy>span{color:var(--blue);font-size:.48rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.finance-return-card.success .finance-return-copy>span{color:#18784F}
+.finance-return-card.warning .finance-return-copy>span{color:#906000}
+.finance-return-card.error .finance-return-copy>span{color:#9A2525}
+.finance-return-copy h3{color:var(--dark);font-size:.98rem;font-weight:850;letter-spacing:-.035em}
+.finance-return-copy p{color:var(--muted);font-size:.61rem;line-height:1.7}
+@media(max-width:560px){.paystack-handoff{padding:14px}.paystack-handoff-brand{align-items:flex-start}.paystack-handoff-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.finance-return-card{padding:15px}.finance-return-brand img{width:128px}}
+@media(prefers-reduced-motion:reduce){.finance-return-card{animation:none}}
+
+
 
 /* Client portal motion system: restrained movement, no extra navigation indicator. */
 @keyframes portalFadeUp{from{opacity:0;transform:translate3d(0,12px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
@@ -1578,14 +1613,42 @@ try{
 const result=await yocoPortalApi(checkoutFunction,{
 invoice_id:invoiceId,amount_cents:amountCents,idempotency_key:modal.dataset.paymentIdempotencyKey
 });
-if(!result.checkout_url||!/^https:\/\//i.test(result.checkout_url))throw new Error("The provider did not return a valid secure checkout link.");
+let checkoutUrl;
+try{checkoutUrl=new URL(String(result.checkout_url||""))}catch(_){checkoutUrl=null}
+if(!checkoutUrl||checkoutUrl.protocol!=="https:"||checkoutUrl.username||checkoutUrl.password){
+throw new Error("The provider did not return a valid secure checkout link.");
+}
+if(provider==="paystack"&&checkoutUrl.hostname!=="checkout.paystack.com"){
+throw new Error("Paystack did not return its expected secure checkout address. Please contact Swayphics before retrying.");
+}
+if(provider==="paystack"){
+const panel=modal.querySelector(".finance-online-panel");
+if(!panel)throw new Error("The Swayphics payment handoff could not be prepared. Your payment has not been redirected.");
+modal.dataset.paystackCheckoutUrl=checkoutUrl.toString();
+panel.innerHTML='<div class="paystack-handoff" aria-labelledby="paystack-handoff-title"><div class="paystack-handoff-brand"><img src="../swayphics-logo.png" alt="Swayphics" width="156" height="35"><span>PAYMENT HANDOFF</span></div><div class="paystack-handoff-copy"><h4 id="paystack-handoff-title">You are one step away from completing your payment.</h4><p>You are leaving the Swayphics client portal to open Paystack’s secure checkout. Once you finish, Paystack will return you here so Swayphics can verify the payment.</p></div><div class="paystack-handoff-summary"><div><span>Invoice</span><strong>'+esc(modal.dataset.invoiceNumber||"Swayphics invoice")+'</strong></div><div><span>Payment amount</span><strong>'+esc(financialMoney(amountCents/100,"ZAR"))+'</strong></div><div><span>Payment provider</span><strong>Paystack</strong></div><div><span>Payment status</span><strong>Awaiting checkout</strong></div></div><div class="paystack-handoff-actions"><button type="button" class="portal-button" id="finance-paystack-continue">Continue to secure payment</button></div><p class="paystack-handoff-note">Your invoice will only be updated after Swayphics receives verified payment confirmation.</p></div>';
+const continueButton=panel.querySelector("#finance-paystack-continue");
+if(!continueButton)throw new Error("The secure Paystack handoff button could not be prepared.");
+continueButton.addEventListener("click",function(){
+const destination=String(modal.dataset.paystackCheckoutUrl||"");
+if(!destination)return;
+continueButton.disabled=true;
+continueButton.textContent="Opening Paystack secure checkout...";
+window.location.assign(destination);
+});
+return;
+}
 statusBox.textContent="Checkout ready. Redirecting you to "+providerName+"...";
-window.location.assign(result.checkout_url);
+window.location.assign(checkoutUrl.toString());
 }catch(error){
 button.disabled=false;button.textContent="Try checkout again";
 statusBox.className="finance-online-status error";
 statusBox.textContent=error&&error.message||"Checkout could not be created. You can safely try again.";
 }
+}
+function renderFinanceReturnState(status,state,providerName,heading,message){
+const symbol=state==="success"?"✓":(state==="error"?"×":(state==="checking"?"…":"!"));
+status.className="finance-return-card "+state;
+status.innerHTML='<div class="finance-return-brand"><img src="../swayphics-logo.png" alt="Swayphics" width="145" height="32"><span>PAYMENT STATUS</span></div><div class="finance-return-content"><span class="finance-return-icon" aria-hidden="true">'+symbol+'</span><div class="finance-return-copy"><span>SECURE CHECKOUT · '+esc(providerName)+'</span><h3>'+esc(heading)+'</h3><p>'+esc(message)+'</p></div></div>';
 }
 async function checkPaymentReturn(){
 const params=new URLSearchParams(window.location.search),attemptId=params.get("payment_attempt"),requestedProvider=String(params.get("payment_provider")||"yoco").toLowerCase(),provider=requestedProvider==="paystack"||requestedProvider==="yoco"?requestedProvider:"",providerName=provider==="paystack"?"Paystack":(provider==="yoco"?"Yoco Test":"online payment provider"),statusFunction=provider==="paystack"?"get-paystack-payment-status":"get-payment-status";
@@ -1593,15 +1656,15 @@ if(!attemptId)return;
 const hero=document.querySelector(".portal-hero");
 if(!hero)return;
 const status=document.createElement("div");
-status.className="finance-online-status";
-status.setAttribute("role","status");status.setAttribute("aria-live","polite");
-status.textContent="Checking your payment confirmation with Swayphics...";
+status.className="finance-return-card checking";
+status.setAttribute("role","status");
+status.setAttribute("aria-live","polite");
 hero.appendChild(status);
 if(!provider){
-status.className="finance-online-status warning";
-status.textContent="The payment provider could not be identified. Please contact Swayphics before trying another payment.";
+renderFinanceReturnState(status,"warning",providerName,"We could not identify this payment","Please contact Swayphics before trying another payment. Your invoice has not been changed.");
 return;
 }
+renderFinanceReturnState(status,"checking",providerName,"Verifying your payment","Swayphics is checking the transaction with "+providerName+". Your invoice will only be updated after verified confirmation.");
 let latest=null;
 for(let i=0;i<5;i++){
 try{
@@ -1612,22 +1675,18 @@ if(["failed","expired","cancelled","requires_review"].includes(String(latest.att
 if(i<4)await new Promise(function(resolve){window.setTimeout(resolve,2500)});
 }
 if(latest&&latest.confirmed){
-status.className="finance-online-status success";
-status.textContent="Payment confirmed. Your invoice balance and payment receipt are being refreshed.";
+renderFinanceReturnState(status,"success",providerName,"Payment confirmed","Swayphics has verified your payment. Your invoice balance and payment receipt are being refreshed.");
 const cleanUrl=new URL(window.location.href);cleanUrl.searchParams.delete("payment_attempt");cleanUrl.searchParams.delete("payment_provider");window.history.replaceState({},document.title,cleanUrl.toString());
-window.setTimeout(function(){window.location.reload()},1000);
+window.setTimeout(function(){window.location.reload()},1500);
 return;
 }
 const attemptStatus=String(latest&&latest.attempt&&latest.attempt.status||"").toLowerCase();
 if(attemptStatus==="failed"||attemptStatus==="expired"||attemptStatus==="cancelled"){
-status.className="finance-online-status error";
-status.textContent=providerName+" did not confirm this payment. Your invoice remains outstanding. You can try again or use EFT.";
+renderFinanceReturnState(status,"error",providerName,"Payment not confirmed",providerName+" did not confirm this payment. Your invoice remains outstanding. You can try again or use EFT.");
 }else if(attemptStatus==="requires_review"){
-status.className="finance-online-status warning";
-status.textContent="Your payment needs a manual confirmation check. Please contact Swayphics before attempting another payment.";
+renderFinanceReturnState(status,"warning",providerName,"Payment requires a review","Swayphics needs to review this payment before updating your invoice. Please do not submit another payment while we check it.");
 }else{
-status.className="finance-online-status warning";
-status.textContent="Payment confirmation is still pending. Your invoice will update only after verified confirmation. Refresh this page in a moment to check again.";
+renderFinanceReturnState(status,"warning",providerName,"Payment confirmation is still pending","We have not received verified confirmation yet. Your invoice remains unchanged until Swayphics confirms the payment. Refresh this page in a moment to check again.");
 }
 }
 async function bankTransferPortalApi(action,payload,formData){
@@ -1730,7 +1789,7 @@ actionLabel="Request a payment receipt";
 requestSubject="Receipt request · "+String(item.reference||"Recorded payment");
 requestMessage="Please send me a receipt or payment confirmation for the payment of "+financialMoney(item.amount,"ZAR")+", recorded on "+date(item.paid_at)+"."+(item.reference?" The payment reference shown in my portal is "+String(item.reference)+".":"");
 }
-modal.className="portal-modal";modal.id="portal-financial-modal";if(type==="invoice"){modal.dataset.invoiceId=String(item.id||"");modal.dataset.invoiceProvider=invoicePaymentProvider(item);}
+modal.className="portal-modal";modal.id="portal-financial-modal";if(type==="invoice"){modal.dataset.invoiceId=String(item.id||"");modal.dataset.invoiceProvider=invoicePaymentProvider(item);modal.dataset.invoiceNumber=String(item.invoice_number||"Invoice");}
 modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&isClientInvoicePayable(item)?(item.online_payment_enabled&&modal.dataset.invoiceProvider&&String(item.currency||"ZAR").toUpperCase()==="ZAR"?'<section class="finance-online-panel"><div><strong>Pay this invoice online</strong><p>Secure checkout hosted by '+esc(modal.dataset.invoiceProvider==="paystack"?"Paystack":"Yoco Test")+'. Your invoice is updated only after Swayphics receives verified payment confirmation.</p></div><div class="finance-online-controls"><div class="field"><label for="finance-online-amount">Payment amount (ZAR)</label><input id="finance-online-amount" type="number" inputmode="decimal" min="'+(Number(item.deposit_amount)>0?Number(item.deposit_amount).toFixed(2):"2.00")+'" max="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" step="0.01" value="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" '+(item.partial_payment_enabled?"":"readonly")+'></div><button type="button" class="portal-button" id="finance-online-pay">Continue to '+(modal.dataset.invoiceProvider==="paystack"?"Paystack":"Yoco Test")+' checkout</button></div><small class="finance-online-note">'+(item.partial_payment_enabled?"You may pay any amount from the required minimum deposit to the remaining balance.":"Online payment is set to full balance only for this invoice.")+(Number(item.deposit_amount)>0?" Minimum required deposit: "+esc(financialMoney(item.deposit_amount,invoiceFinancialBreakdown(item).currency))+".":"")+'</small><div id="finance-online-status" class="finance-online-status" hidden role="status" aria-live="polite"></div></section>':'<p class="finance-payment-guidance">Online payment is not currently available for this invoice. Use the request below to ask Swayphics for payment instructions.</p>'):"")+'<div class="finance-modal-actions">'+(type==="invoice"?'<button type="button" class="portal-button secondary" id="finance-invoice-pdf">Download invoice PDF</button>':"")+(type==="payment"&&item.receipt&&item.receipt.receipt_number?'<button type="button" class="portal-button secondary" id="finance-payment-receipt">Download payment receipt</button>':"")+'<button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div><div id="finance-pdf-status" class="message" hidden role="status"></div></div></section>';
 mountPortalModal(modal);
 modal.querySelector("#finance-payment-receipt")?.addEventListener("click",function(event){
