@@ -76,8 +76,8 @@ test("server RPC requires an authenticated Swayphics administrator", () => {
 });
 
 test("database defaults and existing invoice records are moved to Paystack with online payment enabled", () => {
-  assert.match(migration, /ALTER TABLE public\.invoices ALTER COLUMN online_payment_enabled SET DEFAULT true/i);
-  assert.match(migration, /ALTER TABLE public\.invoices ALTER COLUMN online_payment_provider SET DEFAULT 'paystack'/i);
+  assert.match(migration, /ALTER TABLE public\.invoices\s+ALTER COLUMN online_payment_enabled SET DEFAULT true/i);
+  assert.match(migration, /ALTER TABLE public\.invoices\s+ALTER COLUMN online_payment_provider SET DEFAULT 'paystack'/i);
   assert.match(migration, /UPDATE public\.invoices[\s\S]*online_payment_enabled = true[\s\S]*online_payment_provider = 'paystack'/i);
 });
 
