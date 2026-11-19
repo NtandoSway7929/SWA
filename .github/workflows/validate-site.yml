@@ -113,6 +113,9 @@ jobs:
       - name: Test client portal animation system
         run: node scripts/client-portal-animations.test.cjs
 
+      - name: Test Swayphics loader
+        run: node scripts/swayphics-loader.test.cjs
+
       - name: Test client portal link and access reliability
         run: node --test scripts/client-portal-access-reliability.test.cjs
 
