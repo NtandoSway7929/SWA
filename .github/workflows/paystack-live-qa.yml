@@ -97,5 +97,11 @@ jobs:
       - name: Apply Paystack provider guard migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261119150000_paystack_invoice_provider_guard.sql
 
+      - name: Apply Paystack default for all invoices migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261119190000_paystack_all_invoices_default.sql
+
+      - name: Verify global Paystack defaults and existing invoice backfill
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/20261119190000_paystack_all_invoices_default.test.sql
+
       - name: Run provider isolation regression
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/20261119150000_paystack_invoice_provider_guard.test.sql
