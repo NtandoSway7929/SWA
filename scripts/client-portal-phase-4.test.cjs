@@ -351,7 +351,8 @@ test("client portal verifies a Paystack return using the Paystack status functio
   assert.equal(harnessCalls.length, 1);
   assert.equal(harnessCalls[0].functionName, "get-paystack-payment-status");
   assert.equal(harnessCalls[0].payload.attempt_id, "22222222-2222-4222-8222-222222222222");
-  assert.match(harness.hero.status.innerHTML, /Payment confirmed/);\n  assert.match(harness.hero.status.innerHTML, /swayphics-logo\\.png/);
+  assert.match(harness.hero.status.innerHTML, /Payment confirmed/);
+  assert.match(harness.hero.status.innerHTML, /swayphics-logo\.png/);
   const cleaned = new URL(window.history.cleanedUrl);
   assert.equal(cleaned.searchParams.has("payment_attempt"), false);
   assert.equal(cleaned.searchParams.has("payment_provider"), false);
