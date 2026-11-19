@@ -44,7 +44,7 @@ test("invoice selector contains only issued invoices with an outstanding balance
 
 test("partial payments remain an optional invoice-level setting", () => {
   assert.match(panel, /invoice\.partial_payment_enabled \? "checked" : ""/);
-  assert.match(panel, /partial\.disabled/);
+  assert.match(panel, /deposit\.disabled = !partial\.checked/);
   assert.doesNotMatch(panel, /partial\.disabled = !online/);
 });
 
@@ -94,7 +94,7 @@ test("server RPC locks eligible invoices and keeps partial-payment and deposit v
   assert.match(migration, /v_invoice\.status\s+in\s*\('draft','cancelled','paid'\)/i);
   assert.match(migration, /amount_outstanding\s*,\s*v_invoice\.total\s*,\s*0\)\s*<=\s*0/i);
   assert.match(migration, /if v_partial and upper\(coalesce\(v_invoice\.currency,''\)\) <> 'ZAR' then/i);
-  assert.match(migration, /if v_partial and v_deposit is not null then/i);
+  assert.match(migration, /if v_deposit is not null then/i);
   assert.match(migration, /v_deposit\s*>\s*coalesce\(v_invoice\.amount_outstanding\s*,\s*v_invoice\.total\s*,\s*0\)/i);
   assert.match(migration, /deposit_amount\s*=\s*case\s+when\s+v_partial\s+then\s+v_deposit\s+else\s+null\s+end/i);
 });
