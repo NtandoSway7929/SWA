@@ -181,7 +181,7 @@
                 ["invoices", "Invoices"],
                 ["payments", "Payments"],
                 ["services", "Services"],
-                ["invoice-settings", "Invoice settings"]
+                ["invoice-settings", "Partial payments"]
             ]
         },
         {
@@ -4680,8 +4680,8 @@
                 "Control the services and prices used on invoices."
             ],
             "invoice-settings": [
-                "Invoice settings",
-                "Control the business and payment details shown on invoices."
+                "Partial payment settings",
+                "Paystack is available automatically on every issued ZAR invoice. Configure optional instalments and minimum deposits here."
             ],
             settings: [
                 "Settings",
@@ -18516,7 +18516,7 @@ function simpleBars(items, color) {
 
         return (
             heading(
-                '<button class="sway-workspace-button" data-view-target="invoice-settings">Invoice settings</button>' +
+                '<button class="sway-workspace-button" data-view-target="invoice-settings">Partial payment settings</button>' +
                 (state.currentAdmin.role === "owner" ? '<button class="sway-workspace-button primary" data-add="services">+ New service</button>' : "")
             ) +
             panel(
