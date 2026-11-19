@@ -93,7 +93,7 @@ export function createPaystackCheckoutHandler(
       ) {
         return deps.respond({
           ok: false,
-          error: "Paystack test checkout is not configured. No payment has been initiated.",
+          error: "Paystack live checkout is not configured. No payment has been initiated.",
         }, 503);
       }
 
