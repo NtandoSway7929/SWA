@@ -70,7 +70,7 @@ test("server RPC locks the invoice and rejects ineligible invoice states", () =>
 test("server RPC enforces partial-payment and deposit constraints", () => {
   assert.match(migration, /if v_partial and not v_online then/i);
   assert.match(migration, /if v_deposit is not null then/i);
-  assert.match(migration, /v_deposit > coalesce\(v_invoice\.amount_outstanding, v_invoice\.total, 0\)/i);
+  assert.match(migration, /v_deposit\s*>\s*coalesce\(v_invoice\.amount_outstanding, v_invoice\.total, 0\)/i);
   assert.match(migration, /deposit_amount = case when v_online and v_partial then v_deposit else null end/i);
 });
 
