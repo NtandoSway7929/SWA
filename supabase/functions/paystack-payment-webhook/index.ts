@@ -130,8 +130,21 @@ export function createPaystackWebhookHandler(
         return deps.respond({ ok: false, error: "Invalid webhook JSON." }, 400);
       }
       const event = record(parsed);
-      const data = record(event?.data);
-      if (!event || !data || typeof event.event !== "string") {
+      if (!event || typeof event.event !== "string") {
+        return deps.respond({
+          ok: false,
+          error: "Webhook event structure is invalid.",
+        }, 400);
+      }
+
+      // Paystack's signed endpoint ping is a reachability check, not a
+      // financial event. Acknowledge it only after signature verification.
+      if (event.event === "ping") {
+        return deps.respond({ ok: true, received: true, ping: true });
+      }
+
+      const data = record(event.data);
+      if (!data) {
         return deps.respond({
           ok: false,
           error: "Webhook event structure is invalid.",

@@ -1,3 +1,4 @@
+import { createPaystackWebhookHandler } from "../paystack-payment-webhook/index.ts";
 import {
   isPaystackCheckoutUrl,
   isSwayphicsCallbackUrl,
@@ -170,4 +171,30 @@ Deno.test("Paystack webhook signature verification accepts timestamped and legac
     !(await verifyPaystackWebhookSignature(legacyRequest, rawBody, undefined, "sk_test_unit_test_secret", now)),
     "Legacy test-mode secret key was accepted by live webhook verification.",
   );
+});
+
+
+Deno.test("Paystack signed ping is acknowledged without requiring a data payload or touching financial records", async () => {
+  const rawBody = '{"event":"ping"}';
+  const handler = createPaystackWebhookHandler({
+    env: (name) => ({
+      PAYSTACK_SECRET_KEY: "sk_live_unit_test_secret",
+      PAYSTACK_ENVIRONMENT: "live",
+    } as Record<string, string>)[name],
+    verifySignature: async () => true,
+    readBody: async () => rawBody,
+    createAdmin: () => {
+      throw new Error("A ping must not create an admin client or touch financial records.");
+    },
+  });
+
+  const response = await handler(new Request("https://example.supabase.co/functions/v1/paystack-payment-webhook", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: rawBody,
+  }));
+  const payload = await response.json();
+
+  assert(response.status === 200, "Signed Paystack ping did not receive HTTP 200.");
+  assert(payload.ok === true && payload.received === true && payload.ping === true, "Signed Paystack ping was not acknowledged.");
 });
