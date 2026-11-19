@@ -39,7 +39,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS payment_refunds_provider_reference_uidx ON pub
 
 CREATE OR REPLACE FUNCTION innerme_private.validate_yoco_refund_event_binding()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
-AS $function$
+AS $function$;
 DECLARE v_event public.payment_webhook_events%rowtype; v_attempt public.payment_attempts%rowtype;
 BEGIN
  IF NEW.provider='paystack' AND NEW.environment='live' THEN RETURN NEW; END IF;
@@ -65,7 +65,7 @@ CREATE OR REPLACE FUNCTION innerme_private.create_yoco_payment_attempt(p_invoice
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
     v_invoice public.invoices%rowtype;
     v_attempt public.payment_attempts%rowtype;
@@ -163,14 +163,14 @@ begin
         'checkout_url', v_attempt.checkout_url
     );
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION innerme_private.create_paystack_payment_attempt(p_invoice_id uuid, p_client_id uuid, p_amount_cents bigint, p_idempotency_key text)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
     v_invoice public.invoices%rowtype;
     v_attempt public.payment_attempts%rowtype;
@@ -268,7 +268,7 @@ begin
         'checkout_url', v_attempt.checkout_url
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.apply_paystack_refund_webhook_with_lease(p_event_id uuid, p_lease_token uuid, p_attempt_id uuid, p_payment_id uuid, p_transaction_reference text, p_provider_refund_id text, p_provider_refund_reference text, p_amount_cents bigint, p_currency text, p_provider_status text)
@@ -276,7 +276,7 @@ CREATE OR REPLACE FUNCTION innerme_private.apply_paystack_refund_webhook_with_le
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
   v_attempt public.payment_attempts%rowtype;
   v_event public.payment_webhook_events%rowtype;
@@ -562,7 +562,7 @@ select * into v_attempt
     'currency', v_refund.currency
   );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.attach_paystack_checkout(p_attempt_id uuid, p_provider_checkout_id text, p_checkout_url text, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
@@ -570,7 +570,7 @@ CREATE OR REPLACE FUNCTION innerme_private.attach_paystack_checkout(p_attempt_id
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
     v_attempt public.payment_attempts%rowtype;
 begin
@@ -630,7 +630,7 @@ begin
         'expires_at', v_attempt.expires_at
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.claim_paystack_webhook_event(p_event_id uuid, p_lease_seconds integer DEFAULT 120)
@@ -638,7 +638,7 @@ CREATE OR REPLACE FUNCTION innerme_private.claim_paystack_webhook_event(p_event_
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
   v_event public.payment_webhook_events%rowtype;
   v_token uuid;
@@ -690,7 +690,7 @@ begin
     'lease_expires_at', now() + make_interval(secs => p_lease_seconds)
   );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.create_paystack_payment_attempt(p_invoice_id uuid, p_client_id uuid, p_amount_cents bigint, p_idempotency_key text)
@@ -698,7 +698,7 @@ CREATE OR REPLACE FUNCTION innerme_private.create_paystack_payment_attempt(p_inv
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
     v_invoice public.invoices%rowtype;
     v_attempt public.payment_attempts%rowtype;
@@ -793,7 +793,7 @@ begin
         'checkout_url', v_attempt.checkout_url
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.create_paystack_refund_request(p_payment_id uuid, p_amount_cents bigint, p_idempotency_key uuid, p_reason text DEFAULT NULL::text)
@@ -801,7 +801,7 @@ CREATE OR REPLACE FUNCTION innerme_private.create_paystack_refund_request(p_paym
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
   v_payment public.payments%rowtype;
   v_attempt public.payment_attempts%rowtype;
@@ -903,7 +903,7 @@ begin
     'reused', false
   );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.record_paystack_failed_attempt_status(p_attempt_id uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text, p_provider_status text)
@@ -911,7 +911,7 @@ CREATE OR REPLACE FUNCTION innerme_private.record_paystack_failed_attempt_status
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
     v_attempt public.payment_attempts%rowtype;
     v_target_status text;
@@ -1007,7 +1007,7 @@ begin
         'updated', true
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.record_paystack_refund_initialization(p_refund_id uuid, p_refund_reference text, p_provider_refund_id text, p_provider_status text, p_failure_message text DEFAULT NULL::text)
@@ -1015,7 +1015,7 @@ CREATE OR REPLACE FUNCTION innerme_private.record_paystack_refund_initialization
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
   v_refund public.payment_refunds%rowtype;
   v_target_status text;
@@ -1078,7 +1078,7 @@ begin
     'provider_refund_id', v_refund.provider_refund_id
   );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.record_verified_paystack_webhook(p_provider_event_id text, p_event_type text, p_body_sha256 text)
@@ -1086,7 +1086,7 @@ CREATE OR REPLACE FUNCTION innerme_private.record_verified_paystack_webhook(p_pr
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
     v_event public.payment_webhook_events%rowtype;
     v_inserted_count integer := 0;
@@ -1143,7 +1143,7 @@ begin
         'duplicate', v_inserted_count = 0
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.settle_paystack_payment(p_attempt_id uuid, p_event_id uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text DEFAULT NULL::text, p_payment_channel text DEFAULT NULL::text)
@@ -1151,7 +1151,7 @@ CREATE OR REPLACE FUNCTION innerme_private.settle_paystack_payment(p_attempt_id 
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
     v_attempt public.payment_attempts%rowtype;
     v_event public.payment_webhook_events%rowtype;
@@ -1414,7 +1414,7 @@ begin
         'currency', v_payment.currency
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.settle_paystack_payment_with_lease(p_attempt_id uuid, p_event_id uuid, p_lease_token uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text DEFAULT NULL::text, p_payment_channel text DEFAULT NULL::text)
@@ -1422,7 +1422,7 @@ CREATE OR REPLACE FUNCTION innerme_private.settle_paystack_payment_with_lease(p_
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
   v_event public.payment_webhook_events%rowtype;
   v_result jsonb;
@@ -1451,7 +1451,7 @@ begin
   where id = p_event_id;
   return v_result;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.update_paystack_webhook_event(p_event_id uuid, p_lease_token uuid, p_processing_status text, p_payment_attempt_id uuid DEFAULT NULL::uuid, p_failure_code text DEFAULT NULL::text, p_failure_message text DEFAULT NULL::text)
@@ -1459,7 +1459,7 @@ CREATE OR REPLACE FUNCTION innerme_private.update_paystack_webhook_event(p_event
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
   v_rows integer;
 begin
@@ -1483,7 +1483,7 @@ begin
   get diagnostics v_rows = row_count;
   return v_rows = 1;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_apply_refund_webhook_with_lease(p_event_id uuid, p_lease_token uuid, p_attempt_id uuid, p_payment_id uuid, p_transaction_reference text, p_provider_refund_id text, p_provider_refund_reference text, p_amount_cents bigint, p_currency text, p_provider_status text)
@@ -1491,14 +1491,14 @@ CREATE OR REPLACE FUNCTION public.paystack_apply_refund_webhook_with_lease(p_eve
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
   select innerme_private.apply_paystack_refund_webhook_with_lease(
     p_event_id, p_lease_token, p_attempt_id, p_payment_id,
     p_transaction_reference, p_provider_refund_id,
     p_provider_refund_reference, p_amount_cents,
     p_currency, p_provider_status
   );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_attach_checkout(p_attempt_id uuid, p_provider_checkout_id text, p_checkout_url text, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
@@ -1506,9 +1506,9 @@ CREATE OR REPLACE FUNCTION public.paystack_attach_checkout(p_attempt_id uuid, p_
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
   select innerme_private.attach_paystack_checkout(p_attempt_id,p_provider_checkout_id,p_checkout_url,p_expires_at);
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_claim_webhook_event(p_event_id uuid, p_lease_seconds integer DEFAULT 120)
@@ -1516,9 +1516,9 @@ CREATE OR REPLACE FUNCTION public.paystack_claim_webhook_event(p_event_id uuid, 
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
   select innerme_private.claim_paystack_webhook_event(p_event_id,p_lease_seconds);
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_create_payment_attempt(p_invoice_id uuid, p_client_id uuid, p_amount_cents bigint, p_idempotency_key text)
@@ -1526,9 +1526,9 @@ CREATE OR REPLACE FUNCTION public.paystack_create_payment_attempt(p_invoice_id u
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
   select innerme_private.create_paystack_payment_attempt(p_invoice_id,p_client_id,p_amount_cents,p_idempotency_key);
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_create_refund_request(p_payment_id uuid, p_amount_cents bigint, p_idempotency_key uuid, p_reason text DEFAULT NULL::text)
@@ -1536,11 +1536,11 @@ CREATE OR REPLACE FUNCTION public.paystack_create_refund_request(p_payment_id uu
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
   select innerme_private.create_paystack_refund_request(
     p_payment_id, p_amount_cents, p_idempotency_key, p_reason
   );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_record_failed_attempt_status(p_attempt_id uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text, p_provider_status text)
@@ -1548,7 +1548,7 @@ CREATE OR REPLACE FUNCTION public.paystack_record_failed_attempt_status(p_attemp
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
     select innerme_private.record_paystack_failed_attempt_status(
         p_attempt_id,
         p_provider_checkout_id,
@@ -1558,7 +1558,7 @@ AS $function$
         p_provider_transaction_id,
         p_provider_status
     );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_record_refund_initialization(p_refund_id uuid, p_refund_reference text, p_provider_refund_id text, p_provider_status text, p_failure_message text DEFAULT NULL::text)
@@ -1566,12 +1566,12 @@ CREATE OR REPLACE FUNCTION public.paystack_record_refund_initialization(p_refund
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
   select innerme_private.record_paystack_refund_initialization(
     p_refund_id, p_refund_reference, p_provider_refund_id,
     p_provider_status, p_failure_message
   );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_record_verified_webhook(p_provider_event_id text, p_event_type text, p_body_sha256 text)
@@ -1579,9 +1579,9 @@ CREATE OR REPLACE FUNCTION public.paystack_record_verified_webhook(p_provider_ev
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
   select innerme_private.record_verified_paystack_webhook(p_provider_event_id,p_event_type,p_body_sha256);
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_settle_payment_with_lease(p_attempt_id uuid, p_event_id uuid, p_lease_token uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text DEFAULT NULL::text, p_payment_channel text DEFAULT NULL::text)
@@ -1589,12 +1589,12 @@ CREATE OR REPLACE FUNCTION public.paystack_settle_payment_with_lease(p_attempt_i
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
   select innerme_private.settle_paystack_payment_with_lease(
     p_attempt_id,p_event_id,p_lease_token,p_provider_checkout_id,p_amount_cents,
     p_currency,p_processing_mode,p_provider_transaction_id,p_payment_channel
   );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_update_webhook_event(p_event_id uuid, p_lease_token uuid, p_processing_status text, p_payment_attempt_id uuid DEFAULT NULL::uuid, p_failure_code text DEFAULT NULL::text, p_failure_message text DEFAULT NULL::text)
@@ -1602,11 +1602,11 @@ CREATE OR REPLACE FUNCTION public.paystack_update_webhook_event(p_event_id uuid,
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
   select innerme_private.update_paystack_webhook_event(
     p_event_id,p_lease_token,p_processing_status,p_payment_attempt_id,p_failure_code,p_failure_message
   );
-$function$
+$function$;
 
 
 REVOKE ALL ON FUNCTION public.paystack_apply_refund_webhook_with_lease(uuid, uuid, uuid, uuid, text, text, text, bigint, text, text) FROM PUBLIC, anon, authenticated;
@@ -1654,7 +1654,7 @@ CREATE OR REPLACE FUNCTION public.admin_set_invoice_payment_settings(
  p_invoice_id uuid,p_online_payment_enabled boolean,p_partial_payment_enabled boolean,
  p_deposit_amount numeric DEFAULT NULL,p_provider text DEFAULT 'paystack'
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
-AS $function$
+AS $function$;
 DECLARE
  v_invoice public.invoices%rowtype;
  v_online boolean:=coalesce(p_online_payment_enabled,false);
@@ -1695,7 +1695,7 @@ CREATE OR REPLACE FUNCTION public.get_client_portal(p_token text)
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 declare
     v_token public.client_portal_tokens%rowtype;
     v_result jsonb;
@@ -1861,5 +1861,5 @@ begin
 
     return v_result;
 end;
-$function$
+$function$;
 
