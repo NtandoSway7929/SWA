@@ -109,7 +109,7 @@ export function createPaystackStatusHandler(overrides: Partial<Dependencies> = {
         if (!secretKey || !secretKey.startsWith("sk_live_") || environment !== "live") {
           return deps.respond({
             ok: false,
-            error: "Paystack test verification is not configured.",
+            error: "Paystack live verification is not configured.",
           }, 503);
         }
 
