@@ -98,15 +98,132 @@ test("financial summary groups invoice balances by currency and excludes unissue
   assert.match(summary.invoiced, /USD/);
 });
 
-test("financial centre exposes guarded Yoco checkout only when enabled and verifies payment before updating", () => {
+test("financial centre exposes provider-aware online checkout only when enabled and verifies payment before updating", () => {
   assert.match(portal, /data-invoice-filter="outstanding"/);
   assert.match(portal, /data-financial-type="invoice"/);
   assert.match(portal, /Request payment instructions/);
-  assert.match(portal, /item\.online_payment_enabled\?/);
+  assert.match(portal, /item\.online_payment_enabled&&modal\.dataset\.invoiceProvider/);
+  assert.match(portal, /Pay with Paystack/);
+  assert.match(portal, /Yoco · Test checkout/);
   assert.match(portal, /create-payment-checkout/);
+  assert.match(portal, /create-paystack-payment-checkout/);
   assert.match(portal, /get-payment-status/);
+  assert.match(portal, /get-paystack-payment-status/);
   assert.match(portal, /latest\.confirmed/);
   assert.match(portal, /Your invoice is updated only after Swayphics receives verified payment confirmation/);
   assert.doesNotMatch(portal, /Pay now/i);
   assert.match(portal, /data-financial-type="payment"/);
+});
+
+function loadPortalPaymentFunctions(options = {}) {
+  const start = portal.indexOf("async function startOnlineCheckout(");
+  const end = portal.indexOf("async function bankTransferPortalApi(", start);
+  assert.ok(start >= 0 && end > start, "Portal online checkout and return handlers must exist.");
+
+  const calls = [];
+  let redirectedTo = "";
+  let cleanedUrl = "";
+  let reloadCount = 0;
+  const hero = { appendChild(node) { this.status = node; } };
+  const window = options.window || {
+    crypto: { randomUUID: () => "portal-idempotency-key-0001" },
+    location: {
+      href: "https://swayphics.co.za/client-portal/",
+      assign: value => { redirectedTo = value; },
+      reload: () => { reloadCount += 1; }
+    },
+    history: {
+      replaceState: (_state, _title, url) => { cleanedUrl = String(url); }
+    },
+    setTimeout: callback => callback()
+  };
+  const document = options.document || {
+    title: "Swayphics Client Portal",
+    querySelector: selector => selector === ".portal-hero" ? hero : null,
+    createElement: () => ({
+      setAttribute() {},
+      className: "",
+      textContent: ""
+    })
+  };
+  const context = {
+    window,
+    document,
+    URL,
+    URLSearchParams,
+    Promise,
+    yocoPortalApi: options.yocoPortalApi || (async (functionName, payload) => {
+      calls.push({ functionName, payload });
+      return { checkout_url: "https://checkout.example.test/session" };
+    })
+  };
+  vm.runInNewContext(
+    portal.slice(start, end) +
+      "\nthis.startOnlineCheckout=startOnlineCheckout;" +
+      "\nthis.checkPaymentReturn=checkPaymentReturn;",
+    context
+  );
+  return {
+    context,
+    calls,
+    hero,
+    get redirectedTo() { return redirectedTo; },
+    get cleanedUrl() { return cleanedUrl; },
+    get reloadCount() { return reloadCount; }
+  };
+}
+
+test("client portal routes Paystack Live and Yoco Test invoices to their matching checkout functions", async () => {
+  for (const [provider, expectedFunction] of [
+    ["paystack", "create-paystack-payment-checkout"],
+    ["yoco", "create-payment-checkout"]
+  ]) {
+    const harness = loadPortalPaymentFunctions();
+    const modal = { dataset: { invoiceId: "11111111-1111-4111-8111-111111111111", invoiceProvider: provider } };
+    const amountInput = { value: "25.00", min: "2.00", max: "100.00" };
+    const button = { disabled: false, textContent: "Continue to checkout" };
+    const statusBox = { hidden: true, className: "", textContent: "" };
+
+    await harness.context.startOnlineCheckout(modal, amountInput, button, statusBox);
+
+    assert.equal(harness.calls.length, 1);
+    assert.equal(harness.calls[0].functionName, expectedFunction);
+    assert.equal(harness.calls[0].payload.amount_cents, 2500);
+    assert.equal(harness.calls[0].payload.idempotency_key, "portal-idempotency-key-0001");
+    assert.match(statusBox.textContent, new RegExp(provider === "paystack" ? "Paystack" : "Yoco Test"));
+    assert.equal(harness.redirectedTo, "https://checkout.example.test/session");
+  }
+});
+
+test("client portal verifies a Paystack return using the Paystack status function and clears callback parameters after confirmation", async () => {
+  const window = {
+    crypto: { randomUUID: () => "unused" },
+    location: {
+      href: "https://swayphics.co.za/client-portal/?payment_attempt=22222222-2222-4222-8222-222222222222&payment_provider=paystack",
+      search: "?payment_attempt=22222222-2222-4222-8222-222222222222&payment_provider=paystack",
+      assign() {},
+      reload() { this.reloaded = true; }
+    },
+    history: { replaceState(_state, _title, url) { this.cleanedUrl = String(url); } },
+    setTimeout(callback) { callback(); }
+  };
+  const harness = loadPortalPaymentFunctions({
+    window,
+    yocoPortalApi: async (functionName, payload) => {
+      harnessCalls.push({ functionName, payload });
+      return { confirmed: true, attempt: { status: "succeeded" } };
+    }
+  });
+  const harnessCalls = [];
+
+  await harness.context.checkPaymentReturn();
+
+  assert.equal(harnessCalls.length, 1);
+  assert.equal(harnessCalls[0].functionName, "get-paystack-payment-status");
+  assert.equal(harnessCalls[0].payload.attempt_id, "22222222-2222-4222-8222-222222222222");
+  assert.match(harness.hero.status.textContent, /Payment confirmed/);
+  const cleaned = new URL(window.history.cleanedUrl);
+  assert.equal(cleaned.searchParams.has("payment_attempt"), false);
+  assert.equal(cleaned.searchParams.has("payment_provider"), false);
+  assert.equal(window.location.reloaded, true);
 });
