@@ -92,7 +92,7 @@ export function createPaystackWebhookHandler(
     ) {
       return deps.respond({
         ok: false,
-        error: "Paystack test webhook is not configured.",
+        error: "Paystack live webhook verification is not configured.",
       }, 503);
     }
 
@@ -149,7 +149,7 @@ export function createPaystackWebhookHandler(
       if (refundStatus) {
         if (data.domain !== "live") {
           deps.logWarn(
-            "Ignored Paystack refund event outside the test environment.",
+            "Ignored Paystack refund event outside the live environment.",
           );
           return deps.respond({
             ok: true,
@@ -321,7 +321,7 @@ export function createPaystackWebhookHandler(
         if (!attempt?.payment_id) {
           return await refundReview(
             "refund_mapping_required",
-            "Verified Paystack refund transaction did not match a settled local test payment.",
+            "Verified Paystack refund transaction did not match a settled local payment.",
             attempt?.id,
           );
         }
@@ -354,11 +354,11 @@ export function createPaystackWebhookHandler(
         return deps.respond({ ok: true, received: true, refund });
       }
 
-      // The database and payment ledger are deliberately test-only. Signed live
-      // notifications are acknowledged but never inserted into the test ledger.
+      // Only signed live notifications proceed to the production payment ledger.
+      // Test-mode notifications are acknowledged without financial side effects.
       if (data.domain !== "live") {
         deps.logWarn(
-          "Ignored signed Paystack event outside the test environment.",
+          "Ignored signed Paystack event outside the live environment.",
         );
         return deps.respond({
           ok: true,
@@ -368,8 +368,8 @@ export function createPaystackWebhookHandler(
         });
       }
 
-      // Other signed events (including refund events) are not part of the first
-      // test integration. They are acknowledged without financial side effects.
+      // Unknown signed events are acknowledged without financial side effects.
+      // Supported refund events are handled in the dedicated branch above.
       if (event.event !== "charge.success") {
         return deps.respond({
           ok: true,
