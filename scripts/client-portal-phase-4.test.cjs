@@ -212,6 +212,7 @@ test("outstanding invoices show separated, prominent online and bank-transfer pa
   assert.match(html, /Secure, hosted checkout/);
   assert.match(html, /Pay by bank transfer/);
   assert.match(html, /EFT · Submit proof of payment/);
+  assert.doesNotMatch(html, /Online payment unavailable/);
   assert.match(html, /role="group" aria-label="Choose a payment method"/);
   assert.ok(portal.includes(".financial-item-actions{display:grid;"));
   assert.ok(portal.includes(".finance-payment-choice{") && portal.includes("min-height:78px"));
@@ -219,6 +220,10 @@ test("outstanding invoices show separated, prominent online and bank-transfer pa
   const bankOnlyHtml = context.renderInvoice({ ...invoice, online_payment_enabled: false });
   assert.doesNotMatch(bankOnlyHtml, /Pay online with Paystack/);
   assert.match(bankOnlyHtml, /Pay by bank transfer/);
+
+  const unsupportedOnlineHtml = context.renderInvoice({ ...invoice, currency: "USD" });
+  assert.match(unsupportedOnlineHtml, /Online payment unavailable/);
+  assert.doesNotMatch(unsupportedOnlineHtml, /Pay online with Paystack/);
 });
 
 test("client portal routes Paystack Live and Yoco Test invoices to their matching checkout functions", async () => {
