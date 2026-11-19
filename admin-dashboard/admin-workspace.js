@@ -3,6 +3,7 @@
     "use strict";
 
     const SUPABASE_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
+    const CLIENT_PORTAL_ORIGIN = "https://swayphics.co.za";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
 
     const workspace = document.getElementById("sway-admin-workspace");
@@ -20856,16 +20857,12 @@ function simpleBars(items, color) {
                 }
             );
 
-            const base =
-                window.location.origin +
-                window.location.pathname
-                    .split("/admin-dashboard/")[0]
-                    .replace(/\/$/, "");
+            const portalUrl =
+                new URL("/client-portal/", CLIENT_PORTAL_ORIGIN);
 
-            const link =
-                base +
-                "/client-portal/?token=" +
-                encodeURIComponent(rawToken);
+            portalUrl.searchParams.set("token", rawToken);
+
+            const link = portalUrl.toString();
 
             openClientPortalLinkModal(
                 client,
