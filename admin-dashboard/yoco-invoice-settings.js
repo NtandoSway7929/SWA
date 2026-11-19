@@ -90,26 +90,19 @@
             return;
         }
         var outstanding = Number(invoice.amount_outstanding != null ? invoice.amount_outstanding : invoice.total) || 0;
-        var provider = String(invoice.online_payment_provider || "yoco").toLowerCase() === "paystack" ? "paystack" : "yoco";
         area.innerHTML =
             '<div class="syi-invoice-summary"><span>Invoice ' + escapeHtml(invoice.invoice_number || invoice.id) +
             '</span><strong>R' + outstanding.toFixed(2) + ' outstanding</strong><small>Status: ' +
             escapeHtml(invoice.status || "unknown") + '</small></div>' +
-            '<label class="syi-field"><span>Payment provider</span><select data-provider>' +
-            '<option value="paystack" ' + (provider === "paystack" ? "selected" : "") + '>Paystack · Live</option>' +
-            '<option value="yoco" ' + (provider === "yoco" ? "selected" : "") + '>Yoco · Test only</option>' +
-            '</select></label>' +
-            '<label class="syi-toggle"><input type="checkbox" data-online ' +
-            (invoice.online_payment_enabled ? "checked" : "") + '><span><strong>Enable online payments</strong><small>Allow this client to pay this invoice through the selected payment provider.</small></span></label>' +
+            '<div class="syi-global-note"><strong>Paystack Live is enabled automatically.</strong><span>Every issued ZAR invoice can be paid online. These settings only control optional instalments and the minimum first deposit.</span></div>' +
             '<label class="syi-toggle"><input type="checkbox" data-partial ' +
-            (invoice.partial_payment_enabled ? "checked" : "") + '><span><strong>Allow partial payments</strong><small>Allow the client to pay less than the full outstanding balance.</small></span></label>' +
-            '<label class="syi-field"><span>Minimum deposit (R)</span><input type="number" min="0.01" max="' +
+            (invoice.partial_payment_enabled ? "checked" : "") + '><span><strong>Allow partial payments</strong><small>Allow the client to pay the outstanding balance in instalments.</small></span></label>' +
+            '<label class="syi-field"><span>Minimum first deposit (R)</span><input type="number" min="0.01" max="' +
             outstanding.toFixed(2) + '" step="0.01" data-deposit value="' +
             (invoice.deposit_amount == null ? "" : Number(invoice.deposit_amount).toFixed(2)) +
-            '" placeholder="No minimum deposit"></label>' +
-            '<p class="syi-hint">A deposit is a minimum first payment, not an additional charge. The amount cannot exceed the current outstanding balance. Online payments remain disabled by default.</p>' +
-            '<button type="button" class="syi-save" data-save>Save invoice settings</button>';
-        var online = area.querySelector("[data-online]");
+            '" placeholder="No minimum first deposit"></label>' +
+            '<p class="syi-hint">The deposit is the minimum first payment, not an additional charge. It cannot exceed the outstanding balance. Leave it blank to require no minimum deposit.</p>' +
+            '<button type="button" class="syi-save" data-save>Save payment terms</button>';
         var partial = area.querySelector("[data-partial]");
         var deposit = area.querySelector("[data-deposit]");
         function sync() {
@@ -143,13 +136,10 @@
     async function save() {
         var invoice = selectedInvoice;
         if (!invoice) return;
-        var online = root.querySelector("[data-online]").checked;
         var partial = root.querySelector("[data-partial]").checked;
-        var provider = root.querySelector("[data-provider]").value;
         var rawDeposit = root.querySelector("[data-deposit]").value.trim();
         var deposit = rawDeposit === "" ? null : Number(rawDeposit);
         var outstanding = Number(invoice.amount_outstanding != null ? invoice.amount_outstanding : invoice.total) || 0;
-        if (partial && !online) return status("Enable online payments before allowing partial payments.", true);
         if (deposit !== null && (!Number.isFinite(deposit) || deposit <= 0 || deposit > outstanding)) {
             return status("Enter a minimum deposit greater than zero and no greater than the outstanding balance.", true);
         }
@@ -163,24 +153,24 @@
                 method: "POST",
                 body: {
                     p_invoice_id: invoice.id,
-                    p_online_payment_enabled: online,
+                    p_online_payment_enabled: true,
                     p_partial_payment_enabled: partial,
                     p_deposit_amount: deposit,
-                    p_provider: provider
+                    p_provider: "paystack"
                 }
             });
-            invoice.online_payment_enabled = online;
-            invoice.online_payment_provider = provider;
+            invoice.online_payment_enabled = true;
+            invoice.online_payment_provider = "paystack";
             invoice.partial_payment_enabled = partial;
             invoice.deposit_amount = online && partial ? deposit : null;
-            status("Invoice payment settings saved.", false);
+            status("Partial payment terms saved.", false);
             renderForm();
-            status("Invoice payment settings saved.", false);
+            status("Partial payment terms saved.", false);
         } catch (error) {
             status(error.message || "Unable to save invoice settings.", true);
         } finally {
             var current = root.querySelector("[data-save]");
-            if (current) { current.disabled = false; current.textContent = "Save invoice settings"; }
+            if (current) { current.disabled = false; current.textContent = "Save payment terms"; }
         }
     }
 
@@ -201,6 +191,9 @@
             #sway-yoco-invoice-settings .syi-invoice-summary span{font-size:12px;color:#58657c}
             #sway-yoco-invoice-settings .syi-invoice-summary strong{font-size:18px}
             #sway-yoco-invoice-settings .syi-invoice-summary small{font-size:11px;color:#58657c}
+            #sway-yoco-invoice-settings .syi-global-note{display:grid;gap:5px;padding:13px 14px;border:1px solid #dce6f7;border-radius:12px;background:#f3f7ff}
+            #sway-yoco-invoice-settings .syi-global-note strong{font-size:12px;color:#002096}
+            #sway-yoco-invoice-settings .syi-global-note span{font-size:11px;line-height:1.5;color:#58657c}
             #sway-yoco-invoice-settings .syi-toggle{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #edf1f7}
             #sway-yoco-invoice-settings .syi-toggle input{margin-top:3px}
             #sway-yoco-invoice-settings .syi-toggle span{display:grid;gap:4px}
@@ -217,16 +210,16 @@
         document.head.appendChild(style);
         root = document.createElement("div");
         root.id = "sway-yoco-invoice-settings";
-        root.innerHTML = '<button class="syi-launch" type="button" data-open>Invoice payment settings</button>' +
-            '<section class="syi-panel" aria-label="Invoice payment settings"><div class="syi-head"><div><h2>Invoice payment settings</h2>' +
-            '<p>Choose Paystack Live or Yoco Test for each issued invoice. The selected provider is enforced by the payment service.</p></div>' +
+        root.innerHTML = '<button class="syi-launch" type="button" data-open>Partial payment settings</button>' +
+            '<section class="syi-panel" aria-label="Partial payment settings"><div class="syi-head"><div><h2>Partial payment settings</h2>' +
+            '<p>Paystack Live is automatically enabled for every issued ZAR invoice. Select an invoice here only to manage optional instalments and deposit terms.</p></div>' +
             '<button type="button" class="syi-close" data-close aria-label="Close">×</button></div>' +
             '<label class="syi-picker">Select invoice<select data-yoco-invoice></select></label>' +
             '<div data-yoco-settings-form><p>Loading invoices…</p></div><p data-yoco-settings-status role="status" aria-live="polite"></p></section>';
         document.body.appendChild(root);
         async function openSettings() {
             root.setAttribute("data-open", "true");
-            status("Loading eligible invoices…", false);
+            status("Loading invoices…", false);
             try { await loadInvoices(); status("", false); }
             catch (error) { status(error.message || "Unable to load invoices.", true); }
         }
