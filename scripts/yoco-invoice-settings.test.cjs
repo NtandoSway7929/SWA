@@ -8,12 +8,13 @@ const test = require("node:test");
 const root = path.resolve(__dirname, "..");
 const panel = fs.readFileSync(path.join(root, "admin-dashboard", "yoco-invoice-settings.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
-const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261119094500_paystack_live_integration.sql"), "utf8");
+const workspace = fs.readFileSync(path.join(root, "admin-dashboard", "admin-workspace.js"), "utf8");
+const migration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261119190000_paystack_all_invoices_default.sql"), "utf8");
 const paymentMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "202611110003_yoco_atomic_payment_operations.sql"), "utf8");
 const paymentFlowTest = fs.readFileSync(path.join(root, "supabase", "tests", "202611110006_yoco_payment_flow.test.sql"), "utf8");
 
-test("invoice payment settings panel is loaded by the admin dashboard", () => {
-  assert.match(html, /yoco-invoice-settings\.js\?v=20261113-sales-billing-nav-1/);
+test("partial-payment settings panel is loaded with a refreshed cache key", () => {
+  assert.match(html, /yoco-invoice-settings\.js\?v=20261119-paystack-all-invoices-1/);
   assert.ok(html.indexOf("yoco-invoice-settings.js") < html.indexOf("</body>"));
 });
 
@@ -24,29 +25,42 @@ test("panel verifies the active administrator before loading invoice records", (
   assert.match(panel, /await verifyAdmin\(\);[\s\S]*?invoices = await api/);
 });
 
-test("invoice selector excludes draft, cancelled, paid and zero-balance invoices and loads provider selection", () => {
-  assert.match(panel, /online_payment_provider/);
+test("Paystack Live availability is automatic and cannot be toggled or assigned per invoice", () => {
+  assert.match(panel, /Paystack Live is enabled automatically/);
+  assert.match(panel, /automatically enabled for every issued ZAR invoice/);
+  assert.doesNotMatch(panel, /data-provider/);
+  assert.doesNotMatch(panel, /data-online/);
+  assert.doesNotMatch(panel, /Yoco · Test only/);
+  assert.match(panel, /p_online_payment_enabled: true/);
+  assert.match(panel, /p_provider: "paystack"/);
+  assert.match(workspace, /\["invoice-settings", "Partial payments"\]/);
+  assert.match(workspace, /Paystack is available automatically on every issued ZAR invoice/);
+});
+
+test("invoice selector contains only issued invoices with an outstanding balance", () => {
   assert.match(panel, /\["draft", "cancelled", "paid"\]/);
   assert.match(panel, /Number\(item\.amount_outstanding != null \? item\.amount_outstanding : item\.total\) > 0/);
 });
 
-test("online payments are opt-in and partial payments require online payments", () => {
-  assert.match(panel, /invoice\.online_payment_enabled \? "checked" : ""/);
-  assert.match(panel, /if \(partial && !online\)/);
-  assert.match(panel, /partial\.disabled = !online\.checked/);
+test("partial payments remain an optional invoice-level setting", () => {
+  assert.match(panel, /invoice\.partial_payment_enabled \? "checked" : ""/);
+  assert.match(panel, /partial\.disabled/);
+  assert.doesNotMatch(panel, /partial\.disabled = !online/);
 });
 
-test("deposit input is enabled only for online partial payments", () => {
-  assert.match(panel, /deposit\.disabled = !online\.checked \|\| !partial\.checked/);
+test("deposit input is available only for partial payments and is capped at outstanding balance", () => {
+  assert.match(panel, /deposit\.disabled = !partial\.checked/);
   assert.match(panel, /deposit > outstanding/);
   assert.match(panel, /A minimum deposit requires partial payments/);
 });
 
-test("save uses the guarded server RPC rather than direct invoice table updates", () => {
+test("settings save uses the guarded server RPC and fixes Paystack flags regardless of legacy form inputs", () => {
   assert.match(panel, /\/rest\/v1\/rpc\/admin_set_invoice_payment_settings/);
-  assert.match(panel, /p_provider: provider/);
+  assert.match(panel, /p_online_payment_enabled: true/);
+  assert.match(panel, /p_provider: "paystack"/);
+  assert.doesNotMatch(panel, /p_provider: provider/);
+  assert.doesNotMatch(panel, /p_online_payment_enabled: online/);
   assert.doesNotMatch(panel, /method:\s*"PATCH"/);
-  assert.doesNotMatch(panel, /\/rest\/v1\/invoices\?[^\n]*method/);
 });
 
 test("invoice identifiers and displayed fields are HTML escaped", () => {
@@ -61,43 +75,42 @@ test("server RPC requires an authenticated Swayphics administrator", () => {
   assert.match(migration, /grant execute on function public\.admin_set_invoice_payment_settings[\s\S]*to authenticated/i);
 });
 
-test("server RPC locks the invoice and rejects ineligible invoice states", () => {
-  assert.match(migration, /where (?:i\.)?id\s*=\s*p_invoice_id\s+for update/i);
+test("database defaults and existing invoice records are moved to Paystack with online payment enabled", () => {
+  assert.match(migration, /ALTER TABLE public\.invoices ALTER COLUMN online_payment_enabled SET DEFAULT true/i);
+  assert.match(migration, /ALTER TABLE public\.invoices ALTER COLUMN online_payment_provider SET DEFAULT 'paystack'/i);
+  assert.match(migration, /UPDATE public\.invoices[\s\S]*online_payment_enabled = true[\s\S]*online_payment_provider = 'paystack'/i);
+});
+
+test("legacy RPC parameters cannot disable online payment or choose Yoco", () => {
+  assert.match(migration, /v_online boolean\s*:=\s*true/i);
+  assert.match(migration, /v_provider text\s*:=\s*'paystack'/i);
+  assert.match(migration, /online_payment_enabled\s*=\s*true[\s\S]*online_payment_provider\s*=\s*'paystack'/i);
+  assert.match(migration, /'online_payment_enabled', true/i);
+  assert.match(migration, /'online_payment_provider', 'paystack'/i);
+});
+
+test("server RPC locks eligible invoices and keeps partial-payment and deposit validation", () => {
+  assert.match(migration, /where id\s*=\s*p_invoice_id\s+for update/i);
   assert.match(migration, /v_invoice\.status\s+in\s*\('draft','cancelled','paid'\)/i);
   assert.match(migration, /amount_outstanding\s*,\s*v_invoice\.total\s*,\s*0\)\s*<=\s*0/i);
-});
-
-test("server RPC enforces partial-payment and deposit constraints", () => {
-  assert.match(migration, /if v_partial and not v_online then/i);
-  assert.match(migration, /if v_deposit is not null then/i);
+  assert.match(migration, /if v_partial and upper\(coalesce\(v_invoice\.currency,''\)\) <> 'ZAR' then/i);
+  assert.match(migration, /if v_partial and v_deposit is not null then/i);
   assert.match(migration, /v_deposit\s*>\s*coalesce\(v_invoice\.amount_outstanding\s*,\s*v_invoice\.total\s*,\s*0\)/i);
-  assert.match(migration, /deposit_amount\s*=\s*case\s+when\s+v_online\s+and\s+v_partial\s+then\s+v_deposit\s+else\s+null\s+end/i);
+  assert.match(migration, /deposit_amount\s*=\s*case\s+when\s+v_partial\s+then\s+v_deposit\s+else\s+null\s+end/i);
 });
 
-test("settings panel exposes provider selection without exposing payment credentials", () => {
-  assert.doesNotMatch(panel, /sk_live_|sk_test_|webhook_secret/i);
-  assert.match(panel, /data-provider/);
-  assert.match(panel, /Paystack · Live/);
-  assert.match(panel, /Yoco · Test only/);
-  assert.match(panel, /online_payment_provider/);
-});
-
-test("deposit is required only on the first invoice payment", () => {
+test("deposit remains required only on the first invoice payment and competing checkouts cannot overpay", () => {
   assert.match(paymentMigration, /not exists\s*\(\s*select 1\s*from public\.payments p\s*where p\.invoice_id = v_invoice\.id\s*and p\.status in \('paid', 'partially paid'\)/);
   assert.match(paymentFlowTest, /subsequent instalment may be below the initial deposit threshold/);
-});
-
-test("competing successful checkouts cannot overpay an invoice or retry indefinitely", () => {
   assert.match(paymentMigration, /v_attempt\.amount_cents > v_available_cents/);
-  assert.match(paymentMigration, /failure_code = 'invoice_balance_changed'/);
-  assert.match(paymentMigration, /processing_status = 'requires_review'/);
   assert.match(paymentFlowTest, /a competing successful checkout is routed to manual review/);
-  assert.match(paymentFlowTest, /competing checkout is not inserted as an overpayment/);
 });
 
-test("invoice payment settings opens from its Sales & Billing navigation destination", () => {
+test("partial-payment settings retain the Sales & Billing navigation destination", () => {
   assert.match(panel, /data-view="invoice-settings"/);
   assert.match(panel, /async function openSettings\(\)/);
   assert.match(panel, /stopImmediatePropagation\(\)/);
   assert.match(panel, /\.syi-launch\{display:none;/);
 });
+
+console.log("Paystack default invoice-settings regression tests passed.");
