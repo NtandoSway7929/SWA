@@ -39,7 +39,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS payment_refunds_provider_reference_uidx ON pub
 
 CREATE OR REPLACE FUNCTION innerme_private.validate_yoco_refund_event_binding()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
-AS $function$;
+AS $function$
 DECLARE v_event public.payment_webhook_events%rowtype; v_attempt public.payment_attempts%rowtype;
 BEGIN
  IF NEW.provider='paystack' AND NEW.environment='live' THEN RETURN NEW; END IF;
@@ -65,7 +65,7 @@ CREATE OR REPLACE FUNCTION innerme_private.create_yoco_payment_attempt(p_invoice
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
     v_invoice public.invoices%rowtype;
     v_attempt public.payment_attempts%rowtype;
@@ -170,7 +170,7 @@ CREATE OR REPLACE FUNCTION innerme_private.create_paystack_payment_attempt(p_inv
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
     v_invoice public.invoices%rowtype;
     v_attempt public.payment_attempts%rowtype;
@@ -276,7 +276,7 @@ CREATE OR REPLACE FUNCTION innerme_private.apply_paystack_refund_webhook_with_le
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
   v_attempt public.payment_attempts%rowtype;
   v_event public.payment_webhook_events%rowtype;
@@ -570,7 +570,7 @@ CREATE OR REPLACE FUNCTION innerme_private.attach_paystack_checkout(p_attempt_id
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
     v_attempt public.payment_attempts%rowtype;
 begin
@@ -638,7 +638,7 @@ CREATE OR REPLACE FUNCTION innerme_private.claim_paystack_webhook_event(p_event_
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
   v_event public.payment_webhook_events%rowtype;
   v_token uuid;
@@ -698,7 +698,7 @@ CREATE OR REPLACE FUNCTION innerme_private.create_paystack_payment_attempt(p_inv
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
     v_invoice public.invoices%rowtype;
     v_attempt public.payment_attempts%rowtype;
@@ -801,7 +801,7 @@ CREATE OR REPLACE FUNCTION innerme_private.create_paystack_refund_request(p_paym
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
   v_payment public.payments%rowtype;
   v_attempt public.payment_attempts%rowtype;
@@ -911,7 +911,7 @@ CREATE OR REPLACE FUNCTION innerme_private.record_paystack_failed_attempt_status
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
     v_attempt public.payment_attempts%rowtype;
     v_target_status text;
@@ -1015,7 +1015,7 @@ CREATE OR REPLACE FUNCTION innerme_private.record_paystack_refund_initialization
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
   v_refund public.payment_refunds%rowtype;
   v_target_status text;
@@ -1086,7 +1086,7 @@ CREATE OR REPLACE FUNCTION innerme_private.record_verified_paystack_webhook(p_pr
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
     v_event public.payment_webhook_events%rowtype;
     v_inserted_count integer := 0;
@@ -1151,7 +1151,7 @@ CREATE OR REPLACE FUNCTION innerme_private.settle_paystack_payment(p_attempt_id 
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
     v_attempt public.payment_attempts%rowtype;
     v_event public.payment_webhook_events%rowtype;
@@ -1422,7 +1422,7 @@ CREATE OR REPLACE FUNCTION innerme_private.settle_paystack_payment_with_lease(p_
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
   v_event public.payment_webhook_events%rowtype;
   v_result jsonb;
@@ -1459,7 +1459,7 @@ CREATE OR REPLACE FUNCTION innerme_private.update_paystack_webhook_event(p_event
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
   v_rows integer;
 begin
@@ -1491,7 +1491,7 @@ CREATE OR REPLACE FUNCTION public.paystack_apply_refund_webhook_with_lease(p_eve
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
   select innerme_private.apply_paystack_refund_webhook_with_lease(
     p_event_id, p_lease_token, p_attempt_id, p_payment_id,
     p_transaction_reference, p_provider_refund_id,
@@ -1506,7 +1506,7 @@ CREATE OR REPLACE FUNCTION public.paystack_attach_checkout(p_attempt_id uuid, p_
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
   select innerme_private.attach_paystack_checkout(p_attempt_id,p_provider_checkout_id,p_checkout_url,p_expires_at);
 $function$;
 
@@ -1516,7 +1516,7 @@ CREATE OR REPLACE FUNCTION public.paystack_claim_webhook_event(p_event_id uuid, 
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
   select innerme_private.claim_paystack_webhook_event(p_event_id,p_lease_seconds);
 $function$;
 
@@ -1526,7 +1526,7 @@ CREATE OR REPLACE FUNCTION public.paystack_create_payment_attempt(p_invoice_id u
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
   select innerme_private.create_paystack_payment_attempt(p_invoice_id,p_client_id,p_amount_cents,p_idempotency_key);
 $function$;
 
@@ -1536,7 +1536,7 @@ CREATE OR REPLACE FUNCTION public.paystack_create_refund_request(p_payment_id uu
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
   select innerme_private.create_paystack_refund_request(
     p_payment_id, p_amount_cents, p_idempotency_key, p_reason
   );
@@ -1548,7 +1548,7 @@ CREATE OR REPLACE FUNCTION public.paystack_record_failed_attempt_status(p_attemp
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
     select innerme_private.record_paystack_failed_attempt_status(
         p_attempt_id,
         p_provider_checkout_id,
@@ -1566,7 +1566,7 @@ CREATE OR REPLACE FUNCTION public.paystack_record_refund_initialization(p_refund
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
   select innerme_private.record_paystack_refund_initialization(
     p_refund_id, p_refund_reference, p_provider_refund_id,
     p_provider_status, p_failure_message
@@ -1579,7 +1579,7 @@ CREATE OR REPLACE FUNCTION public.paystack_record_verified_webhook(p_provider_ev
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
   select innerme_private.record_verified_paystack_webhook(p_provider_event_id,p_event_type,p_body_sha256);
 $function$;
 
@@ -1589,7 +1589,7 @@ CREATE OR REPLACE FUNCTION public.paystack_settle_payment_with_lease(p_attempt_i
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
   select innerme_private.settle_paystack_payment_with_lease(
     p_attempt_id,p_event_id,p_lease_token,p_provider_checkout_id,p_amount_cents,
     p_currency,p_processing_mode,p_provider_transaction_id,p_payment_channel
@@ -1602,7 +1602,7 @@ CREATE OR REPLACE FUNCTION public.paystack_update_webhook_event(p_event_id uuid,
  LANGUAGE sql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
   select innerme_private.update_paystack_webhook_event(
     p_event_id,p_lease_token,p_processing_status,p_payment_attempt_id,p_failure_code,p_failure_message
   );
@@ -1654,7 +1654,7 @@ CREATE OR REPLACE FUNCTION public.admin_set_invoice_payment_settings(
  p_invoice_id uuid,p_online_payment_enabled boolean,p_partial_payment_enabled boolean,
  p_deposit_amount numeric DEFAULT NULL,p_provider text DEFAULT 'paystack'
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
-AS $function$;
+AS $function$
 DECLARE
  v_invoice public.invoices%rowtype;
  v_online boolean:=coalesce(p_online_payment_enabled,false);
@@ -1695,7 +1695,7 @@ CREATE OR REPLACE FUNCTION public.get_client_portal(p_token text)
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$;
+AS $function$
 declare
     v_token public.client_portal_tokens%rowtype;
     v_result jsonb;
