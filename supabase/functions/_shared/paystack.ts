@@ -43,7 +43,7 @@ async function hmacSha512Hex(secret: string, value: string): Promise<string> {
 /**
  * Prefer Paystack's timestamped Paystack-Signature when its webhook signing
  * secret is configured. Before that secret is configured, fall back to the
- * documented x-paystack-signature when the test secret key is still active.
+ * documented x-paystack-signature while the account secret key is still active.
  * Paystack may send both headers during migration. Always use the exact raw
  * request body; never re-serialize parsed JSON.
  */
