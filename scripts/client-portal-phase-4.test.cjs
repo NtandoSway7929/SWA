@@ -115,7 +115,7 @@ test("financial centre exposes provider-aware online checkout only when enabled 
   assert.match(portal, /finance-paystack-continue/);
   assert.match(portal, /checkoutUrl.hostname!=="checkout.paystack.com"/);
   assert.match(portal, /finance-return-card/);
-  assert.match(portal, /renderFinanceReturnState(status,"success"/);
+  assert.match(portal, /renderFinanceReturnState\(status,"success"/);
   assert.match(portal, /Your invoice is updated only after Swayphics receives verified payment confirmation/);
   assert.doesNotMatch(portal, /Pay now/i);
   assert.match(portal, /data-financial-type="payment"/);
