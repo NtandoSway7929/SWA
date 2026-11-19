@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__swayYocoInvoiceSettingsLoaded) return;
-    window.__swayYocoInvoiceSettingsLoaded = true;
+    if (window.__swayPaymentInvoiceSettingsLoaded) return;
+    window.__swayPaymentInvoiceSettingsLoaded = true;
 
     var SUPABASE_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
     var SUPABASE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
@@ -90,12 +90,17 @@
             return;
         }
         var outstanding = Number(invoice.amount_outstanding != null ? invoice.amount_outstanding : invoice.total) || 0;
+        var provider = String(invoice.online_payment_provider || "yoco").toLowerCase() === "paystack" ? "paystack" : "yoco";
         area.innerHTML =
             '<div class="syi-invoice-summary"><span>Invoice ' + escapeHtml(invoice.invoice_number || invoice.id) +
             '</span><strong>R' + outstanding.toFixed(2) + ' outstanding</strong><small>Status: ' +
             escapeHtml(invoice.status || "unknown") + '</small></div>' +
+            '<label class="syi-field"><span>Payment provider</span><select data-provider>' +
+            '<option value="paystack" ' + (provider === "paystack" ? "selected" : "") + '>Paystack · Live</option>' +
+            '<option value="yoco" ' + (provider === "yoco" ? "selected" : "") + '>Yoco · Test only</option>' +
+            '</select></label>' +
             '<label class="syi-toggle"><input type="checkbox" data-online ' +
-            (invoice.online_payment_enabled ? "checked" : "") + '><span><strong>Enable online payments</strong><small>Allow this client to pay this invoice through the hosted Yoco checkout.</small></span></label>' +
+            (invoice.online_payment_enabled ? "checked" : "") + '><span><strong>Enable online payments</strong><small>Allow this client to pay this invoice through the selected payment provider.</small></span></label>' +
             '<label class="syi-toggle"><input type="checkbox" data-partial ' +
             (invoice.partial_payment_enabled ? "checked" : "") + '><span><strong>Allow partial payments</strong><small>Allow the client to pay less than the full outstanding balance.</small></span></label>' +
             '<label class="syi-field"><span>Minimum deposit (R)</span><input type="number" min="0.01" max="' +
@@ -120,7 +125,7 @@
 
     async function loadInvoices() {
         await verifyAdmin();
-        invoices = await api("/rest/v1/invoices?select=id,invoice_number,total,amount_outstanding,status,online_payment_enabled,partial_payment_enabled,deposit_amount&order=created_at.desc&limit=200");
+        invoices = await api("/rest/v1/invoices?select=id,invoice_number,total,amount_outstanding,status,online_payment_enabled,online_payment_provider,partial_payment_enabled,deposit_amount&order=created_at.desc&limit=200");
         invoices = (Array.isArray(invoices) ? invoices : []).filter(function (item) {
             return !["draft", "cancelled", "paid"].includes(String(item.status || "").toLowerCase()) &&
                 Number(item.amount_outstanding != null ? item.amount_outstanding : item.total) > 0;
@@ -140,6 +145,7 @@
         if (!invoice) return;
         var online = root.querySelector("[data-online]").checked;
         var partial = root.querySelector("[data-partial]").checked;
+        var provider = root.querySelector("[data-provider]").value;
         var rawDeposit = root.querySelector("[data-deposit]").value.trim();
         var deposit = rawDeposit === "" ? null : Number(rawDeposit);
         var outstanding = Number(invoice.amount_outstanding != null ? invoice.amount_outstanding : invoice.total) || 0;
@@ -153,16 +159,18 @@
         button.textContent = "Saving…";
         status("Saving settings…", false);
         try {
-            await api("/rest/v1/rpc/admin_set_invoice_yoco_settings", {
+            await api("/rest/v1/rpc/admin_set_invoice_payment_settings", {
                 method: "POST",
                 body: {
                     p_invoice_id: invoice.id,
                     p_online_payment_enabled: online,
                     p_partial_payment_enabled: partial,
-                    p_deposit_amount: deposit
+                    p_deposit_amount: deposit,
+                    p_provider: provider
                 }
             });
             invoice.online_payment_enabled = online;
+            invoice.online_payment_provider = provider;
             invoice.partial_payment_enabled = partial;
             invoice.deposit_amount = online && partial ? deposit : null;
             status("Invoice payment settings saved.", false);
@@ -211,7 +219,7 @@
         root.id = "sway-yoco-invoice-settings";
         root.innerHTML = '<button class="syi-launch" type="button" data-open>Invoice payment settings</button>' +
             '<section class="syi-panel" aria-label="Invoice payment settings"><div class="syi-head"><div><h2>Invoice payment settings</h2>' +
-            '<p>Control Yoco test-checkout availability for each issued invoice. Live payments are not enabled by this control.</p></div>' +
+            '<p>Choose Paystack Live or Yoco Test for each issued invoice. The selected provider is enforced by the payment service.</p></div>' +
             '<button type="button" class="syi-close" data-close aria-label="Close">×</button></div>' +
             '<label class="syi-picker">Select invoice<select data-yoco-invoice></select></label>' +
             '<div data-yoco-settings-form><p>Loading invoices…</p></div><p data-yoco-settings-status role="status" aria-live="polite"></p></section>';

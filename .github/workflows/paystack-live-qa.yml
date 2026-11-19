@@ -1,0 +1,50 @@
+name: Paystack Live Integration QA
+
+on:
+  push:
+    branches:
+      - feature/paystack-live-integration
+    paths:
+      - "supabase/functions/**"
+      - "supabase/migrations/*paystack*"
+      - "admin-dashboard/yoco-invoice-settings.js"
+      - "client-portal/index.html"
+      - ".github/workflows/paystack-live-qa.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "supabase/functions/**"
+      - "supabase/migrations/*paystack*"
+      - "admin-dashboard/yoco-invoice-settings.js"
+      - "client-portal/index.html"
+      - ".github/workflows/paystack-live-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Paystack live integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Paystack Edge Functions and tests
+        run: |
+          deno check \
+            supabase/functions/create-paystack-payment-checkout/index.ts \
+            supabase/functions/get-paystack-payment-status/index.ts \
+            supabase/functions/paystack-payment-webhook/index.ts \
+            supabase/functions/create-paystack-refund/index.ts \
+            supabase/functions/tests/paystack-live-validation.test.ts
+
+      - name: Run Paystack live validation tests
+        run: deno test supabase/functions/tests/paystack-live-validation.test.ts
