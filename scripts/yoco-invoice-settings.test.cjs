@@ -56,8 +56,8 @@ test("invoice identifiers and displayed fields are HTML escaped", () => {
 });
 
 test("server RPC requires an authenticated Swayphics administrator", () => {
-  assert.match(migration, /auth\.uid\(\) is null or not coalesce\(public\.is_swayphics_admin\(\), false\)/i);
-  assert.match(migration, /using errcode = '42501'/i);
+  assert.match(migration, /auth\.uid\(\)\s+is\s+null\s+or\s+not\s+coalesce\(public\.is_swayphics_admin\(\)\s*,\s*false\)/i);
+  assert.match(migration, /using\s+errcode\s*=\s*'42501'/i);
   assert.match(migration, /grant execute on function public\.admin_set_invoice_payment_settings[\s\S]*to authenticated/i);
 });
 
