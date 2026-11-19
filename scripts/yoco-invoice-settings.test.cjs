@@ -91,9 +91,9 @@ test("legacy RPC parameters cannot disable online payment or choose Yoco", () =>
 
 test("server RPC locks eligible invoices and keeps partial-payment and deposit validation", () => {
   assert.match(migration, /where id\s*=\s*p_invoice_id\s+for update/i);
-  assert.match(migration, /v_invoice\.status\s+in\s*\('draft','cancelled','paid'\)/i);
+  assert.match(migration, /v_invoice\.status\s+in\s*\('draft',\s*'cancelled',\s*'paid'\)/i);
   assert.match(migration, /amount_outstanding\s*,\s*v_invoice\.total\s*,\s*0\)\s*<=\s*0/i);
-  assert.match(migration, /if v_partial and upper\(coalesce\(v_invoice\.currency,''\)\) <> 'ZAR' then/i);
+  assert.match(migration, /if v_partial and upper\(coalesce\(v_invoice\.currency,\s*''\)\) <> 'ZAR' then/i);
   assert.match(migration, /if v_deposit is not null then/i);
   assert.match(migration, /v_deposit\s*>\s*coalesce\(v_invoice\.amount_outstanding\s*,\s*v_invoice\.total\s*,\s*0\)/i);
   assert.match(migration, /deposit_amount\s*=\s*case\s+when\s+v_partial\s+then\s+v_deposit\s+else\s+null\s+end/i);
