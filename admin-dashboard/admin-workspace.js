@@ -19457,10 +19457,161 @@ function simpleBars(items, color) {
         );
     }
 
+    function canRequestPaystackRefund(payment) {
+        if (
+            !payment ||
+            String(payment.provider || "").toLowerCase() !== "paystack" ||
+            String(payment.status || "").toLowerCase() !== "paid" ||
+            String(payment.currency || "").toUpperCase() !== "ZAR" ||
+            !Number.isFinite(Number(payment.amount)) ||
+            Number(payment.amount) <= 0
+        ) {
+            return false;
+        }
+
+        const attempt = (state.paymentAttempts || []).find(function (item) {
+            return (
+                item.payment_id === payment.id &&
+                String(item.provider || "").toLowerCase() === "paystack" &&
+                String(item.environment || "").toLowerCase() === "live" &&
+                String(item.status || "").toLowerCase() === "succeeded"
+            );
+        });
+
+        if (!attempt) return false;
+
+        const existingRefunds = (state.paymentRefunds || []).filter(function (refund) {
+            return refund.payment_id === payment.id;
+        });
+
+        // Keep the action hidden while any earlier refund is pending,
+        // processing, successful, or reserved for manual review.
+        return existingRefunds.every(function (refund) {
+            return String(refund.status || "").toLowerCase() === "failed";
+        });
+    }
+
+    async function requestPaystackRefund(paymentId, button) {
+        const payment = (state.payments || []).find(function (item) {
+            return item.id === paymentId;
+        });
+
+        if (!canRequestPaystackRefund(payment)) {
+            swayAlert("This payment is no longer eligible for a Paystack Live refund.");
+            return;
+        }
+
+        const invoice = (state.invoices || []).find(function (item) {
+            return item.id === payment.invoice_id;
+        });
+        const amount = Number(payment.amount);
+        const amountCents = Math.round((amount + Number.EPSILON) * 100);
+
+        if (
+            !Number.isSafeInteger(amountCents) ||
+            amountCents <= 0 ||
+            Math.abs(amount * 100 - amountCents) > 0.00001
+        ) {
+            swayAlert("The payment amount could not be validated for a ZAR refund.");
+            return;
+        }
+
+        const invoiceNumber = invoice ? invoice.invoice_number : "the linked invoice";
+        const paymentReference = payment.reference || "Not available";
+        const confirmed = window.confirm(
+            "ISSUE A LIVE PAYSTACK REFUND\n\n" +
+            "Amount: " + money(amount) + "\n" +
+            "Invoice: " + invoiceNumber + "\n" +
+            "Payment reference: " + paymentReference + "\n\n" +
+            "This sends real money back to the customer. The full payment amount will be refunded. Continue?"
+        );
+
+        if (!confirmed) return;
+
+        if (
+            !window.crypto ||
+            typeof window.crypto.randomUUID !== "function"
+        ) {
+            swayAlert("This browser cannot create a secure refund request key. Update the browser and try again.");
+            return;
+        }
+
+        const originalText = button ? button.textContent : "";
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Submitting refund...";
+        }
+
+        try {
+            const result = await api(
+                "/functions/v1/create-paystack-refund",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        payment_id: payment.id,
+                        amount_cents: amountCents,
+                        idempotency_key: window.crypto.randomUUID(),
+                        reason: "Full refund requested by a Swayphics administrator for invoice " +
+                            invoiceNumber + "."
+                    })
+                }
+            );
+
+            let refreshed = false;
+            try {
+                await refreshData();
+                renderView();
+                refreshed = true;
+            } catch (refreshError) {
+                console.warn(
+                    "Paystack refund was submitted, but the Payments view could not be refreshed.",
+                    refreshError
+                );
+            }
+
+            let message = result.message ||
+                "Paystack accepted the refund request. Its final status will be confirmed by the signed webhook.";
+
+            if (result.manual_check_required) {
+                message = "The refund is reserved for manual review. Do not submit another refund request.";
+            } else if (
+                result.refund &&
+                String(result.refund.status || "").toLowerCase() === "succeeded"
+            ) {
+                message = "Paystack reported the refund as processed. The signed refund webhook and ledger still need verification.";
+            }
+
+            if (!refreshed) {
+                message += " Refresh the Payments page to see the latest refund status.";
+            }
+
+            swayAlert(message);
+        } catch (error) {
+            console.error("Paystack Live refund request failed:", error);
+            swayAlert(
+                error.message ||
+                "The refund request could not be confirmed. Check the payment and refund records before retrying."
+            );
+        } finally {
+            if (button && button.isConnected) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+    }
+
     function renderPayments() {
         const cards = state.payments.map(function (item) {
             const invoice = state.invoices.find(function (entry) { return entry.id === item.invoice_id; });
             const overdue = item.due_date && isOverdue(item.due_date) && item.status !== "paid";
+            const refundAvailable = canRequestPaystackRefund(item);
+            const refundAction = refundAvailable
+                ? '<button type="button" class="sway-row-action danger" data-paystack-refund="' +
+                    esc(item.id) + '">Full refund · ' + esc(money(item.amount)) + ' · Live</button>'
+                : "";
             return (
                 '<article class="sway-record-card" data-ai-record="payments:' + esc(item.id) + '">' +
                     '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">PAYMENT</span>' +
@@ -19479,6 +19630,7 @@ function simpleBars(items, color) {
                     '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open payment details</span>' +
                         '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                             '<button class="sway-row-action" data-edit="payments" data-id="' + esc(item.id) + '">Edit</button>' +
+                            refundAction +
                             '<button class="sway-row-action danger" data-delete="payments" data-id="' + esc(item.id) + '">Delete</button>' +
                         '</div></details>' +
                     '</div>' +
@@ -19490,7 +19642,7 @@ function simpleBars(items, color) {
             heading('<button class="sway-workspace-button primary" data-add="payments">+ New payment</button>') +
             panel(
                 "Payments",
-                "Every payment must be attached to a specific invoice. The invoice balance decreases automatically as money is recorded.",
+                "Every payment must be attached to a specific invoice. Live Paystack payments can be fully refunded from the Actions menu after confirmation.",
                 state.payments.length
                     ? '<div class="sway-record-card-grid">' + cards + '</div>'
                     : empty("No payment records yet.")
@@ -29756,6 +29908,19 @@ function simpleBars(items, color) {
                         );
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-paystack-refund]")
+            .forEach(function (button) {
+                button.addEventListener("click", async function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    await requestPaystackRefund(
+                        button.dataset.paystackRefund,
+                        button
+                    );
+                });
             });
 
         workspace
