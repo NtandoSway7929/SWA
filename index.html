@@ -21297,9 +21297,16 @@ if (formStatus) {
 
 <style id="sway-public-loading-ui">
 .sway-loading-button{display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.sway-loading-button::before{content:"";width:16px;height:16px;flex:0 0 16px;background:conic-gradient(from -40deg,transparent 0deg 38deg,#0152F4 54deg 122deg,rgba(119,193,252,.82) 138deg 158deg,transparent 176deg 360deg);-webkit-mask:url("FIST.webp") center/contain no-repeat;mask:url("FIST.webp") center/contain no-repeat;animation:sway-button-favicon-draw-public 1.05s linear infinite}
-@keyframes sway-button-favicon-draw-public{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){.sway-loading-button::before{animation:none}}
+.sway-loading-button::before{content:"";width:16px;height:16px;flex:0 0 16px;display:block;background:url("FIST.webp") center/contain no-repeat;filter:drop-shadow(0 2px 5px rgba(1,82,244,.18));clip-path:inset(100% 0 0 0);animation:sway-fist-ink-draw-public 1.5s cubic-bezier(.55,0,.18,1) infinite}
+@keyframes sway-fist-ink-draw-public{
+  0%{clip-path:inset(100% 0 0 0);opacity:0;transform:translateY(2px) scale(.98)}
+  9%{opacity:1}
+  62%{clip-path:inset(0 0 0 0);opacity:1;transform:translateY(0) scale(1)}
+  80%{clip-path:inset(0);opacity:1;transform:scale(1.02)}
+  92%{clip-path:inset(0);opacity:.45;transform:translateY(-1px) scale(1.02)}
+  100%{clip-path:inset(0);opacity:0;transform:translateY(-1px) scale(1.02)}
+}
+@media(prefers-reduced-motion:reduce){.sway-loading-button::before{animation:none;clip-path:none;opacity:1;transform:none;filter:none}}
 
 /* Refined section spacing and translucent project form */
 .section-title { margin-bottom: 42px; }
