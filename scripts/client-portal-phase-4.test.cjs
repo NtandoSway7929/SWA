@@ -175,7 +175,7 @@ function loadPortalPaymentFunctions(options = {}) {
 
 test("outstanding invoices show separated, prominent online and bank-transfer payment choices", () => {
   const start = portal.indexOf("function invoicePaymentProvider(");
-  const end = portal.indexOf("\\nfunction renderQuote(", start);
+  const end = portal.indexOf("\nfunction renderQuote(", start);
   assert.ok(start >= 0 && end > start, "Invoice rendering helpers must be isolated for testing.");
 
   const context = {
@@ -192,7 +192,7 @@ test("outstanding invoices show separated, prominent online and bank-transfer pa
     isClientInvoicePayable: item => ["sent", "partially paid", "overdue"].includes(String(item.status || "").toLowerCase()) && Number(item.amount_outstanding || 0) > 0
   };
   vm.runInNewContext(
-    portal.slice(start, end) + "\\nthis.renderInvoice = renderInvoice;",
+    portal.slice(start, end) + "\nthis.renderInvoice = renderInvoice;",
     context
   );
 
