@@ -110,6 +110,9 @@ jobs:
       - name: Test client portal Phase 5 documents and deliverables
         run: node scripts/client-portal-phase-5.test.cjs
 
+      - name: Test client portal animation system
+        run: node scripts/client-portal-animations.test.cjs
+
       - name: Test client portal link and access reliability
         run: node --test scripts/client-portal-access-reliability.test.cjs
 
