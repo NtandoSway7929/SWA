@@ -1753,7 +1753,7 @@ const summary=projectMilestoneSummary(project),schedule=projectDeadline(project)
 const milestones=summary.stages.map(function(stage,index){
 const state=summary.currentIndex<0?"upcoming":(index<summary.currentIndex?"complete":(index===summary.currentIndex?"current":"upcoming"));
 const stateLabel=state==="complete"?"Completed":(state==="current"?"Current milestone":"Upcoming");
-return '<div class="project-milestone-step '+state+'" style="animation-delay:'+(85+index*55)+'ms" role="listitem'+(state==="current"?' aria-current="step"':"")+'><span class="project-milestone-node" aria-hidden="true">'+(state==="complete"?"✓":String(index+1))+'</span><div class="project-milestone-copy"><div><strong>'+esc(stage.title)+'</strong><small>'+stateLabel+'</small></div><p>'+esc(stage.description)+'</p></div></div>';
+return '<div class="project-milestone-step '+state+'" style="animation-delay:'+(85+index*55)+'ms" role="listitem"'+(state==="current"?' aria-current="step"':"")+'><span class="project-milestone-node" aria-hidden="true">'+(state==="complete"?"✓":String(index+1))+'</span><div class="project-milestone-copy"><div><strong>'+esc(stage.title)+'</strong><small>'+stateLabel+'</small></div><p>'+esc(stage.description)+'</p></div></div>';
 }).join("");
 let scheduleNote="";
 if(["paused","cancelled"].includes(summary.status)){
