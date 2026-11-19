@@ -29,17 +29,17 @@ CREATE OR REPLACE FUNCTION auth.uid()
 RETURNS uuid
 LANGUAGE sql
 STABLE
-AS $
+AS $function$
     SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-$;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.is_swayphics_admin()
 RETURNS boolean
 LANGUAGE sql
 STABLE
-AS $
+AS $function$
     SELECT auth.uid() IS NOT NULL
-$;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.admin_set_invoice_payment_settings(
     p_invoice_id uuid,
@@ -51,11 +51,11 @@ CREATE OR REPLACE FUNCTION public.admin_set_invoice_payment_settings(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $
+AS $function$
 BEGIN
     RETURN '{}'::jsonb;
 END;
-$;
+$function$;
 
 INSERT INTO public.invoices (
     id, client_id, status, currency, total, amount_outstanding,
