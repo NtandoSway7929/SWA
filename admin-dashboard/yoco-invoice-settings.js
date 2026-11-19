@@ -86,7 +86,7 @@
         selectedInvoice = invoice;
         var area = root.querySelector("[data-yoco-settings-form]");
         if (!invoice) {
-            area.innerHTML = '<p class="syi-empty">No eligible invoices are available. Only issued invoices with an outstanding balance can be configured.</p>';
+            area.innerHTML = '<p class="syi-empty">No eligible invoices are available. Only issued ZAR invoices with an outstanding balance can be configured.</p>';
             return;
         }
         var outstanding = Number(invoice.amount_outstanding != null ? invoice.amount_outstanding : invoice.total) || 0;
@@ -106,11 +106,9 @@
         var partial = area.querySelector("[data-partial]");
         var deposit = area.querySelector("[data-deposit]");
         function sync() {
-            partial.disabled = !online.checked;
-            deposit.disabled = !online.checked || !partial.checked;
-            if (!online.checked || !partial.checked) deposit.value = "";
+            deposit.disabled = !partial.checked;
+            if (!partial.checked) deposit.value = "";
         }
-        online.addEventListener("change", sync);
         partial.addEventListener("change", sync);
         sync();
         area.querySelector("[data-save]").addEventListener("click", save);
@@ -118,10 +116,11 @@
 
     async function loadInvoices() {
         await verifyAdmin();
-        invoices = await api("/rest/v1/invoices?select=id,invoice_number,total,amount_outstanding,status,online_payment_enabled,online_payment_provider,partial_payment_enabled,deposit_amount&order=created_at.desc&limit=200");
+        invoices = await api("/rest/v1/invoices?select=id,invoice_number,total,amount_outstanding,status,currency,partial_payment_enabled,deposit_amount&order=created_at.desc&limit=200");
         invoices = (Array.isArray(invoices) ? invoices : []).filter(function (item) {
             return !["draft", "cancelled", "paid"].includes(String(item.status || "").toLowerCase()) &&
-                Number(item.amount_outstanding != null ? item.amount_outstanding : item.total) > 0;
+                Number(item.amount_outstanding != null ? item.amount_outstanding : item.total) > 0 &&
+                String(item.currency || "ZAR").toUpperCase() === "ZAR";
         });
         var select = root.querySelector("[data-yoco-invoice]");
         select.innerHTML = invoices.map(function (item) {
@@ -147,7 +146,7 @@
         var button = root.querySelector("[data-save]");
         button.disabled = true;
         button.textContent = "Saving…";
-        status("Saving settings…", false);
+        status("Saving payment terms…", false);
         try {
             await api("/rest/v1/rpc/admin_set_invoice_payment_settings", {
                 method: "POST",
@@ -162,12 +161,12 @@
             invoice.online_payment_enabled = true;
             invoice.online_payment_provider = "paystack";
             invoice.partial_payment_enabled = partial;
-            invoice.deposit_amount = online && partial ? deposit : null;
+            invoice.deposit_amount = partial ? deposit : null;
             status("Partial payment terms saved.", false);
             renderForm();
             status("Partial payment terms saved.", false);
         } catch (error) {
-            status(error.message || "Unable to save invoice settings.", true);
+            status(error.message || "Unable to save payment terms.", true);
         } finally {
             var current = root.querySelector("[data-save]");
             if (current) { current.disabled = false; current.textContent = "Save payment terms"; }
