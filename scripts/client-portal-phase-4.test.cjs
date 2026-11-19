@@ -213,8 +213,8 @@ test("outstanding invoices show separated, prominent online and bank-transfer pa
   assert.match(html, /Pay by bank transfer/);
   assert.match(html, /EFT · Submit proof of payment/);
   assert.match(html, /role="group" aria-label="Choose a payment method"/);
-  assert.match(portal, /\\.financial-item-actions\\{display:grid;/);
-  assert.match(portal, /\\.finance-payment-choice\\{[^}]*min-height:78px/s);
+  assert.ok(portal.includes(".financial-item-actions{display:grid;"));
+  assert.ok(portal.includes(".finance-payment-choice{") && portal.includes("min-height:78px"));
 
   const bankOnlyHtml = context.renderInvoice({ ...invoice, online_payment_enabled: false });
   assert.doesNotMatch(bankOnlyHtml, /Pay online with Paystack/);
