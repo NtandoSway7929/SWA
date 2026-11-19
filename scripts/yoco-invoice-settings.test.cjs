@@ -62,7 +62,7 @@ test("server RPC requires an authenticated Swayphics administrator", () => {
 });
 
 test("server RPC locks the invoice and rejects ineligible invoice states", () => {
-  assert.match(migration, /where i\.id = p_invoice_id\s+for update/i);
+  assert.match(migration, /where (?:i\.)?id\s*=\s*p_invoice_id\s+for update/i);
   assert.match(migration, /v_invoice\.status in \('draft', 'cancelled', 'paid'\)/i);
   assert.match(migration, /amount_outstanding, v_invoice\.total, 0\) <= 0/i);
 });
