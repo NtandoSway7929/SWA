@@ -58,7 +58,7 @@ test("onboarding, asset uploads and client requests animate existing feedback st
   assert.match(portal, /animatePortalFeedback\(assetUploadStatus\)/);
   assert.match(portal, /animatePortalFeedback\(message\)/);
   assert.match(portal, /animatePortalFeedback\(statusBox\)/);
-  assert.match(portal, /Uploading \"+files\.length/);
+  assert.match(portal, /Uploading "\+files\.length/);
 });
 
 const helperStart = portal.indexOf("function financialCounterValue(");
