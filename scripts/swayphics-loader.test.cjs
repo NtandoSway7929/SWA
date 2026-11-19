@@ -8,6 +8,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const publicSite = read("index.html");
 const adminStyles = read("admin-dashboard/admin-workspace.css");
 const clientPortal = read("client-portal/index.html");
+const adminDashboard = read("admin-dashboard/index.html");
 
 const publicStart = publicSite.indexOf('<style id="sway-public-loading-ui">');
 const publicEnd = publicSite.indexOf("</style>", publicStart);
@@ -60,5 +61,7 @@ for (const [name, source] of [["admin", adminLoader], ["portal", portalLoader], 
 
 assert.match(portalLoader, /\.sway-favicon-loader-mark,\.sway-favicon-loader-dot\{display:none!important\}/);
 assert.match(publicLoader, /\.sway-loading-button::before\{[^}]*background:url\("FIST\.webp"\)/);
+
+assert.ok(adminDashboard.includes("admin-workspace.css?v=20261119-fist-draw-loader-1"), "admin stylesheet cache key must change with the loader release");
 
 console.log("Swayphics loader source, draw animation and reduced-motion checks passed.");
