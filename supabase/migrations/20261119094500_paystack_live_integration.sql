@@ -256,7 +256,7 @@ begin
         'checkout_url', v_attempt.checkout_url
     );
 end;
-$function$
+$function$;
 
 
 -- Paystack server-side payment, webhook, settlement and refund functions.
@@ -551,7 +551,7 @@ select * into v_attempt
     'currency', v_refund.currency
   );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.attach_paystack_checkout(p_attempt_id uuid, p_provider_checkout_id text, p_checkout_url text, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
@@ -619,7 +619,7 @@ begin
         'expires_at', v_attempt.expires_at
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.claim_paystack_webhook_event(p_event_id uuid, p_lease_seconds integer DEFAULT 120)
@@ -679,7 +679,7 @@ begin
     'lease_expires_at', now() + make_interval(secs => p_lease_seconds)
   );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.create_paystack_payment_attempt(p_invoice_id uuid, p_client_id uuid, p_amount_cents bigint, p_idempotency_key text)
@@ -785,7 +785,7 @@ begin
         'checkout_url', v_attempt.checkout_url
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.create_paystack_refund_request(p_payment_id uuid, p_amount_cents bigint, p_idempotency_key uuid, p_reason text DEFAULT NULL::text)
@@ -895,7 +895,7 @@ begin
     'reused', false
   );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.record_paystack_failed_attempt_status(p_attempt_id uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text, p_provider_status text)
@@ -999,7 +999,7 @@ begin
         'updated', true
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.record_paystack_refund_initialization(p_refund_id uuid, p_refund_reference text, p_provider_refund_id text, p_provider_status text, p_failure_message text DEFAULT NULL::text)
@@ -1070,7 +1070,7 @@ begin
     'provider_refund_id', v_refund.provider_refund_id
   );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.record_verified_paystack_webhook(p_provider_event_id text, p_event_type text, p_body_sha256 text)
@@ -1135,7 +1135,7 @@ begin
         'duplicate', v_inserted_count = 0
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.settle_paystack_payment(p_attempt_id uuid, p_event_id uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text DEFAULT NULL::text, p_payment_channel text DEFAULT NULL::text)
@@ -1406,7 +1406,7 @@ begin
         'currency', v_payment.currency
     );
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.settle_paystack_payment_with_lease(p_attempt_id uuid, p_event_id uuid, p_lease_token uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text DEFAULT NULL::text, p_payment_channel text DEFAULT NULL::text)
@@ -1443,7 +1443,7 @@ begin
   where id = p_event_id;
   return v_result;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION innerme_private.update_paystack_webhook_event(p_event_id uuid, p_lease_token uuid, p_processing_status text, p_payment_attempt_id uuid DEFAULT NULL::uuid, p_failure_code text DEFAULT NULL::text, p_failure_message text DEFAULT NULL::text)
@@ -1475,7 +1475,7 @@ begin
   get diagnostics v_rows = row_count;
   return v_rows = 1;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_apply_refund_webhook_with_lease(p_event_id uuid, p_lease_token uuid, p_attempt_id uuid, p_payment_id uuid, p_transaction_reference text, p_provider_refund_id text, p_provider_refund_reference text, p_amount_cents bigint, p_currency text, p_provider_status text)
@@ -1490,7 +1490,7 @@ AS $function$
     p_provider_refund_reference, p_amount_cents,
     p_currency, p_provider_status
   );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_attach_checkout(p_attempt_id uuid, p_provider_checkout_id text, p_checkout_url text, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
@@ -1500,7 +1500,7 @@ CREATE OR REPLACE FUNCTION public.paystack_attach_checkout(p_attempt_id uuid, p_
  SET search_path TO ''
 AS $function$
   select innerme_private.attach_paystack_checkout(p_attempt_id,p_provider_checkout_id,p_checkout_url,p_expires_at);
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_claim_webhook_event(p_event_id uuid, p_lease_seconds integer DEFAULT 120)
@@ -1510,7 +1510,7 @@ CREATE OR REPLACE FUNCTION public.paystack_claim_webhook_event(p_event_id uuid, 
  SET search_path TO ''
 AS $function$
   select innerme_private.claim_paystack_webhook_event(p_event_id,p_lease_seconds);
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_create_payment_attempt(p_invoice_id uuid, p_client_id uuid, p_amount_cents bigint, p_idempotency_key text)
@@ -1520,7 +1520,7 @@ CREATE OR REPLACE FUNCTION public.paystack_create_payment_attempt(p_invoice_id u
  SET search_path TO ''
 AS $function$
   select innerme_private.create_paystack_payment_attempt(p_invoice_id,p_client_id,p_amount_cents,p_idempotency_key);
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_create_refund_request(p_payment_id uuid, p_amount_cents bigint, p_idempotency_key uuid, p_reason text DEFAULT NULL::text)
@@ -1532,7 +1532,7 @@ AS $function$
   select innerme_private.create_paystack_refund_request(
     p_payment_id, p_amount_cents, p_idempotency_key, p_reason
   );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_record_failed_attempt_status(p_attempt_id uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text, p_provider_status text)
@@ -1550,7 +1550,7 @@ AS $function$
         p_provider_transaction_id,
         p_provider_status
     );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_record_refund_initialization(p_refund_id uuid, p_refund_reference text, p_provider_refund_id text, p_provider_status text, p_failure_message text DEFAULT NULL::text)
@@ -1563,7 +1563,7 @@ AS $function$
     p_refund_id, p_refund_reference, p_provider_refund_id,
     p_provider_status, p_failure_message
   );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_record_verified_webhook(p_provider_event_id text, p_event_type text, p_body_sha256 text)
@@ -1573,7 +1573,7 @@ CREATE OR REPLACE FUNCTION public.paystack_record_verified_webhook(p_provider_ev
  SET search_path TO ''
 AS $function$
   select innerme_private.record_verified_paystack_webhook(p_provider_event_id,p_event_type,p_body_sha256);
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_settle_payment_with_lease(p_attempt_id uuid, p_event_id uuid, p_lease_token uuid, p_provider_checkout_id text, p_amount_cents bigint, p_currency text, p_processing_mode text, p_provider_transaction_id text DEFAULT NULL::text, p_payment_channel text DEFAULT NULL::text)
@@ -1586,7 +1586,7 @@ AS $function$
     p_attempt_id,p_event_id,p_lease_token,p_provider_checkout_id,p_amount_cents,
     p_currency,p_processing_mode,p_provider_transaction_id,p_payment_channel
   );
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.paystack_update_webhook_event(p_event_id uuid, p_lease_token uuid, p_processing_status text, p_payment_attempt_id uuid DEFAULT NULL::uuid, p_failure_code text DEFAULT NULL::text, p_failure_message text DEFAULT NULL::text)
@@ -1598,7 +1598,7 @@ AS $function$
   select innerme_private.update_paystack_webhook_event(
     p_event_id,p_lease_token,p_processing_status,p_payment_attempt_id,p_failure_code,p_failure_message
   );
-$function$
+$function$;
 
 
 REVOKE ALL ON FUNCTION public.paystack_apply_refund_webhook_with_lease(uuid, uuid, uuid, uuid, text, text, text, bigint, text, text) FROM PUBLIC, anon, authenticated;
@@ -1904,5 +1904,5 @@ begin
 
     return v_result;
 end;
-$function$
+$function$;
 
