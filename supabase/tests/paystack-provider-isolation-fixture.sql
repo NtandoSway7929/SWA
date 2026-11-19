@@ -12,7 +12,58 @@ CREATE TABLE public.invoices (
     online_payment_enabled boolean NOT NULL DEFAULT false,
     online_payment_provider text DEFAULT 'paystack',
     partial_payment_enabled boolean NOT NULL DEFAULT false,
-    deposit_amount numeric(12,2)
+    deposit_amount numeric(12,2),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE SCHEMA IF NOT EXISTS auth;
+
+DO $roles$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
+END;
+$roles$;
+
+CREATE OR REPLACE FUNCTION auth.uid()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+AS $
+    SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+$;
+
+CREATE OR REPLACE FUNCTION public.is_swayphics_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $
+    SELECT auth.uid() IS NOT NULL
+$;
+
+CREATE OR REPLACE FUNCTION public.admin_set_invoice_payment_settings(
+    p_invoice_id uuid,
+    p_online_payment_enabled boolean,
+    p_partial_payment_enabled boolean,
+    p_deposit_amount numeric DEFAULT NULL,
+    p_provider text DEFAULT 'paystack'
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $
+BEGIN
+    RETURN '{}'::jsonb;
+END;
+$;
+
+INSERT INTO public.invoices (
+    id, client_id, status, currency, total, amount_outstanding,
+    online_payment_enabled, online_payment_provider
+) VALUES (
+    '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000002',
+    'sent', 'ZAR', 700, 700, false, 'yoco'
 );
 
 CREATE TABLE public.payments (
