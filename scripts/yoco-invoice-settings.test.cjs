@@ -71,7 +71,7 @@ test("server RPC enforces partial-payment and deposit constraints", () => {
   assert.match(migration, /if v_partial and not v_online then/i);
   assert.match(migration, /if v_deposit is not null then/i);
   assert.match(migration, /v_deposit\s*>\s*coalesce\(v_invoice\.amount_outstanding\s*,\s*v_invoice\.total\s*,\s*0\)/i);
-  assert.match(migration, /deposit_amount = case when v_online and v_partial then v_deposit else null end/i);
+  assert.match(migration, /deposit_amount\s*=\s*case\s+when\s+v_online\s+and\s+v_partial\s+then\s+v_deposit\s+else\s+null\s+end/i);
 });
 
 test("settings panel exposes provider selection without exposing payment credentials", () => {
