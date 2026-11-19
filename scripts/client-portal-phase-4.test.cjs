@@ -104,6 +104,7 @@ test("financial centre exposes provider-aware online checkout only when enabled 
   assert.match(portal, /Request payment instructions/);
   assert.match(portal, /item\.online_payment_enabled&&modal\.dataset\.invoiceProvider/);
   assert.match(portal, /Pay online with Paystack/);
+  assert.match(portal, /const provider=String\(item&&item\.online_payment_provider\|\|""\)\.trim\(\)\.toLowerCase\(\)/);
   assert.match(portal, /Yoco · Test checkout/);
   assert.match(portal, /create-payment-checkout/);
   assert.match(portal, /create-paystack-payment-checkout/);
@@ -223,6 +224,10 @@ test("outstanding invoices show separated, prominent online and bank-transfer pa
 
   const unsupportedOnlineHtml = context.renderInvoice({ ...invoice, currency: "USD" });
   assert.match(unsupportedOnlineHtml, /Online payment unavailable/);
+
+  const providerMissingHtml = context.renderInvoice({ ...invoice, online_payment_provider: undefined });
+  assert.match(providerMissingHtml, /Online payment unavailable/);
+  assert.doesNotMatch(providerMissingHtml, /Yoco · Test checkout/);
   assert.doesNotMatch(unsupportedOnlineHtml, /Pay online with Paystack/);
 });
 
