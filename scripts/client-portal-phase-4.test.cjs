@@ -111,6 +111,11 @@ test("financial centre exposes provider-aware online checkout only when enabled 
   assert.match(portal, /get-payment-status/);
   assert.match(portal, /get-paystack-payment-status/);
   assert.match(portal, /latest\.confirmed/);
+  assert.match(portal, /paystack-handoff-brand/);
+  assert.match(portal, /finance-paystack-continue/);
+  assert.match(portal, /checkoutUrl.hostname!=="checkout.paystack.com"/);
+  assert.match(portal, /finance-return-card/);
+  assert.match(portal, /renderFinanceReturnState(status,"success"/);
   assert.match(portal, /Your invoice is updated only after Swayphics receives verified payment confirmation/);
   assert.doesNotMatch(portal, /Pay now/i);
   assert.match(portal, /data-financial-type="payment"/);
@@ -126,6 +131,16 @@ function loadPortalPaymentFunctions(options = {}) {
   let cleanedUrl = "";
   let reloadCount = 0;
   const hero = { appendChild(node) { this.status = node; } };
+  const handoffButton = {
+    disabled: false,
+    textContent: "Continue to secure payment",
+    listener: null,
+    addEventListener(name, callback) { if (name === "click") this.listener = callback; }
+  };
+  const handoffPanel = {
+    innerHTML: "",
+    querySelector(selector) { return selector === "#finance-paystack-continue" ? handoffButton : null; }
+  };
   const window = options.window || {
     crypto: { randomUUID: () => "portal-idempotency-key-0001" },
     location: {
@@ -153,9 +168,11 @@ function loadPortalPaymentFunctions(options = {}) {
     URL,
     URLSearchParams,
     Promise,
+    esc: value => String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"),
+    financialMoney: (value, currency) => String(currency || "ZAR") + " " + Number(value || 0).toFixed(2),
     yocoPortalApi: options.yocoPortalApi || (async (functionName, payload) => {
       calls.push({ functionName, payload });
-      return { checkout_url: "https://checkout.example.test/session" };
+      return { checkout_url: functionName === "create-paystack-payment-checkout" ? "https://checkout.paystack.com/test-session" : "https://checkout.example.test/session" };
     })
   };
   vm.runInNewContext(
@@ -168,6 +185,14 @@ function loadPortalPaymentFunctions(options = {}) {
     context,
     calls,
     hero,
+    handoffPanel,
+    handoffButton,
+    createModal(dataset) {
+      return {
+        dataset,
+        querySelector(selector) { return selector === ".finance-online-panel" ? handoffPanel : null; }
+      };
+    },
     get redirectedTo() { return redirectedTo; },
     get cleanedUrl() { return cleanedUrl; },
     get reloadCount() { return reloadCount; }
@@ -231,13 +256,14 @@ test("outstanding invoices show separated, prominent online and bank-transfer pa
   assert.doesNotMatch(unsupportedOnlineHtml, /Pay online with Paystack/);
 });
 
-test("client portal routes Paystack Live and Yoco Test invoices to their matching checkout functions", async () => {
-  for (const [provider, expectedFunction] of [
-    ["paystack", "create-paystack-payment-checkout"],
-    ["yoco", "create-payment-checkout"]
-  ]) {
+test("client portal routes Paystack through a branded handoff and preserves Yoco redirect behaviour", async () => {
+  {
     const harness = loadPortalPaymentFunctions();
-    const modal = { dataset: { invoiceId: "11111111-1111-4111-8111-111111111111", invoiceProvider: provider } };
+    const modal = harness.createModal({
+      invoiceId: "11111111-1111-4111-8111-111111111111",
+      invoiceProvider: "paystack",
+      invoiceNumber: "SWY-TEST-001"
+    });
     const amountInput = { value: "25.00", min: "2.00", max: "100.00" };
     const button = { disabled: false, textContent: "Continue to checkout" };
     const statusBox = { hidden: true, className: "", textContent: "" };
@@ -245,14 +271,60 @@ test("client portal routes Paystack Live and Yoco Test invoices to their matchin
     await harness.context.startOnlineCheckout(modal, amountInput, button, statusBox);
 
     assert.equal(harness.calls.length, 1);
-    assert.equal(harness.calls[0].functionName, expectedFunction);
+    assert.equal(harness.calls[0].functionName, "create-paystack-payment-checkout");
     assert.equal(harness.calls[0].payload.amount_cents, 2500);
     assert.equal(harness.calls[0].payload.idempotency_key, "portal-idempotency-key-0001");
-    assert.match(statusBox.textContent, new RegExp(provider === "paystack" ? "Paystack" : "Yoco Test"));
+    assert.equal(harness.redirectedTo, "", "Paystack must not redirect before the client sees the Swayphics handoff");
+    assert.match(harness.handoffPanel.innerHTML, /swayphics-logo\.png/);
+    assert.match(harness.handoffPanel.innerHTML, /SWY-TEST-001/);
+    assert.match(harness.handoffPanel.innerHTML, /ZAR 25\.00/);
+    assert.match(harness.handoffPanel.innerHTML, /Paystack’s secure checkout/);
+    assert.equal(typeof harness.handoffButton.listener, "function");
+
+    harness.handoffButton.listener();
+    assert.equal(harness.redirectedTo, "https://checkout.paystack.com/test-session");
+    assert.equal(harness.handoffButton.disabled, true);
+    assert.match(harness.handoffButton.textContent, /Opening Paystack/);
+  }
+
+  {
+    const harness = loadPortalPaymentFunctions();
+    const modal = harness.createModal({
+      invoiceId: "11111111-1111-4111-8111-111111111111",
+      invoiceProvider: "yoco",
+      invoiceNumber: "SWY-TEST-002"
+    });
+    const amountInput = { value: "25.00", min: "2.00", max: "100.00" };
+    const button = { disabled: false, textContent: "Continue to checkout" };
+    const statusBox = { hidden: true, className: "", textContent: "" };
+
+    await harness.context.startOnlineCheckout(modal, amountInput, button, statusBox);
+
+    assert.equal(harness.calls.length, 1);
+    assert.equal(harness.calls[0].functionName, "create-payment-checkout");
     assert.equal(harness.redirectedTo, "https://checkout.example.test/session");
   }
 });
 
+test("client portal rejects Paystack checkout URLs outside the verified Paystack checkout host", async () => {
+  const harness = loadPortalPaymentFunctions({
+    yocoPortalApi: async () => ({ checkout_url: "https://attacker.example.test/fake-checkout" })
+  });
+  const modal = harness.createModal({
+    invoiceId: "11111111-1111-4111-8111-111111111111",
+    invoiceProvider: "paystack",
+    invoiceNumber: "SWY-TEST-003"
+  });
+  const button = { disabled: false, textContent: "Continue to checkout" };
+  const statusBox = { hidden: true, className: "", textContent: "" };
+
+  await harness.context.startOnlineCheckout(modal, { value: "25.00", min: "2.00", max: "100.00" }, button, statusBox);
+
+  assert.equal(harness.redirectedTo, "");
+  assert.equal(button.disabled, false);
+  assert.equal(statusBox.className, "finance-online-status error");
+  assert.match(statusBox.textContent, /expected secure checkout address/);
+});
 test("client portal verifies a Paystack return using the Paystack status function and clears callback parameters after confirmation", async () => {
   const window = {
     crypto: { randomUUID: () => "unused" },
@@ -279,7 +351,7 @@ test("client portal verifies a Paystack return using the Paystack status functio
   assert.equal(harnessCalls.length, 1);
   assert.equal(harnessCalls[0].functionName, "get-paystack-payment-status");
   assert.equal(harnessCalls[0].payload.attempt_id, "22222222-2222-4222-8222-222222222222");
-  assert.match(harness.hero.status.textContent, /Payment confirmed/);
+  assert.match(harness.hero.status.innerHTML, /Payment confirmed/);\n  assert.match(harness.hero.status.innerHTML, /swayphics-logo\\.png/);
   const cleaned = new URL(window.history.cleanedUrl);
   assert.equal(cleaned.searchParams.has("payment_attempt"), false);
   assert.equal(cleaned.searchParams.has("payment_provider"), false);
