@@ -24,4 +24,27 @@ assert.ok(styles.includes("color:var(--blue)") && styles.includes("linear-gradie
 assert.ok(portal.includes("id=\"onboarding-form\""), "The existing onboarding form must remain present.");
 assert.ok(portal.includes("id=\"request-form\""), "The existing client request form must remain present.");
 
-console.log("Client portal premium charcoal styling contract tests passed.");
+
+const refinementStart = styles.indexOf("/* Editorial premium refinement:");
+assert.ok(refinementStart > 0, "The editorial premium refinement layer must exist.");
+const refinement = styles.slice(refinementStart);
+assert.match(refinement, /background:#F5F6F7;[\s\S]*?background-image:none/);
+assert.match(refinement, /font-family:'Plus Jakarta Sans',sans-serif/);
+assert.doesNotMatch(refinement, /(?:Mon|Ral)\w{4,}/);
+assert.ok(portal.includes("family=Plus+Jakarta+Sans"), "The portal must keep its original Plus Jakarta Sans web font.");
+assert.ok(!portal.includes("family=Montserrat") && !portal.includes("family=Raleway"), "The portal must not load a replacement font.");
+assert.match(refinement, /\.portal-nav\{[\s\S]*?background:#FFFFFF[\s\S]*?backdrop-filter:none/);
+assert.match(refinement, /\.stat-card::after\{display:none\}/);
+assert.match(refinement, /\.portal-card\{[\s\S]*?background:#FFFFFF[\s\S]*?backdrop-filter:none/);
+assert.match(refinement, /\.portal-button\{[\s\S]*?border-radius:10px[\s\S]*?background:var\(--deep\)/);
+assert.match(refinement, /\.portal-section-nav a\.active\{[\s\S]*?background:#F0F4FA[\s\S]*?box-shadow:none/);
+assert.match(refinement, /@media\(max-width:760px\)/);
+assert.match(refinement, /@media\(prefers-reduced-motion:reduce\)/);
+assert.ok(portal.includes("function bindOnboarding()"), "The existing onboarding controller must remain present.");
+assert.ok(portal.includes("async function loadPortalDocuments()"), "The existing document retrieval flow must remain present.");
+assert.ok(portal.includes("function startOnlineCheckout("), "The existing invoice checkout flow must remain present.");
+assert.ok(portal.includes('id="request-form"'), "The client request form must remain present.");
+assert.ok(portal.includes("function portalRpcWithRetry("), "The existing portal access retry handling must remain present.");
+assert.ok(portal.includes("function openProjectModal("), "The existing project detail flow must remain present.");
+
+console.log("Client portal editorial premium styling and workflow-preservation contract tests passed.");
