@@ -11,7 +11,7 @@ const workspace = fs.readFileSync(path.join(root, "admin-dashboard", "admin-work
 const portal = fs.readFileSync(path.join(root, "client-portal", "index.html"), "utf8");
 
 test("new client portal links always use the canonical public domain and preserve the private token", () => {
-  assert.match(workspace, /const CLIENT_PORTAL_ORIGIN = "https:\\/\\/swayphics\\.co\\.za"/);
+  assert.ok(workspace.includes('const CLIENT_PORTAL_ORIGIN = "https://swayphics.co.za";'));
   const start = workspace.indexOf("const portalUrl =");
   const end = workspace.indexOf("openClientPortalLinkModal(", start);
   assert.ok(start >= 0 && end > start, "portal URL generation must be present.");
