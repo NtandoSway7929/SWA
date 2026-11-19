@@ -17,6 +17,7 @@ on:
     paths:
       - "supabase/functions/**"
       - "supabase/migrations/*paystack*"
+      - "supabase/tests/*paystack*"
       - "admin-dashboard/yoco-invoice-settings.js"
       - "client-portal/index.html"
       - ".github/workflows/paystack-live-qa.yml"
