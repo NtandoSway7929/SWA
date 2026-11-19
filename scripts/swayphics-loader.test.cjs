@@ -8,6 +8,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const publicSite = read("index.html");
 const adminStyles = read("admin-dashboard/admin-workspace.css");
 const clientPortal = read("client-portal/index.html");
+const adminDashboard = read("admin-dashboard/index.html");
 
 const publicStart = publicSite.indexOf('<style id="sway-public-loading-ui">');
 const publicEnd = publicSite.indexOf("</style>", publicStart);
