@@ -57,6 +57,23 @@ BEGIN
 
     PERFORM set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000004', true);
 
+    PERFORM pg_temp.assert_true(
+        has_function_privilege(
+            'authenticated',
+            'public.admin_set_invoice_payment_settings(uuid,boolean,boolean,numeric,text)',
+            'EXECUTE'
+        ),
+        'authenticated administrators retain execute permission on the guarded settings RPC'
+    );
+    PERFORM pg_temp.assert_true(
+        NOT has_function_privilege(
+            'anon',
+            'public.admin_set_invoice_payment_settings(uuid,boolean,boolean,numeric,text)',
+            'EXECUTE'
+        ),
+        'anonymous users cannot execute the settings RPC'
+    );
+
     -- Even a stale caller that supplies false/Yoco cannot disable Paystack or
     -- assign another provider. The only mutable settings are instalments/deposit.
     v_result := public.admin_set_invoice_payment_settings(v_new_invoice, false, true, 100, 'yoco');
