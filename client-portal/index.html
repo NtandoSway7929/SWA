@@ -510,6 +510,58 @@ body{
 .finance-online-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}.finance-online-controls .field{min-width:0}.finance-online-controls input{width:100%;border:1px solid rgba(0,32,150,.12);border-radius:12px;padding:13px 14px;background:#fff;color:var(--dark);font-size:.76rem}.finance-online-controls .portal-button{width:100%;min-height:50px;padding:0 18px;border-radius:13px;font-size:.72rem}
 .finance-online-note{color:var(--soft);font-size:.56rem;line-height:1.55}.finance-online-status{padding:12px 14px;border-radius:12px;background:rgba(1,82,244,.06);color:var(--muted);font-size:.61rem;line-height:1.6}
 .finance-online-status.success{background:rgba(34,160,107,.08);color:#18784F}.finance-online-status.warning{background:rgba(231,155,26,.10);color:#906000}.finance-online-status.error{background:rgba(190,44,44,.08);color:#9A2525}
+
+
+/* Client portal motion system: restrained movement, no extra navigation indicator. */
+@keyframes portalFadeUp{from{opacity:0;transform:translate3d(0,12px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@keyframes portalBackdropIn{from{opacity:0}to{opacity:1}}
+@keyframes portalBackdropOut{from{opacity:1}to{opacity:0}}
+@keyframes portalModalIn{from{opacity:0;transform:translate3d(0,10px,0) scale(.985)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+@keyframes portalModalOut{from{opacity:1;transform:translate3d(0,0,0) scale(1)}to{opacity:0;transform:translate3d(0,7px,0) scale(.99)}}
+@keyframes portalProgressFill{from{opacity:.45;transform:scaleX(.12)}to{opacity:1;transform:scaleX(1)}}
+@keyframes portalStatusIn{from{opacity:0;transform:translate3d(0,5px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+.portal-animate-in>.portal-nav{animation:portalFadeUp .38s cubic-bezier(.2,.7,.2,1) both}
+.portal-animate-in>.portal-section-nav{animation:portalFadeUp .4s cubic-bezier(.2,.7,.2,1) 55ms both}
+.portal-animate-in>#overview-section{animation:portalFadeUp .42s cubic-bezier(.2,.7,.2,1) 95ms both}
+.portal-animate-in>#projects-section{animation:portalFadeUp .42s cubic-bezier(.2,.7,.2,1) 145ms both}
+.portal-animate-in>#documents-section{animation:portalFadeUp .42s cubic-bezier(.2,.7,.2,1) 195ms both}
+.portal-animate-in>#finances-section{animation:portalFadeUp .42s cubic-bezier(.2,.7,.2,1) 245ms both}
+.portal-animate-in>#onboarding-section,.portal-animate-in>#business-assets-section{animation:portalFadeUp .42s cubic-bezier(.2,.7,.2,1) 295ms both}
+.portal-animate-in>#request-section{animation:portalFadeUp .42s cubic-bezier(.2,.7,.2,1) 345ms both}
+.portal-animate-in>.portal-footer{animation:portalFadeUp .42s cubic-bezier(.2,.7,.2,1) 390ms both}
+.portal-animate-in .stat-card{animation:portalFadeUp .36s ease both}
+.portal-animate-in .stat-card:nth-child(1){animation-delay:150ms}
+.portal-animate-in .stat-card:nth-child(2){animation-delay:205ms}
+.portal-animate-in .stat-card:nth-child(3){animation-delay:260ms}
+.portal-animate-in .stat-card:nth-child(4){animation-delay:315ms}
+.portal-animate-in .progress span.active{transform-origin:left center;animation:portalProgressFill .42s cubic-bezier(.2,.7,.2,1) both}
+.portal-card,.stat-card,.project-item,.financial-item,.portal-document-card,.onboarding-section{transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s ease,border-color .2s ease}
+.progress span{transition:background .36s ease,box-shadow .36s ease,transform .36s ease}
+.portal-button:active:not(:disabled),.finance-payment-choice:active:not(:disabled){transform:translateY(0) scale(.985)}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  .portal-card:hover,.stat-card:hover,.project-item:hover,.financial-item:hover,.portal-document-card:hover,.onboarding-section:hover{transform:translateY(-2px)}
+  .portal-card:hover,.stat-card:hover,.portal-document-card:hover{box-shadow:0 19px 46px rgba(37,43,49,.10),inset 0 1px 0 rgba(255,255,255,.96);border-color:rgba(1,82,244,.16)}
+}
+.portal-document-card,.asset-item{animation:portalFadeUp .3s ease both}
+.onboarding-form .onboarding-section:not([hidden]){animation:portalFadeUp .26s ease both}
+.portal-modal.portal-modal-entering .modal-backdrop{animation:portalBackdropIn .18s ease both}
+.portal-modal.portal-modal-entering .modal-card{animation:portalModalIn .22s cubic-bezier(.2,.7,.2,1) both}
+.portal-modal.portal-modal-entering .project-milestone-step{animation:portalFadeUp .28s ease both}
+.portal-modal.portal-modal-closing .modal-backdrop{animation:portalBackdropOut .16s ease both}
+.portal-modal.portal-modal-closing .modal-card{animation:portalModalOut .16s ease both}
+.portal-feedback-enter{animation:portalStatusIn .24s ease both}
+.message:not([hidden]),.finance-online-status:not([hidden]),.onboarding-submitted{animation:portalStatusIn .24s ease both}
+@media(prefers-reduced-motion:reduce){
+  .portal-animate-in>*,.portal-animate-in .stat-card,.portal-animate-in .progress span.active,
+  .portal-document-card,.asset-item,.onboarding-form .onboarding-section:not([hidden]),
+  .portal-modal.portal-modal-entering .modal-backdrop,.portal-modal.portal-modal-entering .modal-card,
+  .portal-modal.portal-modal-entering .project-milestone-step,.portal-modal.portal-modal-closing .modal-backdrop,
+  .portal-modal.portal-modal-closing .modal-card,.portal-feedback-enter,
+  .message:not([hidden]),.finance-online-status:not([hidden]),.onboarding-submitted{animation:none!important}
+  .portal-card,.stat-card,.project-item,.financial-item,.portal-document-card,.onboarding-section,
+  .progress span,.portal-button,.finance-payment-choice{transition:none!important}
+}
+
 </style>
 </head>
 <body>
@@ -675,7 +727,7 @@ function projectProgress(value){
 const summary=projectMilestoneSummary({status:value});
 const current=summary.currentIndex;
 const currentValue=current>=0?current+1:0;
-return '<div class="progress" role="progressbar" aria-label="Project delivery stage" aria-valuemin="0" aria-valuemax="4" aria-valuenow="'+currentValue+'" aria-valuetext="'+esc(summary.progressText)+'">'+[0,1,2,3].map(function(i){return '<span class="'+(i<current?"active complete":(i===current?"active current":""))+'"></span>'}).join("")+"</div>";
+return '<div class="progress" role="progressbar" aria-label="Project delivery stage" aria-valuemin="0" aria-valuemax="4" aria-valuenow="'+currentValue+'" aria-valuetext="'+esc(summary.progressText)+'">'+[0,1,2,3].map(function(i){return '<span style="animation-delay:'+(150+i*65)+'ms" class="'+(i<current?"active complete":(i===current?"active current":""))+'"></span>'}).join("")+"</div>";
 }
 function activeProjects(data){return (data.projects||[]).filter(function(p){return ["planning","in progress","review"].includes(String(p.status||"").toLowerCase())})}
 function renderProject(item){
@@ -791,8 +843,8 @@ const preview=category==="image"
 :'<iframe class="portal-document-preview-pdf" title="'+esc(item.file_name||"Shared PDF")+'" src="'+esc(href)+'" referrerpolicy="no-referrer"></iframe>';
 modal.className="portal-modal";modal.id="portal-document-preview-modal";
 modal.innerHTML='<div class="modal-backdrop" data-document-preview-close></div><section class="modal-card portal-document-preview-card" role="dialog" aria-modal="true" aria-labelledby="portal-document-preview-title"><div class="modal-head"><div><span class="portal-kicker">SHARED DELIVERABLE</span><h3 id="portal-document-preview-title">'+esc(item.file_name||"Document preview")+'</h3><p>'+esc(item.project_name||"General files")+'</p></div><button type="button" class="modal-close" data-document-preview-close aria-label="Close preview">×</button></div><div class="portal-document-preview-stage">'+preview+'</div><div class="finance-modal-actions"><button type="button" class="portal-button" id="portal-preview-download">Download file</button><button type="button" class="portal-button secondary" data-document-preview-close>Close</button></div></section>';
-document.body.appendChild(modal);
-const close=function(){modal.querySelectorAll("iframe,img").forEach(function(media){media.removeAttribute("src")});modal.remove()};
+mountPortalModal(modal);
+const close=function(){closePortalModal(modal,function(){modal.querySelectorAll("iframe,img").forEach(function(media){media.removeAttribute("src")})})};
 modal.querySelectorAll("[data-document-preview-close]").forEach(function(button){button.addEventListener("click",close)});
 modal.addEventListener("keydown",function(event){if(event.key==="Escape"){event.preventDefault();close()}});
 modal.querySelector("#portal-preview-download")?.addEventListener("click",async function(event){const button=event.currentTarget;button.disabled=true;button.textContent="Preparing download...";try{await downloadPortalDocument(item);button.textContent="Downloaded"}catch(error){button.textContent="Try download again";const stage=modal.querySelector(".portal-document-preview-stage");if(stage){let note=stage.querySelector(".message");if(!note){note=document.createElement("div");note.className="message";stage.appendChild(note)}note.textContent=error.message||"Download failed."}}finally{button.disabled=false}});
@@ -1046,14 +1098,14 @@ if(nextButton)nextButton.disabled=true;
 if(submitButton)submitButton.disabled=true;
 if(statusBox&&!quiet)statusBox.textContent=submit?"Submitting information...":"Saving progress...";
 if(saveState)saveState.textContent=submit?"Submitting securely...":"Saving changes...";
-if(!quiet){message.hidden=false;message.textContent=submit?"Checking and submitting your information securely...":"Saving your progress securely...";}
+if(!quiet){message.hidden=false;message.textContent=submit?"Checking and submitting your information securely...":"Saving your progress securely...";animatePortalFeedback(message);}
 try{
 const result=await portalRpc("save_client_onboarding",{p_token:token,p_data:payload,p_submit:submit},15000);
 if(!result||!result.ok)throw new Error(result&&result.error||"Unable to save your information.");
 const savedAt=submit?"Submitted "+date(new Date().toISOString()):"Last saved just now";
 if(statusBox)statusBox.textContent=savedAt;
 if(saveState)saveState.textContent=submit?"Information submitted":"All changes saved";
-if(!quiet){message.hidden=false;message.textContent=submit?"Thank you. Your information has been submitted to Swayphics for review.":"Your progress has been saved. You can return to this private link later and continue.";}
+if(!quiet){message.hidden=false;message.textContent=submit?"Thank you. Your information has been submitted to Swayphics for review.":"Your progress has been saved. You can return to this private link later and continue.";animatePortalFeedback(message);animatePortalFeedback(saveState);animatePortalFeedback(statusBox);}
 if(submit){
 form.classList.add("onboarding-locked");
 form.querySelectorAll("input,textarea,select").forEach(function(el){el.disabled=true});
@@ -1070,6 +1122,7 @@ if(saveState)saveState.textContent="Not saved";
 if(statusBox)statusBox.textContent="Unable to save changes";
 message.hidden=false;
 message.textContent=error.message||"Unable to save your information.";
+animatePortalFeedback(message);animatePortalFeedback(saveState);animatePortalFeedback(statusBox);
 return false;
 }finally{
 if(saveButton&&!locked)saveButton.disabled=false;
@@ -1097,16 +1150,16 @@ row.innerHTML='<div class="field"><label>Product or service '+(n+1)+'</label><in
 list.appendChild(row);row.querySelector("[data-service-name]")?.focus();scheduleAutosave();
 }
 document.getElementById("add-service")?.addEventListener("click",addService);
-assetInput?.addEventListener("change",function(){const files=Array.from(assetInput.files||[]);assetUploadStatus.textContent=files.length?files.length+" file"+(files.length===1?"":"s")+" selected":"No new files selected";});
+assetInput?.addEventListener("change",function(){const files=Array.from(assetInput.files||[]);assetUploadStatus.textContent=files.length?files.length+" file"+(files.length===1?"":"s")+" selected":"No new files selected";animatePortalFeedback(assetUploadStatus);});
 assetUploadButton?.addEventListener("click",async function(){
 const files=Array.from(assetInput?.files||[]);
 if(!files.length){assetUploadStatus.textContent="Choose one or more files first.";return;}
-assetUploadButton.disabled=true;assetUploadStatus.textContent="Uploading "+files.length+" file"+(files.length===1?"":"s")+"...";
+assetUploadButton.disabled=true;assetUploadStatus.textContent="Uploading "+files.length+" file"+(files.length===1?"":"s")+"...";animatePortalFeedback(assetUploadStatus);
 try{
 const formData=new FormData();formData.append("token",token);files.forEach(function(file){formData.append("files",file,file.name)});
 const response=await fetch(SUPABASE_URL+"/functions/v1/upload-client-onboarding-assets",{method:"POST",headers:{"apikey":SUPABASE_PUBLISHABLE_KEY,"Authorization":"Bearer "+SUPABASE_PUBLISHABLE_KEY},body:formData,cache:"no-store"});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result&&result.error||"Unable to upload the selected files.");
-assetInput.value="";assetUploadStatus.textContent=(result.files||[]).length+" file"+((result.files||[]).length===1?"":"s")+" attached successfully.";await loadAssets();renderReview();
-}catch(error){assetUploadStatus.textContent=error.message||"Unable to upload the selected files.";}
+assetInput.value="";assetUploadStatus.textContent=(result.files||[]).length+" file"+((result.files||[]).length===1?"":"s")+" attached successfully.";animatePortalFeedback(assetUploadStatus);await loadAssets();renderReview();
+}catch(error){assetUploadStatus.textContent=error.message||"Unable to upload the selected files.";animatePortalFeedback(assetUploadStatus);}
 finally{assetUploadButton.disabled=locked;}
 });
 loadAssets();
@@ -1202,6 +1255,79 @@ totals[currency]=(totals[currency]||0)+amount;
 const currencies=Object.keys(totals).sort();
 return currencies.length?currencies.map(function(currency){return financialMoney(totals[currency],currency)}).join(" · "):financialMoney(0,"ZAR");
 }
+
+function financialCounterValue(rows,amountSelector,currencySelector){
+let total=0;const currencies={};
+(rows||[]).forEach(function(item){
+const amount=Number(amountSelector(item)||0);
+if(!Number.isFinite(amount)||amount===0)return;
+const currency=String(currencySelector(item)||"ZAR").trim().toUpperCase()||"ZAR";
+currencies[currency]=true;total+=amount;
+});
+const codes=Object.keys(currencies);
+if(codes.length>1||(codes.length===1&&codes[0]!=="ZAR"))return null;
+return total;
+}
+function portalCounterAttributes(value,format){
+if(value===null||value===undefined||!Number.isFinite(Number(value))||Number(value)<0)return "";
+return ' data-portal-count="true" data-count-value="'+Number(value)+'" data-count-format="'+format+'"';
+}
+function formatPortalCounter(value,format){
+if(format==="integer")return new Intl.NumberFormat("en-ZA",{maximumFractionDigits:0}).format(Math.round(value));
+if(format==="financial")return financialMoney(value,"ZAR");
+return money(value);
+}
+function portalReducedMotion(){
+return Boolean(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+function animatePortalCounters(root){
+if(!root)return;
+const elements=Array.from(root.querySelectorAll("[data-portal-count]"));
+elements.forEach(function(element){
+const target=Number(element.dataset.countValue),format=String(element.dataset.countFormat||"money"),finalText=element.textContent.trim();
+element.setAttribute("aria-label",finalText);
+if(portalReducedMotion()||!Number.isFinite(target)||target===0){element.textContent=finalText;return;}
+const duration=720;let startTime=null;
+function tick(timestamp){
+if(startTime===null)startTime=timestamp;
+const progress=Math.min(1,(timestamp-startTime)/duration),eased=1-Math.pow(1-progress,3);
+element.textContent=formatPortalCounter(target*eased,format);
+if(progress<1)window.requestAnimationFrame(tick);else element.textContent=finalText;
+}
+element.textContent=formatPortalCounter(0,format);
+window.requestAnimationFrame(tick);
+});
+}
+function animatePortalFeedback(element){
+if(!element||portalReducedMotion())return;
+element.classList.remove("portal-feedback-enter");void element.offsetWidth;element.classList.add("portal-feedback-enter");
+const finish=function(event){
+if(event&&event.target!==element)return;
+element.classList.remove("portal-feedback-enter");
+element.removeEventListener("animationend",finish);
+};
+element.addEventListener("animationend",finish);
+}
+function mountPortalModal(modal){
+if(!modal)return;
+if(!portalReducedMotion())modal.classList.add("portal-modal-entering");
+document.body.appendChild(modal);
+}
+function closePortalModal(modal,afterClose){
+if(!modal||!modal.isConnected||modal.classList.contains("portal-modal-closing"))return;
+let finished=false;const card=modal.querySelector(".modal-card");
+const finish=function(){
+if(finished)return;finished=true;
+if(card)card.removeEventListener("animationend",onAnimationEnd);
+if(modal.isConnected)modal.remove();
+if(typeof afterClose==="function")afterClose();
+};
+const onAnimationEnd=function(event){if(event.target===card&&event.animationName==="portalModalOut")finish()};
+if(portalReducedMotion()||!card){finish();return}
+modal.classList.remove("portal-modal-entering");modal.classList.add("portal-modal-closing");
+card.addEventListener("animationend",onAnimationEnd);window.setTimeout(finish,240);
+}
+
 function buildFinancialSummary(invoices,payments,todayValue){
 const visible=(Array.isArray(invoices)?invoices:[]).filter(function(item){return !["draft","cancelled"].includes(String(item&&item.status||"").toLowerCase())});
 const open=visible.filter(isClientInvoicePayable);
@@ -1210,6 +1336,9 @@ return {
 outstanding:formatFinancialTotal(open,function(item){return invoiceFinancialBreakdown(item).outstanding},function(item){return item.currency}),
 overdue:formatFinancialTotal(overdue,function(item){return invoiceFinancialBreakdown(item).outstanding},function(item){return item.currency}),
 invoiced:formatFinancialTotal(visible,function(item){return invoiceFinancialBreakdown(item).total},function(item){return item.currency}),
+outstandingCounter:financialCounterValue(open,function(item){return invoiceFinancialBreakdown(item).outstanding},function(item){return item.currency}),
+overdueCounter:financialCounterValue(overdue,function(item){return invoiceFinancialBreakdown(item).outstanding},function(item){return item.currency}),
+invoicedCounter:financialCounterValue(visible,function(item){return invoiceFinancialBreakdown(item).total},function(item){return item.currency}),
 openCount:open.length,
 overdueCount:overdue.length,
 invoiceCount:visible.length,
@@ -1295,7 +1424,7 @@ function render(data,onboarding){
 const c=data.client||{},projects=data.projects||[],active=activeProjects(data),rawInvoices=data.invoices||[],invoices=rawInvoices.filter(function(item){return !["draft","cancelled"].includes(String(item&&item.status||"").toLowerCase())}),quotes=data.quotes||[],payments=data.payments||[];
 const financeSummary=buildFinancialSummary(invoices,payments),outstanding=financeSummary.outstanding,quoteValue=quotes.reduce(function(sum,item){return sum+Number(item.amount||0)},0),paid=payments.reduce(function(sum,item){return sum+Number(item.amount||0)},0),nextStep=getClientNextStep(onboarding,invoices,quotes,active,projects);
 let invoiceFilter="all";
-app.className="portal-shell";
+app.className="portal-shell portal-animate-in";
 app.innerHTML=
 '<nav class="portal-nav"><img src="../swayphics-logo.png" class="portal-logo" alt="Swayphics"><div class="portal-nav-right"><span class="portal-secure">Secure access</span><span class="portal-badge">Private client portal</span></div></nav>'+
 '<nav class="portal-section-nav" aria-label="Your workspace">'+
@@ -1312,15 +1441,15 @@ app.innerHTML=
 '<section class="portal-hero"><span class="portal-kicker">SWAYPHICS CLIENT PORTAL</span><h1>Welcome, '+esc(c.contact_name||c.business_name||"Client")+'.</h1><p>Your private Swayphics workspace brings your projects, finances and next steps together in one place.</p><div class="portal-hero-actions"><a class="portal-button" href="#projects-section">View my projects</a><a class="portal-button secondary" href="#request-section">Make a request</a></div></section>'+
 '<section class="next-step-card" aria-labelledby="next-step-title"><div class="next-step-content"><span class="next-step-kicker">YOUR NEXT STEP</span><div class="next-step-heading"><h2 id="next-step-title">'+esc(nextStep.title)+'</h2>'+chip(nextStep.badge)+'</div><p>'+esc(nextStep.description)+'</p></div><a class="portal-button next-step-action" href="#'+esc(nextStep.target)+'">'+esc(nextStep.action)+' <span aria-hidden="true">→</span></a></section>'+
 '<section class="overview-stats"><div class="portal-section-head"><div><h2>At a glance</h2><p>A quick view of your Swayphics account.</p></div></div><div class="portal-stats">'+
-'<article class="stat-card"><span>Active projects</span><strong>'+active.length+'</strong><small>'+(projects.length?projects.length+" total project"+(projects.length===1?"":"s"):"No projects yet")+'</small></article>'+
-'<article class="stat-card"><span>Outstanding</span><strong>'+esc(outstanding)+'</strong><small>Across open invoices</small></article>'+
-'<article class="stat-card"><span>Quoted value</span><strong>'+esc(money(quoteValue))+'</strong><small>Current quotations</small></article>'+
-'<article class="stat-card"><span>Recorded payments</span><strong>'+esc(money(paid))+'</strong><small>Payments recorded by Swayphics</small></article>'+
+'<article class="stat-card"><span>Active projects</span><strong'+portalCounterAttributes(active.length,"integer")+'>'+active.length+'</strong><small>'+(projects.length?projects.length+" total project"+(projects.length===1?"":"s"):"No projects yet")+'</small></article>'+
+'<article class="stat-card"><span>Outstanding</span><strong'+portalCounterAttributes(financeSummary.outstandingCounter,"financial")+'>'+esc(outstanding)+'</strong><small>Across open invoices</small></article>'+
+'<article class="stat-card"><span>Quoted value</span><strong'+portalCounterAttributes(quoteValue,"money")+'>'+esc(money(quoteValue))+'</strong><small>Current quotations</small></article>'+
+'<article class="stat-card"><span>Recorded payments</span><strong'+portalCounterAttributes(paid,"money")+'>'+esc(money(paid))+'</strong><small>Payments recorded by Swayphics</small></article>'+
 '</div></section></section>'+
 '<section class="portal-section" id="projects-section"><div class="portal-section-head"><div><h2>My projects</h2><p>Follow the progress of work managed by Swayphics.</p></div><span class="card-count">'+projects.length+' total</span></div><div class="portal-grid portal-project-grid"><section class="portal-card wide"><div class="card-head"><div><h3>Project progress</h3><p>See where each piece of work currently sits.</p></div><span class="card-count">'+active.length+' active</span></div>'+(projects.length?'<div class="project-list">'+projects.map(renderProject).join("")+'</div>':'<div class="empty">No projects are currently listed for this workspace. Your projects will appear here once work has been set up.</div>')+'</section></div></section>'+
 renderPortalDocumentsSection()+
 '<section class="portal-section" id="finances-section"><div class="portal-section-head"><div><h2>Financial centre</h2><p>Review invoice balances, quotations and payments recorded on your account.</p></div><span class="card-count">'+financeSummary.invoiceCount+' invoices · '+financeSummary.paymentCount+' payments</span></div>'+
-'<section class="finance-overview-panel"><div class="finance-overview-main"><span>OUTSTANDING BALANCE</span><strong>'+esc(financeSummary.outstanding)+'</strong><p>'+financeSummary.openCount+' invoice'+(financeSummary.openCount===1?"":"s")+' with a remaining balance recorded.</p></div><div class="finance-overview-metrics"><div><span>OVERDUE BALANCE</span><b>'+esc(financeSummary.overdue)+'</b><small>'+financeSummary.overdueCount+' past-due invoice'+(financeSummary.overdueCount===1?"":"s")+'</small></div><div><span>TOTAL INVOICED</span><b>'+esc(financeSummary.invoiced)+'</b><small>Issued invoices only</small></div><div><span>PAYMENTS RECORDED</span><b>'+financeSummary.paymentCount+'</b><small>Recorded payment entries</small></div></div></section>'+
+'<section class="finance-overview-panel"><div class="finance-overview-main"><span>OUTSTANDING BALANCE</span><strong'+portalCounterAttributes(financeSummary.outstandingCounter,"financial")+'>'+esc(financeSummary.outstanding)+'</strong><p>'+financeSummary.openCount+' invoice'+(financeSummary.openCount===1?"":"s")+' with a remaining balance recorded.</p></div><div class="finance-overview-metrics"><div><span>OVERDUE BALANCE</span><b'+portalCounterAttributes(financeSummary.overdueCounter,"financial")+'>'+esc(financeSummary.overdue)+'</b><small>'+financeSummary.overdueCount+' past-due invoice'+(financeSummary.overdueCount===1?"":"s")+'</small></div><div><span>TOTAL INVOICED</span><b'+portalCounterAttributes(financeSummary.invoicedCounter,"financial")+'>'+esc(financeSummary.invoiced)+'</b><small>Issued invoices only</small></div><div><span>PAYMENTS RECORDED</span><b'+portalCounterAttributes(financeSummary.paymentCount,"integer")+'>'+financeSummary.paymentCount+'</b><small>Recorded payment entries</small></div></div></section>'+
 '<div class="portal-finance-grid">'+
 '<section class="portal-card"><div class="card-head"><div><h3>Invoices</h3><p>See what has been issued, paid or remains outstanding.</p></div><span class="card-count">'+invoices.length+'</span></div><div class="finance-filter-group" role="group" aria-label="Filter invoices"><button type="button" class="active" data-invoice-filter="all" aria-pressed="true">All <span>'+invoices.length+'</span></button><button type="button" data-invoice-filter="outstanding" aria-pressed="false">Outstanding <span>'+invoices.filter(isClientInvoicePayable).length+'</span></button><button type="button" data-invoice-filter="paid" aria-pressed="false">Paid <span>'+filterPortalInvoices(invoices,"paid").length+'</span></button></div><div id="portal-invoice-list" aria-live="polite">'+renderFinanceInvoiceList(invoices,"all")+'</div></section>'+
 '<section class="portal-card"><div class="card-head"><div><h3>Quotes</h3><p>Review quotation amounts, status and validity.</p></div><span class="card-count">'+quotes.length+'</span></div>'+(quotes.length?'<div class="financial-list">'+quotes.map(renderQuote).join("")+'</div>':'<div class="empty">No quotations are currently listed.</div>')+'</section>'+
@@ -1329,6 +1458,7 @@ renderPortalDocumentsSection()+
 onboardingForm(data,onboarding)+
 '<section class="portal-section" id="request-section"><div class="portal-section-head"><div><h2>Requests & support</h2><p>Contact Swayphics about an update, change or something new.</p></div></div><section class="portal-card request-card"><div class="request-copy"><span class="kicker">DIRECT TO SWAYPHICS</span><h3>How can we help?</h3><p>Send a request from the portal and it will be attached to this client account in the Swayphics workspace.</p></div><form class="request-form" id="request-form"><div class="field"><label for="request-subject">Subject</label><input id="request-subject" required maxlength="180" placeholder="What do you need help with?"></div><div class="field"><label for="request-message">Message</label><textarea id="request-message" required maxlength="5000" placeholder="Tell the Swayphics team what you need."></textarea></div><button class="portal-button" type="submit">Send request</button><div id="request-message-status" class="message" hidden></div></form></section></section>'+
 '<footer class="portal-footer"><span><strong>Swayphics</strong> · Creative & Design Lab</span><span>Private portal access · Keep this link confidential</span></footer>';
+animatePortalCounters(app);
 bindPortalNavigation();
 const documentsSection=document.getElementById("documents-section");
 documentsSection?.addEventListener("click",async function(event){
@@ -1387,7 +1517,7 @@ const item=collection.find(function(row){return String(row.id)===String(id)});
 if(item)openFinancialModal(type,item,detailButton);
 });
 bindOnboarding();
-document.getElementById("request-form").addEventListener("submit",async function(event){event.preventDefault();const form=event.target,button=form.querySelector("button"),statusBox=document.getElementById("request-message-status");button.disabled=true;button.textContent="Sending...";statusBox.hidden=false;statusBox.textContent="Sending request...";try{const payload=await portalRpc("submit_client_portal_request",{p_token:token,p_subject:document.getElementById("request-subject").value,p_message:document.getElementById("request-message").value},15000);if(!payload||!payload.ok)throw new Error(payload&&payload.error||"Unable to send request.");statusBox.textContent="Your request has been sent to Swayphics.";form.reset()}catch(error){statusBox.textContent=error.message||"Unable to send request."}finally{button.disabled=false;button.textContent="Send request"}});
+document.getElementById("request-form").addEventListener("submit",async function(event){event.preventDefault();const form=event.target,button=form.querySelector("button"),statusBox=document.getElementById("request-message-status");button.disabled=true;button.textContent="Sending...";statusBox.hidden=false;statusBox.textContent="Sending request...";animatePortalFeedback(statusBox);try{const payload=await portalRpc("submit_client_portal_request",{p_token:token,p_subject:document.getElementById("request-subject").value,p_message:document.getElementById("request-message").value},15000);if(!payload||!payload.ok)throw new Error(payload&&payload.error||"Unable to send request.");statusBox.textContent="Your request has been sent to Swayphics.";animatePortalFeedback(statusBox);form.reset()}catch(error){statusBox.textContent=error.message||"Unable to send request.";animatePortalFeedback(statusBox)}finally{button.disabled=false;button.textContent="Send request"}});
 }
 
 function openPortalRequest(subject,message){
@@ -1509,21 +1639,21 @@ document.getElementById("portal-bank-transfer-modal")?.remove();
 const data=details.invoice,bank=details.bank_details,amount=Math.max(0,Number(data.amount_outstanding||0)),modal=document.createElement("div");modal.className="portal-modal";modal.id="portal-bank-transfer-modal";
 const fields=[["Bank",bank.bank_name],["Account holder",bank.account_name],["Account type",bank.account_type],["Account number",bank.account_number],["Branch code",bank.branch_code],["SWIFT / BIC",bank.swift_bic||"Not required"]];
 modal.innerHTML='<div class="modal-backdrop" data-bank-transfer-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="bank-transfer-title"><div class="modal-head"><div><span class="portal-kicker">BANK TRANSFER · EFT</span><h3 id="bank-transfer-title">'+esc(data.invoice_number)+'</h3><p>Make your payment using the bank details below.</p></div><button type="button" class="modal-close" data-bank-transfer-close aria-label="Close">×</button></div><div class="project-detail"><div class="detail-grid finance-detail-grid"><div class="detail-box"><span>Outstanding balance</span><strong>'+esc(financialMoney(amount,data.currency||"ZAR"))+'</strong></div><div class="detail-box"><span>Invoice reference</span><strong>'+esc(data.payment_reference)+'</strong></div></div><div class="bank-transfer-note"><strong>Use the invoice number as your EFT payment reference.</strong><br>Enter your bank transaction reference below when submitting proof. Uploading proof does not mark the invoice as paid. Swayphics will verify the deposit in its bank account before recording the payment.</div><div class="bank-transfer-details">'+fields.map(function(field){return '<div class="bank-transfer-detail"><span>'+esc(field[0])+'</span><strong>'+esc(field[1])+'</strong>'+(field[0]==="Account number"?'<button type="button" data-copy-bank-account>Copy account number</button>':"")+'</div>'}).join("")+'</div>'+(bank.payment_instructions?'<div class="detail-description finance-notes"><strong>Payment instructions</strong><p>'+esc(bank.payment_instructions)+'</p></div>':"")+'<div><h4 style="font-size:.68rem;margin-bottom:8px">Your previous submissions</h4><div id="bank-transfer-history">'+renderBankTransferSubmissionHistory(details.submissions)+'</div></div><form class="bank-transfer-form" id="bank-transfer-form"><div class="field"><label for="bank-transfer-amount">Amount transferred (ZAR)</label><input id="bank-transfer-amount" name="amount" type="number" min="0.01" max="'+amount.toFixed(2)+'" step="0.01" value="'+amount.toFixed(2)+'" required><small class="field-help">Cannot exceed the outstanding invoice balance. Partial transfers are accepted.</small></div><div class="field"><label for="bank-transfer-reference">Bank transaction reference</label><input id="bank-transfer-reference" name="bank_reference" maxlength="120" required placeholder="Reference shown by your bank"></div><div class="field"><label for="bank-transfer-proof">Proof of payment</label><input id="bank-transfer-proof" name="proof" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required><small class="field-help">PDF, JPG, PNG or WEBP · Maximum 5 MB.</small></div><button class="portal-button" type="submit" id="bank-transfer-submit">Submit proof of payment</button><div id="bank-transfer-message" class="finance-online-status" hidden role="status" aria-live="polite"></div></form><div class="finance-modal-actions"><button type="button" class="portal-button secondary" data-bank-transfer-close>Close</button></div></div></section>';
-document.body.appendChild(modal);
-const close=function(){modal.remove();if(trigger&&typeof trigger.focus==="function")trigger.focus()};
+mountPortalModal(modal);
+const close=function(){closePortalModal(modal,function(){if(trigger&&typeof trigger.focus==="function")trigger.focus()})};
 modal.querySelectorAll("[data-bank-transfer-close]").forEach(function(button){button.addEventListener("click",close)});
 modal.addEventListener("keydown",function(event){if(event.key==="Escape"){event.preventDefault();close()}});
 modal.querySelector("[data-copy-bank-account]")?.addEventListener("click",async function(event){try{await navigator.clipboard.writeText(String(bank.account_number||""));event.currentTarget.textContent="Copied"}catch(_){event.currentTarget.textContent="Copy unavailable"}});
 modal.querySelector("#bank-transfer-form")?.addEventListener("submit",async function(event){
 event.preventDefault();
 const form=event.currentTarget,button=form.querySelector("button[type=submit]"),message=modal.querySelector("#bank-transfer-message"),amountInput=form.querySelector("#bank-transfer-amount"),referenceInput=form.querySelector("#bank-transfer-reference"),proofInput=form.querySelector("#bank-transfer-proof"),amountValue=Number(amountInput.value),file=proofInput.files&&proofInput.files[0];
-if(!Number.isFinite(amountValue)||amountValue<=0||amountValue>amount+0.000001){message.hidden=false;message.className="finance-online-status error";message.textContent="Enter an amount within the outstanding balance.";return}
-if(!referenceInput.value.trim()||!file){message.hidden=false;message.className="finance-online-status error";message.textContent="Enter your bank transaction reference and select proof of payment.";return}
-if(file.size>5*1024*1024){message.hidden=false;message.className="finance-online-status error";message.textContent="The proof file must be 5 MB or smaller.";return}
+if(!Number.isFinite(amountValue)||amountValue<=0||amountValue>amount+0.000001){message.hidden=false;message.className="finance-online-status error";message.textContent="Enter an amount within the outstanding balance.";animatePortalFeedback(message);return}
+if(!referenceInput.value.trim()||!file){message.hidden=false;message.className="finance-online-status error";message.textContent="Enter your bank transaction reference and select proof of payment.";animatePortalFeedback(message);return}
+if(file.size>5*1024*1024){message.hidden=false;message.className="finance-online-status error";message.textContent="The proof file must be 5 MB or smaller.";animatePortalFeedback(message);return}
 const formData=new FormData();formData.append("token",token);formData.append("invoice_id",data.id);formData.append("amount",amountValue.toFixed(2));formData.append("bank_reference",referenceInput.value.trim());formData.append("proof",file,file.name);
-button.disabled=true;button.textContent="Submitting proof...";message.hidden=false;message.className="finance-online-status";message.textContent="Uploading your proof securely...";
-try{const result=await bankTransferPortalApi("submit",null,formData);message.className="finance-online-status success";message.textContent=result.message||"Proof submitted for review.";button.textContent="Proof submitted";form.reset();const history=modal.querySelector("#bank-transfer-history");if(history)history.innerHTML=renderBankTransferSubmissionHistory((details.submissions||[]).concat([result.submission]));}
-catch(error){message.className="finance-online-status error";message.textContent=error&&error.message||"The proof could not be submitted.";button.disabled=false;button.textContent="Try again";}
+button.disabled=true;button.textContent="Submitting proof...";message.hidden=false;message.className="finance-online-status";message.textContent="Uploading your proof securely...";animatePortalFeedback(message);
+try{const result=await bankTransferPortalApi("submit",null,formData);message.className="finance-online-status success";message.textContent=result.message||"Proof submitted for review.";animatePortalFeedback(message);button.textContent="Proof submitted";form.reset();const history=modal.querySelector("#bank-transfer-history");if(history)history.innerHTML=renderBankTransferSubmissionHistory((details.submissions||[]).concat([result.submission]));}
+catch(error){message.className="finance-online-status error";message.textContent=error&&error.message||"The proof could not be submitted.";animatePortalFeedback(message);button.disabled=false;button.textContent="Try again";}
 });
 modal.querySelector(".modal-close")?.focus();
 }
@@ -1594,7 +1724,7 @@ requestMessage="Please send me a receipt or payment confirmation for the payment
 }
 modal.className="portal-modal";modal.id="portal-financial-modal";if(type==="invoice"){modal.dataset.invoiceId=String(item.id||"");modal.dataset.invoiceProvider=invoicePaymentProvider(item);}
 modal.innerHTML='<div class="modal-backdrop" data-finance-close></div><section class="modal-card finance-modal-card" role="dialog" aria-modal="true" aria-labelledby="portal-financial-title"><div class="modal-head"><div><span class="portal-kicker">'+subtitle+'</span><h3 id="portal-financial-title">'+esc(title)+'</h3><p>Financial information recorded on your Swayphics account.</p></div><button type="button" class="modal-close" data-finance-close aria-label="Close financial details">×</button></div><div class="project-detail">'+details+'<div class="detail-description finance-notes"><strong>Notes from Swayphics</strong><p>'+esc(notes)+'</p></div>'+(type==="invoice"&&isClientInvoicePayable(item)?(item.online_payment_enabled&&modal.dataset.invoiceProvider&&String(item.currency||"ZAR").toUpperCase()==="ZAR"?'<section class="finance-online-panel"><div><strong>Pay this invoice online</strong><p>Secure checkout hosted by '+esc(modal.dataset.invoiceProvider==="paystack"?"Paystack":"Yoco Test")+'. Your invoice is updated only after Swayphics receives verified payment confirmation.</p></div><div class="finance-online-controls"><div class="field"><label for="finance-online-amount">Payment amount (ZAR)</label><input id="finance-online-amount" type="number" inputmode="decimal" min="'+(Number(item.deposit_amount)>0?Number(item.deposit_amount).toFixed(2):"2.00")+'" max="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" step="0.01" value="'+invoiceFinancialBreakdown(item).outstanding.toFixed(2)+'" '+(item.partial_payment_enabled?"":"readonly")+'></div><button type="button" class="portal-button" id="finance-online-pay">Continue to '+(modal.dataset.invoiceProvider==="paystack"?"Paystack":"Yoco Test")+' checkout</button></div><small class="finance-online-note">'+(item.partial_payment_enabled?"You may pay any amount from the required minimum deposit to the remaining balance.":"Online payment is set to full balance only for this invoice.")+(Number(item.deposit_amount)>0?" Minimum required deposit: "+esc(financialMoney(item.deposit_amount,invoiceFinancialBreakdown(item).currency))+".":"")+'</small><div id="finance-online-status" class="finance-online-status" hidden role="status" aria-live="polite"></div></section>':'<p class="finance-payment-guidance">Online payment is not currently available for this invoice. Use the request below to ask Swayphics for payment instructions.</p>'):"")+'<div class="finance-modal-actions">'+(type==="invoice"?'<button type="button" class="portal-button secondary" id="finance-invoice-pdf">Download invoice PDF</button>':"")+(type==="payment"&&item.receipt&&item.receipt.receipt_number?'<button type="button" class="portal-button secondary" id="finance-payment-receipt">Download payment receipt</button>':"")+'<button type="button" class="portal-button" id="finance-request-action">'+esc(actionLabel)+'</button><button type="button" class="portal-button secondary" data-finance-close>Close</button></div><div id="finance-pdf-status" class="message" hidden role="status"></div></div></section>';
-document.body.appendChild(modal);
+mountPortalModal(modal);
 modal.querySelector("#finance-payment-receipt")?.addEventListener("click",function(event){
 try{downloadPaymentReceipt(item);event.currentTarget.textContent="Receipt downloaded"}catch(error){const note=modal.querySelector(".finance-notes");if(note)note.textContent=error&&error.message||"Receipt could not be downloaded."}
 });
@@ -1602,10 +1732,10 @@ modal.querySelector("#finance-online-pay")?.addEventListener("click",function(ev
 const button=event.currentTarget,amountInput=modal.querySelector("#finance-online-amount"),statusBox=modal.querySelector("#finance-online-status");
 if(amountInput&&statusBox)startOnlineCheckout(modal,amountInput,button,statusBox);
 });
-const close=function(){modal.remove();if(trigger&&typeof trigger.focus==="function")trigger.focus()};
+const close=function(){closePortalModal(modal,function(){if(trigger&&typeof trigger.focus==="function")trigger.focus()})};
 modal.querySelectorAll("[data-finance-close]").forEach(function(element){element.addEventListener("click",close)});
 modal.addEventListener("keydown",function(event){if(event.key==="Escape"){event.preventDefault();close()}});
-modal.querySelector("#finance-request-action")?.addEventListener("click",function(){modal.remove();openPortalRequest(requestSubject,requestMessage)});
+modal.querySelector("#finance-request-action")?.addEventListener("click",function(){closePortalModal(modal,function(){openPortalRequest(requestSubject,requestMessage)})});
 const invoicePdfButton=modal.querySelector("#finance-invoice-pdf");
 invoicePdfButton?.addEventListener("click",async function(){
 const statusBox=modal.querySelector("#finance-pdf-status");
@@ -1623,7 +1753,7 @@ const summary=projectMilestoneSummary(project),schedule=projectDeadline(project)
 const milestones=summary.stages.map(function(stage,index){
 const state=summary.currentIndex<0?"upcoming":(index<summary.currentIndex?"complete":(index===summary.currentIndex?"current":"upcoming"));
 const stateLabel=state==="complete"?"Completed":(state==="current"?"Current milestone":"Upcoming");
-return '<div class="project-milestone-step '+state+'" role="listitem"'+(state==="current"?' aria-current="step"':"")+'><span class="project-milestone-node" aria-hidden="true">'+(state==="complete"?"✓":String(index+1))+'</span><div class="project-milestone-copy"><div><strong>'+esc(stage.title)+'</strong><small>'+stateLabel+'</small></div><p>'+esc(stage.description)+'</p></div></div>';
+return '<div class="project-milestone-step '+state+'" style="animation-delay:'+(85+index*55)+'ms" role="listitem'+(state==="current"?' aria-current="step"':"")+'><span class="project-milestone-node" aria-hidden="true">'+(state==="complete"?"✓":String(index+1))+'</span><div class="project-milestone-copy"><div><strong>'+esc(stage.title)+'</strong><small>'+stateLabel+'</small></div><p>'+esc(stage.description)+'</p></div></div>';
 }).join("");
 let scheduleNote="";
 if(["paused","cancelled"].includes(summary.status)){
@@ -1641,8 +1771,10 @@ scheduleNote+
 '<section class="project-milestones" aria-labelledby="portal-project-milestones"><div class="project-milestones-head"><div><span class="portal-kicker">DELIVERY TRACKER</span><h4 id="portal-project-milestones">Project milestones</h4><p>'+esc(summary.current?"You are at stage "+(summary.currentIndex+1)+" of "+summary.stages.length+".":summary.message)+'</p></div>'+chip(project.status)+'</div>'+
 '<div class="project-milestone-list" role="list">'+milestones+'</div></section>'+nextMarkup+
 '<div class="project-modal-footer"><button type="button" class="portal-button secondary" data-close>Close</button></div></div></section>';
-document.body.appendChild(modal);
-modal.querySelectorAll("[data-close]").forEach(function(el){el.addEventListener("click",function(){modal.remove()})});
+mountPortalModal(modal);
+const close=function(){closePortalModal(modal)};
+modal.querySelectorAll("[data-close]").forEach(function(el){el.addEventListener("click",close)});
+modal.addEventListener("keydown",function(event){if(event.key==="Escape"){event.preventDefault();close()}});
 }
 async function load(){
 if(!token){renderPortalError("Portal link required","This page needs a valid private Swayphics portal link.");return}
