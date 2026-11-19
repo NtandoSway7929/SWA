@@ -103,7 +103,7 @@ test("financial centre exposes provider-aware online checkout only when enabled 
   assert.match(portal, /data-financial-type="invoice"/);
   assert.match(portal, /Request payment instructions/);
   assert.match(portal, /item\.online_payment_enabled&&modal\.dataset\.invoiceProvider/);
-  assert.match(portal, /Pay with Paystack/);
+  assert.match(portal, /Pay online with Paystack/);
   assert.match(portal, /Yoco · Test checkout/);
   assert.match(portal, /create-payment-checkout/);
   assert.match(portal, /create-paystack-payment-checkout/);
@@ -172,6 +172,59 @@ function loadPortalPaymentFunctions(options = {}) {
     get reloadCount() { return reloadCount; }
   };
 }
+
+test("outstanding invoices show separated, prominent online and bank-transfer payment choices", () => {
+  const start = portal.indexOf("function invoicePaymentProvider(");
+  const end = portal.indexOf("\nfunction renderQuote(", start);
+  assert.ok(start >= 0 && end > start, "Invoice rendering helpers must be isolated for testing.");
+
+  const context = {
+    esc: value => String(value == null ? "" : value),
+    date: value => value ? String(value).slice(0, 10) : "—",
+    financialMoney: (value, currency) => String(currency || "ZAR") + " " + Number(value || 0).toFixed(2),
+    chip: value => "<span>" + String(value || "") + "</span>",
+    invoiceFinancialBreakdown: item => {
+      const total = Number(item.total || item.amount_outstanding || 0);
+      const outstanding = Math.max(0, Number(item.amount_outstanding || 0));
+      return { total, paid: Math.max(0, total - outstanding), outstanding, currency: String(item.currency || "ZAR").toUpperCase() };
+    },
+    invoiceDueState: () => ({ state: "scheduled", label: "Due soon" }),
+    isClientInvoicePayable: item => ["sent", "partially paid", "overdue"].includes(String(item.status || "").toLowerCase()) && Number(item.amount_outstanding || 0) > 0
+  };
+  vm.runInNewContext(
+    portal.slice(start, end) + "\nthis.renderInvoice = renderInvoice;",
+    context
+  );
+
+  const invoice = {
+    id: "invoice-1",
+    invoice_number: "SWY-TEST-001",
+    status: "sent",
+    total: 1500,
+    amount_outstanding: 1500,
+    currency: "ZAR",
+    online_payment_enabled: true,
+    online_payment_provider: "paystack"
+  };
+  const html = context.renderInvoice(invoice);
+  assert.match(html, /class="finance-payment-choices"/);
+  assert.match(html, /Pay online with Paystack/);
+  assert.match(html, /Secure, hosted checkout/);
+  assert.match(html, /Pay by bank transfer/);
+  assert.match(html, /EFT · Submit proof of payment/);
+  assert.doesNotMatch(html, /Online payment unavailable/);
+  assert.match(html, /role="group" aria-label="Choose a payment method"/);
+  assert.ok(portal.includes(".financial-item-actions{display:grid;"));
+  assert.ok(portal.includes(".finance-payment-choice{") && portal.includes("min-height:78px"));
+
+  const bankOnlyHtml = context.renderInvoice({ ...invoice, online_payment_enabled: false });
+  assert.doesNotMatch(bankOnlyHtml, /Pay online with Paystack/);
+  assert.match(bankOnlyHtml, /Pay by bank transfer/);
+
+  const unsupportedOnlineHtml = context.renderInvoice({ ...invoice, currency: "USD" });
+  assert.match(unsupportedOnlineHtml, /Online payment unavailable/);
+  assert.doesNotMatch(unsupportedOnlineHtml, /Pay online with Paystack/);
+});
 
 test("client portal routes Paystack Live and Yoco Test invoices to their matching checkout functions", async () => {
   for (const [provider, expectedFunction] of [
