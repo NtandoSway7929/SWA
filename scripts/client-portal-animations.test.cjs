@@ -49,6 +49,7 @@ test("project progress segments and milestone rows animate without changing thei
   assert.match(styles, /\.portal-modal\.portal-modal-entering \.project-milestone-step/);
   assert.match(portal, /aria-valuemax=\"4\"/);
   assert.match(portal, /animation-delay:'\+\(85\+index\*55\)\+'ms/);
+  assert.ok(portal.includes(String.raw`role="listitem"`), "Milestone rows must keep a valid listitem role.");
 });
 
 test("onboarding, asset uploads and client requests animate existing feedback states", () => {
