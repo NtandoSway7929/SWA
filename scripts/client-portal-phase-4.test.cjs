@@ -200,6 +200,7 @@ test("client portal verifies a Paystack return using the Paystack status functio
     crypto: { randomUUID: () => "unused" },
     location: {
       href: "https://swayphics.co.za/client-portal/?payment_attempt=22222222-2222-4222-8222-222222222222&payment_provider=paystack",
+      search: "?payment_attempt=22222222-2222-4222-8222-222222222222&payment_provider=paystack",
       assign() {},
       reload() { this.reloaded = true; }
     },
