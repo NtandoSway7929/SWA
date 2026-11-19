@@ -19554,7 +19554,7 @@ function simpleBars(items, color) {
                         payment_id: payment.id,
                         amount_cents: amountCents,
                         idempotency_key: window.crypto.randomUUID(),
-                        reason: "Internal Paystack Live integration validation refund for " +
+                        reason: "Full refund requested by a Swayphics administrator for invoice " +
                             invoiceNumber + "."
                     })
                 }
