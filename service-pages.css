@@ -1699,6 +1699,13 @@ body.sp-page {
 
 .sp-button--outline:hover,
 .sp-button--outline:focus-visible,
+.sp-button--outline:active {
+    border-color: #343A40;
+    background: #343A40;
+}
+
+.sp-button--outline:hover,
+.sp-button--outline:focus-visible,
 .sp-button--outline:active,
 .sp-button--outline:hover *,
 .sp-button--outline:focus-visible *,
