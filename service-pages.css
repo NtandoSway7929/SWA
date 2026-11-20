@@ -1524,3 +1524,100 @@ body.sp-page {
         letter-spacing: -.05em;
     }
 }
+
+
+/* =========================================================
+   READABILITY PASS
+   Stronger contrast and more comfortable supporting copy
+   ========================================================= */
+
+.sp-breadcrumb {
+    color: #59636E;
+    font-size: .8rem;
+}
+
+.sp-breadcrumb .sp-crumb-sep {
+    color: #59636E;
+}
+
+.sp-body-copy,
+.sp-faq details p {
+    color: #4F5B68;
+}
+
+.sp-body-copy {
+    font-size: .98rem;
+    line-height: 1.85;
+}
+
+.sp-section-head p {
+    color: #4F5B68;
+}
+
+.sp-section--navy .sp-section-head p {
+    color: rgba(255,255,255,.86);
+}
+
+.sp-card p {
+    color: #4F5B68;
+    font-size: .93rem;
+    line-height: 1.72;
+}
+
+.sp-step p {
+    color: rgba(255,255,255,.84);
+    font-size: .86rem;
+    line-height: 1.75;
+}
+
+.sp-price-label {
+    color: #F4F7FF;
+    font-size: .74rem;
+}
+
+.sp-price-description {
+    color: rgba(255,255,255,.86);
+    font-size: .94rem;
+}
+
+.sp-price-fineprint {
+    color: rgba(255,255,255,.9);
+    font-size: .78rem;
+    line-height: 1.7;
+}
+
+.sp-bottom-cta .sp-kicker {
+    color: #F4F7FF;
+}
+
+.sp-bottom-cta p {
+    color: rgba(255,255,255,.88);
+    font-size: 1rem;
+    line-height: 1.8;
+}
+
+.sp-window-top span {
+    color: #526071;
+    font-size: .58rem;
+}
+
+.sp-window-copy {
+    color: #526071;
+    font-size: .68rem;
+    line-height: 1.65;
+}
+
+.sp-floating-note {
+    color: rgba(255,255,255,.88);
+    font-size: .76rem;
+    line-height: 1.55;
+}
+
+/* Darken small labels embedded in the illustrative service previews. */
+.sp-art [style*="color:#7B8798"],
+.sp-art [style*="color:#8290A4"],
+.sp-art [style*="color:#8692A4"],
+.sp-art [style*="color:#718097"],
+.sp-art [style*="color:#6D7B90"] {
+    color: #526071 !important;
+}
