@@ -12,7 +12,7 @@ const [push, innerMe, knowledgeEmbed] = await Promise.all([
 ]);
 
 test("admin push uses only its explicitly named rotation key", () => {
-  assert.match(push, /PUSH_SECRET_KEY_NAME\s*=\s*["']swayphics-admin-push-rotation["']/);
+  assert.match(push, /PUSH_SECRET_KEY_NAME\s*=\s*["']swayphics_admin_push_rotation["']/);
   assert.match(push, /secretKeys\[PUSH_SECRET_KEY_NAME\]/);
   assert.match(push, /apiKey\s*!==\s*backendApiKey/);
   assert.doesNotMatch(push, /Object\.values\(secretKeys\)/);
