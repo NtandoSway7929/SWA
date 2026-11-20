@@ -1524,3 +1524,161 @@ body.sp-page {
         letter-spacing: -.05em;
     }
 }
+
+
+/* =========================================================
+   SERVICE PAGE READABILITY + PHOTOGRAPHY
+   Stronger text contrast and relevant existing brand imagery
+   ========================================================= */
+
+:root {
+    --sp-muted: #4F5B6D;
+}
+
+.sp-breadcrumb {
+    color: #536175;
+}
+
+.sp-breadcrumb .sp-crumb-sep {
+    color: #7A879A;
+}
+
+.sp-hero-copy {
+    color: #465466;
+}
+
+.sp-price-note {
+    color: #4F5B6D;
+}
+
+.sp-art--photo {
+    position: relative;
+    min-height: 420px;
+    padding: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid rgba(52,58,64,.16);
+    background: #343A40;
+    box-shadow: 0 20px 50px rgba(52,58,64,.16);
+}
+
+.sp-art--photo::before {
+    content: "";
+    display: block;
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(9,18,34,.44) 0%, transparent 34%, transparent 55%, rgba(9,18,34,.58) 100%);
+    pointer-events: none;
+}
+
+.sp-art-image {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.sp-art--photo .sp-art-label {
+    position: absolute;
+    z-index: 2;
+    top: 22px;
+    left: 22px;
+    max-width: calc(100% - 44px);
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 999px;
+    background: rgba(18,26,37,.72);
+    color: #FFFFFF;
+    font-size: .66rem;
+    letter-spacing: .11em;
+    line-height: 1.4;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.sp-art--photo .sp-floating-note {
+    position: absolute;
+    z-index: 2;
+    right: 20px;
+    bottom: 20px;
+    left: 20px;
+    max-width: none;
+    margin: 0;
+    padding: 12px 15px;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 14px;
+    background: rgba(18,26,37,.78);
+    color: #FFFFFF;
+    font-size: .78rem;
+    line-height: 1.55;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.sp-section-head p,
+.sp-body-copy,
+.sp-card p,
+.sp-faq details p {
+    color: #4F5B6D;
+}
+
+.sp-step p,
+.sp-section--navy .sp-section-head p,
+.sp-price-description,
+.sp-bottom-cta p {
+    color: #F0F4FF;
+}
+
+.sp-price-label {
+    color: #E8EEFF;
+}
+
+.sp-price-fineprint {
+    color: #E8EEFF;
+}
+
+.sp-footer {
+    color: #E8EEFF;
+}
+
+.sp-footer-brand,
+.sp-footer-brand span,
+.sp-footer-right,
+.sp-footer-legal-links a,
+.sp-footer-legal-links button {
+    color: #E8EEFF;
+}
+
+.sp-window-copy {
+    color: #536175;
+    font-size: .7rem;
+}
+
+.sp-window-top span {
+    color: #4F5B6D;
+    font-size: .6rem;
+}
+
+@media (max-width: 700px) {
+    .sp-art--photo {
+        min-height: 300px;
+    }
+
+    .sp-art--photo .sp-art-label {
+        top: 16px;
+        left: 16px;
+        max-width: calc(100% - 32px);
+    }
+
+    .sp-art--photo .sp-floating-note {
+        right: 14px;
+        bottom: 14px;
+        left: 14px;
+        padding: 10px 12px;
+        font-size: .74rem;
+    }
+}
