@@ -1311,3 +1311,216 @@ body.sp-page {
         animation-iteration-count: 1 !important;
     }
 }
+
+/* =========================================================
+   PREMIUM REFINEMENT
+   Homepage palette, charcoal contrast and calmer type scale
+   ========================================================= */
+
+.sp-page {
+    color: #343A40;
+    background: #FFFFFF;
+}
+
+/* Keep the light hero treatment consistent with the homepage. */
+.sp-hero {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FBFF 58%, #EEF6FF 100%);
+}
+
+.sp-hero h1 {
+    color: #343A40;
+    font-size: clamp(2.8rem, 5vw, 5rem);
+    line-height: .98;
+    letter-spacing: -.065em;
+}
+
+.sp-hero h1 span {
+    color: #0152F4;
+}
+
+.sp-hero-copy {
+    color: #59636E;
+}
+
+.sp-eyebrow {
+    color: #0031C5;
+    border-color: rgba(52,58,64,.14);
+}
+
+.sp-button {
+    background: #0152F4;
+    box-shadow: 0 12px 28px rgba(0,32,150,.16);
+}
+
+.sp-button:hover {
+    background: #0031C5;
+    box-shadow: 0 15px 32px rgba(0,32,150,.20);
+}
+
+.sp-button--outline {
+    border-color: rgba(52,58,64,.20);
+    color: #343A40 !important;
+}
+
+.sp-button--outline:hover {
+    border-color: #343A40;
+    background: #343A40;
+    color: #FFFFFF !important;
+    box-shadow: 0 12px 26px rgba(52,58,64,.14);
+}
+
+.sp-price-note {
+    color: #59636E;
+}
+
+.sp-price-note strong {
+    color: #343A40;
+}
+
+/* Charcoal artwork panels add depth without introducing another blue. */
+.sp-art {
+    border-color: rgba(52,58,64,.18);
+    background: linear-gradient(145deg, #343A40 0%, #46505A 100%);
+    box-shadow: 0 20px 50px rgba(52,58,64,.16);
+}
+
+.sp-art-label {
+    color: rgba(255,255,255,.84);
+}
+
+.sp-art-window {
+    border-color: rgba(255,255,255,.2);
+    box-shadow: 0 18px 42px rgba(0,0,0,.18);
+}
+
+.sp-floating-note {
+    color: rgba(255,255,255,.78);
+}
+
+/* A restrained neutral surface keeps the content readable and premium. */
+.sp-section--soft {
+    background: #F6F7F9;
+}
+
+.sp-section--navy {
+    background: #343A40;
+    color: #FFFFFF;
+}
+
+.sp-section h2 {
+    color: #343A40;
+    font-size: clamp(2.15rem, 4vw, 3.5rem);
+    letter-spacing: -.05em;
+    line-height: 1.06;
+}
+
+.sp-section--navy h2 {
+    color: #FFFFFF;
+}
+
+.sp-section-head p {
+    color: #59636E;
+}
+
+.sp-section--navy .sp-section-head p {
+    color: rgba(255,255,255,.76);
+}
+
+.sp-section--navy .sp-kicker {
+    color: #77C1FC;
+}
+
+.sp-statement {
+    border-left-color: #0152F4;
+    color: #343A40;
+}
+
+.sp-card {
+    border-color: rgba(52,58,64,.12);
+    background: #FFFFFF;
+    box-shadow: 0 8px 26px rgba(52,58,64,.035);
+}
+
+.sp-card:hover {
+    border-color: rgba(1,82,244,.26);
+    box-shadow: 0 12px 30px rgba(52,58,64,.075);
+}
+
+.sp-card h3 {
+    color: #343A40;
+}
+
+.sp-card p {
+    color: #59636E;
+}
+
+.sp-step {
+    border-color: rgba(255,255,255,.18);
+    background: rgba(255,255,255,.065);
+}
+
+.sp-step::before {
+    color: #77C1FC;
+}
+
+/* Use the same three-stop blue gradient as the homepage CTA. */
+.sp-pricing,
+.sp-bottom-cta {
+    background: linear-gradient(135deg, #002096 0%, #0031C5 45%, #0152F4 100%);
+}
+
+.sp-faq details {
+    border-color: rgba(52,58,64,.12);
+    background: #FFFFFF;
+}
+
+.sp-faq summary {
+    color: #343A40;
+}
+
+.sp-related a {
+    border-color: rgba(52,58,64,.14);
+    background: #FFFFFF;
+    color: #343A40;
+}
+
+.sp-related a:hover {
+    border-color: rgba(1,82,244,.32);
+}
+
+.sp-related span {
+    color: #0152F4;
+}
+
+.sp-footer {
+    background: #00145F;
+}
+
+.sp-footer-legal-links a:hover,
+.sp-footer-legal-links button:hover {
+    color: #77C1FC;
+}
+
+.sp-bottom-cta h2 {
+    max-width: 700px;
+    font-size: clamp(2.5rem, 5vw, 4.2rem);
+    line-height: 1.04;
+}
+
+@media (max-width: 700px) {
+    .sp-hero h1 {
+        font-size: clamp(2.45rem, 10vw, 3.75rem);
+        line-height: .98;
+        letter-spacing: -.06em;
+    }
+
+    .sp-section h2 {
+        font-size: clamp(2.05rem, 8vw, 2.9rem);
+        line-height: 1.06;
+    }
+
+    .sp-bottom-cta h2 {
+        font-size: clamp(2.35rem, 9vw, 3.4rem);
+        letter-spacing: -.05em;
+    }
+}
