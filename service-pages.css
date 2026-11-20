@@ -1685,3 +1685,11 @@ body.sp-page {
         font-size: .78rem;
     }
 }
+
+
+/* The photo itself supplies the artwork; remove the former decorative rings. */
+.sp-art::before,
+.sp-art::after {
+    content: none;
+    display: none;
+}
