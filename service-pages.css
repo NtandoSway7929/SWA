@@ -1621,3 +1621,127 @@ body.sp-page {
 .sp-art [style*="color:#6D7B90"] {
     color: #526071 !important;
 }
+
+/* =========================================================
+   SERVICE ARTWORK LAYOUT AND CTA CONTRAST FIX
+   Keep the caption, preview window and supporting note in
+   a deliberate vertical composition at every viewport size.
+   ========================================================= */
+
+.sp-art {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 68px 26px 26px;
+}
+
+.sp-art-label {
+    top: 20px;
+    left: 24px;
+    right: 24px;
+    max-width: calc(100% - 48px);
+    font-size: .6rem;
+    line-height: 1.35;
+    letter-spacing: .12em;
+}
+
+.sp-art-window {
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: 440px;
+    margin-inline: auto;
+}
+
+.sp-floating-note {
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: 440px;
+    margin: 0;
+    padding: 8px 12px 0;
+    text-align: center;
+}
+
+/* Filled blue CTAs always use a high-contrast white label,
+   including nested arrow spans and interactive states. */
+.sp-button:not(.sp-button--outline):not(.sp-button--light),
+.sp-button:not(.sp-button--outline):not(.sp-button--light):link,
+.sp-button:not(.sp-button--outline):not(.sp-button--light):visited,
+.sp-button:not(.sp-button--outline):not(.sp-button--light):hover,
+.sp-button:not(.sp-button--outline):not(.sp-button--light):focus-visible,
+.sp-button:not(.sp-button--outline):not(.sp-button--light):active,
+.sp-button:not(.sp-button--outline):not(.sp-button--light) * {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF;
+}
+
+/* Preserve deliberate dark text on the white secondary CTA. */
+.sp-button--light,
+.sp-button--light:link,
+.sp-button--light:visited,
+.sp-button--light:hover,
+.sp-button--light:focus-visible,
+.sp-button--light:active,
+.sp-button--light * {
+    color: #002096 !important;
+    -webkit-text-fill-color: #002096;
+}
+
+/* The outline CTA uses charcoal on its light surface, then
+   switches to white when its charcoal hover/focus surface appears. */
+.sp-button--outline,
+.sp-button--outline:link,
+.sp-button--outline:visited,
+.sp-button--outline * {
+    color: #343A40 !important;
+    -webkit-text-fill-color: #343A40;
+}
+
+.sp-button--outline:hover,
+.sp-button--outline:focus-visible,
+.sp-button--outline:active,
+.sp-button--outline:hover *,
+.sp-button--outline:focus-visible *,
+.sp-button--outline:active * {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF;
+}
+
+.sp-button:focus-visible {
+    outline: 3px solid rgba(1,82,244,.35);
+    outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+    .sp-art {
+        gap: 10px;
+        padding: 62px 16px 18px;
+        border-radius: 18px;
+    }
+
+    .sp-art-label {
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        max-width: calc(100% - 32px);
+        font-size: .56rem;
+        letter-spacing: .1em;
+    }
+
+    .sp-art-window,
+    .sp-floating-note {
+        width: 100%;
+        max-width: 440px;
+    }
+
+    .sp-floating-note {
+        padding: 6px 8px 0;
+        font-size: .68rem;
+    }
+
+    .sp-window-top span {
+        font-size: .52rem;
+        letter-spacing: .1em;
+    }
+}
+
