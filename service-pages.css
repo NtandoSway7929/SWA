@@ -1693,3 +1693,111 @@ body.sp-page {
     content: none;
     display: none;
 }
+
+
+/* =========================================================
+   SERVICE DEMONSTRATIONS WITH PHOTOGRAPHIC BACKGROUNDS
+   The hero stays focused on the service message. Original
+   service-specific interface graphics sit in a separate
+   showcase band below it, over a photographic background.
+   ========================================================= */
+
+.sp-hero-grid--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.sp-hero-grid--single > div:first-child {
+    max-width: 860px;
+}
+
+.sp-showcase-section {
+    padding: 0 0 78px;
+    background: linear-gradient(180deg, #F7FAFF 0%, #FFFFFF 100%);
+}
+
+.sp-showcase-section .sp-shell {
+    position: relative;
+}
+
+.sp-art.sp-art--showcase {
+    display: flex;
+    min-height: 500px;
+    align-items: center;
+    justify-content: center;
+    padding: 58px clamp(22px, 5vw, 58px) 48px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.58);
+    border-radius: 30px;
+    background-color: #343A40;
+    background-image:
+        linear-gradient(120deg, rgba(17,24,39,.64), rgba(17,24,39,.22) 54%, rgba(17,24,39,.42)),
+        var(--sp-art-background);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    box-shadow: 0 24px 70px rgba(0,20,95,.14);
+}
+
+.sp-art--showcase .sp-art-label {
+    top: 27px;
+    left: 30px;
+    right: auto;
+    z-index: 2;
+    color: #FFFFFF;
+    font-size: .72rem;
+    letter-spacing: .15em;
+    text-shadow: 0 2px 12px rgba(0,0,0,.5);
+}
+
+.sp-art--showcase .sp-art-window {
+    z-index: 1;
+    width: 100%;
+    max-width: 500px;
+    border-color: rgba(255,255,255,.72);
+    box-shadow: 0 28px 75px rgba(4,12,28,.30);
+}
+
+.sp-art--showcase .sp-floating-note {
+    left: auto;
+    right: 27px;
+    bottom: 26px;
+    max-width: 210px;
+    border-color: rgba(255,255,255,.78);
+    background: rgba(255,255,255,.94);
+    color: #00145F;
+    box-shadow: 0 14px 36px rgba(4,12,28,.2);
+}
+
+@media (max-width: 700px) {
+    .sp-hero-grid--single {
+        gap: 0;
+    }
+
+    .sp-hero-grid--single > div:first-child {
+        max-width: 100%;
+    }
+
+    .sp-showcase-section {
+        padding-bottom: 52px;
+    }
+
+    .sp-art.sp-art--showcase {
+        min-height: 440px;
+        padding: 56px 14px 22px;
+        border-radius: 20px;
+    }
+
+    .sp-art--showcase .sp-art-label {
+        top: 18px;
+        left: 18px;
+        font-size: .66rem;
+    }
+
+    .sp-art--showcase .sp-art-window {
+        max-width: 100%;
+    }
+
+    .sp-art--showcase .sp-floating-note {
+        display: none;
+    }
+}
