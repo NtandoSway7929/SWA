@@ -36,6 +36,9 @@ on:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
+      - "supabase/functions/send-admin-push/**"
+      - "supabase/functions/innerme-knowledge-embed/**"
+      - "scripts/edge-function-secret-key-rotation.test.mjs"
       - "supabase/functions/tests/innerme-evidence-traceability.test.mjs"
       - "supabase/functions/innerme-retrieval-smoke-test/**"
       - ".github/workflows/innerme-semantic-retrieval-smoke.yml"
