@@ -2,7 +2,7 @@ import webpush from "npm:web-push@3.6.7";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseSecretKeysRaw = Deno.env.get("SUPABASE_SECRET_KEYS") ?? "";
-const PUSH_SECRET_KEY_NAME = "swayphics-admin-push-rotation";
+const PUSH_SECRET_KEY_NAME = "swayphics_admin_push_rotation";
 const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
 const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
 const vapidSubject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:info@swayphics.co.za";
@@ -19,14 +19,6 @@ try {
 }
 
 const backendApiKey = secretKeys[PUSH_SECRET_KEY_NAME] || "";
-
-console.info("Admin push configuration check", {
-    supabaseUrlConfigured: Boolean(supabaseUrl),
-    availableSecretKeyNames: Object.keys(secretKeys),
-    namedRotationKeyConfigured: Boolean(backendApiKey),
-    vapidPublicKeyConfigured: Boolean(vapidPublicKey),
-    vapidPrivateKeyConfigured: Boolean(vapidPrivateKey),
-});
 
 if (!supabaseUrl || !backendApiKey || !vapidPublicKey || !vapidPrivateKey) {
     throw new Error("Required push notification secrets are not configured.");
