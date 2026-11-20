@@ -1,8 +1,8 @@
 import webpush from "npm:web-push@3.6.7";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const supabaseSecretKeysRaw = Deno.env.get("SUPABASE_SECRET_KEYS") ?? "";
+const PUSH_SECRET_KEY_NAME = "swayphics-admin-push-rotation";
 const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
 const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
 const vapidSubject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:info@swayphics.co.za";
@@ -18,11 +18,7 @@ try {
     console.error("Unable to parse SUPABASE_SECRET_KEYS:", error);
 }
 
-const backendApiKey =
-    Object.values(secretKeys).find(
-        value => typeof value === "string" && value.startsWith("sb_secret_")
-    ) ||
-    serviceRoleKey;
+const backendApiKey = secretKeys[PUSH_SECRET_KEY_NAME] || "";
 
 if (!supabaseUrl || !backendApiKey || !vapidPublicKey || !vapidPrivateKey) {
     throw new Error("Required push notification secrets are not configured.");
@@ -46,36 +42,9 @@ Deno.serve(async request => {
         );
     }
 
-    const authorization =
-        request.headers.get("authorization") || "";
+    const apiKey = request.headers.get("apikey") || "";
 
-    const apiKey =
-        request.headers.get("apikey") || "";
-
-    const secretKeyValues =
-        Object.values(secretKeys)
-            .filter(value => typeof value === "string");
-
-    const bearerCredential =
-        authorization.startsWith("Bearer ")
-            ? authorization.slice("Bearer ".length)
-            : "";
-
-    const legacyServiceRoleAuthorized =
-        bearerCredential === serviceRoleKey;
-
-    const serviceRoleApiKeyAuthorized =
-        apiKey === serviceRoleKey;
-
-    const secretKeyAuthorized =
-        secretKeyValues.includes(apiKey) ||
-        secretKeyValues.includes(bearerCredential);
-
-    if (
-        !legacyServiceRoleAuthorized &&
-        !serviceRoleApiKeyAuthorized &&
-        !secretKeyAuthorized
-    ) {
+    if (!backendApiKey || apiKey !== backendApiKey) {
         return new Response(
             JSON.stringify({ error: "Unauthorized." }),
             { status: 401, headers: jsonHeaders }
@@ -298,7 +267,6 @@ Deno.serve(async request => {
                                 method: "DELETE",
                                 headers: {
                                     apikey: backendApiKey,
-                                    Authorization: "Bearer " + backendApiKey,
                                     Prefer: "return=minimal"
                                 }
                             }
