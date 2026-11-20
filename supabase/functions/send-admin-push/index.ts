@@ -20,6 +20,14 @@ try {
 
 const backendApiKey = secretKeys[PUSH_SECRET_KEY_NAME] || "";
 
+console.info("Admin push configuration check", {
+    supabaseUrlConfigured: Boolean(supabaseUrl),
+    availableSecretKeyNames: Object.keys(secretKeys),
+    namedRotationKeyConfigured: Boolean(backendApiKey),
+    vapidPublicKeyConfigured: Boolean(vapidPublicKey),
+    vapidPrivateKeyConfigured: Boolean(vapidPrivateKey),
+});
+
 if (!supabaseUrl || !backendApiKey || !vapidPublicKey || !vapidPrivateKey) {
     throw new Error("Required push notification secrets are not configured.");
 }
