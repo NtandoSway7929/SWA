@@ -1,5 +1,16 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
+declare const Supabase: {
+  ai: {
+    Session: new (model: string) => {
+      run(
+        text: string,
+        options: { mean_pool: boolean; normalize: boolean },
+      ): Promise<ArrayLike<number>>;
+    };
+  };
+};
+
 const cors = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
