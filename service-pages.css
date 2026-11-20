@@ -1524,3 +1524,164 @@ body.sp-page {
         letter-spacing: -.05em;
     }
 }
+
+
+/* =========================================================
+   ACCESSIBLE CONTRAST + SERVICE PHOTOGRAPHY
+   ========================================================= */
+
+:root {
+    --sp-muted: #4B5563;
+}
+
+/* Supporting copy on light surfaces. */
+.sp-breadcrumb {
+    color: #4B5563;
+    font-size: .82rem;
+}
+
+.sp-breadcrumb .sp-crumb-sep {
+    color: #59636E;
+}
+
+.sp-price-note {
+    color: #4B5563;
+    font-size: .86rem;
+}
+
+.sp-section-head p,
+.sp-body-copy,
+.sp-card p,
+.sp-faq details p {
+    color: #4B5563;
+}
+
+/* Supporting copy on charcoal and blue surfaces. */
+.sp-section--navy .sp-section-head p,
+.sp-step p,
+.sp-price-description,
+.sp-price-fineprint,
+.sp-bottom-cta p {
+    color: rgba(255,255,255,.92);
+}
+
+.sp-step p {
+    font-size: .86rem;
+    line-height: 1.75;
+}
+
+.sp-price-label {
+    color: #FFFFFF;
+}
+
+.sp-price-description {
+    font-size: .96rem;
+}
+
+.sp-price-fineprint {
+    font-size: .8rem;
+}
+
+.sp-footer {
+    color: rgba(255,255,255,.92);
+}
+
+.sp-footer-legal-links a,
+.sp-footer-legal-links button,
+.sp-footer-brand,
+.sp-footer-brand span,
+.sp-footer-right {
+    color: rgba(255,255,255,.92);
+}
+
+.sp-footer-legal-links span {
+    opacity: .75;
+}
+
+/* Real service imagery replaces the abstract CSS mock-up panels. */
+.sp-art {
+    position: relative;
+    display: block;
+    min-height: 420px;
+    padding: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 28px;
+    background: #343A40;
+}
+
+.sp-art-image {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.sp-art-shade {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        180deg,
+        rgba(15,21,32,.48) 0%,
+        rgba(15,21,32,.04) 42%,
+        rgba(15,21,32,.66) 100%
+    );
+    pointer-events: none;
+}
+
+.sp-art-label {
+    top: 24px;
+    left: 26px;
+    right: 26px;
+    z-index: 2;
+    color: #FFFFFF;
+    font-size: .78rem;
+    text-shadow: 0 1px 8px rgba(0,0,0,.55);
+}
+
+.sp-floating-note {
+    position: absolute;
+    z-index: 2;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    max-width: none;
+    margin: 0;
+    padding: 13px 15px;
+    border: 1px solid rgba(255,255,255,.65);
+    border-radius: 14px;
+    background: rgba(20,27,37,.82);
+    color: #FFFFFF;
+    font-size: .82rem;
+    font-weight: 700;
+    line-height: 1.5;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+@media (max-width: 700px) {
+    .sp-art {
+        min-height: 280px;
+        border-radius: 20px;
+    }
+
+    .sp-art-label {
+        top: 18px;
+        left: 18px;
+        right: 18px;
+        font-size: .74rem;
+    }
+
+    .sp-floating-note {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        padding: 11px 12px;
+        font-size: .78rem;
+    }
+}
