@@ -74,7 +74,7 @@ Deno.serve(async (req: Request) => {
     const rowsResponse = await fetch(
       supabaseUrl +
         "/rest/v1/innerme_knowledge?select=id,embedding_text&status=eq.active&embedding_status=in.(pending,error)",
-      { headers: { apikey: secretKey } },
+      { headers: adminHeaders },
     );
 
     if (!rowsResponse.ok) {
@@ -139,7 +139,7 @@ Deno.serve(async (req: Request) => {
           {
             method: "PATCH",
             headers: {
-              apikey: secretKey,
+              ...adminHeaders,
               "Content-Type": "application/json",
               Prefer: "return=minimal",
             },
