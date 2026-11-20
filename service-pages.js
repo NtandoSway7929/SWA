@@ -1,5 +1,5 @@
 /* =========================================================
-   SWAYPHICS — SERVICE PAGE SHARED SCRIPTS
+   SWAYPHICS - SERVICE PAGE SHARED SCRIPTS
    Cookie consent, analytics and simple page interactions
    ========================================================= */
 
@@ -210,10 +210,49 @@
 })();
 
 document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(".sp-mobile-menu").forEach(function (menu) {
-        menu.addEventListener("click", function (event) {
-            const link = event.target.closest("a");
-            if (link) menu.removeAttribute("open");
+    const nav = document.querySelector(".sp-header");
+    const menu = document.getElementById("sp-mobile-navigation");
+    const toggle = document.querySelector(".sp-mobile-toggle");
+
+    function updateNavigation() {
+        if (!nav) return;
+        nav.classList.toggle("is-scrolled", window.scrollY > 40);
+    }
+
+    function closeMobileMenu() {
+        if (!menu || !toggle) return;
+        menu.classList.remove("is-open");
+        toggle.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.setAttribute("aria-label", "Open navigation");
+    }
+
+    if (nav) {
+        window.addEventListener("scroll", updateNavigation, { passive: true });
+        updateNavigation();
+    }
+
+    if (menu && toggle) {
+        toggle.addEventListener("click", function () {
+            const isOpen = menu.classList.toggle("is-open");
+            toggle.classList.toggle("is-open", isOpen);
+            toggle.setAttribute("aria-expanded", String(isOpen));
+            toggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
         });
-    });
+
+        menu.addEventListener("click", function (event) {
+            if (event.target.closest("a")) closeMobileMenu();
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!menu.classList.contains("is-open")) return;
+            if (!menu.contains(event.target) && !toggle.contains(event.target)) {
+                closeMobileMenu();
+            }
+        });
+
+        window.addEventListener("resize", function () {
+            if (window.innerWidth > 700) closeMobileMenu();
+        });
+    }
 });
