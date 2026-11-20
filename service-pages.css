@@ -1524,3 +1524,119 @@ body.sp-page {
         letter-spacing: -.05em;
     }
 }
+
+
+/* =========================================================
+   READABILITY + SERVICE PHOTOGRAPHY
+   ========================================================= */
+:root {
+    --sp-muted: #59636E;
+}
+
+.sp-breadcrumb,
+.sp-price-note,
+.sp-hero-copy,
+.sp-body-copy,
+.sp-card p,
+.sp-faq details p,
+.sp-bottom-cta p {
+    color: #59636E;
+}
+
+.sp-breadcrumb .sp-crumb-sep { color: #59636E; }
+.sp-art-label { color: rgba(255,255,255,.94); }
+.sp-window-copy { color: #59636E; }
+
+.sp-floating-note {
+    color: #343A40;
+    background: rgba(255,255,255,.96);
+    border-color: rgba(52,58,64,.14);
+}
+
+.sp-step p { color: rgba(255,255,255,.88); }
+
+.sp-price-description,
+.sp-price-fineprint {
+    color: rgba(255,255,255,.86);
+}
+
+.sp-footer { color: rgba(255,255,255,.86); }
+
+.sp-footer-brand,
+.sp-footer-links a,
+.sp-footer-links button,
+.sp-footer-copy {
+    color: rgba(255,255,255,.86);
+}
+
+/* Photo-led hero panels. The dark overlay protects the overlaid copy. */
+.sp-art--photo {
+    min-height: 420px;
+    padding: 0;
+    background: #343A40;
+    isolation: isolate;
+}
+
+.sp-art--photo::before { display: none; }
+
+.sp-art--photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(0,20,95,.06) 30%, rgba(0,20,95,.30) 100%);
+    pointer-events: none;
+}
+
+.sp-art-photo {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.sp-art--photo .sp-art-label {
+    top: 24px;
+    left: 24px;
+    z-index: 2;
+    max-width: calc(100% - 48px);
+    padding: 10px 13px;
+    border-radius: 999px;
+    background: rgba(0,20,95,.82);
+    color: #FFFFFF;
+    font-size: .66rem;
+    letter-spacing: .12em;
+}
+
+.sp-art--photo .sp-floating-note {
+    right: 18px;
+    bottom: 18px;
+    z-index: 3;
+    max-width: min(250px, calc(100% - 36px));
+    color: #343A40;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 12px 32px rgba(0,0,0,.18);
+}
+
+@media (max-width: 700px) {
+    .sp-art--photo { min-height: 340px; }
+
+    .sp-art--photo .sp-art-label {
+        top: 14px;
+        left: 14px;
+        max-width: calc(100% - 28px);
+        font-size: .6rem;
+    }
+
+    .sp-art--photo .sp-floating-note {
+        right: 12px;
+        bottom: 12px;
+        max-width: calc(100% - 24px);
+        font-size: .68rem;
+    }
+}
