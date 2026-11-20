@@ -5,6 +5,9 @@ on:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
+      - "supabase/functions/send-admin-push/**"
+      - "supabase/functions/innerme-knowledge-embed/**"
+      - "scripts/edge-function-secret-key-rotation.test.mjs"
       - "supabase/functions/tests/innerme-evidence-traceability.test.mjs"
       - "supabase/functions/innerme-retrieval-smoke-test/**"
       - ".github/workflows/innerme-semantic-retrieval-smoke.yml"
@@ -33,6 +36,9 @@ on:
     branches: ["main"]
     paths:
       - "supabase/functions/swayphics-ai/**"
+      - "supabase/functions/send-admin-push/**"
+      - "supabase/functions/innerme-knowledge-embed/**"
+      - "scripts/edge-function-secret-key-rotation.test.mjs"
       - "supabase/functions/tests/innerme-evidence-traceability.test.mjs"
       - "supabase/functions/innerme-retrieval-smoke-test/**"
       - ".github/workflows/innerme-semantic-retrieval-smoke.yml"
@@ -75,6 +81,14 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+
+      - name: Verify Edge Function secret-key dependency boundaries
+        run: node --test scripts/edge-function-secret-key-rotation.test.mjs
+
+      - name: Type-check admin push and knowledge embedding functions
+        run: |
+          deno check --no-lock supabase/functions/send-admin-push/index.ts
+          deno check --no-lock supabase/functions/innerme-knowledge-embed/index.ts
 
       - name: Type-check checked-in Edge Function source
         run: deno check --no-lock supabase/functions/swayphics-ai/index.ts

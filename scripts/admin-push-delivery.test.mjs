@@ -24,7 +24,8 @@ test("partial push failures are counted and returned as a non-success HTTP respo
 
 test("expired subscriptions are removed using the configured backend key and cleanup failures are visible", () => {
   assert.match(source, /statusCode === 404 \|\| statusCode === 410/);
-  assert.match(source, /apikey: backendApiKey,[\s\S]*?Authorization: "Bearer " \+ backendApiKey/);
+  assert.match(source, /apikey: backendApiKey,[\s\S]*?Prefer: "return=minimal"/);
+  assert.doesNotMatch(source, /Authorization: "Bearer " \+ backendApiKey/);
   assert.match(source, /if \(!cleanupResponse\.ok\)/);
   assert.match(source, /operation: "remove_expired_subscription"/);
   assert.match(source, /removed \+= 1/);

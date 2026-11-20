@@ -131,7 +131,7 @@ test("Gemini daily quota exhaustion alone may invoke the guarded Cloudflare work
   );
   assert.match(
     recoveryBlock,
-    /if \(!recoveredByCloudflareQuotaFallback\)\s*\{\s*return json\([\s\S]*?quota_guarded: true,[\s\S]*?\}, 429, origin\);/,
+    /if \(!recoveredByCloudflareQuotaFallback\)\s*\{\s*const isSizeGuard = guardReason === "request_too_large";[\s\S]*?quota_guarded: !isSizeGuard,[\s\S]*?\}, isSizeGuard \? 413 : 429, origin\);/,
     "exhausted Gemini quota must remain a guarded 429 if Cloudflare cannot recover the request",
   );
   assert.match(

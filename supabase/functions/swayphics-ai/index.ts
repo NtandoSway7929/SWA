@@ -198,9 +198,7 @@ function readProviderTokenMetrics(
 async function recordInnerMeProviderUsage(event: InnerMeProviderUsageEvent): Promise<void> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const serviceKey =
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
-    Deno.env.get("SUPABASE_SECRET_KEY") ||
-    "";
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
   if (!supabaseUrl || !serviceKey) {
     console.warn("InnerMe provider telemetry skipped: server credentials are unavailable.");
@@ -288,9 +286,7 @@ async function reserveInnerMeProviderQuota(
 ): Promise<InnerMeQuotaReservation> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const serverKey =
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
-    Deno.env.get("SUPABASE_SECRET_KEY") ||
-    "";
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
   if (!supabaseUrl || !serverKey) {
     return {
@@ -543,13 +539,80 @@ async function guardedGeminiFetch(
     }
   }
 
+  // Last-resort, privacy-safe compaction. Keep the current user request, but
+  // discard optional workspace payload and bound static instructions before
+  // rejecting. Measure serialized UTF-8 bytes, not JavaScript character count.
+  if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES) {
+    const systemParts = parsedBody.systemInstruction?.parts;
+    if (Array.isArray(systemParts)) {
+      for (const part of systemParts) {
+        if (typeof part?.text === "string") {
+          const textBytes = new TextEncoder().encode(part.text).byteLength;
+          if (textBytes > 8200) {
+            const keepStart = part.text.slice(0, 5200);
+            const keepEnd = part.text.slice(-2200);
+            part.text = keepStart + "\\n[Optional system context omitted to fit the request budget.]\\n" + keepEnd;
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(parsedBody.contents) && parsedBody.contents.length) {
+      const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
+      const lastPart = lastTurn?.parts?.[0];
+      if (typeof lastPart?.text === "string") {
+        const text = lastPart.text;
+        const markerIndex = text.lastIndexOf(INNERME_WORKSPACE_CONTEXT_MARKER);
+        if (markerIndex >= 0) {
+          // The JSON workspace snapshot is optional. The actual request and
+          // explicit focused-record/question text before the marker are retained.
+          lastPart.text = text.slice(0, markerIndex) +
+            "\\n[Workspace snapshot omitted because the request exceeded the safe size budget.]";
+        }
+      }
+    }
+    requestBytes = measureRequest();
+  }
+
+  // If fixed instructions plus the user's current request are still oversized,
+  // bound each text component while preserving its beginning (where the user
+  // question is assembled) and leave a clear marker instead of looping.
+  if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES) {
+    const systemParts = parsedBody.systemInstruction?.parts;
+    if (Array.isArray(systemParts)) {
+      for (const part of systemParts) {
+        if (typeof part?.text === "string") {
+          part.text = part.text.slice(0, 6000) +
+            "\\n[System instructions compacted by the zero-cost request guard.]";
+        }
+      }
+    }
+    if (Array.isArray(parsedBody.contents) && parsedBody.contents.length) {
+      const lastTurn = parsedBody.contents[parsedBody.contents.length - 1];
+      const lastPart = lastTurn?.parts?.[0];
+      if (typeof lastPart?.text === "string") {
+        lastPart.text = lastPart.text.slice(0, 9000) +
+          "\\n[Request context compacted to fit the zero-cost request limit.]";
+      }
+    }
+    requestBytes = measureRequest();
+  }
+
+  console.info("InnerMe Gemini request size guard.", {
+    request_bytes_before_compaction: new TextEncoder().encode(init.body).byteLength,
+    request_bytes_after_compaction: requestBytes,
+    request_limit_bytes: INNERME_MAX_GEMINI_REQUEST_BYTES,
+    workspace_context_present: Array.isArray(parsedBody.contents) &&
+      String(parsedBody.contents.at(-1)?.parts?.[0]?.text || "").includes(INNERME_WORKSPACE_CONTEXT_MARKER),
+  });
+
   const safeBody = JSON.stringify(parsedBody);
 
   if (requestBytes > INNERME_MAX_GEMINI_REQUEST_BYTES) {
     return innerMeGuardBlockedResponse(
       413,
       "request_too_large",
-      "InnerMe blocked this request because its context exceeds the zero-cost request-size limit. Narrow the request or its context and try again.",
+      "InnerMe could not safely fit this message into the free-tier request limit. Please shorten the message and try again.",
     );
   }
 
@@ -838,8 +901,7 @@ Deno.serve(async (req) => {
     const rateLimitUrl =
       Deno.env.get("SUPABASE_URL");
     const rateLimitKey =
-      Deno.env.get("SUPABASE_SECRET_KEY") ||
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
     if (!rateLimitUrl || !rateLimitKey) {
       return json(
@@ -12370,6 +12432,7 @@ ${INNERME_INTELLIGENT_UI_FORMAT_RULES}`;
           ? guardPayload.error.code
           : "zero_cost_guard";
       console.warn("InnerMe copywriting fallback blocked by zero-cost guard.", guardReason);
+      const isSizeGuard = guardReason === "request_too_large";
       return json({
         error:
           typeof guardPayload?.error?.message === "string"
@@ -12377,9 +12440,9 @@ ${INNERME_INTELLIGENT_UI_FORMAT_RULES}`;
             : "The copywriting fallback was blocked to protect the free-tier budget.",
         provider_type: "gemini",
         provider_model: fallbackModel,
-        quota_guarded: true,
+        quota_guarded: !isSizeGuard,
         guard_reason: guardReason,
-      }, 429, origin);
+      }, isSizeGuard ? 413 : 429, origin);
     }
 
     if (!fallbackResponse.ok) {
@@ -12649,14 +12712,17 @@ ${INNERME_INTELLIGENT_UI_FORMAT_RULES}`;
         }
 
         if (!recoveredByCloudflareQuotaFallback) {
+          const isSizeGuard = guardReason === "request_too_large";
           return json({
             error:
               typeof providerError?.message === "string"
                 ? providerError.message
-                : "InnerMe stopped the request to protect the free-tier budget. No Gemini request was sent.",
-            quota_guarded: true,
+                : isSizeGuard
+                  ? "InnerMe compacted the request but it still exceeds the safe request-size limit."
+                  : "InnerMe stopped the request to protect the free-tier budget. No Gemini request was sent.",
+            quota_guarded: !isSizeGuard,
             guard_reason: guardReason,
-          }, 429, origin);
+          }, isSizeGuard ? 413 : 429, origin);
         }
       }
 

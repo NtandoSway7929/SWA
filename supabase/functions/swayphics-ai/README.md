@@ -1,34 +1,19 @@
 # swayphics-ai Edge Function
 
-**Production status (2026-10-11):** Supabase reports `swayphics-ai` version **91** as ACTIVE. The checked-in `index.ts` and `innerme-evidence-traceability.mjs` were fetched back from production after deployment and both matched the source on GitHub `main` exactly.
+This directory contains the checked-in source and tests for the production InnerMe Edge Function.
 
-## Source provenance
+## Production source provenance
 
-- Function: `swayphics-ai`
-- Production project ref: `sqifhribgsqfaxgtobsa`
-- Current production version: `91`
-- Current bundle SHA-256 reported by Supabase: `384a6a5a1fbf9c6efae99e9cfc8ca286a2e1c0b4291f591763ca7b07d292f43a`
-- Previous production version: `90`
-- Previous bundle SHA-256: `852e470ccec1e2b1eb47eac05f268f40124b5b269c6ff097c8a4664965bcc2cd`
-- Known-good v90 source commit: [`9f3dc55f360a1dda054c36d4770f32ed906b09a1`](https://github.com/NtandoSway7929/SWA/commit/9f3dc55f360a1dda054c36d4770f32ed906b09a1)
+On 20 November 2026, the production function was retrieved from Supabase at version **149** before this credential-rotation patch. Its deployed `index.ts` contained 71 lines of production changes not yet present on GitHub `main`; those changes were preserved when synchronising the production source into this branch. All ten deployed helper modules were byte-for-byte identical to the checked-in files.
 
-## Validation record
+The production gateway remains configured with `verify_jwt=false`. The function performs its own bearer-token validation and Swayphics-admin authorization checks. Preserve this setting unless the authentication design is intentionally changed and tested.
 
-**Post-deployment verification:** GitHub Actions run 11 passed after production v91 was activated. The checks covered Deno type-check, isolated test GET health, isolated test unauthenticated-action rejection, production unauthenticated-action rejection, and production GET health.
+## Credential handling
 
-- Deno type-check: passed before v91 deployment.
-- Isolated test project function v1: ACTIVE.
-- Test and production GET health checks: passed before v91 deployment.
-- Unauthenticated controlled-action requests against test and production v90 were rejected with HTTP 401 and `Authentication is required.`.
-- Phase 30 database suite: 24/24 synthetic scenarios passed.
-- Post-v91 GitHub Actions run 11 passed Deno type-check, both health checks, and both authentication-boundary checks against the current deployments.
+Server-side telemetry and quota operations use the Supabase-injected `SUPABASE_SERVICE_ROLE_KEY`. The function must not read a custom `SUPABASE_SECRET_KEY` value or silently switch between credentials.
 
-## Runtime and gateway notes
+Keep credentials in the Supabase runtime environment. Never commit API keys or JWT values.
 
-The production gateway remains configured with `verify_jwt=false`; the function performs its own bearer-token validation and Swayphics-admin authorization checks. Preserve this setting unless the authentication design is intentionally changed and tested.
+## Validation
 
-A health GET and a rejected unauthenticated POST do not prove a valid authenticated request can complete the full action workflow. No real task or email was used in these tests. Keep credentials in Supabase Edge Function secrets, not in source files or commits.
-
-## Recovery reference
-
-The known-good v90 source files are preserved in the linked GitHub commit above. A function rollback is separate from the Phase 30 database migrations; do not reverse database migrations as part of an Edge Function-only recovery.
+The `validate-innerme-function.yml` workflow type-checks the function, runs the isolated authentication and provider-routing tests, and performs non-mutating health and authentication-boundary checks. Do not treat a health GET or an unauthenticated 401 as proof that a real authenticated business action completed.
