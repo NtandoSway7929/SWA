@@ -11,7 +11,7 @@
     const POLICY_VERSION = "2026-11-09";
     const GA_MEASUREMENT_ID = "G-YNVEVHGFTZ";
     const SUPABASE_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_kV_YWij7nHIHjyr-2v2IA_PIhr-QhB";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
 
     const banner = document.getElementById("sway-cookie-banner");
     const acceptButton = document.getElementById("sway-cookie-accept");
