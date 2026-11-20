@@ -30,4 +30,6 @@ test("knowledge embedding uses the separate legacy service-role JWT", () => {
   assert.match(knowledgeEmbed, /Deno\.env\.get\(["']SUPABASE_SERVICE_ROLE_KEY["']\)/);
   assert.match(knowledgeEmbed, /Authorization:\s*["']Bearer\s*["']\s*\+\s*secretKey/);
   assert.doesNotMatch(knowledgeEmbed, /secretKeys\.default/);
+  assert.equal((knowledgeEmbed.match(/\{ headers: adminHeaders \}/g) || []).length, 2);
+  assert.equal((knowledgeEmbed.match(/\.\.\.adminHeaders/g) || []).length, 2);
 });
