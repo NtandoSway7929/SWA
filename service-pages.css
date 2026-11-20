@@ -1752,3 +1752,75 @@ body.sp-page {
     }
 }
 
+
+
+/* =========================================================
+   SERVICE PAGE CTA CONTRAST V2
+   Force readable text on every filled-blue service CTA.
+   ========================================================= */
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light),
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):link,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):visited,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):hover,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):focus-visible,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):active,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light) *,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light)::before,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light)::after,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light) *::before,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light) *::after,
+.sp-page .sway-cookie-accept,
+.sp-page .sway-cookie-accept * {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    opacity: 1 !important;
+}
+
+/* The white price-panel CTA intentionally keeps navy text. */
+.sp-page a.sp-button--light,
+.sp-page a.sp-button--light:link,
+.sp-page a.sp-button--light:visited,
+.sp-page a.sp-button--light:hover,
+.sp-page a.sp-button--light:focus-visible,
+.sp-page a.sp-button--light:active,
+.sp-page a.sp-button--light *,
+.sp-page a.sp-button--light *::before,
+.sp-page a.sp-button--light *::after {
+    color: #002096 !important;
+    -webkit-text-fill-color: #002096 !important;
+    opacity: 1 !important;
+}
+
+/* The secondary outline button is dark on light, white on charcoal hover. */
+.sp-page a.sp-button--outline,
+.sp-page a.sp-button--outline:link,
+.sp-page a.sp-button--outline:visited,
+.sp-page a.sp-button--outline *,
+.sp-page a.sp-button--outline *::before,
+.sp-page a.sp-button--outline *::after {
+    color: #343A40 !important;
+    -webkit-text-fill-color: #343A40 !important;
+}
+
+.sp-page a.sp-button--outline:hover,
+.sp-page a.sp-button--outline:focus-visible,
+.sp-page a.sp-button--outline:active {
+    background: #343A40 !important;
+    border-color: #343A40 !important;
+}
+
+.sp-page a.sp-button--outline:hover,
+.sp-page a.sp-button--outline:focus-visible,
+.sp-page a.sp-button--outline:active,
+.sp-page a.sp-button--outline:hover *,
+.sp-page a.sp-button--outline:focus-visible *,
+.sp-page a.sp-button--outline:active *,
+.sp-page a.sp-button--outline:hover *::before,
+.sp-page a.sp-button--outline:focus-visible *::before,
+.sp-page a.sp-button--outline:active *::before,
+.sp-page a.sp-button--outline:hover *::after,
+.sp-page a.sp-button--outline:focus-visible *::after,
+.sp-page a.sp-button--outline:active *::after {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
