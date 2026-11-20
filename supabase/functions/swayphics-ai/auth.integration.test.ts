@@ -647,8 +647,8 @@ async function invokeDraftProposalWithMockedProvider(
   ];
   const savedEnv = new Map(envKeys.map((key) => [key, Deno.env.get(key)]));
   Deno.env.set("GEMINI_API_KEY", "synthetic-gemini-key");
-  Deno.env.set("SUPABASE_SECRET_KEY", "synthetic-supabase-secret-key");
-  Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
+  Deno.env.set("SUPABASE_SECRET_KEY", "synthetic-stale-secret-that-must-not-be-used");
+  Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "synthetic-service-role-key");
 
   const requests: ProposalContractMockResult["requests"] = [];
   const originalFetch = globalThis.fetch;
