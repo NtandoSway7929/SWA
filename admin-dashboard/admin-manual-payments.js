@@ -174,6 +174,7 @@
       '<label class="mp-confirm"><input name="confirmed" type="checkbox" required><span>I have independently verified that the funds were received and cleared.</span></label>' +
       '<button type="button" data-mp-submit>Record verified payment</button></form><p data-mp-status role="status" aria-live="polite"></p></section>';
     root.querySelector("[name=payment_date]").value = today();
+    root.querySelector("[name=reference]").required = true;
     root.addEventListener("click",handleClick);
     root.querySelector("[name=invoice_id]").addEventListener("change",updateInvoiceSummary);
     root.querySelector("[name=method]").addEventListener("change",function () {
