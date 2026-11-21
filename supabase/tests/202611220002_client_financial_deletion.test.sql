@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(31);
+select extensions.plan(32);
 
 select extensions.has_table('innerme_private', 'client_financial_deletion_context',
     'transaction-scoped deletion authorisation table exists');
@@ -78,6 +78,11 @@ create temp table client_financial_deletion_test_ids (
     proof_path text,
     keep_client_id uuid,
     keep_invoice_id uuid,
+    keep_payment_id uuid,
+    keep_attempt_id uuid,
+    cross_reconciliation_id uuid,
+    cross_action_id uuid,
+    cross_evidence_id uuid,
     unauthorised_client_id uuid
 );
 
@@ -103,6 +108,11 @@ declare
     v_proof_path text;
     v_keep_client_id uuid;
     v_keep_invoice_id uuid;
+    v_keep_payment_id uuid;
+    v_keep_attempt_id uuid;
+    v_cross_reconciliation_id uuid;
+    v_cross_action_id uuid;
+    v_cross_evidence_id uuid;
     v_unauthorised_client_id uuid;
     v_result jsonb;
 begin
@@ -272,6 +282,59 @@ begin
     values (v_keep_client_id, 'draft', 'ZAR', 25, 25)
     returning id into v_keep_invoice_id;
 
+    insert into public.payments (
+        client_id, invoice_id, amount, status, method, provider,
+        provider_transaction_id, currency
+    )
+    values (
+        v_keep_client_id, v_keep_invoice_id, 25, 'paid', 'Card', 'yoco',
+        'client-delete-keep-payment-' || gen_random_uuid()::text, 'ZAR'
+    )
+    returning id into v_keep_payment_id;
+
+    insert into public.payment_attempts (
+        invoice_id, client_id, provider, environment, amount_cents,
+        currency, idempotency_key, status, payment_id
+    )
+    values (
+        v_keep_invoice_id, v_keep_client_id, 'yoco', 'test', 2500,
+        'ZAR', 'client-delete-keep-attempt-' || gen_random_uuid()::text,
+        'pending', v_keep_payment_id
+    )
+    returning id into v_keep_attempt_id;
+
+    -- A reconciliation case can reference more than one financial anchor.
+    -- Deleting this client must detach its payment without destroying the
+    -- independently-linked other client's attempt, action, or evidence.
+    insert into public.payment_reconciliation (
+        payment_attempt_id, payment_id, provider, environment,
+        discrepancy_type, summary
+    )
+    values (
+        v_keep_attempt_id, v_payment_id, 'yoco', 'test',
+        'other', 'Cross-client reconciliation preservation test'
+    )
+    returning id into v_cross_reconciliation_id;
+
+    insert into public.payment_reconciliation_actions (
+        reconciliation_id, action, previous_status, new_status,
+        related_payment_id, actor_user_id
+    )
+    values (
+        v_cross_reconciliation_id, 'investigation_started', 'open', 'investigating',
+        v_keep_payment_id, v_admin_id
+    )
+    returning id into v_cross_action_id;
+
+    insert into public.payment_reconciliation_evidence (
+        reconciliation_id, evidence_type, note, created_by
+    )
+    values (
+        v_cross_reconciliation_id, 'internal_review',
+        'Evidence belonging to the independently anchored case', v_admin_id
+    )
+    returning id into v_cross_evidence_id;
+
     insert into public.clients (business_name, contact_name, email)
     values ('Unauthorised deletion target', 'Keep Contact', 'unauthorised@example.invalid')
     returning id into v_unauthorised_client_id;
@@ -308,13 +371,17 @@ begin
         client_id, invoice_id, payment_id, paystack_payment_id,
         paystack_refund_id, paystack_event_id, attempt_id, refund_id,
         reconciliation_id, bank_submission_id, proof_path,
-        keep_client_id, keep_invoice_id, unauthorised_client_id
+        keep_client_id, keep_invoice_id, keep_payment_id, keep_attempt_id,
+        cross_reconciliation_id, cross_action_id, cross_evidence_id,
+        unauthorised_client_id
     )
     values (
         v_client_id, v_invoice_id, v_payment_id, v_paystack_payment_id,
         v_paystack_refund_id, v_paystack_event_id, v_attempt_id, v_refund_id,
         v_reconciliation_id, v_submission_id, v_proof_path,
-        v_keep_client_id, v_keep_invoice_id, v_unauthorised_client_id
+        v_keep_client_id, v_keep_invoice_id, v_keep_payment_id, v_keep_attempt_id,
+        v_cross_reconciliation_id, v_cross_action_id, v_cross_evidence_id,
+        v_unauthorised_client_id
     );
 end;
 $$;
@@ -402,6 +469,25 @@ select extensions.ok(
     exists (select 1 from public.clients where id = (select keep_client_id from client_financial_deletion_test_ids))
     and exists (select 1 from public.invoices where id = (select keep_invoice_id from client_financial_deletion_test_ids)),
     'unrelated client and invoice records remain untouched'
+);
+select extensions.ok(
+    exists (
+        select 1
+        from public.payment_reconciliation r
+        where r.id = (select cross_reconciliation_id from client_financial_deletion_test_ids)
+          and r.payment_id is null
+          and r.payment_attempt_id = (select keep_attempt_id from client_financial_deletion_test_ids)
+    )
+    and exists (
+        select 1 from public.payment_reconciliation_actions a
+        where a.id = (select cross_action_id from client_financial_deletion_test_ids)
+          and a.related_payment_id = (select keep_payment_id from client_financial_deletion_test_ids)
+    )
+    and exists (
+        select 1 from public.payment_reconciliation_evidence e
+        where e.id = (select cross_evidence_id from client_financial_deletion_test_ids)
+    ),
+    'independently anchored reconciliation case, action and evidence survive with the target payment reference detached'
 );
 select extensions.ok(
     exists (select 1 from public.clients where id = (select unauthorised_client_id from client_financial_deletion_test_ids)),
