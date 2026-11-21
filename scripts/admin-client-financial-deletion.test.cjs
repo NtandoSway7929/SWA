@@ -86,6 +86,8 @@ assert.ok(deletionOrder.every((position, index) =>
   index === 0 || deletionOrder[index - 1] < position
 ), "financial records must be deleted in foreign-key-safe order");
 
+assert.match(migration, /e\.provider_event_id in \([\s\S]*?r\.provider_event_id is not null/i,
+  "refund-linked provider events must be deleted even when not attached directly to an attempt");
 assert.match(migration, /on conflict \(bucket_id, object_path\) do nothing/i);
 assert.match(migration, /payment_proof_files_queued_for_deletion/);
 assert.match(sqlTest, /unauthorised deletion attempt leaves its client untouched/);
