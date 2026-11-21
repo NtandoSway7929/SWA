@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(31);
+select extensions.plan(30);
 
 select extensions.has_table('innerme_private', 'client_financial_deletion_context',
     'transaction-scoped deletion authorisation table exists');
@@ -222,7 +222,7 @@ begin
     values (
         v_submission_id, v_invoice_id, v_client_id, 10,
         'CLIENT-DELETE-BANK-' || substr(gen_random_uuid()::text, 1, 12),
-        v_proof_path, 'proof.pdf', 'application/pdf', 128, 'approved', v_payment_id
+        v_proof_path, 'proof.pdf', 'application/pdf', 128, 'pending_review', v_payment_id
     );
 
     insert into public.clients (business_name, contact_name, email)
