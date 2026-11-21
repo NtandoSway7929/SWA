@@ -276,7 +276,13 @@ begin
     get diagnostics v_bank_transfers_deleted = row_count;
 
     delete from public.payment_webhook_events e
-    where e.payment_attempt_id = any(v_attempt_ids);
+    where e.payment_attempt_id = any(v_attempt_ids)
+       or e.provider_event_id in (
+           select r.provider_event_id
+           from public.payment_refunds r
+           where r.id = any(v_refund_ids)
+             and r.provider_event_id is not null
+       );
     get diagnostics v_webhook_events_deleted = row_count;
 
     update public.payment_reconciliation r
