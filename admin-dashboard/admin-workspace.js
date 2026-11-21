@@ -24877,7 +24877,7 @@ function simpleBars(items, color) {
 
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client and ALL linked financial records? This includes invoices and invoice items, payments, payment attempts, receipts, refunds, reconciliation cases and evidence, webhook events, bank-transfer submissions and related client records. This cannot be undone."
+                ? "Permanently delete this client and ALL linked financial records? This includes every invoice, invoice item, payment, payment attempt, receipt, refund, reconciliation record, webhook event and bank-transfer submission. Linked bank-transfer proof files and related client records will also be removed. This cannot be undone."
                 : "Delete this " + config.title.toLowerCase() + "?";
 
         if (!(await swayConfirm(confirmMessage))) {
@@ -24887,16 +24887,27 @@ function simpleBars(items, color) {
         let cleanupWarning = "";
 
         if (type === "clients") {
-            const deletionResult = await callClientDeletionFunction({
-                client_id: id
-            });
+            let deletionResult;
+            try {
+                deletionResult = await callClientDeletionFunction({
+                    client_id: id
+                });
+            } catch (error) {
+                swayAlert(
+                    error.message ||
+                    "The client and linked financial records could not be deleted."
+                );
+                return;
+            }
 
             const cleanup = deletionResult.storage_cleanup || {};
-            if (Number(cleanup.pending || 0) > 0) {
+            if (Number(cleanup.pending || 0) > 0 || cleanup.error === true) {
                 cleanupWarning =
-                    "The client and linked financial records were deleted. " +
-                    Number(cleanup.pending) +
-                    " private bank-transfer proof file(s) could not yet be removed. Cleanup will be retried automatically.";
+                    Number(cleanup.pending || 0) > 0
+                        ? "The client and linked financial records were deleted. " +
+                          Number(cleanup.pending) +
+                          " private bank-transfer proof file(s) could not yet be removed. Cleanup will be retried automatically."
+                        : "The client and linked financial records were deleted. Secure proof-file cleanup could not be completed yet and will be retried automatically.";
             }
         } else {
             const deletedRecords = await api(
@@ -24928,12 +24939,23 @@ function simpleBars(items, color) {
             id
         );
 
-        await refreshData();
-        renderShell();
-        renderView();
+        try {
+            await refreshData();
+            renderShell();
+            renderView();
+        } catch (refreshError) {
+            console.warn(
+                "The record deletion succeeded, but the dashboard refresh failed.",
+                refreshError
+            );
+        }
 
         if (cleanupWarning) {
             swayAlert(cleanupWarning);
+        } else if (type === "clients") {
+            swayAlert(
+                "The client and all linked financial records were permanently deleted."
+            );
         }
     }
 
