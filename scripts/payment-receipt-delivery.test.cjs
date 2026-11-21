@@ -28,6 +28,8 @@ assert.match(delivery, /from\("payment_receipt_delivery_attempts"\)/);
 assert.match(delivery, /application\/pdf/);
 assert.match(delivery, /attachments: \[\{ filename:/);
 assert.match(delivery, /https:\/\/api\.resend\.com\/emails/);
+assert.match(delivery, /Idempotency-Key/);
+assert.match(delivery, /status: "sending"/);
 assert.match(delivery, /status: "sent"/);
 assert.match(delivery, /status: "failed"/);
 assert.match(delivery, /serviceKey && apiKey === serviceKey/);
