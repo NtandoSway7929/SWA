@@ -139,7 +139,9 @@ const clientDeleteHandler = section(
 );
 assert.match(clientDeleteHandler, /delete_swayphics_client/);
 assert.match(clientDeleteHandler, /storage_objects/);
-assert.match(clientDeleteHandler, /swayphics-payment-proofs|storageByBucket/);
+assert.match(clientDeleteHandler, /storageByBucket/);
+assert.match(clientDeleteHandler, /offset \+= 1000/);
+assert.match(clientDeleteHandler, /failedStorageCleanupCount/);
 assert.match(clientDeleteHandler, /This does not cancel or reverse transactions held by Yoco, Paystack or a bank/i);
 assert.doesNotMatch(clientDeleteHandler, /state\.invoices\.filter|state\.payments\.filter/,
     "client deletion must use the atomic database purge RPC instead of incomplete client-side cascades");
